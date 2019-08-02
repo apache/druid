@@ -26,12 +26,10 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -120,15 +118,6 @@ public class TransformSpec
   public Transformer toTransformer()
   {
     return new Transformer(this, null);
-  }
-
-  /**
-   * Create a {@link Transformer} from this TransformSpec, taking advantage of the known signature of the rows
-   * to be transformed.
-   */
-  public Transformer toTransformer(@Nullable final Map<String, ValueType> rowSignature)
-  {
-    return new Transformer(this, rowSignature);
   }
 
   @Override

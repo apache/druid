@@ -21,72 +21,87 @@ package org.apache.druid.query.groupby.epinephelinae;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Lists;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.common.guava.SettableSupplier;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.BaseSequence;
-import org.apache.druid.java.util.common.guava.FilteredSequence;
+import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.ResourceLimitExceededException;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.RowBasedColumnSelectorFactory;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
-import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.filter.BooleanValueMatcher;
-import org.apache.druid.segment.filter.Filters;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
+
+import javax.annotation.Nullable;
 
 import java.io.Closeable;
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Utility class that knows how to do higher-level groupBys: i.e. group a {@link Sequence} of {@link ResultRow}
+ * originating from a subquery. It uses a buffer provided by a {@link GroupByQueryResource}. The output rows may not
+ * be perfectly grouped and will not have PostAggregators applied, so they should be fed into
+ * {@link org.apache.druid.query.groupby.strategy.GroupByStrategy#mergeResults}.
+ *
+ * This class has two primary uses: processing nested groupBys, and processing subtotals.
+ *
+ * This class has some similarity to {@link GroupByMergingQueryRunnerV2}, but is different enough that it deserved to
+ * be its own class. Some common code between the two classes is in {@link RowBasedGrouperHelper}.
+ */
 public class GroupByRowProcessor
 {
-  public static Grouper createGrouper(
-      final Query queryParam,
-      final Sequence<Row> rows,
-      final Map<String, ValueType> rowSignature,
+  public interface ResultSupplier extends Closeable
+  {
+    /**
+     * Return a result sequence. Can be called any number of times. When the results are no longer needed,
+     * call {@link #close()} (but make sure any result sequences have been fully consumed first!).
+     *
+     * @param dimensionsToInclude list of dimensions to include, or null to include all dimensions. Used by processing
+     *                            of subtotals. If specified, the results will not necessarily be fully grouped.
+     */
+    Sequence<ResultRow> results(@Nullable List<String> dimensionsToInclude);
+  }
+
+  private GroupByRowProcessor()
+  {
+    // No instantiation
+  }
+
+  /**
+   * Process the input of sequence "rows" (output by "subquery") based on "query" and returns a {@link ResultSupplier}.
+   *
+   * In addition to grouping using dimensions and metrics, it will also apply filters (both DimFilter and interval
+   * filters).
+   *
+   * The input sequence is processed synchronously with the call to this method, and result iteration happens lazy upon
+   * calls to the {@link ResultSupplier}. Make sure to close it when you're done.
+   */
+  public static ResultSupplier process(
+      final GroupByQuery query,
+      final GroupByQuery subquery,
+      final Sequence<ResultRow> rows,
       final GroupByQueryConfig config,
       final GroupByQueryResource resource,
       final ObjectMapper spillMapper,
       final String processingTmpDir,
-      final int mergeBufferSize,
-      final List<Closeable> closeOnExit,
-      final boolean wasQueryPushedDown,
-      final boolean useVirtualizedColumnSelectorFactory
+      final int mergeBufferSize
   )
   {
-    final GroupByQuery query = (GroupByQuery) queryParam;
+    final List<Closeable> closeOnExit = new ArrayList<>();
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
-
-    final AggregatorFactory[] aggregatorFactories = new AggregatorFactory[query.getAggregatorSpecs().size()];
-    for (int i = 0; i < query.getAggregatorSpecs().size(); i++) {
-      aggregatorFactories[i] = query.getAggregatorSpecs().get(i);
-    }
 
     final File temporaryStorageDirectory = new File(
         processingTmpDir,
         StringUtils.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
-
-    Sequence<Row> sequenceToGroup = rows;
-    // When query is pushed down, rows have already been filtered
-    if (!wasQueryPushedDown) {
-      sequenceToGroup = getFilteredSequence(rows, rowSignature, query);
-    }
 
     final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
         temporaryStorageDirectory,
@@ -95,10 +110,9 @@ public class GroupByRowProcessor
 
     closeOnExit.add(temporaryStorage);
 
-    Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, Row>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
+    Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, ResultRow>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
         query,
-        true,
-        rowSignature,
+        subquery,
         querySpecificConfig,
         new Supplier<ByteBuffer>()
         {
@@ -112,82 +126,56 @@ public class GroupByRowProcessor
         },
         temporaryStorage,
         spillMapper,
-        aggregatorFactories,
-        mergeBufferSize,
-        useVirtualizedColumnSelectorFactory
+        mergeBufferSize
     );
     final Grouper<RowBasedKey> grouper = pair.lhs;
-    final Accumulator<AggregateResult, Row> accumulator = pair.rhs;
+    final Accumulator<AggregateResult, ResultRow> accumulator = pair.rhs;
     closeOnExit.add(grouper);
 
-    final AggregateResult retVal = sequenceToGroup.accumulate(AggregateResult.ok(), accumulator);
+    final AggregateResult retVal = rows.accumulate(AggregateResult.ok(), accumulator);
 
     if (!retVal.isOk()) {
       throw new ResourceLimitExceededException(retVal.getReason());
     }
 
-    return grouper;
+    return new ResultSupplier()
+    {
+      @Override
+      public Sequence<ResultRow> results(@Nullable List<String> dimensionsToInclude)
+      {
+        return getRowsFromGrouper(query, grouper, dimensionsToInclude);
+      }
+
+      @Override
+      public void close()
+      {
+        Lists.reverse(closeOnExit).forEach(CloseQuietly::close);
+      }
+    };
   }
 
-  private static Sequence<Row> getFilteredSequence(
-      Sequence<Row> rows,
-      Map<String, ValueType> rowSignature,
-      GroupByQuery query
+  private static Sequence<ResultRow> getRowsFromGrouper(
+      final GroupByQuery query,
+      final Grouper<RowBasedKey> grouper,
+      @Nullable List<String> dimensionsToInclude
   )
   {
-    final List<Interval> queryIntervals = query.getIntervals();
-    final Filter filter = Filters.convertToCNFFromQueryContext(
-        query,
-        Filters.toFilter(query.getDimFilter())
-    );
-
-    final SettableSupplier<Row> rowSupplier = new SettableSupplier<>();
-    final RowBasedColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
-        rowSupplier,
-        rowSignature
-    );
-    final ValueMatcher filterMatcher = filter == null
-                                       ? BooleanValueMatcher.of(true)
-                                       : filter.makeMatcher(columnSelectorFactory);
-
-    return new FilteredSequence<>(
-        rows,
-        input -> {
-          boolean inInterval = false;
-          DateTime rowTime = input.getTimestamp();
-          for (Interval queryInterval : queryIntervals) {
-            if (queryInterval.contains(rowTime)) {
-              inInterval = true;
-              break;
-            }
-          }
-          if (!inInterval) {
-            return false;
-          }
-          rowSupplier.set(input);
-          return filterMatcher.matches();
-        }
-    );
-  }
-
-  public static Sequence<Row> getRowsFromGrouper(GroupByQuery query, List<String> subtotalSpec, Supplier<Grouper> grouper)
-  {
     return new BaseSequence<>(
-        new BaseSequence.IteratorMaker<Row, CloseableGrouperIterator<RowBasedKey, Row>>()
+        new BaseSequence.IteratorMaker<ResultRow, CloseableGrouperIterator<RowBasedKey, ResultRow>>()
         {
           @Override
-          public CloseableGrouperIterator<RowBasedKey, Row> make()
+          public CloseableGrouperIterator<RowBasedKey, ResultRow> make()
           {
             return RowBasedGrouperHelper.makeGrouperIterator(
-                grouper.get(),
+                grouper,
                 query,
-                subtotalSpec,
+                dimensionsToInclude,
                 () -> {}
             );
           }
 
           @Override
-          public void cleanup(CloseableGrouperIterator<RowBasedKey, Row> iterFromMake)
+          public void cleanup(CloseableGrouperIterator<RowBasedKey, ResultRow> iterFromMake)
           {
             iterFromMake.close();
           }

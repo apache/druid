@@ -94,6 +94,7 @@ issues:
     - Area - Extension
     - Area - Kafka/Kinesis Indexing
     - Area - Lookups
+    - Area - Metadata
     - Area - Metrics/Event Emitting
     - Area - Null Handling
     - Area - Operations

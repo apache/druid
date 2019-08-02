@@ -51,7 +51,7 @@ public class ExpressionFilter implements Filter
   public ExpressionFilter(final Supplier<Expr> expr, final FilterTuning filterTuning)
   {
     this.expr = expr;
-    this.requiredBindings = Suppliers.memoize(() -> expr.get().analyzeInputs().getRequiredColumns());
+    this.requiredBindings = Suppliers.memoize(() -> expr.get().analyzeInputs().getRequiredBindings());
     this.manualFilterTuning = filterTuning;
   }
 

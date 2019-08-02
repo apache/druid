@@ -42,7 +42,7 @@ export interface ShowHistoryState {
 }
 
 export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHistoryState> {
-  private showHistoryQueryManager: QueryManager<null, string>;
+  private showHistoryQueryManager: QueryManager<string, PastSupervisor[]>;
   constructor(props: ShowHistoryProps, context: any) {
     super(props, context);
     this.state = {
@@ -51,8 +51,8 @@ export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHisto
     };
 
     this.showHistoryQueryManager = new QueryManager({
-      processQuery: async () => {
-        const resp = await axios.get(this.props.endpoint);
+      processQuery: async (endpoint: string) => {
+        const resp = await axios.get(endpoint);
         return resp.data;
       },
       onStateChange: ({ result, loading, error }) => {
@@ -66,7 +66,7 @@ export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHisto
   }
 
   componentDidMount(): void {
-    this.showHistoryQueryManager.runQuery(null);
+    this.showHistoryQueryManager.runQuery(this.props.endpoint);
   }
 
   render(): JSX.Element | null {

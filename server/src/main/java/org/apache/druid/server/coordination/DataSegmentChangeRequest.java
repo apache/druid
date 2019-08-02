@@ -22,6 +22,8 @@ package org.apache.druid.server.coordination;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
+import javax.annotation.Nullable;
+
 /**
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "action")
@@ -32,7 +34,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 })
 public interface DataSegmentChangeRequest
 {
-  void go(DataSegmentChangeHandler handler, DataSegmentChangeCallback callback);
+  void go(DataSegmentChangeHandler handler, @Nullable DataSegmentChangeCallback callback);
 
   String asString();
 }

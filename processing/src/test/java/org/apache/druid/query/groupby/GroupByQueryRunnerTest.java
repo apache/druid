@@ -25,7 +25,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -33,7 +32,7 @@ import com.google.common.collect.Sets;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.Row;
+import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -106,11 +105,11 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SearchQueryDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.query.groupby.having.BaseHavingSpec;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.having.DimensionSelectorHavingSpec;
 import org.apache.druid.query.groupby.having.EqualToHavingSpec;
 import org.apache.druid.query.groupby.having.GreaterThanHavingSpec;
+import org.apache.druid.query.groupby.having.HavingSpec;
 import org.apache.druid.query.groupby.having.OrHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.LimitSpec;
@@ -187,7 +186,7 @@ public class GroupByQueryRunnerTest
 
   private static final Closer resourceCloser = Closer.create();
 
-  private final QueryRunner<Row> runner;
+  private final QueryRunner<ResultRow> runner;
   private final String runnerName;
   private final GroupByQueryRunnerFactory factory;
   private final GroupByQueryConfig config;
@@ -418,7 +417,7 @@ public class GroupByQueryRunnerTest
       final Pair<GroupByQueryRunnerFactory, Closer> factoryAndCloser = makeQueryRunnerFactory(config);
       final GroupByQueryRunnerFactory factory = factoryAndCloser.lhs;
       resourceCloser.register(factoryAndCloser.rhs);
-      for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
+      for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
         for (boolean vectorize : ImmutableList.of(false, true)) {
           final String testName = StringUtils.format("config=%s, runner=%s, vectorize=%s", config, runner, vectorize);
 
@@ -470,8 +469,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "automotive",
@@ -484,7 +484,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             135.88510131835938d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "business",
@@ -497,7 +498,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             118.57034
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "entertainment",
@@ -510,7 +512,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             158.747224
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "health",
@@ -523,7 +526,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             120.134704
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "mezzanine",
@@ -536,7 +540,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             2871.8866900000003d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "news",
@@ -549,7 +554,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             121.58358d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "premium",
@@ -562,7 +568,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             2900.798647d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "technology",
@@ -575,7 +582,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             78.622547d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "travel",
@@ -589,7 +597,8 @@ public class GroupByQueryRunnerTest
             119.922742d
         ),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "automotive",
@@ -602,7 +611,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             147.42593d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "business",
@@ -615,7 +625,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             112.987027d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "entertainment",
@@ -628,7 +639,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             166.016049d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "health",
@@ -641,7 +653,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             113.446008d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "mezzanine",
@@ -654,7 +667,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             2448.830613d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "news",
@@ -667,7 +681,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             114.290141d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "premium",
@@ -680,7 +695,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             2506.415148d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "technology",
@@ -693,7 +709,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             97.387433d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "travel",
@@ -708,7 +725,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
 
@@ -728,8 +745,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
             "2011-04-01",
             "alias0", null,
             "alias1", "foo",
@@ -737,7 +755,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "missing-column");
   }
 
@@ -765,8 +783,9 @@ public class GroupByQueryRunnerTest
         )
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "travel",
@@ -777,7 +796,8 @@ public class GroupByQueryRunnerTest
             "idx",
             119L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "technology",
@@ -788,7 +808,8 @@ public class GroupByQueryRunnerTest
             "idx",
             78L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "premium",
@@ -799,7 +820,8 @@ public class GroupByQueryRunnerTest
             "idx",
             2900L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "news",
@@ -810,7 +832,8 @@ public class GroupByQueryRunnerTest
             "idx",
             121L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "mezzanine",
@@ -821,7 +844,8 @@ public class GroupByQueryRunnerTest
             "idx",
             2870L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "health",
@@ -832,7 +856,8 @@ public class GroupByQueryRunnerTest
             "idx",
             120L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "entertainment",
@@ -843,7 +868,8 @@ public class GroupByQueryRunnerTest
             "idx",
             158L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "business",
@@ -854,7 +880,8 @@ public class GroupByQueryRunnerTest
             "idx",
             118L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "automotive",
@@ -866,7 +893,8 @@ public class GroupByQueryRunnerTest
             135L
         ),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "travel",
@@ -877,7 +905,8 @@ public class GroupByQueryRunnerTest
             "idx",
             126L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "technology",
@@ -888,7 +917,8 @@ public class GroupByQueryRunnerTest
             "idx",
             97L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "premium",
@@ -899,7 +929,8 @@ public class GroupByQueryRunnerTest
             "idx",
             2505L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "news",
@@ -910,7 +941,8 @@ public class GroupByQueryRunnerTest
             "idx",
             114L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "mezzanine",
@@ -921,7 +953,8 @@ public class GroupByQueryRunnerTest
             "idx",
             2447L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "health",
@@ -932,7 +965,8 @@ public class GroupByQueryRunnerTest
             "idx",
             113L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "entertainment",
@@ -943,7 +977,8 @@ public class GroupByQueryRunnerTest
             "idx",
             166L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "business",
@@ -954,7 +989,8 @@ public class GroupByQueryRunnerTest
             "idx",
             112L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "automotive",
@@ -967,7 +1003,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "string-postAgg");
   }
 
@@ -975,14 +1011,8 @@ public class GroupByQueryRunnerTest
   public void testGroupByWithStringVirtualColumn()
   {
     // Cannot vectorize due to virtual columns.
+    // all virtual columns are single input column, so it will work for group by v1, even with multi-value inputs
     cannotVectorize();
-
-    // Cannot run with groupBy v1 on IncrementalIndex, because expressions would turn multi-value inputs
-    // into cardinalityless selectors, and groupBy v1 requires selectors that have a cardinality.
-    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)
-        && ImmutableSet.of("rtIndex", "noRollupRtIndex").contains(runnerName)) {
-      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
-    }
 
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
@@ -1000,10 +1030,11 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotivex", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "businessx", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "automotivex", "rows", 1L, "idx", 135L),
+        makeRow(query, "2011-04-01", "alias", "businessx", "rows", 1L, "idx", 118L),
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "entertainmentx",
@@ -1012,16 +1043,17 @@ public class GroupByQueryRunnerTest
             "idx",
             158L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "healthx", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzaninex", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "newsx", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premiumx", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technologyx", "rows", 1L, "idx", 78L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travelx", "rows", 1L, "idx", 119L),
+        makeRow(query, "2011-04-01", "alias", "healthx", "rows", 1L, "idx", 120L),
+        makeRow(query, "2011-04-01", "alias", "mezzaninex", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "newsx", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-01", "alias", "premiumx", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-01", "alias", "technologyx", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-01", "alias", "travelx", "rows", 1L, "idx", 119L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotivex", "rows", 1L, "idx", 147L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "businessx", "rows", 1L, "idx", 112L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(query, "2011-04-02", "alias", "automotivex", "rows", 1L, "idx", 147L),
+        makeRow(query, "2011-04-02", "alias", "businessx", "rows", 1L, "idx", 112L),
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "entertainmentx",
@@ -1030,15 +1062,15 @@ public class GroupByQueryRunnerTest
             "idx",
             166L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "healthx", "rows", 1L, "idx", 113L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzaninex", "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "newsx", "rows", 1L, "idx", 114L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premiumx", "rows", 3L, "idx", 2505L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technologyx", "rows", 1L, "idx", 97L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travelx", "rows", 1L, "idx", 126L)
+        makeRow(query, "2011-04-02", "alias", "healthx", "rows", 1L, "idx", 113L),
+        makeRow(query, "2011-04-02", "alias", "mezzaninex", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-02", "alias", "newsx", "rows", 1L, "idx", 114L),
+        makeRow(query, "2011-04-02", "alias", "premiumx", "rows", 3L, "idx", 2505L),
+        makeRow(query, "2011-04-02", "alias", "technologyx", "rows", 1L, "idx", 97L),
+        makeRow(query, "2011-04-02", "alias", "travelx", "rows", 1L, "idx", 126L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "virtual-column");
   }
 
@@ -1053,29 +1085,29 @@ public class GroupByQueryRunnerTest
         .setGranularity(new DurationGranularity(86400L, 0L))
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
+        makeRow(query, "2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
+        makeRow(query, "2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
+        makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
+        makeRow(query, "2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
+        makeRow(query, "2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
+        makeRow(query, "2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
+        makeRow(query, "2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
+        makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
+        makeRow(query, "2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+        makeRow(query, "2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
+        makeRow(query, "2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "duration-granularity");
   }
 
@@ -1109,36 +1141,36 @@ public class GroupByQueryRunnerTest
         .overrideContext(ImmutableMap.of("sortByDimsFirst", true))
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
+        makeRow(query, "2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
+        makeRow(query, "2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
+        makeRow(query, "2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
+        makeRow(query, "2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
+        makeRow(query, "2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
+        makeRow(query, "2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
+        makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+        makeRow(query, "2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
+        makeRow(query, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
+        makeRow(query, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
+        makeRow(query, "2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "sort-by-dimensions-first");
   }
 
@@ -1154,19 +1186,19 @@ public class GroupByQueryRunnerTest
         .overrideContext(ImmutableMap.of("chunkPeriod", "P1D"))
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 282L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 230L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 324L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 2L, "idx", 233L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 5317L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 2L, "idx", 235L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 5405L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 2L, "idx", 175L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 245L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "automotive", "rows", 2L, "idx", 282L),
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 2L, "idx", 230L),
+        makeRow(query, "2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 324L),
+        makeRow(query, "2011-04-01", "alias", "health", "rows", 2L, "idx", 233L),
+        makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 5317L),
+        makeRow(query, "2011-04-01", "alias", "news", "rows", 2L, "idx", 235L),
+        makeRow(query, "2011-04-01", "alias", "premium", "rows", 6L, "idx", 5405L),
+        makeRow(query, "2011-04-01", "alias", "technology", "rows", 2L, "idx", 175L),
+        makeRow(query, "2011-04-01", "alias", "travel", "rows", 2L, "idx", 245L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "chunk-period");
   }
 
@@ -1180,29 +1212,29 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel"),
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "automotive"),
+        makeRow(query, "2011-04-01", "alias", "business"),
+        makeRow(query, "2011-04-01", "alias", "entertainment"),
+        makeRow(query, "2011-04-01", "alias", "health"),
+        makeRow(query, "2011-04-01", "alias", "mezzanine"),
+        makeRow(query, "2011-04-01", "alias", "news"),
+        makeRow(query, "2011-04-01", "alias", "premium"),
+        makeRow(query, "2011-04-01", "alias", "technology"),
+        makeRow(query, "2011-04-01", "alias", "travel"),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel")
+        makeRow(query, "2011-04-02", "alias", "automotive"),
+        makeRow(query, "2011-04-02", "alias", "business"),
+        makeRow(query, "2011-04-02", "alias", "entertainment"),
+        makeRow(query, "2011-04-02", "alias", "health"),
+        makeRow(query, "2011-04-02", "alias", "mezzanine"),
+        makeRow(query, "2011-04-02", "alias", "news"),
+        makeRow(query, "2011-04-02", "alias", "premium"),
+        makeRow(query, "2011-04-02", "alias", "technology"),
+        makeRow(query, "2011-04-02", "alias", "travel")
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "no-aggs");
   }
 
@@ -1220,19 +1252,19 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "a", "rows", 2L, "idx", 282L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "b", "rows", 2L, "idx", 230L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "e", "rows", 2L, "idx", 324L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "h", "rows", 2L, "idx", 233L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "m", "rows", 6L, "idx", 5317L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "n", "rows", 2L, "idx", 235L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "p", "rows", 6L, "idx", 5405L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "preferred", "rows", 26L, "idx", 12446L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "t", "rows", 4L, "idx", 420L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "a", "rows", 2L, "idx", 282L),
+        makeRow(query, "2011-04-01", "alias", "b", "rows", 2L, "idx", 230L),
+        makeRow(query, "2011-04-01", "alias", "e", "rows", 2L, "idx", 324L),
+        makeRow(query, "2011-04-01", "alias", "h", "rows", 2L, "idx", 233L),
+        makeRow(query, "2011-04-01", "alias", "m", "rows", 6L, "idx", 5317L),
+        makeRow(query, "2011-04-01", "alias", "n", "rows", 2L, "idx", 235L),
+        makeRow(query, "2011-04-01", "alias", "p", "rows", 6L, "idx", 5405L),
+        makeRow(query, "2011-04-01", "alias", "preferred", "rows", 26L, "idx", 12446L),
+        makeRow(query, "2011-04-01", "alias", "t", "rows", 4L, "idx", 420L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "multi-value-dim");
   }
 
@@ -1253,8 +1285,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "a",
@@ -1265,7 +1298,8 @@ public class GroupByQueryRunnerTest
             "idx",
             282L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "a",
@@ -1276,7 +1310,8 @@ public class GroupByQueryRunnerTest
             "idx",
             282L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "preferred",
@@ -1287,7 +1322,8 @@ public class GroupByQueryRunnerTest
             "idx",
             282L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "preferred",
@@ -1300,7 +1336,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "two-multi-value-dims");
   }
 
@@ -1320,8 +1356,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "automotive",
@@ -1332,7 +1369,8 @@ public class GroupByQueryRunnerTest
             "idx",
             282L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "business",
@@ -1343,7 +1381,8 @@ public class GroupByQueryRunnerTest
             "idx",
             230L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "entertainment",
@@ -1354,7 +1393,8 @@ public class GroupByQueryRunnerTest
             "idx",
             324L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "health",
@@ -1365,7 +1405,8 @@ public class GroupByQueryRunnerTest
             "idx",
             233L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "mezzanine",
@@ -1376,7 +1417,8 @@ public class GroupByQueryRunnerTest
             "idx",
             5317L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "news",
@@ -1387,7 +1429,8 @@ public class GroupByQueryRunnerTest
             "idx",
             235L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "premium",
@@ -1398,7 +1441,8 @@ public class GroupByQueryRunnerTest
             "idx",
             5405L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "automotive",
@@ -1409,7 +1453,8 @@ public class GroupByQueryRunnerTest
             "idx",
             282L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "business",
@@ -1420,7 +1465,8 @@ public class GroupByQueryRunnerTest
             "idx",
             230L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "entertainment",
@@ -1431,7 +1477,8 @@ public class GroupByQueryRunnerTest
             "idx",
             324L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "health",
@@ -1442,7 +1489,8 @@ public class GroupByQueryRunnerTest
             "idx",
             233L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "mezzanine",
@@ -1453,7 +1501,8 @@ public class GroupByQueryRunnerTest
             "idx",
             5317L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "news",
@@ -1464,7 +1513,8 @@ public class GroupByQueryRunnerTest
             "idx",
             235L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "premium",
@@ -1475,7 +1525,8 @@ public class GroupByQueryRunnerTest
             "idx",
             5405L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "technology",
@@ -1486,7 +1537,8 @@ public class GroupByQueryRunnerTest
             "idx",
             175L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "travel",
@@ -1497,7 +1549,8 @@ public class GroupByQueryRunnerTest
             "idx",
             245L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "technology",
@@ -1508,7 +1561,8 @@ public class GroupByQueryRunnerTest
             "idx",
             175L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "travel",
@@ -1521,7 +1575,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "one-multi-value-dim");
   }
 
@@ -1541,8 +1595,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "automotive",
@@ -1553,7 +1608,8 @@ public class GroupByQueryRunnerTest
             "idx",
             282L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "automotive",
@@ -1564,7 +1620,8 @@ public class GroupByQueryRunnerTest
             "idx",
             282L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "business",
@@ -1575,7 +1632,8 @@ public class GroupByQueryRunnerTest
             "idx",
             230L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "business",
@@ -1586,7 +1644,8 @@ public class GroupByQueryRunnerTest
             "idx",
             230L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "entertainment",
@@ -1597,7 +1656,8 @@ public class GroupByQueryRunnerTest
             "idx",
             324L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "entertainment",
@@ -1608,7 +1668,8 @@ public class GroupByQueryRunnerTest
             "idx",
             324L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "health",
@@ -1619,7 +1680,8 @@ public class GroupByQueryRunnerTest
             "idx",
             233L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "health",
@@ -1630,7 +1692,8 @@ public class GroupByQueryRunnerTest
             "idx",
             233L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "mezzanine",
@@ -1641,7 +1704,8 @@ public class GroupByQueryRunnerTest
             "idx",
             5317L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "mezzanine",
@@ -1652,7 +1716,8 @@ public class GroupByQueryRunnerTest
             "idx",
             5317L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "news",
@@ -1663,7 +1728,8 @@ public class GroupByQueryRunnerTest
             "idx",
             235L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "news",
@@ -1674,7 +1740,8 @@ public class GroupByQueryRunnerTest
             "idx",
             235L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "premium",
@@ -1685,7 +1752,8 @@ public class GroupByQueryRunnerTest
             "idx",
             5405L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "premium",
@@ -1696,7 +1764,8 @@ public class GroupByQueryRunnerTest
             "idx",
             5405L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "technology",
@@ -1707,7 +1776,8 @@ public class GroupByQueryRunnerTest
             "idx",
             175L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "technology",
@@ -1718,7 +1788,8 @@ public class GroupByQueryRunnerTest
             "idx",
             175L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "travel",
@@ -1729,7 +1800,8 @@ public class GroupByQueryRunnerTest
             "idx",
             245L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "quality",
             "travel",
@@ -1742,7 +1814,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "one-multi-value-dim-different-order");
   }
 
@@ -1758,14 +1830,15 @@ public class GroupByQueryRunnerTest
         .overrideContext(ImmutableMap.of("maxResults", 1))
         .build();
 
-    List<Row> expectedResults = null;
+    List<ResultRow> expectedResults = null;
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(ResourceLimitExceededException.class);
     } else {
       expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
-          GroupByQueryRunnerTestHelper.createExpectedRow(
+          makeRow(query, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
+          makeRow(query, "2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
+          makeRow(
+              query,
               "2011-04-01",
               "alias",
               "entertainment",
@@ -1774,16 +1847,17 @@ public class GroupByQueryRunnerTest
               "idx",
               158L
           ),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
+          makeRow(query, "2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
+          makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+          makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+          makeRow(query, "2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
+          makeRow(query, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
+          makeRow(query, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
 
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
-          GroupByQueryRunnerTestHelper.createExpectedRow(
+          makeRow(query, "2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
+          makeRow(query, "2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
+          makeRow(
+              query,
               "2011-04-02",
               "alias",
               "entertainment",
@@ -1792,16 +1866,16 @@ public class GroupByQueryRunnerTest
               "idx",
               166L
           ),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
+          makeRow(query, "2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
+          makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+          makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
+          makeRow(query, "2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+          makeRow(query, "2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
+          makeRow(query, "2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
       );
     }
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "override-maxResults");
   }
 
@@ -1817,29 +1891,29 @@ public class GroupByQueryRunnerTest
         .overrideContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 60000))
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
+        makeRow(query, "2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
+        makeRow(query, "2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
+        makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
+        makeRow(query, "2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
+        makeRow(query, "2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
+        makeRow(query, "2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
+        makeRow(query, "2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
+        makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
+        makeRow(query, "2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+        makeRow(query, "2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
+        makeRow(query, "2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "override-timeout");
   }
 
@@ -1855,15 +1929,16 @@ public class GroupByQueryRunnerTest
         .overrideContext(ImmutableMap.of("maxOnDiskStorage", 0, "bufferGrouperMaxSize", 1))
         .build();
 
-    List<Row> expectedResults = null;
+    List<ResultRow> expectedResults = null;
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       expectedException.expect(ResourceLimitExceededException.class);
       expectedException.expectMessage("Not enough aggregation buffer space to execute this query");
     } else {
       expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
-          GroupByQueryRunnerTestHelper.createExpectedRow(
+          makeRow(query, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
+          makeRow(query, "2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
+          makeRow(
+              query,
               "2011-04-01",
               "alias",
               "entertainment",
@@ -1872,16 +1947,17 @@ public class GroupByQueryRunnerTest
               "idx",
               158L
           ),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
+          makeRow(query, "2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
+          makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+          makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+          makeRow(query, "2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
+          makeRow(query, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
+          makeRow(query, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
 
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
-          GroupByQueryRunnerTestHelper.createExpectedRow(
+          makeRow(query, "2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
+          makeRow(query, "2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
+          makeRow(
+              query,
               "2011-04-02",
               "alias",
               "entertainment",
@@ -1890,16 +1966,16 @@ public class GroupByQueryRunnerTest
               "idx",
               166L
           ),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
+          makeRow(query, "2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
+          makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+          makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
+          makeRow(query, "2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+          makeRow(query, "2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
+          makeRow(query, "2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
       );
     }
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "overide-maxOnDiskStorage");
   }
 
@@ -1915,15 +1991,16 @@ public class GroupByQueryRunnerTest
         .overrideContext(ImmutableMap.of("maxOnDiskStorage", 0, "maxMergingDictionarySize", 1))
         .build();
 
-    List<Row> expectedResults = null;
+    List<ResultRow> expectedResults = null;
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       expectedException.expect(ResourceLimitExceededException.class);
       expectedException.expectMessage("Not enough dictionary space to execute this query");
     } else {
       expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
-          GroupByQueryRunnerTestHelper.createExpectedRow(
+          makeRow(query, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
+          makeRow(query, "2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
+          makeRow(
+              query,
               "2011-04-01",
               "alias",
               "entertainment",
@@ -1932,16 +2009,17 @@ public class GroupByQueryRunnerTest
               "idx",
               158L
           ),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
+          makeRow(query, "2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
+          makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+          makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+          makeRow(query, "2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
+          makeRow(query, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
+          makeRow(query, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
 
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
-          GroupByQueryRunnerTestHelper.createExpectedRow(
+          makeRow(query, "2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
+          makeRow(query, "2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
+          makeRow(
+              query,
               "2011-04-02",
               "alias",
               "entertainment",
@@ -1950,16 +2028,16 @@ public class GroupByQueryRunnerTest
               "idx",
               166L
           ),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
+          makeRow(query, "2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
+          makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+          makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
+          makeRow(query, "2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+          makeRow(query, "2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
+          makeRow(query, "2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
       );
     }
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "dictionary-space");
   }
 
@@ -1975,7 +2053,7 @@ public class GroupByQueryRunnerTest
         .overrideContext(ImmutableMap.of("maxOnDiskStorage", 1, "maxMergingDictionarySize", 1))
         .build();
 
-    List<Row> expectedResults = null;
+    List<ResultRow> expectedResults = null;
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       expectedException.expect(ResourceLimitExceededException.class);
       if (config.getMaxOnDiskStorage() > 0) {
@@ -1986,9 +2064,10 @@ public class GroupByQueryRunnerTest
       }
     } else {
       expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
-          GroupByQueryRunnerTestHelper.createExpectedRow(
+          makeRow(query, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
+          makeRow(query, "2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
+          makeRow(
+              query,
               "2011-04-01",
               "alias",
               "entertainment",
@@ -1997,16 +2076,17 @@ public class GroupByQueryRunnerTest
               "idx",
               158L
           ),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
+          makeRow(query, "2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
+          makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+          makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+          makeRow(query, "2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
+          makeRow(query, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
+          makeRow(query, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
 
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
-          GroupByQueryRunnerTestHelper.createExpectedRow(
+          makeRow(query, "2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
+          makeRow(query, "2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
+          makeRow(
+              query,
               "2011-04-02",
               "alias",
               "entertainment",
@@ -2015,16 +2095,16 @@ public class GroupByQueryRunnerTest
               "idx",
               166L
           ),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
+          makeRow(query, "2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
+          makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+          makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
+          makeRow(query, "2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+          makeRow(query, "2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
+          makeRow(query, "2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
       );
     }
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "disk-space");
   }
 
@@ -2100,10 +2180,11 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive0", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business0", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "automotive0", "rows", 1L, "idx", 135L),
+        makeRow(query, "2011-04-01", "alias", "business0", "rows", 1L, "idx", 118L),
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "entertainment0",
@@ -2112,16 +2193,17 @@ public class GroupByQueryRunnerTest
             "idx",
             158L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health0", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine0", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news0", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium0", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology0", "rows", 1L, "idx", 78L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel0", "rows", 1L, "idx", 119L),
+        makeRow(query, "2011-04-01", "alias", "health0", "rows", 1L, "idx", 120L),
+        makeRow(query, "2011-04-01", "alias", "mezzanine0", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "news0", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-01", "alias", "premium0", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-01", "alias", "technology0", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-01", "alias", "travel0", "rows", 1L, "idx", 119L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive0", "rows", 1L, "idx", 147L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business0", "rows", 1L, "idx", 112L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(query, "2011-04-02", "alias", "automotive0", "rows", 1L, "idx", 147L),
+        makeRow(query, "2011-04-02", "alias", "business0", "rows", 1L, "idx", 112L),
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "entertainment0",
@@ -2130,15 +2212,15 @@ public class GroupByQueryRunnerTest
             "idx",
             166L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health0", "rows", 1L, "idx", 113L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine0", "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news0", "rows", 1L, "idx", 114L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium0", "rows", 3L, "idx", 2505L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology0", "rows", 1L, "idx", 97L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel0", "rows", 1L, "idx", 126L)
+        makeRow(query, "2011-04-02", "alias", "health0", "rows", 1L, "idx", 113L),
+        makeRow(query, "2011-04-02", "alias", "mezzanine0", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-02", "alias", "news0", "rows", 1L, "idx", 114L),
+        makeRow(query, "2011-04-02", "alias", "premium0", "rows", 3L, "idx", 2505L),
+        makeRow(query, "2011-04-02", "alias", "technology0", "rows", 1L, "idx", 97L),
+        makeRow(query, "2011-04-02", "alias", "travel0", "rows", 1L, "idx", 126L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "rebucket-rename");
   }
 
@@ -2169,10 +2251,11 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive0", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business0", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "automotive0", "rows", 1L, "idx", 135L),
+        makeRow(query, "2011-04-01", "alias", "business0", "rows", 1L, "idx", 118L),
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "entertainment0",
@@ -2181,16 +2264,17 @@ public class GroupByQueryRunnerTest
             "idx",
             158L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health0", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine0", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news0", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium0", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology0", "rows", 1L, "idx", 78L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel0", "rows", 1L, "idx", 119L),
+        makeRow(query, "2011-04-01", "alias", "health0", "rows", 1L, "idx", 120L),
+        makeRow(query, "2011-04-01", "alias", "mezzanine0", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "news0", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-01", "alias", "premium0", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-01", "alias", "technology0", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-01", "alias", "travel0", "rows", 1L, "idx", 119L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive0", "rows", 1L, "idx", 147L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business0", "rows", 1L, "idx", 112L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(query, "2011-04-02", "alias", "automotive0", "rows", 1L, "idx", 147L),
+        makeRow(query, "2011-04-02", "alias", "business0", "rows", 1L, "idx", 112L),
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "entertainment0",
@@ -2199,15 +2283,15 @@ public class GroupByQueryRunnerTest
             "idx",
             166L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health0", "rows", 1L, "idx", 113L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine0", "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news0", "rows", 1L, "idx", 114L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium0", "rows", 3L, "idx", 2505L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology0", "rows", 1L, "idx", 97L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel0", "rows", 1L, "idx", 126L)
+        makeRow(query, "2011-04-02", "alias", "health0", "rows", 1L, "idx", 113L),
+        makeRow(query, "2011-04-02", "alias", "mezzanine0", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-02", "alias", "news0", "rows", 1L, "idx", 114L),
+        makeRow(query, "2011-04-02", "alias", "premium0", "rows", 3L, "idx", 2505L),
+        makeRow(query, "2011-04-02", "alias", "technology0", "rows", 1L, "idx", 97L),
+        makeRow(query, "2011-04-02", "alias", "travel0", "rows", 1L, "idx", 126L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "non-injective");
   }
 
@@ -2227,53 +2311,41 @@ public class GroupByQueryRunnerTest
     map.put("travel", "travel0");
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird).setDimensions(new ExtractionDimensionSpec(
-            "quality",
-            "alias",
-            new LookupExtractionFn(new MapLookupExtractor(map, false), true, null, true, false)
-        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(
+            new ExtractionDimensionSpec(
+                "quality",
+                "alias",
+                new LookupExtractionFn(new MapLookupExtractor(map, false), true, null, true, false)
+            )
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive0", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business0", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-01",
-            "alias",
-            "entertainment0",
-            "rows",
-            1L,
-            "idx",
-            158L
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health0", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine0", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news0", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium0", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology0", "rows", 1L, "idx", 78L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel0", "rows", 1L, "idx", 119L),
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "automotive0", "rows", 1L, "idx", 135L),
+        makeRow(query, "2011-04-01", "alias", "business0", "rows", 1L, "idx", 118L),
+        makeRow(query, "2011-04-01", "alias", "entertainment0", "rows", 1L, "idx", 158L),
+        makeRow(query, "2011-04-01", "alias", "health0", "rows", 1L, "idx", 120L),
+        makeRow(query, "2011-04-01", "alias", "mezzanine0", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "news0", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-01", "alias", "premium0", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-01", "alias", "technology0", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-01", "alias", "travel0", "rows", 1L, "idx", 119L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive0", "rows", 1L, "idx", 147L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business0", "rows", 1L, "idx", 112L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-02",
-            "alias",
-            "entertainment0",
-            "rows",
-            1L,
-            "idx",
-            166L
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health0", "rows", 1L, "idx", 113L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine0", "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news0", "rows", 1L, "idx", 114L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium0", "rows", 3L, "idx", 2505L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology0", "rows", 1L, "idx", 97L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel0", "rows", 1L, "idx", 126L)
+        makeRow(query, "2011-04-02", "alias", "automotive0", "rows", 1L, "idx", 147L),
+        makeRow(query, "2011-04-02", "alias", "business0", "rows", 1L, "idx", 112L),
+        makeRow(query, "2011-04-02", "alias", "entertainment0", "rows", 1L, "idx", 166L),
+        makeRow(query, "2011-04-02", "alias", "health0", "rows", 1L, "idx", 113L),
+        makeRow(query, "2011-04-02", "alias", "mezzanine0", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-02", "alias", "news0", "rows", 1L, "idx", 114L),
+        makeRow(query, "2011-04-02", "alias", "premium0", "rows", 3L, "idx", 2505L),
+        makeRow(query, "2011-04-02", "alias", "technology0", "rows", 1L, "idx", 97L),
+        makeRow(query, "2011-04-02", "alias", "travel0", "rows", 1L, "idx", 126L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "retain-missing");
   }
 
@@ -2301,45 +2373,29 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive0", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business0", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-01",
-            "alias",
-            "entertainment0",
-            "rows",
-            1L,
-            "idx",
-            158L
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health0", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine0", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news0", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium0", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology0", "rows", 1L, "idx", 78L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel0", "rows", 1L, "idx", 119L),
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "automotive0", "rows", 1L, "idx", 135L),
+        makeRow(query, "2011-04-01", "alias", "business0", "rows", 1L, "idx", 118L),
+        makeRow(query, "2011-04-01", "alias", "entertainment0", "rows", 1L, "idx", 158L),
+        makeRow(query, "2011-04-01", "alias", "health0", "rows", 1L, "idx", 120L),
+        makeRow(query, "2011-04-01", "alias", "mezzanine0", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "news0", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-01", "alias", "premium0", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-01", "alias", "technology0", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-01", "alias", "travel0", "rows", 1L, "idx", 119L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive0", "rows", 1L, "idx", 147L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business0", "rows", 1L, "idx", 112L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-02",
-            "alias",
-            "entertainment0",
-            "rows",
-            1L,
-            "idx",
-            166L
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health0", "rows", 1L, "idx", 113L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine0", "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news0", "rows", 1L, "idx", 114L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium0", "rows", 3L, "idx", 2505L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology0", "rows", 1L, "idx", 97L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel0", "rows", 1L, "idx", 126L)
+        makeRow(query, "2011-04-02", "alias", "automotive0", "rows", 1L, "idx", 147L),
+        makeRow(query, "2011-04-02", "alias", "business0", "rows", 1L, "idx", 112L),
+        makeRow(query, "2011-04-02", "alias", "entertainment0", "rows", 1L, "idx", 166L),
+        makeRow(query, "2011-04-02", "alias", "health0", "rows", 1L, "idx", 113L),
+        makeRow(query, "2011-04-02", "alias", "mezzanine0", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-02", "alias", "news0", "rows", 1L, "idx", 114L),
+        makeRow(query, "2011-04-02", "alias", "premium0", "rows", 3L, "idx", 2505L),
+        makeRow(query, "2011-04-02", "alias", "technology0", "rows", 1L, "idx", 97L),
+        makeRow(query, "2011-04-02", "alias", "travel0", "rows", 1L, "idx", 126L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "rename-and-missing-string");
   }
 
@@ -2366,10 +2422,11 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive0", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business0", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "automotive0", "rows", 1L, "idx", 135L),
+        makeRow(query, "2011-04-01", "alias", "business0", "rows", 1L, "idx", 118L),
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "entertainment0",
@@ -2378,16 +2435,17 @@ public class GroupByQueryRunnerTest
             "idx",
             158L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health0", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine0", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news0", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium0", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology0", "rows", 1L, "idx", 78L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel0", "rows", 1L, "idx", 119L),
+        makeRow(query, "2011-04-01", "alias", "health0", "rows", 1L, "idx", 120L),
+        makeRow(query, "2011-04-01", "alias", "mezzanine0", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "news0", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-01", "alias", "premium0", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-01", "alias", "technology0", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-01", "alias", "travel0", "rows", 1L, "idx", 119L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive0", "rows", 1L, "idx", 147L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business0", "rows", 1L, "idx", 112L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(query, "2011-04-02", "alias", "automotive0", "rows", 1L, "idx", 147L),
+        makeRow(query, "2011-04-02", "alias", "business0", "rows", 1L, "idx", 112L),
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "entertainment0",
@@ -2396,15 +2454,15 @@ public class GroupByQueryRunnerTest
             "idx",
             166L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health0", "rows", 1L, "idx", 113L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine0", "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news0", "rows", 1L, "idx", 114L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium0", "rows", 3L, "idx", 2505L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology0", "rows", 1L, "idx", 97L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel0", "rows", 1L, "idx", 126L)
+        makeRow(query, "2011-04-02", "alias", "health0", "rows", 1L, "idx", 113L),
+        makeRow(query, "2011-04-02", "alias", "mezzanine0", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-02", "alias", "news0", "rows", 1L, "idx", 114L),
+        makeRow(query, "2011-04-02", "alias", "premium0", "rows", 3L, "idx", 2505L),
+        makeRow(query, "2011-04-02", "alias", "technology0", "rows", 1L, "idx", 97L),
+        makeRow(query, "2011-04-02", "alias", "travel0", "rows", 1L, "idx", 126L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "simple-rename");
   }
 
@@ -2418,8 +2476,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
             "2011-04-01",
             "rows",
             26L,
@@ -2428,7 +2487,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "uniques");
   }
 
@@ -2450,8 +2509,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
             "2011-04-01",
             "rows",
             26L,
@@ -2460,7 +2520,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "unique-postagg-same-name");
   }
 
@@ -2477,8 +2537,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
             "2011-04-01",
             "rows",
             26L,
@@ -2487,7 +2548,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "cardinality");
   }
 
@@ -2508,9 +2569,10 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.monthGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-01-01", "market", "spot", "first", 100L, "last", 155L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-01-01", "market", "spot", "first", 100L, "last", 155L),
+        makeRow(
+            query,
             "2011-01-01",
             "market",
             "total_market",
@@ -2519,9 +2581,10 @@ public class GroupByQueryRunnerTest
             "last",
             1127L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-01-01", "market", "upfront", "first", 800L, "last", 943L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-02-01", "market", "spot", "first", 132L, "last", 114L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(query, "2011-01-01", "market", "upfront", "first", 800L, "last", 943L),
+        makeRow(query, "2011-02-01", "market", "spot", "first", 132L, "last", 114L),
+        makeRow(
+            query,
             "2011-02-01",
             "market",
             "total_market",
@@ -2530,7 +2593,8 @@ public class GroupByQueryRunnerTest
             "last",
             1292L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-02-01",
             "market",
             "upfront",
@@ -2539,8 +2603,9 @@ public class GroupByQueryRunnerTest
             "last",
             1101L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-03-01", "market", "spot", "first", 153L, "last", 125L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(query, "2011-03-01", "market", "spot", "first", 153L, "last", 125L),
+        makeRow(
+            query,
             "2011-03-01",
             "market",
             "total_market",
@@ -2549,7 +2614,8 @@ public class GroupByQueryRunnerTest
             "last",
             1366L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-03-01",
             "market",
             "upfront",
@@ -2558,8 +2624,9 @@ public class GroupByQueryRunnerTest
             "last",
             1063L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "market", "spot", "first", 135L, "last", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(query, "2011-04-01", "market", "spot", "first", 135L, "last", 120L),
+        makeRow(
+            query,
             "2011-04-01",
             "market",
             "total_market",
@@ -2568,10 +2635,10 @@ public class GroupByQueryRunnerTest
             "last",
             1029L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "market", "upfront", "first", 1447L, "last", 780L)
+        makeRow(query, "2011-04-01", "market", "upfront", "first", 1447L, "last", 780L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "first-last-aggs");
   }
 
@@ -2595,8 +2662,8 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = ImmutableList.of();
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    List<ResultRow> expectedResults = ImmutableList.of();
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     Assert.assertEquals(expectedResults, results);
   }
 
@@ -2628,24 +2695,24 @@ public class GroupByQueryRunnerTest
         .setDimensions(new ExtractionDimensionSpec("quality", "alias", nullExtractionFn))
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", null, "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "a", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "b", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "e", "rows", 1L, "idx", 158L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "h", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "n", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "p", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "t", "rows", 2L, "idx", 197L),
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", null, "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "a", "rows", 1L, "idx", 135L),
+        makeRow(query, "2011-04-01", "alias", "b", "rows", 1L, "idx", 118L),
+        makeRow(query, "2011-04-01", "alias", "e", "rows", 1L, "idx", 158L),
+        makeRow(query, "2011-04-01", "alias", "h", "rows", 1L, "idx", 120L),
+        makeRow(query, "2011-04-01", "alias", "n", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-01", "alias", "p", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-01", "alias", "t", "rows", 2L, "idx", 197L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", null, "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "a", "rows", 1L, "idx", 147L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "b", "rows", 1L, "idx", 112L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "e", "rows", 1L, "idx", 166L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "h", "rows", 1L, "idx", 113L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "n", "rows", 1L, "idx", 114L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "p", "rows", 3L, "idx", 2505L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "t", "rows", 2L, "idx", 223L)
+        makeRow(query, "2011-04-02", "alias", null, "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-02", "alias", "a", "rows", 1L, "idx", 147L),
+        makeRow(query, "2011-04-02", "alias", "b", "rows", 1L, "idx", 112L),
+        makeRow(query, "2011-04-02", "alias", "e", "rows", 1L, "idx", 166L),
+        makeRow(query, "2011-04-02", "alias", "h", "rows", 1L, "idx", 113L),
+        makeRow(query, "2011-04-02", "alias", "n", "rows", 1L, "idx", 114L),
+        makeRow(query, "2011-04-02", "alias", "p", "rows", 3L, "idx", 2505L),
+        makeRow(query, "2011-04-02", "alias", "t", "rows", 2L, "idx", 223L)
     );
 
     TestHelper.assertExpectedObjects(
@@ -2687,24 +2754,24 @@ public class GroupByQueryRunnerTest
         .setDimensions(new ExtractionDimensionSpec("quality", "alias", emptyStringExtractionFn))
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "a", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "b", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "e", "rows", 1L, "idx", 158L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "h", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "n", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "p", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "t", "rows", 2L, "idx", 197L),
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "a", "rows", 1L, "idx", 135L),
+        makeRow(query, "2011-04-01", "alias", "b", "rows", 1L, "idx", 118L),
+        makeRow(query, "2011-04-01", "alias", "e", "rows", 1L, "idx", 158L),
+        makeRow(query, "2011-04-01", "alias", "h", "rows", 1L, "idx", 120L),
+        makeRow(query, "2011-04-01", "alias", "n", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-01", "alias", "p", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-01", "alias", "t", "rows", 2L, "idx", 197L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "", "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "a", "rows", 1L, "idx", 147L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "b", "rows", 1L, "idx", 112L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "e", "rows", 1L, "idx", 166L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "h", "rows", 1L, "idx", 113L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "n", "rows", 1L, "idx", 114L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "p", "rows", 3L, "idx", 2505L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "t", "rows", 2L, "idx", 223L)
+        makeRow(query, "2011-04-02", "alias", "", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-02", "alias", "a", "rows", 1L, "idx", 147L),
+        makeRow(query, "2011-04-02", "alias", "b", "rows", 1L, "idx", 112L),
+        makeRow(query, "2011-04-02", "alias", "e", "rows", 1L, "idx", 166L),
+        makeRow(query, "2011-04-02", "alias", "h", "rows", 1L, "idx", 113L),
+        makeRow(query, "2011-04-02", "alias", "n", "rows", 1L, "idx", 114L),
+        makeRow(query, "2011-04-02", "alias", "p", "rows", 3L, "idx", 2505L),
+        makeRow(query, "2011-04-02", "alias", "t", "rows", 2L, "idx", 223L)
     );
 
     TestHelper.assertExpectedObjects(
@@ -2736,8 +2803,9 @@ public class GroupByQueryRunnerTest
         )
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             new DateTime("2011-03-31", tz),
             "alias",
             "automotive",
@@ -2746,7 +2814,8 @@ public class GroupByQueryRunnerTest
             "idx",
             135L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             new DateTime("2011-03-31", tz),
             "alias",
             "business",
@@ -2755,7 +2824,8 @@ public class GroupByQueryRunnerTest
             "idx",
             118L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             new DateTime("2011-03-31", tz),
             "alias",
             "entertainment",
@@ -2764,7 +2834,8 @@ public class GroupByQueryRunnerTest
             "idx",
             158L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             new DateTime("2011-03-31", tz),
             "alias",
             "health",
@@ -2773,7 +2844,8 @@ public class GroupByQueryRunnerTest
             "idx",
             120L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             new DateTime("2011-03-31", tz),
             "alias",
             "mezzanine",
@@ -2782,7 +2854,8 @@ public class GroupByQueryRunnerTest
             "idx",
             2870L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             new DateTime("2011-03-31", tz),
             "alias",
             "news",
@@ -2791,7 +2864,8 @@ public class GroupByQueryRunnerTest
             "idx",
             121L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             new DateTime("2011-03-31", tz),
             "alias",
             "premium",
@@ -2800,7 +2874,8 @@ public class GroupByQueryRunnerTest
             "idx",
             2900L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             new DateTime("2011-03-31", tz),
             "alias",
             "technology",
@@ -2809,7 +2884,8 @@ public class GroupByQueryRunnerTest
             "idx",
             78L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             new DateTime("2011-03-31", tz),
             "alias",
             "travel",
@@ -2819,7 +2895,8 @@ public class GroupByQueryRunnerTest
             119L
         ),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             new DateTime("2011-04-01", tz),
             "alias",
             "automotive",
@@ -2828,7 +2905,8 @@ public class GroupByQueryRunnerTest
             "idx",
             147L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             new DateTime("2011-04-01", tz),
             "alias",
             "business",
@@ -2837,7 +2915,8 @@ public class GroupByQueryRunnerTest
             "idx",
             112L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             new DateTime("2011-04-01", tz),
             "alias",
             "entertainment",
@@ -2846,7 +2925,8 @@ public class GroupByQueryRunnerTest
             "idx",
             166L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             new DateTime("2011-04-01", tz),
             "alias",
             "health",
@@ -2855,7 +2935,8 @@ public class GroupByQueryRunnerTest
             "idx",
             113L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             new DateTime("2011-04-01", tz),
             "alias",
             "mezzanine",
@@ -2864,7 +2945,8 @@ public class GroupByQueryRunnerTest
             "idx",
             2447L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             new DateTime("2011-04-01", tz),
             "alias",
             "news",
@@ -2873,7 +2955,8 @@ public class GroupByQueryRunnerTest
             "idx",
             114L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             new DateTime("2011-04-01", tz),
             "alias",
             "premium",
@@ -2882,7 +2965,8 @@ public class GroupByQueryRunnerTest
             "idx",
             2505L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             new DateTime("2011-04-01", tz),
             "alias",
             "technology",
@@ -2891,7 +2975,8 @@ public class GroupByQueryRunnerTest
             "idx",
             97L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             new DateTime("2011-04-01", tz),
             "alias",
             "travel",
@@ -2902,7 +2987,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "timezone");
   }
 
@@ -2920,10 +3005,10 @@ public class GroupByQueryRunnerTest
     final GroupByQuery allGranQuery = builder.copy().setGranularity(Granularities.ALL).build();
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<Row>()
+        new QueryRunner<ResultRow>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
+          public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -2942,36 +3027,36 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 319L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 2L, "idx", 216L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 2L, "idx", 221L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 2L, "idx", 177L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(fullQuery, "2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L),
+        makeRow(fullQuery, "2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
+        makeRow(fullQuery, "2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 319L),
+        makeRow(fullQuery, "2011-04-01", "alias", "health", "rows", 2L, "idx", 216L),
+        makeRow(fullQuery, "2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        makeRow(fullQuery, "2011-04-01", "alias", "news", "rows", 2L, "idx", 221L),
+        makeRow(fullQuery, "2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L),
+        makeRow(fullQuery, "2011-04-01", "alias", "technology", "rows", 2L, "idx", 177L),
+        makeRow(fullQuery, "2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
     ResponseContext context = ResponseContext.createEmpty();
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
+    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery)), "merged");
 
-    List<Row> allGranExpectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 2L, "idx", 269L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business", "rows", 2L, "idx", 217L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 2L, "idx", 319L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health", "rows", 2L, "idx", 216L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 2L, "idx", 221L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 6L, "idx", 4416L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 2L, "idx", 177L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L)
+    List<ResultRow> allGranExpectedResults = Arrays.asList(
+        makeRow(allGranQuery, "2011-04-02", "alias", "automotive", "rows", 2L, "idx", 269L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "business", "rows", 2L, "idx", 217L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "entertainment", "rows", 2L, "idx", 319L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "health", "rows", 2L, "idx", 216L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "news", "rows", 2L, "idx", 221L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "premium", "rows", 6L, "idx", 4416L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "technology", "rows", 2L, "idx", 177L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
     TestHelper.assertExpectedObjects(
         allGranExpectedResults,
-        mergedRunner.run(QueryPlus.wrap(allGranQuery), context),
+        mergedRunner.run(QueryPlus.wrap(allGranQuery)),
         "merged"
     );
   }
@@ -2996,19 +3081,100 @@ public class GroupByQueryRunnerTest
 
     final GroupByQuery fullQuery = builder.build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 319L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 2L, "idx", 216L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 2L, "idx", 221L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 2L, "idx", 177L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            fullQuery,
+            "2011-04-01",
+            "alias",
+            "automotive",
+            "rows",
+            2L,
+            "idx",
+            269L
+        ),
+        makeRow(
+            fullQuery,
+            "2011-04-01",
+            "alias",
+            "business",
+            "rows",
+            2L,
+            "idx",
+            217L
+        ),
+        makeRow(
+            fullQuery,
+            "2011-04-01",
+            "alias",
+            "entertainment",
+            "rows",
+            2L,
+            "idx",
+            319L
+        ),
+        makeRow(
+            fullQuery,
+            "2011-04-01",
+            "alias",
+            "health",
+            "rows",
+            2L,
+            "idx",
+            216L
+        ),
+        makeRow(
+            fullQuery,
+            "2011-04-01",
+            "alias",
+            "mezzanine",
+            "rows",
+            6L,
+            "idx",
+            4420L
+        ),
+        makeRow(
+            fullQuery,
+            "2011-04-01",
+            "alias",
+            "news",
+            "rows",
+            2L,
+            "idx",
+            221L
+        ),
+        makeRow(
+            fullQuery,
+            "2011-04-01",
+            "alias",
+            "premium",
+            "rows",
+            6L,
+            "idx",
+            4416L
+        ),
+        makeRow(
+            fullQuery,
+            "2011-04-01",
+            "alias",
+            "technology",
+            "rows",
+            2L,
+            "idx",
+            177L
+        ),
+        makeRow(
+            fullQuery,
+            "2011-04-01",
+            "alias",
+            "travel",
+            "rows",
+            2L,
+            "idx",
+            243L
+        )
     );
 
-    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
+    QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner);
 
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit),
@@ -3032,25 +3198,25 @@ public class GroupByQueryRunnerTest
 
     GroupByQuery fullQuery = builder.build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(fullQuery, "2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
+        makeRow(fullQuery, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+        makeRow(fullQuery, "2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
+        makeRow(fullQuery, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
+        makeRow(fullQuery, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+        makeRow(fullQuery, "2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
+        makeRow(fullQuery, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
+        makeRow(fullQuery, "2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
+        makeRow(fullQuery, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
+        makeRow(fullQuery, "2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+        makeRow(fullQuery, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+        makeRow(fullQuery, "2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
+        makeRow(fullQuery, "2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
+        makeRow(fullQuery, "2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
     );
 
-    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
+    QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner);
 
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit),
@@ -3085,25 +3251,25 @@ public class GroupByQueryRunnerTest
 
     GroupByQuery fullQuery = builder.build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 6090L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 6030L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 333L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 285L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 255L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 252L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 251L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 248L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 165L),
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(fullQuery, "2011-04-01", "alias", "premium", "rows", 3L, "idx", 6090L),
+        makeRow(fullQuery, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 6030L),
+        makeRow(fullQuery, "2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 333L),
+        makeRow(fullQuery, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 285L),
+        makeRow(fullQuery, "2011-04-01", "alias", "news", "rows", 1L, "idx", 255L),
+        makeRow(fullQuery, "2011-04-01", "alias", "health", "rows", 1L, "idx", 252L),
+        makeRow(fullQuery, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 251L),
+        makeRow(fullQuery, "2011-04-01", "alias", "business", "rows", 1L, "idx", 248L),
+        makeRow(fullQuery, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 165L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 5262L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 5141L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 348L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 309L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 265L)
+        makeRow(fullQuery, "2011-04-02", "alias", "premium", "rows", 3L, "idx", 5262L),
+        makeRow(fullQuery, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 5141L),
+        makeRow(fullQuery, "2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 348L),
+        makeRow(fullQuery, "2011-04-02", "alias", "automotive", "rows", 1L, "idx", 309L),
+        makeRow(fullQuery, "2011-04-02", "alias", "travel", "rows", 1L, "idx", 265L)
     );
 
-    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
+    QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner);
 
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit),
@@ -3136,45 +3302,34 @@ public class GroupByQueryRunnerTest
         new DefaultLimitSpec(OrderByColumnSpec.descending("rows", "idx"), null),
         };
 
-    final Comparator<Row> idxComparator =
-        new Comparator<Row>()
-        {
-          @Override
-          public int compare(Row o1, Row o2)
-          {
-            return Float.compare(o1.getMetric("idx").floatValue(), o2.getMetric("idx").floatValue());
-          }
-        };
+    GroupByQuery baseQuery = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04")
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .build();
 
-    Comparator<Row> rowsIdxComparator =
-        new Comparator<Row>()
-        {
-
-          @Override
-          public int compare(Row o1, Row o2)
-          {
-            int value = Float.compare(o1.getMetric("rows").floatValue(), o2.getMetric("rows").floatValue());
-            if (value != 0) {
-              return value;
-            }
-
-            return idxComparator.compare(o1, o2);
-          }
-        };
-
-    List<Row> allResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 319L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 2L, "idx", 216L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 2L, "idx", 221L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 2L, "idx", 177L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
+    List<ResultRow> allResults = Arrays.asList(
+        makeRow(baseQuery, "2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L),
+        makeRow(baseQuery, "2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
+        makeRow(baseQuery, "2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 319L),
+        makeRow(baseQuery, "2011-04-01", "alias", "health", "rows", 2L, "idx", 216L),
+        makeRow(baseQuery, "2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        makeRow(baseQuery, "2011-04-01", "alias", "news", "rows", 2L, "idx", 221L),
+        makeRow(baseQuery, "2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L),
+        makeRow(baseQuery, "2011-04-01", "alias", "technology", "rows", 2L, "idx", 177L),
+        makeRow(baseQuery, "2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    List<List<Row>> expectedResults = Lists.newArrayList(
+    final int idxPosition = baseQuery.getResultRowPositionLookup().getInt("idx");
+    final int rowsPosition = baseQuery.getResultRowPositionLookup().getInt("rows");
+
+    Comparator<ResultRow> idxComparator = Comparator.comparing(row -> ((Number) row.get(idxPosition)).floatValue());
+    Comparator<ResultRow> rowsComparator = Comparator.comparing(row -> ((Number) row.get(rowsPosition)).floatValue());
+    Comparator<ResultRow> rowsIdxComparator = Ordering.from(rowsComparator).thenComparing(idxComparator);
+
+    List<List<ResultRow>> expectedResults = Lists.newArrayList(
         Ordering.from(idxComparator).sortedCopy(allResults),
         Ordering.from(rowsIdxComparator).sortedCopy(allResults),
         Ordering.from(idxComparator).reverse().sortedCopy(allResults),
@@ -3182,27 +3337,21 @@ public class GroupByQueryRunnerTest
     );
 
     for (int i = 0; i < orderBySpecs.length; ++i) {
-      doTestMergeResultsWithOrderBy(orderBySpecs[i], expectedResults.get(i));
+      doTestMergeResultsWithOrderBy(baseQuery, orderBySpecs[i], expectedResults.get(i));
     }
   }
 
-  private void doTestMergeResultsWithOrderBy(LimitSpec orderBySpec, List<Row> expectedResults)
+  private void doTestMergeResultsWithOrderBy(
+      GroupByQuery baseQuery,
+      LimitSpec limitSpec,
+      List<ResultRow> expectedResults
+  )
   {
-    GroupByQuery.Builder builder = makeQueryBuilder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
-        .setLimitSpec(orderBySpec);
-
-    final GroupByQuery fullQuery = builder.build();
-
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<Row>()
+        new QueryRunner<ResultRow>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
+          public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -3221,7 +3370,8 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery)), "merged");
+    final GroupByQuery query = baseQuery.withLimitSpec(limitSpec);
+    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(query)), "merged");
   }
 
   @Test
@@ -3241,25 +3391,24 @@ public class GroupByQueryRunnerTest
 
     final GroupByQuery query = builder.build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 2L, "idx", 177L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 2L, "idx", 221L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 2L, "idx", 216L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 319L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L),
+        makeRow(query, "2011-04-01", "alias", "technology", "rows", 2L, "idx", 177L),
+        makeRow(query, "2011-04-01", "alias", "news", "rows", 2L, "idx", 221L),
+        makeRow(query, "2011-04-01", "alias", "health", "rows", 2L, "idx", 216L),
+        makeRow(query, "2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 319L),
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
+        makeRow(query, "2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L),
+        makeRow(query, "2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L),
+        makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L)
     );
 
-    ResponseContext context = ResponseContext.createEmpty();
-    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
+    QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner);
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query)), "no-limit");
 
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, 5),
-        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build()), context),
+        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build())),
         "limited"
     );
 
@@ -3270,7 +3419,8 @@ public class GroupByQueryRunnerTest
     );
     builder.setLimit(Integer.MAX_VALUE).setAggregatorSpecs(aggregatorSpecs);
 
-    expectedResults = GroupByQueryRunnerTestHelper.createExpectedRows(
+    expectedResults = makeRows(
+        builder.build(),
         new String[]{"__time", "alias", "rows", "idx"},
         new Object[]{"2011-04-01", "travel", 2L, 365.4876403808594D},
         new Object[]{"2011-04-01", "technology", 2L, 267.3737487792969D},
@@ -3285,12 +3435,12 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(
         expectedResults,
-        mergeRunner.run(QueryPlus.wrap(builder.build()), context),
+        mergeRunner.run(QueryPlus.wrap(builder.build())),
         "no-limit"
     );
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, 5),
-        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build()), context),
+        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build())),
         "limited"
     );
 
@@ -3309,12 +3459,12 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(
         expectedResults,
-        mergeRunner.run(QueryPlus.wrap(builder.build()), context),
+        mergeRunner.run(QueryPlus.wrap(builder.build())),
         "no-limit"
     );
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, 5),
-        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build()), context),
+        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build())),
         "limited"
     );
   }
@@ -3333,24 +3483,23 @@ public class GroupByQueryRunnerTest
 
     final GroupByQuery query = builder.build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 2L, "idx", 177L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 2L, "idx", 221L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 2L, "idx", 216L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 319L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L),
+        makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        makeRow(query, "2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L),
+        makeRow(query, "2011-04-01", "alias", "technology", "rows", 2L, "idx", 177L),
+        makeRow(query, "2011-04-01", "alias", "news", "rows", 2L, "idx", 221L),
+        makeRow(query, "2011-04-01", "alias", "health", "rows", 2L, "idx", 216L),
+        makeRow(query, "2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 319L),
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
+        makeRow(query, "2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L)
     );
 
-    ResponseContext context = ResponseContext.createEmpty();
-    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
+    QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner);
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query)), "no-limit");
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, 5),
-        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build()), context),
+        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build())),
         "limited"
     );
   }
@@ -3369,7 +3518,8 @@ public class GroupByQueryRunnerTest
 
     GroupByQuery query = builder.build();
 
-    List<Row> expectedResults = GroupByQueryRunnerTestHelper.createExpectedRows(
+    List<ResultRow> expectedResults = makeRows(
+        query,
         new String[]{"__time", "alias", "rows", "idx"},
         new Object[]{"2011-04-01", "mezzanine", 6L, 4423.6533203125D},
         new Object[]{"2011-04-01", "premium", 6L, 4418.61865234375D},
@@ -3382,12 +3532,11 @@ public class GroupByQueryRunnerTest
         new Object[]{"2011-04-01", "technology", 2L, 178.24917602539062D}
     );
 
-    ResponseContext context = ResponseContext.createEmpty();
-    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
+    QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner);
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query)), "no-limit");
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, 5),
-        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build()), context),
+        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build())),
         "limited"
     );
   }
@@ -3414,24 +3563,23 @@ public class GroupByQueryRunnerTest
 
     final GroupByQuery query = builder.build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 319L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 2L, "idx", 216L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 2L, "idx", 221L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 2L, "idx", 177L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        makeRow(query, "2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L),
+        makeRow(query, "2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L),
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
+        makeRow(query, "2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 319L),
+        makeRow(query, "2011-04-01", "alias", "health", "rows", 2L, "idx", 216L),
+        makeRow(query, "2011-04-01", "alias", "news", "rows", 2L, "idx", 221L),
+        makeRow(query, "2011-04-01", "alias", "technology", "rows", 2L, "idx", 177L),
+        makeRow(query, "2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    ResponseContext context = ResponseContext.createEmpty();
-    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
+    QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner);
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query)), "no-limit");
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, 5),
-        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build()), context),
+        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build())),
         "limited"
     );
   }
@@ -3454,22 +3602,25 @@ public class GroupByQueryRunnerTest
         ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             "marketalias",
             "upfront",
             "rows",
             186L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             "marketalias",
             "total_market",
             "rows",
             186L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             "marketalias",
             "spot",
@@ -3478,7 +3629,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
   }
 
@@ -3503,19 +3654,20 @@ public class GroupByQueryRunnerTest
         ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "market", "upfront", "rows", 186L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "1970-01-01T00:00:00.000Z", "market", "upfront", "rows", 186L),
+        makeRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             "market",
             "total_market",
             "rows",
             186L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "market", "spot", "rows", 837L)
+        makeRow(query, "1970-01-01T00:00:00.000Z", "market", "spot", "rows", 837L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
   }
 
@@ -3548,8 +3700,9 @@ public class GroupByQueryRunnerTest
         )
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             "market",
             "spot",
@@ -3558,7 +3711,8 @@ public class GroupByQueryRunnerTest
             QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
             QueryRunnerTestHelper.UNIQUES_9
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             "market",
             "upfront",
@@ -3567,7 +3721,8 @@ public class GroupByQueryRunnerTest
             QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
             QueryRunnerTestHelper.UNIQUES_2
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             "market",
             "total_market",
@@ -3578,7 +3733,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
   }
 
@@ -3613,8 +3768,9 @@ public class GroupByQueryRunnerTest
         )
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             "market",
             "spot",
@@ -3625,7 +3781,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
   }
 
@@ -3663,8 +3819,9 @@ public class GroupByQueryRunnerTest
         )
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             "market",
             "spot",
@@ -3675,7 +3832,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
   }
 
@@ -3710,8 +3867,9 @@ public class GroupByQueryRunnerTest
         )
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             "market",
             "spot",
@@ -3720,7 +3878,8 @@ public class GroupByQueryRunnerTest
             QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
             QueryRunnerTestHelper.UNIQUES_9
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             "market",
             "upfront",
@@ -3729,7 +3888,8 @@ public class GroupByQueryRunnerTest
             QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
             QueryRunnerTestHelper.UNIQUES_2
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             "market",
             "total_market",
@@ -3740,7 +3900,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
   }
 
@@ -3777,28 +3937,28 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health0000", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health09", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health20", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health55", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health105", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health999", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel47", "rows", 1L, "idx", 158L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel123", "rows", 1L, "idx", 78L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel555", "rows", 1L, "idx", 119L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health0000", "rows", 1L, "idx", 114L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health09", "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health20", "rows", 1L, "idx", 112L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health55", "rows", 1L, "idx", 113L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health105", "rows", 1L, "idx", 147L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health999", "rows", 3L, "idx", 2505L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel47", "rows", 1L, "idx", 166L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel123", "rows", 1L, "idx", 97L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel555", "rows", 1L, "idx", 126L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "health0000", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-01", "alias", "health09", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "health20", "rows", 1L, "idx", 118L),
+        makeRow(query, "2011-04-01", "alias", "health55", "rows", 1L, "idx", 120L),
+        makeRow(query, "2011-04-01", "alias", "health105", "rows", 1L, "idx", 135L),
+        makeRow(query, "2011-04-01", "alias", "health999", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-01", "alias", "travel47", "rows", 1L, "idx", 158L),
+        makeRow(query, "2011-04-01", "alias", "travel123", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-01", "alias", "travel555", "rows", 1L, "idx", 119L),
+        makeRow(query, "2011-04-02", "alias", "health0000", "rows", 1L, "idx", 114L),
+        makeRow(query, "2011-04-02", "alias", "health09", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-02", "alias", "health20", "rows", 1L, "idx", 112L),
+        makeRow(query, "2011-04-02", "alias", "health55", "rows", 1L, "idx", 113L),
+        makeRow(query, "2011-04-02", "alias", "health105", "rows", 1L, "idx", 147L),
+        makeRow(query, "2011-04-02", "alias", "health999", "rows", 3L, "idx", 2505L),
+        makeRow(query, "2011-04-02", "alias", "travel47", "rows", 1L, "idx", 166L),
+        makeRow(query, "2011-04-02", "alias", "travel123", "rows", 1L, "idx", 97L),
+        makeRow(query, "2011-04-02", "alias", "travel555", "rows", 1L, "idx", 126L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "alphanumeric-dimension-order");
   }
 
@@ -3836,26 +3996,26 @@ public class GroupByQueryRunnerTest
         .overrideContext(ImmutableMap.of("sortByDimsFirst", true))
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "1", "rows", 1L, "idx", 119L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "1", "rows", 1L, "idx", 126L),
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "1", "rows", 1L, "idx", 119L),
+        makeRow(query, "2011-04-02", "alias", "1", "rows", 1L, "idx", 126L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "2", "rows", 1L, "idx", 78L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "2", "rows", 1L, "idx", 97L),
+        makeRow(query, "2011-04-01", "alias", "2", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-02", "alias", "2", "rows", 1L, "idx", 97L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "3", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "3", "rows", 3L, "idx", 2505L),
+        makeRow(query, "2011-04-01", "alias", "3", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-02", "alias", "3", "rows", 3L, "idx", 2505L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "4", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "4", "rows", 1L, "idx", 114L),
+        makeRow(query, "2011-04-01", "alias", "4", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-02", "alias", "4", "rows", 1L, "idx", 114L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "5", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "5", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-01", "alias", "5", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-02", "alias", "5", "rows", 3L, "idx", 2447L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "6", "rows", 1L, "idx", 120L)
+        makeRow(query, "2011-04-01", "alias", "6", "rows", 1L, "idx", 120L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "lookup-limit");
   }
 
@@ -3882,12 +4042,12 @@ public class GroupByQueryRunnerTest
         ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01T00:00:00.000Z", "market", "spot", "rows", 9L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02T00:00:00.000Z", "market", "spot", "rows", 9L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01T00:00:00.000Z", "market", "spot", "rows", 9L),
+        makeRow(query, "2011-04-02T00:00:00.000Z", "market", "spot", "rows", 9L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     Iterator resultsIter = results.iterator();
     Iterator expectedResultsIter = expectedResults.iterator();
 
@@ -3903,31 +4063,6 @@ public class GroupByQueryRunnerTest
   @Test
   public void testPostAggMergedHavingSpec()
   {
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-01",
-            "alias",
-            "mezzanine",
-            "rows",
-            6L,
-            "index",
-            4420L,
-            QueryRunnerTestHelper.addRowsIndexConstantMetric,
-            (double) (6L + 4420L + 1L)
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-01",
-            "alias",
-            "premium",
-            "rows",
-            6L,
-            "index",
-            4416L,
-            QueryRunnerTestHelper.addRowsIndexConstantMetric,
-            (double) (6L + 4416L + 1L)
-        )
-    );
-
     GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
@@ -3942,12 +4077,38 @@ public class GroupByQueryRunnerTest
         );
 
     final GroupByQuery fullQuery = builder.build();
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            fullQuery,
+            "2011-04-01",
+            "alias",
+            "mezzanine",
+            "rows",
+            6L,
+            "index",
+            4420L,
+            QueryRunnerTestHelper.addRowsIndexConstantMetric,
+            (double) (6L + 4420L + 1L)
+        ),
+        makeRow(
+            fullQuery,
+            "2011-04-01",
+            "alias",
+            "premium",
+            "rows",
+            6L,
+            "index",
+            4416L,
+            QueryRunnerTestHelper.addRowsIndexConstantMetric,
+            (double) (6L + 4416L + 1L)
+        )
+    );
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<Row>()
+        new QueryRunner<ResultRow>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
+          public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -3986,56 +4147,17 @@ public class GroupByQueryRunnerTest
             )
         );
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-01-25",
-            "alias",
-            "business",
-            "rows",
-            3L,
-            "index",
-            312.38165283203125
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-01-25",
-            "alias",
-            "news",
-            "rows",
-            3L,
-            "index",
-            312.7834167480469
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-01-25",
-            "alias",
-            "technology",
-            "rows",
-            3L,
-            "index",
-            324.6412353515625
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-01-25",
-            "alias",
-            "travel",
-            "rows",
-            3L,
-            "index",
-            393.36322021484375
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-01-25",
-            "alias",
-            "health",
-            "rows",
-            3L,
-            "index",
-            511.2996826171875
-        )
+    GroupByQuery fullQuery = builder.build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(fullQuery, "2011-01-25", "alias", "business", "rows", 3L, "index", 312.38165283203125),
+        makeRow(fullQuery, "2011-01-25", "alias", "news", "rows", 3L, "index", 312.7834167480469),
+        makeRow(fullQuery, "2011-01-25", "alias", "technology", "rows", 3L, "index", 324.6412353515625),
+        makeRow(fullQuery, "2011-01-25", "alias", "travel", "rows", 3L, "index", 393.36322021484375),
+        makeRow(fullQuery, "2011-01-25", "alias", "health", "rows", 3L, "index", 511.2996826171875)
     );
 
-    GroupByQuery fullQuery = builder.build();
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, fullQuery);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, fullQuery);
     TestHelper.assertExpectedObjects(
         expectedResults,
         results,
@@ -4046,31 +4168,6 @@ public class GroupByQueryRunnerTest
   @Test
   public void testPostAggHavingSpec()
   {
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-01",
-            "alias",
-            "mezzanine",
-            "rows",
-            6L,
-            "index",
-            4420L,
-            QueryRunnerTestHelper.addRowsIndexConstantMetric,
-            (double) (6L + 4420L + 1L)
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-01",
-            "alias",
-            "premium",
-            "rows",
-            6L,
-            "index",
-            4416L,
-            QueryRunnerTestHelper.addRowsIndexConstantMetric,
-            (double) (6L + 4416L + 1L)
-        )
-    );
-
     GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
@@ -4087,6 +4184,34 @@ public class GroupByQueryRunnerTest
         );
 
     final GroupByQuery fullQuery = builder.build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            fullQuery,
+            "2011-04-01",
+            "alias",
+            "mezzanine",
+            "rows",
+            6L,
+            "index",
+            4420L,
+            QueryRunnerTestHelper.addRowsIndexConstantMetric,
+            (double) (6L + 4420L + 1L)
+        ),
+        makeRow(
+            fullQuery,
+            "2011-04-01",
+            "alias",
+            "premium",
+            "rows",
+            6L,
+            "index",
+            4416L,
+            QueryRunnerTestHelper.addRowsIndexConstantMetric,
+            (double) (6L + 4416L + 1L)
+        )
+    );
+
     TestHelper.assertExpectedObjects(
         expectedResults,
         GroupByQueryRunnerTestHelper.runQuery(factory, runner, fullQuery),
@@ -4098,13 +4223,6 @@ public class GroupByQueryRunnerTest
   @Test
   public void testHavingSpec()
   {
-
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L)
-    );
-
     GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
@@ -4121,6 +4239,13 @@ public class GroupByQueryRunnerTest
         );
 
     final GroupByQuery fullQuery = builder.build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(fullQuery, "2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
+        makeRow(fullQuery, "2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        makeRow(fullQuery, "2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L)
+    );
+
     TestHelper.assertExpectedObjects(
         expectedResults,
         GroupByQueryRunnerTestHelper.runQuery(factory, runner, fullQuery),
@@ -4131,12 +4256,6 @@ public class GroupByQueryRunnerTest
   @Test
   public void testDimFilterHavingSpec()
   {
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L)
-    );
-
     final DimFilterHavingSpec havingSpec = new DimFilterHavingSpec(
         new AndDimFilter(
             ImmutableList.of(
@@ -4161,6 +4280,13 @@ public class GroupByQueryRunnerTest
         .setHavingSpec(havingSpec);
 
     final GroupByQuery fullQuery = builder.build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(fullQuery, "2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
+        makeRow(fullQuery, "2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        makeRow(fullQuery, "2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L)
+    );
+
     TestHelper.assertExpectedObjects(
         expectedResults,
         GroupByQueryRunnerTestHelper.runQuery(factory, runner, fullQuery),
@@ -4185,12 +4311,6 @@ public class GroupByQueryRunnerTest
         JavaScriptConfig.getEnabledInstance()
     );
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L)
-    );
-
     final DimFilterHavingSpec havingSpec = new DimFilterHavingSpec(
         new OrDimFilter(
             ImmutableList.of(
@@ -4210,6 +4330,13 @@ public class GroupByQueryRunnerTest
         .setHavingSpec(havingSpec);
 
     final GroupByQuery fullQuery = builder.build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(fullQuery, "2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
+        makeRow(fullQuery, "2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        makeRow(fullQuery, "2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L)
+    );
+
     TestHelper.assertExpectedObjects(
         expectedResults,
         GroupByQueryRunnerTestHelper.runQuery(factory, runner, fullQuery),
@@ -4220,12 +4347,6 @@ public class GroupByQueryRunnerTest
   @Test
   public void testMergedHavingSpec()
   {
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L)
-    );
-
     GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
@@ -4243,11 +4364,17 @@ public class GroupByQueryRunnerTest
 
     GroupByQuery fullQuery = builder.build();
 
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(fullQuery, "2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
+        makeRow(fullQuery, "2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        makeRow(fullQuery, "2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L)
+    );
+
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<Row>()
+        new QueryRunner<ResultRow>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
+          public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -4272,42 +4399,6 @@ public class GroupByQueryRunnerTest
   @Test
   public void testMergedPostAggHavingSpec()
   {
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-01",
-            "alias",
-            "business",
-            "rows",
-            2L,
-            "idx",
-            217L,
-            "rows_times_10",
-            20.0
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-01",
-            "alias",
-            "mezzanine",
-            "rows",
-            6L,
-            "idx",
-            4420L,
-            "rows_times_10",
-            60.0
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-01",
-            "alias",
-            "premium",
-            "rows",
-            6L,
-            "idx",
-            4416L,
-            "rows_times_10",
-            60.0
-        )
-    );
-
     GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
@@ -4341,13 +4432,26 @@ public class GroupByQueryRunnerTest
             )
         );
 
-    GroupByQuery fullQuery = builder.build();
+    GroupByQuery query = builder.build();
+
+    // Same query, but with expressions instead of arithmetic.
+    final GroupByQuery expressionQuery = query.withPostAggregatorSpecs(
+        Collections.singletonList(
+            new ExpressionPostAggregator("rows_times_10", "rows * 10.0", null, TestExprMacroTable.INSTANCE)
+        )
+    );
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 2L, "idx", 217L, "rows_times_10", 20.0),
+        makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L, "rows_times_10", 60.0),
+        makeRow(query, "2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L, "rows_times_10", 60.0)
+    );
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<Row>()
+        new QueryRunner<ResultRow>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
+          public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -4374,14 +4478,8 @@ public class GroupByQueryRunnerTest
             factory.getToolchest().mergeResults(
                 factory.getToolchest().preMergeQueryDecoration(mergedRunner)
             )
-        ).run(QueryPlus.wrap(fullQuery), context),
+        ).run(QueryPlus.wrap(query)),
         "merged"
-    );
-
-    fullQuery = fullQuery.withPostAggregatorSpecs(
-        Collections.singletonList(
-            new ExpressionPostAggregator("rows_times_10", "rows * 10.0", null, TestExprMacroTable.INSTANCE)
-        )
     );
 
     TestHelper.assertExpectedObjects(
@@ -4390,7 +4488,7 @@ public class GroupByQueryRunnerTest
             factory.getToolchest().mergeResults(
                 factory.getToolchest().preMergeQueryDecoration(mergedRunner)
             )
-        ).run(QueryPlus.wrap(fullQuery), context),
+        ).run(QueryPlus.wrap(expressionQuery)),
         "merged"
     );
   }
@@ -4398,82 +4496,6 @@ public class GroupByQueryRunnerTest
   @Test
   public void testCustomAggregatorHavingSpec()
   {
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-01",
-            "alias",
-            "automotive",
-            "rows",
-            1L,
-            "idxDouble",
-            135.885094d
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-01",
-            "alias",
-            "entertainment",
-            "rows",
-            1L,
-            "idxDouble",
-            158.747224d
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-01",
-            "alias",
-            "mezzanine",
-            "rows",
-            3L,
-            "idxDouble",
-            2871.8866900000003d
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-01",
-            "alias",
-            "premium",
-            "rows",
-            3L,
-            "idxDouble",
-            2900.798647d
-        ),
-
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-02",
-            "alias",
-            "automotive",
-            "rows",
-            1L,
-            "idxDouble",
-            147.425935d
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-02",
-            "alias",
-            "entertainment",
-            "rows",
-            1L,
-            "idxDouble",
-            166.016049d
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-02",
-            "alias",
-            "mezzanine",
-            "rows",
-            3L,
-            "idxDouble",
-            2448.830613d
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-02",
-            "alias",
-            "premium",
-            "rows",
-            3L,
-            "idxDouble",
-            2506.415148d
-        )
-    );
-
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
@@ -4492,6 +4514,17 @@ public class GroupByQueryRunnerTest
             )
         )
         .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "automotive", "rows", 1L, "idxDouble", 135.885094d),
+        makeRow(query, "2011-04-01", "alias", "entertainment", "rows", 1L, "idxDouble", 158.747224d),
+        makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idxDouble", 2871.8866900000003d),
+        makeRow(query, "2011-04-01", "alias", "premium", "rows", 3L, "idxDouble", 2900.798647d),
+        makeRow(query, "2011-04-02", "alias", "automotive", "rows", 1L, "idxDouble", 147.425935d),
+        makeRow(query, "2011-04-02", "alias", "entertainment", "rows", 1L, "idxDouble", 166.016049d),
+        makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idxDouble", 2448.830613d),
+        makeRow(query, "2011-04-02", "alias", "premium", "rows", 3L, "idxDouble", 2506.415148d)
+    );
 
     TestHelper.assertExpectedObjects(
         expectedResults,
@@ -4513,11 +4546,11 @@ public class GroupByQueryRunnerTest
 
     final GroupByQuery query = builder.build();
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "automotive", "rows", 2L)
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(query, "2011-04-01", "quality", "automotive", "rows", 2L)
     );
 
-    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
+    QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query)), "no-limit");
   }
 
@@ -4533,8 +4566,9 @@ public class GroupByQueryRunnerTest
 
     final GroupByQuery query = builder.build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "billy",
             null,
@@ -4543,8 +4577,9 @@ public class GroupByQueryRunnerTest
             "rows",
             2L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "business", "rows", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(query, "2011-04-01", "billy", null, "quality", "business", "rows", 2L),
+        makeRow(
+            query,
             "2011-04-01",
             "billy",
             null,
@@ -4553,11 +4588,12 @@ public class GroupByQueryRunnerTest
             "rows",
             2L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "health", "rows", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "mezzanine", "rows", 6L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "news", "rows", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "premium", "rows", 6L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(query, "2011-04-01", "billy", null, "quality", "health", "rows", 2L),
+        makeRow(query, "2011-04-01", "billy", null, "quality", "mezzanine", "rows", 6L),
+        makeRow(query, "2011-04-01", "billy", null, "quality", "news", "rows", 2L),
+        makeRow(query, "2011-04-01", "billy", null, "quality", "premium", "rows", 6L),
+        makeRow(
+            query,
             "2011-04-01",
             "billy",
             null,
@@ -4566,10 +4602,10 @@ public class GroupByQueryRunnerTest
             "rows",
             2L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "travel", "rows", 2L)
+        makeRow(query, "2011-04-01", "billy", null, "quality", "travel", "rows", 2L)
     );
 
-    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
+    QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query)), "no-limit");
   }
 
@@ -4603,30 +4639,30 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
+        makeRow(query, "2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
+        makeRow(query, "2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
+        makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
+        makeRow(query, "2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
+        makeRow(query, "2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
+        makeRow(query, "2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
+        makeRow(query, "2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
+        makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
+        makeRow(query, "2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+        makeRow(query, "2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
+        makeRow(query, "2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
     );
 
     // Subqueries are handled by the ToolChest
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "sub-query");
   }
 
@@ -4666,30 +4702,30 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
+        makeRow(query, "2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
+        makeRow(query, "2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
+        makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
+        makeRow(query, "2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
+        makeRow(query, "2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
+        makeRow(query, "2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
+        makeRow(query, "2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
+        makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
+        makeRow(query, "2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+        makeRow(query, "2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
+        makeRow(query, "2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
     );
 
     // Subqueries are handled by the ToolChest
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-multiple-intervals");
   }
 
@@ -4730,30 +4766,30 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
+        makeRow(query, "2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
+        makeRow(query, "2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
+        makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
+        makeRow(query, "2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
+        makeRow(query, "2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
+        makeRow(query, "2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
+        makeRow(query, "2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
+        makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
+        makeRow(query, "2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+        makeRow(query, "2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
+        makeRow(query, "2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
     );
 
     // Subqueries are handled by the ToolChest
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-multiple-intervals");
   }
 
@@ -4794,13 +4830,13 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "a", "rows", 13L, "idx", 6619L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "a", "rows", 13L, "idx", 5827L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "a", "rows", 13L, "idx", 6619L),
+        makeRow(query, "2011-04-02", "alias", "a", "rows", 13L, "idx", 5827L)
     );
 
     // Subqueries are handled by the ToolChest
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-extractionfn");
   }
 
@@ -4833,7 +4869,8 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = GroupByQueryRunnerTestHelper.createExpectedRows(
+    List<ResultRow> expectedResults = makeRows(
+        query,
         new String[]{"__time", "rows", "idx", "indexMaxPlusTen"},
         new Object[]{"2011-04-01", 9L, 2900.0, 2930.0},
         new Object[]{"2011-04-02", 9L, 2505.0, 2535.0}
@@ -4856,7 +4893,8 @@ public class GroupByQueryRunnerTest
         .build();
     query = (GroupByQuery) query.withDataSource(new QueryDataSource(subquery));
 
-    expectedResults = GroupByQueryRunnerTestHelper.createExpectedRows(
+    expectedResults = makeRows(
+        query,
         new String[]{"__time", "rows", "idx", "indexMaxPlusTen"},
         new Object[]{"2011-04-01", 9L, 21.0, 2930.0},
         new Object[]{"2011-04-02", 9L, 2.0, 2535.0}
@@ -4903,16 +4941,16 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "idx1", 2900.0, "idx2", 2900.0,
-                                                       "idx3", 5800.0, "idx4", 5800.0
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "idx1", 2900.0, "idx2", 2900.0,
+                "idx3", 5800.0, "idx4", 5800.0
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "idx1", 2505.0, "idx2", 2505.0,
-                                                       "idx3", 5010.0, "idx4", 5010.0
+        makeRow(query, "2011-04-02", "idx1", 2505.0, "idx2", 2505.0,
+                "idx3", 5010.0, "idx4", 5010.0
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-multiple-aggs");
   }
 
@@ -4950,12 +4988,12 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "idx", 2900.0),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "idx", 2505.0)
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "idx", 2900.0),
+        makeRow(query, "2011-04-02", "idx", 2505.0)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-filter");
   }
 
@@ -4977,11 +5015,11 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "idx", 2505.0)
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(query, "2011-04-02", "idx", 2505.0)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-different-intervals");
   }
 
@@ -5068,7 +5106,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     Assert.assertFalse(results.iterator().hasNext());
   }
 
@@ -5121,8 +5159,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "automotive",
@@ -5133,7 +5172,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1135L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "business",
@@ -5144,7 +5184,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1118L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "entertainment",
@@ -5155,7 +5196,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1158L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "health",
@@ -5166,7 +5208,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1120L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "mezzanine",
@@ -5177,7 +5220,8 @@ public class GroupByQueryRunnerTest
             "idx",
             3870L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "news",
@@ -5188,7 +5232,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1121L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "premium",
@@ -5199,7 +5244,8 @@ public class GroupByQueryRunnerTest
             "idx",
             3900L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "technology",
@@ -5210,7 +5256,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1078L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "travel",
@@ -5222,7 +5269,8 @@ public class GroupByQueryRunnerTest
             1119L
         ),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "automotive",
@@ -5233,7 +5281,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1147L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "business",
@@ -5244,7 +5293,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1112L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "entertainment",
@@ -5255,7 +5305,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1166L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "health",
@@ -5266,7 +5317,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1113L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "mezzanine",
@@ -5277,7 +5329,8 @@ public class GroupByQueryRunnerTest
             "idx",
             3447L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "news",
@@ -5288,7 +5341,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1114L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "premium",
@@ -5299,7 +5353,8 @@ public class GroupByQueryRunnerTest
             "idx",
             3505L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "technology",
@@ -5310,7 +5365,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1097L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "travel",
@@ -5324,7 +5380,7 @@ public class GroupByQueryRunnerTest
     );
 
     // Subqueries are handled by the ToolChest
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-postaggs");
   }
 
@@ -5350,8 +5406,16 @@ public class GroupByQueryRunnerTest
             )
         )
         .setHavingSpec(
-            new BaseHavingSpec()
+            new HavingSpec()
             {
+              private GroupByQuery query;
+
+              @Override
+              public void setQuery(GroupByQuery query)
+              {
+                this.query = query;
+              }
+
               @Override
               public byte[] getCacheKey()
               {
@@ -5359,9 +5423,11 @@ public class GroupByQueryRunnerTest
               }
 
               @Override
-              public boolean eval(Row row)
+              public boolean eval(ResultRow row)
               {
-                return (row.getMetric("idx_subpostagg").floatValue() < 3800);
+                final String field = "idx_subpostagg";
+                final int p = query.getResultRowPositionLookup().getInt(field);
+                return (Rows.objectToNumber(field, row.get(p)).floatValue() < 3800);
               }
             }
         )
@@ -5391,8 +5457,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "automotive",
@@ -5403,7 +5470,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1135L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "business",
@@ -5414,7 +5482,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1118L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "entertainment",
@@ -5425,7 +5494,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1158L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "health",
@@ -5436,7 +5506,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1120L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "news",
@@ -5447,7 +5518,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1121L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "technology",
@@ -5458,7 +5530,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1078L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "travel",
@@ -5470,7 +5543,8 @@ public class GroupByQueryRunnerTest
             1119L
         ),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "automotive",
@@ -5481,7 +5555,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1147L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "business",
@@ -5492,7 +5567,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1112L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "entertainment",
@@ -5503,7 +5579,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1166L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "health",
@@ -5514,7 +5591,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1113L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "mezzanine",
@@ -5525,7 +5603,8 @@ public class GroupByQueryRunnerTest
             "idx",
             3447L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "news",
@@ -5536,7 +5615,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1114L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "premium",
@@ -5547,7 +5627,8 @@ public class GroupByQueryRunnerTest
             "idx",
             3505L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "technology",
@@ -5558,7 +5639,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1097L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "travel",
@@ -5572,7 +5654,7 @@ public class GroupByQueryRunnerTest
     );
 
     // Subqueries are handled by the ToolChest
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-postaggs");
   }
 
@@ -5618,8 +5700,10 @@ public class GroupByQueryRunnerTest
             )
         )
         .setHavingSpec(
-            new BaseHavingSpec()
+            new HavingSpec()
             {
+              private GroupByQuery query;
+
               @Override
               public byte[] getCacheKey()
               {
@@ -5627,9 +5711,17 @@ public class GroupByQueryRunnerTest
               }
 
               @Override
-              public boolean eval(Row row)
+              public void setQuery(GroupByQuery query)
               {
-                return (row.getMetric("idx_subpostagg").floatValue() < 3800);
+                this.query = query;
+              }
+
+              @Override
+              public boolean eval(ResultRow row)
+              {
+                final String field = "idx_subpostagg";
+                final int p = query.getResultRowPositionLookup().getInt(field);
+                return (Rows.objectToNumber(field, row.get(p)).floatValue() < 3800);
               }
             }
         )
@@ -5671,8 +5763,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "travel",
@@ -5685,7 +5778,8 @@ public class GroupByQueryRunnerTest
             "js_outer_agg",
             123.92274475097656
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "technology",
@@ -5698,7 +5792,8 @@ public class GroupByQueryRunnerTest
             "js_outer_agg",
             82.62254333496094
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "news",
@@ -5711,7 +5806,8 @@ public class GroupByQueryRunnerTest
             "js_outer_agg",
             125.58358001708984
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "health",
@@ -5724,7 +5820,8 @@ public class GroupByQueryRunnerTest
             "js_outer_agg",
             124.13470458984375
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "entertainment",
@@ -5740,7 +5837,7 @@ public class GroupByQueryRunnerTest
     );
 
     // Subqueries are handled by the ToolChest
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-multi-aggs");
   }
 
@@ -5764,10 +5861,10 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "rows", 837L)
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(query, "1970-01-01", "rows", 837L)
     );
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-filter-agg");
   }
 
@@ -5801,18 +5898,18 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-02-01", "rows", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-02-02", "rows", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-02-03", "rows", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-03-01", "rows", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-03-02", "rows", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-03-03", "rows", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "rows", 13L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "rows", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-03", "rows", 0L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-02-01", "rows", 0L),
+        makeRow(query, "2011-02-02", "rows", 0L),
+        makeRow(query, "2011-02-03", "rows", 0L),
+        makeRow(query, "2011-03-01", "rows", 0L),
+        makeRow(query, "2011-03-02", "rows", 0L),
+        makeRow(query, "2011-03-03", "rows", 0L),
+        makeRow(query, "2011-04-01", "rows", 13L),
+        makeRow(query, "2011-04-02", "rows", 0L),
+        makeRow(query, "2011-04-03", "rows", 0L)
     );
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-time-filter");
   }
 
@@ -5834,10 +5931,10 @@ public class GroupByQueryRunnerTest
         .overrideContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 10000))
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "count", 18L)
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(query, "2011-04-01", "count", 18L)
     );
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-timeout");
   }
 
@@ -5859,10 +5956,10 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "count", 18L)
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(query, "2011-04-01", "count", 18L)
     );
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-virtual");
   }
 
@@ -5889,10 +5986,10 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "car", QueryRunnerTestHelper.UNIQUES_9)
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(query, "1970-01-01", "car", QueryRunnerTestHelper.UNIQUES_9)
     );
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-cardinality");
   }
 
@@ -5929,10 +6026,10 @@ public class GroupByQueryRunnerTest
       expectedException.expectMessage("Unknown column in order clause");
       GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     } else {
-      List<Row> expectedResults = Collections.singletonList(
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "count", 18L)
+      List<ResultRow> expectedResults = Collections.singletonList(
+          makeRow(query, "2011-04-01", "count", 18L)
       );
-      Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+      Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
       TestHelper.assertExpectedObjects(expectedResults, results, "subquery-count-agg");
     }
   }
@@ -5963,28 +6060,28 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "automotive", "js_agg", 139D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "business", "js_agg", 122D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "entertainment", "js_agg", 162D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "health", "js_agg", 124D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "mezzanine", "js_agg", 2893D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "news", "js_agg", 125D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "premium", "js_agg", 2923D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "technology", "js_agg", 82D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "travel", "js_agg", 123D),
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "quality", "automotive", "js_agg", 139D),
+        makeRow(query, "2011-04-01", "quality", "business", "js_agg", 122D),
+        makeRow(query, "2011-04-01", "quality", "entertainment", "js_agg", 162D),
+        makeRow(query, "2011-04-01", "quality", "health", "js_agg", 124D),
+        makeRow(query, "2011-04-01", "quality", "mezzanine", "js_agg", 2893D),
+        makeRow(query, "2011-04-01", "quality", "news", "js_agg", 125D),
+        makeRow(query, "2011-04-01", "quality", "premium", "js_agg", 2923D),
+        makeRow(query, "2011-04-01", "quality", "technology", "js_agg", 82D),
+        makeRow(query, "2011-04-01", "quality", "travel", "js_agg", 123D),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "automotive", "js_agg", 151D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "business", "js_agg", 116D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "entertainment", "js_agg", 170D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "health", "js_agg", 117D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "mezzanine", "js_agg", 2470D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "news", "js_agg", 118D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "premium", "js_agg", 2528D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "technology", "js_agg", 101D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "travel", "js_agg", 130D)
+        makeRow(query, "2011-04-02", "quality", "automotive", "js_agg", 151D),
+        makeRow(query, "2011-04-02", "quality", "business", "js_agg", 116D),
+        makeRow(query, "2011-04-02", "quality", "entertainment", "js_agg", 170D),
+        makeRow(query, "2011-04-02", "quality", "health", "js_agg", 117D),
+        makeRow(query, "2011-04-02", "quality", "mezzanine", "js_agg", 2470D),
+        makeRow(query, "2011-04-02", "quality", "news", "js_agg", 118D),
+        makeRow(query, "2011-04-02", "quality", "premium", "js_agg", 2528D),
+        makeRow(query, "2011-04-02", "quality", "technology", "js_agg", 101D),
+        makeRow(query, "2011-04-02", "quality", "travel", "js_agg", 130D)
     );
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-javascript");
   }
 
@@ -6014,28 +6111,28 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "automotive", "js_agg", 136D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "business", "js_agg", 119D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "entertainment", "js_agg", 159D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "health", "js_agg", 121D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "mezzanine", "js_agg", 2873D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "news", "js_agg", 122D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "premium", "js_agg", 2903D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "technology", "js_agg", 79D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "travel", "js_agg", 120D),
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "quality", "automotive", "js_agg", 136D),
+        makeRow(query, "2011-04-01", "quality", "business", "js_agg", 119D),
+        makeRow(query, "2011-04-01", "quality", "entertainment", "js_agg", 159D),
+        makeRow(query, "2011-04-01", "quality", "health", "js_agg", 121D),
+        makeRow(query, "2011-04-01", "quality", "mezzanine", "js_agg", 2873D),
+        makeRow(query, "2011-04-01", "quality", "news", "js_agg", 122D),
+        makeRow(query, "2011-04-01", "quality", "premium", "js_agg", 2903D),
+        makeRow(query, "2011-04-01", "quality", "technology", "js_agg", 79D),
+        makeRow(query, "2011-04-01", "quality", "travel", "js_agg", 120D),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "automotive", "js_agg", 148D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "business", "js_agg", 113D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "entertainment", "js_agg", 167D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "health", "js_agg", 114D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "mezzanine", "js_agg", 2450D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "news", "js_agg", 115D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "premium", "js_agg", 2508D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "technology", "js_agg", 98D),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "quality", "travel", "js_agg", 127D)
+        makeRow(query, "2011-04-02", "quality", "automotive", "js_agg", 148D),
+        makeRow(query, "2011-04-02", "quality", "business", "js_agg", 113D),
+        makeRow(query, "2011-04-02", "quality", "entertainment", "js_agg", 167D),
+        makeRow(query, "2011-04-02", "quality", "health", "js_agg", 114D),
+        makeRow(query, "2011-04-02", "quality", "mezzanine", "js_agg", 2450D),
+        makeRow(query, "2011-04-02", "quality", "news", "js_agg", 115D),
+        makeRow(query, "2011-04-02", "quality", "premium", "js_agg", 2508D),
+        makeRow(query, "2011-04-02", "quality", "technology", "js_agg", 98D),
+        makeRow(query, "2011-04-02", "quality", "travel", "js_agg", 127D)
     );
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-javascript");
   }
 
@@ -6066,8 +6163,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "automotive",
@@ -6078,7 +6176,8 @@ public class GroupByQueryRunnerTest
             "uniq",
             1.0002442201269182
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "business",
@@ -6089,7 +6188,8 @@ public class GroupByQueryRunnerTest
             "uniq",
             1.0002442201269182
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "entertainment",
@@ -6100,7 +6200,8 @@ public class GroupByQueryRunnerTest
             "uniq",
             1.0002442201269182
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "health",
@@ -6111,7 +6212,8 @@ public class GroupByQueryRunnerTest
             "uniq",
             1.0002442201269182
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "mezzanine",
@@ -6122,7 +6224,8 @@ public class GroupByQueryRunnerTest
             "uniq",
             1.0002442201269182
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "news",
@@ -6133,7 +6236,8 @@ public class GroupByQueryRunnerTest
             "uniq",
             1.0002442201269182
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "premium",
@@ -6144,7 +6248,8 @@ public class GroupByQueryRunnerTest
             "uniq",
             1.0002442201269182
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "technology",
@@ -6155,7 +6260,8 @@ public class GroupByQueryRunnerTest
             "uniq",
             1.0002442201269182
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "travel",
@@ -6169,7 +6275,7 @@ public class GroupByQueryRunnerTest
     );
 
     // Subqueries are handled by the ToolChest
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-hyperunique");
   }
 
@@ -6210,8 +6316,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
             "2011-04-01",
             "rows",
             26L,
@@ -6225,7 +6332,7 @@ public class GroupByQueryRunnerTest
     );
 
     // Subqueries are handled by the ToolChest
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-hyperunique");
   }
 
@@ -6259,14 +6366,14 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.monthGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-01-01", "first", 100L, "last", 943L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-02-01", "first", 132L, "last", 1101L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-03-01", "first", 153L, "last", 1063L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "first", 135L, "last", 780L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-01-01", "first", 100L, "last", 943L),
+        makeRow(query, "2011-02-01", "first", 132L, "last", 1101L),
+        makeRow(query, "2011-03-01", "first", 153L, "last", 1063L),
+        makeRow(query, "2011-04-01", "first", 135L, "last", 780L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-firstlast");
   }
 
@@ -6283,7 +6390,12 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ValueType.STRING, TestExprMacroTable.INSTANCE))
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "alias",
+            "quality",
+            ValueType.STRING,
+            TestExprMacroTable.INSTANCE
+        ))
         .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("quality", "quality"),
             new DefaultDimensionSpec("market", "market"),
@@ -6305,8 +6417,9 @@ public class GroupByQueryRunnerTest
         ))
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "automotive",
@@ -6319,7 +6432,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             135.88510131835938d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "business",
@@ -6332,7 +6446,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             118.57034
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "entertainment",
@@ -6345,7 +6460,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             158.747224
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "health",
@@ -6358,7 +6474,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             120.134704
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "mezzanine",
@@ -6371,7 +6488,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             2871.8866900000003d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "news",
@@ -6384,7 +6502,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             121.58358d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "premium",
@@ -6397,7 +6516,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             2900.798647d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "technology",
@@ -6410,7 +6530,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             78.622547d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "travel",
@@ -6424,7 +6545,8 @@ public class GroupByQueryRunnerTest
             119.922742d
         ),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "automotive",
@@ -6437,7 +6559,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             147.42593d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "business",
@@ -6450,7 +6573,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             112.987027d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "entertainment",
@@ -6463,7 +6587,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             166.016049d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "health",
@@ -6476,7 +6601,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             113.446008d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "mezzanine",
@@ -6489,7 +6615,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             2448.830613d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "news",
@@ -6502,7 +6629,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             114.290141d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "premium",
@@ -6515,7 +6643,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             2506.415148d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "technology",
@@ -6528,7 +6657,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             97.387433d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "travel",
@@ -6542,7 +6672,8 @@ public class GroupByQueryRunnerTest
             126.411364d
         ),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "market",
             "spot",
@@ -6555,7 +6686,8 @@ public class GroupByQueryRunnerTest
             "idx",
             640L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "market",
             "total_market",
@@ -6568,7 +6700,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1314L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "market",
             "upfront",
@@ -6581,7 +6714,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1447L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "market",
             "spot",
@@ -6594,7 +6728,8 @@ public class GroupByQueryRunnerTest
             "idx",
             265L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "market",
             "total_market",
@@ -6607,7 +6742,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1522L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "market",
             "upfront",
@@ -6620,7 +6756,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1234L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "market",
             "spot",
@@ -6634,7 +6771,8 @@ public class GroupByQueryRunnerTest
             197L
         ),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "market",
             "spot",
@@ -6647,7 +6785,8 @@ public class GroupByQueryRunnerTest
             "idx",
             648L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "market",
             "total_market",
@@ -6660,7 +6799,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1193L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "market",
             "upfront",
@@ -6673,7 +6813,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1144L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "market",
             "spot",
@@ -6686,7 +6827,8 @@ public class GroupByQueryRunnerTest
             "idx",
             249L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "market",
             "total_market",
@@ -6699,7 +6841,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1321L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "market",
             "upfront",
@@ -6712,7 +6855,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1049L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "market",
             "spot",
@@ -6726,7 +6870,8 @@ public class GroupByQueryRunnerTest
             223L
         ),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "idxDouble",
             6626.151575318359,
@@ -6737,7 +6882,8 @@ public class GroupByQueryRunnerTest
             "idx",
             6619L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "idxDouble",
             5833.209713,
@@ -6750,7 +6896,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subtotal");
   }
 
@@ -6758,15 +6904,22 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithSubtotalsSpecWithRenamedDimensionAndFilter()
   {
+    // Cannot vectorize due to expression virtual columns.
+    cannotVectorize();
+
     if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       return;
     }
 
-    GroupByQuery query = GroupByQuery
-        .builder()
+    GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ValueType.STRING, TestExprMacroTable.INSTANCE))
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "alias",
+            "quality",
+            ValueType.STRING,
+            TestExprMacroTable.INSTANCE
+        ))
         .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("quality", "quality"),
             new DefaultDimensionSpec("market", "market"),
@@ -6788,8 +6941,9 @@ public class GroupByQueryRunnerTest
         ))
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "alias_renamed",
             "automotive",
@@ -6802,7 +6956,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             135.88510131835938d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias_renamed",
             "automotive",
@@ -6816,7 +6971,8 @@ public class GroupByQueryRunnerTest
             147.42593d
         ),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "rows",
             1L,
@@ -6827,7 +6983,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             135.88510131835938d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "rows",
             1L,
@@ -6840,7 +6997,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subtotal");
   }
 
@@ -6874,8 +7031,9 @@ public class GroupByQueryRunnerTest
         ))
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "idxDouble",
             135.885094,
@@ -6888,7 +7046,8 @@ public class GroupByQueryRunnerTest
             "idx",
             135L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "idxDouble",
             118.57034,
@@ -6901,7 +7060,8 @@ public class GroupByQueryRunnerTest
             "idx",
             118L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "idxDouble",
             158.747224,
@@ -6914,7 +7074,8 @@ public class GroupByQueryRunnerTest
             "idx",
             158L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "idxDouble",
             120.134704,
@@ -6927,7 +7088,8 @@ public class GroupByQueryRunnerTest
             "idx",
             120L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "idxDouble",
             2871.8866900000003,
@@ -6940,7 +7102,8 @@ public class GroupByQueryRunnerTest
             "idx",
             2870L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "idxDouble",
             121.583581,
@@ -6953,7 +7116,8 @@ public class GroupByQueryRunnerTest
             "idx",
             121L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "idxDouble",
             2900.798647,
@@ -6966,7 +7130,8 @@ public class GroupByQueryRunnerTest
             "idx",
             2900L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "idxDouble",
             78.622547,
@@ -6979,7 +7144,8 @@ public class GroupByQueryRunnerTest
             "idx",
             78L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "idxDouble",
             119.922742,
@@ -6992,7 +7158,8 @@ public class GroupByQueryRunnerTest
             "idx",
             119L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "idxDouble",
             147.425935,
@@ -7005,7 +7172,8 @@ public class GroupByQueryRunnerTest
             "idx",
             147L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "idxDouble",
             112.987027,
@@ -7018,7 +7186,8 @@ public class GroupByQueryRunnerTest
             "idx",
             112L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "idxDouble",
             166.016049,
@@ -7031,7 +7200,8 @@ public class GroupByQueryRunnerTest
             "idx",
             166L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "idxDouble",
             113.446008,
@@ -7044,7 +7214,8 @@ public class GroupByQueryRunnerTest
             "idx",
             113L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "idxDouble",
             2448.830613,
@@ -7057,7 +7228,8 @@ public class GroupByQueryRunnerTest
             "idx",
             2447L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "idxDouble",
             114.290141,
@@ -7070,7 +7242,8 @@ public class GroupByQueryRunnerTest
             "idx",
             114L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "idxDouble",
             2506.415148,
@@ -7083,7 +7256,8 @@ public class GroupByQueryRunnerTest
             "idx",
             2505L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "idxDouble",
             97.387433,
@@ -7096,7 +7270,8 @@ public class GroupByQueryRunnerTest
             "idx",
             97L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "idxDouble",
             126.411364,
@@ -7110,7 +7285,8 @@ public class GroupByQueryRunnerTest
             126L
         ),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "market",
             "spot",
@@ -7123,7 +7299,8 @@ public class GroupByQueryRunnerTest
             "idx",
             640L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "market",
             "total_market",
@@ -7136,7 +7313,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1314L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "market",
             "upfront",
@@ -7149,7 +7327,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1447L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "market",
             "spot",
@@ -7162,7 +7341,8 @@ public class GroupByQueryRunnerTest
             "idx",
             265L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "market",
             "total_market",
@@ -7175,7 +7355,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1522L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "market",
             "upfront",
@@ -7188,7 +7369,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1234L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "market",
             "spot",
@@ -7201,7 +7383,8 @@ public class GroupByQueryRunnerTest
             "idx",
             197L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "market",
             "spot",
@@ -7214,7 +7397,8 @@ public class GroupByQueryRunnerTest
             "idx",
             648L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "market",
             "total_market",
@@ -7227,7 +7411,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1193L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "market",
             "upfront",
@@ -7240,7 +7425,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1144L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "market",
             "spot",
@@ -7253,7 +7439,8 @@ public class GroupByQueryRunnerTest
             "idx",
             249L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "market",
             "total_market",
@@ -7266,7 +7453,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1321L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "market",
             "upfront",
@@ -7279,7 +7467,8 @@ public class GroupByQueryRunnerTest
             "idx",
             1049L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "market",
             "spot",
@@ -7293,7 +7482,8 @@ public class GroupByQueryRunnerTest
             223L
         ),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "idxDouble",
             6626.151569,
@@ -7304,7 +7494,8 @@ public class GroupByQueryRunnerTest
             "idx",
             6619L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02T00:00:00.000Z",
             "idxDouble",
             5833.209717999999,
@@ -7317,7 +7508,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subtotal-long-dim");
   }
 
@@ -7353,8 +7544,9 @@ public class GroupByQueryRunnerTest
         .setLimit(1)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "technology",
@@ -7367,7 +7559,8 @@ public class GroupByQueryRunnerTest
             "idxDouble",
             78.622547d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "market",
             "spot",
@@ -7380,7 +7573,8 @@ public class GroupByQueryRunnerTest
             "idx",
             197L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01T00:00:00.000Z",
             "idxDouble",
             6626.151575318359,
@@ -7393,7 +7587,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subtotal-order-limit");
   }
 
@@ -7414,8 +7608,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
             "2011-04-01",
             "rows",
             26L,
@@ -7426,7 +7621,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "time");
   }
 
@@ -7460,8 +7655,9 @@ public class GroupByQueryRunnerTest
         )
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Friday",
@@ -7474,7 +7670,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             13337.574157714844
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Monday",
@@ -7487,7 +7684,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             13675.738830566406
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Saturday",
@@ -7500,7 +7698,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             13611.751281738281
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Sunday",
@@ -7513,7 +7712,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             13703.541015625
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Thursday",
@@ -7526,7 +7726,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             14406.127197265625
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Tuesday",
@@ -7539,7 +7740,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             13317.471435546875
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Wednesday",
@@ -7552,7 +7754,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             14398.368591308594
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Friday",
@@ -7565,7 +7768,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             27324.8623046875
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Monday",
@@ -7578,7 +7782,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             27646.58447265625
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Saturday",
@@ -7591,7 +7796,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             27847.83154296875
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Sunday",
@@ -7604,7 +7810,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             24818.223876953125
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Thursday",
@@ -7617,7 +7824,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             28591.748901367188
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Tuesday",
@@ -7630,7 +7838,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             26995.280639648438
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Wednesday",
@@ -7645,7 +7854,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "time-extraction");
   }
 
@@ -7713,8 +7922,9 @@ public class GroupByQueryRunnerTest
         )
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             null,
@@ -7727,7 +7937,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             14398.368591308594
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Friday",
@@ -7740,7 +7951,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             13337.574157714844
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Monday",
@@ -7753,7 +7965,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             13675.738830566406
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Saturday",
@@ -7766,7 +7979,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             13611.751281738281
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Sunday",
@@ -7779,7 +7993,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             13703.541015625
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Thursday",
@@ -7792,7 +8007,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             14406.127197265625
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Tuesday",
@@ -7805,7 +8021,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             13317.471435546875
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             null,
@@ -7818,7 +8035,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             29014.5751953125
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Friday",
@@ -7831,7 +8049,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             27324.8623046875
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Monday",
@@ -7844,7 +8063,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             27646.58447265625
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Saturday",
@@ -7857,7 +8077,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             27847.83154296875
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Sunday",
@@ -7870,7 +8091,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             24818.223876953125
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Thursday",
@@ -7883,7 +8105,8 @@ public class GroupByQueryRunnerTest
             "addRowsIndexConstant",
             28591.748901367188
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01",
             "dayOfWeek",
             "Tuesday",
@@ -7898,19 +8121,30 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "time-extraction");
   }
 
   @Test
   public void testBySegmentResults()
   {
+    GroupByQuery.Builder builder = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04")
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
+        .setContext(ImmutableMap.of("bySegment", true));
+    final GroupByQuery fullQuery = builder.build();
+
     int segmentCount = 32;
     Result<BySegmentResultValue> singleSegmentResult = new Result<>(
         DateTimes.of("2011-01-12T00:00:00.000Z"),
         new BySegmentResultValueClass<>(
             Collections.singletonList(
-                GroupByQueryRunnerTestHelper.createExpectedRow(
+                makeRow(
+                    fullQuery,
                     "2011-04-01",
                     "alias",
                     "mezzanine",
@@ -7928,18 +8162,9 @@ public class GroupByQueryRunnerTest
     for (int i = 0; i < segmentCount; i++) {
       bySegmentResults.add(singleSegmentResult);
     }
-    GroupByQuery.Builder builder = makeQueryBuilder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
-        .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
-        .overrideContext(ImmutableMap.of("bySegment", true));
-    final GroupByQuery fullQuery = builder.build();
     QueryToolChest toolChest = factory.getToolchest();
 
-    List<QueryRunner<Row>> singleSegmentRunners = new ArrayList<>();
+    List<QueryRunner<ResultRow>> singleSegmentRunners = new ArrayList<>();
     for (int i = 0; i < segmentCount; i++) {
       singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
     }
@@ -7963,15 +8188,31 @@ public class GroupByQueryRunnerTest
   @Test
   public void testBySegmentResultsUnOptimizedDimextraction()
   {
-    // Cannot vectorize due to extraction dimension spec.
-    cannotVectorize();
+    GroupByQuery.Builder builder = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04").setDimensions(new ExtractionDimensionSpec(
+            "quality",
+            "alias",
+            new LookupExtractionFn(
+                new MapLookupExtractor(ImmutableMap.of("mezzanine", "mezzanine0"), false),
+                false,
+                null,
+                false,
+                false
+            )
+        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
+        .setContext(ImmutableMap.of("bySegment", true));
+    final GroupByQuery fullQuery = builder.build();
 
     int segmentCount = 32;
     Result<BySegmentResultValue> singleSegmentResult = new Result<>(
         DateTimes.of("2011-01-12T00:00:00.000Z"),
         new BySegmentResultValueClass<>(
             Collections.singletonList(
-                GroupByQueryRunnerTestHelper.createExpectedRow(
+                makeRow(
+                    fullQuery,
                     "2011-04-01",
                     "alias",
                     "mezzanine0",
@@ -7989,26 +8230,9 @@ public class GroupByQueryRunnerTest
     for (int i = 0; i < segmentCount; i++) {
       bySegmentResults.add(singleSegmentResult);
     }
-    GroupByQuery.Builder builder = makeQueryBuilder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setInterval("2011-04-02/2011-04-04").setDimensions(new ExtractionDimensionSpec(
-            "quality",
-            "alias",
-            new LookupExtractionFn(
-                new MapLookupExtractor(ImmutableMap.of("mezzanine", "mezzanine0"), false),
-                false,
-                null,
-                false,
-                false
-            )
-        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
-        .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
-        .overrideContext(ImmutableMap.of("bySegment", true));
-    final GroupByQuery fullQuery = builder.build();
     QueryToolChest toolChest = factory.getToolchest();
 
-    List<QueryRunner<Row>> singleSegmentRunners = new ArrayList<>();
+    List<QueryRunner<ResultRow>> singleSegmentRunners = new ArrayList<>();
     for (int i = 0; i < segmentCount; i++) {
       singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
     }
@@ -8031,29 +8255,6 @@ public class GroupByQueryRunnerTest
   @Test
   public void testBySegmentResultsOptimizedDimextraction()
   {
-    int segmentCount = 32;
-    Result<BySegmentResultValue> singleSegmentResult = new Result<>(
-        DateTimes.of("2011-01-12T00:00:00.000Z"),
-        new BySegmentResultValueClass<>(
-            Collections.singletonList(
-                GroupByQueryRunnerTestHelper.createExpectedRow(
-                    "2011-04-01",
-                    "alias",
-                    "mezzanine0",
-                    "rows",
-                    6L,
-                    "idx",
-                    4420L
-                )
-            ),
-            QueryRunnerTestHelper.segmentId.toString(),
-            Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
-        )
-    );
-    List<Result> bySegmentResults = new ArrayList<>();
-    for (int i = 0; i < segmentCount; i++) {
-      bySegmentResults.add(singleSegmentResult);
-    }
     GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04").setDimensions(new ExtractionDimensionSpec(
@@ -8071,9 +8272,34 @@ public class GroupByQueryRunnerTest
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
         .overrideContext(ImmutableMap.of("bySegment", true));
     final GroupByQuery fullQuery = builder.build();
+
+    int segmentCount = 32;
+    Result<BySegmentResultValue<ResultRow>> singleSegmentResult = new Result<>(
+        DateTimes.of("2011-01-12T00:00:00.000Z"),
+        new BySegmentResultValueClass<>(
+            Collections.singletonList(
+                makeRow(
+                    fullQuery,
+                    "2011-04-01",
+                    "alias",
+                    "mezzanine0",
+                    "rows",
+                    6L,
+                    "idx",
+                    4420L
+                )
+            ),
+            QueryRunnerTestHelper.segmentId.toString(),
+            Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+        )
+    );
+    List<Result> bySegmentResults = new ArrayList<>();
+    for (int i = 0; i < segmentCount; i++) {
+      bySegmentResults.add(singleSegmentResult);
+    }
     QueryToolChest toolChest = factory.getToolchest();
 
-    List<QueryRunner<Row>> singleSegmentRunners = new ArrayList<>();
+    List<QueryRunner<ResultRow>> singleSegmentRunners = new ArrayList<>();
     for (int i = 0; i < segmentCount; i++) {
       singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
     }
@@ -8127,29 +8353,29 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setDimFilter(new OrDimFilter(dimFilters))
         .build();
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
+        makeRow(query, "2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
+        makeRow(query, "2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
+        makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
+        makeRow(query, "2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
+        makeRow(query, "2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
+        makeRow(query, "2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
+        makeRow(query, "2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
+        makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
+        makeRow(query, "2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+        makeRow(query, "2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
+        makeRow(query, "2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "dim-extraction");
 
   }
@@ -8182,24 +8408,24 @@ public class GroupByQueryRunnerTest
         .setDimFilter(new ExtractionDimFilter("quality", "", lookupExtractionFn, null))
         .build();
 
-    List<Row> expectedResults;
+    List<ResultRow> expectedResults;
 
     if (NullHandling.replaceWithDefault()) {
       expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L)
+          makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+          makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+          makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+          makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L)
       );
     } else {
       // Only empty string should match, nulls will not match
       expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L)
+          makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+          makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L)
       );
     }
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "dim-extraction");
   }
 
@@ -8214,13 +8440,18 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.rowsCount,
+            new LongSumAggregatorFactory("idx", "index")
+        )
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setDimFilter(new ExtractionDimFilter("quality", "NOT_THERE", lookupExtractionFn, null))
+        .setDimFilter(
+            new ExtractionDimFilter("quality", "NOT_THERE", lookupExtractionFn, null)
+        )
         .build();
-    List<Row> expectedResults = Collections.emptyList();
+    List<ResultRow> expectedResults = Collections.emptyList();
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "dim-extraction");
   }
 
@@ -8259,13 +8490,13 @@ public class GroupByQueryRunnerTest
             )
         ).build();
 
-    List<Row> expectedResults = Arrays
+    List<ResultRow> expectedResults = Arrays
         .asList(
-            GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
-            GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", null, "rows", 13L, "idx", 5827L)
+            makeRow(query, "2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
+            makeRow(query, "2011-04-02", "alias", null, "rows", 13L, "idx", 5827L)
         );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "dim-extraction");
   }
 
@@ -8290,14 +8521,18 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(
-            new FilteredAggregatorFactory(QueryRunnerTestHelper.rowsCount, filter),
-            new FilteredAggregatorFactory(new LongSumAggregatorFactory("idx", "index"), filter)
-        )
+        .setAggregatorSpecs(new FilteredAggregatorFactory(
+            QueryRunnerTestHelper.rowsCount,
+            filter
+        ), new FilteredAggregatorFactory(
+            new LongSumAggregatorFactory("idx", "index"),
+            filter
+        ))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "automotive",
@@ -8306,7 +8541,8 @@ public class GroupByQueryRunnerTest
             "idx",
             NullHandling.defaultLongValue()
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "business",
@@ -8315,7 +8551,8 @@ public class GroupByQueryRunnerTest
             "idx",
             NullHandling.defaultLongValue()
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "entertainment",
@@ -8324,7 +8561,8 @@ public class GroupByQueryRunnerTest
             "idx",
             NullHandling.defaultLongValue()
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "health",
@@ -8333,9 +8571,10 @@ public class GroupByQueryRunnerTest
             "idx",
             NullHandling.defaultLongValue()
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "premium",
@@ -8344,7 +8583,8 @@ public class GroupByQueryRunnerTest
             "idx",
             NullHandling.defaultLongValue()
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "technology",
@@ -8353,7 +8593,8 @@ public class GroupByQueryRunnerTest
             "idx",
             NullHandling.defaultLongValue()
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "travel",
@@ -8363,7 +8604,8 @@ public class GroupByQueryRunnerTest
             NullHandling.defaultLongValue()
         ),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "automotive",
@@ -8372,7 +8614,8 @@ public class GroupByQueryRunnerTest
             "idx",
             NullHandling.defaultLongValue()
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "business",
@@ -8381,7 +8624,8 @@ public class GroupByQueryRunnerTest
             "idx",
             NullHandling.defaultLongValue()
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "entertainment",
@@ -8390,7 +8634,8 @@ public class GroupByQueryRunnerTest
             "idx",
             NullHandling.defaultLongValue()
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "health",
@@ -8399,9 +8644,10 @@ public class GroupByQueryRunnerTest
             "idx",
             NullHandling.defaultLongValue()
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "premium",
@@ -8410,7 +8656,8 @@ public class GroupByQueryRunnerTest
             "idx",
             NullHandling.defaultLongValue()
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "technology",
@@ -8419,7 +8666,8 @@ public class GroupByQueryRunnerTest
             "idx",
             NullHandling.defaultLongValue()
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "travel",
@@ -8430,7 +8678,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "agg-filter");
 
   }
@@ -8462,14 +8710,14 @@ public class GroupByQueryRunnerTest
             )
         )
         .build();
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+        makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "extraction-dim-filter");
   }
 
@@ -8498,43 +8746,19 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setDimFilter(new ExtractionDimFilter("null_column", "EMPTY", lookupExtractionFn, null))
         .build();
-    List<Row> expectedResults = Arrays
+    List<ResultRow> expectedResults = Arrays
         .asList(
-            GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
-            GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", null, "rows", 13L, "idx", 5827L)
+            makeRow(query, "2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
+            makeRow(query, "2011-04-02", "alias", null, "rows", 13L, "idx", 5827L)
         );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "extraction-dim-filter");
   }
 
   @Test
   public void testBySegmentResultsWithAllFiltersWithExtractionFns()
   {
-    int segmentCount = 32;
-    Result<BySegmentResultValue> singleSegmentResult = new Result<>(
-        DateTimes.of("2011-01-12T00:00:00.000Z"),
-        new BySegmentResultValueClass<>(
-            Collections.singletonList(
-                GroupByQueryRunnerTestHelper.createExpectedRow(
-                    "2011-04-01",
-                    "alias",
-                    "mezzanine",
-                    "rows",
-                    6L,
-                    "idx",
-                    4420L
-                )
-            ),
-            QueryRunnerTestHelper.segmentId.toString(),
-            Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
-        )
-    );
-    List<Result> bySegmentResults = new ArrayList<>();
-    for (int i = 0; i < segmentCount; i++) {
-      bySegmentResults.add(singleSegmentResult);
-    }
-
     String extractionJsFn = "function(str) { return 'super-' + str; }";
     String jsFn = "function(x) { return(x === 'super-mezzanine') }";
     ExtractionFn extractionFn = new JavaScriptExtractionFn(
@@ -8578,9 +8802,35 @@ public class GroupByQueryRunnerTest
         .setDimFilter(superFilter)
         .overrideContext(ImmutableMap.of("bySegment", true));
     final GroupByQuery fullQuery = builder.build();
+
+    int segmentCount = 32;
+    Result<BySegmentResultValue> singleSegmentResult = new Result<>(
+        DateTimes.of("2011-01-12T00:00:00.000Z"),
+        new BySegmentResultValueClass<>(
+            Collections.singletonList(
+                makeRow(
+                    fullQuery,
+                    "2011-04-01",
+                    "alias",
+                    "mezzanine",
+                    "rows",
+                    6L,
+                    "idx",
+                    4420L
+                )
+            ),
+            QueryRunnerTestHelper.segmentId.toString(),
+            Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+        )
+    );
+    List<Result> bySegmentResults = new ArrayList<>();
+    for (int i = 0; i < segmentCount; i++) {
+      bySegmentResults.add(singleSegmentResult);
+    }
+
     QueryToolChest toolChest = factory.getToolchest();
 
-    List<QueryRunner<Row>> singleSegmentRunners = new ArrayList<>();
+    List<QueryRunner<ResultRow>> singleSegmentRunners = new ArrayList<>();
     for (int i = 0; i < segmentCount; i++) {
       singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
     }
@@ -8637,12 +8887,12 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setDimFilter(superFilter).build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", null, "rows", 13L, "idx", 5827L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
+        makeRow(query, "2011-04-02", "alias", null, "rows", 13L, "idx", 5827L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "extraction");
   }
 
@@ -8671,8 +8921,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "spot",
@@ -8681,7 +8932,8 @@ public class GroupByQueryRunnerTest
             "numVals",
             1.0002442201269182d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "total_market",
@@ -8690,7 +8942,8 @@ public class GroupByQueryRunnerTest
             "numVals",
             1.0002442201269182d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "upfront",
@@ -8699,7 +8952,8 @@ public class GroupByQueryRunnerTest
             "numVals",
             1.0002442201269182d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "spot",
@@ -8708,7 +8962,8 @@ public class GroupByQueryRunnerTest
             "numVals",
             1.0002442201269182d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "total_market",
@@ -8717,7 +8972,8 @@ public class GroupByQueryRunnerTest
             "numVals",
             1.0002442201269182d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "upfront",
@@ -8728,7 +8984,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "cardinality-agg");
   }
 
@@ -8753,8 +9009,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "spot",
@@ -8763,7 +9020,8 @@ public class GroupByQueryRunnerTest
             "numVals",
             8.015665809687173d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "total_market",
@@ -8772,7 +9030,8 @@ public class GroupByQueryRunnerTest
             "numVals",
             2.000977198748901d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             "upfront",
@@ -8781,7 +9040,8 @@ public class GroupByQueryRunnerTest
             "numVals",
             2.000977198748901d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "spot",
@@ -8790,7 +9050,8 @@ public class GroupByQueryRunnerTest
             "numVals",
             9.019833517963864d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "total_market",
@@ -8799,7 +9060,8 @@ public class GroupByQueryRunnerTest
             "numVals",
             2.000977198748901d
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             "upfront",
@@ -8810,7 +9072,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "cardinality-agg");
   }
 
@@ -8836,19 +9098,11 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    Assert.assertEquals(
-        Functions.<Sequence<Row>>identity(),
-        query.getLimitSpec().build(
-            query.getDimensions(),
-            query.getAggregatorSpecs(),
-            query.getPostAggregatorSpecs(),
-            query.getGranularity(),
-            query.getContextSortByDimsFirst()
-        )
-    );
+    Assert.assertEquals(Functions.<Sequence<ResultRow>>identity(), query.getLimitSpec().build(query));
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "ql_alias",
             1200L,
@@ -8857,7 +9111,8 @@ public class GroupByQueryRunnerTest
             "idx",
             158L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "ql_alias",
             1200L,
@@ -8867,7 +9122,7 @@ public class GroupByQueryRunnerTest
             166L
         )
     );
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "long");
   }
 
@@ -8893,19 +9148,11 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    Assert.assertNotEquals(
-        Functions.<Sequence<Row>>identity(),
-        query.getLimitSpec().build(
-            query.getDimensions(),
-            query.getAggregatorSpecs(),
-            query.getPostAggregatorSpecs(),
-            query.getGranularity(),
-            query.getContextSortByDimsFirst()
-        )
-    );
+    Assert.assertNotEquals(Functions.<Sequence<ResultRow>>identity(), query.getLimitSpec().build(query));
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "ql_alias",
             1700L,
@@ -8914,7 +9161,8 @@ public class GroupByQueryRunnerTest
             "idx",
             175L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "ql_alias",
             1200L,
@@ -8924,7 +9172,7 @@ public class GroupByQueryRunnerTest
             324L
         )
     );
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "long");
   }
 
@@ -8951,8 +9199,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "ql_alias",
             "super-1200",
@@ -8961,7 +9210,8 @@ public class GroupByQueryRunnerTest
             "idx",
             158L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "ql_alias",
             "super-1200",
@@ -8971,7 +9221,7 @@ public class GroupByQueryRunnerTest
             166L
         )
     );
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "long-extraction");
   }
 
@@ -8992,8 +9242,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "time_alias",
             1301616000000L,
@@ -9002,7 +9253,8 @@ public class GroupByQueryRunnerTest
             "idx",
             158L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "time_alias",
             1301702400000L,
@@ -9012,7 +9264,7 @@ public class GroupByQueryRunnerTest
             166L
         )
     );
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "long");
   }
 
@@ -9034,8 +9286,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "time_alias",
             "super-1301616000000",
@@ -9044,7 +9297,8 @@ public class GroupByQueryRunnerTest
             "idx",
             158L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "time_alias",
             "super-1301702400000",
@@ -9054,7 +9308,7 @@ public class GroupByQueryRunnerTest
             166L
         )
     );
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "long-extraction");
   }
 
@@ -9080,19 +9334,11 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    Assert.assertEquals(
-        Functions.<Sequence<Row>>identity(),
-        query.getLimitSpec().build(
-            query.getDimensions(),
-            query.getAggregatorSpecs(),
-            query.getPostAggregatorSpecs(),
-            query.getGranularity(),
-            query.getContextSortByDimsFirst()
-        )
-    );
+    Assert.assertEquals(Functions.<Sequence<ResultRow>>identity(), query.getLimitSpec().build(query));
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "index_alias",
             158.747224f,
@@ -9101,7 +9347,8 @@ public class GroupByQueryRunnerTest
             "idx",
             158L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "index_alias",
             166.016049f,
@@ -9112,7 +9359,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "float");
   }
 
@@ -9138,19 +9385,11 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    Assert.assertNotEquals(
-        Functions.<Sequence<Row>>identity(),
-        query.getLimitSpec().build(
-            query.getDimensions(),
-            query.getAggregatorSpecs(),
-            query.getPostAggregatorSpecs(),
-            query.getGranularity(),
-            query.getContextSortByDimsFirst()
-        )
-    );
+    Assert.assertNotEquals(Functions.<Sequence<ResultRow>>identity(), query.getLimitSpec().build(query));
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "qf_alias",
             17000.0f,
@@ -9159,7 +9398,8 @@ public class GroupByQueryRunnerTest
             "idx",
             175L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "qf_alias",
             12000.0f,
@@ -9169,7 +9409,7 @@ public class GroupByQueryRunnerTest
             324L
         )
     );
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "float");
   }
 
@@ -9195,19 +9435,11 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    Assert.assertNotEquals(
-        Functions.<Sequence<Row>>identity(),
-        query.getLimitSpec().build(
-            query.getDimensions(),
-            query.getAggregatorSpecs(),
-            query.getPostAggregatorSpecs(),
-            query.getGranularity(),
-            query.getContextSortByDimsFirst()
-        )
-    );
+    Assert.assertNotEquals(Functions.<Sequence<ResultRow>>identity(), query.getLimitSpec().build(query));
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             17000.0d,
@@ -9216,7 +9448,8 @@ public class GroupByQueryRunnerTest
             "idx",
             175L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             12000.0d,
@@ -9226,7 +9459,7 @@ public class GroupByQueryRunnerTest
             324L
         )
     );
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "double");
   }
 
@@ -9253,10 +9486,11 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults;
+    List<ResultRow> expectedResults;
 
     expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "index_alias",
             "super-158.747224",
@@ -9265,7 +9499,8 @@ public class GroupByQueryRunnerTest
             "idx",
             158L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "index_alias",
             "super-166.016049",
@@ -9276,7 +9511,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "float");
   }
 
@@ -9321,8 +9556,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
             "2011-04-01",
             "alias", "total_market",
             "time_alias", 1301616000000L,
@@ -9332,7 +9568,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "havingspec-long-float");
   }
 
@@ -9356,8 +9592,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "ql_alias",
             "1200",
@@ -9368,7 +9605,8 @@ public class GroupByQueryRunnerTest
             "idx",
             158L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "ql_alias",
             "1200",
@@ -9380,7 +9618,7 @@ public class GroupByQueryRunnerTest
             166L
         )
     );
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "long-float");
   }
 
@@ -9417,8 +9655,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            outerQuery,
             "2011-04-01",
             "time_alias2", 1301616000000L,
             "ql_alias_long", 1200L,
@@ -9426,7 +9665,8 @@ public class GroupByQueryRunnerTest
             "ql_alias_float", 1200.0,
             "count", 1L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            outerQuery,
             "2011-04-01",
             "time_alias2", 1301702400000L,
             "ql_alias_long", 1200L,
@@ -9436,7 +9676,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outerQuery);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outerQuery);
     TestHelper.assertExpectedObjects(expectedResults, results, "numeric-string");
   }
 
@@ -9473,16 +9713,18 @@ public class GroupByQueryRunnerTest
         .addOrderByColumn("ql")
         .build();
 
-    List<Row> expectedResults;
+    List<ResultRow> expectedResults;
     // "entertainment" rows are excluded by the decorated specs, they become empty rows
     expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "ql", NullHandling.defaultLongValue(),
             "qf", NullHandling.defaultDoubleValue(),
             "count", 2L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-01",
             "ql", 170000L,
             "qf", 170000.0,
@@ -9490,7 +9732,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "numeric-string");
   }
 
@@ -9524,16 +9766,18 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
-    List<Row> expectedResults;
+    List<ResultRow> expectedResults;
     if (NullHandling.replaceWithDefault()) {
       expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow(
+          makeRow(
+              query,
               "2011-04-01",
               "ql", 0L,
               "qf", 0.0,
               "count", 2L
           ),
-          GroupByQueryRunnerTestHelper.createExpectedRow(
+          makeRow(
+              query,
               "2011-04-01",
               "ql", 1700L,
               "qf", 17000.0,
@@ -9542,13 +9786,15 @@ public class GroupByQueryRunnerTest
       );
     } else {
       expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow(
+          makeRow(
+              query,
               "2011-04-01",
               "ql", null,
               "qf", null,
               "count", 2L
           ),
-          GroupByQueryRunnerTestHelper.createExpectedRow(
+          makeRow(
+              query,
               "2011-04-01",
               "ql", 1700L,
               "qf", 17000.0,
@@ -9557,7 +9803,7 @@ public class GroupByQueryRunnerTest
       );
     }
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "numeric");
   }
 
@@ -9618,17 +9864,22 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            outerQuery,
             "2011-04-01",
-            "quallong", 1200L,
-            "qualfloat", 12000.0,
-            "ql_alias_sum", 2400L,
-            "qf_alias_sum", 24000.0
+            "quallong",
+            1200L,
+            "qualfloat",
+            12000.0,
+            "ql_alias_sum",
+            2400L,
+            "qf_alias_sum",
+            24000.0
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outerQuery);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outerQuery);
     TestHelper.assertExpectedObjects(expectedResults, results, "numerics");
   }
 
@@ -9665,43 +9916,49 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            outerQuery,
             "2011-04-01",
             "market", "spot",
             "time_alias2", 1301616000000L,
             "time_alias_max", 1301616000000L,
             "index_alias_max", 158.74722290039062
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            outerQuery,
             "2011-04-01",
             "market", "spot",
             "time_alias2", 1301702400000L,
             "time_alias_max", 1301702400000L,
             "index_alias_max", 166.01605224609375
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            outerQuery,
             "2011-04-01",
             "market", "total_market",
             "time_alias2", 1301616000000L,
             "time_alias_max", 1301616000000L,
             "index_alias_max", 1522.043701171875
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            outerQuery,
             "2011-04-01",
             "market", "total_market",
             "time_alias2", 1301702400000L,
             "time_alias_max", 1301702400000L,
             "index_alias_max", 1321.375
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            outerQuery,
             "2011-04-01",
             "market", "upfront",
             "time_alias2", 1301616000000L,
             "time_alias_max", 1301616000000L,
             "index_alias_max", 1447.3411865234375
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            outerQuery,
             "2011-04-01",
             "market", "upfront",
             "time_alias2", 1301702400000L,
@@ -9710,7 +9967,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outerQuery);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outerQuery);
     TestHelper.assertExpectedObjects(expectedResults, results, "numerics");
   }
 
@@ -9741,8 +9998,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "alias",
             13L,
@@ -9751,7 +10009,8 @@ public class GroupByQueryRunnerTest
             "idx",
             158L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias",
             13L,
@@ -9762,7 +10021,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "string-long");
   }
 
@@ -9803,8 +10062,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "2011-04-01",
             "alias", "technology",
             "rows", 1L,
@@ -9815,7 +10075,8 @@ public class GroupByQueryRunnerTest
             "qfLong", 17000L,
             "qfJs", 17000.0
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "2011-04-02",
             "alias", "technology",
             "rows", 1L,
@@ -9828,7 +10089,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "numeric-dims");
   }
 
@@ -9872,16 +10133,11 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-01",
-            "alias", "technology",
-            "qf_outer", 17000.0f,
-            "rows", 2L
-        )
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(outerQuery, "2011-04-01", "alias", "technology", "qf_outer", 17000.0f, "rows", 2L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outerQuery);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outerQuery);
     TestHelper.assertExpectedObjects(expectedResults, results, "extraction-fn");
   }
 
@@ -9925,16 +10181,11 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-01",
-            "alias", "technology",
-            "time_week", 1301270400000L,
-            "rows", 2L
-        )
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(outerQuery, "2011-04-01", "alias", "technology", "time_week", 1301270400000L, "rows", 2L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outerQuery);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outerQuery);
     TestHelper.assertExpectedObjects(expectedResults, results, "extraction-fn");
   }
 
@@ -9963,15 +10214,17 @@ public class GroupByQueryRunnerTest
         .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             "marketalias",
             "upfront",
             "rows",
             186L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+        makeRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             "marketalias",
             "total_market",
@@ -9980,7 +10233,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
   }
 
@@ -10007,16 +10260,16 @@ public class GroupByQueryRunnerTest
     final GroupByQuery allGranQuery = builder.build();
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<Row>()
+        new QueryRunner<ResultRow>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
+          public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
-            final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
+            final QueryPlus<ResultRow> queryPlus1 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
             );
-            final QueryPlus<Row> queryPlus2 = queryPlus.withQuerySegmentSpec(
+            final QueryPlus<ResultRow> queryPlus2 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
             );
 
@@ -10034,12 +10287,13 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    List<Row> allGranExpectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 2L, "idx", 177L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 6L, "idx", 4416L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 2L, "idx", 221L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 6L, "idx", 4420L)
+    Map<String, Object> context = new HashMap<>();
+    List<ResultRow> allGranExpectedResults = Arrays.asList(
+        makeRow(allGranQuery, "2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "technology", "rows", 2L, "idx", 177L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "premium", "rows", 6L, "idx", 4416L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "news", "rows", 2L, "idx", 221L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "mezzanine", "rows", 6L, "idx", 4420L)
     );
 
     TestHelper.assertExpectedObjects(
@@ -10072,16 +10326,16 @@ public class GroupByQueryRunnerTest
     final GroupByQuery allGranQuery = builder.build();
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<Row>()
+        new QueryRunner<ResultRow>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
+          public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
-            final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
+            final QueryPlus<ResultRow> queryPlus1 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
             );
-            final QueryPlus<Row> queryPlus2 = queryPlus.withQuerySegmentSpec(
+            final QueryPlus<ResultRow> queryPlus2 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
             );
 
@@ -10100,15 +10354,15 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    List<Row> allGranExpectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 6L, "idx", 4416L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 2L, "idx", 319L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 2L, "idx", 269L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L)
+    List<ResultRow> allGranExpectedResults = Arrays.asList(
+        makeRow(allGranQuery, "2011-04-02", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "premium", "rows", 6L, "idx", 4416L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "entertainment", "rows", 2L, "idx", 319L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "automotive", "rows", 2L, "idx", 269L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery)).toList();
+    Iterable<ResultRow> results = mergedRunner.run(QueryPlus.wrap(allGranQuery)).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -10140,16 +10394,16 @@ public class GroupByQueryRunnerTest
     final GroupByQuery allGranQuery = builder.build();
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<Row>()
+        new QueryRunner<ResultRow>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
+          public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
-            final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
+            final QueryPlus<ResultRow> queryPlus1 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
             );
-            final QueryPlus<Row> queryPlus2 = queryPlus.withQuerySegmentSpec(
+            final QueryPlus<ResultRow> queryPlus2 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
             );
 
@@ -10168,65 +10422,15 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    List<Row> allGranExpectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-02",
-            "alias",
-            "travel",
-            "market",
-            "spot",
-            "rows",
-            2L,
-            "idx",
-            243L
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-02",
-            "alias",
-            "technology",
-            "market",
-            "spot",
-            "rows",
-            2L,
-            "idx",
-            177L
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-02",
-            "alias",
-            "premium",
-            "market",
-            "upfront",
-            "rows",
-            2L,
-            "idx",
-            1817L
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-02",
-            "alias",
-            "premium",
-            "market",
-            "total_market",
-            "rows",
-            2L,
-            "idx",
-            2342L
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-02",
-            "alias",
-            "premium",
-            "market",
-            "spot",
-            "rows",
-            2L,
-            "idx",
-            257L
-        )
+    List<ResultRow> allGranExpectedResults = Arrays.asList(
+        makeRow(allGranQuery, "2011-04-02", "alias", "travel", "market", "spot", "rows", 2L, "idx", 243L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "technology", "market", "spot", "rows", 2L, "idx", 177L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "premium", "market", "upfront", "rows", 2L, "idx", 1817L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "premium", "market", "total_market", "rows", 2L, "idx", 2342L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "premium", "market", "spot", "rows", 2L, "idx", 257L)
     );
 
-    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery)).toList();
+    Iterable<ResultRow> results = mergedRunner.run(QueryPlus.wrap(allGranQuery)).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -10271,16 +10475,16 @@ public class GroupByQueryRunnerTest
     final GroupByQuery allGranQuery = builder.build();
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<Row>()
+        new QueryRunner<ResultRow>()
         {
           @Override
-          public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
+          public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
-            final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
+            final QueryPlus<ResultRow> queryPlus1 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
             );
-            final QueryPlus<Row> queryPlus2 = queryPlus.withQuerySegmentSpec(
+            final QueryPlus<ResultRow> queryPlus2 = queryPlus.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
             );
 
@@ -10299,65 +10503,15 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    List<Row> allGranExpectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-02",
-            "alias",
-            "travel",
-            "market",
-            "spot",
-            "rows",
-            2L,
-            "idx",
-            243L
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-02",
-            "alias",
-            "technology",
-            "market",
-            "spot",
-            "rows",
-            2L,
-            "idx",
-            177L
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-02",
-            "alias",
-            "premium",
-            "market",
-            "total_market",
-            "rows",
-            2L,
-            "idx",
-            2342L
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-02",
-            "alias",
-            "premium",
-            "market",
-            "upfront",
-            "rows",
-            2L,
-            "idx",
-            1817L
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-02",
-            "alias",
-            "premium",
-            "market",
-            "spot",
-            "rows",
-            2L,
-            "idx",
-            257L
-        )
+    List<ResultRow> allGranExpectedResults = Arrays.asList(
+        makeRow(allGranQuery, "2011-04-02", "alias", "travel", "market", "spot", "rows", 2L, "idx", 243L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "technology", "market", "spot", "rows", 2L, "idx", 177L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "premium", "market", "total_market", "rows", 2L, "idx", 2342L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "premium", "market", "upfront", "rows", 2L, "idx", 1817L),
+        makeRow(allGranQuery, "2011-04-02", "alias", "premium", "market", "spot", "rows", 2L, "idx", 257L)
     );
 
-    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery)).toList();
+    Iterable<ResultRow> results = mergedRunner.run(QueryPlus.wrap(allGranQuery)).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -10425,7 +10579,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     Assert.assertFalse(results.iterator().hasNext());
   }
 
@@ -10480,24 +10634,24 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
+        makeRow(query, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
+        makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+        makeRow(query, "2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
+        makeRow(query, "2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
+        makeRow(query, "2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
 
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L)
+        makeRow(query, "2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L),
+        makeRow(query, "2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
+        makeRow(query, "2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L)
     );
 
     // Subqueries are handled by the ToolChest
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "limit-pushdown");
   }
 
@@ -10547,29 +10701,9 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-01",
-            "alias",
-            "technology",
-            "qualityLen",
-            10L,
-            "rows",
-            2L,
-            "idx",
-            156L
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2011-04-02",
-            "alias",
-            "technology",
-            "qualityLen",
-            10L,
-            "rows",
-            2L,
-            "idx",
-            194L
-        )
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "technology", "qualityLen", 10L, "rows", 2L, "idx", 156L),
+        makeRow(query, "2011-04-02", "alias", "technology", "qualityLen", 10L, "rows", 2L, "idx", 194L)
     );
 
     ChainedExecutionQueryRunner ceqr = new ChainedExecutionQueryRunner(
@@ -10577,13 +10711,32 @@ public class GroupByQueryRunnerTest
         (query1, future) -> {
           return;
         },
-        ImmutableList.<QueryRunner<Row>>of(runner, runner)
+        ImmutableList.<QueryRunner<ResultRow>>of(runner, runner)
     );
 
-    QueryRunner<Row> mergingRunner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(ceqr));
+    QueryRunner<ResultRow> mergingRunner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(ceqr));
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, mergingRunner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, mergingRunner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "type-conversion");
+  }
+
+  private static ResultRow makeRow(final GroupByQuery query, final String timestamp, final Object... vals)
+  {
+    return GroupByQueryRunnerTestHelper.createExpectedRow(query, timestamp, vals);
+  }
+
+  private static ResultRow makeRow(final GroupByQuery query, final DateTime timestamp, final Object... vals)
+  {
+    return GroupByQueryRunnerTestHelper.createExpectedRow(query, timestamp, vals);
+  }
+
+  private static List<ResultRow> makeRows(
+      final GroupByQuery query,
+      final String[] columnNames,
+      final Object[]... values
+  )
+  {
+    return GroupByQueryRunnerTestHelper.createExpectedRows(query, columnNames, values);
   }
 
   /**

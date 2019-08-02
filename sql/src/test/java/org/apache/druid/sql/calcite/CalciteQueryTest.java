@@ -8226,8 +8226,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
-          new Object[]{"foo", 3L},
           new Object[]{"bfoo", 2L},
+          new Object[]{"foo", 2L},
+          new Object[]{"", 1L},
           new Object[]{"afoo", 1L},
           new Object[]{"cfoo", 1L},
           new Object[]{"dfoo", 1L}

@@ -291,26 +291,21 @@ public abstract class BaseFilterTest
     final Sequence<Cursor> cursors = makeCursorSequence(makeFilter(filter));
     Sequence<List<String>> seq = Sequences.map(
         cursors,
-        new Function<Cursor, List<String>>()
-        {
-          @Override
-          public List<String> apply(Cursor input)
-          {
-            final DimensionSelector selector = input
-                .getColumnSelectorFactory()
-                .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
+        cursor -> {
+          final DimensionSelector selector = cursor
+              .getColumnSelectorFactory()
+              .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
 
-            final List<String> values = new ArrayList<>();
+          final List<String> values = new ArrayList<>();
 
-            while (!input.isDone()) {
-              IndexedInts row = selector.getRow();
-              Preconditions.checkState(row.size() == 1);
-              values.add(selector.lookupName(row.get(0)));
-              input.advance();
-            }
-
-            return values;
+          while (!cursor.isDone()) {
+            IndexedInts row = selector.getRow();
+            Preconditions.checkState(row.size() == 1);
+            values.add(selector.lookupName(row.get(0)));
+            cursor.advance();
           }
+
+          return values;
         }
     );
     return seq.toList().get(0);
@@ -433,26 +428,21 @@ public abstract class BaseFilterTest
     final Sequence<Cursor> cursors = makeCursorSequence(postFilteringFilter);
     Sequence<List<String>> seq = Sequences.map(
         cursors,
-        new Function<Cursor, List<String>>()
-        {
-          @Override
-          public List<String> apply(Cursor input)
-          {
-            final DimensionSelector selector = input
-                .getColumnSelectorFactory()
-                .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
+        cursor -> {
+          final DimensionSelector selector = cursor
+              .getColumnSelectorFactory()
+              .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
 
-            final List<String> values = new ArrayList<>();
+          final List<String> values = new ArrayList<>();
 
-            while (!input.isDone()) {
-              IndexedInts row = selector.getRow();
-              Preconditions.checkState(row.size() == 1);
-              values.add(selector.lookupName(row.get(0)));
-              input.advance();
-            }
-
-            return values;
+          while (!cursor.isDone()) {
+            IndexedInts row = selector.getRow();
+            Preconditions.checkState(row.size() == 1);
+            values.add(selector.lookupName(row.get(0)));
+            cursor.advance();
           }
+
+          return values;
         }
     );
     return seq.toList().get(0);
@@ -579,7 +569,7 @@ public abstract class BaseFilterTest
     // Perform test
     final SettableSupplier<InputRow> rowSupplier = new SettableSupplier<>();
     final ValueMatcher matcher = makeFilter(filter).makeMatcher(
-        VIRTUAL_COLUMNS.wrap(RowBasedColumnSelectorFactory.create(rowSupplier, rowSignature))
+        VIRTUAL_COLUMNS.wrap(RowBasedColumnSelectorFactory.create(rowSupplier::get, rowSignature))
     );
     final List<String> values = new ArrayList<>();
     for (InputRow row : rows) {

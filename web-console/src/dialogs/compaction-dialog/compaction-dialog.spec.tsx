@@ -29,7 +29,7 @@ describe('compaction dialog', () => {
         onSave={() => {}}
         onDelete={() => {}}
         datasource={'test'}
-        configData={'test'}
+        compactionConfig={{}}
       />
     );
     render(compactionDialog);
