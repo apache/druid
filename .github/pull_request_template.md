@@ -1,9 +1,11 @@
+Thanks for trying to help us make Apache Druid (incubating) be the best it can be! Please fill out as much of the following information as is possible (where relevant, and remove it when irrelevant) to help make the intention and scope of this PR clear in order to ease review.
+
 Fixes #XXXX.
 
-_Replace XXXX with the id of the issue fixed in this PR. Remove this section if there is no corresponding issue. Don't reference the issue in the title of this pull-request._
+Replace XXXX with the id of the issue fixed in this PR. Remove this section if there is no corresponding issue. Don't reference the issue in the title of this pull-request.
 
-_If you are a committer, follow the PR action item checklist for committers:
-https://github.com/apache/incubator-druid/blob/master/dev/committer-instructions.md#pr-and-issue-action-item-checklist-for-committers._
+If you are a committer, follow the PR action item checklist for committers:
+https://github.com/apache/incubator-druid/blob/master/dev/committer-instructions.md#pr-and-issue-action-item-checklist-for-committers.
 
 ### Description
 
@@ -42,10 +44,11 @@ This PR has:
 - [ ] added integration tests.
 - [ ] been tested in a test Druid cluster.
 
-_Check the items by putting "x" in the brackets for the done things. Not all of these items apply to every PR. Remove the items which are not done or not relevant to the PR. None of the items from the checklist above are strictly necessary, but it would be very helpful if you at least self-review the PR._
+Check the items by putting "x" in the brackets for the done things. Not all of these items apply to every PR. Remove the items which are not done or not relevant to the PR. None of the items from the checklist above are strictly necessary, but it would be very helpful if you at least self-review the PR.
 
 <hr>
 
-For reviewers: the key changed/added classes in this PR are `MyFoo`, `OurBar`, and `TheirBaz`.
-
-_Fill out this section in big PRs to ease navigation in them for reviewers._
+##### Key changed/added classes in this PR
+ * `MyFoo`
+ * `OurBar`
+ * `TheirBaz`
