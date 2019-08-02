@@ -130,7 +130,7 @@ public abstract class ResponseContext
     ETAG("ETag"),
     /**
      * Query fail time (current time + timeout).
-     * It is not updated continuously as TIMEOUT_AT.
+     * It is not updated continuously as {@link Key#TIMEOUT_AT}.
      */
     QUERY_FAIL_DEADLINE_MILLIS("queryFailTime"),
     /**
@@ -247,7 +247,7 @@ public abstract class ResponseContext
 
   protected abstract Map<BaseKey, Object> getDelegate();
 
-  private final Comparator<Map.Entry<String, JsonNode>> valueLengthReversedComparator =
+  private static final Comparator<Map.Entry<String, JsonNode>> valueLengthReversedComparator =
       Comparator.comparing((Map.Entry<String, JsonNode> e) -> e.getValue().toString().length()).reversed();
 
   /**
@@ -325,7 +325,8 @@ public abstract class ResponseContext
    * Serializes the context given that the resulting string length is less than the provided limit.
    * This method removes some elements from context collections if it's needed to satisfy the limit.
    * There is no explicit priorities of keys which values are being truncated because for now there are only
-   * two potential limit breaking keys (UNCOVERED_INTERVALS and MISSING_SEGMENTS) and their values are arrays.
+   * two potential limit breaking keys ({@link Key#UNCOVERED_INTERVALS}
+   * and {@link Key#MISSING_SEGMENTS}) and their values are arrays.
    * Thus current implementation considers these arrays as equal prioritized and starts removing elements from
    * the array which serialized value length is the biggest.
    * The resulting string might be correctly deserialized to {@link ResponseContext}.
@@ -348,7 +349,7 @@ public abstract class ResponseContext
         final JsonNode node = e.getValue();
         if (node.isArray()) {
           if (needToRemoveCharsNumber >= node.toString().length()) {
-            // We need to remove more chars than the field's lenght so removing it completely
+            // We need to remove more chars than the field's length so removing it completely
             contextJsonNode.remove(fieldName);
             // Since the field is completely removed (name + value) we need to do a recalculation
             needToRemoveCharsNumber = contextJsonNode.toString().length() - maxCharsNumber;
@@ -356,7 +357,8 @@ public abstract class ResponseContext
             final ArrayNode arrayNode = (ArrayNode) node;
             needToRemoveCharsNumber -= removeNodeElementsToSatisfyCharsLimit(arrayNode, needToRemoveCharsNumber);
             if (arrayNode.size() == 0) {
-              // The field is empty, removing it.
+              // The field is empty, removing it because an empty array field may be misleading
+              // for the recipients of the truncated response context.
               contextJsonNode.remove(fieldName);
               // Since the field is completely removed (name + value) we need to do a recalculation
               needToRemoveCharsNumber = contextJsonNode.toString().length() - maxCharsNumber;
@@ -377,14 +379,14 @@ public abstract class ResponseContext
   }
 
   /**
-   * Removes {@code node}'s elements which total lenght of serialized values is greater or equal to the passed limit.
+   * Removes {@code node}'s elements which total length of serialized values is greater or equal to the passed limit.
    * If it is impossible to satisfy the limit the method removes all {@code node}'s elements.
    * On every iteration it removes exactly half of the remained elements to reduce the overall complexity.
    * @param node {@link ArrayNode} which elements are being removed.
    * @param needToRemoveCharsNumber the number of chars need to be removed.
    * @return the number of removed chars.
    */
-  private int removeNodeElementsToSatisfyCharsLimit(ArrayNode node, int needToRemoveCharsNumber)
+  private static int removeNodeElementsToSatisfyCharsLimit(ArrayNode node, int needToRemoveCharsNumber)
   {
     int removedCharsNumber = 0;
     while (node.size() > 0 && needToRemoveCharsNumber > removedCharsNumber) {
