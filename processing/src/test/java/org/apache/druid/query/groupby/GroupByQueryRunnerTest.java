@@ -25,7 +25,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -1012,14 +1011,8 @@ public class GroupByQueryRunnerTest
   public void testGroupByWithStringVirtualColumn()
   {
     // Cannot vectorize due to virtual columns.
+    // all virtual columns are single input column, so it will work for group by v1, even with multi-value inputs
     cannotVectorize();
-
-    // Cannot run with groupBy v1 on IncrementalIndex, because expressions would turn multi-value inputs
-    // into cardinalityless selectors, and groupBy v1 requires selectors that have a cardinality.
-    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)
-        && ImmutableSet.of("rtIndex", "noRollupRtIndex").contains(runnerName)) {
-      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
-    }
 
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
