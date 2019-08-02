@@ -25,6 +25,26 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
+/**
+ * This class provides a mechansim to influence whether or not indexes are used for a {@link Filter} during processing
+ * by {@link org.apache.druid.segment.QueryableIndexStorageAdapter#analyzeFilter} (i.e. will a {@link Filter} be a "pre"
+ * filter in which we union indexes for all values that match the filter to create a
+ * {@link org.apache.druid.segment.BitmapOffset}/{@link org.apache.druid.segment.vector.BitmapVectorOffset}, or will it
+ * be used as a "post" filter and evaluated while scanning row values from the
+ * {@link org.apache.druid.segment.FilteredOffset}/{@link org.apache.druid.segment.vector.FilteredVectorOffset}.
+ *
+ * This is currently only manually supplied by the user by adding to a {@link DimFilter} which will pass through to the
+ * {@link Filter} implementation for it to provide as {@link Filter#getManualTuning()}. The main purpose at this time is
+ * to facilitate experimentation so that someday we can have {@link Filter} implementations intelligently, automatically
+ * use sensible defaults based on things like cardinality and who yet knows what additional information.
+ *
+ * It can also be used for advanced users to manually control which filters will be "pre" and "post" filters as
+ * described above to allow skipping indexes in known cases where filters are expensive (mostly high cardinality columns
+ * with expensive filters).
+ *
+ * As such, it is currently undocumented in user facing documentation on purpose, but whatever this turns into once more
+ * automatic usage of this is in place, should be documented in a future release.
+ */
 public class FilterTuning
 {
   public static FilterTuning createDefault(boolean useIndex)
