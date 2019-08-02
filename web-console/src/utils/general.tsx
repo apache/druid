@@ -321,3 +321,7 @@ export function downloadFile(text: string, type: string, filename: string): void
   });
   FileSaver.saveAs(blob, filename);
 }
+
+export function escapeSqlIdentifier(identifier: string): string {
+  return `"${identifier.replace(/"/g, '""')}"`;
+}
