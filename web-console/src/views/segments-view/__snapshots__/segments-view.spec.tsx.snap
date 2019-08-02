@@ -12,12 +12,43 @@ exports[`segments-view matches snapshot 1`] = `
         localStorageKey="segments-refresh-rate"
         onRefresh={[Function]}
       />
-      <Blueprint3.Button
-        disabled={true}
-        icon="application"
-        onClick={[Function]}
-        text="Go to SQL"
-      />
+      <Blueprint3.Popover
+        boundary="scrollParent"
+        captureDismiss={false}
+        content={
+          <Blueprint3.Menu>
+            <Blueprint3.MenuItem
+              disabled={true}
+              icon="application"
+              multiline={false}
+              onClick={[Function]}
+              popoverProps={Object {}}
+              shouldDismissPopover={true}
+              text="Go to SQL"
+            />
+          </Blueprint3.Menu>
+        }
+        defaultIsOpen={false}
+        disabled={false}
+        fill={false}
+        hasBackdrop={false}
+        hoverCloseDelay={300}
+        hoverOpenDelay={150}
+        inheritDarkTheme={true}
+        interactionKind="click"
+        minimal={false}
+        modifiers={Object {}}
+        openOnTargetFocus={true}
+        position="bottom-left"
+        targetTagName="span"
+        transitionDuration={300}
+        usePortal={true}
+        wrapperTagName="span"
+      >
+        <Blueprint3.Button
+          icon="more"
+        />
+      </Blueprint3.Popover>
       <Component>
         Group by
       </Component>

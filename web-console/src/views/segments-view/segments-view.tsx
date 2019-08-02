@@ -16,7 +16,16 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Label } from '@blueprintjs/core';
+import {
+  Button,
+  ButtonGroup,
+  Intent,
+  Label,
+  Menu,
+  MenuItem,
+  Popover,
+  Position,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import React from 'react';
@@ -607,6 +616,35 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     );
   }
 
+  renderBulkSegmentsActions() {
+    const { goToQuery, noSqlMode } = this.props;
+    const lastSegmentsQuery = this.segmentsSqlQueryManager.getLastIntermediateQuery();
+
+    const bulkSegmentsActionsMenu = (
+      <Menu>
+        {!noSqlMode && (
+          <MenuItem
+            icon={IconNames.APPLICATION}
+            text="Go to SQL"
+            disabled={!lastSegmentsQuery}
+            onClick={() => {
+              if (!lastSegmentsQuery) return;
+              goToQuery(lastSegmentsQuery);
+            }}
+          />
+        )}
+      </Menu>
+    );
+
+    return (
+      <>
+        <Popover content={bulkSegmentsActionsMenu} position={Position.BOTTOM_LEFT}>
+          <Button icon={IconNames.MORE} />
+        </Popover>
+      </>
+    );
+  }
+
   render(): JSX.Element {
     const {
       segmentTableActionDialogId,
@@ -614,9 +652,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       actions,
       hiddenColumns,
     } = this.state;
-    const { goToQuery, noSqlMode } = this.props;
+    const { noSqlMode } = this.props;
     const { groupByInterval } = this.state;
-    const lastSegmentsQuery = this.segmentsSqlQueryManager.getLastIntermediateQuery();
 
     return (
       <>
@@ -630,17 +667,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               }
               localStorageKey={LocalStorageKeys.SEGMENTS_REFRESH_RATE}
             />
-            {!noSqlMode && (
-              <Button
-                icon={IconNames.APPLICATION}
-                text="Go to SQL"
-                disabled={!lastSegmentsQuery}
-                onClick={() => {
-                  if (!lastSegmentsQuery) return;
-                  goToQuery(lastSegmentsQuery);
-                }}
-              />
-            )}
+            {this.renderBulkSegmentsActions()}
             <Label>Group by</Label>
             <ButtonGroup>
               <Button
