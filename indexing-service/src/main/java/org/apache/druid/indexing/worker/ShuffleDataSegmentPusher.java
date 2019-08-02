@@ -29,7 +29,7 @@ import java.net.URI;
 import java.util.Map;
 
 /**
- * DataSegmentPusher used for storing intermeidary data in local storage during data shuffle of native parallel
+ * DataSegmentPusher used for storing intermediary data in local storage during data shuffle of native parallel
  * indexing.
  */
 public class ShuffleDataSegmentPusher implements DataSegmentPusher

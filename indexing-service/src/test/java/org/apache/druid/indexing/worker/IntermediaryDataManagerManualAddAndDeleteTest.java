@@ -26,7 +26,6 @@ import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -41,6 +40,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.List;
 
@@ -156,7 +156,7 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
   {
     // Each file size is 138 bytes after compression
     final File segmentDir = tempDir.newFolder();
-    FileUtils.write(new File(segmentDir, fileName), "test data.", StringUtils.UTF8_STRING);
+    FileUtils.write(new File(segmentDir, fileName), "test data.", StandardCharsets.UTF_8);
     return segmentDir;
   }
 

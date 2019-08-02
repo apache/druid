@@ -20,10 +20,12 @@
 package org.apache.druid.query.groupby.having;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.segment.column.ValueType;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
@@ -49,20 +51,34 @@ public class DimFilterHavingSpecTest
   public void testSimple()
   {
     final DimFilterHavingSpec havingSpec = new DimFilterHavingSpec(new SelectorDimFilter("foo", "bar", null), null);
-    havingSpec.setRowSignature(null);
+    havingSpec.setQuery(
+        GroupByQuery.builder()
+                    .setDataSource("dummy")
+                    .setInterval("1000/3000")
+                    .setDimensions(DefaultDimensionSpec.of("foo"))
+                    .setGranularity(Granularities.ALL)
+                    .build()
+    );
 
-    Assert.assertTrue(havingSpec.eval(new MapBasedRow(0, ImmutableMap.of("foo", "bar"))));
-    Assert.assertFalse(havingSpec.eval(new MapBasedRow(0, ImmutableMap.of("foo", "baz"))));
+    Assert.assertTrue(havingSpec.eval(ResultRow.of("bar")));
+    Assert.assertFalse(havingSpec.eval(ResultRow.of("baz")));
   }
 
   @Test
   public void testRowSignature()
   {
     final DimFilterHavingSpec havingSpec = new DimFilterHavingSpec(new SelectorDimFilter("foo", "1", null), null);
-    havingSpec.setRowSignature(ImmutableMap.of("foo", ValueType.LONG));
+    havingSpec.setQuery(
+        GroupByQuery.builder()
+                    .setDataSource("dummy")
+                    .setInterval("1000/3000")
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(new DefaultDimensionSpec("foo", "foo", ValueType.LONG))
+                    .build()
+    );
 
-    Assert.assertTrue(havingSpec.eval(new MapBasedRow(0, ImmutableMap.of("foo", 1L))));
-    Assert.assertFalse(havingSpec.eval(new MapBasedRow(0, ImmutableMap.of("foo", 2L))));
+    Assert.assertTrue(havingSpec.eval(ResultRow.of(1L)));
+    Assert.assertFalse(havingSpec.eval(ResultRow.of(2L)));
   }
 
   @Test(timeout = 60_000L)
@@ -74,18 +90,13 @@ public class DimFilterHavingSpecTest
     final List<Future<?>> futures = new ArrayList<>();
 
     for (int i = 0; i < 2; i++) {
-      final MapBasedRow row = new MapBasedRow(0, ImmutableMap.of("foo", String.valueOf(i)));
+      final ResultRow row = ResultRow.of(String.valueOf(i));
       futures.add(
           exec.submit(
-              new Runnable()
-              {
-                @Override
-                public void run()
-                {
-                  havingSpec.setRowSignature(null);
-                  while (!Thread.interrupted()) {
-                    havingSpec.eval(row);
-                  }
+              () -> {
+                havingSpec.setQuery(GroupByQuery.builder().setDimensions(DefaultDimensionSpec.of("foo")).build());
+                while (!Thread.interrupted()) {
+                  havingSpec.eval(row);
                 }
               }
           )

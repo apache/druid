@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StreamUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -70,10 +71,10 @@ import java.util.stream.IntStream;
  * This class manages intermediary segments for data shuffle between native parallel index tasks.
  * In native parallel indexing, phase 1 tasks store segment files in local storage of middleManagers (or indexer)
  * and phase 2 tasks read those files via HTTP.
- * <p>
+ *
  * The directory where segment files are placed is structured as
  * {@link StorageLocation#path}/supervisorTaskId/startTimeOfSegment/endTimeOfSegment/partitionIdOfSegment.
- * <p>
+ *
  * This class provides interfaces to store, find, and remove segment files.
  * It also has a self-cleanup mechanism to clean up stale segment files. It periodically checks the last access time
  * per supervisorTask and removes its all segment files if the supervisorTask is not running anymore.
@@ -128,6 +129,7 @@ public class IntermediaryDataManager
   @LifecycleStart
   public void start()
   {
+    discoverSupervisorTaskPartitions();
     supervisorTaskChecker = Execs.scheduledSingleThreaded("intermediary-data-manager-%d");
     // Discover partitions for new supervisorTasks
     supervisorTaskChecker.scheduleAtFixedRate(
@@ -172,10 +174,13 @@ public class IntermediaryDataManager
     supervisorTaskCheckTimes.clear();
   }
 
+  /**
+   * IntermediaryDataManager periodically calls this method after it starts up to search for unknown intermediary data.
+   */
   private void discoverSupervisorTaskPartitions()
   {
     for (StorageLocation location : shuffleDataLocations) {
-      final Path localtionPath = location.getPath().toPath().toAbsolutePath();
+      final Path locationPath = location.getPath().toPath().toAbsolutePath();
       final MutableInt numDiscovered = new MutableInt(0);
       final File[] dirsPerSupervisorTask = location.getPath().listFiles();
       if (dirsPerSupervisorTask != null) {
@@ -185,9 +190,11 @@ public class IntermediaryDataManager
               supervisorTaskId,
               k -> {
                 for (File eachFile : FileUtils.listFiles(supervisorTaskDir, null, true)) {
-                  final String relativeSegmentPath = localtionPath
+                  final String relativeSegmentPath = locationPath
                       .relativize(eachFile.toPath().toAbsolutePath())
                       .toString();
+                  // StorageLocation keeps track of how much storage capacity is being used.
+                  // Newly found files should be known to the StorageLocation to keep it up to date.
                   final File reservedFile = location.reserve(
                       relativeSegmentPath,
                       eachFile.getName(),
@@ -203,14 +210,18 @@ public class IntermediaryDataManager
           );
         }
       }
-      log.info("Discovered partitions for [%s] new supervisor tasks", numDiscovered.getValue());
+      log.info(
+          "Discovered partitions for [%s] new supervisor tasks under location[%s]",
+          numDiscovered.getValue(),
+          location.getPath()
+      );
     }
   }
 
   /**
    * Check supervisorTask status if its partitions have not been accessed in timeout and
    * delete all partitions for the supervisorTask if it is already finished.
-   * <p>
+   *
    * Note that the overlord sends a cleanup request when a supervisorTask is finished. The below check is to trigger
    * the self-cleanup for when the cleanup request is missing.
    */
@@ -251,7 +262,7 @@ public class IntermediaryDataManager
    * Write a segment into one of configured locations. The location to write is chosen in a round-robin manner per
    * supervisorTaskId.
    */
-  public long addSegment(String supervisorTaskId, String subTaskId, DataSegment segment, File segmentDir)
+  long addSegment(String supervisorTaskId, String subTaskId, DataSegment segment, File segmentDir)
       throws IOException
   {
     // Get or create the location iterator for supervisorTask.
@@ -268,17 +279,19 @@ public class IntermediaryDataManager
 
     // Create a zipped segment in a temp directory.
     final File taskTempDir = taskConfig.getTaskTempDir(subTaskId);
+    final Closer resourceCloser = Closer.create();
     if (taskTempDir.mkdirs()) {
-      taskTempDir.deleteOnExit();
+      resourceCloser.register(() -> FileUtils.(taskTempDir));
     }
     final File tempZippedFile = new File(taskTempDir, segment.getId().toString());
-    final long unzippedSizeBytes = CompressionUtils.zip(segmentDir, tempZippedFile, true);
+    final long unzippedSizeBytes = CompressionUtils.zip(segmentDir, tempZippedFile);
     if (unzippedSizeBytes == 0) {
       throw new IOE(
           "Read 0 bytes from segmentDir[%s]",
           segmentDir.getAbsolutePath()
       );
     }
+    resourceCloser.register(() -> )
 
     // Try copying the zipped segment to one of storage locations
     for (int i = 0; i < shuffleDataLocations.size(); i++) {

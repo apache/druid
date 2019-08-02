@@ -24,9 +24,11 @@ export interface CenterMessageProps {}
 
 export class CenterMessage extends React.PureComponent<CenterMessageProps> {
   render(): JSX.Element {
+    const { children } = this.props;
+
     return (
       <div className="center-message bp3-input">
-        <div className="center-message-inner">{this.props.children}</div>
+        <div className="center-message-inner">{children}</div>
       </div>
     );
   }

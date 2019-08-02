@@ -5,8 +5,7 @@ exports[`home view matches snapshot 1`] = `
   className="home-view app-view"
 >
   <a
-    href="/status"
-    target="_blank"
+    onClick={[Function]}
   >
     <Blueprint3.Card
       className="home-view-card"

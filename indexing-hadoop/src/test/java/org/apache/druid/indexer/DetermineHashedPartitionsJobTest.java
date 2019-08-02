@@ -73,7 +73,7 @@ public class DetermineHashedPartitionsJobTest
         new Object[][]{
             {
                 DetermineHashedPartitionsJobTest.class.getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
-                1L,
+                1,
                 "2011-04-10T00:00:00.000Z/2011-04-11T00:00:00.000Z",
                 0,
                 1,
@@ -82,7 +82,7 @@ public class DetermineHashedPartitionsJobTest
             },
             {
                 DetermineHashedPartitionsJobTest.class.getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
-                100L,
+                100,
                 "2011-04-10T00:00:00.000Z/2011-04-16T00:00:00.000Z",
                 0,
                 6,
@@ -91,7 +91,7 @@ public class DetermineHashedPartitionsJobTest
             },
             {
                 DetermineHashedPartitionsJobTest.class.getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
-                1L,
+                1,
                 "2011-04-10T00:00:00.000Z/2011-04-16T00:00:00.000Z",
                 0,
                 6,
@@ -100,7 +100,7 @@ public class DetermineHashedPartitionsJobTest
             },
             {
                 DetermineHashedPartitionsJobTest.class.getResource("/druid.test.data.with.duplicate.rows.tsv").getPath(),
-                1L,
+                1,
                 null,
                 0,
                 6,
@@ -109,7 +109,7 @@ public class DetermineHashedPartitionsJobTest
             },
             {
                 DetermineHashedPartitionsJobTest.class.getResource("/druid.test.data.with.rows.in.timezone.tsv").getPath(),
-                1L,
+                1,
                 null,
                 0,
                 1,
@@ -122,7 +122,7 @@ public class DetermineHashedPartitionsJobTest
 
   public DetermineHashedPartitionsJobTest(
       String dataFilePath,
-      long targetPartitionSize,
+      int targetPartitionSize,
       String interval,
       int errorMargin,
       int expectedNumTimeBuckets,
@@ -194,7 +194,7 @@ public class DetermineHashedPartitionsJobTest
         new HadoopTuningConfig(
             tmpDir.getAbsolutePath(),
             null,
-            new HashedPartitionsSpec(targetPartitionSize, null, true, null, null),
+            new HashedPartitionsSpec(targetPartitionSize, null, null),
             null,
             null,
             null,

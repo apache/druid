@@ -33,8 +33,12 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.common.serialization.Deserializer;
 
 import javax.annotation.Nonnull;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -196,7 +200,28 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
       }
     }
   }
-
+  
+  private Deserializer getKafkaDeserializer(Properties properties, String kafkaConfigKey)
+  {
+    Deserializer deserializerObject;
+    try {
+      Class deserializerClass = Class.forName(properties.getProperty(kafkaConfigKey, ByteArrayDeserializer.class.getTypeName()));
+      Method deserializerMethod = deserializerClass.getMethod("deserialize", String.class, byte[].class);
+      
+      Type deserializerReturnType = deserializerMethod.getGenericReturnType();
+      
+      if (deserializerReturnType == byte[].class) {
+        deserializerObject = (Deserializer) deserializerClass.getConstructor().newInstance();
+      } else {
+        throw new IllegalArgumentException("Kafka deserializers must return a byte array (byte[]), " + deserializerClass.getName() + " returns " + deserializerReturnType.getTypeName());
+      }
+    }
+    catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
+      throw new StreamException(e);
+    }
+    return deserializerObject;
+  }
+  
   private KafkaConsumer<byte[], byte[]> getKafkaConsumer()
   {
     final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
@@ -207,7 +232,10 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-      return new KafkaConsumer<>(props, new ByteArrayDeserializer(), new ByteArrayDeserializer());
+      Deserializer keyDeserializerObject = getKafkaDeserializer(props, "key.deserializer");
+      Deserializer valueDeserializerObject = getKafkaDeserializer(props, "value.deserializer");
+  
+      return new KafkaConsumer<>(props, keyDeserializerObject, valueDeserializerObject);
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
