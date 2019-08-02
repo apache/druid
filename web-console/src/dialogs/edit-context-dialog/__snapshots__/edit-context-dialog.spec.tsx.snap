@@ -24,7 +24,7 @@ exports[`clipboard dialog matches snapshot 1`] = `
           <h4
             class="bp3-heading"
           >
-            Edit Query Context
+            Edit query context
           </h4>
           <button
             aria-label="Close"
@@ -62,26 +62,31 @@ exports[`clipboard dialog matches snapshot 1`] = `
         <div
           class="bp3-dialog-footer-actions"
         >
-          <button
-            class="bp3-button bp3-intent-primary"
-            type="button"
+          
+          <div
+            class="bp3-button-group edit-context-dialog-buttons"
           >
-            <span
-              class="bp3-button-text"
+            <button
+              class="bp3-button"
+              type="button"
             >
-              Close
-            </span>
-          </button>
-          <button
-            class="bp3-button bp3-intent-primary"
-            type="button"
-          >
-            <span
-              class="bp3-button-text"
+              <span
+                class="bp3-button-text"
+              >
+                Close
+              </span>
+            </button>
+            <button
+              class="bp3-button bp3-intent-primary"
+              type="button"
             >
-              Submit
-            </span>
-          </button>
+              <span
+                class="bp3-button-text"
+              >
+                Submit
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
