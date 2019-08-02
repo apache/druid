@@ -21,9 +21,9 @@ package org.apache.druid.query.groupby.strategy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
 import org.apache.druid.collections.BlockingPool;
@@ -35,6 +35,7 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
+import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DataSource;
@@ -71,7 +72,6 @@ import org.apache.druid.segment.StorageAdapter;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -446,43 +446,37 @@ public class GroupByStrategyV2 implements GroupByStrategy
         }
 
         GroupByQuery subtotalQuery = queryWithoutSubtotalsSpec
-            .withDimensionSpecs(newDimensions)
-            .withLimitSpec(subtotalQueryLimitSpec);
+            .withLimitSpec(subtotalQueryLimitSpec)
+            .withDimensionSpecs(newDimensions);
 
+        final GroupByRowProcessor.ResultSupplier resultSupplierOneFinal = resultSupplierOne;
         if (Utils.isPrefix(subtotalSpec, queryDimNames)) {
           // Since subtotalSpec is a prefix of base query dimensions, so results from base query are also sorted
           // by subtotalSpec as needed by stream merging.
           subtotalsResults.add(
-              getSubtotalQueryResultFromSortedResultsSupplier(resultSupplierOne, subtotalSpec, subtotalQuery)
+              processSubtotalsResultAndOptionallyClose(() -> resultSupplierOneFinal, subtotalSpec, subtotalQuery, false)
           );
         } else {
           // Since subtotalSpec is not a prefix of base query dimensions, so results from base query are not sorted
           // by subtotalSpec. So we first add the result of base query into another resultSupplier which are sorted
           // by subtotalSpec and then stream merge them.
 
-          GroupByRowProcessor.ResultSupplier resultSupplierTwo = null;
-          try {
-            resultSupplierTwo = GroupByRowProcessor.process(
-                queryWithoutSubtotalsSpec,
-                subtotalQuery,
-                resultSupplierOne.results(subtotalSpec),
-                configSupplier.get(),
-                resource,
-                spillMapper,
-                processingConfig.getTmpDir(),
-                processingConfig.intermediateComputeSizeBytes()
-            );
+          // Also note, we can't create the ResultSupplier eagerly here or as we don't want to eagerly allocate
+          // merge buffers for processing subtotal.
+          Supplier<GroupByRowProcessor.ResultSupplier> resultSupplierTwo = () -> GroupByRowProcessor.process(
+              queryWithoutSubtotalsSpec,
+              subtotalQuery,
+              resultSupplierOneFinal.results(subtotalSpec),
+              configSupplier.get(),
+              resource,
+              spillMapper,
+              processingConfig.getTmpDir(),
+              processingConfig.intermediateComputeSizeBytes()
+          );
 
-            subtotalsResults.add(
-                Sequences.withBaggage(
-                    getSubtotalQueryResultFromSortedResultsSupplier(resultSupplierTwo, subtotalSpec, subtotalQuery),
-                    resultSupplierTwo //this will close resources allocated by resultSupplierTwo after sequence read
-                )
-            );
-          } catch(Exception ex) {
-            CloseQuietly.close(resultSupplierTwo);
-            throw ex;
-          }
+          subtotalsResults.add(
+              processSubtotalsResultAndOptionallyClose(resultSupplierTwo, subtotalSpec, subtotalQuery, true)
+          );
         }
       }
 
@@ -491,25 +485,43 @@ public class GroupByStrategyV2 implements GroupByStrategy
           resultSupplierOne //this will close resources allocated by resultSupplierOne after sequence read
       );
     }
-    catch(Exception ex) {
+    catch (Exception ex) {
       CloseQuietly.close(resultSupplierOne);
       throw ex;
     }
   }
 
-  private Sequence<ResultRow> getSubtotalQueryResultFromSortedResultsSupplier(
-      final GroupByRowProcessor.ResultSupplier baseResultsSupplier,
-      List<String> dimsToInclude, GroupByQuery subtotalQuery
+  private Sequence<ResultRow> processSubtotalsResultAndOptionallyClose(
+      Supplier<GroupByRowProcessor.ResultSupplier> baseResultsSupplier,
+      List<String> dimsToInclude,
+      GroupByQuery subtotalQuery,
+      boolean closeOnSequenceRead
   )
   {
-    return applyPostProcessing(
-        mergeResults(
-            (queryPlus, responseContext) -> baseResultsSupplier.results(dimsToInclude),
-            subtotalQuery,
-            null
-        ),
-        subtotalQuery
-    );
+    // This closes the ResultSupplier in case of any exception here or arranges for it to be closed
+    // on sequence read if closeOnSequenceRead is true.
+    try {
+      Supplier<GroupByRowProcessor.ResultSupplier> memoizedSupplier = Suppliers.memoize(baseResultsSupplier);
+      return applyPostProcessing(
+          mergeResults(
+              (queryPlus, responseContext) ->
+                  new LazySequence<>(
+                      () -> Sequences.withBaggage(
+                          memoizedSupplier.get().results(dimsToInclude),
+                          closeOnSequenceRead ? () -> CloseQuietly.close(memoizedSupplier.get()) : () -> {}
+                      )
+                  ),
+              subtotalQuery,
+              null
+          ),
+          subtotalQuery
+      );
+
+    }
+    catch (Exception ex) {
+      //CloseQuietly.close(baseResultsSupplier.get());
+      throw ex;
+    }
   }
 
   private Set<String> getAggregatorAndPostAggregatorNames(GroupByQuery query)
