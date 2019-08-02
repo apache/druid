@@ -980,7 +980,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         {!noSqlMode && (
           <MenuItem
             icon={IconNames.APPLICATION}
-            text="Go to SQL"
+            text="See in SQL view"
             onClick={() => goToQuery(TasksView.TASK_SQL)}
           />
         )}

@@ -463,7 +463,7 @@ GROUP BY 1`;
         {!noSqlMode && (
           <MenuItem
             icon={IconNames.APPLICATION}
-            text="Go to SQL"
+            text="See in SQL view"
             onClick={() => goToQuery(DatasourcesView.DATASOURCE_SQL)}
           />
         )}

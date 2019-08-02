@@ -625,7 +625,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         {!noSqlMode && (
           <MenuItem
             icon={IconNames.APPLICATION}
-            text="Go to SQL"
+            text="See in SQL view"
             disabled={!lastSegmentsQuery}
             onClick={() => {
               if (!lastSegmentsQuery) return;
