@@ -29,7 +29,7 @@ export interface EditContextDialogProps {
 
 export interface EditContextDialogState {
   queryContextText: string;
-  error?: string;
+  error?: boolean;
   queryContextUpdated: QueryContext;
 }
 
@@ -48,14 +48,13 @@ export class EditContextDialog extends React.PureComponent<
   }
 
   private onTextChange = (e: any) => {
+    let { error } = this.state;
     const queryContextText = (e.target as HTMLInputElement).value;
 
-    let error = null;
     try {
       this.setState({ queryContextUpdated: JSON.parse(queryContextText) });
-    } catch (e) {
-      console.log(e);
-      error = e.message;
+    } catch {
+      error = true;
     }
 
     this.setState({
@@ -78,7 +77,7 @@ export class EditContextDialog extends React.PureComponent<
         <TextArea value={queryContextText} onChange={this.onTextChange} autoFocus />
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
           <Button
-            disabled={Boolean(error)}
+            disabled={error}
             text={'Close'}
             intent={Intent.PRIMARY}
             onClick={() => onClose(queryContextUpdated)}
