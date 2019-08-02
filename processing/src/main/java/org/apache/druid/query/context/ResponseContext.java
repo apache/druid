@@ -35,6 +35,7 @@ import org.joda.time.Interval;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -183,7 +184,7 @@ public abstract class ResponseContext
      * Primary way of registering context keys.
      * @throws IllegalArgumentException if the key has already been registered.
      */
-    public static void registerKey(BaseKey key)
+    public static synchronized void registerKey(BaseKey key)
     {
       Preconditions.checkArgument(
           !registeredKeys.containsKey(key.getName()),
@@ -212,7 +213,7 @@ public abstract class ResponseContext
      */
     public static Collection<BaseKey> getAllRegisteredKeys()
     {
-      return registeredKeys.values();
+      return Collections.unmodifiableCollection(registeredKeys.values());
     }
 
     private final String name;
@@ -244,6 +245,11 @@ public abstract class ResponseContext
     }
   }
 
+  protected abstract Map<BaseKey, Object> getDelegate();
+
+  private final Comparator<Map.Entry<String, JsonNode>> valueLengthReversedComparator =
+      Comparator.comparing((Map.Entry<String, JsonNode> e) -> e.getValue().toString().length()).reversed();
+
   /**
    * Create an empty DefaultResponseContext instance
    * @return empty DefaultResponseContext instance
@@ -270,8 +276,6 @@ public abstract class ResponseContext
     });
     return context;
   }
-
-  protected abstract Map<BaseKey, Object> getDelegate();
 
   /**
    * Associates the specified object with the specified key.
@@ -319,7 +323,11 @@ public abstract class ResponseContext
 
   /**
    * Serializes the context given that the resulting string length is less than the provided limit.
-   * This method tries to remove some elements from context collections if it's needed to satisfy the limit.
+   * This method removes some elements from context collections if it's needed to satisfy the limit.
+   * There is no explicit priorities of keys which values are being truncated because for now there are only
+   * two potential limit breaking keys (UNCOVERED_INTERVALS and MISSING_SEGMENTS) and their values are arrays.
+   * Thus current implementation considers these arrays as equal prioritized and starts removing elements from
+   * the array which serialized value length is the biggest.
    * The resulting string might be correctly deserialized to {@link ResponseContext}.
    */
   public SerializationResult serializeWith(ObjectMapper objectMapper, int maxCharsNumber) throws JsonProcessingException
@@ -332,8 +340,6 @@ public abstract class ResponseContext
       add(Key.TRUNCATED, true);
       final ObjectNode contextJsonNode = objectMapper.valueToTree(getDelegate());
       final ArrayList<Map.Entry<String, JsonNode>> sortedNodesByLength = Lists.newArrayList(contextJsonNode.fields());
-      final Comparator<Map.Entry<String, JsonNode>> valueLengthReversedComparator =
-          Comparator.comparing((Map.Entry<String, JsonNode> e) -> e.getValue().toString().length()).reversed();
       sortedNodesByLength.sort(valueLengthReversedComparator);
       int needToRemoveCharsNumber = fullSerializedString.length() - maxCharsNumber;
       // The complexity of this block is O(n*m*log(m)) where n - context size, m - context's array size
@@ -342,26 +348,22 @@ public abstract class ResponseContext
         final JsonNode node = e.getValue();
         if (node.isArray()) {
           if (needToRemoveCharsNumber >= node.toString().length()) {
-            final int lengthBeforeRemove = node.toString().length();
-            // Empty array could be correctly deserialized so we remove only its elements.
-            ((ArrayNode) node).removeAll();
-            final int lengthAfterRemove = node.toString().length();
-            needToRemoveCharsNumber -= lengthBeforeRemove - lengthAfterRemove;
+            // We need to remove more chars than the field's lenght so removing it completely
+            contextJsonNode.remove(fieldName);
+            // Since the field is completely removed (name + value) we need to do a recalculation
+            needToRemoveCharsNumber = contextJsonNode.toString().length() - maxCharsNumber;
           } else {
-            final ArrayNode arrNode = (ArrayNode) node;
-            while (node.size() > 0 && needToRemoveCharsNumber > 0) {
-              final int lengthBeforeRemove = arrNode.toString().length();
-              // Reducing complexity by removing half of array's elements
-              final int removeUntil = node.size() / 2;
-              for (int removeAt = node.size() - 1; removeAt >= removeUntil; removeAt--) {
-                arrNode.remove(removeAt);
-              }
-              final int lengthAfterRemove = arrNode.toString().length();
-              needToRemoveCharsNumber -= lengthBeforeRemove - lengthAfterRemove;
+            final ArrayNode arrayNode = (ArrayNode) node;
+            needToRemoveCharsNumber -= removeNodeElementsToSatisfyCharsLimit(arrayNode, needToRemoveCharsNumber);
+            if (arrayNode.size() == 0) {
+              // The field is empty, removing it.
+              contextJsonNode.remove(fieldName);
+              // Since the field is completely removed (name + value) we need to do a recalculation
+              needToRemoveCharsNumber = contextJsonNode.toString().length() - maxCharsNumber;
             }
           } // node is not an array
         } else {
-          // In general, a context should not contain nulls so we completely remove the field.
+          // A context should not contain nulls so we completely remove the field.
           contextJsonNode.remove(fieldName);
           // Since the field is completely removed (name + value) we need to do a recalculation
           needToRemoveCharsNumber = contextJsonNode.toString().length() - maxCharsNumber;
@@ -372,6 +374,30 @@ public abstract class ResponseContext
       }
       return new SerializationResult(contextJsonNode.toString(), fullSerializedString);
     }
+  }
+
+  /**
+   * Removes {@code node}'s elements which total lenght of serialized values is greater or equal to the passed limit.
+   * If it is impossible to satisfy the limit the method removes all {@code node}'s elements.
+   * On every iteration it removes exactly half of the remained elements to reduce the overall complexity.
+   * @param node {@link ArrayNode} which elements are being removed.
+   * @param needToRemoveCharsNumber the number of chars need to be removed.
+   * @return the number of removed chars.
+   */
+  private int removeNodeElementsToSatisfyCharsLimit(ArrayNode node, int needToRemoveCharsNumber)
+  {
+    int removedCharsNumber = 0;
+    while (node.size() > 0 && needToRemoveCharsNumber > removedCharsNumber) {
+      final int lengthBeforeRemove = node.toString().length();
+      // Reducing complexity by removing half of array's elements
+      final int removeUntil = node.size() / 2;
+      for (int removeAt = node.size() - 1; removeAt >= removeUntil; removeAt--) {
+        node.remove(removeAt);
+      }
+      final int lengthAfterRemove = node.toString().length();
+      removedCharsNumber += lengthBeforeRemove - lengthAfterRemove;
+    }
+    return removedCharsNumber;
   }
 
   /**

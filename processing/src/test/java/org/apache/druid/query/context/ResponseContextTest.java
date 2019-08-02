@@ -267,7 +267,7 @@ public class ResponseContextTest
     ctxCopy.merge(ctx);
     final ResponseContext.SerializationResult res2 = ctx.serializeWith(objectMapper, 70);
     ctxCopy.put(ResponseContext.Key.UNCOVERED_INTERVALS, Arrays.asList(0, 1, 2, 3, 4));
-    ctxCopy.put(ResponseContext.Key.MISSING_SEGMENTS, Collections.emptyList());
+    ctxCopy.remove(ResponseContext.Key.MISSING_SEGMENTS);
     ctxCopy.put(ResponseContext.Key.TRUNCATED, true);
     Assert.assertEquals(
         ctxCopy.getDelegate(),
