@@ -253,7 +253,9 @@ GROUP BY 1`;
         const tiersResp = await axios.get('/druid/coordinator/v1/tiers');
         const tiers = tiersResp.data;
 
-        const allDatasources = (datasources as any).concat(unused.map(d => ({ datasource: d, unused: true })),);
+        const allDatasources = (datasources as any).concat(
+          unused.map(d => ({ datasource: d, unused: true })),
+        );
         allDatasources.forEach((ds: any) => {
           ds.rules = rules[ds.datasource] || [];
           ds.compaction = compaction[ds.datasource];
@@ -543,9 +545,12 @@ GROUP BY 1`;
         {
           icon: IconNames.EXPORT,
           title: 'Mark as used all segments',
-          onAction: () => this.setState({
-            dataSourceToMarkAllNonOvershadowedSegmentsAsUsedIn: datasource
-          }),
+
+          onAction: () => this.setState(
+            {
+              dataSourceToMarkAllNonOvershadowedSegmentsAsUsedIn: datasource,
+            }
+          ),
         },
         {
           icon: IconNames.TRASH,
@@ -588,18 +593,24 @@ GROUP BY 1`;
         {
           icon: IconNames.EXPORT,
           title: 'Mark as used segments by interval',
-          onAction: () => this.setState({
-            dataSourceToMarkSegmentsByIntervalIn: datasource,
-            useUnuseAction: 'use'
-          }),
+
+          onAction: () => this.setState(
+            {
+              dataSourceToMarkSegmentsByIntervalIn: datasource,
+              useUnuseAction: 'use',
+            }
+          ),
         },
         {
           icon: IconNames.IMPORT,
           title: 'Mark as unused segments by interval',
-          onAction: () => this.setState({
-            dataSourceToMarkSegmentsByIntervalIn: datasource,
-            useUnuseAction: 'unuse'
-          }),
+
+          onAction: () => this.setState(
+            {
+              dataSourceToMarkSegmentsByIntervalIn: datasource,
+              useUnuseAction: 'unuse',
+            }
+          ),
         },
         {
           icon: IconNames.IMPORT,
