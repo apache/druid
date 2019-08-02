@@ -38,6 +38,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.CPUTimeMetricQueryRunner;
+import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
@@ -176,7 +177,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     final boolean skipIncrementalSegment = query.getContextValue(CONTEXT_SKIP_INCREMENTAL_SEGMENT, false);
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
-    return CPUTimeMetricQueryRunner.safeBuild(
+    final QueryRunner<T> mergedRunner =
         toolChest.mergeResults(
             factory.mergeRunners(
                 queryExecutorService,
@@ -268,7 +269,10 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                         }
                     )
             )
-        ),
+        );
+
+    return CPUTimeMetricQueryRunner.safeBuild(
+        new FinalizeResultsQueryRunner<>(mergedRunner, toolChest),
         toolChest,
         emitter,
         cpuTimeAccumulator,

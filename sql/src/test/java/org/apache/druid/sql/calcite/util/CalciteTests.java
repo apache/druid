@@ -428,25 +428,25 @@ public class CalciteTests
 
   public static final List<InputRow> ROWS1_WITH_FULL_TIMESTAMP = ImmutableList.of(
       createRow(
-      ImmutableMap.<String, Object>builder()
-        .put("t", "2000-01-01T10:51:45.695Z")
-        .put("m1", "1.0")
-        .put("m2", "1.0")
-        .put("dim1", "")
-        .put("dim2", ImmutableList.of("a"))
-        .put("dim3", ImmutableList.of("a", "b"))
-        .build()
-    ),
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2000-01-01T10:51:45.695Z")
+              .put("m1", "1.0")
+              .put("m2", "1.0")
+              .put("dim1", "")
+              .put("dim2", ImmutableList.of("a"))
+              .put("dim3", ImmutableList.of("a", "b"))
+              .build()
+      ),
       createRow(
-      ImmutableMap.<String, Object>builder()
-        .put("t", "2000-01-18T10:51:45.695Z")
-        .put("m1", "2.0")
-        .put("m2", "2.0")
-        .put("dim1", "10.1")
-        .put("dim2", ImmutableList.of())
-        .put("dim3", ImmutableList.of("b", "c"))
-        .build()
-    )
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2000-01-18T10:51:45.695Z")
+              .put("m1", "2.0")
+              .put("m2", "2.0")
+              .put("dim1", "10.1")
+              .put("dim2", ImmutableList.of())
+              .put("dim3", ImmutableList.of("b", "c"))
+              .build()
+      )
   );
 
 
@@ -494,6 +494,13 @@ public class CalciteTests
               public int intermediateComputeSizeBytes()
               {
                 return 10 * 1024 * 1024;
+              }
+
+              @Override
+              public int getNumThreads()
+              {
+                // Only use 1 thread for tests.
+                return 1;
               }
 
               @Override
@@ -673,20 +680,22 @@ public class CalciteTests
                    .shardSpec(new LinearShardSpec(0))
                    .build(),
         forbiddenIndex
-    ).add(DataSegment.builder()
-                     .dataSource(DATASOURCE3)
-                     .interval(indexNumericDims.getDataInterval())
-                     .version("1")
-                     .shardSpec(new LinearShardSpec(0))
-                     .build(),
-          indexNumericDims
-    ).add(DataSegment.builder()
-                    .dataSource(DATASOURCE4)
-                    .interval(index4.getDataInterval())
-                    .version("1")
-                    .shardSpec(new LinearShardSpec(0))
-                    .build(),
-          index4
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATASOURCE3)
+                   .interval(indexNumericDims.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .build(),
+        indexNumericDims
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATASOURCE4)
+                   .interval(index4.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .build(),
+        index4
     );
   }
 

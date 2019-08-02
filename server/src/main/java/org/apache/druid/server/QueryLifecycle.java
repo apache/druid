@@ -345,6 +345,15 @@ public class QueryLifecycle
     return baseQuery;
   }
 
+  public QueryToolChest getToolChest()
+  {
+    if (state.compareTo(State.INITIALIZED) < 0) {
+      throw new ISE("Not yet initialized");
+    }
+
+    return toolChest;
+  }
+
   private void transition(final State from, final State to)
   {
     if (state != from) {

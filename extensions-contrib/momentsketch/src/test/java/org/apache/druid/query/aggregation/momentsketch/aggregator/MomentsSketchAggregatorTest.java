@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.momentsketch.aggregator;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -31,6 +30,7 @@ import org.apache.druid.query.aggregation.momentsketch.MomentSketchModule;
 import org.apache.druid.query.aggregation.momentsketch.MomentSketchWrapper;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.ResultRow;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -90,7 +90,7 @@ public class MomentsSketchAggregatorTest
   @Test
   public void buildingSketchesAtIngestionTime() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
         String.join(
             "\n",
@@ -133,28 +133,28 @@ public class MomentsSketchAggregatorTest
             "}"
         )
     );
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
-    double[] quantilesArray = (double[]) row.getRaw("quantiles");
+    ResultRow row = results.get(0);
+    double[] quantilesArray = (double[]) row.get(1); // "quantiles"
     Assert.assertEquals(0, quantilesArray[0], 0.05);
     Assert.assertEquals(.5, quantilesArray[1], 0.05);
     Assert.assertEquals(1.0, quantilesArray[2], 0.05);
 
-    Double minValue = (Double) row.getRaw("min");
+    Double minValue = (Double) row.get(2); // "min"
     Assert.assertEquals(0.0011, minValue, 0.0001);
 
-    Double maxValue = (Double) row.getRaw("max");
+    Double maxValue = (Double) row.get(3); // "max"
     Assert.assertEquals(0.9969, maxValue, 0.0001);
 
-    MomentSketchWrapper sketchObject = (MomentSketchWrapper) row.getRaw("sketch");
+    MomentSketchWrapper sketchObject = (MomentSketchWrapper) row.get(0); // "sketch"
     Assert.assertEquals(400.0, sketchObject.getPowerSums()[0], 1e-10);
   }
 
   @Test
   public void buildingSketchesAtQueryTime() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
         String.join(
             "\n",
@@ -191,11 +191,11 @@ public class MomentsSketchAggregatorTest
         )
     );
 
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
+    ResultRow row = results.get(0);
 
-    MomentSketchWrapper sketchObject = (MomentSketchWrapper) row.getRaw("sketch");
+    MomentSketchWrapper sketchObject = (MomentSketchWrapper) row.get(0); // "sketch"
     // 9 total products since we pre-sum the values.
     Assert.assertEquals(9.0, sketchObject.getPowerSums()[0], 1e-10);
   }

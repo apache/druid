@@ -550,7 +550,7 @@ public abstract class BaseFilterTest
     // Perform test
     final SettableSupplier<InputRow> rowSupplier = new SettableSupplier<>();
     final ValueMatcher matcher = makeFilter(filter).makeMatcher(
-        VIRTUAL_COLUMNS.wrap(RowBasedColumnSelectorFactory.create(rowSupplier, rowSignature))
+        VIRTUAL_COLUMNS.wrap(RowBasedColumnSelectorFactory.create(rowSupplier::get, rowSignature))
     );
     final List<String> values = new ArrayList<>();
     for (InputRow row : rows) {
