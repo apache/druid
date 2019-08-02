@@ -15,23 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Button, Classes, Dialog, Intent, TextArea } from '@blueprintjs/core';
+import { Button, ButtonGroup, Callout, Classes, Dialog, Intent, TextArea } from '@blueprintjs/core';
 import React from 'react';
 
+import { validJson } from '../../utils';
 import { QueryContext } from '../../utils/query-context';
 
 import './edit-context-dialog.scss';
 
 export interface EditContextDialogProps {
   queryContext: QueryContext;
-  onSubmit: (queryContext: QueryContext) => void;
+  onSubmit: (queryContext: {}) => void;
   onClose: () => void;
 }
 
 export interface EditContextDialogState {
-  queryContextText: string;
-  error?: boolean;
-  queryContextUpdated: QueryContext;
+  queryContextString: string;
+  error?: string;
 }
 
 export class EditContextDialog extends React.PureComponent<
@@ -41,58 +41,78 @@ export class EditContextDialog extends React.PureComponent<
   constructor(props: EditContextDialogProps) {
     super(props);
     this.state = {
-      queryContextText: Object.keys(props.queryContext).length
+      queryContextString: Object.keys(props.queryContext).length
         ? JSON.stringify(props.queryContext, undefined, 2)
         : '{\n\n}',
-      queryContextUpdated: props.queryContext ? props.queryContext : {},
+      error: '',
     };
   }
 
   private onTextChange = (e: any) => {
     let { error } = this.state;
     const queryContextText = (e.target as HTMLInputElement).value;
-
+    error = undefined;
+    let queryContextObject;
     try {
-      this.setState({ queryContextUpdated: JSON.parse(queryContextText) });
-    } catch {
-      error = true;
+      queryContextObject = JSON.parse(queryContextText);
+    } catch (e) {
+      error = e.message;
+    }
+
+    if (!(typeof queryContextObject === 'object')) {
+      error = 'Input is not a valid object';
     }
 
     this.setState({
-      queryContextText,
+      queryContextString: queryContextText,
       error,
     });
   };
 
   render(): JSX.Element {
     const { onClose, onSubmit } = this.props;
-    const { queryContextText, error, queryContextUpdated } = this.state;
+    const { queryContextString } = this.state;
+    let { error } = this.state;
+
+    let queryContextObject: {} | undefined;
+    try {
+      queryContextObject = JSON.parse(queryContextString);
+    } catch (e) {
+      error = e.message;
+    }
+
+    if (!(typeof queryContextObject === 'object') && !error) {
+      error = 'Input is not a valid object';
+    }
 
     return (
       <Dialog
         className="edit-context-dialog"
         isOpen
         onClose={() => onClose()}
-        title={'Edit Query Context'}
+        title={'Edit query context'}
       >
-        <TextArea value={queryContextText} onChange={this.onTextChange} autoFocus />
+        <TextArea value={queryContextString} onChange={this.onTextChange} autoFocus />
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          <Button
-            disabled={error}
-            text={'Close'}
-            intent={Intent.PRIMARY}
-            onClick={() => {
-              onClose();
-            }}
-          />
-          <Button
-            disabled={error}
-            text={'Submit'}
-            intent={Intent.PRIMARY}
-            onClick={() => {
-              onSubmit(queryContextUpdated);
-            }}
-          />
+          {error && (
+            <Callout intent={Intent.DANGER} className="edit-context-dialog-error">
+              {error}
+            </Callout>
+          )}
+          <ButtonGroup className={'edit-context-dialog-buttons'}>
+            <Button
+              text={'Close'}
+              onClick={() => {
+                onClose();
+              }}
+            />
+            <Button
+              disabled={!validJson(queryContextString) || typeof queryContextObject !== 'object'}
+              text={'Submit'}
+              intent={Intent.PRIMARY}
+              onClick={() => (queryContextObject ? onSubmit(queryContextObject) : null)}
+            />
+          </ButtonGroup>
         </div>
       </Dialog>
     );
