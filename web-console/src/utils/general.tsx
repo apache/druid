@@ -44,6 +44,20 @@ export function addFilter(filters: Filter[], id: string, value: string): Filter[
   return filters;
 }
 
+export function addFilterNoQuotes(filters: Filter[], id: string, value: string): Filter[] {
+  value = `${value}`;
+  const currentFilter = filters.find(f => f.id === id);
+  if (currentFilter) {
+    filters = filters.filter(f => f.id !== id);
+    if (currentFilter.value !== value) {
+      filters = filters.concat({ id, value });
+    }
+  } else {
+    filters = filters.concat({ id, value });
+  }
+  return filters;
+}
+
 export function makeTextFilter(placeholder = ''): FilterRender {
   return ({ filter, onChange, key }) => {
     const filterValue = filter ? filter.value : '';

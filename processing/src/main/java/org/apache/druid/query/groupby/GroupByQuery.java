@@ -794,7 +794,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return new Builder(this).setQuerySegmentSpec(spec).build();
   }
 
-  public GroupByQuery withDimFilter(final DimFilter dimFilter)
+  public GroupByQuery withDimFilter(@Nullable final DimFilter dimFilter)
   {
     return new Builder(this).setDimFilter(dimFilter).build();
   }
@@ -820,7 +820,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return new Builder(this).setAggregatorSpecs(aggregatorSpecs).build();
   }
 
-  public GroupByQuery withSubtotalsSpec(final List<List<String>> subtotalsSpec)
+  public GroupByQuery withSubtotalsSpec(@Nullable final List<List<String>> subtotalsSpec)
   {
     return new Builder(this).setSubtotalsSpec(subtotalsSpec).build();
   }
@@ -998,7 +998,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       return this;
     }
 
-    public Builder setSubtotalsSpec(List<List<String>> subtotalsSpec)
+    public Builder setSubtotalsSpec(@Nullable List<List<String>> subtotalsSpec)
     {
       this.subtotalsSpec = subtotalsSpec;
       return this;
@@ -1009,7 +1009,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       return addOrderByColumn(dimension, null);
     }
 
-    public Builder addOrderByColumn(String dimension, OrderByColumnSpec.Direction direction)
+    public Builder addOrderByColumn(String dimension, @Nullable OrderByColumnSpec.Direction direction)
     {
       return addOrderByColumn(new OrderByColumnSpec(dimension, direction));
     }
@@ -1051,7 +1051,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       return this;
     }
 
-    public Builder setDimFilter(DimFilter dimFilter)
+    public Builder setDimFilter(@Nullable DimFilter dimFilter)
     {
       this.dimFilter = dimFilter;
       return this;
