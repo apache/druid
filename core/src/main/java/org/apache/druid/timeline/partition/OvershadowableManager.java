@@ -52,6 +52,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
 /**
@@ -76,7 +77,8 @@ class OvershadowableManager<T extends Overshadowable<T>>
    * - Standby: all atomicUpdateGroups of higher versions than that of the visible atomicUpdateGroup.
    * - Overshadowed: all atomicUpdateGroups of lower versions than that of the visible atomicUpdateGroup.
    */
-  private enum State
+  @VisibleForTesting
+  enum State
   {
     STANDBY,
     VISIBLE,
@@ -259,16 +261,14 @@ class OvershadowableManager<T extends Overshadowable<T>>
    *
    * @return a list of found atomicUpdateGroups. It could be empty if no groups are found.
    */
-  private List<AtomicUpdateGroup<T>> findOvershadowedBy(
-      RootPartitionRange rangeOfAug,
-      short minorVersion,
-      State fromState
-  )
+  @VisibleForTesting
+  List<AtomicUpdateGroup<T>> findOvershadowedBy(RootPartitionRange rangeOfAug, short minorVersion, State fromState)
   {
     final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap = getStateMap(fromState);
     Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> current = findLowestOverlappingEntry(
         rangeOfAug,
-        stateMap
+        stateMap,
+        true
     );
 
     if (current == null) {
@@ -303,7 +303,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
   }
 
   /**
-   * Find all atomicUpdateGroups which overshadows others of the given minorVersion in the given rootPartitionRange.
+   * Find all atomicUpdateGroups which overshadow others of the given minorVersion in the given rootPartitionRange.
    * Similar to {@link #findOvershadowedBy}.
    *
    * Note that one atommicUpdateGroup can overshadow multiple other groups. If you're finding overshadowing
@@ -316,12 +316,14 @@ class OvershadowableManager<T extends Overshadowable<T>>
    *
    * @return a list of found atomicUpdateGroups. It could be empty if no groups are found.
    */
-  private List<AtomicUpdateGroup<T>> findOvershadows(RootPartitionRange rangeOfAug, short minorVersion, State fromState)
+  @VisibleForTesting
+  List<AtomicUpdateGroup<T>> findOvershadows(RootPartitionRange rangeOfAug, short minorVersion, State fromState)
   {
     final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap = getStateMap(fromState);
     Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> current = findLowestOverlappingEntry(
         rangeOfAug,
-        stateMap
+        stateMap,
+        false
     );
 
     if (current == null) {
@@ -352,7 +354,8 @@ class OvershadowableManager<T extends Overshadowable<T>>
 
   private Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> findLowestOverlappingEntry(
       RootPartitionRange rangeOfAug,
-      TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap
+      TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap,
+      boolean strictSameStartId
   )
   {
     Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> current = stateMap.floorEntry(rangeOfAug);
@@ -370,13 +373,20 @@ class OvershadowableManager<T extends Overshadowable<T>>
       current = stateMap.higherEntry(current.getKey());
     }
 
+    final BiPredicate<RootPartitionRange, RootPartitionRange> predicate;
+    if (strictSameStartId) {
+      predicate = (entryRange, groupRange) -> entryRange.startPartitionId == groupRange.startPartitionId;
+    } else {
+      predicate = RootPartitionRange::overlaps;
+    }
+
     // There could be multiple entries of the same startPartitionId but different endPartitionId.
     // Find the first key of the same startPartitionId which has the lowest endPartitionId.
     while (current != null) {
       final Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> lowerEntry = stateMap.lowerEntry(
           current.getKey()
       );
-      if (lowerEntry != null && lowerEntry.getKey().startPartitionId == rangeOfAug.startPartitionId) {
+      if (lowerEntry != null && predicate.test(lowerEntry.getKey(), rangeOfAug)) {
         current = lowerEntry;
       } else {
         break;
@@ -953,10 +963,17 @@ class OvershadowableManager<T extends Overshadowable<T>>
            '}';
   }
 
-  private static class RootPartitionRange implements Comparable<RootPartitionRange>
+  @VisibleForTesting
+  static class RootPartitionRange implements Comparable<RootPartitionRange>
   {
     private final short startPartitionId;
     private final short endPartitionId;
+
+    @VisibleForTesting
+    static RootPartitionRange of(int startPartitionId, int endPartitionId)
+    {
+      return new RootPartitionRange((short) startPartitionId, (short) endPartitionId);
+    }
 
     private static <T extends Overshadowable<T>> RootPartitionRange of(PartitionChunk<T> chunk)
     {
@@ -966,11 +983,6 @@ class OvershadowableManager<T extends Overshadowable<T>>
     private static <T extends Overshadowable<T>> RootPartitionRange of(AtomicUpdateGroup<T> aug)
     {
       return of(aug.getStartRootPartitionId(), aug.getEndRootPartitionId());
-    }
-
-    private static RootPartitionRange of(int startPartitionId, int endPartitionId)
-    {
-      return new RootPartitionRange((short) startPartitionId, (short) endPartitionId);
     }
 
     private RootPartitionRange(short startPartitionId, short endPartitionId)

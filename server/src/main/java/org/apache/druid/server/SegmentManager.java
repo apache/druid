@@ -172,7 +172,13 @@ public class SegmentManager
             log.warn("Told to load an adapter for segment[%s] that already exists", segment.getId());
             resultSupplier.set(false);
           } else {
-            final ReferenceCountingSegment referenceCountingSegment = new ReferenceCountingSegment(adapter);
+            final ReferenceCountingSegment referenceCountingSegment = new ReferenceCountingSegment(
+                adapter,
+                segment.getStartRootPartitionId(),
+                segment.getEndRootPartitionId(),
+                segment.getMinorVersion(),
+                segment.getAtomicUpdateGroupSize()
+            );
             loadedIntervals.add(
                 segment.getInterval(),
                 segment.getVersion(),
