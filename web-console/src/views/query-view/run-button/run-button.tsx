@@ -142,7 +142,7 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
         />
         <MenuItem
           icon={IconNames.PROPERTIES}
-          text="Edit Context"
+          text="Edit context"
           onClick={renderEditContextDialog}
         />
       </Menu>
