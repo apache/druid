@@ -74,7 +74,7 @@ public class ExpressionPostAggregator implements PostAggregator
   public ExpressionPostAggregator(
       @JsonProperty("name") String name,
       @JsonProperty("expression") String expression,
-      @JsonProperty("ordering") String ordering,
+      @JsonProperty("ordering") @Nullable String ordering,
       @JacksonInject ExprMacroTable macroTable
   )
   {

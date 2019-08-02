@@ -37,6 +37,7 @@ import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBas
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.File;
 import java.nio.ByteBuffer;
