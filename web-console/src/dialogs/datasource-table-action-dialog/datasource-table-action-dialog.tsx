@@ -48,11 +48,12 @@ export class DatasourceTableActionDialog extends React.PureComponent<
       activeTab: 'dimensions',
     };
 
+    ///This should be a table
     this.dimensionsQueryManager = new QueryManager({
       processQuery: async () => {
         const { datasourceId } = this.props;
         const resp = await queryDruidSql<ColumnMetadata>({
-          query: `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          query: `SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
           WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = '${datasourceId}'`,
         });
         const dimensionArray = resp.map(object => object.COLUMN_NAME);
