@@ -35,10 +35,10 @@ public class ConcurrentResponseContext extends ResponseContext
     return new ConcurrentResponseContext();
   }
 
-  private final ConcurrentHashMap<String, Object> delegate = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<BaseKey, Object> delegate = new ConcurrentHashMap<>();
 
   @Override
-  protected Map<String, Object> getDelegate()
+  protected Map<BaseKey, Object> getDelegate()
   {
     return delegate;
   }
