@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-import { IDialogProps, Intent } from '@blueprintjs/core';
+import { IDialogProps } from '@blueprintjs/core';
 import React from 'react';
 
 import { ShowValue } from '../../components/show-value/show-value';
-import { AppToaster } from '../../singletons/toaster';
 import { queryDruidSql, QueryManager } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { ColumnMetadata } from '../../utils/column-metadata';
@@ -35,6 +34,7 @@ interface DatasourceTableActionDialogProps extends IDialogProps {
 interface DatasourceTableActionDialogState {
   activeTab: 'dimensions';
   dimensions?: string;
+  error?: string;
 }
 
 export class DatasourceTableActionDialog extends React.PureComponent<
@@ -59,13 +59,7 @@ export class DatasourceTableActionDialog extends React.PureComponent<
         return JSON.stringify(dimensionArray, undefined, 2);
       },
       onStateChange: ({ result, error }) => {
-        if (error) {
-          AppToaster.show({
-            message: 'Could not load SQL metadata',
-            intent: Intent.DANGER,
-          });
-        }
-        this.setState({ dimensions: result });
+        this.setState({ dimensions: result, error });
       },
     });
   }
@@ -76,7 +70,7 @@ export class DatasourceTableActionDialog extends React.PureComponent<
 
   render(): React.ReactNode {
     const { onClose, datasourceId, actions } = this.props;
-    const { activeTab, dimensions } = this.state;
+    const { activeTab, dimensions, error } = this.state;
 
     const taskTableSideButtonMetadata: SideButtonMetaData[] = [
       {
@@ -97,7 +91,7 @@ export class DatasourceTableActionDialog extends React.PureComponent<
       >
         {activeTab === 'dimensions' && (
           <ShowValue
-            jsonValue={dimensions}
+            jsonValue={dimensions ? dimensions : error}
             downloadFilename={`datasource-dimensions-${datasourceId}.json`}
           />
         )}

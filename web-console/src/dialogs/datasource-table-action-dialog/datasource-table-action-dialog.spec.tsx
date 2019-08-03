@@ -21,9 +21,9 @@ import React from 'react';
 
 import { DatasourceTableActionDialog } from './datasource-table-action-dialog';
 
-describe('task table action dialog', () => {
+describe('Datasource table action dialog', () => {
   it('matches snapshot', () => {
-    const taskTableActionDialog = (
+    const datasourceTableActionDialog = (
       <DatasourceTableActionDialog
         datasourceId="test"
         actions={[{ title: 'test', onAction: () => null }]}
@@ -31,7 +31,7 @@ describe('task table action dialog', () => {
         isOpen
       />
     );
-    render(taskTableActionDialog);
+    render(datasourceTableActionDialog);
     expect(document.body.lastChild).toMatchSnapshot();
   });
 });
