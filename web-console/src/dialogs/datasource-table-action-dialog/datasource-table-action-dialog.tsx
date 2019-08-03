@@ -19,7 +19,7 @@
 import { IDialogProps } from '@blueprintjs/core';
 import React from 'react';
 
-import { ShowValue } from '../../components/show-value/show-value';
+import { DatasourceColumnsTable } from '../../components/datasource-columns-table/datasource-columns-table';
 import { queryDruidSql, QueryManager } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { ColumnMetadata } from '../../utils/column-metadata';
@@ -48,7 +48,7 @@ export class DatasourceTableActionDialog extends React.PureComponent<
       activeTab: 'dimensions',
     };
 
-    ///This should be a table
+    /// This should be a table
     this.dimensionsQueryManager = new QueryManager({
       processQuery: async () => {
         const { datasourceId } = this.props;
@@ -71,7 +71,7 @@ export class DatasourceTableActionDialog extends React.PureComponent<
 
   render(): React.ReactNode {
     const { onClose, datasourceId, actions } = this.props;
-    const { activeTab, dimensions, error } = this.state;
+    const { activeTab } = this.state;
 
     const taskTableSideButtonMetadata: SideButtonMetaData[] = [
       {
@@ -91,8 +91,8 @@ export class DatasourceTableActionDialog extends React.PureComponent<
         actions={actions}
       >
         {activeTab === 'dimensions' && (
-          <ShowValue
-            jsonValue={dimensions ? dimensions : error}
+          <DatasourceColumnsTable
+            datasourceId={datasourceId ? datasourceId : ''}
             downloadFilename={`datasource-dimensions-${datasourceId}.json`}
           />
         )}
