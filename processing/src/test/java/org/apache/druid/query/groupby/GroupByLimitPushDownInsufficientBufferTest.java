@@ -33,7 +33,6 @@ import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -103,8 +102,8 @@ public class GroupByLimitPushDownInsufficientBufferTest
   private static final IndexIO INDEX_IO;
 
   private File tmpDir;
-  private QueryRunnerFactory<Row, GroupByQuery> groupByFactory;
-  private QueryRunnerFactory<Row, GroupByQuery> tooSmallGroupByFactory;
+  private QueryRunnerFactory<ResultRow, GroupByQuery> groupByFactory;
+  private QueryRunnerFactory<ResultRow, GroupByQuery> tooSmallGroupByFactory;
   private List<IncrementalIndex> incrementalIndices = new ArrayList<>();
   private List<QueryableIndex> groupByIndices = new ArrayList<>();
   private ExecutorService executorService;
@@ -431,27 +430,27 @@ public class GroupByLimitPushDownInsufficientBufferTest
   {
     // one segment's results use limit push down, the other doesn't because of insufficient buffer capacity
 
-    QueryToolChest<Row, GroupByQuery> toolChest = groupByFactory.getToolchest();
-    QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
+    QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
+    QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             groupByFactory.mergeRunners(executorService, getRunner1())
         ),
         (QueryToolChest) toolChest
     );
 
-    QueryRunner<Row> theRunner2 = new FinalizeResultsQueryRunner<>(
+    QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             tooSmallGroupByFactory.mergeRunners(executorService, getRunner2())
         ),
         (QueryToolChest) toolChest
     );
 
-    QueryRunner<Row> theRunner3 = new FinalizeResultsQueryRunner<>(
+    QueryRunner<ResultRow> theRunner3 = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            new QueryRunner<Row>()
+            new QueryRunner<ResultRow>()
             {
               @Override
-              public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
+              public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
               {
                 return Sequences
                     .simple(
@@ -486,20 +485,23 @@ public class GroupByLimitPushDownInsufficientBufferTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = theRunner3.run(QueryPlus.wrap(query));
-    List<Row> results = queryResult.toList();
+    Sequence<ResultRow> queryResult = theRunner3.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    List<ResultRow> results = queryResult.toList();
 
-    Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "1970-01-01T00:00:00.000Z",
         "dimA", "zortaxx",
         "metA", 999L
     );
-    Row expectedRow1 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow1 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "1970-01-01T00:00:00.000Z",
         "dimA", "zebra",
         "metA", 180L
     );
-    Row expectedRow2 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow2 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "1970-01-01T00:00:00.000Z",
         "dimA", "world",
         "metA", 150L
@@ -516,8 +518,8 @@ public class GroupByLimitPushDownInsufficientBufferTest
   {
     // one segment's results use limit push down, the other doesn't because of insufficient buffer capacity
 
-    QueryToolChest<Row, GroupByQuery> toolChest = groupByFactory.getToolchest();
-    QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
+    QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
+    QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             groupByFactory.mergeRunners(executorService, getRunner1())
         ),
@@ -525,19 +527,19 @@ public class GroupByLimitPushDownInsufficientBufferTest
     );
 
 
-    QueryRunner<Row> theRunner2 = new FinalizeResultsQueryRunner<>(
+    QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             tooSmallGroupByFactory.mergeRunners(executorService, getRunner2())
         ),
         (QueryToolChest) toolChest
     );
 
-    QueryRunner<Row> theRunner3 = new FinalizeResultsQueryRunner<>(
+    QueryRunner<ResultRow> theRunner3 = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            new QueryRunner<Row>()
+            new QueryRunner<ResultRow>()
             {
               @Override
-              public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
+              public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
               {
                 return Sequences
                     .simple(
@@ -574,26 +576,29 @@ public class GroupByLimitPushDownInsufficientBufferTest
         .setGranularity(Granularities.ALL)
         .setContext(
             ImmutableMap.of(
-              GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN,
-              true
+                GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN,
+                true
             )
         )
         .build();
 
-    Sequence<Row> queryResult = theRunner3.run(QueryPlus.wrap(query));
-    List<Row> results = queryResult.toList();
+    Sequence<ResultRow> queryResult = theRunner3.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    List<ResultRow> results = queryResult.toList();
 
-    Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "1970-01-01T00:00:00.000Z",
         "dimA", "zortaxx",
         "metA", 999L
     );
-    Row expectedRow1 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow1 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "1970-01-01T00:00:00.000Z",
         "dimA", "foo",
         "metA", 200L
     );
-    Row expectedRow2 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow2 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "1970-01-01T00:00:00.000Z",
         "dimA", "mango",
         "metA", 190L
@@ -605,11 +610,11 @@ public class GroupByLimitPushDownInsufficientBufferTest
     Assert.assertEquals(expectedRow2, results.get(2));
   }
 
-  private List<QueryRunner<Row>> getRunner1()
+  private List<QueryRunner<ResultRow>> getRunner1()
   {
-    List<QueryRunner<Row>> runners = new ArrayList<>();
+    List<QueryRunner<ResultRow>> runners = new ArrayList<>();
     QueryableIndex index = groupByIndices.get(0);
-    QueryRunner<Row> runner = makeQueryRunner(
+    QueryRunner<ResultRow> runner = makeQueryRunner(
         groupByFactory,
         SegmentId.dummy(index.toString()),
         new QueryableIndexSegment(index, SegmentId.dummy(index.toString()))
@@ -618,11 +623,11 @@ public class GroupByLimitPushDownInsufficientBufferTest
     return runners;
   }
 
-  private List<QueryRunner<Row>> getRunner2()
+  private List<QueryRunner<ResultRow>> getRunner2()
   {
-    List<QueryRunner<Row>> runners = new ArrayList<>();
+    List<QueryRunner<ResultRow>> runners = new ArrayList<>();
     QueryableIndex index2 = groupByIndices.get(1);
-    QueryRunner<Row> tooSmallRunner = makeQueryRunner(
+    QueryRunner<ResultRow> tooSmallRunner = makeQueryRunner(
         tooSmallGroupByFactory,
         SegmentId.dummy(index2.toString()),
         new QueryableIndexSegment(index2, SegmentId.dummy(index2.toString()))

@@ -255,6 +255,14 @@ exports[`tasks view matches snapshot 1`] = `
           }
         }
         filterable={true}
+        filtered={
+          Array [
+            Object {
+              "id": "datasource",
+              "value": "datasource",
+            },
+          ]
+        }
         freezeWhenExpanded={false}
         getLoadingProps={[Function]}
         getNoDataProps={[Function]}
@@ -288,6 +296,7 @@ exports[`tasks view matches snapshot 1`] = `
         noDataText=""
         ofText="of"
         onFetchData={[Function]}
+        onFilteredChange={[Function]}
         originalKey="_original"
         pageJumpText="jump to page"
         pageSizeOptions={
@@ -578,6 +587,10 @@ exports[`tasks view matches snapshot 1`] = `
             Object {
               "id": "task_id",
               "value": "test",
+            },
+            Object {
+              "id": "datasource",
+              "value": "datasource",
             },
           ]
         }

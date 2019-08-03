@@ -17,24 +17,20 @@
  * under the License.
  */
 
-package org.apache.druid.query.groupby.having;
+package org.apache.druid.sql.calcite.expression;
 
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
+import org.junit.Rule;
+import org.junit.rules.ExpectedException;
 
-import java.util.Map;
-
-public abstract class BaseHavingSpec implements HavingSpec
+public abstract class ExpressionTestBase extends CalciteTestBase
 {
-  @Override
-  public void setRowSignature(Map<String, ValueType> rowSignature)
-  {
-    // Do nothing.
-  }
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
-  @Override
-  public void setAggregators(Map<String, AggregatorFactory> aggregators)
+  void expectException(Class<? extends Throwable> type, String message)
   {
-
+    expectedException.expect(type);
+    expectedException.expectMessage(message);
   }
 }

@@ -32,6 +32,7 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
@@ -124,7 +125,7 @@ public class FixedBucketsHistogramGroupByQueryTest
       );
       final GroupByQueryRunnerFactory factory = factoryAndCloser.lhs;
       resourceCloser.register(factoryAndCloser.rhs);
-      for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
+      for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
         final String testName = StringUtils.format(
             "config=%s, runner=%s",
             config.toString(),
@@ -188,8 +189,9 @@ public class FixedBucketsHistogramGroupByQueryTest
         )
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
+    List<ResultRow> expectedResults = Collections.singletonList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             "marketalias", "upfront",
             "rows", 186L,
@@ -211,7 +213,7 @@ public class FixedBucketsHistogramGroupByQueryTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "fixed-histo");
   }
 
@@ -248,8 +250,9 @@ public class FixedBucketsHistogramGroupByQueryTest
         )
         .build();
 
-    List<Row> expectedResults = Collections.singletonList(
+    List<ResultRow> expectedResults = Collections.singletonList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             "marketalias", "upfront",
             "rows", 186L,
@@ -257,7 +260,7 @@ public class FixedBucketsHistogramGroupByQueryTest
         )
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "fixed-histo");
   }
 }

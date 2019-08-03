@@ -19,6 +19,7 @@
 import { Button, FormGroup, InputGroup, Intent, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
+import classNames from 'classnames';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
@@ -30,11 +31,13 @@ import {
   ViewControlBar,
 } from '../../components';
 import { ActionIcon } from '../../components/action-icon/action-icon';
+import { SegmentTimeline } from '../../components/segment-timeline/segment-timeline';
 import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
   countBy,
+  escapeSqlIdentifier,
   formatBytes,
   formatNumber,
   getDruidErrorMessage,
@@ -82,12 +85,6 @@ function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string 
   return loadDrop.join(', ') || 'No segments to load/drop';
 }
 
-export interface DatasourcesViewProps {
-  goToQuery: (initSql: string) => void;
-  goToSegments: (datasource: string, onlyUnavailable?: boolean) => void;
-  noSqlMode: boolean;
-}
-
 interface Datasource {
   datasource: string;
   rules: any[];
@@ -105,17 +102,35 @@ interface DatasourceQueryResultRow {
   num_rows: number;
 }
 
+interface RetentionDialogOpenOn {
+  datasource: string;
+  rules: any[];
+}
+
+interface CompactionDialogOpenOn {
+  datasource: string;
+  compactionConfig: Record<string, any>;
+}
+
+export interface DatasourcesViewProps {
+  goToQuery: (initSql: string) => void;
+  goToTask: (datasource?: string, openDialog?: string) => void;
+  goToSegments: (datasource: string, onlyUnavailable?: boolean) => void;
+  noSqlMode: boolean;
+  initDatasource?: string;
+}
+
 export interface DatasourcesViewState {
   datasourcesLoading: boolean;
   datasources: Datasource[] | null;
   tiers: string[];
   defaultRules: any[];
   datasourcesError?: string;
-  datasourcesFilter: Filter[];
+  datasourceFilter: Filter[];
 
   showDisabled: boolean;
-  retentionDialogOpenOn?: { datasource: string; rules: any[] };
-  compactionDialogOpenOn?: { datasource: string; configData: any };
+  retentionDialogOpenOn?: RetentionDialogOpenOn;
+  compactionDialogOpenOn?: CompactionDialogOpenOn;
   dropDataDatasource?: string;
   enableDatasource?: string;
   killDatasource?: string;
@@ -123,6 +138,9 @@ export interface DatasourcesViewState {
   dropReloadAction: 'drop' | 'reload';
   dropReloadInterval: string;
   hiddenColumns: LocalStorageBackedArray<string>;
+  showChart: boolean;
+  chartWidth: number;
+  chartHeight: number;
 }
 
 export class DatasourcesView extends React.PureComponent<
@@ -162,12 +180,18 @@ GROUP BY 1`;
 
   constructor(props: DatasourcesViewProps, context: any) {
     super(props, context);
+
+    const datasourceFilter: Filter[] = [];
+    if (props.initDatasource) {
+      datasourceFilter.push({ id: 'datasource', value: `"${props.initDatasource}"` });
+    }
+
     this.state = {
       datasourcesLoading: true,
       datasources: null,
       tiers: [],
       defaultRules: [],
-      datasourcesFilter: [],
+      datasourceFilter,
 
       showDisabled: false,
       dropReloadAction: 'drop',
@@ -175,6 +199,9 @@ GROUP BY 1`;
       hiddenColumns: new LocalStorageBackedArray<string>(
         LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION,
       ),
+      showChart: false,
+      chartWidth: window.innerWidth * 0.85,
+      chartHeight: window.innerHeight * 0.4,
     };
 
     this.datasourceQueryManager = new QueryManager({
@@ -252,9 +279,31 @@ GROUP BY 1`;
     });
   }
 
+  private handleResize = () => {
+    this.setState({
+      chartWidth: window.innerWidth * 0.85,
+      chartHeight: window.innerHeight * 0.4,
+    });
+  };
+
+  private refresh = (auto: any): void => {
+    this.datasourceQueryManager.rerunLastQuery(auto);
+    // this looks ugly, but it forces the chart to re-render when refresh is clicked
+    this.setState(
+      {
+        showChart: !this.state.showChart,
+      },
+      () =>
+        this.setState({
+          showChart: !this.state.showChart,
+        }),
+    );
+  };
+
   componentDidMount(): void {
     const { noSqlMode } = this.props;
     this.datasourceQueryManager.runQuery(noSqlMode);
+    window.addEventListener('resize', this.handleResize);
   }
 
   componentWillUnmount(): void {
@@ -392,9 +441,9 @@ GROUP BY 1`;
         }}
       >
         <p>
-          {`Are you sure you want to permanently delete the data in datasource '${killDatasource}'?`}
+          {`Are you sure you want to permanently delete the deep storage data for datasource '${killDatasource}'?`}
         </p>
-        <p>This action can not be undone.</p>
+        <p>This action is not reversible and the data deleted will be lost.</p>
       </AsyncActionDialog>
     );
   }
@@ -484,8 +533,13 @@ GROUP BY 1`;
     this.setState({ showDisabled: !showDisabled });
   }
 
-  getDatasourceActions(datasource: string, disabled: boolean): BasicAction[] {
-    const { goToQuery } = this.props;
+  getDatasourceActions(
+    datasource: string,
+    disabled: boolean,
+    rules: any[],
+    compactionConfig: Record<string, any>,
+  ): BasicAction[] {
+    const { goToQuery, goToTask } = this.props;
 
     if (disabled) {
       return [
@@ -496,7 +550,7 @@ GROUP BY 1`;
         },
         {
           icon: IconNames.TRASH,
-          title: 'Permanently delete (kill task)',
+          title: 'Delete segments (issue kill task)',
           intent: Intent.DANGER,
           onAction: () => this.setState({ killDatasource: datasource }),
         },
@@ -506,7 +560,36 @@ GROUP BY 1`;
         {
           icon: IconNames.APPLICATION,
           title: 'Query with SQL',
-          onAction: () => goToQuery(`SELECT * FROM "${datasource}"`),
+          onAction: () => goToQuery(`SELECT * FROM ${escapeSqlIdentifier(datasource)}`),
+        },
+        {
+          icon: IconNames.GANTT_CHART,
+          title: 'Go to tasks',
+          onAction: () => goToTask(datasource),
+        },
+        {
+          icon: IconNames.AUTOMATIC_UPDATES,
+          title: 'Edit retention rules',
+          onAction: () => {
+            this.setState({
+              retentionDialogOpenOn: {
+                datasource,
+                rules,
+              },
+            });
+          },
+        },
+        {
+          icon: IconNames.COMPRESSED,
+          title: 'Edit compaction configuration',
+          onAction: () => {
+            this.setState({
+              compactionDialogOpenOn: {
+                datasource,
+                compactionConfig,
+              },
+            });
+          },
         },
         {
           icon: IconNames.EXPORT,
@@ -525,6 +608,12 @@ GROUP BY 1`;
           title: 'Drop datasource (disable)',
           intent: Intent.DANGER,
           onAction: () => this.setState({ dropDataDatasource: datasource }),
+        },
+        {
+          icon: IconNames.TRASH,
+          title: 'Delete unused segments (issue kill task)',
+          intent: Intent.DANGER,
+          onAction: () => this.setState({ killDatasource: datasource }),
         },
       ];
     }
@@ -554,7 +643,7 @@ GROUP BY 1`;
     return (
       <CompactionDialog
         datasource={compactionDialogOpenOn.datasource}
-        configData={compactionDialogOpenOn.configData}
+        compactionConfig={compactionDialogOpenOn.compactionConfig}
         onClose={() => this.setState({ compactionDialogOpenOn: undefined })}
         onSave={this.saveCompaction}
         onDelete={this.deleteCompaction}
@@ -569,9 +658,10 @@ GROUP BY 1`;
       defaultRules,
       datasourcesLoading,
       datasourcesError,
-      datasourcesFilter,
+      datasourceFilter,
       showDisabled,
       hiddenColumns,
+      showChart,
     } = this.state;
     let data = datasources || [];
     if (!showDisabled) {
@@ -588,9 +678,9 @@ GROUP BY 1`;
               : datasourcesError || ''
           }
           filterable
-          filtered={datasourcesFilter}
+          filtered={datasourceFilter}
           onFilteredChange={filtered => {
-            this.setState({ datasourcesFilter: filtered });
+            this.setState({ datasourceFilter: filtered });
           }}
           columns={[
             {
@@ -603,7 +693,7 @@ GROUP BY 1`;
                   <a
                     onClick={() => {
                       this.setState({
-                        datasourcesFilter: addFilter(datasourcesFilter, 'datasource', value),
+                        datasourceFilter: addFilter(datasourceFilter, 'datasource', value),
                       });
                     }}
                   >
@@ -728,10 +818,6 @@ GROUP BY 1`;
               filterable: false,
               Cell: row => {
                 const { compaction } = row.original;
-                const compactionOpenOn: { datasource: string; configData: any } | null = {
-                  datasource: row.original.datasource,
-                  configData: compaction,
-                };
                 let text: string;
                 if (compaction) {
                   text = `Target: ${formatBytes(compaction.targetCompactionSizeBytes)}`;
@@ -741,7 +827,14 @@ GROUP BY 1`;
                 return (
                   <span
                     className="clickable-cell"
-                    onClick={() => this.setState({ compactionDialogOpenOn: compactionOpenOn })}
+                    onClick={() =>
+                      this.setState({
+                        compactionDialogOpenOn: {
+                          datasource: row.original.datasource,
+                          compactionConfig: compaction,
+                        },
+                      })
+                    }
                   >
                     {text}&nbsp;
                     <ActionIcon icon={IconNames.EDIT} />
@@ -782,14 +875,20 @@ GROUP BY 1`;
               filterable: false,
               Cell: row => {
                 const datasource = row.value;
-                const { disabled } = row.original;
-                const datasourceActions = this.getDatasourceActions(datasource, disabled);
+                const { disabled, rules, compaction } = row.original;
+                const datasourceActions = this.getDatasourceActions(
+                  datasource,
+                  disabled,
+                  rules,
+                  compaction,
+                );
                 return <ActionCell actions={datasourceActions} />;
               },
               show: hiddenColumns.exists(ActionCell.COLUMN_LABEL),
             },
           ]}
           defaultPageSize={50}
+          className={classNames(`-striped -highlight`, showChart ? '' : 'full-height')}
         />
         {this.renderDropDataAction()}
         {this.renderEnableAction()}
@@ -803,13 +902,15 @@ GROUP BY 1`;
 
   render(): JSX.Element {
     const { goToQuery, noSqlMode } = this.props;
-    const { showDisabled, hiddenColumns } = this.state;
+    const { showDisabled, hiddenColumns, showChart, chartHeight, chartWidth } = this.state;
 
     return (
       <div className="data-sources-view app-view">
         <ViewControlBar label="Datasources">
           <RefreshButton
-            onRefresh={auto => this.datasourceQueryManager.rerunLastQuery(auto)}
+            onRefresh={auto => {
+              this.refresh(auto);
+            }}
             localStorageKey={LocalStorageKeys.DATASOURCES_REFRESH_RATE}
           />
           {!noSqlMode && (
@@ -819,6 +920,11 @@ GROUP BY 1`;
               onClick={() => goToQuery(DatasourcesView.DATASOURCE_SQL)}
             />
           )}
+          <Switch
+            checked={showChart}
+            label="Show segment timeline"
+            onChange={() => this.setState({ showChart: !showChart })}
+          />
           <Switch
             checked={showDisabled}
             label="Show disabled"
@@ -830,6 +936,11 @@ GROUP BY 1`;
             tableColumnsHidden={hiddenColumns.storedArray}
           />
         </ViewControlBar>
+        {showChart && (
+          <div className={'chart-container'}>
+            <SegmentTimeline chartHeight={chartHeight} chartWidth={chartWidth} />
+          </div>
+        )}
         {this.renderDatasourceTable()}
       </div>
     );

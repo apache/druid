@@ -20,7 +20,6 @@
 package org.apache.druid.query.groupby;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
@@ -54,6 +53,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
+ *
  */
 public class GroupByQueryRunnerFactoryTest
 {
@@ -126,11 +126,11 @@ public class GroupByQueryRunnerFactoryTest
         }
     );
 
-    Sequence<Row> result = mergedRunner.run(QueryPlus.wrap(query));
+    Sequence<ResultRow> result = mergedRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t1", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t2", "count", 4L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", "t1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", "t2", "count", 4L)
     );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
@@ -160,7 +160,7 @@ public class GroupByQueryRunnerFactoryTest
         "2011-01-12T00:00:00.000Z,product_1,t1",
         "2011-01-13T00:00:00.000Z,product_2,t2",
         "2011-01-14T00:00:00.000Z,product_3,t2",
-    };
+        };
 
     for (String row : rows) {
       incrementalIndex.add(parser.parse(row));

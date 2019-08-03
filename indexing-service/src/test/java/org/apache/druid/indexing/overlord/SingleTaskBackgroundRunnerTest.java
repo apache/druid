@@ -82,6 +82,7 @@ public class SingleTaskBackgroundRunnerTest
     final ServiceEmitter emitter = new NoopServiceEmitter();
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(
         taskConfig,
+        null,
         EasyMock.createMock(TaskActionClientFactory.class),
         emitter,
         new NoopDataSegmentPusher(),
