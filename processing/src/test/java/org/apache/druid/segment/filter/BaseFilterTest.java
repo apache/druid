@@ -410,6 +410,12 @@ public abstract class BaseFilterTest
       }
 
       @Override
+      public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
+      {
+        return false;
+      }
+
+      @Override
       public double estimateSelectivity(BitmapIndexSelector indexSelector)
       {
         return 1.0;
@@ -481,6 +487,12 @@ public abstract class BaseFilterTest
       public Set<String> getRequiredColumns()
       {
         return null;
+      }
+
+      @Override
+      public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
+      {
+        return false;
       }
 
       @Override
