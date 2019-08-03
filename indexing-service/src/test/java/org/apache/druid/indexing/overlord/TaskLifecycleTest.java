@@ -71,6 +71,7 @@ import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
+import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
@@ -227,6 +228,7 @@ public class TaskLifecycleTest
   private QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
   private MonitorScheduler monitorScheduler;
   private ServiceEmitter emitter;
+  private TaskLockConfig lockConfig;
   private TaskQueueConfig tqc;
   private TaskConfig taskConfig;
   private DataSegmentPusher dataSegmentPusher;
@@ -653,12 +655,13 @@ public class TaskLifecycleTest
     Preconditions.checkNotNull(tac);
     Preconditions.checkNotNull(emitter);
 
+    lockConfig = new TaskLockConfig();
     tqc = mapper.readValue(
         "{\"startDelay\":\"PT0S\", \"restartDelay\":\"PT1S\", \"storageSyncRate\":\"PT0.5S\"}",
         TaskQueueConfig.class
     );
 
-    return new TaskQueue(tqc, ts, tr, tac, taskLockbox, emitter);
+    return new TaskQueue(lockConfig, tqc, ts, tr, tac, taskLockbox, emitter);
   }
 
   @After
