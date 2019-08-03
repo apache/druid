@@ -706,6 +706,12 @@ public class IncrementalIndexStorageAdapterTest
       return null;
     }
 
+    @Override
+    public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
+    {
+      return true;
+    }
+
     private class DictionaryRaceTestFilterDruidPredicateFactory implements DruidPredicateFactory
     {
       @Override
