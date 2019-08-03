@@ -37,8 +37,8 @@ public class InDimFilterSerDesrTest
 {
   private static ObjectMapper mapper;
 
-  private final String actualInFilter =
-      "{\"type\":\"in\",\"dimension\":\"dimTest\",\"values\":[\"bad\",\"good\"],\"extractionFn\":null,\"filterTuning\":null}";
+  private final String expectedFilter =
+      "{\"type\":\"in\",\"dimension\":\"dimTest\",\"values\":[\"bad\",\"good\"],\"extractionFn\":null}";
 
   @Before
   public void setUp()
@@ -50,7 +50,7 @@ public class InDimFilterSerDesrTest
   @Test
   public void testDeserialization() throws IOException
   {
-    final InDimFilter actualInDimFilter = mapper.readerFor(DimFilter.class).readValue(actualInFilter);
+    final InDimFilter actualInDimFilter = mapper.readerFor(DimFilter.class).readValue(expectedFilter);
     final InDimFilter expectedInDimFilter = new InDimFilter("dimTest", Arrays.asList("good", "bad"), null);
     Assert.assertEquals(expectedInDimFilter, actualInDimFilter);
   }
@@ -59,8 +59,8 @@ public class InDimFilterSerDesrTest
   public void testSerialization() throws IOException
   {
     final InDimFilter dimInFilter = new InDimFilter("dimTest", Arrays.asList("good", "bad"), null);
-    final String expectedInFilter = mapper.writeValueAsString(dimInFilter);
-    Assert.assertEquals(expectedInFilter, actualInFilter);
+    final String actualFilter = mapper.writeValueAsString(dimInFilter);
+    Assert.assertEquals(expectedFilter, actualFilter);
   }
 
   @Test
