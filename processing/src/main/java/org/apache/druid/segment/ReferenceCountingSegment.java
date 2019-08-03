@@ -25,6 +25,8 @@ import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -96,6 +98,7 @@ public class ReferenceCountingSegment extends AbstractSegment implements Oversha
     this.atomicUpdateGroupSize = atomicUpdateGroupSize;
   }
 
+  @Nullable
   public Segment getBaseSegment()
   {
     return !isClosed() ? baseSegment : null;
@@ -112,24 +115,28 @@ public class ReferenceCountingSegment extends AbstractSegment implements Oversha
   }
 
   @Override
+  @Nullable
   public SegmentId getId()
   {
     return !isClosed() ? baseSegment.getId() : null;
   }
 
   @Override
+  @Nullable
   public Interval getDataInterval()
   {
     return !isClosed() ? baseSegment.getDataInterval() : null;
   }
 
   @Override
+  @Nullable
   public QueryableIndex asQueryableIndex()
   {
     return !isClosed() ? baseSegment.asQueryableIndex() : null;
   }
 
   @Override
+  @Nullable
   public StorageAdapter asStorageAdapter()
   {
     return !isClosed() ? baseSegment.asStorageAdapter() : null;
