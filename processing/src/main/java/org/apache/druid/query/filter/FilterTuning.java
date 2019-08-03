@@ -72,13 +72,13 @@ public class FilterTuning
   }
 
   @JsonProperty
-  public Integer getUseIndexMinCardinalityThreshold()
+  public int getUseIndexMinCardinalityThreshold()
   {
     return useIndexMinCardinalityThreshold;
   }
 
   @JsonProperty
-  public Integer getUseIndexMaxCardinalityThreshold()
+  public int getUseIndexMaxCardinalityThreshold()
   {
     return useIndexMaxCardinalityThreshold;
   }
