@@ -120,7 +120,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         // closeNow() is supposed to be called on abnormal exits. Interrupting the current thread could lead to close()
         // to be called indirectly, e.g., for Appenderators in try-with-resources. In this case, closeNow() should be
         // called before the current thread is interrupted, so that subsequent close() calls can be ignored.
-        resourceCloserOnAbnormalExit.register(config -> Thread.currentThread().interrupt());
+        final Thread currentThread = Thread.currentThread();
+        resourceCloserOnAbnormalExit.register(config -> currentThread.interrupt());
       }
     }
     return runTask(toolbox);
