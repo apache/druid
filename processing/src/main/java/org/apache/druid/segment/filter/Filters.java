@@ -653,8 +653,9 @@ public class Filters
     }
   }
 
-  public static boolean shouldUseIndex(Filter filter, BitmapIndexSelector indexSelector, FilterTuning tuning)
+  public static boolean shouldUseIndex(Filter filter, BitmapIndexSelector indexSelector, FilterTuning filterTuning)
   {
+    final FilterTuning tuning = filterTuning != null ? filterTuning : FilterTuning.createDefault(filter, indexSelector);
     if (filter.supportsBitmapIndex(indexSelector) && tuning.getUseIndex()) {
       return filter.getRequiredColumns().stream().allMatch(column -> {
         final int cardinality = indexSelector.getBitmapIndex(column).getCardinality();

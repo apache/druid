@@ -47,6 +47,11 @@ import java.util.Objects;
  */
 public class FilterTuning
 {
+  public static FilterTuning createDefault(Filter filter, BitmapIndexSelector selector)
+  {
+    return new FilterTuning(filter.supportsBitmapIndex(selector), null, null);
+  }
+
   private final boolean useIndex;
   private final int useIndexMinCardinalityThreshold;
   private final int useIndexMaxCardinalityThreshold;
