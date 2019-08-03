@@ -22,7 +22,6 @@ package org.apache.druid.segment.filter;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -57,9 +56,9 @@ public class TrueFilter implements Filter
   }
 
   @Override
-  public FilterTuning getManualTuning()
+  public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
   {
-    return null;
+    return true;
   }
 
   @Override

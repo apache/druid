@@ -126,6 +126,17 @@ public class AndFilter implements BooleanFilter
   }
 
   @Override
+  public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
+  {
+    for (Filter filter : filters) {
+      if (!filter.shouldUseIndex(bitmapIndexSelector)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Override
   public ValueMatcher makeMatcher(
       BitmapIndexSelector selector,
       ColumnSelectorFactory columnSelectorFactory,

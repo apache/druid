@@ -40,7 +40,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
-import javax.annotation.Nullable;
 import java.util.Set;
 
 /**
@@ -51,7 +50,7 @@ public class DimensionPredicateFilter implements Filter
   private final DruidPredicateFactory predicateFactory;
   private final String basePredicateString;
   private final ExtractionFn extractionFn;
-  private final FilterTuning manualFilterTuning;
+  private final FilterTuning filterTuning;
 
   public DimensionPredicateFilter(
       final String dimension,
@@ -73,7 +72,7 @@ public class DimensionPredicateFilter implements Filter
     this.dimension = Preconditions.checkNotNull(dimension, "dimension");
     this.basePredicateString = predicateFactory.toString();
     this.extractionFn = extractionFn;
-    this.manualFilterTuning = filterTuning;
+    this.filterTuning = filterTuning;
 
     if (extractionFn == null) {
       this.predicateFactory = predicateFactory;
@@ -149,11 +148,10 @@ public class DimensionPredicateFilter implements Filter
     return selector.getBitmapIndex(dimension) != null;
   }
 
-  @Nullable
   @Override
-  public FilterTuning getManualTuning()
+  public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
   {
-    return manualFilterTuning;
+    return Filters.shouldUseIndex(this, bitmapIndexSelector, filterTuning);
   }
 
   @Override

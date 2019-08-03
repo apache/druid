@@ -28,7 +28,6 @@ import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
-import javax.annotation.Nullable;
 import java.util.Set;
 
 public interface Filter
@@ -138,27 +137,6 @@ public interface Filter
   Set<String> getRequiredColumns();
 
   /**
-   * "Manual" {@link FilterTuning} to allow explicit control of filter optimization behavior. This will likely be
-   * supplied by the {@link DimFilter} that is creating this {@link Filter}
-   */
-  @Nullable
-  FilterTuning getManualTuning();
-
-  /**
-   * This method allows a filter to automatically compute a {@link FilterTuning} based on information it can gather
-   * from a {@link BitmapIndexSelector}. This method makes sense to override if the default implementation of
-   * {@link #shouldUseIndex(BitmapIndexSelector)} is sufficient for filter optimization. By default, creates a
-   * {@link FilterTuning} with no limits that will always use a bitmap index if
-   * {@link #supportsBitmapIndex(BitmapIndexSelector)} is true, unless a {@link FilterTuning} is provided by
-   * {@link #getManualTuning()}
-   */
-  default FilterTuning computeTuning(BitmapIndexSelector selector)
-  {
-    final FilterTuning manual = getManualTuning();
-    return manual != null ? manual : FilterTuning.createDefault(supportsBitmapIndex(selector));
-  }
-
-  /**
    * Determine if a filter *should* use a bitmap index based on information collected from the supplied
    * {@link BitmapIndexSelector}. This method differs from {@link #supportsBitmapIndex(BitmapIndexSelector)} in that
    * the former only indicates if a bitmap index is available and {@link #getBitmapIndex(BitmapIndexSelector)} may be
@@ -166,17 +144,5 @@ public interface Filter
    * available index. Override this method in a {@link Filter} implementation when {@link FilterTuning} alone is not
    * adequate for making this decision.
    */
-  default boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
-  {
-    if (supportsBitmapIndex(bitmapIndexSelector)) {
-      final FilterTuning tuning = computeTuning(bitmapIndexSelector);
-      return tuning.getUseIndex()
-             && (getRequiredColumns().size() == 0 || getRequiredColumns().stream().allMatch(column -> {
-               final int cardinality = bitmapIndexSelector.getBitmapIndex(column).getCardinality();
-               return cardinality >= tuning.getUseIndexMinCardinalityThreshold()
-                      && cardinality <= tuning.getUseIndexMaxCardinalityThreshold();
-             }));
-    }
-    return false;
-  }
+  boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector);
 }

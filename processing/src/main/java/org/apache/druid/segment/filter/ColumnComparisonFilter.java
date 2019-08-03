@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
 public class ColumnComparisonFilter implements Filter
 {
   private final List<DimensionSpec> dimensions;
-  private final FilterTuning manualFilterTuning;
+  private final FilterTuning filterTuning;
 
   public ColumnComparisonFilter(
       final List<DimensionSpec> dimensions,
@@ -54,7 +54,7 @@ public class ColumnComparisonFilter implements Filter
   )
   {
     this.dimensions = Preconditions.checkNotNull(dimensions, "dimensions");
-    this.manualFilterTuning = filterTuning;
+    this.filterTuning = filterTuning;
   }
 
   @Override
@@ -147,11 +147,10 @@ public class ColumnComparisonFilter implements Filter
     return false;
   }
 
-  @Nullable
   @Override
-  public FilterTuning getManualTuning()
+  public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
   {
-    return manualFilterTuning;
+    return Filters.shouldUseIndex(this, bitmapIndexSelector, filterTuning);
   }
 
   @Override
@@ -163,7 +162,7 @@ public class ColumnComparisonFilter implements Filter
   @Override
   public Set<String> getRequiredColumns()
   {
-    return dimensions.stream().map(dim -> dim.getDimension()).collect(Collectors.toSet());
+    return dimensions.stream().map(DimensionSpec::getDimension).collect(Collectors.toSet());
   }
 
   @Override

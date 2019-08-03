@@ -44,7 +44,6 @@ import org.apache.druid.segment.IntIteratorUtils;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
-import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -55,7 +54,7 @@ public class InFilter implements Filter
   private final String dimension;
   private final Set<String> values;
   private final ExtractionFn extractionFn;
-  private final FilterTuning manualFilterTuning;
+  private final FilterTuning filterTuning;
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
   private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
@@ -73,7 +72,7 @@ public class InFilter implements Filter
     this.dimension = dimension;
     this.values = values;
     this.extractionFn = extractionFn;
-    this.manualFilterTuning = filterTuning;
+    this.filterTuning = filterTuning;
     this.longPredicateSupplier = longPredicateSupplier;
     this.floatPredicateSupplier = floatPredicateSupplier;
     this.doublePredicateSupplier = doublePredicateSupplier;
@@ -180,11 +179,10 @@ public class InFilter implements Filter
     return selector.getBitmapIndex(dimension) != null;
   }
 
-  @Nullable
   @Override
-  public FilterTuning getManualTuning()
+  public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
   {
-    return manualFilterTuning;
+    return Filters.shouldUseIndex(this, bitmapIndexSelector, filterTuning);
   }
 
   @Override

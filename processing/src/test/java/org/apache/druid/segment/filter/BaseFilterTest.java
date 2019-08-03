@@ -43,7 +43,6 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.groupby.RowBasedColumnSelectorFactory;
@@ -77,7 +76,6 @@ import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -399,13 +397,6 @@ public abstract class BaseFilterTest
         return false;
       }
 
-      @Nullable
-      @Override
-      public FilterTuning getManualTuning()
-      {
-        return null;
-      }
-
       @Override
       public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
       {
@@ -488,13 +479,6 @@ public abstract class BaseFilterTest
 
       @Override
       public Set<String> getRequiredColumns()
-      {
-        return null;
-      }
-
-      @Nullable
-      @Override
-      public FilterTuning getManualTuning()
       {
         return null;
       }

@@ -42,7 +42,7 @@ public class SelectorFilter implements Filter
 {
   private final String dimension;
   private final String value;
-  private final FilterTuning manualFilterTuning;
+  private final FilterTuning filterTuning;
 
   public SelectorFilter(
       String dimension,
@@ -60,7 +60,7 @@ public class SelectorFilter implements Filter
   {
     this.dimension = dimension;
     this.value = value;
-    this.manualFilterTuning = filterTuning;
+    this.filterTuning = filterTuning;
   }
 
   @Override
@@ -91,11 +91,10 @@ public class SelectorFilter implements Filter
     return selector.getBitmapIndex(dimension) != null;
   }
 
-  @Nullable
   @Override
-  public FilterTuning getManualTuning()
+  public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
   {
-    return manualFilterTuning;
+    return Filters.shouldUseIndex(this, bitmapIndexSelector, filterTuning);
   }
 
   @Override

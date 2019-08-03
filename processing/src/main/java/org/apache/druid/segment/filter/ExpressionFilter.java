@@ -38,7 +38,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 
-import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Set;
 
@@ -46,13 +45,13 @@ public class ExpressionFilter implements Filter
 {
   private final Supplier<Expr> expr;
   private final Supplier<Set<String>> requiredBindings;
-  private final FilterTuning manualFilterTuning;
+  private final FilterTuning filterTuning;
 
   public ExpressionFilter(final Supplier<Expr> expr, final FilterTuning filterTuning)
   {
     this.expr = expr;
     this.requiredBindings = Suppliers.memoize(() -> expr.get().analyzeInputs().getRequiredBindings());
-    this.manualFilterTuning = filterTuning;
+    this.filterTuning = filterTuning;
   }
 
   @Override
@@ -112,11 +111,10 @@ public class ExpressionFilter implements Filter
     }
   }
 
-  @Nullable
   @Override
-  public FilterTuning getManualTuning()
+  public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
   {
-    return manualFilterTuning;
+    return Filters.shouldUseIndex(this, bitmapIndexSelector, filterTuning);
   }
 
   @Override

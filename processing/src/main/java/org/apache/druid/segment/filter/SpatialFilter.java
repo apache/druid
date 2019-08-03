@@ -37,7 +37,6 @@ import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.incremental.SpatialDimensionRowTransformer;
 
-import javax.annotation.Nullable;
 import java.util.Set;
 
 /**
@@ -46,7 +45,7 @@ public class SpatialFilter implements Filter
 {
   private final String dimension;
   private final Bound bound;
-  private final FilterTuning manualFilterTuning;
+  private final FilterTuning filterTuning;
 
   public SpatialFilter(
       String dimension,
@@ -56,7 +55,7 @@ public class SpatialFilter implements Filter
   {
     this.dimension = Preconditions.checkNotNull(dimension, "dimension");
     this.bound = Preconditions.checkNotNull(bound, "bound");
-    this.manualFilterTuning = filterTuning;
+    this.filterTuning = filterTuning;
   }
 
   @Override
@@ -77,17 +76,12 @@ public class SpatialFilter implements Filter
           @Override
           public Predicate<String> makeStringPredicate()
           {
-            return new Predicate<String>()
-            {
-              @Override
-              public boolean apply(String input)
-              {
-                if (input == null) {
-                  return false;
-                }
-                final float[] coordinate = SpatialDimensionRowTransformer.decode(input);
-                return bound.contains(coordinate);
+            return input -> {
+              if (input == null) {
+                return false;
               }
+              final float[] coordinate = SpatialDimensionRowTransformer.decode(input);
+              return bound.contains(coordinate);
             };
           }
 
@@ -133,11 +127,10 @@ public class SpatialFilter implements Filter
     return ImmutableSet.of(dimension);
   }
 
-  @Nullable
   @Override
-  public FilterTuning getManualTuning()
+  public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
   {
-    return manualFilterTuning;
+    return Filters.shouldUseIndex(this, bitmapIndexSelector, filterTuning);
   }
 
   @Override

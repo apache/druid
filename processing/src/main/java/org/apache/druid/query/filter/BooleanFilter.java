@@ -52,12 +52,6 @@ public interface BooleanFilter extends Filter
   );
 
   @Override
-  default FilterTuning getManualTuning()
-  {
-    return null;
-  }
-
-  @Override
   default Set<String> getRequiredColumns()
   {
     Set<String> allColumns = new HashSet<>();

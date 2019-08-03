@@ -100,6 +100,17 @@ public class OrFilter implements BooleanFilter
   }
 
   @Override
+  public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
+  {
+    for (Filter f : filters) {
+      if (!f.shouldUseIndex(bitmapIndexSelector)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Override
   public ValueMatcher makeMatcher(
       BitmapIndexSelector selector,
       ColumnSelectorFactory columnSelectorFactory,

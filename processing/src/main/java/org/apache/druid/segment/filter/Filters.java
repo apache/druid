@@ -39,6 +39,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.ValueMatcherColumnSelectorStrategy;
 import org.apache.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
@@ -650,5 +651,17 @@ public class Filters
     if (andList.size() > 1) {
       generateAllCombinations(result, andList.subList(1, andList.size()), nonAndList);
     }
+  }
+
+  public static boolean shouldUseIndex(Filter filter, BitmapIndexSelector indexSelector, FilterTuning tuning)
+  {
+    if (filter.supportsBitmapIndex(indexSelector) && tuning.getUseIndex()) {
+      return filter.getRequiredColumns().stream().allMatch(column -> {
+        final int cardinality = indexSelector.getBitmapIndex(column).getCardinality();
+        return cardinality >= tuning.getUseIndexMinCardinalityThreshold()
+               && cardinality <= tuning.getUseIndexMaxCardinalityThreshold();
+      });
+    }
+    return false;
   }
 }

@@ -42,7 +42,6 @@ import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.NoSuchElementException;
@@ -53,7 +52,7 @@ public class LikeFilter implements Filter
   private final String dimension;
   private final ExtractionFn extractionFn;
   private final LikeDimFilter.LikeMatcher likeMatcher;
-  private final FilterTuning manualFilterTuning;
+  private final FilterTuning filterTuning;
 
   public LikeFilter(
       final String dimension,
@@ -65,7 +64,7 @@ public class LikeFilter implements Filter
     this.dimension = dimension;
     this.extractionFn = extractionFn;
     this.likeMatcher = likeMatcher;
-    this.manualFilterTuning = filterTuning;
+    this.filterTuning = filterTuning;
   }
 
   @Override
@@ -114,11 +113,10 @@ public class LikeFilter implements Filter
     return selector.getBitmapIndex(dimension) != null;
   }
 
-  @Nullable
   @Override
-  public FilterTuning getManualTuning()
+  public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
   {
-    return manualFilterTuning;
+    return Filters.shouldUseIndex(this, bitmapIndexSelector, filterTuning);
   }
 
   @Override

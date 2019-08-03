@@ -31,14 +31,13 @@ import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.mozilla.javascript.Context;
 
-import javax.annotation.Nullable;
 import java.util.Set;
 
 public class JavaScriptFilter implements Filter
 {
   private final String dimension;
   private final JavaScriptDimFilter.JavaScriptPredicateFactory predicateFactory;
-  private final FilterTuning manualFilterTuning;
+  private final FilterTuning filterTuning;
 
   public JavaScriptFilter(
       String dimension,
@@ -48,7 +47,7 @@ public class JavaScriptFilter implements Filter
   {
     this.dimension = dimension;
     this.predicateFactory = predicate;
-    this.manualFilterTuning = filterTuning;
+    this.filterTuning = filterTuning;
   }
 
   @Override
@@ -112,10 +111,9 @@ public class JavaScriptFilter implements Filter
     return ImmutableSet.of(dimension);
   }
 
-  @Nullable
   @Override
-  public FilterTuning getManualTuning()
+  public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
   {
-    return manualFilterTuning;
+    return Filters.shouldUseIndex(this, bitmapIndexSelector, filterTuning);
   }
 }

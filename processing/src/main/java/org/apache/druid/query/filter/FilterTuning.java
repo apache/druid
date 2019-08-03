@@ -34,9 +34,9 @@ import java.util.Objects;
  * {@link org.apache.druid.segment.FilteredOffset}/{@link org.apache.druid.segment.vector.FilteredVectorOffset}.
  *
  * This is currently only manually supplied by the user by adding to a {@link DimFilter} which will pass through to the
- * {@link Filter} implementation for it to provide as {@link Filter#getManualTuning()}. The main purpose at this time is
- * to facilitate experimentation so that someday we can have {@link Filter} implementations intelligently, automatically
- * use sensible defaults based on things like cardinality and who yet knows what additional information.
+ * {@link Filter} implementation. The main purpose at this time is to facilitate experimentation so that someday we can
+ * have {@link Filter} implementations intelligently, automatically use sensible defaults based on things like
+ * cardinality and who yet knows what additional information.
  *
  * It can also be used for advanced users to manually control which filters will be "pre" and "post" filters as
  * described above to allow skipping indexes in known cases where filters are expensive (mostly high cardinality columns
@@ -47,14 +47,9 @@ import java.util.Objects;
  */
 public class FilterTuning
 {
-  public static FilterTuning createDefault(boolean useIndex)
-  {
-    return new FilterTuning(useIndex, 0, Integer.MAX_VALUE);
-  }
-
-  private final Boolean useIndex;
-  private final Integer useIndexMinCardinalityThreshold;
-  private final Integer useIndexMaxCardinalityThreshold;
+  private final boolean useIndex;
+  private final int useIndexMinCardinalityThreshold;
+  private final int useIndexMaxCardinalityThreshold;
 
   @JsonCreator
   public FilterTuning(
@@ -63,27 +58,29 @@ public class FilterTuning
       @Nullable @JsonProperty("useIndexMaximumCardinalityThreshold") Integer useIndexMaxCardinalityThreshold
   )
   {
-    this.useIndex = useIndex;
-    this.useIndexMinCardinalityThreshold = useIndexMinCardinalityThreshold;
-    this.useIndexMaxCardinalityThreshold = useIndexMaxCardinalityThreshold;
+    this.useIndex = useIndex != null ? useIndex : true;
+    this.useIndexMinCardinalityThreshold =
+        useIndexMinCardinalityThreshold != null ? useIndexMinCardinalityThreshold : 0;
+    this.useIndexMaxCardinalityThreshold =
+        useIndexMaxCardinalityThreshold != null ? useIndexMaxCardinalityThreshold : Integer.MAX_VALUE;
   }
 
   @JsonProperty
-  public Boolean getUseIndex()
+  public boolean getUseIndex()
   {
-    return useIndex != null ? useIndex : true;
+    return useIndex;
   }
 
   @JsonProperty
   public Integer getUseIndexMinCardinalityThreshold()
   {
-    return useIndexMinCardinalityThreshold != null ? useIndexMinCardinalityThreshold : 0;
+    return useIndexMinCardinalityThreshold;
   }
 
   @JsonProperty
   public Integer getUseIndexMaxCardinalityThreshold()
   {
-    return useIndexMaxCardinalityThreshold != null ? useIndexMaxCardinalityThreshold : Integer.MAX_VALUE;
+    return useIndexMaxCardinalityThreshold;
   }
 
   @Override
