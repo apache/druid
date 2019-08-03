@@ -113,6 +113,13 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       if (stopped) {
         return TaskStatus.failure(getId());
       } else {
+        // Register the cleaner to interrupt the current thread first.
+        // Since the resource closer cleans up the registered resources in LIFO order,
+        // this will be executed last on abnormal exists.
+        // The order is sometimes important. For example, Appenderator has two methods of close() and closeNow(), and
+        // closeNow() is supposed to be called on abnormal exits. Interrupting the current thread could lead to close()
+        // to be called indirectly, e.g., for Appenderators in try-with-resources. In this case, closeNow() should be
+        // called before the current thread is interrupted, so that subsequent close() calls can be ignored.
         resourceCloserOnAbnormalExit.register(config -> Thread.currentThread().interrupt());
       }
     }
