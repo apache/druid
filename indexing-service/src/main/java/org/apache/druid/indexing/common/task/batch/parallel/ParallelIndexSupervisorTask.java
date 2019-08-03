@@ -364,8 +364,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         rowIngestionMetersFactory,
         appenderatorsManager
     );
-    registerResourceCloserOnAbnormalExit(config -> sequentialIndexTask.stopGracefully(config));
     if (sequentialIndexTask.isReady(toolbox.getTaskActionClient())) {
+      registerResourceCloserOnAbnormalExit(config -> sequentialIndexTask.stopGracefully(config));
       return sequentialIndexTask.run(toolbox);
     } else {
       return TaskStatus.failure(getId());

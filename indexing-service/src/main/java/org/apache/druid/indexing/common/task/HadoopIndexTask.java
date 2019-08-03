@@ -479,8 +479,10 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       String hadoopJobIdFile = getHadoopJobIdFileName();
 
       try {
-        ClassLoader loader = HadoopTask.buildClassLoader(getHadoopDependencyCoordinates(),
-                                                         taskConfig.getDefaultHadoopCoordinates());
+        ClassLoader loader = HadoopTask.buildClassLoader(
+            getHadoopDependencyCoordinates(),
+            taskConfig.getDefaultHadoopCoordinates()
+        );
 
         Object killMRJobInnerProcessingRunner = getForeignClassloaderObject(
             "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopKillMRJobIdProcessingRunner",

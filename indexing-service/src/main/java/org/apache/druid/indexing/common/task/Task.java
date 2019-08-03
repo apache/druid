@@ -165,7 +165,7 @@ public interface Task
    * terminated with extreme prejudice.
    *
    * If the task has some resources to clean up on exit, e.g., sub tasks of parallel indexing task
-   * or Hadoop job of Hadoop indexing task, those resource cleanup should be done in this method.
+   * or Hadoop job of Hadoop indexing task, those resource cleanups should be done in this method.
    *
    * @param taskConfig TaskConfig for this task
    */
