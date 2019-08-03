@@ -22,12 +22,15 @@ package org.apache.druid.indexing.common.task;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -43,6 +46,7 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -50,6 +54,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -64,11 +69,17 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
   private final SegmentLockHelper segmentLockHelper;
 
+  @GuardedBy("this")
+  private final TaskResourceCleaner resourceCloserOnAbnormalExit = new TaskResourceCleaner();
+
   /**
    * State to indicate that this task will use segmentLock or timeChunkLock.
    * This is automatically set when {@link #determineLockGranularityandTryLock} is called.
    */
   private boolean useSegmentLock;
+
+  @GuardedBy("this")
+  private boolean stopped = false;
 
   protected AbstractBatchIndexTask(String id, String dataSource, Map<String, Object> context)
   {
@@ -87,6 +98,52 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     super(id, groupId, taskResource, dataSource, context);
     segmentLockHelper = new SegmentLockHelper();
   }
+
+  /**
+   * Run this task. Before running the task, ithecks the the current task is already stopped and
+   * registers a cleaner to interrupt the thread running this task on abnormal exits.
+   *
+   * @see #runTask(TaskToolbox)
+   * @see #stopGracefully(TaskConfig)
+   */
+  @Override
+  public TaskStatus run(TaskToolbox toolbox) throws Exception
+  {
+    synchronized (this) {
+      if (stopped) {
+        return TaskStatus.failure(getId());
+      } else {
+        resourceCloserOnAbnormalExit.register(config -> Thread.currentThread().interrupt());
+      }
+    }
+    return runTask(toolbox);
+  }
+
+  @Override
+  public void stopGracefully(TaskConfig taskConfig)
+  {
+    synchronized (this) {
+      stopped = true;
+      resourceCloserOnAbnormalExit.clean(taskConfig);
+    }
+  }
+
+  /**
+   * Registers a resource cleaner which is executed on abnormal exits.
+   *
+   * @see Task#stopGracefully
+   */
+  protected void registerResourceCloserOnAbnormalExit(Consumer<TaskConfig> cleaner)
+  {
+    synchronized (this) {
+      resourceCloserOnAbnormalExit.register(cleaner);
+    }
+  }
+
+  /**
+   * The method to acutally process this task. This method is executed in {@link #run(TaskToolbox)}.
+   */
+  public abstract TaskStatus runTask(TaskToolbox toolbox) throws Exception;
 
   /**
    * Return true if this task can overwrite existing segments.

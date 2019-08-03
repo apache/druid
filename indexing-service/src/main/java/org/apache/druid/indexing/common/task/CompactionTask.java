@@ -146,10 +146,13 @@ public class CompactionTask extends AbstractBatchIndexTask
   private final RetryPolicyFactory retryPolicyFactory;
 
   @JsonIgnore
-  private List<IndexTask> indexTaskSpecs;
+  private final AppenderatorsManager appenderatorsManager;
 
   @JsonIgnore
-  private AppenderatorsManager appenderatorsManager;
+  private List<IndexTask> indexTaskSpecs;
+
+  @Nullable
+  private volatile IndexTask currentRunningTaskSpec = null;
 
   @JsonCreator
   public CompactionTask(
@@ -289,7 +292,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox) throws Exception
+  public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
     if (indexTaskSpecs == null) {
       final List<IndexIngestionSpec> ingestionSpecs = createIngestionSchema(
@@ -330,12 +333,18 @@ public class CompactionTask extends AbstractBatchIndexTask
       log.info("Generated [%d] compaction task specs", totalNumSpecs);
 
       int failCnt = 0;
+      registerResourceCloserOnAbnormalExit(config -> {
+        if (currentRunningTaskSpec != null) {
+          currentRunningTaskSpec.stopGracefully(config);
+        }
+      });
       for (IndexTask eachSpec : indexTaskSpecs) {
         final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
         log.info("Running indexSpec: " + json);
 
         try {
           if (eachSpec.isReady(toolbox.getTaskActionClient())) {
+            currentRunningTaskSpec = eachSpec;
             final TaskStatus eachResult = eachSpec.run(toolbox);
             if (!eachResult.isSuccess()) {
               failCnt++;

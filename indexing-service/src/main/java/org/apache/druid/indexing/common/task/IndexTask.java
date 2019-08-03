@@ -51,7 +51,6 @@ import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
@@ -177,15 +176,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   @JsonIgnore
   private final AppenderatorsManager appenderatorsManager;
-
-  @JsonIgnore
-  private Thread runThread;
-
-  @JsonIgnore
-  private boolean stopped = false;
-
-  @JsonIgnore
-  private Appenderator appenderator;
 
   @JsonCreator
   public IndexTask(
@@ -421,16 +411,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox)
+  public TaskStatus runTask(final TaskToolbox toolbox)
   {
-    synchronized (this) {
-      if (stopped) {
-        return TaskStatus.failure(getId());
-      } else {
-        runThread = Thread.currentThread();
-      }
-    }
-
     try {
       if (chatHandlerProvider.isPresent()) {
         log.info("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
@@ -509,23 +491,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     finally {
       if (chatHandlerProvider.isPresent()) {
         chatHandlerProvider.get().unregister(getId());
-      }
-    }
-  }
-
-  @Override
-  public void stopGracefully(TaskConfig taskConfig)
-  {
-    synchronized (this) {
-      stopped = true;
-      // Nothing else to do for native batch except terminate
-      if (ingestionState != IngestionState.COMPLETED) {
-        if (appenderator != null) {
-          appenderator.closeNow();
-        }
-        if (runThread != null) {
-          runThread.interrupt();
-        }
       }
     }
   }
@@ -935,7 +900,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         final BatchAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
-      this.appenderator = appenderator;
+      registerResourceCloserOnAbnormalExit(config -> appenderator.closeNow());
 
       driver.startJob();
 

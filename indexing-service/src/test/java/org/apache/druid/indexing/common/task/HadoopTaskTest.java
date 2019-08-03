@@ -70,6 +70,11 @@ public class HadoopTaskTest
       }
 
       @Override
+      public void stopGracefully(TaskConfig taskConfig)
+      {
+      }
+
+      @Override
       public boolean requireLockExistingSegments()
       {
         return true;
@@ -95,7 +100,7 @@ public class HadoopTaskTest
       }
 
       @Override
-      public TaskStatus run(TaskToolbox toolbox)
+      public TaskStatus runTask(TaskToolbox toolbox)
       {
         return null;
       }

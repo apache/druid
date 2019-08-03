@@ -38,7 +38,6 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -106,10 +105,6 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
   private final IndexingServiceClient indexingServiceClient;
   private final IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory;
   private final AppenderatorsManager appenderatorsManager;
-
-  private Appenderator appenderator;
-  private Thread runThread;
-  private boolean stopped = false;
 
   /**
    * If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
@@ -205,16 +200,8 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox) throws Exception
+  public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
   {
-    synchronized (this) {
-      if (stopped) {
-        return TaskStatus.failure(getId());
-      } else {
-        runThread = Thread.currentThread();
-      }
-    }
-
     if (missingIntervalsInOverwriteMode) {
       LOG.warn(
           "Intervals are missing in granularitySpec while this task is potentially overwriting existing segments. "
@@ -430,7 +417,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
         final BatchAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
-      this.appenderator = appenderator;
+      registerResourceCloserOnAbnormalExit(config -> appenderator.closeNow());
       driver.startJob();
 
       final Set<DataSegment> pushedSegments = new HashSet<>();
@@ -535,19 +522,5 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getDataSegmentKiller()
     );
-  }
-
-  @Override
-  public void stopGracefully(TaskConfig taskConfig)
-  {
-    synchronized (this) {
-      stopped = true;
-      if (appenderator != null) {
-        appenderator.closeNow();
-      }
-      if (runThread != null) {
-        runThread.interrupt();
-      }
-    }
   }
 }
