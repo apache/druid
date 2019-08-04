@@ -30,6 +30,7 @@ import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -37,6 +38,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -48,7 +50,6 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -57,13 +58,12 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.RealtimeMetricsMonitor;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
-import org.apache.druid.segment.realtime.appenderator.Appenderators;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
@@ -98,13 +98,32 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
 {
   public static final String TYPE = "index_sub";
 
-  private static final Logger log = new Logger(ParallelIndexSubTask.class);
+  private static final Logger LOG = new Logger(ParallelIndexSubTask.class);
 
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
   private final IndexingServiceClient indexingServiceClient;
   private final IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory;
+  private final AppenderatorsManager appenderatorsManager;
+
+  private Appenderator appenderator;
+  private Thread runThread;
+  private boolean stopped = false;
+
+  /**
+   * If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
+   * In this mode, sub tasks ask new locks whenever they see a new row which is not covered by existing locks.
+   * If this task is overwriting existing segments, then we should know this task is changing segment granularity
+   * in advance to know what types of lock we should use. However, if intervals are missing, we can't know
+   * the segment granularity of existing segments until the task reads all data because we don't know what segments
+   * are going to be overwritten. As a result, we assume that segment granularity is going to be changed if intervals
+   * are missing and force to use timeChunk lock.
+   *
+   * This variable is initialized in the constructor and used in {@link #run} to log that timeChunk lock was enforced
+   * in the task logs.
+   */
+  private final boolean missingIntervalsInOverwriteMode;
 
   @JsonCreator
   public ParallelIndexSubTask(
@@ -117,7 +136,8 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
       @JsonProperty("spec") final ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context,
       @JacksonInject IndexingServiceClient indexingServiceClient,
-      @JacksonInject IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory
+      @JacksonInject IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory,
+      @JacksonInject AppenderatorsManager appenderatorsManager
   )
   {
     super(
@@ -137,6 +157,15 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
     this.supervisorTaskId = supervisorTaskId;
     this.indexingServiceClient = indexingServiceClient;
     this.taskClientFactory = taskClientFactory;
+    this.appenderatorsManager = appenderatorsManager;
+    this.missingIntervalsInOverwriteMode = !ingestionSchema.getIOConfig().isAppendToExisting()
+                                           && !ingestionSchema.getDataSchema()
+                                                              .getGranularitySpec()
+                                                              .bucketIntervals()
+                                                              .isPresent();
+    if (missingIntervalsInOverwriteMode) {
+      addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
+    }
   }
 
   @Override
@@ -154,17 +183,6 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws IOException
   {
-    if (!ingestionSchema.getDataSchema().getGranularitySpec().bucketIntervals().isPresent()
-        && !ingestionSchema.getIOConfig().isAppendToExisting()) {
-      // If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
-      // In this mode, sub tasks ask new locks whenever they see a new row which is not covered by existing locks.
-      // If this task is overwriting existing segments, then we should know this task is changing segment granularity
-      // in advance to know what types of lock we should use. However, if intervals are missing, we can't know
-      // the segment granularity of existing segments until the task reads all data because we don't know what segments
-      // are going to be overwritten. As a result, we assume that segment granularity will be changed if intervals are
-      // missing force to use timeChunk lock.
-      addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
-    }
     return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.getDataSchema().getGranularitySpec());
   }
 
@@ -189,6 +207,20 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
+    synchronized (this) {
+      if (stopped) {
+        return TaskStatus.failure(getId());
+      } else {
+        runThread = Thread.currentThread();
+      }
+    }
+
+    if (missingIntervalsInOverwriteMode) {
+      LOG.warn(
+          "Intervals are missing in granularitySpec while this task is potentially overwriting existing segments. "
+          + "Forced to use timeChunk lock."
+      );
+    }
     final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
 
     final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
@@ -353,10 +385,10 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
    *
    * <ul>
    * <li>
-   * If the number of rows in a segment exceeds {@link ParallelIndexTuningConfig#maxRowsPerSegment}
+   * If the number of rows in a segment exceeds {@link DynamicPartitionsSpec#maxRowsPerSegment}
    * </li>
    * <li>
-   * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link ParallelIndexTuningConfig#maxTotalRows}
+   * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link DynamicPartitionsSpec#maxTotalRows}
    * </li>
    * </ul>
    *
@@ -388,8 +420,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
 
     // Initialize maxRowsPerSegment and maxTotalRows lazily
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
-    @Nullable final Integer maxRowsPerSegment = IndexTask.getValidMaxRowsPerSegment(tuningConfig);
-    @Nullable final Long maxTotalRows = IndexTask.getValidMaxTotalRows(tuningConfig);
+    final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) tuningConfig.getGivenOrDefaultPartitionsSpec();
     final long pushTimeout = tuningConfig.getPushTimeout();
     final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
     final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient);
@@ -399,6 +430,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
         final BatchAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
+      this.appenderator = appenderator;
       driver.startJob();
 
       final Set<DataSegment> pushedSegments = new HashSet<>();
@@ -434,13 +466,17 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 
           if (addResult.isOk()) {
-            if (addResult.isPushRequired(maxRowsPerSegment, maxTotalRows)) {
+            final boolean isPushRequired = addResult.isPushRequired(
+                partitionsSpec.getMaxRowsPerSegment(),
+                partitionsSpec.getMaxTotalRows()
+            );
+            if (isPushRequired) {
               // There can be some segments waiting for being published even though any rows won't be added to them.
               // If those segments are not published here, the available space in appenderator will be kept to be small
               // which makes the size of segments smaller.
               final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
               pushedSegments.addAll(pushed.getSegments());
-              log.info("Pushed segments[%s]", pushed.getSegments());
+              LOG.info("Pushed segments[%s]", pushed.getSegments());
             }
           } else {
             throw new ISE("Failed to add a row with timestamp[%s]", inputRow.getTimestamp());
@@ -459,7 +495,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
 
       final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
       pushedSegments.addAll(pushed.getSegments());
-      log.info("Pushed segments[%s]", pushed.getSegments());
+      LOG.info("Pushed segments[%s]", pushed.getSegments());
 
       return pushedSegments;
     }
@@ -468,23 +504,15 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
     }
   }
 
-  private static Granularity findSegmentGranularity(GranularitySpec granularitySpec)
-  {
-    if (granularitySpec instanceof UniformGranularitySpec) {
-      return granularitySpec.getSegmentGranularity();
-    } else {
-      return Granularities.ALL;
-    }
-  }
-
-  private static Appenderator newAppenderator(
+  private Appenderator newAppenderator(
       FireDepartmentMetrics metrics,
       TaskToolbox toolbox,
       DataSchema dataSchema,
       ParallelIndexTuningConfig tuningConfig
   )
   {
-    return Appenderators.createOffline(
+    return appenderatorsManager.createOfflineAppenderatorForTask(
+        getId(),
         dataSchema,
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
         metrics,
@@ -507,5 +535,19 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getDataSegmentKiller()
     );
+  }
+
+  @Override
+  public void stopGracefully(TaskConfig taskConfig)
+  {
+    synchronized (this) {
+      stopped = true;
+      if (appenderator != null) {
+        appenderator.closeNow();
+      }
+      if (runThread != null) {
+        runThread.interrupt();
+      }
+    }
   }
 }

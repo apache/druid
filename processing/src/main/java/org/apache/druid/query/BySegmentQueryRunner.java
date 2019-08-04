@@ -29,6 +29,14 @@ import java.util.Collections;
 import java.util.List;
 
 /**
+ * Query runner that wraps a base single-segment query runner, and wraps its results in a
+ * {@link BySegmentResultValueClass} object if the "bySegment" query context parameter is set. Otherwise, it
+ * delegates to the base runner without any behavior modification.
+ *
+ * Note that despite the type parameter "T", this runner may not actually return sequences with type T. They
+ * may really be of type {@code Result<BySegmentResultValue<T>>}, if "bySegment" is set. Downstream consumers
+ * of the returned sequence must be aware of this, and can use {@link QueryContexts#isBySegment(Query)} to
+ * know what to expect.
  */
 public class BySegmentQueryRunner<T> implements QueryRunner<T>
 {

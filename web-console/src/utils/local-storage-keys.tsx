@@ -17,6 +17,7 @@
  */
 
 export const LocalStorageKeys = {
+  CAPABILITIES_OVERRIDE: 'capabilities-override' as 'capabilities-override',
   INGESTION_SPEC: 'ingestion-spec' as 'ingestion-spec',
   DATASOURCE_TABLE_COLUMN_SELECTION: 'datasource-table-column-selection' as 'datasource-table-column-selection',
   SEGMENT_TABLE_COLUMN_SELECTION: 'segment-table-column-selection' as 'segment-table-column-selection',

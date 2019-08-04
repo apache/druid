@@ -23,7 +23,8 @@ import React from 'react';
 
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
-import { downloadFile } from '../../utils';
+import { downloadFile, QueryManager } from '../../utils';
+import { Loader } from '../loader/loader';
 
 import './show-json.scss';
 
@@ -34,39 +35,44 @@ export interface ShowJsonProps {
 }
 
 export interface ShowJsonState {
-  jsonValue: string;
+  jsonValue?: string;
+  loading: boolean;
+  error?: string;
 }
 
 export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> {
+  private showJsonQueryManager: QueryManager<null, string>;
   constructor(props: ShowJsonProps, context: any) {
     super(props, context);
     this.state = {
       jsonValue: '',
+      loading: false,
     };
-
-    this.getJsonInfo();
+    this.showJsonQueryManager = new QueryManager({
+      processQuery: async () => {
+        const { endpoint, transform } = this.props;
+        const resp = await axios.get(endpoint);
+        let data = resp.data;
+        if (transform) data = transform(data);
+        return typeof data === 'string' ? data : JSON.stringify(data, undefined, 2);
+      },
+      onStateChange: ({ result, loading, error }) => {
+        this.setState({
+          loading,
+          error,
+          jsonValue: result,
+        });
+      },
+    });
   }
 
-  private getJsonInfo = async (): Promise<void> => {
-    const { endpoint, transform } = this.props;
-
-    try {
-      const resp = await axios.get(endpoint);
-      let data = resp.data;
-      if (transform) data = transform(data);
-      this.setState({
-        jsonValue: typeof data === 'string' ? data : JSON.stringify(data, undefined, 2),
-      });
-    } catch (e) {
-      this.setState({
-        jsonValue: `Error: ` + e.response.data,
-      });
-    }
-  };
+  componentDidMount(): void {
+    this.showJsonQueryManager.runQuery(null);
+  }
 
   render(): JSX.Element {
     const { endpoint, downloadFilename } = this.props;
-    const { jsonValue } = this.state;
+    const { jsonValue, error, loading } = this.state;
 
     return (
       <div className="show-json">
@@ -74,16 +80,18 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
           <ButtonGroup className="right-buttons">
             {downloadFilename && (
               <Button
+                disabled={loading}
                 text="Save"
                 minimal
-                onClick={() => downloadFile(jsonValue, 'json', downloadFilename)}
+                onClick={() => downloadFile(jsonValue ? jsonValue : '', 'json', downloadFilename)}
               />
             )}
             <Button
               text="Copy"
               minimal
+              disabled={loading}
               onClick={() => {
-                copy(jsonValue, { format: 'text/plain' });
+                copy(jsonValue ? jsonValue : '', { format: 'text/plain' });
                 AppToaster.show({
                   message: 'JSON copied to clipboard',
                   intent: Intent.SUCCESS,
@@ -92,13 +100,14 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
             />
             <Button
               text="View raw"
+              disabled={!jsonValue}
               minimal
               onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
             />
           </ButtonGroup>
         </div>
         <div className="main-area">
-          <TextArea readOnly value={jsonValue} />
+          {loading ? <Loader /> : <TextArea readOnly value={!error ? jsonValue : error} />}
         </div>
       </div>
     );

@@ -43,15 +43,18 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   @JsonIgnore
   private boolean filterable;
 
+
+  @JsonIgnore
+  private boolean complete = false;
+
   public static ColumnCapabilitiesImpl copyOf(final ColumnCapabilities other)
   {
     final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
     capabilities.merge(other);
+    capabilities.setFilterable(other.isFilterable());
+    capabilities.setIsComplete(other.isComplete());
     return capabilities;
   }
-
-  @JsonIgnore
-  private boolean complete = false;
 
   @Override
   @JsonProperty

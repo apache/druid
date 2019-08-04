@@ -205,6 +205,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         value={deepGet(model as any, field.name)}
         onChange={(v: any) => this.fieldChange(field, v)}
         updateInputValidity={updateInputValidity}
+        placeholder={field.placeholder}
       />
     );
   }

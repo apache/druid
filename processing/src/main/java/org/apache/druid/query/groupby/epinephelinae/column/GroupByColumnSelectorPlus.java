@@ -24,11 +24,20 @@ import org.apache.druid.query.ColumnSelectorPlus;
 public class GroupByColumnSelectorPlus extends ColumnSelectorPlus<GroupByColumnSelectorStrategy>
 {
   /**
+   * Indicates the offset of this dimension's value within ResultRows.
+   */
+  private final int resultRowPosition;
+
+  /**
    * Indicates the offset of this dimension's value within the grouping key.
    */
-  private int keyBufferPosition;
+  private final int keyBufferPosition;
 
-  public GroupByColumnSelectorPlus(ColumnSelectorPlus<GroupByColumnSelectorStrategy> baseInfo, int keyBufferPosition)
+  public GroupByColumnSelectorPlus(
+      ColumnSelectorPlus<GroupByColumnSelectorStrategy> baseInfo,
+      int keyBufferPosition,
+      int resultRowPosition
+  )
   {
     super(
         baseInfo.getName(),
@@ -37,10 +46,16 @@ public class GroupByColumnSelectorPlus extends ColumnSelectorPlus<GroupByColumnS
         baseInfo.getSelector()
     );
     this.keyBufferPosition = keyBufferPosition;
+    this.resultRowPosition = resultRowPosition;
   }
 
   public int getKeyBufferPosition()
   {
     return keyBufferPosition;
+  }
+
+  public int getResultRowPosition()
+  {
+    return resultRowPosition;
   }
 }

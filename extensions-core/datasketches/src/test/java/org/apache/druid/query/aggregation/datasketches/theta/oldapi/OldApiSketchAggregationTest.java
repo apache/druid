@@ -28,13 +28,16 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchHolder;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GrouperTestUtil;
 import org.apache.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
 import org.junit.After;
@@ -53,6 +56,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
+ *
  */
 @RunWith(Parameterized.class)
 public class OldApiSketchAggregationTest
@@ -93,30 +97,37 @@ public class OldApiSketchAggregationTest
   @Test
   public void testSimpleDataIngestAndQuery() throws Exception
   {
-    Sequence seq = helper.createIndexAndRunQueryOnSegment(
+    final String groupByQueryString = readFileFromClasspathAsString("oldapi/old_simple_test_data_group_by_query.json");
+    final GroupByQuery groupByQuery = (GroupByQuery) helper.getObjectMapper()
+                                                           .readValue(groupByQueryString, Query.class);
+
+    final Sequence seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("simple_test_data.tsv").getFile()),
         readFileFromClasspathAsString("simple_test_data_record_parser.json"),
         readFileFromClasspathAsString("oldapi/old_simple_test_data_aggregators.json"),
         0,
         Granularities.NONE,
         1000,
-        readFileFromClasspathAsString("oldapi/old_simple_test_data_group_by_query.json")
+        groupByQueryString
     );
 
     List results = seq.toList();
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(
-        new MapBasedRow(
-            DateTimes.of("2014-10-19T00:00:00.000Z"),
-            ImmutableMap
-                .<String, Object>builder()
-                .put("sketch_count", 50.0)
-                .put("sketchEstimatePostAgg", 50.0)
-                .put("sketchUnionPostAggEstimate", 50.0)
-                .put("sketchIntersectionPostAggEstimate", 50.0)
-                .put("sketchAnotBPostAggEstimate", 0.0)
-                .put("non_existing_col_validation", 0.0)
-                .build()
+        ResultRow.fromLegacyRow(
+            new MapBasedRow(
+                DateTimes.of("2014-10-19T00:00:00.000Z"),
+                ImmutableMap
+                    .<String, Object>builder()
+                    .put("sketch_count", 50.0)
+                    .put("sketchEstimatePostAgg", 50.0)
+                    .put("sketchUnionPostAggEstimate", 50.0)
+                    .put("sketchIntersectionPostAggEstimate", 50.0)
+                    .put("sketchAnotBPostAggEstimate", 0.0)
+                    .put("non_existing_col_validation", 0.0)
+                    .build()
+            ),
+            groupByQuery
         ),
         results.get(0)
     );
@@ -125,30 +136,37 @@ public class OldApiSketchAggregationTest
   @Test
   public void testSketchDataIngestAndQuery() throws Exception
   {
-    Sequence seq = helper.createIndexAndRunQueryOnSegment(
+    final String groupByQueryString = readFileFromClasspathAsString("oldapi/old_sketch_test_data_group_by_query.json");
+    final GroupByQuery groupByQuery = (GroupByQuery) helper.getObjectMapper()
+                                                           .readValue(groupByQueryString, Query.class);
+
+    final Sequence seq = helper.createIndexAndRunQueryOnSegment(
         new File(OldApiSketchAggregationTest.class.getClassLoader().getResource("sketch_test_data.tsv").getFile()),
         readFileFromClasspathAsString("sketch_test_data_record_parser.json"),
         readFileFromClasspathAsString("oldapi/old_sketch_test_data_aggregators.json"),
         0,
         Granularities.NONE,
         1000,
-        readFileFromClasspathAsString("oldapi/old_sketch_test_data_group_by_query.json")
+        groupByQueryString
     );
 
     List results = seq.toList();
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(
-        new MapBasedRow(
-            DateTimes.of("2014-10-19T00:00:00.000Z"),
-            ImmutableMap
-                .<String, Object>builder()
-                .put("sids_sketch_count", 50.0)
-                .put("sketchEstimatePostAgg", 50.0)
-                .put("sketchUnionPostAggEstimate", 50.0)
-                .put("sketchIntersectionPostAggEstimate", 50.0)
-                .put("sketchAnotBPostAggEstimate", 0.0)
-                .put("non_existing_col_validation", 0.0)
-                .build()
+        ResultRow.fromLegacyRow(
+            new MapBasedRow(
+                DateTimes.of("2014-10-19T00:00:00.000Z"),
+                ImmutableMap
+                    .<String, Object>builder()
+                    .put("sids_sketch_count", 50.0)
+                    .put("sketchEstimatePostAgg", 50.0)
+                    .put("sketchUnionPostAggEstimate", 50.0)
+                    .put("sketchIntersectionPostAggEstimate", 50.0)
+                    .put("sketchAnotBPostAggEstimate", 0.0)
+                    .put("non_existing_col_validation", 0.0)
+                    .build()
+            ),
+            groupByQuery
         ),
         results.get(0)
     );

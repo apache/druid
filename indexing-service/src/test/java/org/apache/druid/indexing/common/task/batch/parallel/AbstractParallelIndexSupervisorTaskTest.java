@@ -43,9 +43,10 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
-import org.apache.druid.indexing.common.task.NoopTestTaskFileWriter;
+import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -54,6 +55,7 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.AllowAllAuthorizer;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -218,6 +220,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   {
     return new TaskToolbox(
         null,
+        new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         actionClient,
         null,
         new LocalDataSegmentPusher(
@@ -251,7 +254,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         null,
-        new NoopTestTaskFileWriter()
+        new NoopTestTaskReportFileWriter()
     );
   }
 
@@ -280,7 +283,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
               return new AllowAllAuthorizer();
             }
           },
-          new DropwizardRowIngestionMetersFactory()
+          new DropwizardRowIngestionMetersFactory(),
+          new TestAppenderatorsManager()
       );
     }
   }

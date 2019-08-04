@@ -93,7 +93,18 @@ public class TestServerInventoryView implements TimelineServerView
         ImmutableMap.of("src", dataSource),
         1
     );
-    return ImmutableList.of(server);
+    final ImmutableDruidDataSource dataSource2 = new ImmutableDruidDataSource(
+        "DUMMY2",
+        Collections.emptyMap(),
+        realtimeSegments
+    );
+    final ImmutableDruidServer realtimeServer = new ImmutableDruidServer(
+        DUMMY_SERVER_REALTIME,
+        0L,
+        ImmutableMap.of("src", dataSource2),
+        1
+    );
+    return ImmutableList.of(server, realtimeServer);
   }
 
   @Override

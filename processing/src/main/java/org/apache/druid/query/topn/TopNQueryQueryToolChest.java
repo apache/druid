@@ -58,6 +58,7 @@ import java.util.Map;
 import java.util.function.BinaryOperator;
 
 /**
+ *
  */
 public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultValue>, TopNQuery>
 {
@@ -388,7 +389,6 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               List<Object> result = (List<Object>) inputIter.next();
               final Map<String, Object> vals = Maps.newLinkedHashMap();
 
-              Iterator<AggregatorFactory> aggIter = aggs.iterator();
               Iterator<Object> resultIter = result.iterator();
 
               // Must convert generic Jackson-deserialized type into the proper type.
@@ -398,12 +398,11 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               );
 
               CacheStrategy.fetchAggregatorsFromCache(
-                  aggIter,
+                  aggs,
                   resultIter,
                   isResultLevelCache,
-                  (aggName, aggValueObject) -> {
+                  (aggName, aggPos, aggValueObject) -> {
                     vals.put(aggName, aggValueObject);
-                    return null;
                   }
               );
 

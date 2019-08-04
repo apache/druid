@@ -42,7 +42,7 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   public FloatSumAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("expression") String expression,
+      @JsonProperty("expression") @Nullable String expression,
       @JacksonInject ExprMacroTable macroTable
   )
   {
