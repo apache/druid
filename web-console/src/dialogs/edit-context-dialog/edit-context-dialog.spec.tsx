@@ -19,22 +19,14 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { RunButton } from './run-button';
+import { EditContextDialog } from './edit-context-dialog';
 
-describe('run button', () => {
+describe('clipboard dialog', () => {
   it('matches snapshot', () => {
-    const runButton = (
-      <RunButton
-        renderEditContextDialog={() => null}
-        runeMode={false}
-        queryContext={{}}
-        onQueryContextChange={() => {}}
-        onRun={() => {}}
-        onExplain={() => {}}
-      />
+    const compactionDialog = (
+      <EditContextDialog queryContext={{}} onSubmit={() => null} onClose={() => null} />
     );
-
-    const { container } = render(runButton);
-    expect(container.firstChild).toMatchSnapshot();
+    render(compactionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });
