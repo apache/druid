@@ -34,6 +34,8 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -56,8 +58,8 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
   public HadoopIngestionSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("ioConfig") HadoopIOConfig ioConfig,
-      @JsonProperty("tuningConfig") HadoopTuningConfig tuningConfig,
-      @JsonProperty("uniqueId") String uniqueId
+      @JsonProperty("tuningConfig") @Nullable HadoopTuningConfig tuningConfig,
+      @JsonProperty("uniqueId") @Nullable String uniqueId
   )
   {
     super(dataSchema, ioConfig, tuningConfig);
