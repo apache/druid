@@ -32,7 +32,7 @@ interface DatasourceTableActionDialogProps extends IDialogProps {
 }
 
 interface DatasourceTableActionDialogState {
-  activeTab: 'dimensions';
+  activeTab: 'columns';
   dimensions?: string;
   error?: string;
 }
@@ -45,7 +45,7 @@ export class DatasourceTableActionDialog extends React.PureComponent<
   constructor(props: DatasourceTableActionDialogProps) {
     super(props);
     this.state = {
-      activeTab: 'dimensions',
+      activeTab: 'columns',
     };
 
     /// This should be a table
@@ -76,9 +76,9 @@ export class DatasourceTableActionDialog extends React.PureComponent<
     const taskTableSideButtonMetadata: SideButtonMetaData[] = [
       {
         icon: 'list-columns',
-        text: 'Dimensions',
-        active: activeTab === 'dimensions',
-        onClick: () => this.setState({ activeTab: 'dimensions' }),
+        text: 'Columns',
+        active: activeTab === 'columns',
+        onClick: () => this.setState({ activeTab: 'columns' }),
       },
     ];
 
@@ -90,7 +90,7 @@ export class DatasourceTableActionDialog extends React.PureComponent<
         title={`Datasource: ${datasourceId}`}
         actions={actions}
       >
-        {activeTab === 'dimensions' && (
+        {activeTab === 'columns' && (
           <DatasourceColumnsTable
             datasourceId={datasourceId ? datasourceId : ''}
             downloadFilename={`datasource-dimensions-${datasourceId}.json`}
