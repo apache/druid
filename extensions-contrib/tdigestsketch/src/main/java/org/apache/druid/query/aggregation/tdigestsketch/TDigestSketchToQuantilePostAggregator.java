@@ -29,35 +29,35 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
  * Post aggregation operator that can take in aggregated T-Digest sketches and
  * generate quantiles from it.
  */
-public class TDigestSketchToQuantilesPostAggregator implements PostAggregator
+public class TDigestSketchToQuantilePostAggregator implements PostAggregator
 {
 
   private final String name;
   private final PostAggregator field;
-  private final double[] fractions;
 
-  public static final String TYPE_NAME = "quantilesFromTDigestSketch";
+  private final double fraction;
+
+  public static final String TYPE_NAME = "quantileFromTDigestSketch";
 
   @JsonCreator
-  public TDigestSketchToQuantilesPostAggregator(
+  public TDigestSketchToQuantilePostAggregator(
       @JsonProperty("name") final String name,
       @JsonProperty("field") final PostAggregator field,
-      @JsonProperty("fractions") final double[] fractions
+      @JsonProperty("fraction") final double fraction
   )
   {
     this.name = Preconditions.checkNotNull(name, "name is null");
     this.field = Preconditions.checkNotNull(field, "field is null");
-    this.fractions = Preconditions.checkNotNull(fractions, "array of fractions is null");
-    Preconditions.checkArgument(this.fractions.length >= 1, "Array of fractions cannot be empty");
+    this.fraction = fraction;
   }
 
   @Override
@@ -74,22 +74,16 @@ public class TDigestSketchToQuantilesPostAggregator implements PostAggregator
   }
 
   @JsonProperty
-  public double[] getFractions()
+  public double getFraction()
   {
-    return fractions;
+    return fraction;
   }
 
   @Override
   public Object compute(final Map<String, Object> combinedAggregators)
   {
     final MergingDigest sketch = (MergingDigest) field.compute(combinedAggregators);
-    double[] quantiles = new double[fractions.length];
-    int i = 0;
-
-    for (double f : fractions) {
-      quantiles[i++] = sketch.quantile(f);
-    }
-    return quantiles;
+    return sketch.quantile(fraction);
   }
 
   @Override
@@ -110,12 +104,21 @@ public class TDigestSketchToQuantilesPostAggregator implements PostAggregator
     return getClass().getSimpleName() + "{" +
            "name='" + name + '\'' +
            ", field=" + field +
-           ", fractions=" + Arrays.toString(fractions) +
+           ", fraction=" + fraction +
            "}";
   }
 
   @Override
-  public boolean equals(final Object o)
+  public byte[] getCacheKey()
+  {
+    final CacheKeyBuilder builder = new CacheKeyBuilder(
+        PostAggregatorIds.TDIGEST_SKETCH_TO_QUANTILE_CACHE_TYPE_ID).appendCacheable(field);
+    builder.appendDouble(fraction);
+    return builder.build();
+  }
+
+  @Override
+  public boolean equals(Object o)
   {
     if (this == o) {
       return true;
@@ -123,31 +126,16 @@ public class TDigestSketchToQuantilesPostAggregator implements PostAggregator
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final TDigestSketchToQuantilesPostAggregator that = (TDigestSketchToQuantilesPostAggregator) o;
-    if (!name.equals(that.name)) {
-      return false;
-    }
-    if (!Arrays.equals(fractions, that.fractions)) {
-      return false;
-    }
-    return field.equals(that.field);
+    TDigestSketchToQuantilePostAggregator that = (TDigestSketchToQuantilePostAggregator) o;
+    return Double.compare(that.fraction, fraction) == 0 &&
+           Objects.equals(name, that.name) &&
+           Objects.equals(field, that.field);
   }
 
   @Override
   public int hashCode()
   {
-    return (name.hashCode() * 31 + field.hashCode()) * 31 + Arrays.hashCode(fractions);
-  }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    final CacheKeyBuilder builder = new CacheKeyBuilder(
-        PostAggregatorIds.TDIGEST_SKETCH_TO_QUANTILES_CACHE_TYPE_ID).appendCacheable(field);
-    for (final double value : fractions) {
-      builder.appendDouble(value);
-    }
-    return builder.build();
+    return Objects.hash(name, field, fraction);
   }
 
   @Override
