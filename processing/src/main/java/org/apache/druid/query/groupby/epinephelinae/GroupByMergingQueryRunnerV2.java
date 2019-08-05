@@ -185,7 +185,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
                   hasTimeout,
                   timeoutAt
               );
-              resources.register(mergeBufferHolders);
+              resources.registerAll(mergeBufferHolders);
 
               final ReferenceCountingResourceHolder<ByteBuffer> mergeBufferHolder = mergeBufferHolders.get(0);
               final ReferenceCountingResourceHolder<ByteBuffer> combineBufferHolder = numMergeBuffers == 2 ?
@@ -283,15 +283,15 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
                   resources
               );
             }
-            catch (Throwable e) {
+            catch (Throwable t) {
               // Exception caught while setting up the iterator; release resources.
               try {
                 resources.close();
               }
               catch (IOException ex) {
-                e.addSuppressed(ex);
+                t.addSuppressed(ex);
               }
-              throw e;
+              throw t;
             }
           }
 
