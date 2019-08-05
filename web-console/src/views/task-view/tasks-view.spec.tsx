@@ -27,9 +27,11 @@ describe('tasks view', () => {
       <TasksView
         openDialog={'test'}
         taskId={'test'}
-        goToQuery={() => null}
-        goToMiddleManager={() => null}
-        goToLoadDataView={() => null}
+        datasourceId={'datasource'}
+        goToDatasource={() => {}}
+        goToQuery={() => {}}
+        goToMiddleManager={() => {}}
+        goToLoadData={() => {}}
         noSqlMode={false}
       />,
     );

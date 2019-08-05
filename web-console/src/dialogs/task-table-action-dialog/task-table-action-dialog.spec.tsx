@@ -29,7 +29,7 @@ describe('task table action dialog', () => {
         status={'RUNNING'}
         taskId={'test'}
         actions={[basicAction]}
-        onClose={() => null}
+        onClose={() => {}}
         isOpen
       />
     );

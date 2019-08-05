@@ -19,10 +19,12 @@
 import axios from 'axios';
 import { AxiosResponse } from 'axios';
 
-export function parseHtmlError(htmlStr: string): string | null {
+import { assemble } from './general';
+
+export function parseHtmlError(htmlStr: string): string | undefined {
   const startIndex = htmlStr.indexOf('</h3><pre>');
   const endIndex = htmlStr.indexOf('\n\tat');
-  if (startIndex === -1 || endIndex === -1) return null;
+  if (startIndex === -1 || endIndex === -1) return;
 
   return htmlStr
     .substring(startIndex + 10, endIndex)
@@ -36,9 +38,12 @@ export function getDruidErrorMessage(e: any) {
   switch (typeof data) {
     case 'object':
       return (
-        [data.error, data.errorMessage, data.errorClass, data.host ? `on host ${data.host}` : null]
-          .filter(Boolean)
-          .join(' / ') || e.message
+        assemble(
+          data.error,
+          data.errorMessage,
+          data.errorClass,
+          data.host ? `on host ${data.host}` : undefined,
+        ).join(' / ') || e.message
       );
 
     case 'string':

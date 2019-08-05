@@ -284,7 +284,7 @@ public class GenericIndexedWriter<T> implements Serializer
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, @Nullable FileSmoosher smoosher) throws IOException
   {
     if (requireMultipleFiles) {
       writeToMultiFiles(channel, smoosher);

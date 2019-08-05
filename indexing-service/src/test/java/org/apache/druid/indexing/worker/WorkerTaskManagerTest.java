@@ -34,7 +34,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
-import org.apache.druid.indexing.common.task.NoopTestTaskFileWriter;
+import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.TestTaskRunner;
@@ -108,6 +108,7 @@ public class WorkerTaskManagerTest
         new TestTaskRunner(
             new TaskToolboxFactory(
                 taskConfig,
+                null,
                 taskActionClientFactory,
                 null,
                 null,
@@ -131,7 +132,7 @@ public class WorkerTaskManagerTest
                 null,
                 null,
                 null,
-                new NoopTestTaskFileWriter()
+                new NoopTestTaskReportFileWriter()
             ),
             taskConfig,
             location

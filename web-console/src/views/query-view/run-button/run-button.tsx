@@ -47,8 +47,9 @@ export interface RunButtonProps {
   runeMode: boolean;
   queryContext: QueryContext;
   onQueryContextChange: (newQueryContext: QueryContext) => void;
-  onRun: ((wrapQuery: boolean) => void) | null;
+  onRun: (wrapQuery: boolean) => void;
   onExplain: () => void;
+  renderEditContextDialog: () => void;
 }
 
 interface RunButtonState {
@@ -85,7 +86,13 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
   };
 
   renderExtraMenu() {
-    const { runeMode, onExplain, queryContext, onQueryContextChange } = this.props;
+    const {
+      runeMode,
+      onExplain,
+      queryContext,
+      onQueryContextChange,
+      renderEditContextDialog,
+    } = this.props;
     const { wrapQuery } = this.state;
 
     const useCache = getUseCache(queryContext);
@@ -133,11 +140,16 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
             onQueryContextChange(setUseCache(queryContext, !useCache));
           }}
         />
+        <MenuItem
+          icon={IconNames.PROPERTIES}
+          text="Edit context"
+          onClick={renderEditContextDialog}
+        />
       </Menu>
     );
   }
 
-  render() {
+  render(): JSX.Element {
     const { runeMode, onRun } = this.props;
     const { wrapQuery } = this.state;
 

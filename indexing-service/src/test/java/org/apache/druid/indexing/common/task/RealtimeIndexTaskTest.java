@@ -976,6 +976,7 @@ public class RealtimeIndexTaskTest
     };
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(
         taskConfig,
+        null, // taskExecutorNode
         taskActionClientFactory,
         EMITTER,
         new TestDataSegmentPusher(),
@@ -999,7 +1000,7 @@ public class RealtimeIndexTaskTest
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
-        new NoopTestTaskFileWriter()
+        new NoopTestTaskReportFileWriter()
     );
 
     return toolboxFactory.build(task);

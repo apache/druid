@@ -92,7 +92,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
           QueryPlus.wrap(query),
           responseContext
       );
-      String newResultSetId = (String) responseContext.get(ResponseContext.CTX_ETAG);
+      String newResultSetId = (String) responseContext.get(ResponseContext.Key.ETAG);
 
       if (useResultCache && newResultSetId != null && newResultSetId.equals(existingResultSetId)) {
         log.debug("Return cached result set as there is no change in identifiers for query %s ", query.getId());

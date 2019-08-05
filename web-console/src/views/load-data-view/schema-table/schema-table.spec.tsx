@@ -43,7 +43,7 @@ describe('schema table', () => {
         columnFilter=""
         selectedDimensionSpecIndex={-1}
         selectedMetricSpecIndex={-1}
-        onDimensionOrMetricSelect={() => null}
+        onDimensionOrMetricSelect={() => {}}
       />
     );
 

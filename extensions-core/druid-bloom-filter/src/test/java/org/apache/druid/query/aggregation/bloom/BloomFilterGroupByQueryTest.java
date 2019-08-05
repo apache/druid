@@ -30,8 +30,10 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.filter.BloomKFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.TestHelper;
 import org.junit.After;
@@ -241,7 +243,7 @@ public class BloomFilterGroupByQueryTest
                        + "  }"
                        + "}";
 
-    Sequence seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         this.getClass().getClassLoader().getResourceAsStream("sample.data.tsv"),
         parseSpec,
         metricSpec,
@@ -251,6 +253,6 @@ public class BloomFilterGroupByQueryTest
         query
     );
 
-    return (MapBasedRow) seq.toList().get(0);
+    return seq.toList().get(0).toMapBasedRow((GroupByQuery) helper.readQuery(query));
   }
 }

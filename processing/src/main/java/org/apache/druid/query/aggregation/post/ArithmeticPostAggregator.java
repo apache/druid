@@ -29,6 +29,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
+import javax.annotation.Nullable;
+
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -71,7 +73,7 @@ public class ArithmeticPostAggregator implements PostAggregator
       @JsonProperty("name") String name,
       @JsonProperty("fn") String fnName,
       @JsonProperty("fields") List<PostAggregator> fields,
-      @JsonProperty("ordering") String ordering
+      @JsonProperty("ordering") @Nullable String ordering
   )
   {
     Preconditions.checkArgument(fnName != null, "fn cannot not be null");

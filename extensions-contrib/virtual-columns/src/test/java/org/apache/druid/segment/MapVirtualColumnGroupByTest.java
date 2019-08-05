@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -39,6 +38,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -53,13 +53,14 @@ import org.junit.rules.ExpectedException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class MapVirtualColumnGroupByTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  private QueryRunner<Row> runner;
+  private QueryRunner<ResultRow> runner;
 
   @Before
   public void setup() throws IOException
@@ -161,14 +162,14 @@ public class MapVirtualColumnGroupByTest
         null
     );
 
-    final List<Row> result = runner.run(QueryPlus.wrap(query)).toList();
-    final List<Row> expected = ImmutableList.of(
+    final List<ResultRow> result = runner.run(QueryPlus.wrap(query)).toList();
+    final List<ResultRow> expected = ImmutableList.of(
         new MapBasedRow(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             MapVirtualColumnTestBase.mapOf("count", 1L, "params.key3", "value3")
         ),
         new MapBasedRow(DateTimes.of("2011-01-12T00:00:00.000Z"), MapVirtualColumnTestBase.mapOf("count", 2L))
-    );
+    ).stream().map(row -> ResultRow.fromLegacyRow(row, query)).collect(Collectors.toList());
 
     Assert.assertEquals(expected, result);
   }

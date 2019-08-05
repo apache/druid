@@ -144,7 +144,7 @@ public class ApproximateHistogramErrorBenchmark
     for (int i = 0; i < numValues; ++i) {
       tmp.offer(values[i]);
       if ((i + 1) % numPerHist == 0) {
-        ah1.fold(tmp);
+        ah1.fold(tmp, null, null, null);
         ah2.foldRule(tmp, null, null);
         tmp = new ApproximateHistogram(resolution);
       }

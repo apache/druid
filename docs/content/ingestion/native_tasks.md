@@ -180,13 +180,11 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|The task type, this should always be `index_parallel`.|none|yes|
-|maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
 |maxRowsInMemory|Used in determining when intermediate persists to disk should occur. Normally user does not need to set this, but depending on the nature of data, if rows are short in terms of bytes, user may not want to store a million rows in memory and this value should be set.|1000000|no|
 |maxBytesInMemory|Used in determining when intermediate persists to disk should occur. Normally this is computed internally and user does not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists)|1/6 of max JVM memory|no|
-|maxTotalRows|Total number of rows in segments waiting for being pushed. Used in determining when intermediate pushing should occur.|20000000|no|
-|numShards|Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data. numShards cannot be specified if maxRowsPerSegment is set.|null|no|
-|indexSpec|defines segment storage format options to be used at indexing time, see [IndexSpec](#indexspec)|null|no|
-|indexSpecForIntermediatePersists|defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](#indexspec) for possible values.|same as indexSpec|no|
+|partitionsSpec|Defines how to partition the segments in timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic_partitions`|no|
+|indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](#indexspec)|null|no|
+|indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](#indexspec) for possible values.|same as indexSpec|no|
 |maxPendingPersists|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|0 (meaning one persist can be running concurrently with ingestion, and none can be queued up)|no|
 |reportParseExceptions|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|false|no|
 |pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
@@ -196,6 +194,18 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |taskStatusCheckPeriodMs|Polling period in milleseconds to check running task statuses.|1000|no|
 |chatHandlerTimeout|Timeout for reporting the pushed segments in worker tasks.|PT10S|no|
 |chatHandlerNumRetries|Retries for reporting the pushed segments in worker tasks.|5|no|
+
+#### PartitionsSpec
+
+PartitionsSpec is to describe the secondary partitioning method.
+Parallel Index Task supports only the best-effort rollup mode,
+and thus `dynamic_partitions` is only available option currently.
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should always be `dynamic_partitions`|none|yes|
+|maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
+|maxTotalRows|Total number of rows in segments waiting for being pushed. Used in determining when intermediate segment push should occur.|20000000|no|
 
 #### HTTP Endpoints
 
@@ -558,14 +568,11 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|The task type, this should always be "index".|none|yes|
-|maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
 |maxRowsInMemory|Used in determining when intermediate persists to disk should occur. Normally user does not need to set this, but depending on the nature of data, if rows are short in terms of bytes, user may not want to store a million rows in memory and this value should be set.|1000000|no|
 |maxBytesInMemory|Used in determining when intermediate persists to disk should occur. Normally this is computed internally and user does not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists)|1/6 of max JVM memory|no|
-|maxTotalRows|Total number of rows in segments waiting for being pushed. Used in determining when intermediate pushing should occur.|20000000|no|
-|numShards|Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data. numShards cannot be specified if maxRowsPerSegment is set.|null|no|
-|partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions. Only used with `forceGuaranteedRollup` = true, will be ignored otherwise.|null|no|
-|indexSpec|defines segment storage format options to be used at indexing time, see [IndexSpec](#indexspec)|null|no|
-|indexSpecForIntermediatePersists|defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](#indexspec) for possible values.|same as indexSpec|no|
+|partitionsSpec|Defines how to partition the segments in timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic_partitions` if `forceGuaranteedRollup` = false, `hashed_partitions` if `forceGuaranteedRollup` = true|no|
+|indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](#indexspec)|null|no|
+|indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](#indexspec) for possible values.|same as indexSpec|no|
 |maxPendingPersists|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|0 (meaning one persist can be running concurrently with ingestion, and none can be queued up)|no|
 |forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../ingestion/index.html#roll-up-modes). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, the index task will read the entire input data twice: one for finding the optimal number of partitions per time chunk and one for generating segments. Note that the result segments would be hash-partitioned. You can set `forceExtendableShardSpecs` if you plan to append more data to the same time range in the future. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
 |reportParseExceptions|DEPRECATED. If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped. Setting `reportParseExceptions` to true will override existing configurations for `maxParseExceptions` and `maxSavedParseExceptions`, setting `maxParseExceptions` to 0 and limiting `maxSavedParseExceptions` to no more than 1.|false|no|
@@ -574,6 +581,27 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |logParseExceptions|If true, log an error message when a parsing exception occurs, containing information about the row where the error occurred.|false|no|
 |maxParseExceptions|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.|unlimited|no|
 |maxSavedParseExceptions|When a parse exception occurs, Druid can keep track of the most recent parse exceptions. "maxSavedParseExceptions" limits how many exception instances will be saved. These saved exceptions will be made available after the task finishes in the [task completion report](../ingestion/reports.html). Overridden if `reportParseExceptions` is set.|0|no|
+
+#### PartitionsSpec
+
+PartitionsSpec is to describe the secondary partitioning method.
+You should use different partitionsSpec depending on the [rollup mode](../ingestion/index.html#roll-up-modes) you want.
+For perfect rollup, you should use `hashed_partitions`.
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should always be `hashed_partitions`|none|yes|
+|maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
+|numShards|Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data. numShards cannot be specified if maxRowsPerSegment is set.|null|no|
+|partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions.|null|no|
+
+For best-effort rollup, you should use `dynamic_partitions`.
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should always be `dynamic_partitions`|none|yes|
+|maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
+|maxTotalRows|Total number of rows in segments waiting for being pushed. Used in determining when intermediate segment push should occur.|20000000|no|
 
 #### IndexSpec
 

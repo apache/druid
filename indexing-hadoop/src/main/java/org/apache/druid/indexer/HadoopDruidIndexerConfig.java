@@ -39,7 +39,7 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
 import org.apache.druid.indexer.path.PathSpec;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.DateTimes;
@@ -289,7 +289,7 @@ public class HadoopDruidIndexerConfig
     this.pathSpec = JSON_MAPPER.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
   }
 
-  public PartitionsSpec getPartitionsSpec()
+  public DimensionBasedPartitionsSpec getPartitionsSpec()
   {
     return schema.getTuningConfig().getPartitionsSpec();
   }
@@ -327,22 +327,18 @@ public class HadoopDruidIndexerConfig
 
   public boolean isDeterminingPartitions()
   {
-    return schema.getTuningConfig().getPartitionsSpec().isDeterminingPartitions();
+    return schema.getTuningConfig().getPartitionsSpec().needsDeterminePartitions(true);
   }
 
-  public Long getTargetPartitionSize()
+  public int getTargetPartitionSize()
   {
-    return schema.getTuningConfig().getPartitionsSpec().getTargetPartitionSize();
+    final Integer targetPartitionSize = schema.getTuningConfig().getPartitionsSpec().getMaxRowsPerSegment();
+    return targetPartitionSize == null ? -1 : targetPartitionSize;
   }
 
   public boolean isForceExtendableShardSpecs()
   {
     return schema.getTuningConfig().isForceExtendableShardSpecs();
-  }
-
-  public long getMaxPartitionSize()
-  {
-    return schema.getTuningConfig().getPartitionsSpec().getMaxPartitionSize();
   }
 
   public boolean isUpdaterJobSpecSet()

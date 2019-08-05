@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -159,7 +158,7 @@ public class GroupByQueryRunnerFailureTest
       }
   );
 
-  private QueryRunner<Row> runner;
+  private QueryRunner<ResultRow> runner;
 
   @AfterClass
   public static void teardownClass()
@@ -172,13 +171,13 @@ public class GroupByQueryRunnerFailureTest
   public static Collection<Object[]> constructorFeeder()
   {
     final List<Object[]> args = new ArrayList<>();
-    for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(FACTORY)) {
+    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(FACTORY)) {
       args.add(new Object[]{runner});
     }
     return args;
   }
 
-  public GroupByQueryRunnerFailureTest(QueryRunner<Row> runner)
+  public GroupByQueryRunnerFailureTest(QueryRunner<ResultRow> runner)
   {
     this.runner = FACTORY.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
   }

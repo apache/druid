@@ -25,7 +25,7 @@ describe('clipboard dialog', () => {
   it('matches snapshot', () => {
     const compactionDialog = (
       <ShowValueDialog
-        onClose={() => null}
+        onClose={() => {}}
         str={
           'Bot: Automatska zamjena teksta  (-[[Administrativna podjela Meksika|Admin]] +[[Administrativna podjela Meksika|Admi]])'
         }

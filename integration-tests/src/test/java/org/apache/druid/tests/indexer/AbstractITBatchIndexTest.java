@@ -32,7 +32,7 @@ import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.testng.Assert;
+import org.junit.Assert;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -135,7 +135,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
           fullReindexDatasourceName,
           "2013-08-31T00:00:00.000Z/2013-09-10T00:00:00.000Z"
       );
-      Assert.assertFalse(dimensions.contains("robot"), "dimensions : " + dimensions);
+      Assert.assertFalse("dimensions : " + dimensions, dimensions.contains("robot"));
     }
     catch (Exception e) {
       LOG.error(e, "Error while testing");
@@ -183,12 +183,10 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
     if (assertRunsSubTasks) {
       final long newSubTasks = countCompleteSubTasks(dataSourceName) - startSubTaskCount;
       Assert.assertTrue(
-          newSubTasks > 0,
           StringUtils.format(
               "The supervisor task[%s] didn't create any sub tasks. Was it executed in the parallel mode?",
               taskID
-          )
-      );
+          ), newSubTasks > 0);
     }
 
     // ITParallelIndexTest does a second round of ingestion to replace segements in an existing

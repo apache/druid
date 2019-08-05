@@ -24,6 +24,7 @@ import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
 
 import { QueryPlanDialog } from '../../dialogs';
+import { EditContextDialog } from '../../dialogs/edit-context-dialog/edit-context-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import {
   BasicQueryExplanation,
@@ -65,18 +66,20 @@ export interface QueryViewState {
   queryContext: QueryContext;
 
   columnMetadataLoading: boolean;
-  columnMetadata: ColumnMetadata[] | null;
-  columnMetadataError: string | null;
+  columnMetadata?: ColumnMetadata[];
+  columnMetadataError?: string;
 
   loading: boolean;
-  result: HeaderRows | null;
-  queryExtraInfo: QueryExtraInfoData | null;
-  error: string | null;
+  result?: HeaderRows;
+  queryExtraInfo?: QueryExtraInfoData;
+  error?: string;
 
   explainDialogOpen: boolean;
-  explainResult: BasicQueryExplanation | SemiJoinQueryExplanation | string | null;
+  explainResult?: BasicQueryExplanation | SemiJoinQueryExplanation | string;
   loadingExplain: boolean;
-  explainError: Error | null;
+  explainError?: string;
+
+  editContextDialogOpen: boolean;
 }
 
 interface QueryResult {
@@ -133,18 +136,13 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       queryContext: {},
 
       columnMetadataLoading: false,
-      columnMetadata: null,
-      columnMetadataError: null,
 
       loading: false,
-      result: null,
-      queryExtraInfo: null,
-      error: null,
 
       explainDialogOpen: false,
       loadingExplain: false,
-      explainResult: null,
-      explainError: null,
+
+      editContextDialogOpen: false,
     };
 
     this.metadataQueryManager = new QueryManager({
@@ -171,8 +169,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     this.sqlQueryManager = new QueryManager({
       processQuery: async (queryWithContext: QueryWithContext): Promise<QueryResult> => {
         const { queryString, queryContext, wrapQuery } = queryWithContext;
-        let queryId: string | null = null;
-        let sqlQueryId: string | null = null;
+        let queryId: string | undefined;
+        let sqlQueryId: string | undefined;
         let wrappedLimit: number | undefined;
 
         let queryResult: HeaderRows;
@@ -239,8 +237,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
-          result: result ? result.queryResult : null,
-          queryExtraInfo: result ? result.queryExtraInfo : null,
+          result: result ? result.queryResult : undefined,
+          queryExtraInfo: result ? result.queryExtraInfo : undefined,
           loading,
           error,
         });
@@ -264,7 +262,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         this.setState({
           explainResult: result,
           loadingExplain: loading,
-          explainError: error !== null ? new Error(error) : null,
+          explainError: error,
         });
       },
     });
@@ -312,16 +310,30 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
   renderExplainDialog() {
     const { explainDialogOpen, explainResult, loadingExplain, explainError } = this.state;
-    if (!loadingExplain && explainDialogOpen) {
-      return (
-        <QueryPlanDialog
-          explainResult={explainResult}
-          explainError={explainError}
-          onClose={() => this.setState({ explainDialogOpen: false })}
-        />
-      );
-    }
-    return null;
+    if (loadingExplain || !explainDialogOpen) return;
+
+    return (
+      <QueryPlanDialog
+        explainResult={explainResult}
+        explainError={explainError}
+        onClose={() => this.setState({ explainDialogOpen: false })}
+      />
+    );
+  }
+
+  renderEditContextDialog() {
+    const { editContextDialogOpen, queryContext } = this.state;
+    if (!editContextDialogOpen) return;
+
+    return (
+      <EditContextDialog
+        onSubmit={(queryContext: QueryContext) =>
+          this.setState({ queryContext, editContextDialogOpen: false })
+        }
+        onClose={() => this.setState({ editContextDialogOpen: false })}
+        queryContext={queryContext}
+      />
+    );
   }
 
   renderMainArea() {
@@ -356,6 +368,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           />
           <div className="control-bar">
             <RunButton
+              renderEditContextDialog={() => this.setState({ editContextDialogOpen: true })}
               runeMode={runeMode}
               queryContext={queryContext}
               onQueryContextChange={this.handleQueryContextChange}
@@ -399,7 +412,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     localStorageSet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE, String(secondaryPaneSize));
   };
 
-  render() {
+  render(): JSX.Element {
     const { columnMetadata, columnMetadataLoading, columnMetadataError } = this.state;
 
     return (
@@ -415,6 +428,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         )}
         {this.renderMainArea()}
         {this.renderExplainDialog()}
+        {this.renderEditContextDialog()}
       </div>
     );
   }

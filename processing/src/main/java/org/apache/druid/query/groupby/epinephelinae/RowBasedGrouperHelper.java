@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -33,9 +32,9 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.common.utils.IntArrayUtils;
-import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -48,13 +47,16 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryHelper;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.RowBasedColumnSelectorFactory;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.BufferComparator;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
@@ -67,23 +69,29 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.filter.BooleanValueMatcher;
+import org.apache.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.ToLongFunction;
 import java.util.stream.IntStream;
 
-// this class contains shared code between GroupByMergingQueryRunnerV2 and GroupByRowProcessor
+/**
+ * This class contains shared code between {@link GroupByMergingQueryRunnerV2} and {@link GroupByRowProcessor}.
+ */
 public class RowBasedGrouperHelper
 {
   // Entry in dictionary, node pointer in reverseDictionary, hash + k/v/next pointer in reverseDictionary nodes
@@ -93,89 +101,111 @@ public class RowBasedGrouperHelper
   private static final int UNKNOWN_THREAD_PRIORITY = -1;
   private static final long UNKNOWN_TIMEOUT = -1L;
 
+  private RowBasedGrouperHelper()
+  {
+    // No instantiation.
+  }
+
   /**
    * Create a single-threaded grouper and accumulator.
    */
-  public static Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, Row>> createGrouperAccumulatorPair(
+  public static Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, ResultRow>> createGrouperAccumulatorPair(
       final GroupByQuery query,
-      final boolean isInputRaw,
-      final Map<String, ValueType> rawInputRowSignature,
+      @Nullable final GroupByQuery subquery,
       final GroupByQueryConfig config,
       final Supplier<ByteBuffer> bufferSupplier,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
-      final AggregatorFactory[] aggregatorFactories,
-      final int mergeBufferSize,
-      final boolean useVirtualizedColumnSelectorFactory
+      final int mergeBufferSize
   )
   {
     return createGrouperAccumulatorPair(
         query,
-        isInputRaw,
-        rawInputRowSignature,
+        subquery,
         config,
         bufferSupplier,
         null,
         SINGLE_THREAD_CONCURRENCY_HINT,
         temporaryStorage,
         spillMapper,
-        aggregatorFactories,
         null,
         UNKNOWN_THREAD_PRIORITY,
         false,
         UNKNOWN_TIMEOUT,
-        mergeBufferSize,
-        useVirtualizedColumnSelectorFactory
+        mergeBufferSize
     );
   }
 
   /**
-   * If isInputRaw is true, transformations such as timestamp truncation and extraction functions have not
-   * been applied to the input rows yet, for example, in a nested query, if an extraction function is being
-   * applied in the outer query to a field of the inner query. This method must apply those transformations.
+   * Create a {@link Grouper} that groups according to the dimensions and aggregators in "query", along with
+   * an {@link Accumulator} that accepts ResultRows and forwards them to the grouper.
+   *
+   * The pair will operate in one of two modes:
+   *
+   * 1) Combining mode (used if "subquery" is null). In this mode, filters from the "query" are ignored, and
+   * its aggregators are converted into combining form. The input ResultRows are assumed to be partially-grouped
+   * results originating from the provided "query".
+   *
+   * 2) Subquery mode (used if "subquery" is nonnull). In this mode, filters from the "query" (both intervals
+   * and dim filters) are respected, and its aggregators are used in standard (not combining) form. The input
+   * ResultRows are assumed to be results originating from the provided "subquery".
+   *
+   * @param query               query that we are grouping for
+   * @param subquery            optional subquery that we are receiving results from (see combining vs. subquery
+   *                            mode above)
+   * @param config              groupBy query config
+   * @param bufferSupplier      supplier of merge buffers
+   * @param combineBufferHolder holder of combine buffers. Unused if concurrencyHint = -1, and may be null in that case
+   * @param concurrencyHint     -1 for single-threaded Grouper, >=1 for concurrent Grouper
+   * @param temporaryStorage    temporary storage used for spilling from the Grouper
+   * @param spillMapper         object mapper used for spilling from the Grouper
+   * @param grouperSorter       executor service used for parallel combining. Unused if concurrencyHint = -1, and may
+   *                            be null in that case
+   * @param priority            query priority
+   * @param hasQueryTimeout     whether or not this query has a timeout
+   * @param queryTimeoutAt      when this query times out, in milliseconds since the epoch
+   * @param mergeBufferSize     size of the merge buffers from "bufferSupplier"
    */
-  public static Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, Row>> createGrouperAccumulatorPair(
+  public static Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, ResultRow>> createGrouperAccumulatorPair(
       final GroupByQuery query,
-      final boolean isInputRaw,
-      final Map<String, ValueType> rawInputRowSignature,
+      @Nullable final GroupByQuery subquery,
       final GroupByQueryConfig config,
       final Supplier<ByteBuffer> bufferSupplier,
       @Nullable final ReferenceCountingResourceHolder<ByteBuffer> combineBufferHolder,
       final int concurrencyHint,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
-      final AggregatorFactory[] aggregatorFactories,
       @Nullable final ListeningExecutorService grouperSorter,
       final int priority,
       final boolean hasQueryTimeout,
       final long queryTimeoutAt,
-      final int mergeBufferSize,
-      final boolean useVirtualizedColumnSelectorFactory
+      final int mergeBufferSize
   )
   {
     // concurrencyHint >= 1 for concurrent groupers, -1 for single-threaded
     Preconditions.checkArgument(concurrencyHint >= 1 || concurrencyHint == -1, "invalid concurrencyHint");
 
+    if (concurrencyHint >= 1) {
+      Preconditions.checkNotNull(grouperSorter, "grouperSorter executor must be provided");
+    }
+
+    // See method-level javadoc; we go into combining mode if there is no subquery.
+    final boolean combining = subquery == null;
+
     final List<ValueType> valueTypes = DimensionHandlerUtils.getValueTypesFromDimensionSpecs(query.getDimensions());
 
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
-    final boolean includeTimestamp = GroupByStrategyV2.getUniversalTimestamp(query) == null;
+    final boolean includeTimestamp = query.getResultRowHasTimestamp();
 
-    final ThreadLocal<Row> columnSelectorRow = new ThreadLocal<>();
+    final ThreadLocal<ResultRow> columnSelectorRow = new ThreadLocal<>();
 
-    ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
-        columnSelectorRow,
-        rawInputRowSignature
+    ColumnSelectorFactory columnSelectorFactory = createResultRowBasedColumnSelectorFactory(
+        combining ? query : subquery,
+        columnSelectorRow::get
     );
 
-    // Although queries would work fine if we always wrap the columnSelectorFactory into a
-    // VirtualizedColumnSelectorFactory. However, VirtualizedColumnSelectorFactory is incapable of using
-    // ColumnSelector based variants of makeXXX methods which are more efficient.
-    // this flag is set to true when it is essential to wrap e.g. a nested groupBy query with virtual columns in
-    // the outer query. Without this flag, groupBy query processing would never use more efficient ColumnSelector
-    // based methods in VirtualColumn interface.
-    // For more details, See https://github.com/apache/incubator-druid/issues/7574
-    if (useVirtualizedColumnSelectorFactory) {
+    // Apply virtual columns if we are in subquery (non-combining) mode.
+    if (!combining) {
       columnSelectorFactory = query.getVirtualColumns().wrap(columnSelectorFactory);
     }
 
@@ -187,6 +217,17 @@ public class RowBasedGrouperHelper
           limitSpec,
           query.getDimensions()
       );
+    }
+
+    final AggregatorFactory[] aggregatorFactories;
+
+    if (combining) {
+      aggregatorFactories = query.getAggregatorSpecs()
+                                 .stream()
+                                 .map(AggregatorFactory::getCombiningFactory)
+                                 .toArray(AggregatorFactory[]::new);
+    } else {
+      aggregatorFactories = query.getAggregatorSpecs().toArray(new AggregatorFactory[0]);
     }
 
     final Grouper.KeySerdeFactory<RowBasedKey> keySerdeFactory = new RowBasedKeySerdeFactory(
@@ -250,13 +291,22 @@ public class RowBasedGrouperHelper
     final int keySize = includeTimestamp ? query.getDimensions().size() + 1 : query.getDimensions().size();
     final ValueExtractFunction valueExtractFn = makeValueExtractFunction(
         query,
-        isInputRaw,
+        combining,
         includeTimestamp,
         columnSelectorFactory,
         valueTypes
     );
 
-    final Accumulator<AggregateResult, Row> accumulator = (priorResult, row) -> {
+    final Predicate<ResultRow> rowPredicate;
+
+    if (combining) {
+      // Filters are not applied in combining mode.
+      rowPredicate = row -> true;
+    } else {
+      rowPredicate = getResultRowPredicate(query, subquery);
+    }
+
+    final Accumulator<AggregateResult, ResultRow> accumulator = (priorResult, row) -> {
       BaseQuery.checkInterrupted();
 
       if (priorResult != null && !priorResult.isOk()) {
@@ -266,6 +316,10 @@ public class RowBasedGrouperHelper
 
       if (!grouper.isInitialized()) {
         grouper.init();
+      }
+
+      if (!rowPredicate.test(row)) {
+        return AggregateResult.ok();
       }
 
       columnSelectorRow.set(row);
@@ -282,47 +336,140 @@ public class RowBasedGrouperHelper
     return new Pair<>(grouper, accumulator);
   }
 
+  /**
+   * Creates a {@link ColumnSelectorFactory} that can read rows which originate as results of the provided "query".
+   *
+   * @param query    a groupBy query
+   * @param supplier supplier of result rows from the query
+   */
+  public static ColumnSelectorFactory createResultRowBasedColumnSelectorFactory(
+      final GroupByQuery query,
+      final Supplier<ResultRow> supplier
+  )
+  {
+    final RowBasedColumnSelectorFactory.RowAdapter<ResultRow> adapter =
+        new RowBasedColumnSelectorFactory.RowAdapter<ResultRow>()
+        {
+          @Override
+          public ToLongFunction<ResultRow> timestampFunction()
+          {
+            if (query.getResultRowHasTimestamp()) {
+              return row -> row.getLong(0);
+            } else {
+              final long timestamp = query.getUniversalTimestamp().getMillis();
+              return row -> timestamp;
+            }
+          }
+
+          @Override
+          public Function<ResultRow, Object> rawFunction(final String columnName)
+          {
+            final int columnIndex = query.getResultRowPositionLookup().getInt(columnName);
+            if (columnIndex < 0) {
+              return row -> null;
+            } else {
+              return row -> row.get(columnIndex);
+            }
+          }
+        };
+
+    return RowBasedColumnSelectorFactory.create(adapter, supplier::get, GroupByQueryHelper.rowSignatureFor(query));
+  }
+
+  /**
+   * Returns a predicate that filters result rows from a particular "subquery" based on the intervals and dim filters
+   * from "query".
+   *
+   * @param query    outer query
+   * @param subquery inner query
+   */
+  private static Predicate<ResultRow> getResultRowPredicate(final GroupByQuery query, final GroupByQuery subquery)
+  {
+    final List<Interval> queryIntervals = query.getIntervals();
+    final Filter filter = Filters.convertToCNFFromQueryContext(
+        query,
+        Filters.toFilter(query.getDimFilter())
+    );
+
+    final SettableSupplier<ResultRow> rowSupplier = new SettableSupplier<>();
+    final ColumnSelectorFactory columnSelectorFactory =
+        RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(subquery, rowSupplier);
+
+    final ValueMatcher filterMatcher = filter == null
+                                       ? BooleanValueMatcher.of(true)
+                                       : filter.makeMatcher(columnSelectorFactory);
+
+    if (subquery.getUniversalTimestamp() != null
+        && queryIntervals.stream().noneMatch(itvl -> itvl.contains(subquery.getUniversalTimestamp()))) {
+      // There's a universal timestamp, and it doesn't match our query intervals, so no row should match.
+      // By the way, if there's a universal timestamp that _does_ match the query intervals, we do nothing special here.
+      return row -> false;
+    }
+
+    return row -> {
+      if (subquery.getResultRowHasTimestamp()) {
+        boolean inInterval = false;
+        for (Interval queryInterval : queryIntervals) {
+          if (queryInterval.contains(row.getLong(0))) {
+            inInterval = true;
+            break;
+          }
+        }
+        if (!inInterval) {
+          return false;
+        }
+      }
+      rowSupplier.set(row);
+      return filterMatcher.matches();
+    };
+  }
+
   private interface TimestampExtractFunction
   {
-    long apply(Row row);
+    long apply(ResultRow row);
   }
 
   private static TimestampExtractFunction makeTimestampExtractFunction(
       final GroupByQuery query,
-      final boolean isInputRaw
+      final boolean combining
   )
   {
-    if (isInputRaw) {
-      if (query.getGranularity() instanceof AllGranularity) {
-        return row -> query.getIntervals().get(0).getStartMillis();
+    if (query.getResultRowHasTimestamp()) {
+      if (combining) {
+        return row -> row.getLong(0);
       } else {
-        return row -> query.getGranularity().bucketStart(row.getTimestamp()).getMillis();
+        if (query.getGranularity() instanceof AllGranularity) {
+          return row -> query.getIntervals().get(0).getStartMillis();
+        } else {
+          return row -> query.getGranularity().bucketStart(DateTimes.utc(row.getLong(0))).getMillis();
+        }
       }
     } else {
-      return Row::getTimestampFromEpoch;
+      final long timestamp = query.getUniversalTimestamp().getMillis();
+      return row -> timestamp;
     }
   }
 
   private interface ValueExtractFunction
   {
-    Comparable[] apply(Row row, Comparable[] key);
+    Comparable[] apply(ResultRow row, Comparable[] key);
   }
 
   private static ValueExtractFunction makeValueExtractFunction(
       final GroupByQuery query,
-      final boolean isInputRaw,
+      final boolean combining,
       final boolean includeTimestamp,
       final ColumnSelectorFactory columnSelectorFactory,
       final List<ValueType> valueTypes
   )
   {
     final TimestampExtractFunction timestampExtractFn = includeTimestamp ?
-                                                        makeTimestampExtractFunction(query, isInputRaw) :
+                                                        makeTimestampExtractFunction(query, combining) :
                                                         null;
 
     final Function<Comparable, Comparable>[] valueConvertFns = makeValueConvertFunctions(valueTypes);
 
-    if (isInputRaw) {
+    if (!combining) {
       final Supplier<Comparable>[] inputRawSuppliers = getValueSuppliersForDimensions(
           columnSelectorFactory,
           query.getDimensions()
@@ -347,11 +494,13 @@ public class RowBasedGrouperHelper
         };
       }
     } else {
+      final int dimensionStartPosition = query.getResultRowDimensionStart();
+
       if (includeTimestamp) {
         return (row, key) -> {
           key[0] = timestampExtractFn.apply(row);
           for (int i = 1; i < key.length; i++) {
-            final Comparable val = (Comparable) row.getRaw(query.getDimensions().get(i - 1).getOutputName());
+            final Comparable val = (Comparable) row.get(dimensionStartPosition + i - 1);
             key[i] = valueConvertFns[i - 1].apply(val);
           }
           return key;
@@ -359,7 +508,7 @@ public class RowBasedGrouperHelper
       } else {
         return (row, key) -> {
           for (int i = 0; i < key.length; i++) {
-            final Comparable val = (Comparable) row.getRaw(query.getDimensions().get(i).getOutputName());
+            final Comparable val = (Comparable) row.get(dimensionStartPosition + i);
             key[i] = valueConvertFns[i].apply(val);
           }
           return key;
@@ -368,7 +517,7 @@ public class RowBasedGrouperHelper
     }
   }
 
-  public static CloseableGrouperIterator<RowBasedKey, Row> makeGrouperIterator(
+  public static CloseableGrouperIterator<RowBasedKey, ResultRow> makeGrouperIterator(
       final Grouper<RowBasedKey> grouper,
       final GroupByQuery query,
       final Closeable closeable
@@ -377,68 +526,61 @@ public class RowBasedGrouperHelper
     return makeGrouperIterator(grouper, query, null, closeable);
   }
 
-  public static CloseableGrouperIterator<RowBasedKey, Row> makeGrouperIterator(
+  public static CloseableGrouperIterator<RowBasedKey, ResultRow> makeGrouperIterator(
       final Grouper<RowBasedKey> grouper,
       final GroupByQuery query,
-      final List<String> dimsToInclude,
+      @Nullable final List<String> dimsToInclude,
       final Closeable closeable
   )
   {
-    final boolean includeTimestamp = GroupByStrategyV2.getUniversalTimestamp(query) == null;
+    final boolean includeTimestamp = query.getResultRowHasTimestamp();
+    final BitSet dimsToIncludeBitSet = new BitSet(query.getDimensions().size());
+    final int resultRowDimensionStart = query.getResultRowDimensionStart();
+
+    if (dimsToInclude != null) {
+      for (String dimension : dimsToInclude) {
+        final int dimIndex = query.getResultRowPositionLookup().getInt(dimension);
+        if (dimIndex >= 0) {
+          dimsToIncludeBitSet.set(dimIndex - resultRowDimensionStart);
+        }
+      }
+    }
 
     return new CloseableGrouperIterator<>(
         grouper.iterator(true),
         entry -> {
-          Map<String, Object> theMap = Maps.newLinkedHashMap();
+          final ResultRow resultRow = ResultRow.create(query.getResultRowSizeWithoutPostAggregators());
 
-          // Get timestamp, maybe.
-          final DateTime timestamp;
-          final int dimStart;
-
+          // Add timestamp, maybe.
           if (includeTimestamp) {
-            timestamp = query.getGranularity().toDateTime(((long) (entry.getKey().getKey()[0])));
-            dimStart = 1;
-          } else {
-            timestamp = null;
-            dimStart = 0;
+            final DateTime timestamp = query.getGranularity().toDateTime(((long) (entry.getKey().getKey()[0])));
+            resultRow.set(0, timestamp.getMillis());
           }
 
           // Add dimensions.
-          if (dimsToInclude == null) {
-            for (int i = dimStart; i < entry.getKey().getKey().length; i++) {
-              Object dimVal = entry.getKey().getKey()[i];
-              theMap.put(
-                  query.getDimensions().get(i - dimStart).getOutputName(),
+          for (int i = resultRowDimensionStart; i < entry.getKey().getKey().length; i++) {
+            if (dimsToInclude == null || dimsToIncludeBitSet.get(i - resultRowDimensionStart)) {
+              final Object dimVal = entry.getKey().getKey()[i];
+              resultRow.set(
+                  i,
                   dimVal instanceof String ? NullHandling.emptyToNullIfNeeded((String) dimVal) : dimVal
               );
-            }
-          } else {
-            Map<String, Object> dimensions = new HashMap<>();
-            for (int i = dimStart; i < entry.getKey().getKey().length; i++) {
-              Object dimVal = entry.getKey().getKey()[i];
-              dimensions.put(
-                  query.getDimensions().get(i - dimStart).getOutputName(),
-                  dimVal instanceof String ? NullHandling.emptyToNullIfNeeded((String) dimVal) : dimVal
-              );
-            }
-
-            for (String dimToInclude : dimsToInclude) {
-              theMap.put(dimToInclude, dimensions.get(dimToInclude));
             }
           }
 
           // Add aggregations.
+          final int resultRowAggregatorStart = query.getResultRowAggregatorStart();
           for (int i = 0; i < entry.getValues().length; i++) {
-            theMap.put(query.getAggregatorSpecs().get(i).getName(), entry.getValues()[i]);
+            resultRow.set(resultRowAggregatorStart + i, entry.getValues()[i]);
           }
 
-          return new MapBasedRow(timestamp, theMap);
+          return resultRow;
         },
         closeable
     );
   }
 
-  static class RowBasedKey
+  public static class RowBasedKey
   {
     private final Object[] key;
 

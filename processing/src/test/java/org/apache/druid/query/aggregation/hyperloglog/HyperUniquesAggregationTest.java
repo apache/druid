@@ -19,13 +19,13 @@
 
 package org.apache.druid.query.aggregation.hyperloglog;
 
-import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.jackson.AggregatorsModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.ResultRow;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -110,7 +110,7 @@ public class HyperUniquesAggregationTest
                      + "\"intervals\": [ \"1970/2050\" ]"
                      + "}";
 
-      Sequence seq = helper.createIndexAndRunQueryOnSegment(
+      Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
           new File(this.getClass().getClassLoader().getResource("druid.sample.tsv").getFile()),
           parseSpec,
           metricSpec,
@@ -120,9 +120,9 @@ public class HyperUniquesAggregationTest
           query
       );
 
-      MapBasedRow row = (MapBasedRow) seq.toList().get(0);
-      Assert.assertEquals(3.0, row.getMetric("index_hll").floatValue(), 0.1);
-      Assert.assertEquals(3.0, row.getMetric("index_unique_count").floatValue(), 0.1);
+      final ResultRow resultRow = seq.toList().get(0);
+      Assert.assertEquals("index_hll", 3.0, ((Number) resultRow.get(0)).floatValue(), 0.1);
+      Assert.assertEquals("index_unique_count", 3.0, ((Number) resultRow.get(1)).floatValue(), 0.1);
     }
   }
 
@@ -175,7 +175,7 @@ public class HyperUniquesAggregationTest
                      + "\"intervals\": [ \"1970/2050\" ]"
                      + "}";
 
-      Sequence seq = helper.createIndexAndRunQueryOnSegment(
+      Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
           new File(this.getClass().getClassLoader().getResource("druid.hll.sample.tsv").getFile()),
           parseSpec,
           metricSpec,
@@ -185,9 +185,9 @@ public class HyperUniquesAggregationTest
           query
       );
 
-      MapBasedRow row = (MapBasedRow) seq.toList().get(0);
-      Assert.assertEquals(4.0, row.getMetric("index_hll").floatValue(), 0.1);
-      Assert.assertEquals(4.0, row.getMetric("index_unique_count").floatValue(), 0.1);
+      final ResultRow resultRow = seq.toList().get(0);
+      Assert.assertEquals("index_hll", 4.0, ((Number) resultRow.get(0)).floatValue(), 0.1);
+      Assert.assertEquals("index_unique_count", 4.0, ((Number) resultRow.get(1)).floatValue(), 0.1);
     }
   }
 }

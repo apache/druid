@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.variance;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
@@ -28,6 +27,8 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.stats.DruidStatsModule;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.ResultRow;
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;
@@ -35,8 +36,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
+ *
  */
 public class VarianceTestHelper extends QueryRunnerTestHelper
 {
@@ -83,17 +86,17 @@ public class VarianceTestHelper extends QueryRunnerTestHelper
       return this;
     }
 
-    public List<Row> build()
+    public List<ResultRow> build(final GroupByQuery query)
     {
       try {
-        return Lists.newArrayList(rows);
+        return rows.stream().map(row -> ResultRow.fromLegacyRow(row, query)).collect(Collectors.toList());
       }
       finally {
         rows.clear();
       }
     }
 
-    public Row build(final String timestamp, Object... values)
+    private Row build(final String timestamp, Object... values)
     {
       Preconditions.checkArgument(names.length == values.length);
 

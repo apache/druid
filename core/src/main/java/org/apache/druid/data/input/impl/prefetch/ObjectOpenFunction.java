@@ -23,7 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
-interface ObjectOpenFunction<T>
+public interface ObjectOpenFunction<T>
 {
   InputStream open(T object) throws IOException;
 
