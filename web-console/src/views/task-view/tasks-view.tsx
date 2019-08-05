@@ -1010,8 +1010,32 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     );
   }
 
+  renderBulkTasksActions() {
+    const { goToQuery, noSqlMode } = this.props;
+
+    const bulkTaskActionsMenu = (
+      <Menu>
+        {!noSqlMode && (
+          <MenuItem
+            icon={IconNames.APPLICATION}
+            text="See in SQL view"
+            onClick={() => goToQuery(TasksView.TASK_SQL)}
+          />
+        )}
+      </Menu>
+    );
+
+    return (
+      <>
+        <Popover content={bulkTaskActionsMenu} position={Position.BOTTOM_LEFT}>
+          <Button icon={IconNames.MORE} />
+        </Popover>
+      </>
+    );
+  }
+
   render(): JSX.Element {
-    const { goToQuery, goToLoadData, noSqlMode } = this.props;
+    const { goToLoadData } = this.props;
     const {
       groupTasksBy,
       supervisorSpecDialogOpen,
@@ -1122,13 +1146,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                 localStorageKey={LocalStorageKeys.TASKS_REFRESH_RATE}
                 onRefresh={auto => this.taskQueryManager.rerunLastQuery(auto)}
               />
-              {!noSqlMode && (
-                <Button
-                  icon={IconNames.APPLICATION}
-                  text="Go to SQL"
-                  onClick={() => goToQuery(TasksView.TASK_SQL)}
-                />
-              )}
+              {this.renderBulkTasksActions()}
               <Popover content={submitTaskMenu} position={Position.BOTTOM_LEFT}>
                 <Button icon={IconNames.PLUS} text="Submit task" />
               </Popover>

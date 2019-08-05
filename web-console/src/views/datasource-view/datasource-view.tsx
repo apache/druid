@@ -16,7 +16,17 @@
  * limitations under the License.
  */
 
-import { Button, FormGroup, InputGroup, Intent, Switch } from '@blueprintjs/core';
+import {
+  Button,
+  FormGroup,
+  InputGroup,
+  Intent,
+  Menu,
+  MenuItem,
+  Popover,
+  Position,
+  Switch,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import classNames from 'classnames';
@@ -445,6 +455,29 @@ GROUP BY 1`;
         </p>
         <p>This action is not reversible and the data deleted will be lost.</p>
       </AsyncActionDialog>
+    );
+  }
+
+  renderBulkDatasourceActions() {
+    const { goToQuery, noSqlMode } = this.props;
+    const bulkDatasourceActionsMenu = (
+      <Menu>
+        {!noSqlMode && (
+          <MenuItem
+            icon={IconNames.APPLICATION}
+            text="See in SQL view"
+            onClick={() => goToQuery(DatasourcesView.DATASOURCE_SQL)}
+          />
+        )}
+      </Menu>
+    );
+
+    return (
+      <>
+        <Popover content={bulkDatasourceActionsMenu} position={Position.BOTTOM_LEFT}>
+          <Button icon={IconNames.MORE} />
+        </Popover>
+      </>
     );
   }
 
@@ -901,7 +934,7 @@ GROUP BY 1`;
   }
 
   render(): JSX.Element {
-    const { goToQuery, noSqlMode } = this.props;
+    const { noSqlMode } = this.props;
     const { showDisabled, hiddenColumns, showChart, chartHeight, chartWidth } = this.state;
 
     return (
@@ -913,13 +946,7 @@ GROUP BY 1`;
             }}
             localStorageKey={LocalStorageKeys.DATASOURCES_REFRESH_RATE}
           />
-          {!noSqlMode && (
-            <Button
-              icon={IconNames.APPLICATION}
-              text="Go to SQL"
-              onClick={() => goToQuery(DatasourcesView.DATASOURCE_SQL)}
-            />
-          )}
+          {this.renderBulkDatasourceActions()}
           <Switch
             checked={showChart}
             label="Show segment timeline"
