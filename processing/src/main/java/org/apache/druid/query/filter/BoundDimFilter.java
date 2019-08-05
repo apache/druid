@@ -325,7 +325,7 @@ public class BoundDimFilter implements DimFilter
   @Override
   public String toString()
   {
-    final StringBuilder builder = new StringBuilder();
+    final DimFilterToStringBuilder builder = new DimFilterToStringBuilder();
 
     if (lower != null) {
       builder.append(lower);
@@ -336,11 +336,7 @@ public class BoundDimFilter implements DimFilter
       }
     }
 
-    if (extractionFn != null) {
-      builder.append(StringUtils.format("%s(%s)", extractionFn, dimension));
-    } else {
-      builder.append(dimension);
-    }
+    builder.appendDimension(dimension, extractionFn);
 
     if (!ordering.equals(StringComparators.LEXICOGRAPHIC)) {
       builder.append(StringUtils.format(" as %s", ordering.toString()));
@@ -355,7 +351,7 @@ public class BoundDimFilter implements DimFilter
       builder.append(upper);
     }
 
-    return builder.toString();
+    return builder.appendFilterTuning(filterTuning).build();
   }
 
   private Supplier<DruidLongPredicate> makeLongPredicateSupplier()

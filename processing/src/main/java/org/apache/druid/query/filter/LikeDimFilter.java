@@ -196,25 +196,12 @@ public class LikeDimFilter implements DimFilter
   @Override
   public String toString()
   {
-    final StringBuilder builder = new StringBuilder();
-
-    if (extractionFn != null) {
-      builder.append(extractionFn).append("(");
-    }
-
-    builder.append(dimension);
-
-    if (extractionFn != null) {
-      builder.append(")");
-    }
-
-    builder.append(" LIKE '").append(pattern).append("'");
-
+    final DimFilterToStringBuilder builder = new DimFilterToStringBuilder();
+    builder.appendDimension(dimension, extractionFn).append(" LIKE '").append(pattern).append("'");
     if (escapeChar != null) {
       builder.append(" ESCAPE '").append(escapeChar).append("'");
     }
-
-    return builder.toString();
+    return builder.appendFilterTuning(filterTuning).build();
   }
 
   public static class LikeMatcher

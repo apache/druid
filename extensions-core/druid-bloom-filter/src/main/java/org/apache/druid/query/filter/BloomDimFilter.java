@@ -28,7 +28,6 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
 import com.google.common.hash.HashCode;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
@@ -214,11 +213,10 @@ public class BloomDimFilter implements DimFilter
   @Override
   public String toString()
   {
-    if (extractionFn != null) {
-      return StringUtils.format("%s(%s) = %s", extractionFn, dimension, hash.toString());
-    } else {
-      return StringUtils.format("%s = %s", dimension, hash.toString());
-    }
+    return new DimFilterToStringBuilder().appendDimension(dimension, extractionFn)
+                                         .appendEquals(hash.toString())
+                                         .appendFilterTuning(filterTuning)
+                                         .build();
   }
 
   @Override

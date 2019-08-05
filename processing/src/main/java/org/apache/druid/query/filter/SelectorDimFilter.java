@@ -33,7 +33,6 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
@@ -172,11 +171,10 @@ public class SelectorDimFilter implements DimFilter
   @Override
   public String toString()
   {
-    if (extractionFn != null) {
-      return StringUtils.format("%s(%s) = %s", extractionFn, dimension, value);
-    } else {
-      return StringUtils.format("%s = %s", dimension, value);
-    }
+    return new DimFilterToStringBuilder().appendDimension(dimension, extractionFn)
+                                         .appendEquals(value)
+                                         .appendFilterTuning(filterTuning)
+                                         .build();
   }
 
   @Override

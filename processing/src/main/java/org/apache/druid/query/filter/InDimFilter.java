@@ -241,26 +241,13 @@ public class InDimFilter implements DimFilter
   @Override
   public String toString()
   {
-    final StringBuilder builder = new StringBuilder();
-
-    if (extractionFn != null) {
-      builder.append(extractionFn).append("(");
-    }
-
-    builder.append(dimension);
-
-    if (extractionFn != null) {
-      builder.append(")");
-    }
-
-    builder.append(" IN (")
-           .append(
-               Joiner.on(", ").join(
-                   Iterables.transform(values, input -> StringUtils.nullToEmptyNonDruidDataString(input))
-               )
-           )
-           .append(")");
-    return builder.toString();
+    final DimFilterToStringBuilder builder = new DimFilterToStringBuilder();
+    return builder.appendDimension(dimension, extractionFn)
+                  .append(" IN (")
+                  .append(Joiner.on(", ").join(Iterables.transform(values, StringUtils::nullToEmptyNonDruidDataString)))
+                  .append(")")
+                  .appendFilterTuning(filterTuning)
+                  .build();
   }
 
   @Override
