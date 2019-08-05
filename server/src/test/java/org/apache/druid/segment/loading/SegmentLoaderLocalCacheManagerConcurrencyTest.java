@@ -153,8 +153,6 @@ public class SegmentLoaderLocalCacheManagerConcurrencyTest
     for (Future future : futures) {
       future.get();
     }
-
-    System.out.println(manager.getLocations().get(0).availableSizeBytes());
   }
 
   private DataSegment newSegment(Interval interval, int partitionId)

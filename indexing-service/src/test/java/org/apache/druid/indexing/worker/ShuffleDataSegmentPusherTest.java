@@ -20,19 +20,20 @@
 package org.apache.druid.indexing.worker;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.Files;
+import com.google.common.primitives.Ints;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
-import org.apache.druid.client.indexing.TaskStatus;
-import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.java.util.common.FileUtils.FileCopyResult;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.utils.CompressionUtils;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -43,41 +44,22 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
-public class IntermediaryDataManagerAutoCleanupTest
+public class ShuffleDataSegmentPusherTest
 {
   @Rule
-  public TemporaryFolder tempDir = new TemporaryFolder();
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private IntermediaryDataManager intermediaryDataManager;
+  private ShuffleDataSegmentPusher segmentPusher;
 
   @Before
   public void setup() throws IOException
   {
-    final WorkerConfig workerConfig = new WorkerConfig()
-    {
-      @Override
-      public long getIntermediaryPartitionDiscoveryPeriodSec()
-      {
-        return 1;
-      }
-
-      @Override
-      public long getIntermediaryPartitionCleanupPeriodSec()
-      {
-        return 2;
-      }
-
-      @Override
-      public Period getIntermediaryPartitionTimeout()
-      {
-        return new Period("PT2S");
-      }
-
-    };
+    final WorkerConfig workerConfig = new WorkerConfig();
     final TaskConfig taskConfig = new TaskConfig(
         null,
         null,
@@ -87,22 +69,12 @@ public class IntermediaryDataManagerAutoCleanupTest
         false,
         null,
         null,
-        ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null))
+        ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null))
     );
-    final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient()
-    {
-      @Override
-      public Map<String, TaskStatus> getTaskStatuses(Set<String> taskIds)
-      {
-        final Map<String, TaskStatus> result = new HashMap<>();
-        for (String taskId : taskIds) {
-          result.put(taskId, new TaskStatus(taskId, TaskState.SUCCESS, 10));
-        }
-        return result;
-      }
-    };
+    final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient();
     intermediaryDataManager = new IntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
     intermediaryDataManager.start();
+    segmentPusher = new ShuffleDataSegmentPusher("supervisorTaskId", "subTaskId", intermediaryDataManager);
   }
 
   @After
@@ -112,27 +84,44 @@ public class IntermediaryDataManagerAutoCleanupTest
   }
 
   @Test
-  public void testCleanup() throws IOException, InterruptedException
+  public void testPush() throws IOException
   {
-    final String supervisorTaskId = "supervisorTaskId";
-    final Interval interval = Intervals.of("2018/2019");
-    final File segmentFile = generateSegmentDir("test");
-    final DataSegment segment = newSegment(interval, 0);
-    intermediaryDataManager.addSegment(supervisorTaskId, "subTaskId", segment, segmentFile);
+    final File segmentDir = generateSegmentDir();
+    final DataSegment segment = newSegment(Intervals.of("2018/2019"));
+    final DataSegment pushed = segmentPusher.push(segmentDir, segment, true);
 
-    Thread.sleep(3000);
-    Assert.assertTrue(intermediaryDataManager.findPartitionFiles(supervisorTaskId, interval, 0).isEmpty());
+    Assert.assertEquals(9, pushed.getBinaryVersion().intValue());
+    Assert.assertEquals(14, pushed.getSize()); // 10 bytes data + 4 bytes version
+
+    final List<File> files = intermediaryDataManager.findPartitionFiles(
+        "supervisorTaskId",
+        segment.getInterval(),
+        segment.getShardSpec().getPartitionNum()
+    );
+    Assert.assertEquals(1, files.size());
+    final File zippedSegment = files.get(0);
+    final File tempDir = temporaryFolder.newFolder();
+    final FileCopyResult result = CompressionUtils.unzip(zippedSegment, tempDir);
+    final List<File> unzippedFiles = new ArrayList<>(result.getFiles());
+    unzippedFiles.sort(Comparator.comparing(File::getName));
+    final File dataFile = unzippedFiles.get(0);
+    Assert.assertEquals("test", dataFile.getName());
+    Assert.assertEquals("test data.", Files.readFirstLine(dataFile, StandardCharsets.UTF_8));
+    final File versionFile = unzippedFiles.get(1);
+    Assert.assertEquals("version.bin", versionFile.getName());
+    Assert.assertArrayEquals(Ints.toByteArray(0x9), Files.toByteArray(versionFile));
   }
 
-  private File generateSegmentDir(String fileName) throws IOException
+  private File generateSegmentDir() throws IOException
   {
     // Each file size is 138 bytes after compression
-    final File segmentDir = tempDir.newFolder();
-    FileUtils.write(new File(segmentDir, fileName), "test data.", StandardCharsets.UTF_8);
+    final File segmentDir = temporaryFolder.newFolder();
+    Files.asByteSink(new File(segmentDir, "version.bin")).write(Ints.toByteArray(0x9));
+    FileUtils.write(new File(segmentDir, "test"), "test data.", StandardCharsets.UTF_8);
     return segmentDir;
   }
 
-  private DataSegment newSegment(Interval interval, int partitionId)
+  private DataSegment newSegment(Interval interval)
   {
     return new DataSegment(
         "dataSource",
@@ -141,9 +130,9 @@ public class IntermediaryDataManagerAutoCleanupTest
         null,
         null,
         null,
-        new NumberedShardSpec(partitionId, 0),
+        new NumberedShardSpec(0, 0),
         9,
-        10
+        0
     );
   }
 }
