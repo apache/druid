@@ -519,7 +519,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
     }
     catch (Exception ex) {
-      //CloseQuietly.close(baseResultsSupplier.get());
+      CloseQuietly.close(baseResultsSupplier.get());
       throw ex;
     }
   }
