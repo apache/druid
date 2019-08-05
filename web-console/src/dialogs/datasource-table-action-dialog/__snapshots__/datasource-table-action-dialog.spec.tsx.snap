@@ -84,7 +84,7 @@ exports[`Datasource table action dialog matches snapshot 1`] = `
               <span
                 class="bp3-button-text"
               >
-                Dimensions
+                Columns
               </span>
             </button>
           </div>
