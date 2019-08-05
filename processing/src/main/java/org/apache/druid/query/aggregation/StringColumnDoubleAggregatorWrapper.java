@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation;
 
 import com.google.common.primitives.Doubles;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableValueDoubleColumnValueSelector;

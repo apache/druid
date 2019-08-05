@@ -34,6 +34,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.IncrementalIndexSegment;
@@ -41,6 +42,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -84,7 +86,7 @@ public class StringColumnAggregationTest
       String val = String.valueOf(i * 1.0d);
 
       inputRows.add(new MapBasedInputRow(
-          DateTime.now(),
+          DateTime.now(DateTimeZone.UTC),
           dimensions,
           ImmutableMap.of(
               singleValue, val,
@@ -154,8 +156,8 @@ public class StringColumnAggregationTest
         )
         .build();
 
-    Sequence<Row> seq = aggregationTestHelper.runQueryOnSegmentsObjs(segments, query);
-    Row result = Iterables.getOnlyElement(seq.toList());
+    Sequence<ResultRow> seq = aggregationTestHelper.runQueryOnSegmentsObjs(segments, query);
+    Row result = Iterables.getOnlyElement(seq.toList()).toMapBasedRow(query);
 
     Assert.assertEquals(numRows, result.getMetric("count").longValue());
     Assert.assertEquals(singleValueSum, result.getMetric("singleDoubleSum").doubleValue(), 0.0001d);
