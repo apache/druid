@@ -288,7 +288,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
               try {
                 resources.close();
               }
-              catch (IOException ex) {
+              catch (Exception ex) {
                 t.addSuppressed(ex);
               }
               throw t;
