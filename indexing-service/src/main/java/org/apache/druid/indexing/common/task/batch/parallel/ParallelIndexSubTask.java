@@ -412,12 +412,11 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
     final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
     final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient);
 
+    final Appenderator appenderator = newAppenderator(fireDepartmentMetrics, toolbox, dataSchema, tuningConfig);
     try (
-        final Appenderator appenderator = newAppenderator(fireDepartmentMetrics, toolbox, dataSchema, tuningConfig);
         final BatchAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
-      registerResourceCloserOnAbnormalExit(config -> appenderator.closeNow());
       driver.startJob();
 
       final Set<DataSegment> pushedSegments = new HashSet<>();
@@ -479,6 +478,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
           }
         }
       }
+      appenderator.close();
 
       final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
       pushedSegments.addAll(pushed.getSegments());
@@ -487,7 +487,12 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
       return pushedSegments;
     }
     catch (TimeoutException | ExecutionException e) {
+      appenderator.closeNow();
       throw new RuntimeException(e);
+    }
+    catch (RuntimeException e) {
+      appenderator.closeNow();
+      throw e;
     }
   }
 

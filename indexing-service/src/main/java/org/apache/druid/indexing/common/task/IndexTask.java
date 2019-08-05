@@ -890,17 +890,16 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         toolbox.getTaskActionClient()
                .submit(SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish));
 
+    final Appenderator appenderator = newAppenderator(
+        buildSegmentsFireDepartmentMetrics,
+        toolbox,
+        dataSchema,
+        tuningConfig
+    );
     try (
-        final Appenderator appenderator = newAppenderator(
-            buildSegmentsFireDepartmentMetrics,
-            toolbox,
-            dataSchema,
-            tuningConfig
-        );
         final BatchAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
-      registerResourceCloserOnAbnormalExit(config -> appenderator.closeNow());
 
       driver.startJob();
 
@@ -961,6 +960,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           handleParseException(e);
         }
       }
+      appenderator.close();
 
       final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
       log.info("Pushed segments[%s]", pushed.getSegments());
@@ -996,7 +996,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       }
     }
     catch (TimeoutException | ExecutionException e) {
+      appenderator.closeNow();
       throw new RuntimeException(e);
+    }
+    catch (RuntimeException e) {
+      appenderator.closeNow();
+      throw e;
     }
   }
 
