@@ -145,13 +145,13 @@ public class ScanQueryRunnerFactoryTest
                 DateTimes.of("2019-01-01").plusHours(1)
             ))
         ).toList();
-        if (query.getLimit() > Integer.MAX_VALUE) {
+        if (query.getScanRowsLimit() > Integer.MAX_VALUE) {
           Assert.fail("Unsupported exception should have been thrown due to high limit");
         }
         validateSortedOutput(output, expectedEventTimestamps);
       }
       catch (UOE e) {
-        if (query.getLimit() <= Integer.MAX_VALUE) {
+        if (query.getScanRowsLimit() <= Integer.MAX_VALUE) {
           Assert.fail("Unsupported operation exception should not have been thrown here");
         }
       }
@@ -247,7 +247,7 @@ public class ScanQueryRunnerFactoryTest
       }
 
       // check total # of rows <= limit
-      Assert.assertTrue(output.size() <= query.getLimit());
+      Assert.assertTrue(output.size() <= query.getScanRowsLimit());
 
       // check ordering is correct
       for (int i = 1; i < output.size(); i++) {
@@ -261,7 +261,7 @@ public class ScanQueryRunnerFactoryTest
       }
 
       // check the values are correct
-      for (int i = 0; i < query.getLimit() && i < output.size(); i++) {
+      for (int i = 0; i < query.getScanRowsLimit() && i < output.size(); i++) {
         Assert.assertEquals((long) expectedEventTimestamps.get(i), output.get(i).getFirstEventTimestamp(resultFormat));
       }
     }

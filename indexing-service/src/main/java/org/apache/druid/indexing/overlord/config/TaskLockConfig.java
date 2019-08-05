@@ -17,29 +17,20 @@
  * under the License.
  */
 
-package org.apache.druid.query.context;
+package org.apache.druid.indexing.overlord.config;
 
-import org.apache.druid.guice.annotations.PublicApi;
-
-import java.util.HashMap;
-import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * The implementation of {@link ResponseContext} with a HashMap as a delegate
+ * Global configurations for task lock. Used by the overlord.
  */
-@PublicApi
-public class DefaultResponseContext extends ResponseContext
+public class TaskLockConfig
 {
-  public static DefaultResponseContext createEmpty()
-  {
-    return new DefaultResponseContext();
-  }
+  @JsonProperty
+  private boolean forceTimeChunkLock = true;
 
-  private final HashMap<BaseKey, Object> delegate = new HashMap<>();
-
-  @Override
-  protected Map<BaseKey, Object> getDelegate()
+  public boolean isForceTimeChunkLock()
   {
-    return delegate;
+    return forceTimeChunkLock;
   }
 }

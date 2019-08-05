@@ -17,29 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.query.context;
+package org.apache.druid.guice.annotations;
 
-import org.apache.druid.guice.annotations.PublicApi;
+import com.google.inject.BindingAnnotation;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * The implementation of {@link ResponseContext} with a HashMap as a delegate
+ * Binding annotation for org.apache.druid.server.DruidNode.
+ * Indicates that the DruidNode bound with this annotation holds the information of the machine which spawned
+ * this process.
+ *
+ * @see Self
  */
+@Target({ElementType.FIELD, ElementType.PARAMETER})
+@Retention(RetentionPolicy.RUNTIME)
+@BindingAnnotation
 @PublicApi
-public class DefaultResponseContext extends ResponseContext
+public @interface Parent
 {
-  public static DefaultResponseContext createEmpty()
-  {
-    return new DefaultResponseContext();
-  }
-
-  private final HashMap<BaseKey, Object> delegate = new HashMap<>();
-
-  @Override
-  protected Map<BaseKey, Object> getDelegate()
-  {
-    return delegate;
-  }
 }
