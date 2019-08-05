@@ -36,6 +36,7 @@ exports[`sql view matches snapshot 1`] = `
           onQueryContextChange={[Function]}
           onRun={[Function]}
           queryContext={Object {}}
+          renderEditContextDialog={[Function]}
           runeMode={false}
         />
       </div>

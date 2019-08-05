@@ -16,25 +16,27 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+.edit-context-dialog {
+  &.bp3-dialog {
+    padding-bottom: 10px;
+  }
 
-import { RunButton } from './run-button';
+  .bp3-input {
+    margin: 10px;
+    height: 400px;
+  }
 
-describe('run button', () => {
-  it('matches snapshot', () => {
-    const runButton = (
-      <RunButton
-        renderEditContextDialog={() => null}
-        runeMode={false}
-        queryContext={{}}
-        onQueryContextChange={() => {}}
-        onRun={() => {}}
-        onExplain={() => {}}
-      />
-    );
+  .bp3-dialog-footer-actions {
+    padding: 0px 10px 0px 10px;
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    grid-template-areas: 'error buttons';
+  }
 
-    const { container } = render(runButton);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+  .edit-context-dialog-error {
+    grid-area: error;
+  }
+  .edit-context-dialog-buttons {
+    grid-area: buttons;
+  }
+}
