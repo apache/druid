@@ -402,80 +402,83 @@ class OvershadowableManager<T extends Overshadowable<T>>
   private void determineVisibleGroupAfterAdd(AtomicUpdateGroup<T> aug, State stateOfAug)
   {
     if (stateOfAug == State.STANDBY) {
-      // A standby atomicUpdateGroup becomes visible when its all segments are available.
-      if (aug.isFull()) {
-        // A visible atomicUpdateGroup becomes overshadowed when a fully available standby atomicUpdateGroup becomes
-        // visible which overshadows the current visible one.
-        replaceVisibleWith(
-            findOvershadowedBy(aug, State.VISIBLE),
-            State.OVERSHADOWED,
-            Collections.singletonList(aug),
-            State.STANDBY
-        );
-        findOvershadowedBy(aug, State.STANDBY)
-            .forEach(entry -> transitAtomicUpdateGroupState(entry, State.STANDBY, State.OVERSHADOWED));
-      } else {
-        // The given atomicUpdateGroup is in the standby state which means it's not overshadowed by the visible group.
-        // If the visible group is not fully available, then the new standby group should be visible since it has a
-        // higher minor version.
-        checkVisibleIsFullyAvailableAndMoveNewStandbyToVisible(aug, stateOfAug);
-      }
+      moveNewStandbyToVisibleIfNecessary(aug, stateOfAug);
     } else if (stateOfAug == State.OVERSHADOWED) {
       checkVisibleIsFullyAvailableAndTryToMoveOvershadowedToVisible(aug, stateOfAug);
     }
   }
 
   /**
-   * This method is called in {@link #determineVisibleGroupAfterAdd}. It checks the current visible group is
-   * fully available, and if not, moves the given group to the visible state.
+   * This method is called in {@link #determineVisibleGroupAfterAdd}.
+   * The given standby group can be visible in the below two cases:
+   *
+   * - The standby group is full. Since every standby group has a higher version than the current visible group,
+   *   it should become visible immediately when it's full.
+   * - The standby group is not full but not empty and the current visible is not full. If there's no fully available
+   *   group, the group of the highest version should be the visible.
    */
-  private void checkVisibleIsFullyAvailableAndMoveNewStandbyToVisible(
-      AtomicUpdateGroup<T> standbyGroup,
-      State stateOfGroup
-  )
+  private void moveNewStandbyToVisibleIfNecessary(AtomicUpdateGroup<T> standbyGroup, State stateOfGroup)
   {
     assert stateOfGroup == State.STANDBY;
-    if (!standbyGroup.isEmpty()) {
-      // Check there are visible atomicUpdateGroups overshadowed by the given atomicUpdateGroup.
-      final List<AtomicUpdateGroup<T>> overshadowedVisibles = findOvershadowedBy(
-          standbyGroup,
-          State.VISIBLE
+
+    // A standby atomicUpdateGroup becomes visible when its all segments are available.
+    if (standbyGroup.isFull()) {
+      // A current visible atomicUpdateGroup becomes overshadowed when a fully available standby atomicUpdateGroup
+      // becomes visible.
+      replaceVisibleWith(
+          findOvershadowedBy(standbyGroup, State.VISIBLE),
+          State.OVERSHADOWED,
+          Collections.singletonList(standbyGroup),
+          State.STANDBY
       );
-      if (overshadowedVisibles.isEmpty()) {
-        // There is no visible atomicUpdateGroup for the rootPartitionRange of the given aug.
-        // The given aug should be visible.
-        transitAtomicUpdateGroupState(standbyGroup, State.STANDBY, State.VISIBLE);
-        findOvershadowedBy(standbyGroup, State.STANDBY)
-            .forEach(entry -> transitAtomicUpdateGroupState(entry, State.STANDBY, State.OVERSHADOWED));
-      } else {
-        // Check there is any missing chunk in the current visible groups.
-        // If the current visible groups don't cover the partitino range of the given standby group,
-        // the given standby group should be visible.
-        final boolean fullyCoverAugRange = doGroupsFullyCoverPartitionRange(
-            overshadowedVisibles,
-            standbyGroup.getStartRootPartitionId(),
-            standbyGroup.getEndRootPartitionId()
+      findOvershadowedBy(standbyGroup, State.STANDBY)
+          .forEach(entry -> transitAtomicUpdateGroupState(entry, State.STANDBY, State.OVERSHADOWED));
+    } else {
+      // The given atomicUpdateGroup is in the standby state which means it's not overshadowed by the visible group.
+      // If the visible group is not fully available, then the new standby group should be visible since it has a
+      // higher minor version.
+      if (!standbyGroup.isEmpty()) {
+        // Check there are visible atomicUpdateGroups overshadowed by the given atomicUpdateGroup.
+        final List<AtomicUpdateGroup<T>> overshadowedVisibles = findOvershadowedBy(
+            standbyGroup,
+            State.VISIBLE
         );
-        if (!fullyCoverAugRange) {
-          replaceVisibleWith(
-              overshadowedVisibles,
-              State.OVERSHADOWED,
-              Collections.singletonList(standbyGroup),
-              State.STANDBY
-          );
+        if (overshadowedVisibles.isEmpty()) {
+          // There is no visible atomicUpdateGroup for the rootPartitionRange of the given aug.
+          // The given aug should be visible.
+          transitAtomicUpdateGroupState(standbyGroup, State.STANDBY, State.VISIBLE);
           findOvershadowedBy(standbyGroup, State.STANDBY)
               .forEach(entry -> transitAtomicUpdateGroupState(entry, State.STANDBY, State.OVERSHADOWED));
+        } else {
+          // Check there is any missing chunk in the current visible groups.
+          // If the current visible groups don't cover the partitino range of the given standby group,
+          // the given standby group should be visible.
+          final boolean fullyCoverAugRange = doGroupsFullyCoverPartitionRange(
+              overshadowedVisibles,
+              standbyGroup.getStartRootPartitionId(),
+              standbyGroup.getEndRootPartitionId()
+          );
+          if (!fullyCoverAugRange) {
+            replaceVisibleWith(
+                overshadowedVisibles,
+                State.OVERSHADOWED,
+                Collections.singletonList(standbyGroup),
+                State.STANDBY
+            );
+            findOvershadowedBy(standbyGroup, State.STANDBY)
+                .forEach(entry -> transitAtomicUpdateGroupState(entry, State.STANDBY, State.OVERSHADOWED));
 
+          }
+          // If all visible atomicUpdateGroups are full, then the given atomicUpdateGroup should stay in the standby
+          // state.
         }
-        // If all visible atomicUpdateGroups are full, then the given atomicUpdateGroup should stay in the standby
-        // state.
       }
     }
   }
 
   /**
-   * This method is called in {@link #determineVisibleGroupAfterAdd}. It first hecks the current visible group is
-   * fully available. If not, it checkes there are overshadowed groups which can cover the rootPartitionRange of
+   * This method is called in {@link #determineVisibleGroupAfterAdd}. It first checks the current visible group is
+   * fully available. If not, it checks there are overshadowed groups which can cover the rootPartitionRange of
    * the visible groups and are fully available. If it finds such groups, they become visible.
    */
   private void checkVisibleIsFullyAvailableAndTryToMoveOvershadowedToVisible(
