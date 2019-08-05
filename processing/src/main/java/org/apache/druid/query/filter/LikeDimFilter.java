@@ -25,8 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
 import org.apache.druid.common.config.NullHandling;
@@ -37,8 +37,8 @@ import org.apache.druid.segment.filter.LikeFilter;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 public class LikeDimFilter implements DimFilter
@@ -50,18 +50,21 @@ public class LikeDimFilter implements DimFilter
 
   private final String dimension;
   private final String pattern;
+  @Nullable
   private final Character escapeChar;
+  @Nullable
   private final ExtractionFn extractionFn;
-  private final LikeMatcher likeMatcher;
+  @Nullable
   private final FilterTuning filterTuning;
+  private final LikeMatcher likeMatcher;
 
   @JsonCreator
   public LikeDimFilter(
       @JsonProperty("dimension") final String dimension,
       @JsonProperty("pattern") final String pattern,
-      @JsonProperty("escape") final String escape,
-      @JsonProperty("extractionFn") final ExtractionFn extractionFn,
-      @JsonProperty("filterTuning") final FilterTuning filterTuning
+      @Nullable @JsonProperty("escape") final String escape,
+      @Nullable @JsonProperty("extractionFn") final ExtractionFn extractionFn,
+      @Nullable @JsonProperty("filterTuning") final FilterTuning filterTuning
   )
   {
     this.dimension = Preconditions.checkNotNull(dimension, "dimension");
@@ -82,8 +85,8 @@ public class LikeDimFilter implements DimFilter
   public LikeDimFilter(
       final String dimension,
       final String pattern,
-      final String escape,
-      final ExtractionFn extractionFn
+      @Nullable final String escape,
+      @Nullable final ExtractionFn extractionFn
   )
   {
     this(dimension, pattern, escape, extractionFn, null);
@@ -101,18 +104,21 @@ public class LikeDimFilter implements DimFilter
     return pattern;
   }
 
+  @Nullable
   @JsonProperty
   public String getEscape()
   {
     return escapeChar != null ? escapeChar.toString() : null;
   }
 
+  @Nullable
   @JsonProperty
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
   }
 
+  @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
   @JsonProperty
   public FilterTuning getFilterTuning()
@@ -159,9 +165,9 @@ public class LikeDimFilter implements DimFilter
   }
 
   @Override
-  public HashSet<String> getRequiredColumns()
+  public Set<String> getRequiredColumns()
   {
-    return Sets.newHashSet(dimension);
+    return ImmutableSet.of(dimension);
   }
 
   @Override

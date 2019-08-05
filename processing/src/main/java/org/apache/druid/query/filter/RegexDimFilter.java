@@ -24,15 +24,16 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.filter.RegexFilter;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -41,7 +42,9 @@ public class RegexDimFilter implements DimFilter
 {
   private final String dimension;
   private final String pattern;
+  @Nullable
   private final ExtractionFn extractionFn;
+  @Nullable
   private final FilterTuning filterTuning;
 
   private final Pattern compiledPattern;
@@ -50,8 +53,8 @@ public class RegexDimFilter implements DimFilter
   public RegexDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("pattern") String pattern,
-      @JsonProperty("extractionFn") ExtractionFn extractionFn,
-      @JsonProperty("filterTuning") FilterTuning filterTuning
+      @Nullable @JsonProperty("extractionFn") ExtractionFn extractionFn,
+      @Nullable @JsonProperty("filterTuning") FilterTuning filterTuning
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
@@ -64,11 +67,7 @@ public class RegexDimFilter implements DimFilter
   }
 
   @VisibleForTesting
-  public RegexDimFilter(
-      String dimension,
-      String pattern,
-      ExtractionFn extractionFn
-  )
+  public RegexDimFilter(String dimension, String pattern, @Nullable ExtractionFn extractionFn)
   {
     this(dimension, pattern, extractionFn, null);
   }
@@ -85,12 +84,14 @@ public class RegexDimFilter implements DimFilter
     return pattern;
   }
 
+  @Nullable
   @JsonProperty
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
   }
 
+  @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
   @JsonProperty
   public FilterTuning getFilterTuning()
@@ -134,9 +135,9 @@ public class RegexDimFilter implements DimFilter
   }
 
   @Override
-  public HashSet<String> getRequiredColumns()
+  public Set<String> getRequiredColumns()
   {
-    return Sets.newHashSet(dimension);
+    return ImmutableSet.of(dimension);
   }
 
   @Override

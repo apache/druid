@@ -25,16 +25,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import com.google.common.hash.HashCode;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
 
-import java.util.HashSet;
+import javax.annotation.Nullable;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  */
@@ -44,15 +45,17 @@ public class BloomDimFilter implements DimFilter
   private final String dimension;
   private final BloomKFilter bloomKFilter;
   private final HashCode hash;
+  @Nullable
   private final ExtractionFn extractionFn;
+  @Nullable
   private final FilterTuning filterTuning;
 
   @JsonCreator
   public BloomDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("bloomKFilter") BloomKFilterHolder bloomKFilterHolder,
-      @JsonProperty("extractionFn") ExtractionFn extractionFn,
-      @JsonProperty("filterTuning") FilterTuning filterTuning
+      @Nullable @JsonProperty("extractionFn") ExtractionFn extractionFn,
+      @Nullable @JsonProperty("filterTuning") FilterTuning filterTuning
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
@@ -65,11 +68,7 @@ public class BloomDimFilter implements DimFilter
   }
 
   @VisibleForTesting
-  public BloomDimFilter(
-      String dimension,
-      BloomKFilterHolder bloomKFilterHolder,
-      ExtractionFn extractionFn
-  )
+  public BloomDimFilter(String dimension, BloomKFilterHolder bloomKFilterHolder, @Nullable ExtractionFn extractionFn)
   {
     this(dimension, bloomKFilterHolder, extractionFn, null);
   }
@@ -185,17 +184,31 @@ public class BloomDimFilter implements DimFilter
     return bloomKFilter;
   }
 
+  @Nullable
   @JsonProperty
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
   }
 
+  @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
   @JsonProperty
   public FilterTuning getFilterTuning()
   {
     return filterTuning;
+  }
+
+  @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
+  {
+    return null;
+  }
+
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return ImmutableSet.of(dimension);
   }
 
   @Override
@@ -228,17 +241,5 @@ public class BloomDimFilter implements DimFilter
   public int hashCode()
   {
     return Objects.hash(dimension, hash, extractionFn, filterTuning);
-  }
-
-  @Override
-  public RangeSet<String> getDimensionRangeSet(String dimension)
-  {
-    return null;
-  }
-
-  @Override
-  public HashSet<String> getRequiredColumns()
-  {
-    return Sets.newHashSet(dimension);
   }
 }

@@ -22,13 +22,12 @@ package org.apache.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
@@ -42,8 +41,8 @@ import org.apache.druid.segment.filter.SelectorFilter;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  */
@@ -53,7 +52,9 @@ public class SelectorDimFilter implements DimFilter
 
   @Nullable
   private final String value;
+  @Nullable
   private final ExtractionFn extractionFn;
+  @Nullable
   private final FilterTuning filterTuning;
 
   private final Object initLock = new Object();
@@ -66,8 +67,8 @@ public class SelectorDimFilter implements DimFilter
   public SelectorDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("value") String value,
-      @JsonProperty("extractionFn") ExtractionFn extractionFn,
-      @JsonProperty("filterTuning") FilterTuning filterTuning
+      @Nullable @JsonProperty("extractionFn") ExtractionFn extractionFn,
+      @Nullable @JsonProperty("filterTuning") FilterTuning filterTuning
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
@@ -78,12 +79,7 @@ public class SelectorDimFilter implements DimFilter
     this.filterTuning = filterTuning;
   }
 
-  @VisibleForTesting
-  public SelectorDimFilter(
-      String dimension,
-      String value,
-      ExtractionFn extractionFn
-  )
+  public SelectorDimFilter(String dimension, String value, @Nullable ExtractionFn extractionFn)
   {
     this(dimension, value, extractionFn, null);
   }
@@ -224,9 +220,9 @@ public class SelectorDimFilter implements DimFilter
   }
 
   @Override
-  public HashSet<String> getRequiredColumns()
+  public Set<String> getRequiredColumns()
   {
-    return Sets.newHashSet(dimension);
+    return ImmutableSet.of(dimension);
   }
 
 

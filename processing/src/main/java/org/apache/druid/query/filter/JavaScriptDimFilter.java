@@ -26,8 +26,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -38,17 +38,20 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 public class JavaScriptDimFilter implements DimFilter
 {
   private final String dimension;
   private final String function;
+  @Nullable
   private final ExtractionFn extractionFn;
-  private final JavaScriptConfig config;
+  @Nullable
   private final FilterTuning filterTuning;
+  private final JavaScriptConfig config;
 
   /**
    * The field is declared volatile in order to ensure safe publication of the object
@@ -65,8 +68,8 @@ public class JavaScriptDimFilter implements DimFilter
   public JavaScriptDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("function") String function,
-      @JsonProperty("extractionFn") ExtractionFn extractionFn,
-      @JsonProperty("filterTuning") FilterTuning filterTuning,
+      @Nullable @JsonProperty("extractionFn") ExtractionFn extractionFn,
+      @Nullable @JsonProperty("filterTuning") FilterTuning filterTuning,
       @JacksonInject JavaScriptConfig config
   )
   {
@@ -83,7 +86,7 @@ public class JavaScriptDimFilter implements DimFilter
   public JavaScriptDimFilter(
       String dimension,
       String function,
-      ExtractionFn extractionFn,
+      @Nullable ExtractionFn extractionFn,
       JavaScriptConfig config
   )
   {
@@ -102,12 +105,14 @@ public class JavaScriptDimFilter implements DimFilter
     return function;
   }
 
+  @Nullable
   @JsonProperty
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
   }
 
+  @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
   @JsonProperty
   public FilterTuning getFilterTuning()
@@ -176,9 +181,9 @@ public class JavaScriptDimFilter implements DimFilter
   }
 
   @Override
-  public HashSet<String> getRequiredColumns()
+  public Set<String> getRequiredColumns()
   {
-    return Sets.newHashSet(dimension);
+    return ImmutableSet.of(dimension);
   }
 
   @Override

@@ -26,14 +26,14 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.filter.ColumnComparisonFilter;
 
-import java.util.HashSet;
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -43,12 +43,13 @@ public class ColumnComparisonDimFilter implements DimFilter
   private static final Joiner COMMA_JOINER = Joiner.on(", ");
 
   private final List<DimensionSpec> dimensions;
+  @Nullable
   private final FilterTuning filterTuning;
 
   @JsonCreator
   public ColumnComparisonDimFilter(
       @JsonProperty("dimensions") List<DimensionSpec> dimensions,
-      @JsonProperty("filterTuning") FilterTuning filterTuning
+      @Nullable @JsonProperty("filterTuning") FilterTuning filterTuning
   )
   {
     this.dimensions = Preconditions.checkNotNull(dimensions, "dimensions");
@@ -57,9 +58,7 @@ public class ColumnComparisonDimFilter implements DimFilter
   }
 
   @VisibleForTesting
-  public ColumnComparisonDimFilter(
-      List<DimensionSpec> dimensions
-  )
+  public ColumnComparisonDimFilter(List<DimensionSpec> dimensions)
   {
     this(dimensions, null);
   }
@@ -134,11 +133,8 @@ public class ColumnComparisonDimFilter implements DimFilter
   }
 
   @Override
-  public HashSet<String> getRequiredColumns()
+  public Set<String> getRequiredColumns()
   {
-    return Sets.newHashSet(dimensions.stream()
-        .map(DimensionSpec::getDimension)
-        .collect(Collectors.toSet())
-    );
+    return dimensions.stream().map(DimensionSpec::getDimension).collect(Collectors.toSet());
   }
 }

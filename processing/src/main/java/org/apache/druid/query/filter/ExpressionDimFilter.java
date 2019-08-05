@@ -27,26 +27,27 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.filter.ExpressionFilter;
 
-import java.util.HashSet;
+import javax.annotation.Nullable;
 import java.util.Objects;
+import java.util.Set;
 
 public class ExpressionDimFilter implements DimFilter
 {
   private final String expression;
   private final Supplier<Expr> parsed;
+  @Nullable
   private final FilterTuning filterTuning;
 
   @JsonCreator
   public ExpressionDimFilter(
       @JsonProperty("expression") final String expression,
-      @JsonProperty("filterTuning") final FilterTuning filterTuning,
+      @Nullable @JsonProperty("filterTuning") final FilterTuning filterTuning,
       @JacksonInject ExprMacroTable macroTable
   )
   {
@@ -56,10 +57,7 @@ public class ExpressionDimFilter implements DimFilter
   }
 
   @VisibleForTesting
-  public ExpressionDimFilter(
-      final String expression,
-      ExprMacroTable macroTable
-  )
+  public ExpressionDimFilter(final String expression, ExprMacroTable macroTable)
   {
     this(expression, null, macroTable);
   }
@@ -70,6 +68,7 @@ public class ExpressionDimFilter implements DimFilter
     return expression;
   }
 
+  @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
   @JsonProperty
   public FilterTuning getFilterTuning()
@@ -96,9 +95,9 @@ public class ExpressionDimFilter implements DimFilter
   }
 
   @Override
-  public HashSet<String> getRequiredColumns()
+  public Set<String> getRequiredColumns()
   {
-    return Sets.newHashSet(parsed.get().analyzeInputs().getRequiredBindings());
+    return parsed.get().analyzeInputs().getRequiredBindings();
   }
 
   @Override

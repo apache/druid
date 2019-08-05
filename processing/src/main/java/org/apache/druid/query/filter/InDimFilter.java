@@ -26,10 +26,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
@@ -47,10 +47,10 @@ import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.filter.InFilter;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -66,7 +66,9 @@ public class InDimFilter implements DimFilter
   // Values can contain `null` object
   private final SortedSet<String> values;
   private final String dimension;
+  @Nullable
   private final ExtractionFn extractionFn;
+  @Nullable
   private final FilterTuning filterTuning;
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
@@ -76,8 +78,8 @@ public class InDimFilter implements DimFilter
   public InDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("values") Collection<String> values,
-      @JsonProperty("extractionFn") ExtractionFn extractionFn,
-      @JsonProperty("filterTuning") FilterTuning filterTuning
+      @Nullable @JsonProperty("extractionFn") ExtractionFn extractionFn,
+      @Nullable @JsonProperty("filterTuning") FilterTuning filterTuning
   )
   {
     Preconditions.checkNotNull(dimension, "dimension can not be null");
@@ -96,11 +98,7 @@ public class InDimFilter implements DimFilter
   }
 
   @VisibleForTesting
-  public InDimFilter(
-      String dimension,
-      Collection<String> values,
-      ExtractionFn extractionFn
-  )
+  public InDimFilter(String dimension, Collection<String> values, @Nullable ExtractionFn extractionFn)
   {
     this(dimension, values, extractionFn, null);
   }
@@ -117,12 +115,14 @@ public class InDimFilter implements DimFilter
     return values;
   }
 
+  @Nullable
   @JsonProperty
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
   }
 
+  @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
   @JsonProperty
   public FilterTuning getFilterTuning()
@@ -233,9 +233,9 @@ public class InDimFilter implements DimFilter
   }
 
   @Override
-  public HashSet<String> getRequiredColumns()
+  public Set<String> getRequiredColumns()
   {
-    return Sets.newHashSet(dimension);
+    return ImmutableSet.of(dimension);
   }
 
   @Override

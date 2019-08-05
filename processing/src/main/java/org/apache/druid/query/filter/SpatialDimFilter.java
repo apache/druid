@@ -24,15 +24,16 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import org.apache.druid.collections.spatial.search.Bound;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.filter.SpatialFilter;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  */
@@ -40,13 +41,14 @@ public class SpatialDimFilter implements DimFilter
 {
   private final String dimension;
   private final Bound bound;
+  @Nullable
   private final FilterTuning filterTuning;
 
   @JsonCreator
   public SpatialDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("bound") Bound bound,
-      @JsonProperty("filterTuning") FilterTuning filterTuning
+      @Nullable @JsonProperty("filterTuning") FilterTuning filterTuning
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
@@ -58,10 +60,7 @@ public class SpatialDimFilter implements DimFilter
   }
 
   @VisibleForTesting
-  public SpatialDimFilter(
-      String dimension,
-      Bound bound
-  )
+  public SpatialDimFilter(String dimension, Bound bound)
   {
     this(dimension, bound, null);
   }
@@ -98,6 +97,7 @@ public class SpatialDimFilter implements DimFilter
     return bound;
   }
 
+  @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
   @JsonProperty
   public FilterTuning getFilterTuning()
@@ -118,9 +118,9 @@ public class SpatialDimFilter implements DimFilter
   }
 
   @Override
-  public HashSet<String> getRequiredColumns()
+  public Set<String> getRequiredColumns()
   {
-    return Sets.newHashSet(dimension);
+    return ImmutableSet.of(dimension);
   }
 
   @Override

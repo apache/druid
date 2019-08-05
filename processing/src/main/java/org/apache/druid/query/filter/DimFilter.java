@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.java.util.common.Cacheable;
 
-import java.util.HashSet;
+import java.util.Set;
 
 /**
  */
@@ -81,5 +81,5 @@ public interface DimFilter extends Cacheable
   /**
    * @return a HashSet that represents all columns' name which the DimFilter required to do filter.
    */
-  HashSet<String> getRequiredColumns();
+  Set<String> getRequiredColumns();
 }

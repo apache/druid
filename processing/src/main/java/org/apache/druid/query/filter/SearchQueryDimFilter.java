@@ -23,16 +23,17 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.search.SearchQuerySpec;
 import org.apache.druid.segment.filter.SearchQueryFilter;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  */
@@ -40,14 +41,16 @@ public class SearchQueryDimFilter implements DimFilter
 {
   private final String dimension;
   private final SearchQuerySpec query;
+  @Nullable
   private final ExtractionFn extractionFn;
+  @Nullable
   private final FilterTuning filterTuning;
 
   public SearchQueryDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("query") SearchQuerySpec query,
-      @JsonProperty("extractionFn") ExtractionFn extractionFn,
-      @JsonProperty("filterTuning") FilterTuning filterTuning
+      @Nullable @JsonProperty("extractionFn") ExtractionFn extractionFn,
+      @Nullable @JsonProperty("filterTuning") FilterTuning filterTuning
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
@@ -63,7 +66,7 @@ public class SearchQueryDimFilter implements DimFilter
   public SearchQueryDimFilter(
       String dimension,
       SearchQuerySpec query,
-      ExtractionFn extractionFn
+      @Nullable ExtractionFn extractionFn
   )
   {
     this(dimension, query, extractionFn, null);
@@ -130,9 +133,9 @@ public class SearchQueryDimFilter implements DimFilter
   }
 
   @Override
-  public HashSet<String> getRequiredColumns()
+  public Set<String> getRequiredColumns()
   {
-    return Sets.newHashSet(dimension);
+    return ImmutableSet.of(dimension);
   }
 
   @Override

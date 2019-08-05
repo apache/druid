@@ -24,8 +24,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
@@ -34,28 +34,31 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.ordering.StringComparators;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 public class IntervalDimFilter implements DimFilter
 {
   private final List<Interval> intervals;
   private final List<Pair<Long, Long>> intervalLongs;
   private final String dimension;
+  @Nullable
   private final ExtractionFn extractionFn;
-  private final OrDimFilter convertedFilter;
+  @Nullable
   private final FilterTuning filterTuning;
+  private final OrDimFilter convertedFilter;
 
   @JsonCreator
   public IntervalDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("intervals") List<Interval> intervals,
-      @JsonProperty("extractionFn") ExtractionFn extractionFn,
-      @JsonProperty("filterTuning") FilterTuning filterTuning
+      @Nullable @JsonProperty("extractionFn") ExtractionFn extractionFn,
+      @Nullable @JsonProperty("filterTuning") FilterTuning filterTuning
   )
   {
     Preconditions.checkNotNull(dimension, "dimension can not be null");
@@ -70,11 +73,7 @@ public class IntervalDimFilter implements DimFilter
   }
 
   @VisibleForTesting
-  public IntervalDimFilter(
-      String dimension,
-      List<Interval> intervals,
-      ExtractionFn extractionFn
-  )
+  public IntervalDimFilter(String dimension, List<Interval> intervals, @Nullable ExtractionFn extractionFn)
   {
     this(dimension, intervals, extractionFn, null);
   }
@@ -91,12 +90,14 @@ public class IntervalDimFilter implements DimFilter
     return intervals;
   }
 
+  @Nullable
   @JsonProperty
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
   }
 
+  @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
   @JsonProperty
   public FilterTuning getFilterTuning()
@@ -148,9 +149,9 @@ public class IntervalDimFilter implements DimFilter
   }
 
   @Override
-  public HashSet<String> getRequiredColumns()
+  public Set<String> getRequiredColumns()
   {
-    return Sets.newHashSet(dimension);
+    return ImmutableSet.of(dimension);
   }
 
   @Override
