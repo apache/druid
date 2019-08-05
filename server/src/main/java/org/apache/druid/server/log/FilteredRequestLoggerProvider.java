@@ -73,10 +73,10 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
     private final List<String> mutedQueryTypes;
 
     public FilteredRequestLogger(
-            RequestLogger logger,
-            long queryTimeThresholdMs,
-            long sqlQueryTimeThresholdMs,
-            List<String> mutedQueryTypes
+        RequestLogger logger,
+        long queryTimeThresholdMs,
+        long sqlQueryTimeThresholdMs,
+        List<String> mutedQueryTypes
     )
     {
       this.logger = logger;

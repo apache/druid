@@ -47,14 +47,14 @@ public class FilteredRequestLoggerTest
   public final ExpectedException expectedException = ExpectedException.none();
   private final DefaultObjectMapper mapper = new DefaultObjectMapper();
   private final SegmentMetadataQuery testSegmentMetadataQuery = new SegmentMetadataQuery(
-          new LegacyDataSource("foo"),
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
+      new LegacyDataSource("foo"),
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
   );
 
   public FilteredRequestLoggerTest()
