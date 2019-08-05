@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class HttpPostEmitterTest
 {
 
-  private static final ObjectMapper objectMapper = new ObjectMapper()
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
   {
     @Override
     public byte[] writeValueAsBytes(Object value)
@@ -72,7 +72,7 @@ public class HttpPostEmitterTest
         .setMaxBatchSize(1024 * 1024)
         .setBatchQueueSizeLimit(1000)
         .build();
-    final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, objectMapper);
+    final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, OBJECT_MAPPER);
     emitter.start();
 
     // emit first event
