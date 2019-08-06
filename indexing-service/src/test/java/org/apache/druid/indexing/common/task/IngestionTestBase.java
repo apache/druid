@@ -58,6 +58,7 @@ import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.After;
@@ -278,6 +279,7 @@ public abstract class IngestionTestBase
 
         final TaskToolbox box = new TaskToolbox(
             null,
+            new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
             taskActionClient,
             null,
             new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()),

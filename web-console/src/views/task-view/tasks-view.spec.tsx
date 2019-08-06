@@ -27,6 +27,7 @@ describe('tasks view', () => {
       <TasksView
         openDialog={'test'}
         taskId={'test'}
+        datasourceId={'datasource'}
         goToDatasource={() => {}}
         goToQuery={() => {}}
         goToMiddleManager={() => {}}

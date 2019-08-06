@@ -39,7 +39,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   public static final Comparator<Float> FLOAT_COMPARATOR = Comparators.naturalNullsFirst();
 
   @Override
-  public Float processRowValsToUnsortedEncodedKeyComponent(Object dimValues, boolean reportParseExceptions)
+  public Float processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
     if (dimValues instanceof List) {
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");

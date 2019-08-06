@@ -31,6 +31,8 @@ import org.junit.rules.ExpectedException;
 
 public class ExprMacroTest
 {
+  private static final String IPV4_STRING = "192.168.0.1";
+  private static final long IPV4_LONG = 3232235521L;
   private static final Expr.ObjectBinding BINDINGS = Parser.withMap(
       ImmutableMap.<String, Object>builder()
           .put("t", DateTimes.of("2000-02-03T04:05:06").getMillis())
@@ -42,6 +44,10 @@ public class ExprMacroTest
           .put("z", 3.1)
           .put("CityOfAngels", "America/Los_Angeles")
           .put("spacey", "  hey there  ")
+          .put("ipv4_string", IPV4_STRING)
+          .put("ipv4_long", IPV4_LONG)
+          .put("ipv4_network", "192.168.0.0")
+          .put("ipv4_broadcast", "192.168.255.255")
           .build()
   );
 
@@ -185,6 +191,34 @@ public class ExprMacroTest
     assertExpr("rtrim(spacey, 'he ')", "  hey ther");
     assertExpr("rtrim(spacey, spacey)", emptyString);
     assertExpr("rtrim(spacey, substring(spacey, 0, 4))", "  hey ther");
+  }
+
+  @Test
+  public void testIPv4AddressParse()
+  {
+    Long nullLong = NullHandling.replaceWithDefault() ? NullHandling.ZERO_LONG : null;
+    assertExpr("ipv4_parse(x)", nullLong);
+    assertExpr("ipv4_parse(ipv4_string)", IPV4_LONG);
+    assertExpr("ipv4_parse(ipv4_long)", IPV4_LONG);
+    assertExpr("ipv4_parse(ipv4_stringify(ipv4_long))", IPV4_LONG);
+  }
+
+  @Test
+  public void testIPv4AddressStringify()
+  {
+    assertExpr("ipv4_stringify(x)", null);
+    assertExpr("ipv4_stringify(ipv4_long)", IPV4_STRING);
+    assertExpr("ipv4_stringify(ipv4_string)", IPV4_STRING);
+    assertExpr("ipv4_stringify(ipv4_parse(ipv4_string))", IPV4_STRING);
+  }
+
+  @Test
+  public void testIPv4AddressMatch()
+  {
+    assertExpr("ipv4_match(ipv4_string,    '10.0.0.0/8')", 0L);
+    assertExpr("ipv4_match(ipv4_string,    '192.168.0.0/16')", 1L);
+    assertExpr("ipv4_match(ipv4_network,   '192.168.0.0/16')", 1L);
+    assertExpr("ipv4_match(ipv4_broadcast, '192.168.0.0/16')", 1L);
   }
 
   private void assertExpr(final String expression, final Object expectedResult)

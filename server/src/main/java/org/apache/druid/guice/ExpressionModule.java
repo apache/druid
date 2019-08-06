@@ -26,6 +26,9 @@ import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.GuiceExprMacroTable;
+import org.apache.druid.query.expression.IPv4AddressMatchExprMacro;
+import org.apache.druid.query.expression.IPv4AddressParseExprMacro;
+import org.apache.druid.query.expression.IPv4AddressStringifyExprMacro;
 import org.apache.druid.query.expression.LikeExprMacro;
 import org.apache.druid.query.expression.RegexpExtractExprMacro;
 import org.apache.druid.query.expression.TimestampCeilExprMacro;
@@ -44,6 +47,9 @@ public class ExpressionModule implements DruidModule
 {
   public static final List<Class<? extends ExprMacroTable.ExprMacro>> EXPR_MACROS =
       ImmutableList.<Class<? extends ExprMacroTable.ExprMacro>>builder()
+          .add(IPv4AddressMatchExprMacro.class)
+          .add(IPv4AddressParseExprMacro.class)
+          .add(IPv4AddressStringifyExprMacro.class)
           .add(LikeExprMacro.class)
           .add(RegexpExtractExprMacro.class)
           .add(TimestampCeilExprMacro.class)

@@ -40,7 +40,7 @@ public class DoubleMaxAggregatorFactory extends SimpleDoubleAggregatorFactory
   public DoubleMaxAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("expression") String expression,
+      @JsonProperty("expression") @Nullable String expression,
       @JacksonInject ExprMacroTable macroTable
   )
   {

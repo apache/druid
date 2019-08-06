@@ -289,14 +289,31 @@ public class ForkingTaskRunner
                         command.add(StringUtils.format("-Ddruid.host=%s", childHost));
                         command.add(StringUtils.format("-Ddruid.plaintextPort=%d", childPort));
                         command.add(StringUtils.format("-Ddruid.tlsPort=%d", tlsChildPort));
-                        /**
-                         * These are not enabled per default to allow the user to either set or not set them
-                         * Users are highly suggested to be set in druid.indexer.runner.javaOpts
-                         * See org.apache.druid.concurrent.TaskThreadPriority#getThreadPriorityFromTaskPriority(int)
-                         * for more information
-                         command.add("-XX:+UseThreadPriorities");
-                         command.add("-XX:ThreadPriorityPolicy=42");
-                         */
+
+                        // Let tasks know where they are running on.
+                        // This information is used in native parallel indexing with shuffle.
+                        command.add(StringUtils.format("-Ddruid.task.executor.service=%s", node.getServiceName()));
+                        command.add(StringUtils.format("-Ddruid.task.executor.host=%s", node.getHost()));
+                        command.add(
+                            StringUtils.format("-Ddruid.task.executor.plaintextPort=%d", node.getPlaintextPort())
+                        );
+                        command.add(
+                            StringUtils.format(
+                                "-Ddruid.task.executor.enablePlaintextPort=%s",
+                                node.isEnablePlaintextPort()
+                            )
+                        );
+                        command.add(StringUtils.format("-Ddruid.task.executor.tlsPort=%d", node.getTlsPort()));
+                        command.add(
+                            StringUtils.format("-Ddruid.task.executor.enableTlsPort=%s", node.isEnableTlsPort())
+                        );
+
+                        // These are not enabled per default to allow the user to either set or not set them
+                        // Users are highly suggested to be set in druid.indexer.runner.javaOpts
+                        // See org.apache.druid.concurrent.TaskThreadPriority#getThreadPriorityFromTaskPriority(int)
+                        // for more information
+                        // command.add("-XX:+UseThreadPriorities");
+                        // command.add("-XX:ThreadPriorityPolicy=42");
 
                         command.add("org.apache.druid.cli.Main");
                         command.add("internal");

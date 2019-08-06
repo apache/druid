@@ -409,6 +409,8 @@ public class ThreadingTaskRunner
     } else {
       LOGGER.warn("Ran out of time, not waiting for executor to finish!");
     }
+
+    appenderatorsManager.shutdown();
   }
 
   @Override

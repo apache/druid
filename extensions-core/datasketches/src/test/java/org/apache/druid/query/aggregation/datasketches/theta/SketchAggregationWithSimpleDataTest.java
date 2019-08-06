@@ -24,14 +24,16 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
 import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.select.SelectResultValue;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.query.topn.DimensionAndMetricValueExtractor;
@@ -52,6 +54,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
+ *
  */
 @RunWith(Parameterized.class)
 public class SketchAggregationWithSimpleDataTest
@@ -127,13 +130,17 @@ public class SketchAggregationWithSimpleDataTest
             tempFolder
         )
     ) {
+      final String groupByQueryString = readFileFromClasspathAsString("simple_test_data_group_by_query.json");
+      final GroupByQuery groupByQuery = (GroupByQuery) gpByQueryAggregationTestHelper
+          .getObjectMapper()
+          .readValue(groupByQueryString, Query.class);
 
-      Sequence seq = gpByQueryAggregationTestHelper.runQueryOnSegments(
+      Sequence<ResultRow> seq = gpByQueryAggregationTestHelper.runQueryOnSegments(
           ImmutableList.of(s1, s2),
-          readFileFromClasspathAsString("simple_test_data_group_by_query.json")
+          groupByQueryString
       );
 
-      List<Row> results = seq.toList();
+      List<MapBasedRow> results = seq.map(row -> row.toMapBasedRow(groupByQuery)).toList();
       Assert.assertEquals(5, results.size());
       Assert.assertEquals(
           ImmutableList.of(
@@ -279,9 +286,12 @@ public class SketchAggregationWithSimpleDataTest
     Result<SelectResultValue> result = (Result<SelectResultValue>) Iterables.getOnlyElement(seq.toList());
     Assert.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
     Assert.assertEquals(100, result.getValue().getEvents().size());
-    Assert.assertEquals("AgMDAAAazJMCAAAAAACAPzz9j7pWTMdROWGf15uY1nI=", result.getValue().getEvents().get(0).getEvent().get("pty_country"));
+    Assert.assertEquals(
+        "AgMDAAAazJMCAAAAAACAPzz9j7pWTMdROWGf15uY1nI=",
+        result.getValue().getEvents().get(0).getEvent().get("pty_country")
+    );
   }
-  
+
   @Test
   public void testTopNQueryWithSketchConstant() throws Exception
   {
@@ -294,9 +304,9 @@ public class SketchAggregationWithSimpleDataTest
         ImmutableList.of(s1, s2),
         readFileFromClasspathAsString("topn_query_sketch_const.json")
     );
-    
+
     Result<TopNResultValue> result = (Result<TopNResultValue>) Iterables.getOnlyElement(seq.toList());
-    
+
     Assert.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
 
     DimensionAndMetricValueExtractor value1 = Iterables.get(result.getValue().getValue(), 0);
@@ -307,7 +317,7 @@ public class SketchAggregationWithSimpleDataTest
     Assert.assertEquals(1.0, value1.getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
     Assert.assertEquals(37.0, value1.getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
     Assert.assertEquals("product_3", value1.getDimensionValue("product"));
-    
+
     DimensionAndMetricValueExtractor value2 = Iterables.get(result.getValue().getValue(), 1);
     Assert.assertEquals(42.0, value2.getDoubleMetric("sketch_count"), 0.01);
     Assert.assertEquals(42.0, value2.getDoubleMetric("sketchEstimatePostAgg"), 0.01);
@@ -316,7 +326,7 @@ public class SketchAggregationWithSimpleDataTest
     Assert.assertEquals(2.0, value2.getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
     Assert.assertEquals(40.0, value2.getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
     Assert.assertEquals("product_1", value2.getDimensionValue("product"));
-    
+
     DimensionAndMetricValueExtractor value3 = Iterables.get(result.getValue().getValue(), 2);
     Assert.assertEquals(42.0, value3.getDoubleMetric("sketch_count"), 0.01);
     Assert.assertEquals(42.0, value3.getDoubleMetric("sketchEstimatePostAgg"), 0.01);

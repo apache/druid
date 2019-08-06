@@ -44,6 +44,7 @@ import {
 import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
+  addFilterNoQuotes,
   booleanCustomTableFilter,
   formatDuration,
   getDruidErrorMessage,
@@ -78,6 +79,7 @@ const taskTableColumns: string[] = [
 
 export interface TasksViewProps {
   taskId: string | undefined;
+  datasourceId: string | undefined;
   openDialog: string | undefined;
   goToDatasource: (datasource: string) => void;
   goToQuery: (initSql: string) => void;
@@ -103,7 +105,10 @@ export interface TasksViewState {
   tasksLoading: boolean;
   tasks?: any[];
   tasksError?: string;
+
   taskFilter: Filter[];
+  supervisorFilter: Filter[];
+
   groupTasksBy?: 'type' | 'datasource' | 'status';
 
   killTaskId?: string;
@@ -199,6 +204,14 @@ ORDER BY "rank" DESC, "created_time" DESC`;
 
   constructor(props: TasksViewProps, context: any) {
     super(props, context);
+
+    const taskFilter: Filter[] = [];
+    if (props.taskId) taskFilter.push({ id: 'task_id', value: props.taskId });
+    if (props.datasourceId) taskFilter.push({ id: 'datasource', value: props.datasourceId });
+
+    const supervisorFilter: Filter[] = [];
+    if (props.datasourceId) supervisorFilter.push({ id: 'datasource', value: props.datasourceId });
+
     this.state = {
       supervisorsLoading: true,
       supervisors: [],
@@ -208,7 +221,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       showTerminateAllSupervisors: false,
 
       tasksLoading: true,
-      taskFilter: props.taskId ? [{ id: 'task_id', value: props.taskId }] : [],
+      taskFilter: taskFilter,
+      supervisorFilter: supervisorFilter,
 
       supervisorSpecDialogOpen: props.openDialog === 'supervisor',
       taskSpecDialogOpen: props.openDialog === 'task',
@@ -517,6 +531,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       supervisorsLoading,
       supervisorsError,
       hiddenSupervisorColumns,
+      taskFilter,
+      supervisorFilter,
     } = this.state;
     return (
       <>
@@ -528,6 +544,19 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               ? 'No supervisors'
               : supervisorsError || ''
           }
+          filtered={supervisorFilter}
+          onFilteredChange={filtered => {
+            const datasourceFilter = filtered.find(filter => filter.id === 'datasource');
+            let newTaskFilter = taskFilter.filter(filter => filter.id !== 'datasource');
+            if (datasourceFilter) {
+              newTaskFilter = addFilterNoQuotes(
+                newTaskFilter,
+                datasourceFilter.id,
+                datasourceFilter.value,
+              );
+            }
+            this.setState({ supervisorFilter: filtered, taskFilter: newTaskFilter });
+          }}
           filterable
           columns={[
             {
@@ -683,8 +712,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       taskFilter,
       groupTasksBy,
       hiddenTaskColumns,
+      supervisorFilter,
     } = this.state;
-
     return (
       <>
         <ReactTable
@@ -694,7 +723,16 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           filterable
           filtered={taskFilter}
           onFilteredChange={filtered => {
-            this.setState({ taskFilter: filtered });
+            const datasourceFilter = filtered.find(filter => filter.id === 'datasource');
+            let newSupervisorFilter = supervisorFilter.filter(filter => filter.id !== 'datasource');
+            if (datasourceFilter) {
+              newSupervisorFilter = addFilterNoQuotes(
+                newSupervisorFilter,
+                datasourceFilter.id,
+                datasourceFilter.value,
+              );
+            }
+            this.setState({ supervisorFilter: newSupervisorFilter, taskFilter: filtered });
           }}
           defaultSorted={[{ id: 'status', desc: true }]}
           pivotBy={groupTasksBy ? [groupTasksBy] : []}

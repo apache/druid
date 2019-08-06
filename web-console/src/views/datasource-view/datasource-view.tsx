@@ -38,6 +38,7 @@ import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
   countBy,
+  escapeSqlIdentifier,
   formatBytes,
   formatNumber,
   getDruidErrorMessage,
@@ -114,6 +115,7 @@ interface CompactionDialogOpenOn {
 
 export interface DatasourcesViewProps {
   goToQuery: (initSql: string) => void;
+  goToTask: (datasource?: string, openDialog?: string) => void;
   goToSegments: (datasource: string, onlyUnavailable?: boolean) => void;
   noSqlMode: boolean;
   initDatasource?: string;
@@ -543,7 +545,7 @@ GROUP BY 1`;
     rules: any[],
     compactionConfig: Record<string, any>,
   ): BasicAction[] {
-    const { goToQuery } = this.props;
+    const { goToQuery, goToTask } = this.props;
 
     if (disabled) {
       return [
@@ -564,7 +566,12 @@ GROUP BY 1`;
         {
           icon: IconNames.APPLICATION,
           title: 'Query with SQL',
-          onAction: () => goToQuery(`SELECT * FROM "${datasource}"`),
+          onAction: () => goToQuery(`SELECT * FROM ${escapeSqlIdentifier(datasource)}`),
+        },
+        {
+          icon: IconNames.GANTT_CHART,
+          title: 'Go to tasks',
+          onAction: () => goToTask(datasource),
         },
         {
           icon: IconNames.AUTOMATIC_UPDATES,

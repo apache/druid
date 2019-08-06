@@ -187,6 +187,12 @@ public interface Task
     return getContext();
   }
 
+  default Map<String, Object> addToContextIfAbsent(String key, Object val)
+  {
+    getContext().putIfAbsent(key, val);
+    return getContext();
+  }
+
   Map<String, Object> getContext();
 
   default <ContextValueType> ContextValueType getContextValue(String key)

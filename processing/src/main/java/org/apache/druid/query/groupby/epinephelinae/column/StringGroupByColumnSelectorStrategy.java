@@ -21,12 +21,12 @@ package org.apache.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
 
 import java.nio.ByteBuffer;
-import java.util.Map;
 
 public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
 {
@@ -40,7 +40,7 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   public void processValueFromGroupingKey(
       GroupByColumnSelectorPlus selectorPlus,
       ByteBuffer key,
-      Map<String, Object> resultMap,
+      ResultRow resultRow,
       int keyBufferPosition
   )
   {
@@ -48,12 +48,12 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
 
     // GROUP_BY_MISSING_VALUE is used to indicate empty rows, which are omitted from the result map.
     if (id != GROUP_BY_MISSING_VALUE) {
-      resultMap.put(
-          selectorPlus.getOutputName(),
+      resultRow.set(
+          selectorPlus.getResultRowPosition(),
           ((DimensionSelector) selectorPlus.getSelector()).lookupName(id)
       );
     } else {
-      resultMap.put(selectorPlus.getOutputName(), NullHandling.defaultStringValue());
+      resultRow.set(selectorPlus.getResultRowPosition(), NullHandling.defaultStringValue());
     }
   }
 
@@ -81,7 +81,13 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   }
 
   @Override
-  public void initGroupingKeyColumnValue(int keyBufferPosition, int columnIndex, Object rowObj, ByteBuffer keyBuffer, int[] stack)
+  public void initGroupingKeyColumnValue(
+      int keyBufferPosition,
+      int columnIndex,
+      Object rowObj,
+      ByteBuffer keyBuffer,
+      int[] stack
+  )
   {
     IndexedInts row = (IndexedInts) rowObj;
     int rowSize = row.size();
@@ -91,7 +97,12 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   }
 
   @Override
-  public boolean checkRowIndexAndAddValueToGroupingKey(int keyBufferPosition, Object rowObj, int rowValIdx, ByteBuffer keyBuffer)
+  public boolean checkRowIndexAndAddValueToGroupingKey(
+      int keyBufferPosition,
+      Object rowObj,
+      int rowValIdx,
+      ByteBuffer keyBuffer
+  )
   {
     IndexedInts row = (IndexedInts) rowObj;
     int rowSize = row.size();
