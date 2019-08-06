@@ -960,7 +960,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           handleParseException(e);
         }
       }
-      appenderator.close();
 
       final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
       log.info("Pushed segments[%s]", pushed.getSegments());
@@ -972,6 +971,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                                              : null;
       // Probably we can publish atomicUpdateGroup along with segments.
       final SegmentsAndMetadata published = awaitPublish(driver.publishAll(inputSegments, publisher), pushTimeout);
+      appenderator.close();
 
       ingestionState = IngestionState.COMPLETED;
       if (published == null) {
