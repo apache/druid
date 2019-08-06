@@ -140,9 +140,9 @@ public interface Filter
    * Determine if a filter *should* use a bitmap index based on information collected from the supplied
    * {@link BitmapIndexSelector}. This method differs from {@link #supportsBitmapIndex(BitmapIndexSelector)} in that
    * the former only indicates if a bitmap index is available and {@link #getBitmapIndex(BitmapIndexSelector)} may be
-   * used. This method, by default, will consider a {@link FilterTuning} to make decisions about when to use an
-   * available index. Override this method in a {@link Filter} implementation when {@link FilterTuning} alone is not
-   * adequate for making this decision.
+   * used. Implementations of this methods typically consider a {@link FilterTuning} to make decisions about when to
+   * use an available index. A "standard" implementation of this is available to all {@link Filter} implementations in
+   * {@link org.apache.druid.segment.filter.Filters#shouldUseIndex(Filter, BitmapIndexSelector, FilterTuning)}.
    */
   boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector);
 }

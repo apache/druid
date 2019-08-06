@@ -653,6 +653,16 @@ public class Filters
     }
   }
 
+  /**
+   * This method provides a "standard" implementation of {@link Filter#shouldUseIndex(BitmapIndexSelector)} which takes
+   * a {@link Filter}, a {@link BitmapIndexSelector}, and {@link FilterTuning} to determine if:
+   *  a) the filter supports bitmap indexes
+   *  b) the filter tuning specifies that it should use the index
+   *  c) the cardinality of the column is above the minimum threshold and below the maximum threshold to use the index
+   *
+   * If all these things are true, {@link org.apache.druid.segment.QueryableIndexStorageAdapter} will utilize the
+   * indexes.
+   */
   public static boolean shouldUseIndex(Filter filter, BitmapIndexSelector indexSelector, FilterTuning filterTuning)
   {
     final FilterTuning tuning = filterTuning != null ? filterTuning : FilterTuning.createDefault(filter, indexSelector);
