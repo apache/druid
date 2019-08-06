@@ -270,7 +270,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
         try {
           ast = parser(queryString);
-        } catch (e) {}
+        } catch {}
 
         if (!(ast instanceof SqlQuery)) {
           ast = undefined;
