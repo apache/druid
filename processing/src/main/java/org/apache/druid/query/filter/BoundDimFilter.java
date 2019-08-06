@@ -53,9 +53,7 @@ public class BoundDimFilter implements DimFilter
   private final String upper;
   @Nullable
   private final String lower;
-  @Nullable
   private final boolean lowerStrict;
-  @Nullable
   private final boolean upperStrict;
   @Nullable
   private final ExtractionFn extractionFn;
@@ -132,12 +130,14 @@ public class BoundDimFilter implements DimFilter
     return dimension;
   }
 
+  @Nullable
   @JsonProperty
   public String getUpper()
   {
     return upper;
   }
 
+  @Nullable
   @JsonProperty
   public String getLower()
   {
@@ -166,6 +166,7 @@ public class BoundDimFilter implements DimFilter
     return upper != null;
   }
 
+  @Nullable
   @JsonProperty
   public ExtractionFn getExtractionFn()
   {
@@ -178,6 +179,7 @@ public class BoundDimFilter implements DimFilter
     return ordering;
   }
 
+  @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
   @JsonProperty
   public FilterTuning getFilterTuning()
