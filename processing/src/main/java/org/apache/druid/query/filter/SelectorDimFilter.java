@@ -149,18 +149,21 @@ public class SelectorDimFilter implements DimFilter
     return dimension;
   }
 
+  @Nullable
   @JsonProperty
   public String getValue()
   {
     return value;
   }
 
+  @Nullable
   @JsonProperty
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
   }
 
+  @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
   @JsonProperty
   public FilterTuning getFilterTuning()
