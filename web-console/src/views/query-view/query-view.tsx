@@ -24,7 +24,9 @@ import {
   isFirstRowHeader,
   normalizeQueryResult,
   shouldIncludeTimestamp,
+  sqlParserFactory,
 } from 'druid-query-toolkit';
+import { SqlQuery } from 'druid-query-toolkit/build/ast';
 import Hjson from 'hjson';
 import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
@@ -55,6 +57,89 @@ import { RunButton } from './run-button/run-button';
 
 import './query-view.scss';
 
+const parser = sqlParserFactory([
+  'COUNT',
+  'SUM',
+  'MIN',
+  'MAX',
+  'AVG',
+  'APPROX_COUNT_DISTINCT',
+  'APPROX_COUNT_DISTINCT_DS_HLL',
+  'APPROX_COUNT_DISTINCT_DS_THETA',
+  'APPROX_QUANTILE',
+  'APPROX_QUANTILE_DS',
+  'APPROX_QUANTILE_FIXED_BUCKETS',
+  'BLOOM_FILTER',
+  'ABS',
+  'CEIL',
+  'EXP',
+  'FLOOR',
+  'LN',
+  'LOG10',
+  'POWER',
+  'SQRT',
+  'TRUNCATE',
+  'TRUNC',
+  'ROUND',
+  'MOD',
+  'SIN',
+  'COS',
+  'TAN',
+  'COT',
+  'ASIN',
+  'ACOS',
+  'ATAN',
+  'ATAN2',
+  'DEGREES',
+  'RADIANS',
+  'CONCAT',
+  'TEXTCAT',
+  'STRING_FORMAT',
+  'LENGTH',
+  'CHAR_LENGTH',
+  'CHARARACTER_LENGTH',
+  'STRLEN',
+  'LOOKUP',
+  'LOWER',
+  'PARSE_LONG',
+  'POSITION',
+  'REGEXP_EXTRACT',
+  'REPLACE',
+  'STRPOS',
+  'SUBSTRING',
+  'RIGHT',
+  'LEFT',
+  'SUBSTR',
+  'TRIM',
+  'BTRIM',
+  'LTRIM',
+  'RTRIM',
+  'UPPER',
+  'REVERSE',
+  'REPEAT',
+  'LPAD',
+  'RPAD',
+  'CURRENT_TIMESTAMP',
+  'CURRENT_DATE',
+  'DATE_TRUNC',
+  'TIME_FLOOR',
+  'TIME_SHIFT',
+  'TIME_EXTRACT',
+  'TIME_PARSE',
+  'TIME_FORMAT',
+  'MILLIS_TO_TIMESTAMP',
+  'TIMESTAMP_TO_MILIS',
+  'EXTRACT',
+  'FLOOR',
+  'CEIL',
+  'TIMESTAMPADD',
+  'timestamp_expr',
+  'CAST',
+  'NULLIF',
+  'COALESCE',
+  'BLOOM_FILTER_TEST',
+]);
+
 interface QueryWithContext {
   queryString: string;
   queryContext: QueryContext;
@@ -83,12 +168,17 @@ export interface QueryViewState {
   loadingExplain: boolean;
   explainError?: string;
 
+  defaultSchema?: string;
+  defaultTable?: string;
+  ast?: SqlQuery;
+
   editContextDialogOpen: boolean;
 }
 
 interface QueryResult {
   queryResult: HeaderRows;
   queryExtraInfo: QueryExtraInfoData;
+  parsedQuery?: SqlQuery;
 }
 
 export class QueryView extends React.PureComponent<QueryViewProps, QueryViewState> {
@@ -174,8 +264,18 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       processQuery: async (queryWithContext: QueryWithContext): Promise<QueryResult> => {
         const { queryString, queryContext, wrapQuery } = queryWithContext;
 
+        let ast: SqlQuery | undefined;
         let wrappedLimit: number | undefined;
         let jsonQuery: any;
+
+        try {
+          ast = parser(queryString);
+        } catch (e) {}
+
+        if (!(ast instanceof SqlQuery)) {
+          ast = undefined;
+        }
+
         if (QueryView.isJsonLike(queryString)) {
           jsonQuery = Hjson.parse(queryString);
         } else {
@@ -237,6 +337,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             numResults: queryResult.rows.length,
             wrappedLimit,
           },
+          parsedQuery: ast,
         };
       },
       onStateChange: ({ result, loading, error }) => {
@@ -245,6 +346,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           queryExtraInfo: result ? result.queryExtraInfo : undefined,
           loading,
           error,
+          ast: result ? result.parsedQuery : undefined,
         });
       },
     });
@@ -349,6 +451,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       queryExtraInfo,
       error,
       columnMetadata,
+      ast,
     } = this.state;
     const runeMode = QueryView.isJsonLike(queryString);
 
@@ -384,10 +487,59 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             )}
           </div>
         </div>
-        <QueryOutput loading={loading} result={result} error={error} />
+        <QueryOutput
+          aggregateColumns={ast ? ast.getAggregateColumns() : undefined}
+          disabled={!ast}
+          sorted={ast ? ast.getSorted() : undefined}
+          handleSQLAction={this.handleSqlAction}
+          loading={loading}
+          result={result}
+          error={error}
+        />
       </SplitterLayout>
     );
   }
+
+  private handleSqlAction = (row: string, header: string, action: string): void => {
+    let ast: SqlQuery | undefined = this.state.ast;
+    if (ast) {
+      switch (action) {
+        case 'order by': {
+          const directionFilter = ast.getSorted().find(filter => {
+            return filter.id === header;
+          });
+          const direction = directionFilter ? directionFilter.desc : true;
+          ast = ast.orderBy(header, direction ? 'ASC' : 'DESC');
+          this.setState({
+            queryString: ast.toString(),
+          });
+          break;
+        }
+        case 'exclude column': {
+          ast = ast.excludeColumn(header);
+          this.setState({
+            queryString: ast.toString(),
+          });
+          break;
+        }
+        case 'exclude': {
+          ast = ast.filterRow(header, row, '!=');
+          this.setState({
+            queryString: ast.toString(),
+          });
+          break;
+        }
+        case 'filter': {
+          ast = ast.filterRow(header, row, '=');
+          this.setState({
+            queryString: ast.toString(),
+          });
+          break;
+        }
+      }
+      this.handleRun(true, ast.toString());
+    }
+  };
 
   private handleQueryStringChange = (queryString: string): void => {
     this.setState({ queryString });
@@ -397,13 +549,15 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     this.setState({ queryContext });
   };
 
-  private handleRun = (wrapQuery: boolean) => {
+  private handleRun = (wrapQuery: boolean, customQueryString?: string) => {
     const { queryString, queryContext } = this.state;
+    if (!customQueryString) {
+      customQueryString = queryString;
+    }
+    if (QueryView.isJsonLike(customQueryString) && !QueryView.validRune(customQueryString)) return;
 
-    if (QueryView.isJsonLike(queryString) && !QueryView.validRune(queryString)) return;
-
-    localStorageSet(LocalStorageKeys.QUERY_KEY, queryString);
-    this.sqlQueryManager.runQuery({ queryString, queryContext, wrapQuery });
+    localStorageSet(LocalStorageKeys.QUERY_KEY, customQueryString);
+    this.sqlQueryManager.runQuery({ queryString: customQueryString, queryContext, wrapQuery });
   };
 
   private handleExplain = () => {
@@ -417,7 +571,32 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   };
 
   render(): JSX.Element {
-    const { columnMetadata, columnMetadataLoading, columnMetadataError } = this.state;
+    const {
+      columnMetadata,
+      columnMetadataLoading,
+      columnMetadataError,
+      ast,
+      queryString,
+    } = this.state;
+
+    let tempAst: SqlQuery | undefined;
+    if (!ast) {
+      try {
+        tempAst = parser(queryString);
+      } catch {}
+    }
+    let defaultSchema;
+    if (ast && ast instanceof SqlQuery) {
+      defaultSchema = ast.getSchema();
+    } else if (tempAst && tempAst instanceof SqlQuery) {
+      defaultSchema = tempAst.getSchema();
+    }
+    let defaultTable;
+    if (ast && ast instanceof SqlQuery) {
+      defaultTable = ast.getTableName();
+    } else if (tempAst && tempAst instanceof SqlQuery) {
+      defaultTable = tempAst.getTableName();
+    }
 
     return (
       <div
@@ -428,6 +607,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             columnMetadataLoading={columnMetadataLoading}
             columnMetadata={columnMetadata}
             onQueryStringChange={this.handleQueryStringChange}
+            defaultSchema={defaultSchema}
+            defaultTable={defaultTable}
           />
         )}
         {this.renderMainArea()}
