@@ -56,8 +56,7 @@ import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
 /**
- * OvershadowableManager manages the state of {@link AtomicUpdateGroup}. See the below {@link State} for details of
- * the possible states.
+ * OvershadowableManager manages the state of {@link AtomicUpdateGroup}. See the below {@link State} for details.
  * Note that an AtomicUpdateGroup can consist of {@link Overshadowable}s of the same majorVersion, minorVersion,
  * rootPartition range, and atomicUpdateGroupSize.
  * In {@link org.apache.druid.timeline.VersionedIntervalTimeline}, this class is used to manage segments in the same
@@ -306,7 +305,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
    * Find all atomicUpdateGroups which overshadow others of the given minorVersion in the given rootPartitionRange.
    * Similar to {@link #findOvershadowedBy}.
    *
-   * Note that one atommicUpdateGroup can overshadow multiple other groups. If you're finding overshadowing
+   * Note that one atomicUpdateGroup can overshadow multiple other groups. If you're finding overshadowing
    * atomicUpdateGroups by calling this method in a loop, the results of this method can contain duplicate groups.
    *
    * @param rangeOfAug   the partition range to search for overshadowing groups.
@@ -352,16 +351,26 @@ class OvershadowableManager<T extends Overshadowable<T>>
     return found;
   }
 
+  /**
+   * Finds the lowest entry overlapping with the given root partition range.
+   * It first searches the entries lower than or equal to the given range.
+   * If there's no such entry lower than the given range, then it searches the entries higher than the given range.
+   *
+   * @return an entry of the lowest key overlapping with the given range. Otherwise null.
+   */
+  @Nullable
   private Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> findLowestOverlappingEntry(
       RootPartitionRange rangeOfAug,
       TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap,
       boolean strictSameStartId
   )
   {
+    // Searches the entries lower than or equal to the given range.
     Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> current = stateMap.floorEntry(rangeOfAug);
 
     if (current == null) {
-      current = stateMap.ceilingEntry(rangeOfAug);
+      // Searches the entries higher than then given range.
+      current = stateMap.higherEntry(rangeOfAug);
     }
 
     if (current == null) {
