@@ -627,7 +627,7 @@ ORDER BY "rank" DESC, "server" DESC`;
         {!noSqlMode && (
           <MenuItem
             icon={IconNames.APPLICATION}
-            text="See in SQL view"
+            text="View SQL query for table"
             onClick={() => goToQuery(ServersView.SERVER_SQL)}
           />
         )}

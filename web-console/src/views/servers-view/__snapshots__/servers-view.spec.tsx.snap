@@ -46,7 +46,7 @@ exports[`servers view action servers view 1`] = `
             onClick={[Function]}
             popoverProps={Object {}}
             shouldDismissPopover={true}
-            text="See in SQL view"
+            text="View SQL query for table"
           />
         </Blueprint3.Menu>
       }
