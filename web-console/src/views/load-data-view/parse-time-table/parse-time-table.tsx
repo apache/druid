@@ -43,7 +43,7 @@ export interface ParseTimeTableProps {
 }
 
 export class ParseTimeTable extends React.PureComponent<ParseTimeTableProps> {
-  render() {
+  render(): JSX.Element {
     const {
       sampleBundle,
       columnFilter,
@@ -62,14 +62,14 @@ export class ParseTimeTable extends React.PureComponent<ParseTimeTableProps> {
           headerAndRows.header.length ? headerAndRows.header : ['__error__'],
           (columnName, i) => {
             const timestamp = columnName === '__time';
-            if (!timestamp && !caseInsensitiveContains(columnName, columnFilter)) return null;
+            if (!timestamp && !caseInsensitiveContains(columnName, columnFilter)) return;
             const selected = timestampSpec.column === columnName;
             const possibleFormat = timestamp
               ? null
               : possibleDruidFormatForValues(
-                  filterMap(headerAndRows.rows, d => (d.parsed ? d.parsed[columnName] : null)),
+                  filterMap(headerAndRows.rows, d => (d.parsed ? d.parsed[columnName] : undefined)),
                 );
-            if (possibleTimestampColumnsOnly && !timestamp && !possibleFormat) return null;
+            if (possibleTimestampColumnsOnly && !timestamp && !possibleFormat) return;
 
             const columnClassName = classNames({
               timestamp,

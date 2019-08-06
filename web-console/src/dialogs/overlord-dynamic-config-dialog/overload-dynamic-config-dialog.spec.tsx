@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { OverlordDynamicConfigDialog } from './overlord-dynamic-config-dialog';
 
 describe('overload dynamic config', () => {
   it('matches snapshot', () => {
-    const lookupEditDialog = <OverlordDynamicConfigDialog onClose={() => null} />;
+    const lookupEditDialog = <OverlordDynamicConfigDialog onClose={() => {}} />;
 
     render(lookupEditDialog);
     expect(document.body.lastChild).toMatchSnapshot();

@@ -22,6 +22,8 @@ package org.apache.druid.query.aggregation.variance;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 
+import javax.annotation.Nullable;
+
 /**
  */
 @JsonTypeName("varianceFold")
@@ -30,7 +32,7 @@ public class VarianceFoldingAggregatorFactory extends VarianceAggregatorFactory
   public VarianceFoldingAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
-      @JsonProperty("estimator") String estimator
+      @JsonProperty("estimator") @Nullable String estimator
   )
   {
     super(name, fieldName, estimator, "variance");

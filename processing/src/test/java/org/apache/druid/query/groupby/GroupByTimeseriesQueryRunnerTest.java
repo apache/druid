@@ -22,7 +22,6 @@ package org.apache.druid.query.groupby;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -40,6 +39,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerTest;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
@@ -53,7 +53,6 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  *
@@ -83,14 +82,14 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 
     final List<Object[]> constructors = new ArrayList<>();
 
-    for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
+    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
       final QueryRunner modifiedRunner = new QueryRunner()
       {
         @Override
-        public Sequence run(QueryPlus queryPlus, Map responseContext)
+        public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
         {
           TimeseriesQuery tsQuery = (TimeseriesQuery) queryPlus.getQuery();
-          QueryRunner<Row> newRunner = factory.mergeRunners(
+          QueryRunner<ResultRow> newRunner = factory.mergeRunners(
               Execs.directExecutor(), ImmutableList.of(runner)
           );
           QueryToolChest toolChest = factory.getToolchest();
@@ -114,15 +113,16 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 
           return Sequences.map(
               newRunner.run(queryPlus.withQuery(newQuery), responseContext),
-              new Function<Row, Result<TimeseriesResultValue>>()
+              new Function<ResultRow, Result<TimeseriesResultValue>>()
               {
                 @Override
-                public Result<TimeseriesResultValue> apply(final Row input)
+                public Result<TimeseriesResultValue> apply(final ResultRow input)
                 {
-                  MapBasedRow row = (MapBasedRow) input;
+                  final MapBasedRow mapBasedRow = input.toMapBasedRow(newQuery);
 
                   return new Result<>(
-                      row.getTimestamp(), new TimeseriesResultValue(row.getEvent())
+                      mapBasedRow.getTimestamp(),
+                      new TimeseriesResultValue(mapBasedRow.getEvent())
                   );
                 }
               }
@@ -171,7 +171,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
     DateTime expectedEarliest = DateTimes.of("1970-01-01");
     DateTime expectedLast = DateTimes.of("2011-04-15");
 
-    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     Result<TimeseriesResultValue> result = results.iterator().next();
 
     Assert.assertEquals(expectedEarliest, result.getTimestamp());

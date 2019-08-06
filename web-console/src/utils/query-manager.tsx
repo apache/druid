@@ -19,30 +19,32 @@
 import debounce from 'lodash.debounce';
 
 export interface QueryStateInt<R> {
-  result: R | null;
+  result?: R;
   loading: boolean;
-  error: string | null;
+  error?: string;
 }
 
 export interface QueryManagerOptions<Q, R> {
-  processQuery: (query: Q) => Promise<R>;
+  processQuery: (query: Q, setIntermediateQuery: (intermediateQuery: any) => void) => Promise<R>;
   onStateChange?: (queryResolve: QueryStateInt<R>) => void;
   debounceIdle?: number;
   debounceLoading?: number;
 }
 
 export class QueryManager<Q, R> {
-  private processQuery: (query: Q) => Promise<R>;
+  private processQuery: (
+    query: Q,
+    setIntermediateQuery: (intermediateQuery: any) => void,
+  ) => Promise<R>;
   private onStateChange?: (queryResolve: QueryStateInt<R>) => void;
 
   private terminated = false;
   private nextQuery: Q | undefined;
   private lastQuery: Q | undefined;
+  private lastIntermediateQuery: any;
   private actuallyLoading = false;
   private state: QueryStateInt<R> = {
-    result: null,
     loading: false,
-    error: null,
   };
   private currentQueryId = 0;
 
@@ -78,21 +80,23 @@ export class QueryManager<Q, R> {
     const myQueryId = this.currentQueryId;
 
     this.actuallyLoading = true;
-    this.processQuery(this.lastQuery).then(
+    this.processQuery(this.lastQuery, (intermediateQuery: any) => {
+      this.lastIntermediateQuery = intermediateQuery;
+    }).then(
       result => {
         if (this.currentQueryId !== myQueryId) return;
         this.actuallyLoading = false;
         this.setState({
           result,
           loading: false,
-          error: null,
+          error: undefined,
         });
       },
       (e: Error) => {
         if (this.currentQueryId !== myQueryId) return;
         this.actuallyLoading = false;
         this.setState({
-          result: null,
+          result: undefined,
           loading: false,
           error: e.message,
         });
@@ -104,9 +108,9 @@ export class QueryManager<Q, R> {
     const currentActuallyLoading = this.actuallyLoading;
 
     this.setState({
-      result: null,
+      result: undefined,
       loading: true,
-      error: null,
+      error: undefined,
     });
 
     if (currentActuallyLoading) {
@@ -134,6 +138,10 @@ export class QueryManager<Q, R> {
 
   public getLastQuery(): Q | undefined {
     return this.lastQuery;
+  }
+
+  public getLastIntermediateQuery(): any {
+    return this.lastIntermediateQuery;
   }
 
   public getState(): QueryStateInt<R> {

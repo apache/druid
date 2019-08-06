@@ -48,7 +48,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   private static final byte[] CLASS_CACHE_KEY;
 
   static {
-    final byte[] keyUtf8 = StringUtils.toUtf8(NamespaceLookupExtractorFactory.class.getCanonicalName());
+    final byte[] keyUtf8 = StringUtils.toUtf8(NamespaceLookupExtractorFactory.class.getName());
     CLASS_CACHE_KEY = ByteBuffer.allocate(keyUtf8.length + 1).put(keyUtf8).put((byte) 0xFF).array();
   }
 

@@ -12,12 +12,60 @@ exports[`segments-view matches snapshot 1`] = `
         localStorageKey="segments-refresh-rate"
         onRefresh={[Function]}
       />
-      <Blueprint3.Button
-        disabled={true}
-        icon="application"
-        onClick={[Function]}
-        text="Go to SQL"
-      />
+      <Blueprint3.Popover
+        boundary="scrollParent"
+        captureDismiss={false}
+        content={
+          <Blueprint3.Menu>
+            <Blueprint3.MenuItem
+              disabled={true}
+              icon="application"
+              multiline={false}
+              onClick={[Function]}
+              popoverProps={Object {}}
+              shouldDismissPopover={true}
+              text="See in SQL view"
+            />
+          </Blueprint3.Menu>
+        }
+        defaultIsOpen={false}
+        disabled={false}
+        fill={false}
+        hasBackdrop={false}
+        hoverCloseDelay={300}
+        hoverOpenDelay={150}
+        inheritDarkTheme={true}
+        interactionKind="click"
+        minimal={false}
+        modifiers={Object {}}
+        openOnTargetFocus={true}
+        position="bottom-left"
+        targetTagName="span"
+        transitionDuration={300}
+        usePortal={true}
+        wrapperTagName="span"
+      >
+        <Blueprint3.Button
+          icon="more"
+        />
+      </Blueprint3.Popover>
+      <Component>
+        Group by
+      </Component>
+      <Blueprint3.ButtonGroup>
+        <Blueprint3.Button
+          active={true}
+          onClick={[Function]}
+        >
+          None
+        </Blueprint3.Button>
+        <Blueprint3.Button
+          active={false}
+          onClick={[Function]}
+        >
+          Interval
+        </Blueprint3.Button>
+      </Blueprint3.ButtonGroup>
       <TableColumnSelector
         columns={
           Array [
@@ -109,6 +157,14 @@ exports[`segments-view matches snapshot 1`] = `
             "Header": "Datasource",
             "accessor": "datasource",
             "show": true,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": "Interval",
+            "accessor": "interval",
+            "defaultSortDesc": true,
+            "show": false,
+            "width": 120,
           },
           Object {
             "Cell": [Function],
@@ -209,7 +265,7 @@ exports[`segments-view matches snapshot 1`] = `
       defaultFilterMethod={[Function]}
       defaultFiltered={Array []}
       defaultPage={0}
-      defaultPageSize={50}
+      defaultPageSize={25}
       defaultResized={Array []}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
@@ -234,7 +290,7 @@ exports[`segments-view matches snapshot 1`] = `
         Array [
           Object {
             "id": "datasource",
-            "value": "test",
+            "value": "\\"test\\"",
           },
         ]
       }
@@ -287,6 +343,7 @@ exports[`segments-view matches snapshot 1`] = `
       }
       pageText="Page"
       pages={10000000}
+      pivotBy={Array []}
       pivotDefaults={Object {}}
       pivotIDKey="_pivotID"
       pivotValKey="_pivotVal"

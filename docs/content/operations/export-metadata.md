@@ -27,6 +27,7 @@ title: "Export Metadata Tool"
 Druid includes an `export-metadata` tool for assisting with migration of cluster metadata and deep storage.
 
 This tool exports the contents of the following Druid metadata tables:
+
 - segments
 - rules
 - config
@@ -37,6 +38,7 @@ Additionally, the tool can rewrite the local deep storage location descriptors i
 to point to new deep storage locations (S3, HDFS, and local rewrite paths are supported).
 
 The tool has the following limitations:
+
 - Only exporting from Derby metadata is currently supported
 - If rewriting load specs for deep storage migration, only migrating from local deep storage is currently supported.
 
@@ -46,20 +48,19 @@ The `export-metadata` tool provides the following options:
 
 ### Connection Properties
 
-`--connectURI`: The URI of the Derby database, e.g. `jdbc:derby://localhost:1527/var/druid/metadata.db;create=true`
-`--user`: Username
-`--password`: Password
-`--base`: corresponds to the value of `druid.metadata.storage.tables.base` in the configuration, `druid` by default.
+- `--connectURI`: The URI of the Derby database, e.g. `jdbc:derby://localhost:1527/var/druid/metadata.db;create=true`
+- `--user`: Username
+- `--password`: Password
+- `--base`: corresponds to the value of `druid.metadata.storage.tables.base` in the configuration, `druid` by default.
 
 ### Output Path
 
-`--output-path`, `-o`: The output directory of the tool. CSV files for the Druid segments, rules, config, datasource, and supervisors tables will be written to this directory.
+- `--output-path`, `-o`: The output directory of the tool. CSV files for the Druid segments, rules, config, datasource, and supervisors tables will be written to this directory.
 
 ### Export Format Options
 
-`--use-hex-blobs`, `-x`: If set, export BLOB payload columns as hexadecimal strings. This needs to be set if importing back into Derby. Default is false.
-
-`--booleans-as-strings`, `-t`: If set, write boolean values as "true" or "false" instead of "1" and "0". This needs to be set if importing back into Derby. Default is false.
+- `--use-hex-blobs`, `-x`: If set, export BLOB payload columns as hexadecimal strings. This needs to be set if importing back into Derby. Default is false.
+- `--booleans-as-strings`, `-t`: If set, write boolean values as "true" or "false" instead of "1" and "0". This needs to be set if importing back into Derby. Default is false.
 
 ### Deep Storage Migration
 
@@ -69,8 +70,8 @@ By setting the options below, the tool will rewrite the segment load specs to po
 
 This helps users migrate segments stored in local deep storage to S3.
 
-`--s3bucket`, `-b`: The S3 bucket that will hold the migrated segments
-`--s3baseKey`, `-k`: The base S3 key where the migrated segments will be stored
+- `--s3bucket`, `-b`: The S3 bucket that will hold the migrated segments
+- `--s3baseKey`, `-k`: The base S3 key where the migrated segments will be stored
 
 When copying the local deep storage segments to S3, the rewrite performed by this tool requires that the directory structure of the segments be unchanged.
 
@@ -142,6 +143,7 @@ java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log
 ```
 
 In the example command above:
+
 - `lib` is the the Druid lib directory
 - `extensions` is the Druid extensions directory
 - `/tmp/csv` is the output directory. Please make sure that this directory exists.

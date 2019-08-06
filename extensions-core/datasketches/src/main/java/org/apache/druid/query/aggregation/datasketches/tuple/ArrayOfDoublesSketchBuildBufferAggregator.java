@@ -30,6 +30,8 @@ import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
 
+import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
@@ -50,6 +52,7 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   private final BaseDoubleColumnValueSelector[] valueSelectors;
   private final int nominalEntries;
   private final int maxIntermediateSize;
+  @Nullable
   private double[] values; // not part of the state, but to reuse in aggregate() method
   private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
 

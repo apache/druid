@@ -40,16 +40,23 @@ public class ExtractOperatorConversion implements SqlOperatorConversion
   private static final Map<TimeUnitRange, TimestampExtractExprMacro.Unit> EXTRACT_UNIT_MAP =
       ImmutableMap.<TimeUnitRange, TimestampExtractExprMacro.Unit>builder()
           .put(TimeUnitRange.EPOCH, TimestampExtractExprMacro.Unit.EPOCH)
+          .put(TimeUnitRange.MICROSECOND, TimestampExtractExprMacro.Unit.MICROSECOND)
+          .put(TimeUnitRange.MILLISECOND, TimestampExtractExprMacro.Unit.MILLISECOND)
           .put(TimeUnitRange.SECOND, TimestampExtractExprMacro.Unit.SECOND)
           .put(TimeUnitRange.MINUTE, TimestampExtractExprMacro.Unit.MINUTE)
           .put(TimeUnitRange.HOUR, TimestampExtractExprMacro.Unit.HOUR)
           .put(TimeUnitRange.DAY, TimestampExtractExprMacro.Unit.DAY)
           .put(TimeUnitRange.DOW, TimestampExtractExprMacro.Unit.DOW)
+          .put(TimeUnitRange.ISODOW, TimestampExtractExprMacro.Unit.ISODOW)
           .put(TimeUnitRange.DOY, TimestampExtractExprMacro.Unit.DOY)
           .put(TimeUnitRange.WEEK, TimestampExtractExprMacro.Unit.WEEK)
           .put(TimeUnitRange.MONTH, TimestampExtractExprMacro.Unit.MONTH)
           .put(TimeUnitRange.QUARTER, TimestampExtractExprMacro.Unit.QUARTER)
           .put(TimeUnitRange.YEAR, TimestampExtractExprMacro.Unit.YEAR)
+          .put(TimeUnitRange.ISOYEAR, TimestampExtractExprMacro.Unit.ISOYEAR)
+          .put(TimeUnitRange.DECADE, TimestampExtractExprMacro.Unit.DECADE)
+          .put(TimeUnitRange.CENTURY, TimestampExtractExprMacro.Unit.CENTURY)
+          .put(TimeUnitRange.MILLENNIUM, TimestampExtractExprMacro.Unit.MILLENNIUM)
           .build();
 
   @Override

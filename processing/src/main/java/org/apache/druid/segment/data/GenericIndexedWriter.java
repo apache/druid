@@ -140,10 +140,13 @@ public class GenericIndexedWriter<T> implements Serializer
   private boolean objectsSorted = true;
   @Nullable
   private T prevObject = null;
+  @Nullable
   private WriteOutBytes headerOut = null;
+  @Nullable
   private WriteOutBytes valuesOut = null;
   private int numWritten = 0;
   private boolean requireMultipleFiles = false;
+  @Nullable
   private LongList headerOutLong;
 
   private final ByteBuffer getOffsetBuffer = ByteBuffer.allocate(Integer.BYTES);
@@ -281,7 +284,7 @@ public class GenericIndexedWriter<T> implements Serializer
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, @Nullable FileSmoosher smoosher) throws IOException
   {
     if (requireMultipleFiles) {
       writeToMultiFiles(channel, smoosher);

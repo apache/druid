@@ -39,7 +39,7 @@ export class ActionCell extends React.PureComponent<ActionCellProps> {
     super(props, context);
   }
 
-  render() {
+  render(): JSX.Element {
     const { onDetail, actions } = this.props;
     const actionsMenu = actions ? basicActionsToMenu(actions) : null;
 

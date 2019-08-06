@@ -40,6 +40,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -51,7 +52,6 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -249,7 +249,7 @@ public class QueryLifecycle
   {
     transition(State.AUTHORIZED, State.EXECUTING);
 
-    final ConcurrentMap<String, Object> responseContext = DirectDruidClient.makeResponseContextForQuery();
+    final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
 
     final Sequence res = QueryPlus.wrap(baseQuery)
                                   .withIdentity(authenticationResult.getIdentity())
@@ -345,6 +345,15 @@ public class QueryLifecycle
     return baseQuery;
   }
 
+  public QueryToolChest getToolChest()
+  {
+    if (state.compareTo(State.INITIALIZED) < 0) {
+      throw new ISE("Not yet initialized");
+    }
+
+    return toolChest;
+  }
+
   private void transition(final State from, final State to)
   {
     if (state != from) {
@@ -368,9 +377,9 @@ public class QueryLifecycle
   public static class QueryResponse
   {
     private final Sequence results;
-    private final Map<String, Object> responseContext;
+    private final ResponseContext responseContext;
 
-    private QueryResponse(final Sequence results, final Map<String, Object> responseContext)
+    private QueryResponse(final Sequence results, final ResponseContext responseContext)
     {
       this.results = results;
       this.responseContext = responseContext;
@@ -381,7 +390,7 @@ public class QueryLifecycle
       return results;
     }
 
-    public Map<String, Object> getResponseContext()
+    public ResponseContext getResponseContext()
     {
       return responseContext;
     }

@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { ColumnMetadata } from '../../../utils/column-metadata';
 
@@ -50,7 +50,7 @@ describe('column tree', () => {
             },
           ] as ColumnMetadata[]
         }
-        onQueryStringChange={() => null}
+        onQueryStringChange={() => {}}
       />
     );
 

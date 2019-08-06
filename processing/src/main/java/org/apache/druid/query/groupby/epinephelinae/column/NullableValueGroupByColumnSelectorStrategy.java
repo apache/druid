@@ -21,11 +21,11 @@ package org.apache.druid.query.groupby.epinephelinae.column;
 
 
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Map;
 
 public class NullableValueGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
 {
@@ -46,14 +46,14 @@ public class NullableValueGroupByColumnSelectorStrategy implements GroupByColumn
   public void processValueFromGroupingKey(
       GroupByColumnSelectorPlus selectorPlus,
       ByteBuffer key,
-      Map<String, Object> resultMap,
+      ResultRow resultRow,
       int keyBufferPosition
   )
   {
     if (key.get(keyBufferPosition) == NullHandling.IS_NULL_BYTE) {
-      resultMap.put(selectorPlus.getOutputName(), null);
+      resultRow.set(selectorPlus.getResultRowPosition(), null);
     } else {
-      delegate.processValueFromGroupingKey(selectorPlus, key, resultMap, keyBufferPosition + Byte.BYTES);
+      delegate.processValueFromGroupingKey(selectorPlus, key, resultRow, keyBufferPosition + Byte.BYTES);
     }
   }
 

@@ -22,11 +22,10 @@ package org.apache.druid.query.groupby.having;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
+import org.apache.druid.query.groupby.ResultRow;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -35,9 +34,9 @@ import java.util.Map;
 public class DimensionSelectorHavingSpecTest
 {
 
-  private Row getTestRow(Object dimensionValue)
+  private ResultRow getTestRow(Object dimensionValue)
   {
-    return new MapBasedRow(0, ImmutableMap.of("dimension", dimensionValue));
+    return ResultRow.of(dimensionValue);
   }
 
   @Test

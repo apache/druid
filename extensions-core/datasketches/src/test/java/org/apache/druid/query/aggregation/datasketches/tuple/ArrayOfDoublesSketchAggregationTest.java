@@ -20,13 +20,13 @@
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
 import com.yahoo.sketches.quantiles.DoublesSketch;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.ResultRow;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -77,7 +77,7 @@ public class ArrayOfDoublesSketchAggregationTest
   @Test
   public void ingestingSketches() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/array_of_doubles_sketch_data.tsv").getFile()),
         String.join("\n",
             "{",
@@ -138,17 +138,17 @@ public class ArrayOfDoublesSketchAggregationTest
             "  ],",
             "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
             "}"));
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
-    Assert.assertEquals(0, (double) row.getMetric("non_existing_sketch"), 0);
-    Assert.assertEquals(40.0, (double) row.getRaw("sketch"), 0);
-    Assert.assertEquals(40.0, (double) row.getRaw("estimate"), 0);
-    Assert.assertEquals(40.0, (double) row.getRaw("union"), 0);
-    Assert.assertEquals(40.0, (double) row.getRaw("intersection"), 0);
-    Assert.assertEquals(0, (double) row.getRaw("anotb"), 0);
+    ResultRow row = results.get(0);
+    Assert.assertEquals("non_existing_sketch", 0, (double) row.get(1), 0);
+    Assert.assertEquals("sketch", 40.0, (double) row.get(0), 0);
+    Assert.assertEquals("estimate", 40.0, (double) row.get(2), 0);
+    Assert.assertEquals("union", 40.0, (double) row.get(4), 0);
+    Assert.assertEquals("intersection", 40.0, (double) row.get(5), 0);
+    Assert.assertEquals("anotb", 0, (double) row.get(6), 0);
 
-    Object obj = row.getRaw("quantiles-sketch");
+    Object obj = row.get(3); // quantiles-sketch
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
@@ -159,7 +159,7 @@ public class ArrayOfDoublesSketchAggregationTest
   @Test
   public void ingestingSketchesTwoValues() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/array_of_doubles_sketch_data_two_values.tsv")
             .getFile()),
         String.join("\n",
@@ -225,23 +225,23 @@ public class ArrayOfDoublesSketchAggregationTest
             "  ],",
             "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
             "}"));
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
-    Assert.assertEquals(40.0, (double) row.getRaw("sketch"), 0);
-    Assert.assertEquals(40.0, (double) row.getRaw("estimate"), 0);
-    Assert.assertEquals(40.0, (double) row.getRaw("union"), 0);
-    Assert.assertEquals(40.0, (double) row.getRaw("intersection"), 0);
-    Assert.assertEquals(0, (double) row.getRaw("anotb"), 0);
+    ResultRow row = results.get(0);
+    Assert.assertEquals("sketch", 40.0, (double) row.get(0), 0);
+    Assert.assertEquals("estimate", 40.0, (double) row.get(1), 0);
+    Assert.assertEquals("union", 40.0, (double) row.get(3), 0);
+    Assert.assertEquals("intersection", 40.0, (double) row.get(4), 0);
+    Assert.assertEquals("anotb", 0, (double) row.get(5), 0);
 
-    Object meansObj = row.getRaw("means");
+    Object meansObj = row.get(6); // means
     Assert.assertTrue(meansObj instanceof double[]);
     double[] means = (double[]) meansObj;
     Assert.assertEquals(2, means.length);
     Assert.assertEquals(1.0, means[0], 0);
     Assert.assertEquals(2.0, means[1], 0);
 
-    Object quantilesObj = row.getRaw("quantiles-sketch");
+    Object quantilesObj = row.get(2); // quantiles-sketch
     Assert.assertTrue(quantilesObj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) quantilesObj;
     Assert.assertEquals(40, ds.getN());
@@ -252,7 +252,7 @@ public class ArrayOfDoublesSketchAggregationTest
   @Test
   public void buildingSketchesAtIngestionTime() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/array_of_doubles_build_data.tsv").getFile()),
         String.join("\n",
             "{",
@@ -311,16 +311,16 @@ public class ArrayOfDoublesSketchAggregationTest
             "  ],",
             "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
             "}"));
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
-    Assert.assertEquals(40.0, (double) row.getRaw("sketch"), 0);
-    Assert.assertEquals(40.0, (double) row.getRaw("estimate"), 0);
-    Assert.assertEquals(40.0, (double) row.getRaw("union"), 0);
-    Assert.assertEquals(40.0, (double) row.getRaw("intersection"), 0);
-    Assert.assertEquals(0, (double) row.getRaw("anotb"), 0);
+    ResultRow row = results.get(0);
+    Assert.assertEquals("sketch", 40.0, (double) row.get(0), 0);
+    Assert.assertEquals("estimate", 40.0, (double) row.get(1), 0);
+    Assert.assertEquals("union", 40.0, (double) row.get(3), 0);
+    Assert.assertEquals("intersection", 40.0, (double) row.get(4), 0);
+    Assert.assertEquals("anotb", 0, (double) row.get(5), 0);
 
-    Object obj = row.getRaw("quantiles-sketch");
+    Object obj = row.get(2);  // quantiles-sketch
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
@@ -331,7 +331,7 @@ public class ArrayOfDoublesSketchAggregationTest
   @Test
   public void buildingSketchesAtIngestionTimeTwoValues() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(
             this.getClass().getClassLoader().getResource("tuple/array_of_doubles_build_data_two_values.tsv").getFile()),
         String.join("\n",
@@ -399,23 +399,23 @@ public class ArrayOfDoublesSketchAggregationTest
             "  ],",
             "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
             "}"));
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
-    Assert.assertEquals(40.0, (double) row.getRaw("sketch"), 0);
-    Assert.assertEquals(40.0, (double) row.getRaw("estimate"), 0);
-    Assert.assertEquals(40.0, (double) row.getRaw("union"), 0);
-    Assert.assertEquals(40.0, (double) row.getRaw("intersection"), 0);
-    Assert.assertEquals(0, (double) row.getRaw("anotb"), 0);
+    ResultRow row = results.get(0);
+    Assert.assertEquals("sketch", 40.0, (double) row.get(0), 0);
+    Assert.assertEquals("estimate", 40.0, (double) row.get(1), 0);
+    Assert.assertEquals("union", 40.0, (double) row.get(3), 0);
+    Assert.assertEquals("intersection", 40.0, (double) row.get(4), 0);
+    Assert.assertEquals("anotb", 0, (double) row.get(5), 0);
 
-    Object meansObj = row.getRaw("means");
+    Object meansObj = row.get(6); // means
     Assert.assertTrue(meansObj instanceof double[]);
     double[] means = (double[]) meansObj;
     Assert.assertEquals(2, means.length);
     Assert.assertEquals(1.0, means[0], 0);
     Assert.assertEquals(2.0, means[1], 0);
 
-    Object obj = row.getRaw("quantiles-sketch");
+    Object obj = row.get(2); // quantiles-sketch
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
@@ -426,7 +426,7 @@ public class ArrayOfDoublesSketchAggregationTest
   @Test
   public void buildingSketchesAtQueryTime() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/array_of_doubles_build_data.tsv").getFile()),
         String.join("\n",
             "{",
@@ -486,17 +486,17 @@ public class ArrayOfDoublesSketchAggregationTest
             "  ],",
             "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
             "}"));
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
-    Assert.assertEquals(40.0, new Double(row.getRaw("cnt").toString()), 0);
-    Assert.assertEquals(40.0, (double) row.getRaw("sketch"), 0);
-    Assert.assertEquals(40.0, new Double(row.getRaw("estimate").toString()), 0);
-    Assert.assertEquals(40.0, new Double(row.getRaw("union").toString()), 0);
-    Assert.assertEquals(40.0, new Double(row.getRaw("intersection").toString()), 0);
-    Assert.assertEquals(0, new Double(row.getRaw("anotb").toString()), 0);
+    ResultRow row = results.get(0);
+    Assert.assertEquals("cnt", 40.0, new Double(row.get(1).toString()), 0);
+    Assert.assertEquals("sketch", 40.0, (double) row.get(0), 0);
+    Assert.assertEquals("estimate", 40.0, new Double(row.get(2).toString()), 0);
+    Assert.assertEquals("union", 40.0, new Double(row.get(4).toString()), 0);
+    Assert.assertEquals("intersection", 40.0, new Double(row.get(5).toString()), 0);
+    Assert.assertEquals("anotb", 0, new Double(row.get(6).toString()), 0);
 
-    Object obj = row.getRaw("quantiles-sketch");
+    Object obj = row.get(3); // quantiles-sketch
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
@@ -509,7 +509,7 @@ public class ArrayOfDoublesSketchAggregationTest
   @Test
   public void buildingSketchesAtQueryTimeAndTTest() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("tuple/bucket_test_data.tsv").getFile()),
         String.join("\n",
             "{",
@@ -558,10 +558,10 @@ public class ArrayOfDoublesSketchAggregationTest
             "  ],",
             "  \"intervals\": [\"2017-01-01T00:00:00.000Z/2017-01-31T00:00:00.000Z\"]",
             "}"));
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
-    Object obj = row.getRaw("p-value");
+    ResultRow row = results.get(0);
+    Object obj = row.get(2); // p-value
     Assert.assertTrue(obj instanceof double[]);
     double[] array = (double[]) obj;
     Assert.assertEquals(1, array.length);

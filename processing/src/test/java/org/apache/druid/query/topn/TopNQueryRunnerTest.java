@@ -65,6 +65,7 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
@@ -249,14 +250,12 @@ public class TopNQueryRunnerTest
     return retval;
   }
 
-  private Sequence<Result<TopNResultValue>> runWithMerge(
-      TopNQuery query
-  )
+  private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query)
   {
-    return runWithMerge(query, ImmutableMap.of());
+    return runWithMerge(query, ResponseContext.createEmpty());
   }
 
-  private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, Map<String, Object> context)
+  private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, ResponseContext context)
   {
     final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),
@@ -291,7 +290,7 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = ImmutableList.of(
@@ -324,11 +323,11 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -385,7 +384,7 @@ public class TopNQueryRunnerTest
         .metric("rows")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-        .aggregators(Collections.singletonList(new CountAggregatorFactory("rows")))
+        .aggregators(new CountAggregatorFactory("rows"))
         .build();
 
     final HashMap<String, Object> resultMap = new HashMap<>();
@@ -411,7 +410,7 @@ public class TopNQueryRunnerTest
         .metric("rows")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-        .aggregators(Collections.singletonList(new CountAggregatorFactory("rows")))
+        .aggregators(new CountAggregatorFactory("rows"))
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -451,11 +450,11 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -515,19 +514,17 @@ public class TopNQueryRunnerTest
             )
         )
         .postAggregators(
-            ImmutableList.of(
-                new ExpressionPostAggregator(
-                    "dimPostAgg",
-                    "market + 'x'",
-                    null,
-                    TestExprMacroTable.INSTANCE
-                )
+            new ExpressionPostAggregator(
+                "dimPostAgg",
+                "market + 'x'",
+                null,
+                TestExprMacroTable.INSTANCE
             )
         )
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -586,11 +583,11 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -638,13 +635,11 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.uniqueMetric)
         .threshold(3)
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-        .aggregators(
-            Collections.<AggregatorFactory>singletonList(new HyperUniquesAggregatorFactory("uniques", "missingUniques"))
-        )
+        .aggregators(new HyperUniquesAggregatorFactory("uniques", "missingUniques"))
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -677,14 +672,12 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric)
         .threshold(3)
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-        .aggregators(
-            Collections.<AggregatorFactory>singletonList(QueryRunnerTestHelper.qualityUniques)
-        )
+        .aggregators(QueryRunnerTestHelper.qualityUniques)
         .postAggregators(
-            Collections.singletonList(new HyperUniqueFinalizingPostAggregator(
+            new HyperUniqueFinalizingPostAggregator(
                 QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
                 QueryRunnerTestHelper.uniqueMetric
-            ))
+            )
         )
         .build();
 
@@ -725,16 +718,14 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric)
         .threshold(3)
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-        .aggregators(
-            Collections.<AggregatorFactory>singletonList(QueryRunnerTestHelper.qualityUniques)
-        )
+        .aggregators(QueryRunnerTestHelper.qualityUniques)
         .postAggregators(
-            Collections.singletonList(new ExpressionPostAggregator(
+            new ExpressionPostAggregator(
                 QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
                 "uniques + 1",
                 null,
                 TestExprMacroTable.INSTANCE
-            ))
+            )
         )
         .build();
 
@@ -781,16 +772,14 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric)
         .threshold(3)
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-        .aggregators(
-            Collections.<AggregatorFactory>singletonList(QueryRunnerTestHelper.qualityUniquesRounded)
-        )
+        .aggregators(QueryRunnerTestHelper.qualityUniquesRounded)
         .postAggregators(
-            Collections.singletonList(new ExpressionPostAggregator(
+            new ExpressionPostAggregator(
                 QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
                 "uniques + 1",
                 null,
                 TestExprMacroTable.INSTANCE
-            ))
+            )
         )
         .build();
 
@@ -832,10 +821,8 @@ public class TopNQueryRunnerTest
         .threshold(3)
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
-            Arrays.asList(
-                new LongFirstAggregatorFactory("first", "index"),
-                new LongLastAggregatorFactory("last", "index")
-            )
+            new LongFirstAggregatorFactory("first", "index"),
+            new LongLastAggregatorFactory("last", "index")
         )
         .build();
 
@@ -943,10 +930,8 @@ public class TopNQueryRunnerTest
         .threshold(3)
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
-            Arrays.asList(
-                new LongFirstAggregatorFactory("first", "index"),
-                new LongLastAggregatorFactory("last", "index")
-            )
+            new LongFirstAggregatorFactory("first", "index"),
+            new LongLastAggregatorFactory("last", "index")
         )
         .context(ImmutableMap.of("chunkPeriod", "P1D"))
         .build();
@@ -1057,10 +1042,8 @@ public class TopNQueryRunnerTest
         .threshold(3)
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
-            Arrays.asList(
-                new FloatFirstAggregatorFactory("first", "index"),
-                new FloatLastAggregatorFactory("last", "index")
-            )
+            new FloatFirstAggregatorFactory("first", "index"),
+            new FloatLastAggregatorFactory("last", "index")
         )
         .build();
 
@@ -1168,10 +1151,8 @@ public class TopNQueryRunnerTest
         .threshold(3)
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
-            Arrays.asList(
-                new FloatFirstAggregatorFactory("first", "indexFloat"),
-                new FloatLastAggregatorFactory("last", "indexFloat")
-            )
+            new FloatFirstAggregatorFactory("first", "indexFloat"),
+            new FloatLastAggregatorFactory("last", "indexFloat")
         )
         .build();
 
@@ -1284,13 +1265,13 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .context(specialContext)
         .build();
 
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -1319,10 +1300,8 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    Sequence<Result<TopNResultValue>> results = runWithMerge(
-        query,
-        specialContext
-    );
+
+    Sequence<Result<TopNResultValue>> results = runWithMerge(query);
     List<Result<BySegmentTopNResultValue>> resultList = results
         .map((Result<TopNResultValue> input) -> {
           // Stupid type erasure
@@ -1368,12 +1347,12 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -1416,12 +1395,12 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -1465,11 +1444,11 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -1513,11 +1492,11 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -1554,11 +1533,11 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Collections.<Map<String, Object>>singletonList(
@@ -1588,11 +1567,11 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -1640,11 +1619,11 @@ public class TopNQueryRunnerTest
             )
         )
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -1688,11 +1667,11 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -1729,7 +1708,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
     assertExpectedResults(
         Collections.singletonList(
@@ -1755,7 +1734,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
     assertExpectedResults(
         Collections.singletonList(
@@ -1777,7 +1756,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     assertExpectedResults(
@@ -1791,7 +1770,7 @@ public class TopNQueryRunnerTest
                 .threshold(4)
                 .intervals(QueryRunnerTestHelper.firstToThird)
                 .aggregators(commonAggregators)
-                .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+                .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
                 .build()
         ).toList(),
         query
@@ -1810,7 +1789,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     assertExpectedResults(
@@ -1829,7 +1808,7 @@ public class TopNQueryRunnerTest
                 .threshold(4)
                 .intervals(QueryRunnerTestHelper.firstToThird)
                 .aggregators(commonAggregators)
-                .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+                .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
                 .build()
         ).toList(),
         query
@@ -1848,7 +1827,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     final List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -1889,7 +1868,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     final List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -1937,11 +1916,11 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     final List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -1991,7 +1970,7 @@ public class TopNQueryRunnerTest
         .threshold(1)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -2025,7 +2004,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -2059,7 +2038,7 @@ public class TopNQueryRunnerTest
         .threshold(1)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -2092,7 +2071,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -2172,7 +2151,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -2212,7 +2191,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -2252,11 +2231,11 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -2292,11 +2271,11 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -2339,7 +2318,7 @@ public class TopNQueryRunnerTest
         .threshold(10)
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -2386,7 +2365,7 @@ public class TopNQueryRunnerTest
         .threshold(10)
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -2428,12 +2407,10 @@ public class TopNQueryRunnerTest
         .threshold(2)
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                QueryRunnerTestHelper.indexDoubleSum
-            )
+            QueryRunnerTestHelper.rowsCount,
+            QueryRunnerTestHelper.indexDoubleSum
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -2498,7 +2475,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -2600,7 +2577,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -2664,7 +2641,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -2729,7 +2706,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -2796,7 +2773,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -2862,11 +2839,11 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -2928,11 +2905,11 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -2995,11 +2972,11 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -3048,11 +3025,11 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -3101,11 +3078,11 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -3154,11 +3131,11 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -3225,11 +3202,11 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -3272,11 +3249,11 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -3318,11 +3295,11 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -3384,7 +3361,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .dimension(
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
@@ -3472,7 +3449,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .dimension(
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
@@ -3529,7 +3506,7 @@ public class TopNQueryRunnerTest
             .threshold(3)
             .intervals(QueryRunnerTestHelper.firstToThird)
             .aggregators(commonAggregators)
-            .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+            .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
             .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -3685,16 +3662,14 @@ public class TopNQueryRunnerTest
             )
         )
         .postAggregators(
-            Arrays.asList(
-                QueryRunnerTestHelper.addRowsIndexConstant,
-                QueryRunnerTestHelper.dependentPostAgg,
-                QueryRunnerTestHelper.hyperUniqueFinalizingPostAgg
-            )
+            QueryRunnerTestHelper.addRowsIndexConstant,
+            QueryRunnerTestHelper.dependentPostAgg,
+            QueryRunnerTestHelper.hyperUniqueFinalizingPostAgg
         )
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -3769,10 +3744,8 @@ public class TopNQueryRunnerTest
             )
         )
         .postAggregators(
-            Arrays.asList(
-                QueryRunnerTestHelper.addRowsIndexConstant,
-                QueryRunnerTestHelper.dependentPostAgg
-            )
+            QueryRunnerTestHelper.addRowsIndexConstant,
+            QueryRunnerTestHelper.dependentPostAgg
         )
         .context(ImmutableMap.of("finalize", true, "bySegment", true))
         .build();
@@ -3835,11 +3808,9 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                QueryRunnerTestHelper.jsCountIfTimeGreaterThan,
-                QueryRunnerTestHelper.__timeLongSum
-            )
+            QueryRunnerTestHelper.rowsCount,
+            QueryRunnerTestHelper.jsCountIfTimeGreaterThan,
+            QueryRunnerTestHelper.__timeLongSum
         )
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(QueryRunnerTestHelper.marketDimension)
@@ -3903,12 +3874,10 @@ public class TopNQueryRunnerTest
         .threshold(2)
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                QueryRunnerTestHelper.indexDoubleSum
-            )
+            QueryRunnerTestHelper.rowsCount,
+            QueryRunnerTestHelper.indexDoubleSum
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -3956,7 +3925,7 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     Map<String, Object> map = new HashMap<>();
@@ -4004,7 +3973,7 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     Map<String, Object> map = new HashMap<>();
@@ -4165,7 +4134,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -4204,7 +4173,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
 
@@ -4223,8 +4192,7 @@ public class TopNQueryRunnerTest
                                             .threshold(3)
                                             .intervals(QueryRunnerTestHelper.firstToThird)
                                             .aggregators(commonAggregators)
-                                            .postAggregators(Collections.singletonList(
-                                                QueryRunnerTestHelper.addRowsIndexConstant))
+                                            .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
                                             .filters(
                                                 new ExtractionDimFilter(
                                                     QueryRunnerTestHelper.marketDimension,
@@ -4293,7 +4261,7 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant));
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant);
     TopNQuery topNQueryWithNULLValueExtraction = topNQueryBuilder
         .filters(extractionFilter)
         .build();
@@ -4321,10 +4289,10 @@ public class TopNQueryRunnerTest
 
   private Sequence<Result<TopNResultValue>> runWithPreMergeAndMerge(TopNQuery query)
   {
-    return runWithPreMergeAndMerge(query, ImmutableMap.of());
+    return runWithMerge(query, ResponseContext.createEmpty());
   }
 
-  private Sequence<Result<TopNResultValue>> runWithPreMergeAndMerge(TopNQuery query, Map<String, Object> context)
+  private Sequence<Result<TopNResultValue>> runWithPreMergeAndMerge(TopNQuery query, ResponseContext context)
   {
     final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),
@@ -4359,12 +4327,21 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-        .aggregators(Lists.newArrayList(Iterables.concat(commonAggregators, Lists.newArrayList(
-            new FilteredAggregatorFactory(new DoubleMaxAggregatorFactory("maxIndex", "index"),
-                                          extractionFilter),
-            //new DoubleMaxAggregatorFactory("maxIndex", "index"),
-            new DoubleMinAggregatorFactory("minIndex", "index")))))
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant));
+        .aggregators(
+            Lists.newArrayList(
+                Iterables.concat(
+                    commonAggregators,
+                    Lists.newArrayList(
+                        new FilteredAggregatorFactory(
+                            new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                            extractionFilter
+                        ),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant);
     TopNQuery topNQueryWithNULLValueExtraction = topNQueryBuilder
         .filters(extractionFilter)
         .build();
@@ -4414,11 +4391,11 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -4489,11 +4466,11 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -4561,11 +4538,11 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -4633,11 +4610,11 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -4705,12 +4682,12 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .virtualColumns(new ExpressionVirtualColumn("ql_expr", "qualityLong", ValueType.LONG, ExprMacroTable.nil()))
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -4776,7 +4753,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(commonAggregators)
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -4836,11 +4813,11 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -4908,11 +4885,11 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -4980,11 +4957,11 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -5052,11 +5029,11 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -5124,11 +5101,11 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -5331,11 +5308,11 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -5410,7 +5387,7 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     Map<String, Object> expectedMap = new HashMap<>();
@@ -5423,7 +5400,7 @@ public class TopNQueryRunnerTest
     expectedMap.put("minIndex", 59.02102279663086D);
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Collections.singletonList(
@@ -5458,11 +5435,11 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -5536,11 +5513,11 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -5605,11 +5582,11 @@ public class TopNQueryRunnerTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -5713,7 +5690,7 @@ public class TopNQueryRunnerTest
       }
       queryBuilder.metric(metric);
       if (hasIndexAggregator && hasRowsAggregator) {
-        queryBuilder.postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant));
+        queryBuilder.postAggregators(QueryRunnerTestHelper.addRowsIndexConstant);
       }
       TopNQuery query = queryBuilder.build();
 
@@ -5767,13 +5744,11 @@ public class TopNQueryRunnerTest
         .metric("Count")
         .threshold(5)
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-        .aggregators(
-            Collections.singletonList(new LongSumAggregatorFactory("Count", "qualityLong"))
-        )
+        .aggregators(new LongSumAggregatorFactory("Count", "qualityLong"))
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(Collections.emptyList())
         )
@@ -5804,9 +5779,7 @@ public class TopNQueryRunnerTest
         .metric("count")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(
-            Collections.singletonList(new DoubleSumAggregatorFactory("count", "qualityDouble"))
-        )
+        .aggregators(new DoubleSumAggregatorFactory("count", "qualityDouble"))
         .build();
 
     // Don't check results, just the fact that the query could complete

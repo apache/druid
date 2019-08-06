@@ -19,86 +19,135 @@
 
 package org.apache.druid.timeline.partition;
 
+import org.apache.druid.timeline.Overshadowable;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class IntegerPartitionChunkTest
 {
+  private static IntegerPartitionChunk<OvershadowableInteger> make(
+      Integer start,
+      Integer end,
+      int chunkNumber,
+      int obj
+  )
+  {
+    return new IntegerPartitionChunk<>(start, end, chunkNumber, new OvershadowableInteger(obj));
+  }
+
   @Test
   public void testAbuts()
   {
-    IntegerPartitionChunk<Integer> lhs = IntegerPartitionChunk.make(null, 10, 0, 1);
+    IntegerPartitionChunk<OvershadowableInteger> lhs = make(null, 10, 0, 1);
 
-    Assert.assertTrue(lhs.abuts(IntegerPartitionChunk.make(10, null, 1, 2)));
-    Assert.assertFalse(lhs.abuts(IntegerPartitionChunk.make(11, null, 2, 3)));
-    Assert.assertFalse(lhs.abuts(IntegerPartitionChunk.make(null, null, 3, 4)));
+    Assert.assertTrue(lhs.abuts(make(10, null, 1, 2)));
+    Assert.assertFalse(lhs.abuts(make(11, null, 2, 3)));
+    Assert.assertFalse(lhs.abuts(make(null, null, 3, 4)));
 
-    Assert.assertFalse(IntegerPartitionChunk.make(null, null, 0, 1)
-                                            .abuts(IntegerPartitionChunk.make(null, null, 1, 2)));
+    Assert.assertFalse(make(null, null, 0, 1).abuts(make(null, null, 1, 2)));
   }
 
   @Test
   public void testIsStart()
   {
-    Assert.assertTrue(IntegerPartitionChunk.make(null, 10, 0, 1).isStart());
-    Assert.assertFalse(IntegerPartitionChunk.make(10, null, 0, 1).isStart());
-    Assert.assertFalse(IntegerPartitionChunk.make(10, 11, 0, 1).isStart());
-    Assert.assertTrue(IntegerPartitionChunk.make(null, null, 0, 1).isStart());
+    Assert.assertTrue(make(null, 10, 0, 1).isStart());
+    Assert.assertFalse(make(10, null, 0, 1).isStart());
+    Assert.assertFalse(make(10, 11, 0, 1).isStart());
+    Assert.assertTrue(make(null, null, 0, 1).isStart());
   }
 
   @Test
   public void testIsEnd()
   {
-    Assert.assertFalse(IntegerPartitionChunk.make(null, 10, 0, 1).isEnd());
-    Assert.assertTrue(IntegerPartitionChunk.make(10, null, 0, 1).isEnd());
-    Assert.assertFalse(IntegerPartitionChunk.make(10, 11, 0, 1).isEnd());
-    Assert.assertTrue(IntegerPartitionChunk.make(null, null, 0, 1).isEnd());
+    Assert.assertFalse(make(null, 10, 0, 1).isEnd());
+    Assert.assertTrue(make(10, null, 0, 1).isEnd());
+    Assert.assertFalse(make(10, 11, 0, 1).isEnd());
+    Assert.assertTrue(make(null, null, 0, 1).isEnd());
   }
 
   @Test
   public void testCompareTo()
   {
-    //noinspection EqualsWithItself (the intention of this first test is specifically to call compareTo with itself)
     Assert.assertEquals(
         0,
-        IntegerPartitionChunk.make(null, null, 0, 1).compareTo(IntegerPartitionChunk.make(null, null, 0, 1))
+        make(null, null, 0, 1).compareTo(make(null, null, 0, 1))
     );
     Assert.assertEquals(
         0,
-        IntegerPartitionChunk.make(10, null, 0, 1).compareTo(IntegerPartitionChunk.make(10, null, 0, 2))
+        make(10, null, 0, 1).compareTo(make(10, null, 0, 2))
     );
     Assert.assertEquals(
         0,
-        IntegerPartitionChunk.make(null, 10, 0, 1).compareTo(IntegerPartitionChunk.make(null, 10, 0, 2))
+        make(null, 10, 0, 1).compareTo(make(null, 10, 0, 2))
     );
     Assert.assertEquals(
         0,
-        IntegerPartitionChunk.make(10, 11, 0, 1).compareTo(IntegerPartitionChunk.make(10, 11, 0, 2))
+        make(10, 11, 0, 1).compareTo(make(10, 11, 0, 2))
     );
     Assert.assertEquals(
         -1,
-        IntegerPartitionChunk.make(null, 10, 0, 1).compareTo(IntegerPartitionChunk.make(10, null, 1, 2))
+        make(null, 10, 0, 1).compareTo(make(10, null, 1, 2))
     );
     Assert.assertEquals(
         -1,
-        IntegerPartitionChunk.make(11, 20, 0, 1).compareTo(IntegerPartitionChunk.make(20, 33, 1, 1))
+        make(11, 20, 0, 1).compareTo(make(20, 33, 1, 1))
     );
     Assert.assertEquals(
         1,
-        IntegerPartitionChunk.make(20, 33, 1, 1).compareTo(IntegerPartitionChunk.make(11, 20, 0, 1))
+        make(20, 33, 1, 1).compareTo(make(11, 20, 0, 1))
     );
     Assert.assertEquals(
         1,
-        IntegerPartitionChunk.make(10, null, 1, 1).compareTo(IntegerPartitionChunk.make(null, 10, 0, 1))
+        make(10, null, 1, 1).compareTo(make(null, 10, 0, 1))
     );
   }
 
   @Test
   public void testEquals()
   {
-    Assert.assertEquals(IntegerPartitionChunk.make(null, null, 0, 1), IntegerPartitionChunk.make(null, null, 0, 1));
-    Assert.assertEquals(IntegerPartitionChunk.make(null, 10, 0, 1), IntegerPartitionChunk.make(null, 10, 0, 1));
-    Assert.assertEquals(IntegerPartitionChunk.make(10, null, 0, 1), IntegerPartitionChunk.make(10, null, 0, 1));
-    Assert.assertEquals(IntegerPartitionChunk.make(10, 11, 0, 1), IntegerPartitionChunk.make(10, 11, 0, 1));
+    Assert.assertEquals(make(null, null, 0, 1), make(null, null, 0, 1));
+    Assert.assertEquals(make(null, 10, 0, 1), make(null, 10, 0, 1));
+    Assert.assertEquals(make(10, null, 0, 1), make(10, null, 0, 1));
+    Assert.assertEquals(make(10, 11, 0, 1), make(10, 11, 0, 1));
+  }
+
+  private static class OvershadowableInteger implements Overshadowable<OvershadowableInteger>
+  {
+    private final int val;
+
+    OvershadowableInteger(int val)
+    {
+      this.val = val;
+    }
+
+    @Override
+    public int getStartRootPartitionId()
+    {
+      return 0;
+    }
+
+    @Override
+    public int getEndRootPartitionId()
+    {
+      return 1;
+    }
+
+    @Override
+    public String getVersion()
+    {
+      return "";
+    }
+
+    @Override
+    public short getMinorVersion()
+    {
+      return 0;
+    }
+
+    @Override
+    public short getAtomicUpdateGroupSize()
+    {
+      return 1;
+    }
   }
 }

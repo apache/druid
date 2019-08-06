@@ -39,7 +39,8 @@ public enum NodeRole
   OVERLORD("overlord"),
   PEON("peon"),
   ROUTER("router"),
-  MIDDLE_MANAGER("middleManager");
+  MIDDLE_MANAGER("middleManager"),
+  INDEXER("indexer");
 
   private final String jsonName;
 

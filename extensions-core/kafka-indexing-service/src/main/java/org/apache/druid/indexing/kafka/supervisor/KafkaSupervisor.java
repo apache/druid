@@ -258,7 +258,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
           null,
           null,
           rowIngestionMetersFactory,
-          sortingMapper
+          sortingMapper,
+          null
       ));
     }
     return taskList;
@@ -266,6 +267,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
 
 
   @Override
+  // suppress use of CollectionUtils.mapValues() since the valueMapper function is dependent on map key here
+  @SuppressWarnings("SSBasedInspection")
   protected Map<Integer, Long> getLagPerPartition(Map<Integer, Long> currentOffsets)
   {
     return currentOffsets

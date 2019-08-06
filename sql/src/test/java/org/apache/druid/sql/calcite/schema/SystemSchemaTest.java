@@ -105,11 +105,10 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class SystemSchemaTest extends CalciteTestBase
 {
@@ -272,8 +271,7 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("met1", "met2"),
       null,
       1,
-      53000L,
-      DataSegment.PruneLoadSpecHolder.DEFAULT
+      53000L
   );
   private final DataSegment publishedSegment2 = new DataSegment(
       "wikipedia2",
@@ -284,8 +282,7 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("met1", "met2"),
       null,
       1,
-      83000L,
-      DataSegment.PruneLoadSpecHolder.DEFAULT
+      83000L
   );
   private final DataSegment publishedSegment3 = new DataSegment(
       "wikipedia3",
@@ -296,8 +293,7 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("met1", "met2"),
       null,
       1,
-      47000L,
-      DataSegment.PruneLoadSpecHolder.DEFAULT
+      47000L
   );
 
   private final DataSegment segment1 = new DataSegment(
@@ -309,8 +305,7 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("met1", "met2"),
       null,
       1,
-      100L,
-      DataSegment.PruneLoadSpecHolder.DEFAULT
+      100L
   );
   private final DataSegment segment2 = new DataSegment(
       "test2",
@@ -321,8 +316,7 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("met1", "met2"),
       null,
       1,
-      100L,
-      DataSegment.PruneLoadSpecHolder.DEFAULT
+      100L
   );
   private final DataSegment segment3 = new DataSegment(
       "test3",
@@ -333,8 +327,7 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("met1", "met2"),
       new NumberedShardSpec(2, 3),
       1,
-      100L,
-      DataSegment.PruneLoadSpecHolder.DEFAULT
+      100L
   );
   private final DataSegment segment4 = new DataSegment(
       "test4",
@@ -345,8 +338,7 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("met1", "met2"),
       null,
       1,
-      100L,
-      DataSegment.PruneLoadSpecHolder.DEFAULT
+      100L
   );
   private final DataSegment segment5 = new DataSegment(
       "test5",
@@ -357,8 +349,7 @@ public class SystemSchemaTest extends CalciteTestBase
       ImmutableList.of("met1", "met2"),
       null,
       1,
-      100L,
-      DataSegment.PruneLoadSpecHolder.DEFAULT
+      100L
   );
 
   final List<DataSegment> realtimeSegments = ImmutableList.of(segment2, segment4, segment5);
@@ -430,6 +421,13 @@ public class SystemSchemaTest extends CalciteTestBase
           DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0))
   );
 
+  private final DiscoveryDruidNode indexer = new DiscoveryDruidNode(
+      new DruidNode("s8", "indexerHost", false, 8091, null, true, false),
+      NodeRole.INDEXER,
+      ImmutableMap.of(
+          DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0))
+  );
+
   private final ImmutableDruidServer druidServer1 = new ImmutableDruidServer(
       new DruidServerMetadata("server1", "localhost:0000", null, 5L, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0),
       1L,
@@ -484,19 +482,18 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testSegmentsTable()
   {
-
     final SystemSchema.SegmentsTable segmentsTable = EasyMock
         .createMockBuilder(SystemSchema.SegmentsTable.class)
         .withConstructor(druidSchema, metadataView, mapper, authMapper)
         .createMock();
     EasyMock.replay(segmentsTable);
-    final Set<SegmentWithOvershadowedStatus> publishedSegments = Stream.of(
+    final Set<SegmentWithOvershadowedStatus> publishedSegments = new HashSet<>(Arrays.asList(
         new SegmentWithOvershadowedStatus(publishedSegment1, true),
         new SegmentWithOvershadowedStatus(publishedSegment2, false),
         new SegmentWithOvershadowedStatus(publishedSegment3, false),
         new SegmentWithOvershadowedStatus(segment1, true),
         new SegmentWithOvershadowedStatus(segment2, false)
-    ).collect(Collectors.toSet());
+    ));
 
     EasyMock.expect(metadataView.getPublishedSegments()).andReturn(publishedSegments.iterator()).once();
 
@@ -696,6 +693,8 @@ public class SystemSchemaTest extends CalciteTestBase
     final DruidNodeDiscovery historicalNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
     final DruidNodeDiscovery mmNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
     final DruidNodeDiscovery peonNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    final DruidNodeDiscovery indexerNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+
 
     EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.COORDINATOR))
             .andReturn(coordinatorNodeDiscovery)
@@ -711,6 +710,9 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.MIDDLE_MANAGER))
             .andReturn(mmNodeDiscovery)
             .once();
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.INDEXER))
+            .andReturn(indexerNodeDiscovery)
+            .once();
     EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.PEON)).andReturn(peonNodeDiscovery).once();
 
     EasyMock.expect(coordinatorNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(coordinator)).once();
@@ -720,6 +722,7 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(historicalNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(historical1, historical2)).once();
     EasyMock.expect(mmNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(middleManager)).once();
     EasyMock.expect(peonNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(peon1, peon2)).once();
+    EasyMock.expect(indexerNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(indexer)).once();
 
     final DruidServer server1 = EasyMock.createMock(DruidServer.class);
     EasyMock.expect(serverInventoryView.getInventoryValue(historical1.toDruidServer().getName())).andReturn(server1).once();
@@ -736,7 +739,8 @@ public class SystemSchemaTest extends CalciteTestBase
         routerNodeDiscovery,
         historicalNodeDiscovery,
         mmNodeDiscovery,
-        peonNodeDiscovery
+        peonNodeDiscovery,
+        indexerNodeDiscovery
     );
 
     DataContext dataContext = new DataContext()
@@ -767,7 +771,7 @@ public class SystemSchemaTest extends CalciteTestBase
     };
     final List<Object[]> rows = serversTable.scan(dataContext).toList();
     rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
-    Assert.assertEquals(10, rows.size());
+    Assert.assertEquals(11, rows.size());
     verifyServerRow(
         rows.get(0),
         "brokerHost:8082",
@@ -792,6 +796,17 @@ public class SystemSchemaTest extends CalciteTestBase
     );
     verifyServerRow(
         rows.get(2),
+        "indexerHost:8091",
+        "indexerHost",
+        8091,
+        -1,
+        "indexer",
+        null,
+        0,
+        0
+    );
+    verifyServerRow(
+        rows.get(3),
         "localhost:8080",
         "localhost",
         8080,
@@ -802,7 +817,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0
     );
     verifyServerRow(
-        rows.get(3),
+        rows.get(4),
         "localhost:8081",
         "localhost",
         8081,
@@ -813,7 +828,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0
     );
     verifyServerRow(
-        rows.get(4),
+        rows.get(5),
         "localhost:8082",
         "localhost",
         8082,
@@ -824,7 +839,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0
     );
     verifyServerRow(
-        rows.get(5),
+        rows.get(6),
         "localhost:8083",
         "localhost",
         8083,
@@ -835,7 +850,7 @@ public class SystemSchemaTest extends CalciteTestBase
         1000
     );
     verifyServerRow(
-        rows.get(6),
+        rows.get(7),
         "localhost:8090",
         "localhost",
         8090,
@@ -846,7 +861,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0
     );
     verifyServerRow(
-        rows.get(7),
+        rows.get(8),
         "localhost:8888",
         "localhost",
         8888,
@@ -857,7 +872,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0
     );
     verifyServerRow(
-        rows.get(8),
+        rows.get(9),
         "mmHost:8091",
         "mmHost",
         8091,
@@ -868,7 +883,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0
     );
     verifyServerRow(
-        rows.get(9),
+        rows.get(10),
         "peonHost:8080",
         "peonHost",
         8080,

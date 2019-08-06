@@ -29,7 +29,7 @@ exports[`run button matches snapshot 1`] = `
               caret-right
             </desc>
             <path
-              d="M11 8c0-.15-.07-.28-.17-.37l-4-3.5A.495.495 0 0 0 6 4.5v7a.495.495 0 0 0 .83.37l4-3.5c.1-.09.17-.22.17-.37z"
+              d="M11 8c0-.15-.07-.28-.17-.37l-4-3.5A.495.495 0 006 4.5v7a.495.495 0 00.83.37l4-3.5c.1-.09.17-.22.17-.37z"
               fill-rule="evenodd"
             />
           </svg>
@@ -66,7 +66,7 @@ exports[`run button matches snapshot 1`] = `
               more
             </desc>
             <path
-              d="M2 6.03a2 2 0 1 0 0 4 2 2 0 1 0 0-4zM14 6.03a2 2 0 1 0 0 4 2 2 0 1 0 0-4zM8 6.03a2 2 0 1 0 0 4 2 2 0 1 0 0-4z"
+              d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
               fill-rule="evenodd"
             />
           </svg>

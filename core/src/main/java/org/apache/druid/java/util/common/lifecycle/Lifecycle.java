@@ -436,8 +436,7 @@ public class Lifecycle
       for (Method method : o.getClass().getMethods()) {
         boolean doStart = false;
         for (Annotation annotation : method.getAnnotations()) {
-          if ("org.apache.druid.java.util.common.lifecycle.LifecycleStart".equals(annotation.annotationType()
-              .getCanonicalName())) {
+          if (LifecycleStart.class.getName().equals(annotation.annotationType().getName())) {
             doStart = true;
             break;
           }
@@ -455,8 +454,7 @@ public class Lifecycle
       for (Method method : o.getClass().getMethods()) {
         boolean doStop = false;
         for (Annotation annotation : method.getAnnotations()) {
-          if ("org.apache.druid.java.util.common.lifecycle.LifecycleStop".equals(annotation.annotationType()
-              .getCanonicalName())) {
+          if (LifecycleStop.class.getName().equals(annotation.annotationType().getName())) {
             doStop = true;
             break;
           }

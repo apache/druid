@@ -19,13 +19,11 @@
 
 package org.apache.druid.server.coordinator.helper;
 
-import com.google.common.collect.Iterables;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
-
-import java.util.TreeSet;
 
 public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
 {
@@ -41,50 +39,27 @@ public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    log.info("Starting coordination. Getting available segments.");
+    log.info("Starting coordination. Getting used segments.");
 
-    final Iterable<DataSegment> dataSegments = coordinator.iterateAvailableDataSegments();
-    if (dataSegments == null) {
-      log.info("Metadata store not polled yet, canceling this run.");
-      return null;
+    DataSourcesSnapshot dataSourcesSnapshot = params.getDataSourcesSnapshot();
+    for (DataSegment segment : dataSourcesSnapshot.iterateAllUsedSegmentsInSnapshot()) {
+      if (segment.getSize() < 0) {
+        log.makeAlert("No size on a segment")
+           .addData("segment", segment)
+           .emit();
+      }
     }
 
-    // The following transform() call doesn't actually transform the iterable. It only checks the sizes of the segments
-    // and emits alerts if segments with negative sizes are encountered. In other words, semantically it's similar to
-    // Stream.peek(). It works as long as DruidCoordinatorRuntimeParams.createAvailableSegmentsSet() (which is called
-    // below) guarantees to go over the passed iterable exactly once.
-    //
-    // An iterable returned from iterateAvailableDataSegments() is not simply iterated (with size checks) before passing
-    // into DruidCoordinatorRuntimeParams.createAvailableSegmentsSet() because iterateAvailableDataSegments()'s
-    // documentation says to strive to avoid iterating the result more than once.
-    //
-    //noinspection StaticPseudoFunctionalStyleMethod: https://youtrack.jetbrains.com/issue/IDEA-153047
-    Iterable<DataSegment> availableSegmentsWithSizeChecking = Iterables.transform(
-        dataSegments,
-        segment -> {
-          if (segment.getSize() < 0) {
-            log.makeAlert("No size on a segment")
-               .addData("segment", segment)
-               .emit();
-          }
-          return segment;
-        }
-    );
-    final TreeSet<DataSegment> availableSegments =
-        DruidCoordinatorRuntimeParams.createAvailableSegmentsSet(availableSegmentsWithSizeChecking);
-
-    // Log info about all available segments
+    // Log info about all used segments
     if (log.isDebugEnabled()) {
-      log.debug("Available DataSegments");
-      for (DataSegment dataSegment : availableSegments) {
+      log.debug("Used Segments");
+      for (DataSegment dataSegment : dataSourcesSnapshot.iterateAllUsedSegmentsInSnapshot()) {
         log.debug("  %s", dataSegment);
       }
     }
 
-    log.info("Found [%,d] available segments.", availableSegments.size());
+    log.info("Found [%,d] used segments.", params.getUsedSegments().size());
 
-    return params.buildFromExisting()
-                 .setAvailableSegments(availableSegments)
-                 .build();
+    return params;
   }
 }
