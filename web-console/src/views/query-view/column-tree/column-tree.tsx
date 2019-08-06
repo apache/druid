@@ -31,65 +31,104 @@ import { ColumnMetadata } from '../../../utils/column-metadata';
 
 import './column-tree.scss';
 
-function handleNodeClick(nodeData: ITreeNode, nodePath: number[]): void {
-  const { onQueryStringChange } = this.props;
-  const { columnTree, selectedTreeIndex } = this.state;
-
-  console.log(nodeData, nodePath);
-
-  const selectedNode = columnTree[selectedTreeIndex];
-  switch (nodePath.length) {
-    case 1: // Datasource
-      const tableSchema = selectedNode.label;
-      let columns: string[];
-      if (nodeData.childNodes) {
-        columns = nodeData.childNodes.map(child => escapeSqlIdentifier(String(child.label)));
-      } else {
-        columns = ['*'];
-      }
-      if (tableSchema === 'druid') {
-        onQueryStringChange(`SELECT ${columns.join(', ')}
+function handleTableClick(
+  tableSchema: string,
+  nodeData: ITreeNode,
+  onQueryStringChange: (queryString: string) => void,
+): void {
+  let columns: string[];
+  if (nodeData.childNodes) {
+    columns = nodeData.childNodes.map(child => escapeSqlIdentifier(String(child.label)));
+  } else {
+    columns = ['*'];
+  }
+  if (tableSchema === 'druid') {
+    onQueryStringChange(`SELECT ${columns.join(', ')}
 FROM ${escapeSqlIdentifier(String(nodeData.label))}
 WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
-      } else {
-        onQueryStringChange(`SELECT ${columns.join(', ')}
+  } else {
+    onQueryStringChange(`SELECT ${columns.join(', ')}
 FROM ${tableSchema}.${nodeData.label}`);
-      }
-      break;
+  }
+}
 
-    case 2: // Column
-      const schemaNode = selectedNode;
-      const columnSchema = schemaNode.label;
-      const columnTable = schemaNode.childNodes
-        ? String(schemaNode.childNodes[nodePath[0]].label)
-        : '?';
-      if (columnSchema === 'druid') {
-        if (nodeData.icon === IconNames.TIME) {
-          onQueryStringChange(`SELECT
+function getTableQuery(tableSchema: string, nodeData: ITreeNode): string {
+  let columns: string[];
+  if (nodeData.childNodes) {
+    columns = nodeData.childNodes.map(child => escapeSqlIdentifier(String(child.label)));
+  } else {
+    columns = ['*'];
+  }
+  if (tableSchema === 'druid') {
+    return `SELECT ${columns.join(', ')}
+FROM ${escapeSqlIdentifier(String(nodeData.label))}
+WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`;
+  } else {
+    return `SELECT ${columns.join(', ')}
+FROM ${tableSchema}.${nodeData.label}`;
+  }
+}
+
+function handleColumnClick(
+  columnSchema: string,
+  columnTable: string,
+  nodeData: ITreeNode,
+  onQueryStringChange: (queryString: string) => void,
+): void {
+  if (columnSchema === 'druid') {
+    if (nodeData.icon === IconNames.TIME) {
+      onQueryStringChange(`SELECT
   TIME_FLOOR(${escapeSqlIdentifier(String(nodeData.label))}, 'PT1H') AS "Time",
   COUNT(*) AS "Count"
 FROM ${escapeSqlIdentifier(columnTable)}
 WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
 GROUP BY 1
 ORDER BY "Time" ASC`);
-        } else {
-          onQueryStringChange(`SELECT
+    } else {
+      onQueryStringChange(`SELECT
   "${nodeData.label}",
   COUNT(*) AS "Count"
 FROM ${escapeSqlIdentifier(columnTable)}
 WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
 GROUP BY 1
 ORDER BY "Count" DESC`);
-        }
-      } else {
-        onQueryStringChange(`SELECT
+    }
+  } else {
+    onQueryStringChange(`SELECT
   ${escapeSqlIdentifier(String(nodeData.label))},
   COUNT(*) AS "Count"
 FROM ${columnSchema}.${columnTable}
 GROUP BY 1
 ORDER BY "Count" DESC`);
-      }
-      break;
+  }
+}
+
+function getColumnQuery(columnSchema: string, columnTable: string, nodeData: ITreeNode): string {
+  if (columnSchema === 'druid') {
+    if (nodeData.icon === IconNames.TIME) {
+      return `SELECT
+  TIME_FLOOR(${escapeSqlIdentifier(String(nodeData.label))}, 'PT1H') AS "Time",
+  COUNT(*) AS "Count"
+FROM ${escapeSqlIdentifier(columnTable)}
+WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
+GROUP BY 1
+ORDER BY "Time" ASC`;
+    } else {
+      return `SELECT
+  "${nodeData.label}",
+  COUNT(*) AS "Count"
+FROM ${escapeSqlIdentifier(columnTable)}
+WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
+GROUP BY 1
+ORDER BY "Count" DESC`;
+    }
+  } else {
+    return `SELECT
+  ${escapeSqlIdentifier(String(nodeData.label))},
+  COUNT(*) AS "Count"
+FROM ${columnSchema}.${columnTable}
+GROUP BY 1
+ORDER BY "Count" DESC`;
   }
 }
 
@@ -125,21 +164,81 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
             (metadata, table) => ({
               id: table,
               icon: IconNames.TH,
-              label: table,
+              label: (
+                <Popover
+                  boundary={'window'}
+                  position={Position.RIGHT}
+                  content={basicActionsToMenu([
+                    {
+                      icon: IconNames.CLIPBOARD,
+                      title: `Copy ${table}`,
+                      onAction: () => {
+                        copy(
+                          getTableQuery(schema, {
+                            id: table,
+                            icon: IconNames.TH,
+                            label: table,
+                            childNodes: metadata.map(columnData => ({
+                              id: columnData.COLUMN_NAME,
+                              icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
+                              label: columnData.COLUMN_NAME,
+                            })),
+                          }),
+                          { format: 'text/plain' },
+                        );
+                        AppToaster.show({
+                          message: `${table} query copied to clipboard`,
+                          intent: Intent.SUCCESS,
+                        });
+                      },
+                    },
+                    {
+                      icon: IconNames.FULLSCREEN,
+                      title: `Show ${table}`,
+                      onAction: () => {
+                        handleTableClick(
+                          schema,
+                          {
+                            id: table,
+                            icon: IconNames.TH,
+                            label: table,
+                            childNodes: metadata.map(columnData => ({
+                              id: columnData.COLUMN_NAME,
+                              icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
+                              label: columnData.COLUMN_NAME,
+                            })),
+                          },
+                          props.onQueryStringChange,
+                        );
+                      },
+                    },
+                  ])}
+                >
+                  <div>{table}</div>
+                </Popover>
+              ),
               childNodes: metadata.map(columnData => ({
                 id: columnData.COLUMN_NAME,
                 icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
                 label: (
                   <Popover
-                    position={Position.LEFT}
+                    boundary={'window'}
+                    position={Position.RIGHT}
                     content={basicActionsToMenu([
                       {
                         icon: IconNames.CLIPBOARD,
                         title: `Copy ${columnData.COLUMN_NAME}`,
                         onAction: () => {
-                          copy(columnData.COLUMN_NAME, { format: 'text/plain' });
+                          copy(
+                            getColumnQuery(schema, table, {
+                              id: columnData.COLUMN_NAME,
+                              icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
+                              label: columnData.COLUMN_NAME,
+                            }),
+                            { format: 'text/plain' },
+                          );
                           AppToaster.show({
-                            message: `${columnData.COLUMN_NAME}' copied to clipboard`,
+                            message: `${columnData.COLUMN_NAME} query copied to clipboard`,
                             intent: Intent.SUCCESS,
                           });
                         },
@@ -148,12 +247,21 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                         icon: IconNames.FULLSCREEN,
                         title: `Show ${columnData.COLUMN_NAME}`,
                         onAction: () => {
-                          handleNodeClick(columnData.COLUMN_NAME);
+                          handleColumnClick(
+                            schema,
+                            table,
+                            {
+                              id: columnData.COLUMN_NAME,
+                              icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
+                              label: columnData.COLUMN_NAME,
+                            },
+                            props.onQueryStringChange,
+                          );
                         },
                       },
                     ])}
                   >
-                    {columnData.COLUMN_NAME}
+                    <div>{columnData.COLUMN_NAME}</div>
                   </Popover>
                 ),
               })),
@@ -259,14 +367,13 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     if (expandedNode > -1) {
       currentSchemaSubtree[expandedNode].isExpanded = true;
     }
-    console.log(currentSchemaSubtree);
     return (
       <div className="column-tree">
         {this.renderSchemaSelector()}
         <div className="tree-container">
           <Tree
             contents={currentSchemaSubtree}
-            onNodeClick={this.handleNodeClick}
+            onNodeClick={() => this.setState({ expandedNode: -1 })}
             onNodeCollapse={this.handleNodeCollapse}
             onNodeExpand={this.handleNodeExpand}
           />
@@ -274,71 +381,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       </div>
     );
   }
-
-  private handleNodeClick = (nodeData: ITreeNode, nodePath: number[]) => {
-    const { onQueryStringChange } = this.props;
-    const { columnTree, selectedTreeIndex } = this.state;
-    this.setState({ expandedNode: -1 });
-    if (!columnTree) return;
-
-    const selectedNode = columnTree[selectedTreeIndex];
-
-    console.log(selectedNode);
-
-    switch (nodePath.length) {
-      case 1: // Datasource
-        const tableSchema = selectedNode.label;
-        let columns: string[];
-        if (nodeData.childNodes) {
-          columns = nodeData.childNodes.map(child => escapeSqlIdentifier(String(child.label)));
-        } else {
-          columns = ['*'];
-        }
-        if (tableSchema === 'druid') {
-          onQueryStringChange(`SELECT ${columns.join(', ')}
-FROM ${escapeSqlIdentifier(String(nodeData.label))}
-WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
-        } else {
-          onQueryStringChange(`SELECT ${columns.join(', ')}
-FROM ${tableSchema}.${nodeData.label}`);
-        }
-        break;
-
-      case 2: // Column
-        const schemaNode = selectedNode;
-        const columnSchema = schemaNode.label;
-        const columnTable = schemaNode.childNodes
-          ? String(schemaNode.childNodes[nodePath[0]].label)
-          : '?';
-        if (columnSchema === 'druid') {
-          if (nodeData.icon === IconNames.TIME) {
-            onQueryStringChange(`SELECT
-  TIME_FLOOR(${escapeSqlIdentifier(String(nodeData.label))}, 'PT1H') AS "Time",
-  COUNT(*) AS "Count"
-FROM ${escapeSqlIdentifier(columnTable)}
-WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
-GROUP BY 1
-ORDER BY "Time" ASC`);
-          } else {
-            onQueryStringChange(`SELECT
-  "${nodeData.label}",
-  COUNT(*) AS "Count"
-FROM ${escapeSqlIdentifier(columnTable)}
-WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
-GROUP BY 1
-ORDER BY "Count" DESC`);
-          }
-        } else {
-          onQueryStringChange(`SELECT
-  ${escapeSqlIdentifier(String(nodeData.label))},
-  COUNT(*) AS "Count"
-FROM ${columnSchema}.${columnTable}
-GROUP BY 1
-ORDER BY "Count" DESC`);
-        }
-        break;
-    }
-  };
 
   private handleNodeCollapse = (nodeData: ITreeNode) => {
     this.setState({ expandedNode: -1 });

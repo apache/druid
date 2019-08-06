@@ -95,6 +95,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
     if (disabled) {
       actionsMenu = basicActionsToMenu([
         {
+          icon: IconNames.CLIPBOARD,
           title: `Copy ${basicIdentifierEscape(h)}`,
           onAction: () => {
             copy(basicIdentifierEscape(h), { format: 'text/plain' });
@@ -105,6 +106,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
           },
         },
         {
+          icon: IconNames.CLIPBOARD,
           title: `Copy 'ORDER BY ${basicIdentifierEscape(h)} ASC'`,
           onAction: () => {
             copy(`ORDER BY ${basicIdentifierEscape(h)} ASC`, { format: 'text/plain' });
@@ -115,6 +117,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
           },
         },
         {
+          icon: IconNames.CLIPBOARD,
           title: `Copy 'ORDER BY ${basicIdentifierEscape(h)} DESC'`,
           onAction: () => {
             copy(`ORDER BY ${basicIdentifierEscape(h)} DESC`, { format: 'text/plain' });
@@ -169,7 +172,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
     if (disabled) {
       actionsMenu = basicActionsToMenu([
         {
-          icon: IconNames.DUPLICATE,
+          icon: IconNames.CLIPBOARD,
           title: `Copy '${row}'`,
           onAction: () => {
             copy(row, { format: 'text/plain' });
@@ -180,7 +183,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
           },
         },
         {
-          icon: IconNames.DUPLICATE,
+          icon: IconNames.CLIPBOARD,
           title: `Copy 'WHERE ${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)}'`,
           onAction: () => {
             copy(`WHERE  ${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)}`, {
@@ -195,7 +198,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
           },
         },
         {
-          icon: IconNames.DUPLICATE,
+          icon: IconNames.CLIPBOARD,
           title: `Copy 'WHERE ${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)}'`,
           onAction: () => {
             copy(`WHERE  ${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)}`, {
