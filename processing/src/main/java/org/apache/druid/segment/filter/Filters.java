@@ -663,7 +663,11 @@ public class Filters
    * If all these things are true, {@link org.apache.druid.segment.QueryableIndexStorageAdapter} will utilize the
    * indexes.
    */
-  public static boolean shouldUseIndex(Filter filter, BitmapIndexSelector indexSelector, FilterTuning filterTuning)
+  public static boolean shouldUseIndex(
+      Filter filter,
+      BitmapIndexSelector indexSelector,
+      @Nullable FilterTuning filterTuning
+  )
   {
     final FilterTuning tuning = filterTuning != null ? filterTuning : FilterTuning.createDefault(filter, indexSelector);
     if (filter.supportsBitmapIndex(indexSelector) && tuning.getUseIndex()) {
