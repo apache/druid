@@ -16,15 +16,16 @@
  * limitations under the License.
  */
 
-@import '../../variables';
+import { render } from '@testing-library/react';
+import React from 'react';
 
-.home-view {
-  display: grid;
-  grid-gap: $standard-padding;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
+import { SegmentsCard } from './segments-card';
 
-  & > a {
-    text-decoration: inherit;
-    color: inherit;
-  }
-}
+describe('segments card', () => {
+  it('matches snapshot', () => {
+    const segmentsCard = <SegmentsCard noSqlMode={false} />;
+
+    const { container } = render(segmentsCard);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
