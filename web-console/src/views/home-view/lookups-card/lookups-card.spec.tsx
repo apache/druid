@@ -16,15 +16,16 @@
  * limitations under the License.
  */
 
-@import '../../variables';
+import { render } from '@testing-library/react';
+import React from 'react';
 
-.home-view {
-  display: grid;
-  grid-gap: $standard-padding;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
+import { LookupsCard } from './lookups-card';
 
-  & > a {
-    text-decoration: inherit;
-    color: inherit;
-  }
-}
+describe('lookups card', () => {
+  it('matches snapshot', () => {
+    const lookupsCard = <LookupsCard />;
+
+    const { container } = render(lookupsCard);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

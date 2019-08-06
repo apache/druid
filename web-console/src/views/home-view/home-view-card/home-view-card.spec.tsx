@@ -16,15 +16,28 @@
  * limitations under the License.
  */
 
-@import '../../variables';
+import { IconNames } from '@blueprintjs/icons';
+import { render } from '@testing-library/react';
+import React from 'react';
 
-.home-view {
-  display: grid;
-  grid-gap: $standard-padding;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
+import { HomeViewCard } from './home-view-card';
 
-  & > a {
-    text-decoration: inherit;
-    color: inherit;
-  }
-}
+describe('home view card', () => {
+  it('matches snapshot', () => {
+    const homeViewCard = (
+      <HomeViewCard
+        className="some-card"
+        href={'#somewhere'}
+        icon={IconNames.DATABASE}
+        title={'Something'}
+        loading={false}
+        error={undefined}
+      >
+        Thigns
+      </HomeViewCard>
+    );
+
+    const { container } = render(homeViewCard);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
