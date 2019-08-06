@@ -16,57 +16,178 @@
  * limitations under the License.
  */
 
-import { HTMLSelect, IconName, ITreeNode, Tree } from '@blueprintjs/core';
+import { HTMLSelect, IconName, Intent, ITreeNode, Tree } from '@blueprintjs/core';
+import { Popover } from '@blueprintjs/core/lib/cjs';
+import { Position } from '@blueprintjs/core/lib/esm/common/position';
 import { IconNames } from '@blueprintjs/icons';
+import copy = require('copy-to-clipboard');
 import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
+import { AppToaster } from '../../../singletons/toaster';
 import { escapeSqlIdentifier, groupBy } from '../../../utils';
+import { basicActionsToMenu } from '../../../utils/basic-action';
 import { ColumnMetadata } from '../../../utils/column-metadata';
 
 import './column-tree.scss';
+
+function handleNodeClick(nodeData: ITreeNode, nodePath: number[]): void {
+  const { onQueryStringChange } = this.props;
+  const { columnTree, selectedTreeIndex } = this.state;
+
+  console.log(nodeData, nodePath);
+
+  const selectedNode = columnTree[selectedTreeIndex];
+  switch (nodePath.length) {
+    case 1: // Datasource
+      const tableSchema = selectedNode.label;
+      let columns: string[];
+      if (nodeData.childNodes) {
+        columns = nodeData.childNodes.map(child => escapeSqlIdentifier(String(child.label)));
+      } else {
+        columns = ['*'];
+      }
+      if (tableSchema === 'druid') {
+        onQueryStringChange(`SELECT ${columns.join(', ')}
+FROM ${escapeSqlIdentifier(String(nodeData.label))}
+WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
+      } else {
+        onQueryStringChange(`SELECT ${columns.join(', ')}
+FROM ${tableSchema}.${nodeData.label}`);
+      }
+      break;
+
+    case 2: // Column
+      const schemaNode = selectedNode;
+      const columnSchema = schemaNode.label;
+      const columnTable = schemaNode.childNodes
+        ? String(schemaNode.childNodes[nodePath[0]].label)
+        : '?';
+      if (columnSchema === 'druid') {
+        if (nodeData.icon === IconNames.TIME) {
+          onQueryStringChange(`SELECT
+  TIME_FLOOR(${escapeSqlIdentifier(String(nodeData.label))}, 'PT1H') AS "Time",
+  COUNT(*) AS "Count"
+FROM ${escapeSqlIdentifier(columnTable)}
+WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
+GROUP BY 1
+ORDER BY "Time" ASC`);
+        } else {
+          onQueryStringChange(`SELECT
+  "${nodeData.label}",
+  COUNT(*) AS "Count"
+FROM ${escapeSqlIdentifier(columnTable)}
+WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
+GROUP BY 1
+ORDER BY "Count" DESC`);
+        }
+      } else {
+        onQueryStringChange(`SELECT
+  ${escapeSqlIdentifier(String(nodeData.label))},
+  COUNT(*) AS "Count"
+FROM ${columnSchema}.${columnTable}
+GROUP BY 1
+ORDER BY "Count" DESC`);
+      }
+      break;
+  }
+}
 
 export interface ColumnTreeProps {
   columnMetadataLoading: boolean;
   columnMetadata?: ColumnMetadata[];
   onQueryStringChange: (queryString: string) => void;
+  defaultSchema?: string;
+  defaultTable?: string;
 }
 
 export interface ColumnTreeState {
   prevColumnMetadata?: ColumnMetadata[];
   columnTree?: ITreeNode[];
   selectedTreeIndex: number;
+  expandedNode: number;
 }
 
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
-    const { columnMetadata } = props;
+    const { columnMetadata, defaultSchema, defaultTable } = props;
 
     if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
+      const columnTree = groupBy(
+        columnMetadata,
+        r => r.TABLE_SCHEMA,
+        (metadata, schema): ITreeNode => ({
+          id: schema,
+          label: schema,
+          childNodes: groupBy(
+            metadata,
+            r => r.TABLE_NAME,
+            (metadata, table) => ({
+              id: table,
+              icon: IconNames.TH,
+              label: table,
+              childNodes: metadata.map(columnData => ({
+                id: columnData.COLUMN_NAME,
+                icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
+                label: (
+                  <Popover
+                    position={Position.LEFT}
+                    content={basicActionsToMenu([
+                      {
+                        icon: IconNames.CLIPBOARD,
+                        title: `Copy ${columnData.COLUMN_NAME}`,
+                        onAction: () => {
+                          copy(columnData.COLUMN_NAME, { format: 'text/plain' });
+                          AppToaster.show({
+                            message: `${columnData.COLUMN_NAME}' copied to clipboard`,
+                            intent: Intent.SUCCESS,
+                          });
+                        },
+                      },
+                      {
+                        icon: IconNames.FULLSCREEN,
+                        title: `Show ${columnData.COLUMN_NAME}`,
+                        onAction: () => {
+                          handleNodeClick(columnData.COLUMN_NAME);
+                        },
+                      },
+                    ])}
+                  >
+                    {columnData.COLUMN_NAME}
+                  </Popover>
+                ),
+              })),
+            }),
+          ),
+        }),
+      );
+
+      let selectedTreeIndex = -1;
+      let expandedNode = -1;
+      if (defaultSchema && columnTree) {
+        selectedTreeIndex = columnTree
+          .map(function(x) {
+            return x.id;
+          })
+          .indexOf(defaultSchema);
+      }
+      if (selectedTreeIndex > -1) {
+        const treeNodes = columnTree[selectedTreeIndex].childNodes;
+        if (treeNodes) {
+          if (defaultTable) {
+            expandedNode = treeNodes
+              .map(node => {
+                return node.id;
+              })
+              .indexOf(defaultTable);
+          }
+        }
+      }
       return {
         prevColumnMetadata: columnMetadata,
-        columnTree: groupBy(
-          columnMetadata,
-          r => r.TABLE_SCHEMA,
-          (metadata, schema): ITreeNode => ({
-            id: schema,
-            label: schema,
-            childNodes: groupBy(
-              metadata,
-              r => r.TABLE_NAME,
-              (metadata, table) => ({
-                id: table,
-                icon: IconNames.TH,
-                label: table,
-                childNodes: metadata.map(columnData => ({
-                  id: columnData.COLUMN_NAME,
-                  icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
-                  label: columnData.COLUMN_NAME,
-                })),
-              }),
-            ),
-          }),
-        ),
+        columnTree,
+        selectedTreeIndex,
+        expandedNode,
       };
     }
     return null;
@@ -88,7 +209,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   constructor(props: ColumnTreeProps, context: any) {
     super(props, context);
     this.state = {
-      selectedTreeIndex: 0,
+      selectedTreeIndex: -1,
+      expandedNode: -1,
     };
   }
 
@@ -99,7 +221,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     return (
       <HTMLSelect
         className="schema-selector"
-        value={selectedTreeIndex}
+        value={selectedTreeIndex > -1 ? selectedTreeIndex : undefined}
         onChange={this.handleSchemaSelectorChange}
         fill
         minimal
@@ -115,7 +237,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   }
 
   private handleSchemaSelectorChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    this.setState({ selectedTreeIndex: Number(e.target.value) });
+    this.setState({ selectedTreeIndex: Number(e.target.value), expandedNode: -1 });
   };
 
   render(): JSX.Element | null {
@@ -128,11 +250,16 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       );
     }
 
-    const { columnTree, selectedTreeIndex } = this.state;
+    const { columnTree, selectedTreeIndex, expandedNode } = this.state;
     if (!columnTree) return null;
-    const currentSchemaSubtree = columnTree[selectedTreeIndex].childNodes;
+    const currentSchemaSubtree =
+      columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
     if (!currentSchemaSubtree) return null;
 
+    if (expandedNode > -1) {
+      currentSchemaSubtree[expandedNode].isExpanded = true;
+    }
+    console.log(currentSchemaSubtree);
     return (
       <div className="column-tree">
         {this.renderSchemaSelector()}
@@ -151,9 +278,13 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   private handleNodeClick = (nodeData: ITreeNode, nodePath: number[]) => {
     const { onQueryStringChange } = this.props;
     const { columnTree, selectedTreeIndex } = this.state;
+    this.setState({ expandedNode: -1 });
     if (!columnTree) return;
 
     const selectedNode = columnTree[selectedTreeIndex];
+
+    console.log(selectedNode);
+
     switch (nodePath.length) {
       case 1: // Datasource
         const tableSchema = selectedNode.label;
@@ -210,6 +341,7 @@ ORDER BY "Count" DESC`);
   };
 
   private handleNodeCollapse = (nodeData: ITreeNode) => {
+    this.setState({ expandedNode: -1 });
     nodeData.isExpanded = false;
     this.bounceState();
   };
