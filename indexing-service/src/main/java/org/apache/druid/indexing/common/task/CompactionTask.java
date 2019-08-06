@@ -151,6 +151,9 @@ public class CompactionTask extends AbstractBatchIndexTask
   @JsonIgnore
   private List<IndexTask> indexTaskSpecs;
 
+  /**
+   * This variable is updated by the main thread and read by an HTTP thread when {@link #stopGracefully} is called.
+   */
   @Nullable
   private volatile IndexTask currentRunningTaskSpec = null;
 
