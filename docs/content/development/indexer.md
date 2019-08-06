@@ -30,7 +30,7 @@ The Indexer is an optional and <a href="../development/experimental.html">experi
 
 The Apache Druid (incubating) Indexer process is an alternative to the MiddleManager + Peon task execution system. Instead of forking a separate JVM process per-task, the Indexer runs tasks as separate threads within a single JVM process.
 
-The Indexer is designed to be easier to configure and deploy compared to the MiddleManager + Peon system.
+The Indexer is designed to be easier to configure and deploy compared to the MiddleManager + Peon system and to better enable resource sharing across tasks.
 
 ## Running
 
@@ -40,11 +40,13 @@ org.apache.druid.cli.Main server indexer
 
 ## Task Resource Sharing
 
-The following resources are shared across all tasks running inside an Indexer process:
+The following resources are shared across all tasks running inside an Indexer process.
 
 ### Query resources
 
 The query processing threads and buffers are shared across all tasks. The Indexer will serve queries from a single endpoint shared by all tasks.
+
+If [query caching](#indexer-caching) is enabled, the query cache is also shared across all tasks.
 
 ### Server HTTP threads
 
@@ -78,16 +80,16 @@ In addition to the [common configurations](../configuration/index.html#common-co
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.worker.version`|Version identifier for the MiddleManager.|0|
-|`druid.worker.capacity`|Maximum number of tasks the MiddleManager can accept.|Number of available processors - 1|
+|`druid.worker.version`|Version identifier for the Indexer.|0|
+|`druid.worker.capacity`|Maximum number of tasks the Indexer can accept.|Number of available processors - 1|
 |`druid.worker.globalIngestionHeapLimitBytes`|Total amount of heap available for ingestion processing. This is applied by automatically setting the `maxBytesInMemory` property on tasks.|60% of configured JVM heap|
 |`druid.worker.numConcurrentMerges`|Maximum number of segment persist or merge operations that can run concurrently across all tasks.|`druid.worker.capacity` / 2, rounded down|
 |`druid.indexer.task.baseDir`|Base temporary working directory.|`System.getProperty("java.io.tmpdir")`|
 |`druid.indexer.task.baseTaskDir`|Base temporary working directory for tasks.|`${druid.indexer.task.baseDir}/persistent/tasks`|
 |`druid.indexer.task.defaultHadoopCoordinates`|Hadoop version to use with HadoopIndexTasks that do not request a particular version.|org.apache.hadoop:hadoop-client:2.8.3|
-|`druid.indexer.task.gracefulShutdownTimeout`|Wait this long on middleManager restart for restorable tasks to gracefully exit.|PT5M|
+|`druid.indexer.task.gracefulShutdownTimeout`|Wait this long on Indexer restart for restorable tasks to gracefully exit.|PT5M|
 |`druid.indexer.task.hadoopWorkingPath`|Temporary working directory for Hadoop tasks.|`/tmp/druid-indexing`|
-|`druid.indexer.task.restoreTasksOnRestart`|If true, middleManagers will attempt to stop tasks gracefully on shutdown and restore them on restart.|false|
+|`druid.indexer.task.restoreTasksOnRestart`|If true, the Indexer will attempt to stop tasks gracefully on shutdown and restore them on restart.|false|
 |`druid.peon.taskActionClient.retry.minWait`|The minimum retry time to communicate with Overlord.|PT5S|
 |`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with Overlord.|PT1M|
 |`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with Overlord.|60|
@@ -143,10 +145,12 @@ You can optionally configure caching to be enabled on the Indexer by setting cac
 
 See [cache configuration](#cache-configuration) for how to configure cache settings.
 
+Note that only local caches such as the `local`-type cache and `caffeine` cache are supported. If a remote cache such as `memcached` is used, it will be ignored.
+
 ## Current Limitations
 
 Separate task logs are not currently supported when using the Indexer; all task log messages will instead be logged in the Indexer process log.
 
 The Indexer currently imposes an identical memory limit on each task. In later releases, the per-task memory limit will be removed and only the global limit will apply. The limit on concurrent merges will also be removed. 
 
-In late releases, per-task memory usage will be dynamically managed. Please see https://github.com/apache/incubator-druid/issues/7900 for details on future enhancements to the Indexer.
+In later releases, per-task memory usage will be dynamically managed. Please see https://github.com/apache/incubator-druid/issues/7900 for details on future enhancements to the Indexer.
