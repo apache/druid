@@ -16,7 +16,16 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Label } from '@blueprintjs/core';
+import {
+  Button,
+  ButtonGroup,
+  Intent,
+  Label,
+  Menu,
+  MenuItem,
+  Popover,
+  Position,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import { sum } from 'd3-array';
@@ -610,8 +619,31 @@ ORDER BY "rank" DESC, "server" DESC`;
     );
   }
 
-  render(): JSX.Element {
+  renderBulkServersActions() {
     const { goToQuery, noSqlMode } = this.props;
+
+    const bulkserversActionsMenu = (
+      <Menu>
+        {!noSqlMode && (
+          <MenuItem
+            icon={IconNames.APPLICATION}
+            text="See in SQL view"
+            onClick={() => goToQuery(ServersView.SERVER_SQL)}
+          />
+        )}
+      </Menu>
+    );
+
+    return (
+      <>
+        <Popover content={bulkserversActionsMenu} position={Position.BOTTOM_LEFT}>
+          <Button icon={IconNames.MORE} />
+        </Popover>
+      </>
+    );
+  }
+
+  render(): JSX.Element {
     const { groupServersBy, hiddenColumns } = this.state;
 
     return (
@@ -642,13 +674,7 @@ ORDER BY "rank" DESC, "server" DESC`;
             onRefresh={auto => this.serverQueryManager.rerunLastQuery(auto)}
             localStorageKey={LocalStorageKeys.SERVERS_REFRESH_RATE}
           />
-          {!noSqlMode && (
-            <Button
-              icon={IconNames.APPLICATION}
-              text="Go to SQL"
-              onClick={() => goToQuery(ServersView.SERVER_SQL)}
-            />
-          )}
+          {this.renderBulkServersActions()}
           <TableColumnSelector
             columns={serverTableColumns}
             onChange={column => this.setState({ hiddenColumns: hiddenColumns.toggle(column) })}

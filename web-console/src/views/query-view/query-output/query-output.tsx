@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
+import { HeaderRows } from 'druid-query-toolkit';
 import React from 'react';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
-import { HeaderRows } from '../../../utils';
 
 import './query-output.scss';
 

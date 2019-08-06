@@ -34,7 +34,7 @@ import java.util.IdentityHashMap;
 /**
  * Aggregator that builds T-Digest backed sketch using numeric values read from {@link ByteBuffer}
  */
-public class TDigestBuildSketchBufferAggregator implements BufferAggregator
+public class TDigestSketchBufferAggregator implements BufferAggregator
 {
 
   @Nonnull
@@ -42,7 +42,7 @@ public class TDigestBuildSketchBufferAggregator implements BufferAggregator
   private final int compression;
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<MergingDigest>> sketchCache = new IdentityHashMap();
 
-  public TDigestBuildSketchBufferAggregator(
+  public TDigestSketchBufferAggregator(
       final ColumnValueSelector valueSelector,
       @Nullable final Integer compression
   )
@@ -52,7 +52,7 @@ public class TDigestBuildSketchBufferAggregator implements BufferAggregator
     if (compression != null) {
       this.compression = compression;
     } else {
-      this.compression = TDigestBuildSketchAggregatorFactory.DEFAULT_COMPRESSION;
+      this.compression = TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION;
     }
   }
 
@@ -70,6 +70,8 @@ public class TDigestBuildSketchBufferAggregator implements BufferAggregator
     Object x = selector.getObject();
     if (x instanceof Number) {
       sketch.add(((Number) x).doubleValue());
+    } else if (x instanceof MergingDigest) {
+      sketch.add((MergingDigest) x);
     } else {
       TDigestSketchUtils.throwExceptionForWrongType(selector);
     }
