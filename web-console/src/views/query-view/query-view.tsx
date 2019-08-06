@@ -19,6 +19,12 @@
 import { Intent } from '@blueprintjs/core';
 import axios from 'axios';
 import classNames from 'classnames';
+import {
+  HeaderRows,
+  isFirstRowHeader,
+  normalizeQueryResult,
+  shouldIncludeTimestamp,
+} from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
@@ -28,10 +34,8 @@ import { EditContextDialog } from '../../dialogs/edit-context-dialog/edit-contex
 import { AppToaster } from '../../singletons/toaster';
 import {
   BasicQueryExplanation,
-  decodeRune,
   downloadFile,
   getDruidErrorMessage,
-  HeaderRows,
   localStorageGet,
   LocalStorageKeys,
   localStorageSet,
@@ -93,7 +97,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     return query.replace(/;+((?:\s*--[^\n]*)?\s*)$/, '$1');
   }
 
-  static isRune(queryString: string): boolean {
+  static isJsonLike(queryString: string): boolean {
     return queryString.trim().startsWith('{');
   }
 
@@ -169,30 +173,11 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     this.sqlQueryManager = new QueryManager({
       processQuery: async (queryWithContext: QueryWithContext): Promise<QueryResult> => {
         const { queryString, queryContext, wrapQuery } = queryWithContext;
-        let queryId: string | undefined;
-        let sqlQueryId: string | undefined;
+
         let wrappedLimit: number | undefined;
-
-        let queryResult: HeaderRows;
-        const startTime = new Date();
-        let endTime: Date;
-
-        if (QueryView.isRune(queryString)) {
-          // Secret way to issue a native JSON "rune" query
-          const runeQuery = Hjson.parse(queryString);
-
-          if (!isEmptyContext(queryContext)) runeQuery.context = queryContext;
-          let runeResult: any[];
-          try {
-            const runeResultResp = await axios.post('/druid/v2', runeQuery);
-            endTime = new Date();
-            runeResult = runeResultResp.data;
-            queryId = runeResultResp.headers['x-druid-query-id'];
-          } catch (e) {
-            throw new Error(getDruidErrorMessage(e));
-          }
-
-          queryResult = decodeRune(runeQuery, runeResult);
+        let jsonQuery: any;
+        if (QueryView.isJsonLike(queryString)) {
+          jsonQuery = Hjson.parse(queryString);
         } else {
           const actualQuery = wrapQuery
             ? `SELECT * FROM (${QueryView.trimSemicolon(queryString)}\n) LIMIT 1000`
@@ -200,28 +185,47 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
           if (wrapQuery) wrappedLimit = 1000;
 
-          const queryPayload: Record<string, any> = {
+          jsonQuery = {
             query: actualQuery,
             resultFormat: 'array',
             header: true,
           };
+        }
 
-          if (!isEmptyContext(queryContext)) queryPayload.context = queryContext;
-          let sqlResult: any[];
+        if (!isEmptyContext(queryContext)) {
+          jsonQuery.context = Object.assign(jsonQuery.context || {}, queryContext);
+        }
+
+        let rawQueryResult: unknown;
+        let queryId: string | undefined;
+        let sqlQueryId: string | undefined;
+        const startTime = new Date();
+        let endTime: Date;
+        if (!jsonQuery.queryType && typeof jsonQuery.query === 'string') {
           try {
-            const sqlResultResp = await axios.post('/druid/v2/sql', queryPayload);
+            const sqlResultResp = await axios.post('/druid/v2/sql', jsonQuery);
             endTime = new Date();
-            sqlResult = sqlResultResp.data;
+            rawQueryResult = sqlResultResp.data;
             sqlQueryId = sqlResultResp.headers['x-druid-sql-query-id'];
           } catch (e) {
             throw new Error(getDruidErrorMessage(e));
           }
-
-          queryResult = {
-            header: sqlResult && sqlResult.length ? sqlResult[0] : [],
-            rows: sqlResult && sqlResult.length ? sqlResult.slice(1) : [],
-          };
+        } else {
+          try {
+            const runeResultResp = await axios.post('/druid/v2', jsonQuery);
+            endTime = new Date();
+            rawQueryResult = runeResultResp.data;
+            queryId = runeResultResp.headers['x-druid-query-id'];
+          } catch (e) {
+            throw new Error(getDruidErrorMessage(e));
+          }
         }
+
+        const queryResult = normalizeQueryResult(
+          rawQueryResult,
+          shouldIncludeTimestamp(jsonQuery),
+          isFirstRowHeader(jsonQuery),
+        );
 
         return {
           queryResult,
@@ -346,7 +350,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       error,
       columnMetadata,
     } = this.state;
-    const runeMode = QueryView.isRune(queryString);
+    const runeMode = QueryView.isJsonLike(queryString);
 
     return (
       <SplitterLayout
@@ -368,7 +372,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           />
           <div className="control-bar">
             <RunButton
-              renderEditContextDialog={() => this.setState({ editContextDialogOpen: true })}
+              onEditContext={() => this.setState({ editContextDialogOpen: true })}
               runeMode={runeMode}
               queryContext={queryContext}
               onQueryContextChange={this.handleQueryContextChange}
@@ -396,7 +400,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   private handleRun = (wrapQuery: boolean) => {
     const { queryString, queryContext } = this.state;
 
-    if (QueryView.isRune(queryString) && !QueryView.validRune(queryString)) return;
+    if (QueryView.isJsonLike(queryString) && !QueryView.validRune(queryString)) return;
 
     localStorageSet(LocalStorageKeys.QUERY_KEY, queryString);
     this.sqlQueryManager.runQuery({ queryString, queryContext, wrapQuery });

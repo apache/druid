@@ -31,21 +31,10 @@ export function wait(ms: number): Promise<void> {
 }
 
 export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
-  value = `"${value}"`;
-  const currentFilter = filters.find(f => f.id === id);
-  if (currentFilter) {
-    filters = filters.filter(f => f.id !== id);
-    if (currentFilter.value !== value) {
-      filters = filters.concat({ id, value });
-    }
-  } else {
-    filters = filters.concat({ id, value });
-  }
-  return filters;
+  return addFilterRaw(filters, id, `"${value}"`);
 }
 
-export function addFilterNoQuotes(filters: Filter[], id: string, value: string): Filter[] {
-  value = `${value}`;
+export function addFilterRaw(filters: Filter[], id: string, value: string): Filter[] {
   const currentFilter = filters.find(f => f.id === id);
   if (currentFilter) {
     filters = filters.filter(f => f.id !== id);
