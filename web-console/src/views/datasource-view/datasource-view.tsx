@@ -43,6 +43,7 @@ import {
 import { ActionIcon } from '../../components/action-icon/action-icon';
 import { SegmentTimeline } from '../../components/segment-timeline/segment-timeline';
 import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
+import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
@@ -151,6 +152,9 @@ export interface DatasourcesViewState {
   showChart: boolean;
   chartWidth: number;
   chartHeight: number;
+
+  datasourceTableActionDialogId?: string;
+  actions: BasicAction[];
 }
 
 export class DatasourcesView extends React.PureComponent<
@@ -212,6 +216,8 @@ GROUP BY 1`;
       showChart: false,
       chartWidth: window.innerWidth * 0.85,
       chartHeight: window.innerHeight * 0.4,
+
+      actions: [],
     };
 
     this.datasourceQueryManager = new QueryManager({
@@ -465,7 +471,7 @@ GROUP BY 1`;
         {!noSqlMode && (
           <MenuItem
             icon={IconNames.APPLICATION}
-            text="See in SQL view"
+            text="View SQL query for table"
             onClick={() => goToQuery(DatasourcesView.DATASOURCE_SQL)}
           />
         )}
@@ -915,7 +921,17 @@ GROUP BY 1`;
                   rules,
                   compaction,
                 );
-                return <ActionCell actions={datasourceActions} />;
+                return (
+                  <ActionCell
+                    onDetail={() => {
+                      this.setState({
+                        datasourceTableActionDialogId: datasource,
+                        actions: datasourceActions,
+                      });
+                    }}
+                    actions={datasourceActions}
+                  />
+                );
               },
               show: hiddenColumns.exists(ActionCell.COLUMN_LABEL),
             },
@@ -935,7 +951,15 @@ GROUP BY 1`;
 
   render(): JSX.Element {
     const { noSqlMode } = this.props;
-    const { showDisabled, hiddenColumns, showChart, chartHeight, chartWidth } = this.state;
+    const {
+      showDisabled,
+      hiddenColumns,
+      showChart,
+      chartHeight,
+      chartWidth,
+      datasourceTableActionDialogId,
+      actions,
+    } = this.state;
 
     return (
       <div className="data-sources-view app-view">
@@ -969,6 +993,14 @@ GROUP BY 1`;
           </div>
         )}
         {this.renderDatasourceTable()}
+        {datasourceTableActionDialogId && (
+          <DatasourceTableActionDialog
+            datasourceId={datasourceTableActionDialogId}
+            actions={actions}
+            onClose={() => this.setState({ datasourceTableActionDialogId: undefined })}
+            isOpen
+          />
+        )}
       </div>
     );
   }

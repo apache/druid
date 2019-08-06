@@ -37,6 +37,7 @@ import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import {
   addFilter,
+  compact,
   filterMap,
   formatBytes,
   formatNumber,
@@ -180,24 +181,28 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         });
 
         let queryParts: string[];
+
+        let whereClause = '';
+        if (whereParts.length) {
+          whereClause = whereParts.join(' AND ');
+        }
+
         if (query.groupByInterval) {
-          queryParts = [
+          queryParts = compact([
             `SELECT`,
             `  ("start" || '/' || "end") AS "interval",`,
             `  "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
             `FROM sys.segments`,
             `WHERE`,
-          ];
-          if (whereParts.length) {
-            queryParts.push(whereParts.join(' AND ') + 'AND');
-          }
-          queryParts.push(
-            ` ("start" || '/' || "end") IN (SELECT "start" || '/' || "end" FROM sys.segments GROUP BY 1 LIMIT ${totalQuerySize})`,
-          );
-
-          if (whereParts.length) {
-            queryParts.push('AND ' + whereParts.join(' AND '));
-          }
+            `  ("start" || '/' || "end") IN (`,
+            `     SELECT "start" || '/' || "end"`,
+            `     FROM sys.segments`,
+            whereClause ? `     WHERE ${whereClause}` : '',
+            `     GROUP BY 1`,
+            `     LIMIT ${totalQuerySize}`,
+            `  )`,
+            whereClause ? `  AND ${whereClause}` : '',
+          ]);
 
           if (query.sorted.length) {
             queryParts.push(
@@ -215,8 +220,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             `FROM sys.segments`,
           ];
 
-          if (whereParts.length) {
-            queryParts.push('WHERE ' + whereParts.join(' AND '));
+          if (whereClause) {
+            queryParts.push(`WHERE ${whereClause}`);
           }
 
           if (query.sorted.length) {
@@ -625,7 +630,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         {!noSqlMode && (
           <MenuItem
             icon={IconNames.APPLICATION}
-            text="See in SQL view"
+            text="View SQL query for table"
             disabled={!lastSegmentsQuery}
             onClick={() => {
               if (!lastSegmentsQuery) return;
@@ -667,7 +672,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               }
               localStorageKey={LocalStorageKeys.SEGMENTS_REFRESH_RATE}
             />
-            {this.renderBulkSegmentsActions()}
             <Label>Group by</Label>
             <ButtonGroup>
               <Button
@@ -689,6 +693,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 Interval
               </Button>
             </ButtonGroup>
+            {this.renderBulkSegmentsActions()}
             <TableColumnSelector
               columns={noSqlMode ? tableColumnsNoSql : tableColumns}
               onChange={column => this.setState({ hiddenColumns: hiddenColumns.toggle(column) })}

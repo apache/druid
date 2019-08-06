@@ -21,9 +21,9 @@ package org.apache.druid.query.groupby.strategy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
 import org.apache.druid.collections.BlockingPool;
@@ -33,7 +33,9 @@ import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
+import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DataSource;
@@ -61,6 +63,8 @@ import org.apache.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.groupby.epinephelinae.GroupByRowProcessor;
+import org.apache.druid.query.groupby.orderby.LimitSpec;
+import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.StorageAdapter;
@@ -68,9 +72,12 @@ import org.apache.druid.segment.StorageAdapter;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BinaryOperator;
+import java.util.stream.Collectors;
 
 public class GroupByStrategyV2 implements GroupByStrategy
 {
@@ -109,7 +116,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   public GroupByQueryResource prepareResource(GroupByQuery query)
   {
     final int requiredMergeBufferNum = countRequiredMergeBufferNum(query, 1) +
-                                       (query.getSubtotalsSpec() != null ? 1 : 0);
+                                       numMergeBuffersNeededForSubtotalsSpec(query);
 
     if (requiredMergeBufferNum > mergeBufferPool.maxSize()) {
       throw new ResourceLimitExceededException(
@@ -346,35 +353,41 @@ public class GroupByStrategyV2 implements GroupByStrategy
       Sequence<ResultRow> queryResult
   )
   {
-    // Note: the approach used here is not always correct; see https://github.com/apache/incubator-druid/issues/8091.
+    // How it works?
+    // First we accumulate the result of top level base query aka queryResult arg inside a resultSupplierOne object.
+    // Next for each subtotalSpec
+    //   If subtotalSpec is a prefix of top level dims then we iterate on rows in resultSupplierOne object which are still
+    //   sorted by subtotalSpec, stream merge them and return.
+    //
+    //   If subtotalSpec is not a prefix of top level dims then we create a resultSupplierTwo object filled with rows from
+    //   resultSupplierOne object with only dims from subtotalSpec. Then we iterate on rows in resultSupplierTwo object which are
+    //   of course sorted by subtotalSpec, stream merge them and return.
 
     // Keep a reference to resultSupplier outside the "try" so we can close it if something goes wrong
     // while creating the sequence.
-    GroupByRowProcessor.ResultSupplier resultSupplier = null;
+    GroupByRowProcessor.ResultSupplier resultSupplierOne = null;
 
     try {
-      GroupByQuery queryWithoutSubtotalsSpec = query.withSubtotalsSpec(null).withDimFilter(null);
-      List<List<String>> subtotals = query.getSubtotalsSpec();
+      GroupByQuery queryWithoutSubtotalsSpec = query
+          .withDimensionSpecs(query.getDimensions().stream().map(
+              dimSpec -> new DefaultDimensionSpec(
+                  dimSpec.getOutputName(),
+                  dimSpec.getOutputName(),
+                  dimSpec.getOutputType()
+              )).collect(Collectors.toList())
+          )
+          .withAggregatorSpecs(
+              query.getAggregatorSpecs()
+                   .stream()
+                   .map(AggregatorFactory::getCombiningFactory)
+                   .collect(Collectors.toList())
+          )
+          .withSubtotalsSpec(null)
+          .withDimFilter(null);
 
-      resultSupplier = GroupByRowProcessor.process(
-          queryWithoutSubtotalsSpec
-              .withAggregatorSpecs(
-                  Lists.transform(
-                      queryWithoutSubtotalsSpec.getAggregatorSpecs(),
-                      AggregatorFactory::getCombiningFactory
-                  )
-              )
-              .withDimensionSpecs(
-                  Lists.transform(
-                      queryWithoutSubtotalsSpec.getDimensions(),
-                      dimSpec ->
-                          new DefaultDimensionSpec(
-                              dimSpec.getOutputName(),
-                              dimSpec.getOutputName(),
-                              dimSpec.getOutputType()
-                          )
-                  )
-              ),
+
+      resultSupplierOne = GroupByRowProcessor.process(
+          queryWithoutSubtotalsSpec,
           queryWithoutSubtotalsSpec,
           queryResult,
           configSupplier.get(),
@@ -383,8 +396,20 @@ public class GroupByStrategyV2 implements GroupByStrategy
           processingConfig.getTmpDir(),
           processingConfig.intermediateComputeSizeBytes()
       );
+
+      List<String> queryDimNames = queryWithoutSubtotalsSpec.getDimensions().stream().map(DimensionSpec::getOutputName)
+                                                            .collect(Collectors.toList());
+
+      // Only needed to make LimitSpec.filterColumns(..) call later in case base query has a non default LimitSpec.
+      Set<String> aggsAndPostAggs = null;
+      if (queryWithoutSubtotalsSpec.getLimitSpec() != null && !(queryWithoutSubtotalsSpec.getLimitSpec() instanceof NoopLimitSpec)) {
+        aggsAndPostAggs = getAggregatorAndPostAggregatorNames(queryWithoutSubtotalsSpec);
+      }
+
+      List<List<String>> subtotals = query.getSubtotalsSpec();
       List<Sequence<ResultRow>> subtotalsResults = new ArrayList<>(subtotals.size());
 
+      // Iterate through each subtotalSpec, build results for it and add to subtotalsResults
       for (List<String> subtotalSpec : subtotals) {
         final ImmutableSet<String> dimsInSubtotalSpec = ImmutableSet.copyOf(subtotalSpec);
         final List<DimensionSpec> dimensions = query.getDimensions();
@@ -411,30 +436,128 @@ public class GroupByStrategyV2 implements GroupByStrategy
           }
         }
 
-        GroupByQuery subtotalQuery = queryWithoutSubtotalsSpec.withDimensionSpecs(newDimensions);
+        // Create appropriate LimitSpec for subtotal query
+        LimitSpec subtotalQueryLimitSpec = NoopLimitSpec.instance();
+        if (queryWithoutSubtotalsSpec.getLimitSpec() != null && !(queryWithoutSubtotalsSpec.getLimitSpec() instanceof NoopLimitSpec)) {
+          Set<String> columns = new HashSet(aggsAndPostAggs);
+          columns.addAll(subtotalSpec);
 
-        final GroupByRowProcessor.ResultSupplier finalResultSupplier = resultSupplier;
-        subtotalsResults.add(
-            applyPostProcessing(
-                mergeResults(
-                    (queryPlus, responseContext) -> finalResultSupplier.results(subtotalSpec),
-                    subtotalQuery,
-                    null
-                ),
-                subtotalQuery
-            )
-        );
+          subtotalQueryLimitSpec = queryWithoutSubtotalsSpec.getLimitSpec().filterColumns(columns);
+        }
+
+        GroupByQuery subtotalQuery = queryWithoutSubtotalsSpec
+            .withLimitSpec(subtotalQueryLimitSpec)
+            .withDimensionSpecs(newDimensions);
+
+        final GroupByRowProcessor.ResultSupplier resultSupplierOneFinal = resultSupplierOne;
+        if (Utils.isPrefix(subtotalSpec, queryDimNames)) {
+          // Since subtotalSpec is a prefix of base query dimensions, so results from base query are also sorted
+          // by subtotalSpec as needed by stream merging.
+          subtotalsResults.add(
+              processSubtotalsResultAndOptionallyClose(() -> resultSupplierOneFinal, subtotalSpec, subtotalQuery, false)
+          );
+        } else {
+          // Since subtotalSpec is not a prefix of base query dimensions, so results from base query are not sorted
+          // by subtotalSpec. So we first add the result of base query into another resultSupplier which are sorted
+          // by subtotalSpec and then stream merge them.
+
+          // Also note, we can't create the ResultSupplier eagerly here or as we don't want to eagerly allocate
+          // merge buffers for processing subtotal.
+          Supplier<GroupByRowProcessor.ResultSupplier> resultSupplierTwo = () -> GroupByRowProcessor.process(
+              queryWithoutSubtotalsSpec,
+              subtotalQuery,
+              resultSupplierOneFinal.results(subtotalSpec),
+              configSupplier.get(),
+              resource,
+              spillMapper,
+              processingConfig.getTmpDir(),
+              processingConfig.intermediateComputeSizeBytes()
+          );
+
+          subtotalsResults.add(
+              processSubtotalsResultAndOptionallyClose(resultSupplierTwo, subtotalSpec, subtotalQuery, true)
+          );
+        }
       }
 
       return Sequences.withBaggage(
           Sequences.concat(subtotalsResults),
-          resultSupplier
+          resultSupplierOne //this will close resources allocated by resultSupplierOne after sequence read
       );
     }
     catch (Exception ex) {
-      CloseQuietly.close(resultSupplier);
+      CloseQuietly.close(resultSupplierOne);
       throw ex;
     }
+  }
+
+  private Sequence<ResultRow> processSubtotalsResultAndOptionallyClose(
+      Supplier<GroupByRowProcessor.ResultSupplier> baseResultsSupplier,
+      List<String> dimsToInclude,
+      GroupByQuery subtotalQuery,
+      boolean closeOnSequenceRead
+  )
+  {
+    // This closes the ResultSupplier in case of any exception here or arranges for it to be closed
+    // on sequence read if closeOnSequenceRead is true.
+    try {
+      Supplier<GroupByRowProcessor.ResultSupplier> memoizedSupplier = Suppliers.memoize(baseResultsSupplier);
+      return applyPostProcessing(
+          mergeResults(
+              (queryPlus, responseContext) ->
+                  new LazySequence<>(
+                      () -> Sequences.withBaggage(
+                          memoizedSupplier.get().results(dimsToInclude),
+                          closeOnSequenceRead ? () -> CloseQuietly.close(memoizedSupplier.get()) : () -> {}
+                      )
+                  ),
+              subtotalQuery,
+              null
+          ),
+          subtotalQuery
+      );
+
+    }
+    catch (Exception ex) {
+      CloseQuietly.close(baseResultsSupplier.get());
+      throw ex;
+    }
+  }
+
+  private Set<String> getAggregatorAndPostAggregatorNames(GroupByQuery query)
+  {
+    Set<String> aggsAndPostAggs = new HashSet();
+    if (query.getAggregatorSpecs() != null) {
+      for (AggregatorFactory af : query.getAggregatorSpecs()) {
+        aggsAndPostAggs.add(af.getName());
+      }
+    }
+
+    if (query.getPostAggregatorSpecs() != null) {
+      for (PostAggregator pa : query.getPostAggregatorSpecs()) {
+        aggsAndPostAggs.add(pa.getName());
+      }
+    }
+
+    return aggsAndPostAggs;
+  }
+
+  private int numMergeBuffersNeededForSubtotalsSpec(GroupByQuery query)
+  {
+    List<List<String>> subtotalSpecs = query.getSubtotalsSpec();
+    if (subtotalSpecs == null || subtotalSpecs.size() == 0) {
+      return 0;
+    }
+
+    List<String> queryDimOutputNames = query.getDimensions().stream().map(DimensionSpec::getOutputName).collect(
+        Collectors.toList());
+    for (List<String> subtotalSpec : subtotalSpecs) {
+      if (!Utils.isPrefix(subtotalSpec, queryDimOutputNames)) {
+        return 2;
+      }
+    }
+
+    return 1;
   }
 
   @Override

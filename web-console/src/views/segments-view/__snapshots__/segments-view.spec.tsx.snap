@@ -12,6 +12,23 @@ exports[`segments-view matches snapshot 1`] = `
         localStorageKey="segments-refresh-rate"
         onRefresh={[Function]}
       />
+      <Component>
+        Group by
+      </Component>
+      <Blueprint3.ButtonGroup>
+        <Blueprint3.Button
+          active={true}
+          onClick={[Function]}
+        >
+          None
+        </Blueprint3.Button>
+        <Blueprint3.Button
+          active={false}
+          onClick={[Function]}
+        >
+          Interval
+        </Blueprint3.Button>
+      </Blueprint3.ButtonGroup>
       <Blueprint3.Popover
         boundary="scrollParent"
         captureDismiss={false}
@@ -24,7 +41,7 @@ exports[`segments-view matches snapshot 1`] = `
               onClick={[Function]}
               popoverProps={Object {}}
               shouldDismissPopover={true}
-              text="See in SQL view"
+              text="View SQL query for table"
             />
           </Blueprint3.Menu>
         }
@@ -49,23 +66,6 @@ exports[`segments-view matches snapshot 1`] = `
           icon="more"
         />
       </Blueprint3.Popover>
-      <Component>
-        Group by
-      </Component>
-      <Blueprint3.ButtonGroup>
-        <Blueprint3.Button
-          active={true}
-          onClick={[Function]}
-        >
-          None
-        </Blueprint3.Button>
-        <Blueprint3.Button
-          active={false}
-          onClick={[Function]}
-        >
-          Interval
-        </Blueprint3.Button>
-      </Blueprint3.ButtonGroup>
       <TableColumnSelector
         columns={
           Array [
