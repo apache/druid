@@ -415,7 +415,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           aggregateColumns={ast ? ast.getAggregateColumns() : undefined}
           disabled={!ast}
           sorted={ast ? ast.getSorted() : undefined}
-          handleSqlAction={this.handleSqlAction}
+          sqlExcludeColumn={this.sqlExcludeColumn}
+          sqlFilterRow={this.sqlFilterRow}
+          sqlOrderBy={this.sqlOrderBy}
           loading={loading}
           result={result}
           error={error}
@@ -424,45 +426,34 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     );
   }
 
-  private handleSqlAction = (row: string, header: string, action: string): void => {
-    let ast: SqlQuery | undefined = this.state.ast;
-    if (ast) {
-      switch (action) {
-        case 'order by': {
-          const directionFilter = ast.getSorted().find(filter => {
-            return filter.id === header;
-          });
-          const direction = directionFilter ? directionFilter.desc : true;
-          ast = ast.orderBy(header, direction ? 'ASC' : 'DESC');
-          this.setState({
-            queryString: ast.toString(),
-          });
-          break;
-        }
-        case 'exclude column': {
-          ast = ast.excludeColumn(header);
-          this.setState({
-            queryString: ast.toString(),
-          });
-          break;
-        }
-        case 'exclude': {
-          ast = ast.filterRow(header, row, '!=');
-          this.setState({
-            queryString: ast.toString(),
-          });
-          break;
-        }
-        case 'filter': {
-          ast = ast.filterRow(header, row, '=');
-          this.setState({
-            queryString: ast.toString(),
-          });
-          break;
-        }
-      }
-      this.handleRun(true, ast.toString());
-    }
+  private sqlOrderBy = (header: string, direction: 'ASC' | 'DESC'): void => {
+    let { ast } = this.state;
+    if (!ast) return;
+    ast = ast.orderBy(header, direction);
+    this.setState({
+      queryString: ast.toString(),
+    });
+    this.handleRun(true, ast.toString());
+  };
+
+  private sqlExcludeColumn = (header: string): void => {
+    let { ast } = this.state;
+    if (!ast) return;
+    ast = ast.excludeColumn(header);
+    this.setState({
+      queryString: ast.toString(),
+    });
+    this.handleRun(true, ast.toString());
+  };
+
+  private sqlFilterRow = (row: string, header: string, operator: '!=' | '='): void => {
+    let { ast } = this.state;
+    if (!ast) return;
+    ast = ast.filterRow(header, row, operator);
+    this.setState({
+      queryString: ast.toString(),
+    });
+    this.handleRun(true, ast.toString());
   };
 
   private handleQueryStringChange = (queryString: string): void => {

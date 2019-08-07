@@ -332,9 +332,9 @@ export function escapeSqlIdentifier(identifier: string): string {
 }
 
 export function copyAndAlert(copyString: string, alertMessage: string): void {
-  copy(copyString, { format: 'text/plain' }),
-    AppToaster.show({
-      message: alertMessage,
-      intent: Intent.SUCCESS,
-    });
+  copy(copyString, { format: 'text/plain' });
+  AppToaster.show({
+    message: alertMessage,
+    intent: Intent.SUCCESS,
+  });
 }

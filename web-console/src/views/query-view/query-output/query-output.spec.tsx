@@ -24,7 +24,14 @@ import { QueryOutput } from './query-output';
 describe('query output', () => {
   it('matches snapshot', () => {
     const queryOutput = (
-      <QueryOutput handleSqlAction={() => null} disabled={false} loading={false} error="lol" />
+      <QueryOutput
+        sqlOrderBy={() => null}
+        sqlFilterRow={() => null}
+        sqlExcludeColumn={() => null}
+        disabled={false}
+        loading={false}
+        error="lol"
+      />
     );
 
     const { container } = render(queryOutput);
