@@ -47,7 +47,7 @@ public class ExpressionDimFilter implements DimFilter
   @JsonCreator
   public ExpressionDimFilter(
       @JsonProperty("expression") final String expression,
-      @Nullable @JsonProperty("filterTuning") final FilterTuning filterTuning,
+      @JsonProperty("filterTuning") @Nullable final FilterTuning filterTuning,
       @JacksonInject ExprMacroTable macroTable
   )
   {

@@ -48,7 +48,7 @@ public class SpatialDimFilter implements DimFilter
   public SpatialDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("bound") Bound bound,
-      @Nullable @JsonProperty("filterTuning") FilterTuning filterTuning
+      @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");

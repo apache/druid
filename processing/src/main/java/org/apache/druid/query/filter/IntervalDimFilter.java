@@ -57,8 +57,8 @@ public class IntervalDimFilter implements DimFilter
   public IntervalDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("intervals") List<Interval> intervals,
-      @Nullable @JsonProperty("extractionFn") ExtractionFn extractionFn,
-      @Nullable @JsonProperty("filterTuning") FilterTuning filterTuning
+      @JsonProperty("extractionFn") @Nullable ExtractionFn extractionFn,
+      @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
     Preconditions.checkNotNull(dimension, "dimension can not be null");

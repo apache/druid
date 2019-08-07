@@ -102,14 +102,37 @@ public interface Filter
   }
 
   /**
-   * Indicates whether this filter can return a bitmap index for filtering, based on
-   * the information provided by the input BitmapIndexSelector.
+   * Indicates whether this filter can return a bitmap index for filtering, based on the information provided by the
+   * input BitmapIndexSelector.
+   *
+   * Returning a value of true here guarantees that {@link #getBitmapIndex(BitmapIndexSelector)} will return a non-null
+   * {@link BitmapIndexSelector}.
    *
    * @param selector Object used to retrieve bitmap indexes
    *
    * @return true if this Filter can provide a bitmap index using the selector, false otherwise.
    */
   boolean supportsBitmapIndex(BitmapIndexSelector selector);
+
+  /**
+   * Determine if a filter *should* use a bitmap index based on information collected from the supplied
+   * {@link BitmapIndexSelector}. This method differs from {@link #supportsBitmapIndex(BitmapIndexSelector)} in that
+   * the former only indicates if a bitmap index is available and {@link #getBitmapIndex(BitmapIndexSelector)} may be
+   * used.
+   *
+   * If shouldUseFilter(selector) returns true, {@link #supportsBitmapIndex} must also return true when called with the
+   * same selector object. Returning a value of true here guarantees that {@link #getBitmapIndex(BitmapIndexSelector)}
+   * will return a non-null {@link BitmapIndexSelector}.
+   *
+   * Implementations of this methods typically consider a {@link FilterTuning} to make decisions about when to
+   * use an available index. A "standard" implementation of this is available to all {@link Filter} implementations in
+   * {@link org.apache.druid.segment.filter.Filters#shouldUseIndex(Filter, BitmapIndexSelector, FilterTuning)}.
+   *
+   * @param selector Object used to retrieve bitmap indexes and provide information about the column
+   *
+   * @return true if this Filter should provide a bitmap index using the selector, false otherwise.
+   */
+  boolean shouldUseBitmapIndex(BitmapIndexSelector selector);
 
   /**
    * Indicates whether this filter supports selectivity estimation.
@@ -135,14 +158,4 @@ public interface Filter
    * Set of columns used by a filter
    */
   Set<String> getRequiredColumns();
-
-  /**
-   * Determine if a filter *should* use a bitmap index based on information collected from the supplied
-   * {@link BitmapIndexSelector}. This method differs from {@link #supportsBitmapIndex(BitmapIndexSelector)} in that
-   * the former only indicates if a bitmap index is available and {@link #getBitmapIndex(BitmapIndexSelector)} may be
-   * used. Implementations of this methods typically consider a {@link FilterTuning} to make decisions about when to
-   * use an available index. A "standard" implementation of this is available to all {@link Filter} implementations in
-   * {@link org.apache.druid.segment.filter.Filters#shouldUseIndex(Filter, BitmapIndexSelector, FilterTuning)}.
-   */
-  boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector);
 }

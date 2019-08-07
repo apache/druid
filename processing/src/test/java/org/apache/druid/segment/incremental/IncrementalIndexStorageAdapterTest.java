@@ -695,6 +695,12 @@ public class IncrementalIndexStorageAdapterTest
     }
 
     @Override
+    public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+    {
+      return true;
+    }
+
+    @Override
     public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
     {
       return true;
@@ -703,13 +709,7 @@ public class IncrementalIndexStorageAdapterTest
     @Override
     public Set<String> getRequiredColumns()
     {
-      return null;
-    }
-
-    @Override
-    public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
-    {
-      return true;
+      return Collections.emptySet();
     }
 
     private class DictionaryRaceTestFilterDruidPredicateFactory implements DruidPredicateFactory

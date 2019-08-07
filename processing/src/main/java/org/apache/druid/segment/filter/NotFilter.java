@@ -118,9 +118,9 @@ public class NotFilter implements Filter
   }
 
   @Override
-  public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
+  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
   {
-    return baseFilter.shouldUseIndex(bitmapIndexSelector);
+    return baseFilter.shouldUseBitmapIndex(selector);
   }
 
   @Override

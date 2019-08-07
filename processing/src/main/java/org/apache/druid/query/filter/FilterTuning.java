@@ -52,40 +52,40 @@ public class FilterTuning
     return new FilterTuning(filter.supportsBitmapIndex(selector), null, null);
   }
 
-  private final boolean useIndex;
-  private final int useIndexMinCardinalityThreshold;
-  private final int useIndexMaxCardinalityThreshold;
+  private final boolean useBitmapIndex;
+  private final int minCardinalityToUseBitmapIndex;
+  private final int maxCardinalityToUseBitmapIndex;
 
   @JsonCreator
   public FilterTuning(
-      @Nullable @JsonProperty("useIndex") Boolean useIndex,
-      @Nullable @JsonProperty("useIndexMinCardinalityThreshold") Integer useIndexMinCardinalityThreshold,
-      @Nullable @JsonProperty("useIndexMaximumCardinalityThreshold") Integer useIndexMaxCardinalityThreshold
+      @JsonProperty("useBitmapIndex") @Nullable Boolean useBitmapIndex,
+      @JsonProperty("minCardinalityToUseBitmapIndex") @Nullable Integer minCardinalityToUseBitmapIndex,
+      @JsonProperty("useIndexMaximumCardinalityThreshold") @Nullable Integer maxCardinalityToUseBitmapIndex
   )
   {
-    this.useIndex = useIndex != null ? useIndex : true;
-    this.useIndexMinCardinalityThreshold =
-        useIndexMinCardinalityThreshold != null ? useIndexMinCardinalityThreshold : 0;
-    this.useIndexMaxCardinalityThreshold =
-        useIndexMaxCardinalityThreshold != null ? useIndexMaxCardinalityThreshold : Integer.MAX_VALUE;
+    this.useBitmapIndex = useBitmapIndex != null ? useBitmapIndex : true;
+    this.minCardinalityToUseBitmapIndex =
+        minCardinalityToUseBitmapIndex != null ? minCardinalityToUseBitmapIndex : 0;
+    this.maxCardinalityToUseBitmapIndex =
+        maxCardinalityToUseBitmapIndex != null ? maxCardinalityToUseBitmapIndex : Integer.MAX_VALUE;
   }
 
   @JsonProperty
-  public boolean getUseIndex()
+  public boolean getUseBitmapIndex()
   {
-    return useIndex;
+    return useBitmapIndex;
   }
 
   @JsonProperty
-  public int getUseIndexMinCardinalityThreshold()
+  public int getMinCardinalityToUseBitmapIndex()
   {
-    return useIndexMinCardinalityThreshold;
+    return minCardinalityToUseBitmapIndex;
   }
 
   @JsonProperty
-  public int getUseIndexMaxCardinalityThreshold()
+  public int getMaxCardinalityToUseBitmapIndex()
   {
-    return useIndexMaxCardinalityThreshold;
+    return maxCardinalityToUseBitmapIndex;
   }
 
   @Override
@@ -98,24 +98,24 @@ public class FilterTuning
       return false;
     }
     FilterTuning that = (FilterTuning) o;
-    return Objects.equals(useIndex, that.useIndex) &&
-           Objects.equals(useIndexMinCardinalityThreshold, that.useIndexMinCardinalityThreshold) &&
-           Objects.equals(useIndexMaxCardinalityThreshold, that.useIndexMaxCardinalityThreshold);
+    return Objects.equals(useBitmapIndex, that.useBitmapIndex) &&
+           Objects.equals(minCardinalityToUseBitmapIndex, that.minCardinalityToUseBitmapIndex) &&
+           Objects.equals(maxCardinalityToUseBitmapIndex, that.maxCardinalityToUseBitmapIndex);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(useIndex, useIndexMinCardinalityThreshold, useIndexMaxCardinalityThreshold);
+    return Objects.hash(useBitmapIndex, minCardinalityToUseBitmapIndex, maxCardinalityToUseBitmapIndex);
   }
 
   @Override
   public String toString()
   {
     return "FilterTuning{" +
-           "useIndex=" + useIndex +
-           ", useIndexMinCardinalityThreshold=" + useIndexMinCardinalityThreshold +
-           ", useIndexMaxCardinalityThreshold=" + useIndexMaxCardinalityThreshold +
+           "useBitmapIndex=" + useBitmapIndex +
+           ", minCardinalityToUseBitmapIndex=" + minCardinalityToUseBitmapIndex +
+           ", maxCardinalityToUseBitmapIndex=" + maxCardinalityToUseBitmapIndex +
            '}';
   }
 }

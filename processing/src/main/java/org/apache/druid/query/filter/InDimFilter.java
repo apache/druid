@@ -78,8 +78,8 @@ public class InDimFilter implements DimFilter
   public InDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("values") Collection<String> values,
-      @Nullable @JsonProperty("extractionFn") ExtractionFn extractionFn,
-      @Nullable @JsonProperty("filterTuning") FilterTuning filterTuning
+      @JsonProperty("extractionFn") @Nullable ExtractionFn extractionFn,
+      @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
     Preconditions.checkNotNull(dimension, "dimension can not be null");

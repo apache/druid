@@ -153,23 +153,22 @@ public class BoundFilter implements Filter
   {
     return selector.getBitmapIndex(boundDimFilter.getDimension()) != null;
   }
-
   @Override
-  public Set<String> getRequiredColumns()
+  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
   {
-    return boundDimFilter.getRequiredColumns();
-  }
-
-  @Override
-  public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
-  {
-    return Filters.shouldUseIndex(this, bitmapIndexSelector, filterTuning);
+    return Filters.shouldUseIndex(this, selector, filterTuning);
   }
 
   @Override
   public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
   {
     return Filters.supportsSelectivityEstimation(this, boundDimFilter.getDimension(), columnSelector, indexSelector);
+  }
+
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return boundDimFilter.getRequiredColumns();
   }
 
   private static Pair<Integer, Integer> getStartEndIndexes(

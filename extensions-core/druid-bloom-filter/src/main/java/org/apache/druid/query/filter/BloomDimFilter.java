@@ -53,8 +53,8 @@ public class BloomDimFilter implements DimFilter
   public BloomDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("bloomKFilter") BloomKFilterHolder bloomKFilterHolder,
-      @Nullable @JsonProperty("extractionFn") ExtractionFn extractionFn,
-      @Nullable @JsonProperty("filterTuning") FilterTuning filterTuning
+      @JsonProperty("extractionFn") @Nullable ExtractionFn extractionFn,
+      @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");

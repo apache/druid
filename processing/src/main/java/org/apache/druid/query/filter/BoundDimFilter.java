@@ -67,14 +67,14 @@ public class BoundDimFilter implements DimFilter
   @JsonCreator
   public BoundDimFilter(
       @JsonProperty("dimension") String dimension,
-      @Nullable @JsonProperty("lower") String lower,
-      @Nullable @JsonProperty("upper") String upper,
-      @Nullable @JsonProperty("lowerStrict") Boolean lowerStrict,
-      @Nullable @JsonProperty("upperStrict") Boolean upperStrict,
-      @Deprecated @JsonProperty("alphaNumeric") Boolean alphaNumeric,
-      @Nullable @JsonProperty("extractionFn") ExtractionFn extractionFn,
-      @Nullable @JsonProperty("ordering") StringComparator ordering,
-      @Nullable @JsonProperty("filterTuning") FilterTuning filterTuning
+      @JsonProperty("lower") @Nullable String lower,
+      @JsonProperty("upper") @Nullable String upper,
+      @JsonProperty("lowerStrict") @Nullable Boolean lowerStrict,
+      @JsonProperty("upperStrict") @Nullable Boolean upperStrict,
+      @Deprecated @JsonProperty("alphaNumeric") @Nullable Boolean alphaNumeric,
+      @JsonProperty("extractionFn") @Nullable ExtractionFn extractionFn,
+      @JsonProperty("ordering") @Nullable StringComparator ordering,
+      @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
     this.dimension = Preconditions.checkNotNull(dimension, "dimension can not be null");

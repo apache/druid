@@ -62,9 +62,9 @@ public class LikeDimFilter implements DimFilter
   public LikeDimFilter(
       @JsonProperty("dimension") final String dimension,
       @JsonProperty("pattern") final String pattern,
-      @Nullable @JsonProperty("escape") final String escape,
-      @Nullable @JsonProperty("extractionFn") final ExtractionFn extractionFn,
-      @Nullable @JsonProperty("filterTuning") final FilterTuning filterTuning
+      @JsonProperty("escape") @Nullable final String escape,
+      @JsonProperty("extractionFn") @Nullable final ExtractionFn extractionFn,
+      @JsonProperty("filterTuning") @Nullable final FilterTuning filterTuning
   )
   {
     this.dimension = Preconditions.checkNotNull(dimension, "dimension");

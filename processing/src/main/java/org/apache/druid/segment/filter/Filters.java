@@ -654,7 +654,7 @@ public class Filters
   }
 
   /**
-   * This method provides a "standard" implementation of {@link Filter#shouldUseIndex(BitmapIndexSelector)} which takes
+   * This method provides a "standard" implementation of {@link Filter#shouldUseBitmapIndex(BitmapIndexSelector)} which takes
    * a {@link Filter}, a {@link BitmapIndexSelector}, and {@link FilterTuning} to determine if:
    *  a) the filter supports bitmap indexes
    *  b) the filter tuning specifies that it should use the index
@@ -670,11 +670,11 @@ public class Filters
   )
   {
     final FilterTuning tuning = filterTuning != null ? filterTuning : FilterTuning.createDefault(filter, indexSelector);
-    if (filter.supportsBitmapIndex(indexSelector) && tuning.getUseIndex()) {
+    if (filter.supportsBitmapIndex(indexSelector) && tuning.getUseBitmapIndex()) {
       return filter.getRequiredColumns().stream().allMatch(column -> {
         final int cardinality = indexSelector.getBitmapIndex(column).getCardinality();
-        return cardinality >= tuning.getUseIndexMinCardinalityThreshold()
-               && cardinality <= tuning.getUseIndexMaxCardinalityThreshold();
+        return cardinality >= tuning.getMinCardinalityToUseBitmapIndex()
+               && cardinality <= tuning.getMaxCardinalityToUseBitmapIndex();
       });
     }
     return false;

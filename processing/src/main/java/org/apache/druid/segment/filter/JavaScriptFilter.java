@@ -100,6 +100,12 @@ public class JavaScriptFilter implements Filter
   }
 
   @Override
+  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+  {
+    return Filters.shouldUseIndex(this, selector, filterTuning);
+  }
+
+  @Override
   public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
   {
     return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
@@ -109,11 +115,5 @@ public class JavaScriptFilter implements Filter
   public Set<String> getRequiredColumns()
   {
     return ImmutableSet.of(dimension);
-  }
-
-  @Override
-  public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
-  {
-    return Filters.shouldUseIndex(this, bitmapIndexSelector, filterTuning);
   }
 }

@@ -66,8 +66,8 @@ public class SelectorDimFilter implements DimFilter
   public SelectorDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("value") String value,
-      @Nullable @JsonProperty("extractionFn") ExtractionFn extractionFn,
-      @Nullable @JsonProperty("filterTuning") FilterTuning filterTuning
+      @JsonProperty("extractionFn") @Nullable ExtractionFn extractionFn,
+      @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");

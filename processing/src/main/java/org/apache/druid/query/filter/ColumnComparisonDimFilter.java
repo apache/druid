@@ -49,7 +49,7 @@ public class ColumnComparisonDimFilter implements DimFilter
   @JsonCreator
   public ColumnComparisonDimFilter(
       @JsonProperty("dimensions") List<DimensionSpec> dimensions,
-      @Nullable @JsonProperty("filterTuning") FilterTuning filterTuning
+      @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
     this.dimensions = Preconditions.checkNotNull(dimensions, "dimensions");

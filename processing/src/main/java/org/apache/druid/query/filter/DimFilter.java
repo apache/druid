@@ -25,6 +25,7 @@ import com.google.common.collect.RangeSet;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.query.extraction.ExtractionFn;
 
+import javax.annotation.Nullable;
 import java.util.Set;
 
 /**
@@ -99,7 +100,7 @@ public interface DimFilter extends Cacheable
     /**
      * Append dimension name OR {@link ExtractionFn#toString()} with dimension wrapped in parenthesis
      */
-    DimFilterToStringBuilder appendDimension(String dimension, ExtractionFn extractionFn)
+    DimFilterToStringBuilder appendDimension(String dimension, @Nullable ExtractionFn extractionFn)
     {
       if (extractionFn != null) {
         builder.append(extractionFn).append("(");
@@ -125,7 +126,7 @@ public interface DimFilter extends Cacheable
     /**
      * Add filter tuning to {@link #builder} if tuning exists
      */
-    DimFilterToStringBuilder appendFilterTuning(FilterTuning tuning)
+    DimFilterToStringBuilder appendFilterTuning(@Nullable FilterTuning tuning)
     {
       if (tuning != null) {
         builder.append(" (filterTuning=").append(tuning).append(")");

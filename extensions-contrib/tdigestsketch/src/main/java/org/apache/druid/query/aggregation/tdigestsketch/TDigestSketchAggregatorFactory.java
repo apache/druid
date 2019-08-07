@@ -76,7 +76,7 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
   public TDigestSketchAggregatorFactory(
       @JsonProperty("name") final String name,
       @JsonProperty("fieldName") final String fieldName,
-      @Nullable @JsonProperty("compression") final Integer compression
+      @JsonProperty("compression") @Nullable final Integer compression
   )
   {
     this(name, fieldName, compression, AggregatorUtil.TDIGEST_BUILD_SKETCH_CACHE_TYPE_ID);

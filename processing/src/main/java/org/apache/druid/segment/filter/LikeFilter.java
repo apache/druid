@@ -114,9 +114,9 @@ public class LikeFilter implements Filter
   }
 
   @Override
-  public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
+  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
   {
-    return Filters.shouldUseIndex(this, bitmapIndexSelector, filterTuning);
+    return Filters.shouldUseIndex(this, selector, filterTuning);
   }
 
   @Override

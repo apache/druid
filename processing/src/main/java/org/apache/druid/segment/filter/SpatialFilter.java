@@ -116,6 +116,12 @@ public class SpatialFilter implements Filter
   }
 
   @Override
+  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+  {
+    return Filters.shouldUseIndex(this, selector, filterTuning);
+  }
+
+  @Override
   public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
   {
     return false;
@@ -125,12 +131,6 @@ public class SpatialFilter implements Filter
   public Set<String> getRequiredColumns()
   {
     return ImmutableSet.of(dimension);
-  }
-
-  @Override
-  public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
-  {
-    return Filters.shouldUseIndex(this, bitmapIndexSelector, filterTuning);
   }
 
   @Override

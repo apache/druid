@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.filter;
 
+import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
 import java.util.HashSet;
@@ -59,5 +60,38 @@ public interface BooleanFilter extends Filter
       allColumns.addAll(f.getRequiredColumns());
     }
     return allColumns;
+  }
+
+  @Override
+  default boolean supportsBitmapIndex(BitmapIndexSelector selector)
+  {
+    for (Filter filter : getFilters()) {
+      if (!filter.supportsBitmapIndex(selector)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Override
+  default boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+  {
+    for (Filter f : getFilters()) {
+      if (!f.shouldUseBitmapIndex(selector)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Override
+  default boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  {
+    for (Filter filter : getFilters()) {
+      if (!filter.supportsSelectivityEstimation(columnSelector, indexSelector)) {
+        return false;
+      }
+    }
+    return true;
   }
 }

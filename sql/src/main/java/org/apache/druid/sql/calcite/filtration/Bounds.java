@@ -131,7 +131,7 @@ public class Bounds
         null,
         boundRefKey.getExtractionFn(),
         boundRefKey.getComparator(),
-         null
+        null
     );
   }
 

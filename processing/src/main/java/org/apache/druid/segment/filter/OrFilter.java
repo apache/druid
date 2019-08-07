@@ -34,7 +34,6 @@ import org.apache.druid.query.filter.vector.ReadableVectorMatch;
 import org.apache.druid.query.filter.vector.VectorMatch;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -100,17 +99,6 @@ public class OrFilter implements BooleanFilter
   }
 
   @Override
-  public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
-  {
-    for (Filter f : filters) {
-      if (!f.shouldUseIndex(bitmapIndexSelector)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  @Override
   public ValueMatcher makeMatcher(
       BitmapIndexSelector selector,
       ColumnSelectorFactory columnSelectorFactory,
@@ -142,28 +130,6 @@ public class OrFilter implements BooleanFilter
   public List<Filter> getFilters()
   {
     return filters;
-  }
-
-  @Override
-  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
-  {
-    for (Filter filter : filters) {
-      if (!filter.supportsBitmapIndex(selector)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
-  {
-    for (Filter filter : filters) {
-      if (!filter.supportsSelectivityEstimation(columnSelector, indexSelector)) {
-        return false;
-      }
-    }
-    return true;
   }
 
   @Override

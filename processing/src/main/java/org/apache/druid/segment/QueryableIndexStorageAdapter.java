@@ -213,7 +213,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     if (filter != null) {
       final boolean filterCanVectorize =
-          filter.supportsBitmapIndex(makeBitmapIndexSelector(virtualColumns))
+          filter.shouldUseBitmapIndex(makeBitmapIndexSelector(virtualColumns))
           || filter.canVectorizeMatcher();
 
       if (!filterCanVectorize) {
@@ -361,7 +361,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @VisibleForTesting
   public FilterAnalysis analyzeFilter(
       @Nullable final Filter filter,
-      ColumnSelectorBitmapIndexSelector bitmapIndexSelector,
+      ColumnSelectorBitmapIndexSelector indexSelector,
       @Nullable QueryMetrics queryMetrics
   )
   {
@@ -393,7 +393,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         // If we get an AndFilter, we can split the subfilters across both filtering stages
         for (Filter subfilter : ((AndFilter) filter).getFilters()) {
 
-          if (subfilter.shouldUseIndex(bitmapIndexSelector)) {
+          if (subfilter.supportsBitmapIndex(indexSelector) && subfilter.shouldUseBitmapIndex(indexSelector)) {
 
             preFilters.add(subfilter);
           } else {
@@ -402,7 +402,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         }
       } else {
         // If we get an OrFilter or a single filter, handle the filter in one stage
-        if (filter.shouldUseIndex(bitmapIndexSelector)) {
+        if (filter.supportsBitmapIndex(indexSelector) && filter.shouldUseBitmapIndex(indexSelector)) {
           preFilters.add(filter);
         } else {
           postFilters.add(filter);
@@ -416,15 +416,15 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     } else {
       if (queryMetrics != null) {
         BitmapResultFactory<?> bitmapResultFactory =
-            queryMetrics.makeBitmapResultFactory(bitmapIndexSelector.getBitmapFactory());
+            queryMetrics.makeBitmapResultFactory(indexSelector.getBitmapFactory());
         long bitmapConstructionStartNs = System.nanoTime();
         // Use AndFilter.getBitmapResult to intersect the preFilters to get its short-circuiting behavior.
-        preFilterBitmap = AndFilter.getBitmapIndex(bitmapIndexSelector, bitmapResultFactory, preFilters);
+        preFilterBitmap = AndFilter.getBitmapIndex(indexSelector, bitmapResultFactory, preFilters);
         preFilteredRows = preFilterBitmap.size();
         queryMetrics.reportBitmapConstructionTime(System.nanoTime() - bitmapConstructionStartNs);
       } else {
-        BitmapResultFactory<?> bitmapResultFactory = new DefaultBitmapResultFactory(bitmapIndexSelector.getBitmapFactory());
-        preFilterBitmap = AndFilter.getBitmapIndex(bitmapIndexSelector, bitmapResultFactory, preFilters);
+        BitmapResultFactory<?> bitmapResultFactory = new DefaultBitmapResultFactory(indexSelector.getBitmapFactory());
+        preFilterBitmap = AndFilter.getBitmapIndex(indexSelector, bitmapResultFactory, preFilters);
       }
     }
 

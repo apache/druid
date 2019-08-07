@@ -81,6 +81,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -398,6 +399,12 @@ public abstract class BaseFilterTest
       }
 
       @Override
+      public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+      {
+        return false;
+      }
+
+      @Override
       public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
       {
         return false;
@@ -406,13 +413,7 @@ public abstract class BaseFilterTest
       @Override
       public Set<String> getRequiredColumns()
       {
-        return null;
-      }
-
-      @Override
-      public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
-      {
-        return false;
+        return Collections.emptySet();
       }
 
       @Override
@@ -472,6 +473,12 @@ public abstract class BaseFilterTest
       }
 
       @Override
+      public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+      {
+        return false;
+      }
+
+      @Override
       public VectorValueMatcher makeVectorMatcher(VectorColumnSelectorFactory factory)
       {
         return theFilter.makeVectorMatcher(factory);
@@ -487,12 +494,6 @@ public abstract class BaseFilterTest
       public Set<String> getRequiredColumns()
       {
         return null;
-      }
-
-      @Override
-      public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
-      {
-        return false;
       }
 
       @Override

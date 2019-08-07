@@ -56,7 +56,7 @@ public class TrueFilter implements Filter
   }
 
   @Override
-  public boolean shouldUseIndex(BitmapIndexSelector bitmapIndexSelector)
+  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
   {
     return true;
   }
