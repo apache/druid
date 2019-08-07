@@ -25,12 +25,13 @@ import {
   normalizeQueryResult,
   shouldIncludeTimestamp,
   sqlParserFactory,
+  SqlQuery,
 } from 'druid-query-toolkit';
-import { SqlQuery } from 'druid-query-toolkit/build/ast';
 import Hjson from 'hjson';
 import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
 
+import { SQL_FUNCTIONS, SyntaxDescription } from '../../../lib/sql-function-doc';
 import { QueryPlanDialog } from '../../dialogs';
 import { EditContextDialog } from '../../dialogs/edit-context-dialog/edit-context-dialog';
 import { AppToaster } from '../../singletons/toaster';
@@ -57,88 +58,11 @@ import { RunButton } from './run-button/run-button';
 
 import './query-view.scss';
 
-const parser = sqlParserFactory([
-  'COUNT',
-  'SUM',
-  'MIN',
-  'MAX',
-  'AVG',
-  'APPROX_COUNT_DISTINCT',
-  'APPROX_COUNT_DISTINCT_DS_HLL',
-  'APPROX_COUNT_DISTINCT_DS_THETA',
-  'APPROX_QUANTILE',
-  'APPROX_QUANTILE_DS',
-  'APPROX_QUANTILE_FIXED_BUCKETS',
-  'BLOOM_FILTER',
-  'ABS',
-  'CEIL',
-  'EXP',
-  'FLOOR',
-  'LN',
-  'LOG10',
-  'POWER',
-  'SQRT',
-  'TRUNCATE',
-  'TRUNC',
-  'ROUND',
-  'MOD',
-  'SIN',
-  'COS',
-  'TAN',
-  'COT',
-  'ASIN',
-  'ACOS',
-  'ATAN',
-  'ATAN2',
-  'DEGREES',
-  'RADIANS',
-  'CONCAT',
-  'TEXTCAT',
-  'STRING_FORMAT',
-  'LENGTH',
-  'CHAR_LENGTH',
-  'CHARARACTER_LENGTH',
-  'STRLEN',
-  'LOOKUP',
-  'LOWER',
-  'PARSE_LONG',
-  'POSITION',
-  'REGEXP_EXTRACT',
-  'REPLACE',
-  'STRPOS',
-  'SUBSTRING',
-  'RIGHT',
-  'LEFT',
-  'SUBSTR',
-  'TRIM',
-  'BTRIM',
-  'LTRIM',
-  'RTRIM',
-  'UPPER',
-  'REVERSE',
-  'REPEAT',
-  'LPAD',
-  'RPAD',
-  'CURRENT_TIMESTAMP',
-  'CURRENT_DATE',
-  'DATE_TRUNC',
-  'TIME_FLOOR',
-  'TIME_SHIFT',
-  'TIME_EXTRACT',
-  'TIME_PARSE',
-  'TIME_FORMAT',
-  'MILLIS_TO_TIMESTAMP',
-  'TIMESTAMP_TO_MILIS',
-  'EXTRACT',
-  'FLOOR',
-  'CEIL',
-  'TIMESTAMPADD',
-  'timestamp_expr',
-  'CAST',
-  'NULLIF',
-  'COALESCE',
-  'BLOOM_FILTER_TEST',
-]);
+const parser = sqlParserFactory(
+  SQL_FUNCTIONS.map((sql_function: SyntaxDescription) => {
+    return sql_function.syntax.substr(0, sql_function.syntax.indexOf('('));
+  }),
+);
 
 interface QueryWithContext {
   queryString: string;
@@ -491,7 +415,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           aggregateColumns={ast ? ast.getAggregateColumns() : undefined}
           disabled={!ast}
           sorted={ast ? ast.getSorted() : undefined}
-          handleSQLAction={this.handleSqlAction}
+          handleSqlAction={this.handleSqlAction}
           loading={loading}
           result={result}
           error={error}

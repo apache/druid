@@ -16,17 +16,13 @@
  * limitations under the License.
  */
 
-import { HTMLSelect, IconName, Intent, ITreeNode, Tree } from '@blueprintjs/core';
+import { HTMLSelect, IconName, ITreeNode, Menu, MenuItem, Position, Tree } from '@blueprintjs/core';
 import { Popover } from '@blueprintjs/core/lib/cjs';
-import { Position } from '@blueprintjs/core/lib/esm/common/position';
 import { IconNames } from '@blueprintjs/icons';
-import copy = require('copy-to-clipboard');
 import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
-import { AppToaster } from '../../../singletons/toaster';
-import { escapeSqlIdentifier, groupBy } from '../../../utils';
-import { basicActionsToMenu } from '../../../utils/basic-action';
+import { copyAndAlert, escapeSqlIdentifier, groupBy } from '../../../utils';
 import { ColumnMetadata } from '../../../utils/column-metadata';
 
 import './column-tree.scss';
@@ -168,51 +164,49 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                 <Popover
                   boundary={'window'}
                   position={Position.RIGHT}
-                  content={basicActionsToMenu([
-                    {
-                      icon: IconNames.CLIPBOARD,
-                      title: `Copy ${table}`,
-                      onAction: () => {
-                        copy(
-                          getTableQuery(schema, {
-                            id: table,
-                            icon: IconNames.TH,
-                            label: table,
-                            childNodes: metadata.map(columnData => ({
-                              id: columnData.COLUMN_NAME,
-                              icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
-                              label: columnData.COLUMN_NAME,
-                            })),
-                          }),
-                          { format: 'text/plain' },
-                        );
-                        AppToaster.show({
-                          message: `${table} query copied to clipboard`,
-                          intent: Intent.SUCCESS,
-                        });
-                      },
-                    },
-                    {
-                      icon: IconNames.FULLSCREEN,
-                      title: `Show ${table}`,
-                      onAction: () => {
-                        handleTableClick(
-                          schema,
-                          {
-                            id: table,
-                            icon: IconNames.TH,
-                            label: table,
-                            childNodes: metadata.map(columnData => ({
-                              id: columnData.COLUMN_NAME,
-                              icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
-                              label: columnData.COLUMN_NAME,
-                            })),
-                          },
-                          props.onQueryStringChange,
-                        );
-                      },
-                    },
-                  ])}
+                  content={
+                    <Menu>
+                      <MenuItem
+                        icon={IconNames.FULLSCREEN}
+                        text={`Show: ${table}`}
+                        onClick={() => {
+                          handleTableClick(
+                            schema,
+                            {
+                              id: table,
+                              icon: IconNames.TH,
+                              label: table,
+                              childNodes: metadata.map(columnData => ({
+                                id: columnData.COLUMN_NAME,
+                                icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
+                                label: columnData.COLUMN_NAME,
+                              })),
+                            },
+                            props.onQueryStringChange,
+                          );
+                        }}
+                      />
+                      <MenuItem
+                        icon={IconNames.CLIPBOARD}
+                        text={`Copy: ${table}`}
+                        onClick={() => {
+                          copyAndAlert(
+                            getTableQuery(schema, {
+                              id: table,
+                              icon: IconNames.TH,
+                              label: table,
+                              childNodes: metadata.map(columnData => ({
+                                id: columnData.COLUMN_NAME,
+                                icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
+                                label: columnData.COLUMN_NAME,
+                              })),
+                            }),
+                            `${table} query copied to clipboard`,
+                          );
+                        }}
+                      />
+                    </Menu>
+                  }
                 >
                   <div>{table}</div>
                 </Popover>
@@ -224,42 +218,40 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                   <Popover
                     boundary={'window'}
                     position={Position.RIGHT}
-                    content={basicActionsToMenu([
-                      {
-                        icon: IconNames.CLIPBOARD,
-                        title: `Copy ${columnData.COLUMN_NAME}`,
-                        onAction: () => {
-                          copy(
-                            getColumnQuery(schema, table, {
-                              id: columnData.COLUMN_NAME,
-                              icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
-                              label: columnData.COLUMN_NAME,
-                            }),
-                            { format: 'text/plain' },
-                          );
-                          AppToaster.show({
-                            message: `${columnData.COLUMN_NAME} query copied to clipboard`,
-                            intent: Intent.SUCCESS,
-                          });
-                        },
-                      },
-                      {
-                        icon: IconNames.FULLSCREEN,
-                        title: `Show ${columnData.COLUMN_NAME}`,
-                        onAction: () => {
-                          handleColumnClick(
-                            schema,
-                            table,
-                            {
-                              id: columnData.COLUMN_NAME,
-                              icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
-                              label: columnData.COLUMN_NAME,
-                            },
-                            props.onQueryStringChange,
-                          );
-                        },
-                      },
-                    ])}
+                    content={
+                      <Menu>
+                        <MenuItem
+                          icon={IconNames.FULLSCREEN}
+                          text={`Show: ${columnData.COLUMN_NAME}`}
+                          onClick={() => {
+                            handleColumnClick(
+                              schema,
+                              table,
+                              {
+                                id: columnData.COLUMN_NAME,
+                                icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
+                                label: columnData.COLUMN_NAME,
+                              },
+                              props.onQueryStringChange,
+                            );
+                          }}
+                        />
+                        <MenuItem
+                          icon={IconNames.CLIPBOARD}
+                          text={`Copy: ${columnData.COLUMN_NAME}`}
+                          onClick={() => {
+                            copyAndAlert(
+                              getColumnQuery(schema, table, {
+                                id: columnData.COLUMN_NAME,
+                                icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
+                                label: columnData.COLUMN_NAME,
+                              }),
+                              `${columnData.COLUMN_NAME} query copied to clipboard`,
+                            );
+                          }}
+                        />
+                      </Menu>
+                    }
                   >
                     <div>{columnData.COLUMN_NAME}</div>
                   </Popover>

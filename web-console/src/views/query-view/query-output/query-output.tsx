@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Intent, Popover } from '@blueprintjs/core';
+import { Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import copy = require('copy-to-clipboard');
 import { HeaderRows } from 'druid-query-toolkit';
 import {
   basicIdentifierEscape,
@@ -27,7 +26,7 @@ import {
 import React from 'react';
 import ReactTable from 'react-table';
 
-import { AppToaster } from '../../../singletons/toaster';
+import { copyAndAlert } from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
 
 import './query-output.scss';
@@ -36,7 +35,7 @@ export interface QueryOutputProps {
   aggregateColumns?: string[];
   disabled: boolean;
   loading: boolean;
-  handleSQLAction: (row: string, header: string, action: string, direction?: boolean) => void;
+  handleSqlAction: (row: string, header: string, action: string, direction?: boolean) => void;
   sorted?: { id: string; desc: boolean }[];
   result?: HeaderRows;
   error?: string;
@@ -90,7 +89,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
     );
   }
   getHeaderActions(h: string) {
-    const { disabled, handleSQLAction } = this.props;
+    const { disabled, handleSqlAction } = this.props;
     let actionsMenu;
     if (disabled) {
       actionsMenu = basicActionsToMenu([
@@ -98,33 +97,30 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
           icon: IconNames.CLIPBOARD,
           title: `Copy ${basicIdentifierEscape(h)}`,
           onAction: () => {
-            copy(basicIdentifierEscape(h), { format: 'text/plain' });
-            AppToaster.show({
-              message: `${basicIdentifierEscape(h)}' copied to clipboard`,
-              intent: Intent.SUCCESS,
-            });
+            copyAndAlert(
+              basicIdentifierEscape(h),
+              `${basicIdentifierEscape(h)}' copied to clipboard`,
+            );
           },
         },
         {
           icon: IconNames.CLIPBOARD,
           title: `Copy 'ORDER BY ${basicIdentifierEscape(h)} ASC'`,
           onAction: () => {
-            copy(`ORDER BY ${basicIdentifierEscape(h)} ASC`, { format: 'text/plain' });
-            AppToaster.show({
-              message: `ORDER BY ${basicIdentifierEscape(h)} ASC' copied to clipboard`,
-              intent: Intent.SUCCESS,
-            });
+            copyAndAlert(
+              `ORDER BY ${basicIdentifierEscape(h)} ASC`,
+              `ORDER BY ${basicIdentifierEscape(h)} ASC' copied to clipboard`,
+            );
           },
         },
         {
           icon: IconNames.CLIPBOARD,
           title: `Copy 'ORDER BY ${basicIdentifierEscape(h)} DESC'`,
           onAction: () => {
-            copy(`ORDER BY ${basicIdentifierEscape(h)} DESC`, { format: 'text/plain' });
-            AppToaster.show({
-              message: `ORDER BY ${basicIdentifierEscape(h)} DESC' copied to clipboard`,
-              intent: Intent.SUCCESS,
-            });
+            copyAndAlert(
+              `ORDER BY ${basicIdentifierEscape(h)} DESC`,
+              `ORDER BY ${basicIdentifierEscape(h)} DESC' copied to clipboard`,
+            );
           },
         },
       ]);
@@ -137,7 +133,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
             basicActions.push({
               icon: sorted.desc ? IconNames.SORT_ASC : IconNames.SORT_DESC,
               title: `Order by: ${h} ${sorted.desc ? 'ASC' : 'DESC'}`,
-              onAction: () => handleSQLAction('', h, 'order by'),
+              onAction: () => handleSqlAction('', h, 'order by'),
             });
           }
         });
@@ -147,19 +143,19 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
           {
             icon: IconNames.SORT_ASC,
             title: `Order by: ${h} ASC`,
-            onAction: () => handleSQLAction('', h, 'order by'),
+            onAction: () => handleSqlAction('', h, 'order by'),
           },
           {
             icon: IconNames.SORT_DESC,
             title: `Order by: ${h} DESC`,
-            onAction: () => handleSQLAction('', h, 'order by'),
+            onAction: () => handleSqlAction('', h, 'order by'),
           },
         );
       }
       basicActions.push({
         icon: IconNames.CROSS,
         title: `Remove: ${h}`,
-        onAction: () => handleSQLAction('', h, 'exclude column'),
+        onAction: () => handleSqlAction('', h, 'exclude column'),
       });
       actionsMenu = basicActionsToMenu(basicActions);
     }
@@ -167,7 +163,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
   }
 
   getRowActions(row: string, header: string) {
-    const { disabled, handleSQLAction } = this.props;
+    const { disabled, handleSqlAction } = this.props;
     let actionsMenu;
     if (disabled) {
       actionsMenu = basicActionsToMenu([
@@ -175,41 +171,31 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
           icon: IconNames.CLIPBOARD,
           title: `Copy '${row}'`,
           onAction: () => {
-            copy(row, { format: 'text/plain' });
-            AppToaster.show({
-              message: `${row} copied to clipboard`,
-              intent: Intent.SUCCESS,
-            });
+            copyAndAlert(row, `${row} copied to clipboard`);
           },
         },
         {
           icon: IconNames.CLIPBOARD,
           title: `Copy 'WHERE ${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)}'`,
           onAction: () => {
-            copy(`WHERE  ${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)}`, {
-              format: 'text/plain',
-            });
-            AppToaster.show({
-              message: `WHERE ${basicIdentifierEscape(header)} = ${basicLiteralEscape(
+            copyAndAlert(
+              `WHERE  ${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)}`,
+              `WHERE ${basicIdentifierEscape(header)} = ${basicLiteralEscape(
                 row,
               )} copied to clipboard`,
-              intent: Intent.SUCCESS,
-            });
+            );
           },
         },
         {
           icon: IconNames.CLIPBOARD,
           title: `Copy 'WHERE ${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)}'`,
           onAction: () => {
-            copy(`WHERE  ${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)}`, {
-              format: 'text/plain',
-            });
-            AppToaster.show({
-              message: `WHERE ${basicIdentifierEscape(header)} != ${basicLiteralEscape(
+            copyAndAlert(
+              `WHERE  ${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)}`,
+              `WHERE ${basicIdentifierEscape(header)} != ${basicLiteralEscape(
                 row,
               )} copied to clipboard`,
-              intent: Intent.SUCCESS,
-            });
+            );
           },
         },
       ]);
@@ -218,12 +204,12 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
         {
           icon: IconNames.FILTER_KEEP,
           title: `Filter by: ${header} = ${row}`,
-          onAction: () => handleSQLAction(row, header, 'exclude'),
+          onAction: () => handleSqlAction(row, header, 'exclude'),
         },
         {
           icon: IconNames.FILTER_REMOVE,
           title: `Filter by: ${header} != ${row}`,
-          onAction: () => handleSQLAction(row, header, 'filter'),
+          onAction: () => handleSqlAction(row, header, 'filter'),
         },
       ]);
     }
