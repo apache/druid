@@ -48,23 +48,6 @@ FROM ${tableSchema}.${nodeData.label}`);
   }
 }
 
-function getTableQuery(tableSchema: string, nodeData: ITreeNode): string {
-  let columns: string[];
-  if (nodeData.childNodes) {
-    columns = nodeData.childNodes.map(child => escapeSqlIdentifier(String(child.label)));
-  } else {
-    columns = ['*'];
-  }
-  if (tableSchema === 'druid') {
-    return `SELECT ${columns.join(', ')}
-FROM ${escapeSqlIdentifier(String(nodeData.label))}
-WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`;
-  } else {
-    return `SELECT ${columns.join(', ')}
-FROM ${tableSchema}.${nodeData.label}`;
-  }
-}
-
 function handleColumnClick(
   columnSchema: string,
   columnTable: string,
@@ -96,35 +79,6 @@ ORDER BY "Count" DESC`);
 FROM ${columnSchema}.${columnTable}
 GROUP BY 1
 ORDER BY "Count" DESC`);
-  }
-}
-
-function getColumnQuery(columnSchema: string, columnTable: string, nodeData: ITreeNode): string {
-  if (columnSchema === 'druid') {
-    if (nodeData.icon === IconNames.TIME) {
-      return `SELECT
-  TIME_FLOOR(${escapeSqlIdentifier(String(nodeData.label))}, 'PT1H') AS "Time",
-  COUNT(*) AS "Count"
-FROM ${escapeSqlIdentifier(columnTable)}
-WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
-GROUP BY 1
-ORDER BY "Time" ASC`;
-    } else {
-      return `SELECT
-  "${nodeData.label}",
-  COUNT(*) AS "Count"
-FROM ${escapeSqlIdentifier(columnTable)}
-WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
-GROUP BY 1
-ORDER BY "Count" DESC`;
-    }
-  } else {
-    return `SELECT
-  ${escapeSqlIdentifier(String(nodeData.label))},
-  COUNT(*) AS "Count"
-FROM ${columnSchema}.${columnTable}
-GROUP BY 1
-ORDER BY "Count" DESC`;
   }
 }
 
@@ -190,19 +144,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                         icon={IconNames.CLIPBOARD}
                         text={`Copy: ${table}`}
                         onClick={() => {
-                          copyAndAlert(
-                            getTableQuery(schema, {
-                              id: table,
-                              icon: IconNames.TH,
-                              label: table,
-                              childNodes: metadata.map(columnData => ({
-                                id: columnData.COLUMN_NAME,
-                                icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
-                                label: columnData.COLUMN_NAME,
-                              })),
-                            }),
-                            `${table} query copied to clipboard`,
-                          );
+                          copyAndAlert(table, `${table} query copied to clipboard`);
                         }}
                       />
                     </Menu>
@@ -241,11 +183,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                           text={`Copy: ${columnData.COLUMN_NAME}`}
                           onClick={() => {
                             copyAndAlert(
-                              getColumnQuery(schema, table, {
-                                id: columnData.COLUMN_NAME,
-                                icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
-                                label: columnData.COLUMN_NAME,
-                              }),
+                              columnData.COLUMN_NAME,
                               `${columnData.COLUMN_NAME} query copied to clipboard`,
                             );
                           }}

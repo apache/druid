@@ -418,6 +418,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           sqlExcludeColumn={this.sqlExcludeColumn}
           sqlFilterRow={this.sqlFilterRow}
           sqlOrderBy={this.sqlOrderBy}
+          runeMode={runeMode}
           loading={loading}
           result={result}
           error={error}
