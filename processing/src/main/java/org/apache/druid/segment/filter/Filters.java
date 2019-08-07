@@ -656,7 +656,7 @@ public class Filters
   /**
    * This method provides a "standard" implementation of {@link Filter#shouldUseBitmapIndex(BitmapIndexSelector)} which takes
    * a {@link Filter}, a {@link BitmapIndexSelector}, and {@link FilterTuning} to determine if:
-   *  a) the filter supports bitmap indexes
+   *  a) the filter supports bitmap indexes for all required columns
    *  b) the filter tuning specifies that it should use the index
    *  c) the cardinality of the column is above the minimum threshold and below the maximum threshold to use the index
    *
@@ -672,7 +672,9 @@ public class Filters
     final FilterTuning tuning = filterTuning != null ? filterTuning : FilterTuning.createDefault(filter, indexSelector);
     if (filter.supportsBitmapIndex(indexSelector) && tuning.getUseBitmapIndex()) {
       return filter.getRequiredColumns().stream().allMatch(column -> {
-        final int cardinality = indexSelector.getBitmapIndex(column).getCardinality();
+        final BitmapIndex index = indexSelector.getBitmapIndex(column);
+        Preconditions.checkNotNull(index, "WTF?! column doesn't have a bitmap index");
+        final int cardinality = index.getCardinality();
         return cardinality >= tuning.getMinCardinalityToUseBitmapIndex()
                && cardinality <= tuning.getMaxCardinalityToUseBitmapIndex();
       });

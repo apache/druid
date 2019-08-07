@@ -106,7 +106,8 @@ public interface Filter
    * input BitmapIndexSelector.
    *
    * Returning a value of true here guarantees that {@link #getBitmapIndex(BitmapIndexSelector)} will return a non-null
-   * {@link BitmapIndexSelector}.
+   * {@link BitmapIndexSelector}, and also that all columns specified in {@link #getRequiredColumns()} have a bitmap
+   * index retrievable via {@link BitmapIndexSelector#getBitmapIndex(String)}.
    *
    * @param selector Object used to retrieve bitmap indexes
    *
@@ -122,7 +123,9 @@ public interface Filter
    *
    * If shouldUseFilter(selector) returns true, {@link #supportsBitmapIndex} must also return true when called with the
    * same selector object. Returning a value of true here guarantees that {@link #getBitmapIndex(BitmapIndexSelector)}
-   * will return a non-null {@link BitmapIndexSelector}.
+   * will return a non-null {@link BitmapIndexSelector}, and also that all columns specified in
+   * {@link #getRequiredColumns()} have a bitmap index retrievable via
+   * {@link BitmapIndexSelector#getBitmapIndex(String)}.
    *
    * Implementations of this methods typically consider a {@link FilterTuning} to make decisions about when to
    * use an available index. A "standard" implementation of this is available to all {@link Filter} implementations in
@@ -155,7 +158,8 @@ public interface Filter
   }
 
   /**
-   * Set of columns used by a filter
+   * Set of columns used by a filter. If {@link #supportsBitmapIndex} returns true, all columns returned by this method
+   * can be expected to have a bitmap index retrievable via {@link BitmapIndexSelector#getBitmapIndex(String)}
    */
   Set<String> getRequiredColumns();
 }
