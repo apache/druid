@@ -25,7 +25,7 @@ import { downloadFile } from '../../utils';
 import './show-value.scss';
 
 export interface ShowValueProps {
-  endpoint: string;
+  endpoint?: string;
   downloadFilename?: string;
   jsonValue?: string;
 }
@@ -50,11 +50,13 @@ export class ShowValue extends React.PureComponent<ShowValueProps> {
                 }
               />
             )}
-            <Button
-              text="View raw"
-              minimal
-              onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
-            />
+            {endpoint && (
+              <Button
+                text="View raw"
+                minimal
+                onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
+              />
+            )}
           </ButtonGroup>
         </div>
         <div className="main-area">

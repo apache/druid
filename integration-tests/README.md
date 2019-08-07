@@ -218,8 +218,3 @@ This will tell the test framework that the test class needs to be constructed us
 2) FromFileTestQueryHelper - reads queries with expected results from file and executes them and verifies the results using ResultVerifier
 
 Refer ITIndexerTest as an example on how to use dependency Injection
-
-### Register new tests for Travis CI
-
-Once you add new integration tests, don't forget to add them to `{DRUID_ROOT}/ci/travis_script_integration.sh`
-or `{DRUID_ROOT}/ci/travis_script_integration_part2.sh` for Travis CI to run them.
