@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Popover } from '@blueprintjs/core';
+import { Menu, MenuItem, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { HeaderRows } from 'druid-query-toolkit';
 import {
@@ -41,6 +41,7 @@ export interface QueryOutputProps {
   sorted?: { id: string; desc: boolean }[];
   result?: HeaderRows;
   error?: string;
+  runeMode: boolean;
 }
 
 export class QueryOutput extends React.PureComponent<QueryOutputProps> {
@@ -91,38 +92,44 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
     );
   }
   getHeaderActions(h: string) {
-    const { disabled, sqlExcludeColumn, sqlOrderBy } = this.props;
+    const { disabled, sqlExcludeColumn, sqlOrderBy, runeMode } = this.props;
     let actionsMenu;
     if (disabled) {
-      actionsMenu = basicActionsToMenu([
-        {
-          icon: IconNames.CLIPBOARD,
-          title: `Copy: ${h}`,
-          onAction: () => {
-            copyAndAlert(h, `${h}' copied to clipboard`);
-          },
-        },
-        {
-          icon: IconNames.CLIPBOARD,
-          title: `Copy: ORDER BY ${basicIdentifierEscape(h)} ASC`,
-          onAction: () => {
-            copyAndAlert(
-              `ORDER BY ${basicIdentifierEscape(h)} ASC`,
-              `ORDER BY ${basicIdentifierEscape(h)} ASC' copied to clipboard`,
-            );
-          },
-        },
-        {
-          icon: IconNames.CLIPBOARD,
-          title: `Copy: 'ORDER BY ${basicIdentifierEscape(h)} DESC'`,
-          onAction: () => {
-            copyAndAlert(
-              `ORDER BY ${basicIdentifierEscape(h)} DESC`,
-              `ORDER BY ${basicIdentifierEscape(h)} DESC' copied to clipboard`,
-            );
-          },
-        },
-      ]);
+      actionsMenu = (
+        <Menu>
+          <MenuItem
+            icon={IconNames.CLIPBOARD}
+            text={`Copy: ${h}`}
+            onClick={() => {
+              copyAndAlert(h, `${h}' copied to clipboard`);
+            }}
+          />
+          {runeMode && (
+            <MenuItem
+              icon={IconNames.CLIPBOARD}
+              text={`Copy: ORDER BY ${basicIdentifierEscape(h)} ASC`}
+              onClick={() =>
+                copyAndAlert(
+                  `ORDER BY ${basicIdentifierEscape(h)} ASC`,
+                  `ORDER BY ${basicIdentifierEscape(h)} ASC' copied to clipboard`,
+                )
+              }
+            />
+          )}
+          {runeMode && (
+            <MenuItem
+              icon={IconNames.CLIPBOARD}
+              text={`Copy: 'ORDER BY ${basicIdentifierEscape(h)} DESC'`}
+              onClick={() =>
+                copyAndAlert(
+                  `ORDER BY ${basicIdentifierEscape(h)} DESC`,
+                  `ORDER BY ${basicIdentifierEscape(h)} DESC' copied to clipboard`,
+                )
+              }
+            />
+          )}
+        </Menu>
+      );
     } else {
       const { sorted } = this.props;
       const basicActions: BasicAction[] = [];
@@ -162,38 +169,46 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
   }
 
   getRowActions(row: string, header: string) {
-    const { disabled, sqlFilterRow } = this.props;
+    const { disabled, sqlFilterRow, runeMode } = this.props;
     let actionsMenu;
     if (disabled) {
-      actionsMenu = basicActionsToMenu([
-        {
-          icon: IconNames.CLIPBOARD,
-          title: `Copy: '${row}'`,
-          onAction: () => {
-            copyAndAlert(row, `${row} copied to clipboard`);
-          },
-        },
-        {
-          icon: IconNames.CLIPBOARD,
-          title: `Copy: ${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)}`,
-          onAction: () => {
-            copyAndAlert(
-              `${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)}`,
-              `${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)} copied to clipboard`,
-            );
-          },
-        },
-        {
-          icon: IconNames.CLIPBOARD,
-          title: `Copy: ${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)}`,
-          onAction: () => {
-            copyAndAlert(
-              `${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)}`,
-              `${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)} copied to clipboard`,
-            );
-          },
-        },
-      ]);
+      actionsMenu = (
+        <Menu>
+          <MenuItem
+            icon={IconNames.CLIPBOARD}
+            text={`Copy: ${row}`}
+            onClick={() => copyAndAlert(row, `${row} copied to clipboard`)}
+          />
+          {runeMode && (
+            <MenuItem
+              icon={IconNames.CLIPBOARD}
+              text={`Copy: ${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)}`}
+              onClick={() =>
+                copyAndAlert(
+                  `${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)}`,
+                  `${basicIdentifierEscape(header)} = ${basicLiteralEscape(
+                    row,
+                  )} copied to clipboard`,
+                )
+              }
+            />
+          )}
+          {runeMode && (
+            <MenuItem
+              icon={IconNames.CLIPBOARD}
+              text={`Copy: ${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)}`}
+              onClick={() =>
+                copyAndAlert(
+                  `${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)}`,
+                  `${basicIdentifierEscape(header)} != ${basicLiteralEscape(
+                    row,
+                  )} copied to clipboard`,
+                )
+              }
+            />
+          )}
+        </Menu>
+      );
     } else {
       actionsMenu = basicActionsToMenu([
         {

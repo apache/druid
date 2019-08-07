@@ -44,6 +44,7 @@ exports[`sql view matches snapshot 1`] = `
     <QueryOutput
       disabled={true}
       loading={false}
+      runeMode={false}
       sqlExcludeColumn={[Function]}
       sqlFilterRow={[Function]}
       sqlOrderBy={[Function]}
