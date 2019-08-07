@@ -193,7 +193,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         let jsonQuery: any;
 
         try {
-          ast = parser(queryString.trim());
+          ast = parser(queryString);
         } catch {}
 
         if (!(ast instanceof SqlQuery)) {
@@ -437,6 +437,16 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     this.handleRun(true, ast.toString());
   };
 
+  private addAggregateColumn = (columnName: string, functionName: string): void => {
+    let { ast } = this.state;
+    if (!ast) return;
+    ast = ast.addAggregateColumn(columnName, functionName);
+    this.setState({
+      queryString: ast.toString(),
+    });
+    this.handleRun(true, ast.toString());
+  };
+
   private sqlOrderBy = (header: string, direction: 'ASC' | 'DESC'): void => {
     let { ast } = this.state;
     if (!ast) return;
@@ -523,6 +533,12 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     } else if (tempAst && tempAst instanceof SqlQuery) {
       defaultTable = tempAst.getTableName();
     }
+    let hasGroupBy;
+    if (ast && ast instanceof SqlQuery) {
+      hasGroupBy = !!ast.groupByClause;
+    } else if (tempAst && tempAst instanceof SqlQuery) {
+      hasGroupBy = !!tempAst.groupByClause;
+    }
 
     return (
       <div
@@ -530,8 +546,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       >
         {!columnMetadataError && (
           <ColumnTree
+            addAggregateColumn={this.addAggregateColumn}
             addToGroupBy={this.addToGroupBy}
-            hasGroupBy={ast ? !!ast.groupByClause : undefined}
+            hasGroupBy={hasGroupBy}
             columnMetadataLoading={columnMetadataLoading}
             columnMetadata={columnMetadata}
             onQueryStringChange={this.handleQueryStringChange}

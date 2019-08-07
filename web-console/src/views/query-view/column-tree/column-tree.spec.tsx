@@ -27,6 +27,8 @@ describe('column tree', () => {
   it('matches snapshot', () => {
     const columnTree = (
       <ColumnTree
+        addAggregateColumn={() => null}
+        addToGroupBy={() => null}
         columnMetadataLoading={false}
         columnMetadata={
           [

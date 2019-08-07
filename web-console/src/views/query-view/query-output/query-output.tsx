@@ -104,7 +104,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
               copyAndAlert(h, `${h}' copied to clipboard`);
             }}
           />
-          {runeMode && (
+          {!runeMode && (
             <MenuItem
               icon={IconNames.CLIPBOARD}
               text={`Copy: ORDER BY ${basicIdentifierEscape(h)} ASC`}
@@ -116,7 +116,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
               }
             />
           )}
-          {runeMode && (
+          {!runeMode && (
             <MenuItem
               icon={IconNames.CLIPBOARD}
               text={`Copy: 'ORDER BY ${basicIdentifierEscape(h)} DESC'`}
@@ -179,7 +179,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
             text={`Copy: ${row}`}
             onClick={() => copyAndAlert(row, `${row} copied to clipboard`)}
           />
-          {runeMode && (
+          {!runeMode && (
             <MenuItem
               icon={IconNames.CLIPBOARD}
               text={`Copy: ${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)}`}
@@ -193,7 +193,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
               }
             />
           )}
-          {runeMode && (
+          {!runeMode && (
             <MenuItem
               icon={IconNames.CLIPBOARD}
               text={`Copy: ${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)}`}

@@ -89,6 +89,7 @@ export interface ColumnTreeProps {
   defaultSchema?: string;
   defaultTable?: string;
   addToGroupBy: (columnName: string) => void;
+  addAggregateColumn: (columnName: string, functionName: string) => void;
   hasGroupBy?: boolean;
 }
 
@@ -102,7 +103,7 @@ export interface ColumnTreeState {
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
     const { columnMetadata, defaultSchema, defaultTable } = props;
-
+    console.log(props.hasGroupBy);
     if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
       const columnTree = groupBy(
         columnMetadata,
@@ -185,6 +186,13 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                             icon={IconNames.GROUP_OBJECTS}
                             text={`Add to group by: ${columnData.COLUMN_NAME}`}
                             onClick={() => props.addToGroupBy(columnData.COLUMN_NAME)}
+                          />
+                        )}
+                        {props.hasGroupBy && columnData.DATA_TYPE === 'BIGINT' && (
+                          <MenuItem
+                            icon={IconNames.GROUP_OBJECTS}
+                            text={`Aggregate: ${columnData.COLUMN_NAME}`}
+                            onClick={() => props.addAggregateColumn(columnData.COLUMN_NAME, 'SUM')}
                           />
                         )}
                         <MenuItem
