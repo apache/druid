@@ -1301,9 +1301,7 @@ public class TopNQueryRunnerTest
         )
     );
 
-    final ResponseContext responseContext = ResponseContext.createEmpty();
-    responseContext.putAll(specialContext);
-    Sequence<Result<TopNResultValue>> results = runWithMerge(query, responseContext);
+    Sequence<Result<TopNResultValue>> results = runWithMerge(query);
     List<Result<BySegmentTopNResultValue>> resultList = results
         .map((Result<TopNResultValue> input) -> {
           // Stupid type erasure

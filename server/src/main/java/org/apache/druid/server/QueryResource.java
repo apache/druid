@@ -210,7 +210,7 @@ public class QueryResource implements QueryCountStatsProvider
       final ResponseContext responseContext = queryResponse.getResponseContext();
       final String prevEtag = getPreviousEtag(req);
 
-      if (prevEtag != null && prevEtag.equals(responseContext.get(ResponseContext.CTX_ETAG))) {
+      if (prevEtag != null && prevEtag.equals(responseContext.get(ResponseContext.Key.ETAG))) {
         queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), -1);
         successfulQueryCount.incrementAndGet();
         return Response.notModified().build();
@@ -230,7 +230,7 @@ public class QueryResource implements QueryCountStatsProvider
             serializeDateTimeAsLong
         );
 
-        Response.ResponseBuilder builder = Response
+        Response.ResponseBuilder responseBuilder = Response
             .ok(
                 new StreamingOutput()
                 {
@@ -269,9 +269,9 @@ public class QueryResource implements QueryCountStatsProvider
             )
             .header("X-Druid-Query-Id", queryId);
 
-        if (responseContext.get(ResponseContext.CTX_ETAG) != null) {
-          builder.header(HEADER_ETAG, responseContext.get(ResponseContext.CTX_ETAG));
-          responseContext.remove(ResponseContext.CTX_ETAG);
+        Object entityTag = responseContext.remove(ResponseContext.Key.ETAG);
+        if (entityTag != null) {
+          responseBuilder.header(HEADER_ETAG, entityTag);
         }
 
         DirectDruidClient.removeMagicResponseContextFields(responseContext);
@@ -279,14 +279,20 @@ public class QueryResource implements QueryCountStatsProvider
         //Limit the response-context header, see https://github.com/apache/incubator-druid/issues/2331
         //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
         //and encodes the string using ASCII, so 1 char is = 1 byte
-        String responseCtxString = responseContext.serializeWith(jsonMapper);
-        if (responseCtxString.length() > RESPONSE_CTX_HEADER_LEN_LIMIT) {
-          log.warn("Response Context truncated for id [%s] . Full context is [%s].", queryId, responseCtxString);
-          responseCtxString = responseCtxString.substring(0, RESPONSE_CTX_HEADER_LEN_LIMIT);
+        final ResponseContext.SerializationResult serializationResult = responseContext.serializeWith(
+            jsonMapper,
+            RESPONSE_CTX_HEADER_LEN_LIMIT
+        );
+        if (serializationResult.isReduced()) {
+          log.info(
+              "Response Context truncated for id [%s] . Full context is [%s].",
+              queryId,
+              serializationResult.getFullResult()
+          );
         }
 
-        return builder
-            .header(HEADER_RESPONSE_CONTEXT, responseCtxString)
+        return responseBuilder
+            .header(HEADER_RESPONSE_CONTEXT, serializationResult.getTruncatedResult())
             .build();
       }
       catch (Exception e) {

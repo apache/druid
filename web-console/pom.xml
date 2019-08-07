@@ -33,6 +33,7 @@
 
   <properties>
     <resources.directory>${project.build.directory}/resources</resources.directory>
+    <druid.console.skip>false</druid.console.skip>  <!-- this property is overidden in Travis CI to skip the javascript-related work -->
   </properties>
 
   <build>
@@ -40,6 +41,9 @@
       <plugin>
         <groupId>com.github.eirslett</groupId>
         <artifactId>frontend-maven-plugin</artifactId>
+        <configuration>
+          <skip>${druid.console.skip}</skip>
+        </configuration>
         <executions>
           <execution>
             <id>install-node-and-npm</id>
@@ -100,6 +104,9 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
+        <configuration>
+          <skip>${druid.console.skip}</skip>
+        </configuration>
         <executions>
           <execution>
             <id>clean-console</id>
@@ -141,6 +148,7 @@
         <artifactId>maven-resources-plugin</artifactId>
         <configuration>
           <outputDirectory>${project.build.outputDirectory}/org/apache/druid/console</outputDirectory>
+          <skip>${druid.console.skip}</skip>
         </configuration>
       </plugin>
     </plugins>

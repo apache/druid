@@ -53,6 +53,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -209,6 +210,15 @@ public class DefaultLimitSpec implements LimitSpec
     }
 
     throw new ISE("Unknown column in order clause[%s]", columnSpec);
+  }
+
+  @Override
+  public LimitSpec filterColumns(Set<String> names)
+  {
+    return new DefaultLimitSpec(
+        columns.stream().filter(c -> names.contains(c.getDimension())).collect(Collectors.toList()),
+        limit
+    );
   }
 
   private Ordering<ResultRow> makeComparator(

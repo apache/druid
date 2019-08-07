@@ -21,14 +21,13 @@ package org.apache.druid.query.groupby.epinephelinae;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.BaseSequence;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -40,8 +39,8 @@ import javax.annotation.Nullable;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -95,7 +94,7 @@ public class GroupByRowProcessor
       final int mergeBufferSize
   )
   {
-    final List<Closeable> closeOnExit = new ArrayList<>();
+    final Closer closeOnExit = Closer.create();
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
 
     final File temporaryStorageDirectory = new File(
@@ -108,7 +107,7 @@ public class GroupByRowProcessor
         querySpecificConfig.getMaxOnDiskStorage()
     );
 
-    closeOnExit.add(temporaryStorage);
+    closeOnExit.register(temporaryStorage);
 
     Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, ResultRow>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
         query,
@@ -120,7 +119,7 @@ public class GroupByRowProcessor
           public ByteBuffer get()
           {
             final ResourceHolder<ByteBuffer> mergeBufferHolder = resource.getMergeBuffer();
-            closeOnExit.add(mergeBufferHolder);
+            closeOnExit.register(mergeBufferHolder);
             return mergeBufferHolder.get();
           }
         },
@@ -130,7 +129,7 @@ public class GroupByRowProcessor
     );
     final Grouper<RowBasedKey> grouper = pair.lhs;
     final Accumulator<AggregateResult, ResultRow> accumulator = pair.rhs;
-    closeOnExit.add(grouper);
+    closeOnExit.register(grouper);
 
     final AggregateResult retVal = rows.accumulate(AggregateResult.ok(), accumulator);
 
@@ -147,9 +146,9 @@ public class GroupByRowProcessor
       }
 
       @Override
-      public void close()
+      public void close() throws IOException
       {
-        Lists.reverse(closeOnExit).forEach(CloseQuietly::close);
+        closeOnExit.close();
       }
     };
   }
