@@ -193,7 +193,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         let jsonQuery: any;
 
         try {
-          ast = parser(queryString);
+          ast = parser(queryString.trim());
         } catch {}
 
         if (!(ast instanceof SqlQuery)) {
