@@ -152,7 +152,10 @@ public class CompactionTask extends AbstractBatchIndexTask
   private List<IndexTask> indexTaskSpecs;
 
   /**
-   * This variable is updated by the main thread and read by an HTTP thread when {@link #stopGracefully} is called.
+   * The sub-task that is currently running.
+   *
+   * Volatile since it will potentially be accessed by {@link #stopGracefully} concurrently with {@link #runTask},
+   * which is responsible for assigning the value.
    */
   @Nullable
   private volatile IndexTask currentRunningTaskSpec = null;

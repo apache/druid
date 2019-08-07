@@ -162,12 +162,15 @@ public interface Task
 
   /**
    * Asks a task to arrange for its "run" method to exit promptly. Tasks that take too long to stop gracefully will be
-   * terminated with extreme prejudice.
+   * terminated with extreme prejudice. Note that this method can be called at any time while {@link #run} is called.
+   * Its implementations should handle potential concurreny issues properly.
    *
-   * If the task has some resources to clean up on exit, e.g., sub tasks of parallel indexing task
-   * or Hadoop job of Hadoop indexing task, those resource cleanups should be done in this method.
+   * If the task has some resources to clean up on exit, e.g., sub tasks of parallel indexing task or Hadoop job of
+   * Hadoop indexing task, those resource cleanups should be done in this method.
    *
    * @param taskConfig TaskConfig for this task
+   *
+   * @see org.apache.druid.indexing.worker.http.WorkerResource#doShutdown(String)
    */
   void stopGracefully(TaskConfig taskConfig);
 
