@@ -162,15 +162,21 @@ public interface Task
 
   /**
    * Asks a task to arrange for its "run" method to exit promptly. Tasks that take too long to stop gracefully will be
-   * terminated with extreme prejudice. Note that this method can be called at any time while {@link #run} is called.
-   * Its implementations should handle potential concurreny issues properly.
+   * terminated with extreme prejudice.
+   *
+   * This method can be called at any time while {@link #run} is being called when the task is killed.
+   * Depending on the task executor type, one of the two cases below can happen when the task is killed.
+   *
+   * - When the task is executed by a middleManager, {@link org.apache.druid.indexing.overlord.ForkingTaskRunner} kills
+   *   the process running the task, which triggers
+   *   {@link org.apache.druid.indexing.overlord.SingleTaskBackgroundRunner#stop}.
+   * - When the task is executed by an indexer, {@link org.apache.druid.indexing.overlord.ThreadingTaskRunner#shutdown}
+   *   calls this method directly.
    *
    * If the task has some resources to clean up on exit, e.g., sub tasks of parallel indexing task or Hadoop job of
    * Hadoop indexing task, those resource cleanups should be done in this method.
    *
    * @param taskConfig TaskConfig for this task
-   *
-   * @see org.apache.druid.indexing.worker.http.WorkerResource#doShutdown(String)
    */
   void stopGracefully(TaskConfig taskConfig);
 
