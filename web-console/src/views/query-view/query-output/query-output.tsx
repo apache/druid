@@ -97,17 +97,14 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
       actionsMenu = basicActionsToMenu([
         {
           icon: IconNames.CLIPBOARD,
-          title: `Copy ${basicIdentifierEscape(h)}`,
+          title: `Copy: ${h}`,
           onAction: () => {
-            copyAndAlert(
-              basicIdentifierEscape(h),
-              `${basicIdentifierEscape(h)}' copied to clipboard`,
-            );
+            copyAndAlert(h, `${h}' copied to clipboard`);
           },
         },
         {
           icon: IconNames.CLIPBOARD,
-          title: `Copy 'ORDER BY ${basicIdentifierEscape(h)} ASC'`,
+          title: `Copy: ORDER BY ${basicIdentifierEscape(h)} ASC`,
           onAction: () => {
             copyAndAlert(
               `ORDER BY ${basicIdentifierEscape(h)} ASC`,
@@ -117,7 +114,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
         },
         {
           icon: IconNames.CLIPBOARD,
-          title: `Copy 'ORDER BY ${basicIdentifierEscape(h)} DESC'`,
+          title: `Copy: 'ORDER BY ${basicIdentifierEscape(h)} DESC'`,
           onAction: () => {
             copyAndAlert(
               `ORDER BY ${basicIdentifierEscape(h)} DESC`,
@@ -171,32 +168,28 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
       actionsMenu = basicActionsToMenu([
         {
           icon: IconNames.CLIPBOARD,
-          title: `Copy '${row}'`,
+          title: `Copy: '${row}'`,
           onAction: () => {
             copyAndAlert(row, `${row} copied to clipboard`);
           },
         },
         {
           icon: IconNames.CLIPBOARD,
-          title: `Copy 'WHERE ${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)}'`,
+          title: `Copy: ${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)}`,
           onAction: () => {
             copyAndAlert(
-              `WHERE  ${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)}`,
-              `WHERE ${basicIdentifierEscape(header)} = ${basicLiteralEscape(
-                row,
-              )} copied to clipboard`,
+              `${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)}`,
+              `${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)} copied to clipboard`,
             );
           },
         },
         {
           icon: IconNames.CLIPBOARD,
-          title: `Copy 'WHERE ${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)}'`,
+          title: `Copy: ${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)}`,
           onAction: () => {
             copyAndAlert(
-              `WHERE  ${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)}`,
-              `WHERE ${basicIdentifierEscape(header)} != ${basicLiteralEscape(
-                row,
-              )} copied to clipboard`,
+              `${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)}`,
+              `${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)} copied to clipboard`,
             );
           },
         },
