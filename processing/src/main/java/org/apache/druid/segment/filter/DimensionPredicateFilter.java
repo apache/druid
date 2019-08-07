@@ -151,7 +151,7 @@ public class DimensionPredicateFilter implements Filter
   @Override
   public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
   {
-    return Filters.shouldUseIndex(this, selector, filterTuning);
+    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
   }
 
   @Override

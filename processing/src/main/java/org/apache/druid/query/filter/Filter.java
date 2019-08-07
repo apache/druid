@@ -129,7 +129,7 @@ public interface Filter
    *
    * Implementations of this methods typically consider a {@link FilterTuning} to make decisions about when to
    * use an available index. A "standard" implementation of this is available to all {@link Filter} implementations in
-   * {@link org.apache.druid.segment.filter.Filters#shouldUseIndex(Filter, BitmapIndexSelector, FilterTuning)}.
+   * {@link org.apache.druid.segment.filter.Filters#shouldUseBitmapIndex(Filter, BitmapIndexSelector, FilterTuning)}.
    *
    * @param selector Object used to retrieve bitmap indexes and provide information about the column
    *
