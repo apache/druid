@@ -427,6 +427,16 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     );
   }
 
+  private addToGroupBy = (columnName: string): void => {
+    let { ast } = this.state;
+    if (!ast) return;
+    ast = ast.addToGroupBy(columnName);
+    this.setState({
+      queryString: ast.toString(),
+    });
+    this.handleRun(true, ast.toString());
+  };
+
   private sqlOrderBy = (header: string, direction: 'ASC' | 'DESC'): void => {
     let { ast } = this.state;
     if (!ast) return;
@@ -520,6 +530,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       >
         {!columnMetadataError && (
           <ColumnTree
+            addToGroupBy={this.addToGroupBy}
+            hasGroupBy={ast ? !!ast.groupByClause : undefined}
             columnMetadataLoading={columnMetadataLoading}
             columnMetadata={columnMetadata}
             onQueryStringChange={this.handleQueryStringChange}

@@ -88,6 +88,8 @@ export interface ColumnTreeProps {
   onQueryStringChange: (queryString: string) => void;
   defaultSchema?: string;
   defaultTable?: string;
+  addToGroupBy: (columnName: string) => void;
+  hasGroupBy?: boolean;
 }
 
 export interface ColumnTreeState {
@@ -178,6 +180,13 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                             );
                           }}
                         />
+                        {props.hasGroupBy && (
+                          <MenuItem
+                            icon={IconNames.GROUP_OBJECTS}
+                            text={`Add to group by: ${columnData.COLUMN_NAME}`}
+                            onClick={() => props.addToGroupBy(columnData.COLUMN_NAME)}
+                          />
+                        )}
                         <MenuItem
                           icon={IconNames.CLIPBOARD}
                           text={`Copy: ${columnData.COLUMN_NAME}`}
