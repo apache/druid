@@ -134,7 +134,7 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
             onQueryContextChange(setUseCache(queryContext, !useCache));
           }}
         />
-        {runeMode && (
+        {!runeMode && (
           <MenuItem icon={IconNames.PROPERTIES} text="Edit context" onClick={onEditContext} />
         )}
       </Menu>

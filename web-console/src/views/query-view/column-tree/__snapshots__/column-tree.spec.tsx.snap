@@ -95,7 +95,19 @@ exports[`column tree matches snapshot 1`] = `
             <span
               class="bp3-tree-node-label"
             >
-              deletion-tutorial
+              <span
+                class="bp3-popover-wrapper"
+              >
+                <span
+                  class="bp3-popover-target"
+                >
+                  <div
+                    class=""
+                  >
+                    deletion-tutorial
+                  </div>
+                </span>
+              </span>
             </span>
           </div>
           <div

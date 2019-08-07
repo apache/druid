@@ -42,7 +42,11 @@ exports[`sql view matches snapshot 1`] = `
       </div>
     </div>
     <QueryOutput
+      disabled={true}
       loading={false}
+      sqlExcludeColumn={[Function]}
+      sqlFilterRow={[Function]}
+      sqlOrderBy={[Function]}
     />
   </t>
 </div>
