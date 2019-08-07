@@ -51,8 +51,8 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReport;
-import org.apache.druid.indexing.common.TaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -119,6 +119,7 @@ import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
@@ -274,6 +275,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   private File baseDir;
   private File reportsFile;
   private RowIngestionMetersFactory rowIngestionMetersFactory;
+  private AppenderatorsManager appenderatorsManager;
 
   @Before
   public void setUp() throws IOException
@@ -288,6 +290,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     derbyConnector.createTaskTables();
     derbyConnector.createSegmentTable();
     derbyConnector.createPendingSegmentsTable();
+
+    appenderatorsManager = new TestAppenderatorsManager();
 
     baseDir = tempFolder.newFolder();
     reportsFile = File.createTempFile("KafkaIndexTaskTestReports-" + System.currentTimeMillis(), "json");
@@ -1431,7 +1435,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         null,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     )
     {
       @Override
@@ -1597,6 +1602,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
     taskToolboxFactory = new TaskToolboxFactory(
         taskConfig,
+        new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         taskActionClientFactory,
         emitter,
         new TestDataSegmentPusher(),
@@ -1620,7 +1626,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
-        new TaskReportFileWriter(reportsFile)
+        new SingleFileTaskReportFileWriter(reportsFile)
     );
   }
 

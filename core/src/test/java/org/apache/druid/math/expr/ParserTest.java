@@ -471,7 +471,7 @@ public class ParserTest
     final Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
     final Expr.BindingDetails deets = parsed.analyzeInputs();
     Assert.assertEquals(expression, expected, parsed.toString());
-    Assert.assertEquals(expression, identifiers, deets.getRequiredColumnsList());
+    Assert.assertEquals(expression, identifiers, deets.getRequiredBindingsList());
     Assert.assertEquals(expression, scalars, deets.getScalarVariables());
     Assert.assertEquals(expression, arrays, deets.getArrayVariables());
   }
@@ -486,7 +486,7 @@ public class ParserTest
     final Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
     Expr.BindingDetails deets = parsed.analyzeInputs();
     Parser.validateExpr(parsed, deets);
-    final Expr transformed = Parser.applyUnappliedIdentifiers(parsed, deets, identifiers);
+    final Expr transformed = Parser.applyUnappliedBindings(parsed, deets, identifiers);
     Assert.assertEquals(expression, unapplied, parsed.toString());
     Assert.assertEquals(applied, applied, transformed.toString());
   }

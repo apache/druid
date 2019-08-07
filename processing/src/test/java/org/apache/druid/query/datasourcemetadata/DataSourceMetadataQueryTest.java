@@ -139,7 +139,7 @@ public class DataSourceMetadataQueryTest
                                                             .dataSource("testing")
                                                             .build();
     ResponseContext context = ConcurrentResponseContext.createEmpty();
-    context.put(ResponseContext.CTX_MISSING_SEGMENTS, new ArrayList<>());
+    context.put(ResponseContext.Key.MISSING_SEGMENTS, new ArrayList<>());
     Iterable<Result<DataSourceMetadataResultValue>> results =
         runner.run(QueryPlus.wrap(dataSourceMetadataQuery), context).toList();
     DataSourceMetadataResultValue val = results.iterator().next().getValue();

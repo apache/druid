@@ -33,7 +33,7 @@ exports[`column tree matches snapshot 1`] = `
           double-caret-vertical
         </desc>
         <path
-          d="M5 7h6a1.003 1.003 0 0 0 .71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 0 0 5 7zm6 2H5a1.003 1.003 0 0 0-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0 0 11 9z"
+          d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
           fill-rule="evenodd"
         />
       </svg>
@@ -68,7 +68,7 @@ exports[`column tree matches snapshot 1`] = `
                   chevron-right
                 </desc>
                 <path
-                  d="M10.71 7.29l-4-4a1.003 1.003 0 0 0-1.42 1.42L8.59 8 5.3 11.29c-.19.18-.3.43-.3.71a1.003 1.003 0 0 0 1.71.71l4-4c.18-.18.29-.43.29-.71 0-.28-.11-.53-.29-.71z"
+                  d="M10.71 7.29l-4-4a1.003 1.003 0 00-1.42 1.42L8.59 8 5.3 11.29c-.19.18-.3.43-.3.71a1.003 1.003 0 001.71.71l4-4c.18-.18.29-.43.29-.71 0-.28-.11-.53-.29-.71z"
                   fill-rule="evenodd"
                 />
               </svg>
@@ -95,7 +95,19 @@ exports[`column tree matches snapshot 1`] = `
             <span
               class="bp3-tree-node-label"
             >
-              deletion-tutorial
+              <span
+                class="bp3-popover-wrapper"
+              >
+                <span
+                  class="bp3-popover-target"
+                >
+                  <div
+                    class=""
+                  >
+                    deletion-tutorial
+                  </div>
+                </span>
+              </span>
             </span>
           </div>
           <div

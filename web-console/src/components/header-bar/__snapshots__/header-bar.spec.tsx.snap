@@ -256,6 +256,16 @@ exports[`header bar matches snapshot 1`] = `
           />
           <Blueprint3.MenuItem
             disabled={false}
+            href="https://druid.apache.org/community/join-slack"
+            icon="chat"
+            multiline={false}
+            popoverProps={Object {}}
+            shouldDismissPopover={true}
+            target="_blank"
+            text="ASF Slack channel"
+          />
+          <Blueprint3.MenuItem
+            disabled={false}
             href="https://github.com/apache/druid"
             icon="git-branch"
             multiline={false}

@@ -47,6 +47,8 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -435,6 +437,7 @@ public class ParallelCombiner<KeyType>
     private static final int UNKNOWN_COLUMN_INDEX = -1;
     private final Object2IntMap<String> columnIndexMap;
 
+    @Nullable
     private Object[] values;
 
     SettableColumnSelectorFactory(AggregatorFactory[] aggregatorFactories)
@@ -446,7 +449,7 @@ public class ParallelCombiner<KeyType>
       }
     }
 
-    public void set(Object[] values)
+    public void set(@Nullable Object[] values)
     {
       this.values = values;
     }

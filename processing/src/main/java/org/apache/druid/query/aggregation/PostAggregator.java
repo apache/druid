@@ -40,6 +40,7 @@ public interface PostAggregator extends Cacheable
   @Nullable
   Object compute(Map<String, Object> combinedAggregators);
 
+  @Nullable
   String getName();
 
   /**

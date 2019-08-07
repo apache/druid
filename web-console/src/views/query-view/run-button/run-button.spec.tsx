@@ -25,11 +25,12 @@ describe('run button', () => {
   it('matches snapshot', () => {
     const runButton = (
       <RunButton
+        onEditContext={() => null}
         runeMode={false}
         queryContext={{}}
-        onQueryContextChange={() => null}
-        onRun={() => null}
-        onExplain={() => null}
+        onQueryContextChange={() => {}}
+        onRun={() => {}}
+        onExplain={() => {}}
       />
     );
 

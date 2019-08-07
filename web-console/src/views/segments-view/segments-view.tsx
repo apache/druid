@@ -16,7 +16,16 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Label } from '@blueprintjs/core';
+import {
+  Button,
+  ButtonGroup,
+  Intent,
+  Label,
+  Menu,
+  MenuItem,
+  Popover,
+  Position,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import React from 'react';
@@ -28,6 +37,8 @@ import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import {
   addFilter,
+  compact,
+  filterMap,
   formatBytes,
   formatNumber,
   LocalStorageKeys,
@@ -76,15 +87,15 @@ export interface SegmentsViewProps {
 
 export interface SegmentsViewState {
   segmentsLoading: boolean;
-  segments: SegmentQueryResultRow[] | null;
-  segmentsError: string | null;
+  segments?: SegmentQueryResultRow[];
+  segmentsError?: string;
   segmentFilter: Filter[];
-  allSegments?: SegmentQueryResultRow[] | null;
-  segmentTableActionDialogId: string | null;
-  datasourceTableActionDialogId: string | null;
+  allSegments?: SegmentQueryResultRow[];
+  segmentTableActionDialogId?: string;
+  datasourceTableActionDialogId?: string;
   actions: BasicAction[];
-  terminateSegmentId: string | null;
-  terminateDatasourceId: string | null;
+  terminateSegmentId?: string;
+  terminateDatasourceId?: string;
   hiddenColumns: LocalStorageBackedArray<string>;
   loaded: boolean;
   groupByInterval: boolean;
@@ -136,18 +147,12 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     super(props, context);
 
     const segmentFilter: Filter[] = [];
-    if (props.datasource) segmentFilter.push({ id: 'datasource', value: props.datasource });
+    if (props.datasource) segmentFilter.push({ id: 'datasource', value: `"${props.datasource}"` });
     if (props.onlyUnavailable) segmentFilter.push({ id: 'is_available', value: 'false' });
 
     this.state = {
-      segmentTableActionDialogId: null,
-      datasourceTableActionDialogId: null,
       actions: [],
-      terminateSegmentId: null,
-      terminateDatasourceId: null,
       segmentsLoading: true,
-      segments: null,
-      segmentsError: null,
       segmentFilter,
       hiddenColumns: new LocalStorageBackedArray<string>(
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
@@ -166,36 +171,38 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       processQuery: async (query: SegmentsQuery, setIntermediateQuery) => {
         const totalQuerySize = (query.page + 1) * query.pageSize;
 
-        const whereParts = query.filtered
-          .map((f: Filter) => {
-            if (f.id.startsWith('is_')) {
-              if (f.value === 'all') return null;
-              return `${JSON.stringify(f.id)} = ${f.value === 'true' ? 1 : 0}`;
-            } else {
-              return sqlQueryCustomTableFilter(f);
-            }
-          })
-          .filter(Boolean);
+        const whereParts = filterMap(query.filtered, (f: Filter) => {
+          if (f.id.startsWith('is_')) {
+            if (f.value === 'all') return;
+            return `${JSON.stringify(f.id)} = ${f.value === 'true' ? 1 : 0}`;
+          } else {
+            return sqlQueryCustomTableFilter(f);
+          }
+        });
 
         let queryParts: string[];
+
+        let whereClause = '';
+        if (whereParts.length) {
+          whereClause = whereParts.join(' AND ');
+        }
+
         if (query.groupByInterval) {
-          queryParts = [
+          queryParts = compact([
             `SELECT`,
             `  ("start" || '/' || "end") AS "interval",`,
             `  "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
             `FROM sys.segments`,
             `WHERE`,
-          ];
-          if (whereParts.length) {
-            queryParts.push(whereParts.join(' AND ') + 'AND');
-          }
-          queryParts.push(
-            ` ("start" || '/' || "end") IN (SELECT "start" || '/' || "end" FROM sys.segments GROUP BY 1 LIMIT ${totalQuerySize})`,
-          );
-
-          if (whereParts.length) {
-            queryParts.push('AND ' + whereParts.join(' AND '));
-          }
+            `  ("start" || '/' || "end") IN (`,
+            `     SELECT "start" || '/' || "end"`,
+            `     FROM sys.segments`,
+            whereClause ? `     WHERE ${whereClause}` : '',
+            `     GROUP BY 1`,
+            `     LIMIT ${totalQuerySize}`,
+            `  )`,
+            whereClause ? `  AND ${whereClause}` : '',
+          ]);
 
           if (query.sorted.length) {
             queryParts.push(
@@ -213,8 +220,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             `FROM sys.segments`,
           ];
 
-          if (whereParts.length) {
-            queryParts.push('WHERE ' + whereParts.join(' AND '));
+          if (whereClause) {
+            queryParts.push(`WHERE ${whereClause}`);
           }
 
           if (query.sorted.length) {
@@ -258,6 +265,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           datasourceList.map(async (d: string) => {
             const segments = (await axios.get(`/druid/coordinator/v1/datasources/${d}?full`)).data
               .segments;
+
             return segments.map((segment: any) => {
               return {
                 segment_id: segment.identifier,
@@ -278,17 +286,17 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             });
           }),
         );
-        const results: SegmentQueryResultRow[] = ([] as SegmentQueryResultRow[]).concat
-          .apply([], nestedResults)
-          .sort((d1: any, d2: any) => {
-            return d2.start.localeCompare(d1.start);
-          });
-        return results;
+
+        const results: SegmentQueryResultRow[] = nestedResults.flat().sort((d1: any, d2: any) => {
+          return d2.start.localeCompare(d1.start);
+        });
+
+        return results.slice(0, SegmentsView.PAGE_SIZE);
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
           allSegments: result,
-          segments: result ? result.slice(0, SegmentsView.PAGE_SIZE) : null,
+          segments: result,
           segmentsLoading: loading,
           segmentsError: error,
         });
@@ -297,7 +305,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   }
 
   componentDidMount(): void {
-    if (this.props.noSqlMode) {
+    const { noSqlMode } = this.props;
+    if (noSqlMode) {
       this.segmentsNoSqlQueryManager.runQuery(null);
     }
   }
@@ -599,7 +608,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         failText="Could not drop segment"
         intent={Intent.DANGER}
         onClose={() => {
-          this.setState({ terminateSegmentId: null });
+          this.setState({ terminateSegmentId: undefined });
         }}
         onSuccess={() => {
           this.segmentsNoSqlQueryManager.rerunLastQuery();
@@ -612,16 +621,44 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     );
   }
 
-  render() {
+  renderBulkSegmentsActions() {
+    const { goToQuery, noSqlMode } = this.props;
+    const lastSegmentsQuery = this.segmentsSqlQueryManager.getLastIntermediateQuery();
+
+    const bulkSegmentsActionsMenu = (
+      <Menu>
+        {!noSqlMode && (
+          <MenuItem
+            icon={IconNames.APPLICATION}
+            text="View SQL query for table"
+            disabled={!lastSegmentsQuery}
+            onClick={() => {
+              if (!lastSegmentsQuery) return;
+              goToQuery(lastSegmentsQuery);
+            }}
+          />
+        )}
+      </Menu>
+    );
+
+    return (
+      <>
+        <Popover content={bulkSegmentsActionsMenu} position={Position.BOTTOM_LEFT}>
+          <Button icon={IconNames.MORE} />
+        </Popover>
+      </>
+    );
+  }
+
+  render(): JSX.Element {
     const {
       segmentTableActionDialogId,
       datasourceTableActionDialogId,
       actions,
       hiddenColumns,
     } = this.state;
-    const { goToQuery, noSqlMode } = this.props;
+    const { noSqlMode } = this.props;
     const { groupByInterval } = this.state;
-    const lastSegmentsQuery = this.segmentsSqlQueryManager.getLastIntermediateQuery();
 
     return (
       <>
@@ -635,17 +672,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               }
               localStorageKey={LocalStorageKeys.SEGMENTS_REFRESH_RATE}
             />
-            {!noSqlMode && (
-              <Button
-                icon={IconNames.APPLICATION}
-                text="Go to SQL"
-                disabled={!lastSegmentsQuery}
-                onClick={() => {
-                  if (!lastSegmentsQuery) return;
-                  goToQuery(lastSegmentsQuery);
-                }}
-              />
-            )}
             <Label>Group by</Label>
             <ButtonGroup>
               <Button
@@ -667,6 +693,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 Interval
               </Button>
             </ButtonGroup>
+            {this.renderBulkSegmentsActions()}
             <TableColumnSelector
               columns={noSqlMode ? tableColumnsNoSql : tableColumns}
               onChange={column => this.setState({ hiddenColumns: hiddenColumns.toggle(column) })}
@@ -679,9 +706,9 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         {segmentTableActionDialogId && (
           <SegmentTableActionDialog
             segmentId={segmentTableActionDialogId}
-            dataSourceId={datasourceTableActionDialogId}
+            datasourceId={datasourceTableActionDialogId}
             actions={actions}
-            onClose={() => this.setState({ segmentTableActionDialogId: null })}
+            onClose={() => this.setState({ segmentTableActionDialogId: undefined })}
             isOpen
           />
         )}

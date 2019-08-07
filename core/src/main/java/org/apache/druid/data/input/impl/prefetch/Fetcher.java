@@ -41,7 +41,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * A file fetcher used by {@link PrefetchableTextFilesFirehoseFactory} and {@link PrefetchSqlFirehoseFactory}.
+ * A file fetcher used by {@link PrefetchableTextFilesFirehoseFactory} and PrefetchSqlFirehoseFactory (in druid-server).
  * See the javadoc of {@link PrefetchableTextFilesFirehoseFactory} for more details.
  */
 public abstract class Fetcher<T> implements Iterator<OpenedObject<T>>
@@ -72,7 +72,7 @@ public abstract class Fetcher<T> implements Iterator<OpenedObject<T>>
 
   private int numRemainingObjects;
 
-  Fetcher(
+  public Fetcher(
       CacheManager<T> cacheManager,
       List<T> objects,
       ExecutorService fetchExecutor,

@@ -212,6 +212,11 @@
                 <artifactId>commons-lang</artifactId>
                 <version>2.6</version>
             </dependency>
+           <dependency>
+               <groupId>commons-net</groupId>
+               <artifactId>commons-net</artifactId>
+               <version>3.6</version>
+           </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk-ec2</artifactId>
@@ -1125,7 +1130,7 @@
                 <version>1.4.1</version>
                 <executions>
                     <execution>
-                        <id>enforce-banned-dependencies</id>
+                        <id>default-cli</id>
                         <goals>
                             <goal>enforce</goal>
                         </goals>
@@ -1291,7 +1296,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-resources-plugin</artifactId>
-                    <version>2.5</version>
+                    <version>3.1.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -1326,7 +1331,7 @@
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>exec-maven-plugin</artifactId>
-                    <version>1.2.1</version>
+                    <version>1.6.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

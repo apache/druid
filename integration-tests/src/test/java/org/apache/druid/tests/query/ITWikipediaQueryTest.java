@@ -24,10 +24,12 @@ import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.RetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
+import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+@Test(groups = TestNGGroup.QUERY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITWikipediaQueryTest
 {

@@ -5,7 +5,6 @@ exports[`sql view matches snapshot 1`] = `
   className="query-view app-view"
 >
   <ColumnTree
-    columnMetadata={null}
     columnMetadataLoading={true}
     onQueryStringChange={[Function]}
   />
@@ -25,7 +24,6 @@ exports[`sql view matches snapshot 1`] = `
       className="control-pane"
     >
       <QueryInput
-        columnMetadata={null}
         onQueryStringChange={[Function]}
         queryString="test"
         runeMode={false}
@@ -34,6 +32,7 @@ exports[`sql view matches snapshot 1`] = `
         className="control-bar"
       >
         <HotkeysTarget(RunButton)
+          onEditContext={[Function]}
           onExplain={[Function]}
           onQueryContextChange={[Function]}
           onRun={[Function]}
@@ -43,9 +42,11 @@ exports[`sql view matches snapshot 1`] = `
       </div>
     </div>
     <QueryOutput
-      error={null}
+      disabled={true}
       loading={false}
-      result={null}
+      sqlExcludeColumn={[Function]}
+      sqlFilterRow={[Function]}
+      sqlOrderBy={[Function]}
     />
   </t>
 </div>

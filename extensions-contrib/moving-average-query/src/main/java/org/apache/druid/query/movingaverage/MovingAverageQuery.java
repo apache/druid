@@ -27,8 +27,9 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.IAE;
@@ -42,6 +43,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.having.HavingSpec;
 import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
@@ -67,13 +70,22 @@ public class MovingAverageQuery extends BaseQuery<Row>
   private final LimitSpec limitSpec;
   private final HavingSpec havingSpec;
   private final DimFilter dimFilter;
-  private final Function<Sequence<Row>, Sequence<Row>> limitFn;
   private final Granularity granularity;
   private final List<DimensionSpec> dimensions;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
   private final List<AveragerFactory<?, ?>> averagerSpecs;
   private final List<PostAggregator> postAveragerSpecs;
+
+  /**
+   * This GroupByQuery is used by {@link #applyLimit(Sequence)} to convert between Rows and ResultRows.
+   */
+  private final GroupByQuery groupByQueryForLimitSpec;
+
+  /**
+   * This Function is used by {@link #applyLimit(Sequence)} to apply having and limit specs.
+   */
+  private final Function<Sequence<ResultRow>, Sequence<ResultRow>> limitFn;
 
   @JsonCreator
   public MovingAverageQuery(
@@ -94,7 +106,10 @@ public class MovingAverageQuery extends BaseQuery<Row>
     super(dataSource, querySegmentSpec, false, context);
 
     //TBD: Implement null awareness to respect the contract of this flag.
-    Preconditions.checkArgument(NullHandling.replaceWithDefault(), "movingAverage does not support druid.generic.useDefaultValueForNull=false");
+    Preconditions.checkArgument(
+        NullHandling.replaceWithDefault(),
+        "movingAverage does not support druid.generic.useDefaultValueForNull=false"
+    );
 
     this.dimFilter = dimFilter;
     this.granularity = granularity;
@@ -120,41 +135,29 @@ public class MovingAverageQuery extends BaseQuery<Row>
       combinedAggregatorSpecs.add(new AveragerFactoryWrapper(avg, ""));
     }
 
-    Function<Sequence<Row>, Sequence<Row>> postProcFn =
-        this.limitSpec.build(
-            this.dimensions,
-            combinedAggregatorSpecs,
-            this.postAggregatorSpecs,
-            this.granularity,
-            getContextSortByDimsFirst()
-        );
+    this.groupByQueryForLimitSpec = GroupByQuery
+        .builder()
+        .setDataSource(dataSource)
+        .setInterval(getQuerySegmentSpec())
+        .setDimensions(this.dimensions)
+        .setAggregatorSpecs(combinedAggregatorSpecs)
+        .setPostAggregatorSpecs(
+            ImmutableList.copyOf(Iterables.concat(this.postAggregatorSpecs, this.postAveragerSpecs))
+        )
+        .setGranularity(this.granularity)
+        .overrideContext(ImmutableMap.of(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, true))
+        .build();
+
+    Function<Sequence<ResultRow>, Sequence<ResultRow>> postProcFn = this.limitSpec.build(groupByQueryForLimitSpec);
 
     if (havingSpec != null) {
       postProcFn = Functions.compose(
           postProcFn,
-          new Function<Sequence<Row>, Sequence<Row>>()
-          {
-            @Override
-            public Sequence<Row> apply(Sequence<Row> input)
-            {
-              return Sequences.filter(
-                  input,
-                  new Predicate<Row>()
-                  {
-                    @Override
-                    public boolean apply(Row input)
-                    {
-                      return MovingAverageQuery.this.havingSpec.eval(input);
-                    }
-                  }
-              );
-            }
-          }
+          sequence -> Sequences.filter(sequence, MovingAverageQuery.this.havingSpec::eval)
       );
     }
 
     this.limitFn = postProcFn;
-
   }
 
   private static void verifyOutputNames(
@@ -200,7 +203,8 @@ public class MovingAverageQuery extends BaseQuery<Row>
       List<PostAggregator> postAveragerSpecs,
       HavingSpec havingSpec,
       LimitSpec orderBySpec,
-      Function<Sequence<Row>, Sequence<Row>> limitFn,
+      GroupByQuery groupByQueryForLimitSpec,
+      Function<Sequence<ResultRow>, Sequence<ResultRow>> limitFn,
       Map<String, Object> context
   )
   {
@@ -215,6 +219,7 @@ public class MovingAverageQuery extends BaseQuery<Row>
     this.postAveragerSpecs = postAveragerSpecs;
     this.havingSpec = havingSpec;
     this.limitSpec = orderBySpec;
+    this.groupByQueryForLimitSpec = groupByQueryForLimitSpec;
     this.limitFn = limitFn;
   }
 
@@ -307,6 +312,7 @@ public class MovingAverageQuery extends BaseQuery<Row>
         postAveragerSpecs,
         havingSpec,
         limitSpec,
+        groupByQueryForLimitSpec,
         limitFn,
         computeOverridenContext(contextOverride)
     );
@@ -327,6 +333,7 @@ public class MovingAverageQuery extends BaseQuery<Row>
         postAveragerSpecs,
         havingSpec,
         limitSpec,
+        groupByQueryForLimitSpec,
         limitFn,
         getContext()
     );
@@ -347,6 +354,7 @@ public class MovingAverageQuery extends BaseQuery<Row>
         postAveragerSpecs,
         havingSpec,
         limitSpec,
+        groupByQueryForLimitSpec,
         limitFn,
         getContext()
     );
@@ -366,6 +374,7 @@ public class MovingAverageQuery extends BaseQuery<Row>
         postAveragerSpecs,
         havingSpec,
         limitSpec,
+        groupByQueryForLimitSpec,
         limitFn,
         getContext()
     );
@@ -373,6 +382,7 @@ public class MovingAverageQuery extends BaseQuery<Row>
 
   public Sequence<Row> applyLimit(Sequence<Row> results)
   {
-    return limitFn.apply(results);
+    return limitFn.apply(results.map(row -> ResultRow.fromLegacyRow(row, groupByQueryForLimitSpec)))
+                  .map(row -> row.toMapBasedRow(groupByQueryForLimitSpec));
   }
 }

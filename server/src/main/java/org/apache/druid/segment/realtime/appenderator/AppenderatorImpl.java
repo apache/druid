@@ -128,9 +128,7 @@ public class AppenderatorImpl implements Appenderator
    */
   private final ConcurrentMap<SegmentIdWithShardSpec, Sink> sinks = new ConcurrentHashMap<>();
   private final Set<SegmentIdWithShardSpec> droppingSinks = Sets.newConcurrentHashSet();
-  private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<>(
-      String.CASE_INSENSITIVE_ORDER
-  );
+  private final VersionedIntervalTimeline<String, Sink> sinkTimeline;
   private final long maxBytesTuningConfig;
 
   private final QuerySegmentWalker texasRanger;
@@ -173,6 +171,55 @@ public class AppenderatorImpl implements Appenderator
       CachePopulatorStats cachePopulatorStats
   )
   {
+    this(
+        schema,
+        tuningConfig,
+        metrics,
+        dataSegmentPusher,
+        objectMapper,
+        segmentAnnouncer,
+        conglomerate == null ? null : new SinkQuerySegmentWalker(
+            schema.getDataSource(),
+            new VersionedIntervalTimeline<>(
+                String.CASE_INSENSITIVE_ORDER
+            ),
+            objectMapper,
+            emitter,
+            conglomerate,
+            queryExecutorService,
+            Preconditions.checkNotNull(cache, "cache"),
+            cacheConfig,
+            cachePopulatorStats
+        ),
+        indexIO,
+        indexMerger,
+        cache
+    );
+    log.info("Created Appenderator for dataSource[%s].", schema.getDataSource());
+  }
+
+  /**
+   * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
+   *
+   * The sinkTimeline is set to the sink timeline of the provided SinkQuerySegmentWalker.
+   * If the SinkQuerySegmentWalker is null, a new sink timeline is initialized.
+   *
+   * It is used by UnifiedIndexerAppenderatorsManager which allows queries on data associated with multiple
+   * Appenderators.
+   */
+  AppenderatorImpl(
+      DataSchema schema,
+      AppenderatorConfig tuningConfig,
+      FireDepartmentMetrics metrics,
+      DataSegmentPusher dataSegmentPusher,
+      ObjectMapper objectMapper,
+      DataSegmentAnnouncer segmentAnnouncer,
+      SinkQuerySegmentWalker sinkQuerySegmentWalker,
+      IndexIO indexIO,
+      IndexMerger indexMerger,
+      Cache cache
+  )
+  {
     this.schema = Preconditions.checkNotNull(schema, "schema");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
     this.metrics = Preconditions.checkNotNull(metrics, "metrics");
@@ -182,20 +229,20 @@ public class AppenderatorImpl implements Appenderator
     this.indexIO = Preconditions.checkNotNull(indexIO, "indexIO");
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "indexMerger");
     this.cache = cache;
-    this.texasRanger = conglomerate == null ? null : new SinkQuerySegmentWalker(
-        schema.getDataSource(),
-        sinkTimeline,
-        objectMapper,
-        emitter,
-        conglomerate,
-        queryExecutorService,
-        Preconditions.checkNotNull(cache, "cache"),
-        cacheConfig,
-        cachePopulatorStats
-    );
+    this.texasRanger = sinkQuerySegmentWalker;
+
+    if (sinkQuerySegmentWalker == null) {
+      this.sinkTimeline = new VersionedIntervalTimeline<>(
+          String.CASE_INSENSITIVE_ORDER
+      );
+    } else {
+      this.sinkTimeline = sinkQuerySegmentWalker.getSinkTimeline();
+    }
+
     maxBytesTuningConfig = TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory());
     log.info("Created Appenderator for dataSource[%s].", schema.getDataSource());
   }
+
 
   @Override
   public String getDataSource()

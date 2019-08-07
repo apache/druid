@@ -24,7 +24,7 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.TaskReportFileWriter;
+import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClient;
@@ -58,6 +58,7 @@ import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.After;
@@ -278,6 +279,7 @@ public abstract class IngestionTestBase
 
         final TaskToolbox box = new TaskToolbox(
             null,
+            new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
             taskActionClient,
             null,
             new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()),
@@ -302,7 +304,7 @@ public abstract class IngestionTestBase
             null,
             null,
             null,
-            new TaskReportFileWriter(taskReportsFile)
+            new SingleFileTaskReportFileWriter(taskReportsFile)
         );
 
         if (task.isReady(box.getTaskActionClient())) {
