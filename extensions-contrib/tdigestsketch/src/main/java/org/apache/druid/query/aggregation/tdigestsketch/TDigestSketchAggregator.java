@@ -24,60 +24,73 @@ import com.tdunning.math.stats.MergingDigest;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
+import javax.annotation.Nullable;
+
 
 /**
- * Aggregator that merges T-Digest based sketches generated from {@link TDigestBuildSketchAggregator}
+ * Aggregator to build T-Digest sketches on numeric values.
+ * It generally makes sense to use this aggregator during the ingestion time.
+ * <p>
+ * One can use this aggregator to build these sketches during query time too, just
+ * that it will be slower and more resource intensive.
  */
-public class TDigestMergeSketchAggregator implements Aggregator
+public class TDigestSketchAggregator implements Aggregator
 {
-  private final ColumnValueSelector<MergingDigest> selector;
+
+  private final ColumnValueSelector selector;
 
   @GuardedBy("this")
-  private MergingDigest tdigestSketch;
+  private MergingDigest histogram;
 
-  public TDigestMergeSketchAggregator(
-      ColumnValueSelector<MergingDigest> selector,
-      final Integer compression
-  )
+
+  public TDigestSketchAggregator(ColumnValueSelector selector, @Nullable Integer compression)
   {
     this.selector = selector;
-    this.tdigestSketch = new MergingDigest(compression);
+    if (compression != null) {
+      this.histogram = new MergingDigest(compression);
+    } else {
+      this.histogram = new MergingDigest(TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION);
+    }
   }
 
   @Override
   public void aggregate()
   {
-    final MergingDigest sketch = selector.getObject();
-    if (sketch == null) {
-      return;
-    }
-    synchronized (this) {
-      this.tdigestSketch.add(sketch);
+    if (selector.getObject() instanceof Number) {
+      synchronized (this) {
+        histogram.add(((Number) selector.getObject()).doubleValue());
+      }
+    } else if (selector.getObject() instanceof MergingDigest) {
+      synchronized (this) {
+        histogram.add((MergingDigest) selector.getObject());
+      }
+    } else {
+      TDigestSketchUtils.throwExceptionForWrongType(selector);
     }
   }
 
+  @Nullable
   @Override
   public synchronized Object get()
   {
-    return tdigestSketch;
+    return histogram;
   }
 
   @Override
   public float getFloat()
   {
-    throw new UnsupportedOperationException("Not implemented");
+    throw new UnsupportedOperationException("Casting to float type is not supported");
   }
 
   @Override
   public long getLong()
   {
-    throw new UnsupportedOperationException("Not implemented");
+    throw new UnsupportedOperationException("Casting to long type is not supported");
   }
 
   @Override
   public synchronized void close()
   {
-    tdigestSketch = null;
+    histogram = null;
   }
-
 }

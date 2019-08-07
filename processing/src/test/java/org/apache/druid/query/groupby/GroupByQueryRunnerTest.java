@@ -6508,9 +6508,9 @@ public class GroupByQueryRunnerTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ValueType.STRING, TestExprMacroTable.INSTANCE))
         .setDimensions(Lists.newArrayList(
-            new DefaultDimensionSpec("quality", "quality"),
-            new DefaultDimensionSpec("market", "market"),
-            new DefaultDimensionSpec("alias", "alias")
+            new DefaultDimensionSpec("quality", "quality2"),
+            new DefaultDimensionSpec("market", "market2"),
+            new DefaultDimensionSpec("alias", "alias2")
         ))
         .setAggregatorSpecs(
             Arrays.asList(
@@ -6525,8 +6525,8 @@ public class GroupByQueryRunnerTest
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .setSubtotalsSpec(ImmutableList.of(
-            ImmutableList.of("alias"),
-            ImmutableList.of("market"),
+            ImmutableList.of("alias2"),
+            ImmutableList.of("market2"),
             ImmutableList.of()
         ))
         .build();
@@ -6535,7 +6535,7 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01",
-            "alias",
+            "alias2",
             "automotive",
             "rows",
             1L,
@@ -6547,7 +6547,7 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01",
-            "alias",
+            "alias2",
             "business",
             "rows",
             1L,
@@ -6559,7 +6559,7 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01",
-            "alias",
+            "alias2",
             "entertainment",
             "rows",
             1L,
@@ -6571,7 +6571,7 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01",
-            "alias",
+            "alias2",
             "health",
             "rows",
             1L,
@@ -6583,7 +6583,7 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01",
-            "alias",
+            "alias2",
             "mezzanine",
             "rows",
             3L,
@@ -6595,7 +6595,7 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01",
-            "alias",
+            "alias2",
             "news",
             "rows",
             1L,
@@ -6607,7 +6607,7 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01",
-            "alias",
+            "alias2",
             "premium",
             "rows",
             3L,
@@ -6619,7 +6619,7 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01",
-            "alias",
+            "alias2",
             "technology",
             "rows",
             1L,
@@ -6631,7 +6631,7 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01",
-            "alias",
+            "alias2",
             "travel",
             "rows",
             1L,
@@ -6644,7 +6644,7 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02",
-            "alias",
+            "alias2",
             "automotive",
             "rows",
             1L,
@@ -6656,7 +6656,7 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02",
-            "alias",
+            "alias2",
             "business",
             "rows",
             1L,
@@ -6668,7 +6668,7 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02",
-            "alias",
+            "alias2",
             "entertainment",
             "rows",
             1L,
@@ -6680,7 +6680,7 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02",
-            "alias",
+            "alias2",
             "health",
             "rows",
             1L,
@@ -6692,7 +6692,7 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02",
-            "alias",
+            "alias2",
             "mezzanine",
             "rows",
             3L,
@@ -6704,7 +6704,7 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02",
-            "alias",
+            "alias2",
             "news",
             "rows",
             1L,
@@ -6716,7 +6716,7 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02",
-            "alias",
+            "alias2",
             "premium",
             "rows",
             3L,
@@ -6728,7 +6728,7 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02",
-            "alias",
+            "alias2",
             "technology",
             "rows",
             1L,
@@ -6956,7 +6956,7 @@ public class GroupByQueryRunnerTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("qualityLong", "ql", ValueType.LONG),
-            new DefaultDimensionSpec("market", "market")
+            new DefaultDimensionSpec("market", "market2")
         ))
         .setAggregatorSpecs(
             Arrays.asList(
@@ -6967,7 +6967,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .setSubtotalsSpec(ImmutableList.of(
             ImmutableList.of("ql"),
-            ImmutableList.of("market"),
+            ImmutableList.of("market2"),
             ImmutableList.of()
         ))
         .build();
@@ -7180,9 +7180,9 @@ public class GroupByQueryRunnerTest
             "market2",
             "upfront",
             "rows",
-            1L,
+            2L,
             "idx",
-            1144L
+            2681L
         ),
 
         makeRow(

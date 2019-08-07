@@ -79,7 +79,6 @@ writeFile(
  * limitations under the License.
  */
 
-import { Button, InputGroup } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import React from 'react';
@@ -156,8 +155,8 @@ writeFile(
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { ${camelName} } from './${name}';
 

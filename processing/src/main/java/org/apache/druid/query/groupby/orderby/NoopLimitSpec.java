@@ -26,6 +26,8 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 
+import java.util.Set;
+
 /**
  *
  */
@@ -55,6 +57,12 @@ public final class NoopLimitSpec implements LimitSpec
   public LimitSpec merge(LimitSpec other)
   {
     return other;
+  }
+
+  @Override
+  public LimitSpec filterColumns(Set<String> names)
+  {
+    return this;
   }
 
   @Override
