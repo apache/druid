@@ -197,7 +197,7 @@ public class TaskLifecycleTest
   };
   private static DateTime now = DateTimes.nowUtc();
 
-  private static final Iterable<InputRow> REALTIME_IDX_INPUT_ROWS = ImmutableList.of(
+  private static final Iterable<InputRow> REALTIME_IDX_TASK_INPUT_ROWS = ImmutableList.of(
       ir(now.toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 1.0f),
       ir(now.plus(new Period(Hours.ONE)).toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 2.0f),
       ir(now.plus(new Period(Hours.TWO)).toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 3.0f)
@@ -316,7 +316,7 @@ public class TaskLifecycleTest
     public Firehose connect(InputRowParser parser, File temporaryDirectory)
     {
       final Iterator<InputRow> inputRowIterator = usedByRealtimeIdxTask
-                                                  ? REALTIME_IDX_INPUT_ROWS.iterator()
+                                                  ? REALTIME_IDX_TASK_INPUT_ROWS.iterator()
                                                   : IDX_TASK_INPUT_ROWS.iterator();
 
       return new Firehose()

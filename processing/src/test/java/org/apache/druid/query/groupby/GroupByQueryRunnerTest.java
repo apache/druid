@@ -6378,7 +6378,7 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
-  public void testGroupByWithSubtotalsSpec()
+  public void testGroupByWithSubtotalsSpecOfDimensionsPrefixes()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -6390,12 +6390,123 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setVirtualColumns(new ExpressionVirtualColumn(
-            "alias",
-            "quality",
-            ValueType.STRING,
-            TestExprMacroTable.INSTANCE
+        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ValueType.STRING, TestExprMacroTable.INSTANCE))
+        .setDimensions(Lists.newArrayList(
+            new DefaultDimensionSpec("market", "market2"),
+            new DefaultDimensionSpec("alias", "alias2")
         ))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.ROWS_COUNT,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .setSubtotalsSpec(ImmutableList.of(
+            ImmutableList.of("market2"),
+            ImmutableList.of()
+        ))
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
+            "2011-04-01T00:00:00.000Z",
+            "market2",
+            "spot",
+            "rows",
+            9L,
+            "idx",
+            1102L
+        ),
+        makeRow(
+            query,
+            "2011-04-01T00:00:00.000Z",
+            "market2",
+            "total_market",
+            "rows",
+            2L,
+            "idx",
+            2836L
+        ),
+        makeRow(
+            query,
+            "2011-04-01T00:00:00.000Z",
+            "market2",
+            "upfront",
+            "rows",
+            2L,
+            "idx",
+            2681L
+        ),
+
+        makeRow(
+            query,
+            "2011-04-02T00:00:00.000Z",
+            "market2",
+            "spot",
+            "rows",
+            9L,
+            "idx",
+            1120L
+        ),
+        makeRow(
+            query,
+            "2011-04-02T00:00:00.000Z",
+            "market2",
+            "total_market",
+            "rows",
+            2L,
+            "idx",
+            2514L
+        ),
+        makeRow(
+            query,
+            "2011-04-02T00:00:00.000Z",
+            "market2",
+            "upfront",
+            "rows",
+            2L,
+            "idx",
+            2193L
+        ),
+
+        makeRow(
+            query,
+            "2011-04-01T00:00:00.000Z",
+            "rows",
+            13L,
+            "idx",
+            6619L
+        ),
+        makeRow(
+            query,
+            "2011-04-02T00:00:00.000Z",
+            "rows",
+            13L,
+            "idx",
+            5827L
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "subtotal");
+  }
+
+  @Test
+  public void testGroupByWithSubtotalsSpecGeneral()
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
+      return;
+    }
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ValueType.STRING, TestExprMacroTable.INSTANCE))
         .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("quality", "quality"),
             new DefaultDimensionSpec("market", "market"),
@@ -6404,9 +6515,12 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.ROWS_COUNT,
-                new LongSumAggregatorFactory("idx", "index"),
-                new FloatSumAggregatorFactory("idxFloat", "indexFloat"),
-                new DoubleSumAggregatorFactory("idxDouble", "index")
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setPostAggregatorSpecs(
+            Collections.singletonList(
+                new FieldAccessPostAggregator("idxPostAgg", "idx")
             )
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -6427,10 +6541,8 @@ public class GroupByQueryRunnerTest
             1L,
             "idx",
             135L,
-            "idxFloat",
-            135.88510131835938f,
-            "idxDouble",
-            135.88510131835938d
+            "idxPostAgg",
+            135L
         ),
         makeRow(
             query,
@@ -6441,10 +6553,8 @@ public class GroupByQueryRunnerTest
             1L,
             "idx",
             118L,
-            "idxFloat",
-            118.57034,
-            "idxDouble",
-            118.57034
+            "idxPostAgg",
+            118L
         ),
         makeRow(
             query,
@@ -6455,10 +6565,8 @@ public class GroupByQueryRunnerTest
             1L,
             "idx",
             158L,
-            "idxFloat",
-            158.747224,
-            "idxDouble",
-            158.747224
+            "idxPostAgg",
+            158L
         ),
         makeRow(
             query,
@@ -6469,10 +6577,8 @@ public class GroupByQueryRunnerTest
             1L,
             "idx",
             120L,
-            "idxFloat",
-            120.134704,
-            "idxDouble",
-            120.134704
+            "idxPostAgg",
+            120L
         ),
         makeRow(
             query,
@@ -6483,10 +6589,8 @@ public class GroupByQueryRunnerTest
             3L,
             "idx",
             2870L,
-            "idxFloat",
-            2871.8866900000003f,
-            "idxDouble",
-            2871.8866900000003d
+            "idxPostAgg",
+            2870L
         ),
         makeRow(
             query,
@@ -6497,10 +6601,8 @@ public class GroupByQueryRunnerTest
             1L,
             "idx",
             121L,
-            "idxFloat",
-            121.58358f,
-            "idxDouble",
-            121.58358d
+            "idxPostAgg",
+            121L
         ),
         makeRow(
             query,
@@ -6511,10 +6613,8 @@ public class GroupByQueryRunnerTest
             3L,
             "idx",
             2900L,
-            "idxFloat",
-            2900.798647f,
-            "idxDouble",
-            2900.798647d
+            "idxPostAgg",
+            2900L
         ),
         makeRow(
             query,
@@ -6525,10 +6625,8 @@ public class GroupByQueryRunnerTest
             1L,
             "idx",
             78L,
-            "idxFloat",
-            78.622547f,
-            "idxDouble",
-            78.622547d
+            "idxPostAgg",
+            78L
         ),
         makeRow(
             query,
@@ -6539,10 +6637,8 @@ public class GroupByQueryRunnerTest
             1L,
             "idx",
             119L,
-            "idxFloat",
-            119.922742f,
-            "idxDouble",
-            119.922742d
+            "idxPostAgg",
+            119L
         ),
 
         makeRow(
@@ -6554,10 +6650,8 @@ public class GroupByQueryRunnerTest
             1L,
             "idx",
             147L,
-            "idxFloat",
-            147.42593f,
-            "idxDouble",
-            147.42593d
+            "idxPostAgg",
+            147L
         ),
         makeRow(
             query,
@@ -6568,10 +6662,8 @@ public class GroupByQueryRunnerTest
             1L,
             "idx",
             112L,
-            "idxFloat",
-            112.987027f,
-            "idxDouble",
-            112.987027d
+            "idxPostAgg",
+            112L
         ),
         makeRow(
             query,
@@ -6582,10 +6674,8 @@ public class GroupByQueryRunnerTest
             1L,
             "idx",
             166L,
-            "idxFloat",
-            166.016049f,
-            "idxDouble",
-            166.016049d
+            "idxPostAgg",
+            166L
         ),
         makeRow(
             query,
@@ -6596,10 +6686,8 @@ public class GroupByQueryRunnerTest
             1L,
             "idx",
             113L,
-            "idxFloat",
-            113.446008f,
-            "idxDouble",
-            113.446008d
+            "idxPostAgg",
+            113L
         ),
         makeRow(
             query,
@@ -6610,10 +6698,8 @@ public class GroupByQueryRunnerTest
             3L,
             "idx",
             2447L,
-            "idxFloat",
-            2448.830613f,
-            "idxDouble",
-            2448.830613d
+            "idxPostAgg",
+            2447L
         ),
         makeRow(
             query,
@@ -6624,10 +6710,8 @@ public class GroupByQueryRunnerTest
             1L,
             "idx",
             114L,
-            "idxFloat",
-            114.290141f,
-            "idxDouble",
-            114.290141d
+            "idxPostAgg",
+            114L
         ),
         makeRow(
             query,
@@ -6638,10 +6722,8 @@ public class GroupByQueryRunnerTest
             3L,
             "idx",
             2505L,
-            "idxFloat",
-            2506.415148f,
-            "idxDouble",
-            2506.415148d
+            "idxPostAgg",
+            2505L
         ),
         makeRow(
             query,
@@ -6652,246 +6734,114 @@ public class GroupByQueryRunnerTest
             1L,
             "idx",
             97L,
-            "idxFloat",
-            97.387433f,
-            "idxDouble",
-            97.387433d
+            "idxPostAgg",
+            97L
         ),
         makeRow(
             query,
             "2011-04-02",
-            "alias",
+            "alias2",
             "travel",
             "rows",
             1L,
             "idx",
             126L,
-            "idxFloat",
-            126.411364f,
-            "idxDouble",
-            126.411364d
+            "idxPostAgg",
+            126L
         ),
 
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
-            "market",
+            "market2",
             "spot",
-            "idxDouble",
-            643.043177,
-            "idxFloat",
-            643.043212890625,
             "rows",
-            5L,
+            9L,
             "idx",
-            640L
+            1102L,
+            "idxPostAgg",
+            1102L
         ),
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
-            "market",
+            "market2",
             "total_market",
-            "idxDouble",
-            1314.839715,
-            "idxFloat",
-            1314.8397,
-            "rows",
-            1L,
-            "idx",
-            1314L
-        ),
-        makeRow(
-            query,
-            "2011-04-01T00:00:00.000Z",
-            "market",
-            "upfront",
-            "idxDouble",
-            1447.34116,
-            "idxFloat",
-            1447.3412,
-            "rows",
-            1L,
-            "idx",
-            1447L
-        ),
-        makeRow(
-            query,
-            "2011-04-01T00:00:00.000Z",
-            "market",
-            "spot",
-            "idxDouble",
-            266.090949,
-            "idxFloat",
-            266.0909423828125,
             "rows",
             2L,
             "idx",
-            265L
+            2836L,
+            "idxPostAgg",
+            2836L
         ),
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
-            "market",
-            "total_market",
-            "idxDouble",
-            1522.043733,
-            "idxFloat",
-            1522.0437,
-            "rows",
-            1L,
-            "idx",
-            1522L
-        ),
-        makeRow(
-            query,
-            "2011-04-01T00:00:00.000Z",
-            "market",
+            "market2",
             "upfront",
-            "idxDouble",
-            1234.247546,
-            "idxFloat",
-            1234.2476,
-            "rows",
-            1L,
-            "idx",
-            1234L
-        ),
-        makeRow(
-            query,
-            "2011-04-01T00:00:00.000Z",
-            "market",
-            "spot",
-            "idxDouble",
-            198.545289,
-            "idxFloat",
-            198.5452880859375,
             "rows",
             2L,
             "idx",
-            197L
+            2681L,
+            "idxPostAgg",
+            2681L
         ),
 
         makeRow(
             query,
             "2011-04-02T00:00:00.000Z",
-            "market",
+            "market2",
             "spot",
-            "idxDouble",
-            650.806953,
-            "idxFloat",
-            650.8069458007812,
             "rows",
-            5L,
+            9L,
             "idx",
-            648L
+            1120L,
+            "idxPostAgg",
+            1120L
         ),
         makeRow(
             query,
             "2011-04-02T00:00:00.000Z",
-            "market",
+            "market2",
             "total_market",
-            "idxDouble",
-            1193.556278,
-            "idxFloat",
-            1193.5563,
-            "rows",
-            1L,
-            "idx",
-            1193L
-        ),
-        makeRow(
-            query,
-            "2011-04-02T00:00:00.000Z",
-            "market",
-            "upfront",
-            "idxDouble",
-            1144.342401,
-            "idxFloat",
-            1144.3424,
-            "rows",
-            1L,
-            "idx",
-            1144L
-        ),
-        makeRow(
-            query,
-            "2011-04-02T00:00:00.000Z",
-            "market",
-            "spot",
-            "idxDouble",
-            249.591647,
-            "idxFloat",
-            249.59164428710938,
             "rows",
             2L,
             "idx",
-            249L
+            2514L,
+            "idxPostAgg",
+            2514L
         ),
         makeRow(
             query,
             "2011-04-02T00:00:00.000Z",
-            "market",
-            "total_market",
-            "idxDouble",
-            1321.375057,
-            "idxFloat",
-            1321.375,
-            "rows",
-            1L,
-            "idx",
-            1321L
-        ),
-        makeRow(
-            query,
-            "2011-04-02T00:00:00.000Z",
-            "market",
+            "market2",
             "upfront",
-            "idxDouble",
-            1049.738585,
-            "idxFloat",
-            1049.7385,
-            "rows",
-            1L,
-            "idx",
-            1049L
-        ),
-        makeRow(
-            query,
-            "2011-04-02T00:00:00.000Z",
-            "market",
-            "spot",
-            "idxDouble",
-            223.798797,
-            "idxFloat",
-            223.79879760742188,
             "rows",
             2L,
             "idx",
-            223L
+            2193L,
+            "idxPostAgg",
+            2193L
         ),
 
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
-            "idxDouble",
-            6626.151575318359,
-            "idxFloat",
-            6626.152f,
             "rows",
             13L,
             "idx",
+            6619L,
+            "idxPostAgg",
             6619L
         ),
         makeRow(
             query,
             "2011-04-02T00:00:00.000Z",
-            "idxDouble",
-            5833.209713,
-            "idxFloat",
-            5833.209f,
             "rows",
             13L,
             "idx",
+            5827L,
+            "idxPostAgg",
             5827L
         )
     );
@@ -6904,22 +6854,15 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithSubtotalsSpecWithRenamedDimensionAndFilter()
   {
-    // Cannot vectorize due to expression virtual columns.
-    cannotVectorize();
-
     if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       return;
     }
 
-    GroupByQuery query = makeQueryBuilder()
+    GroupByQuery query = GroupByQuery
+        .builder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setVirtualColumns(new ExpressionVirtualColumn(
-            "alias",
-            "quality",
-            ValueType.STRING,
-            TestExprMacroTable.INSTANCE
-        ))
+        .setVirtualColumns(new ExpressionVirtualColumn("alias", "quality", ValueType.STRING, TestExprMacroTable.INSTANCE))
         .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("quality", "quality"),
             new DefaultDimensionSpec("market", "market"),
@@ -7018,9 +6961,7 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.ROWS_COUNT,
-                new LongSumAggregatorFactory("idx", "index"),
-                new FloatSumAggregatorFactory("idxFloat", "indexFloat"),
-                new DoubleSumAggregatorFactory("idxDouble", "index")
+                new LongSumAggregatorFactory("idx", "index")
             )
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -7035,10 +6976,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
-            "idxDouble",
-            135.885094,
-            "idxFloat",
-            135.8851,
             "ql",
             1000L,
             "rows",
@@ -7049,10 +6986,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
-            "idxDouble",
-            118.57034,
-            "idxFloat",
-            118.57034,
             "ql",
             1100L,
             "rows",
@@ -7063,10 +6996,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
-            "idxDouble",
-            158.747224,
-            "idxFloat",
-            158.74722,
             "ql",
             1200L,
             "rows",
@@ -7077,10 +7006,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
-            "idxDouble",
-            120.134704,
-            "idxFloat",
-            120.134705,
             "ql",
             1300L,
             "rows",
@@ -7091,10 +7016,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
-            "idxDouble",
-            2871.8866900000003,
-            "idxFloat",
-            2871.88671875,
             "ql",
             1400L,
             "rows",
@@ -7105,10 +7026,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
-            "idxDouble",
-            121.583581,
-            "idxFloat",
-            121.58358,
             "ql",
             1500L,
             "rows",
@@ -7119,10 +7036,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
-            "idxDouble",
-            2900.798647,
-            "idxFloat",
-            2900.798583984375,
             "ql",
             1600L,
             "rows",
@@ -7133,10 +7046,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
-            "idxDouble",
-            78.622547,
-            "idxFloat",
-            78.62254,
             "ql",
             1700L,
             "rows",
@@ -7147,10 +7056,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
-            "idxDouble",
-            119.922742,
-            "idxFloat",
-            119.922745,
             "ql",
             1800L,
             "rows",
@@ -7161,10 +7066,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02T00:00:00.000Z",
-            "idxDouble",
-            147.425935,
-            "idxFloat",
-            147.42593,
             "ql",
             1000L,
             "rows",
@@ -7175,10 +7076,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02T00:00:00.000Z",
-            "idxDouble",
-            112.987027,
-            "idxFloat",
-            112.98703,
             "ql",
             1100L,
             "rows",
@@ -7189,10 +7086,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02T00:00:00.000Z",
-            "idxDouble",
-            166.016049,
-            "idxFloat",
-            166.01605,
             "ql",
             1200L,
             "rows",
@@ -7203,10 +7096,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02T00:00:00.000Z",
-            "idxDouble",
-            113.446008,
-            "idxFloat",
-            113.44601,
             "ql",
             1300L,
             "rows",
@@ -7217,10 +7106,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02T00:00:00.000Z",
-            "idxDouble",
-            2448.830613,
-            "idxFloat",
-            2448.83056640625,
             "ql",
             1400L,
             "rows",
@@ -7231,10 +7116,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02T00:00:00.000Z",
-            "idxDouble",
-            114.290141,
-            "idxFloat",
-            114.29014,
             "ql",
             1500L,
             "rows",
@@ -7245,10 +7126,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02T00:00:00.000Z",
-            "idxDouble",
-            2506.415148,
-            "idxFloat",
-            2506.4150390625,
             "ql",
             1600L,
             "rows",
@@ -7259,10 +7136,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02T00:00:00.000Z",
-            "idxDouble",
-            97.387433,
-            "idxFloat",
-            97.387436,
             "ql",
             1700L,
             "rows",
@@ -7273,10 +7146,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02T00:00:00.000Z",
-            "idxDouble",
-            126.411364,
-            "idxFloat",
-            126.41136,
             "ql",
             1800L,
             "rows",
@@ -7288,207 +7157,69 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
-            "market",
+            "market2",
             "spot",
-            "idxDouble",
-            643.043177,
-            "idxFloat",
-            643.043212890625,
             "rows",
-            5L,
+            9L,
             "idx",
-            640L
+            1102L
         ),
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
-            "market",
+            "market2",
             "total_market",
-            "idxDouble",
-            1314.839715,
-            "idxFloat",
-            1314.8397,
-            "rows",
-            1L,
-            "idx",
-            1314L
-        ),
-        makeRow(
-            query,
-            "2011-04-01T00:00:00.000Z",
-            "market",
-            "upfront",
-            "idxDouble",
-            1447.34116,
-            "idxFloat",
-            1447.3412,
-            "rows",
-            1L,
-            "idx",
-            1447L
-        ),
-        makeRow(
-            query,
-            "2011-04-01T00:00:00.000Z",
-            "market",
-            "spot",
-            "idxDouble",
-            266.090949,
-            "idxFloat",
-            266.0909423828125,
             "rows",
             2L,
             "idx",
-            265L
+            2836L
         ),
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
-            "market",
-            "total_market",
-            "idxDouble",
-            1522.043733,
-            "idxFloat",
-            1522.0437,
-            "rows",
-            1L,
-            "idx",
-            1522L
-        ),
-        makeRow(
-            query,
-            "2011-04-01T00:00:00.000Z",
-            "market",
+            "market2",
             "upfront",
-            "idxDouble",
-            1234.247546,
-            "idxFloat",
-            1234.2476,
-            "rows",
-            1L,
-            "idx",
-            1234L
-        ),
-        makeRow(
-            query,
-            "2011-04-01T00:00:00.000Z",
-            "market",
-            "spot",
-            "idxDouble",
-            198.545289,
-            "idxFloat",
-            198.5452880859375,
-            "rows",
-            2L,
-            "idx",
-            197L
-        ),
-        makeRow(
-            query,
-            "2011-04-02T00:00:00.000Z",
-            "market",
-            "spot",
-            "idxDouble",
-            650.806953,
-            "idxFloat",
-            650.8069458007812,
-            "rows",
-            5L,
-            "idx",
-            648L
-        ),
-        makeRow(
-            query,
-            "2011-04-02T00:00:00.000Z",
-            "market",
-            "total_market",
-            "idxDouble",
-            1193.556278,
-            "idxFloat",
-            1193.5563,
-            "rows",
-            1L,
-            "idx",
-            1193L
-        ),
-        makeRow(
-            query,
-            "2011-04-02T00:00:00.000Z",
-            "market",
-            "upfront",
-            "idxDouble",
-            1144.342401,
-            "idxFloat",
-            1144.3424,
             "rows",
             1L,
             "idx",
             1144L
         ),
+
         makeRow(
             query,
             "2011-04-02T00:00:00.000Z",
-            "market",
+            "market2",
             "spot",
-            "idxDouble",
-            249.591647,
-            "idxFloat",
-            249.59164428710938,
             "rows",
-            2L,
+            9L,
             "idx",
-            249L
+            1120L
         ),
         makeRow(
             query,
             "2011-04-02T00:00:00.000Z",
-            "market",
+            "market2",
             "total_market",
-            "idxDouble",
-            1321.375057,
-            "idxFloat",
-            1321.375,
-            "rows",
-            1L,
-            "idx",
-            1321L
-        ),
-        makeRow(
-            query,
-            "2011-04-02T00:00:00.000Z",
-            "market",
-            "upfront",
-            "idxDouble",
-            1049.738585,
-            "idxFloat",
-            1049.7385,
-            "rows",
-            1L,
-            "idx",
-            1049L
-        ),
-        makeRow(
-            query,
-            "2011-04-02T00:00:00.000Z",
-            "market",
-            "spot",
-            "idxDouble",
-            223.798797,
-            "idxFloat",
-            223.79879760742188,
             "rows",
             2L,
             "idx",
-            223L
+            2514L
         ),
+        makeRow(
+            query,
+            "2011-04-02T00:00:00.000Z",
+            "market2",
+            "upfront",
+            "rows",
+            2L,
+            "idx",
+            2193L
+        ),
+
 
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
-            "idxDouble",
-            6626.151569,
-            "idxFloat",
-            6626.1513671875,
             "rows",
             13L,
             "idx",
@@ -7497,10 +7228,6 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02T00:00:00.000Z",
-            "idxDouble",
-            5833.209717999999,
-            "idxFloat",
-            5833.20849609375,
             "rows",
             13L,
             "idx",
@@ -7529,9 +7256,7 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.ROWS_COUNT,
-                new LongSumAggregatorFactory("idx", "index"),
-                new FloatSumAggregatorFactory("idxFloat", "indexFloat"),
-                new DoubleSumAggregatorFactory("idxDouble", "index")
+                new LongSumAggregatorFactory("idx", "index")
             )
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -7540,7 +7265,9 @@ public class GroupByQueryRunnerTest
             ImmutableList.of("market"),
             ImmutableList.of()
         ))
-        .addOrderByColumn("idxDouble")
+        .addOrderByColumn("idx")
+        .addOrderByColumn("alias")
+        .addOrderByColumn("market")
         .setLimit(1)
         .build();
 
@@ -7553,33 +7280,21 @@ public class GroupByQueryRunnerTest
             "rows",
             1L,
             "idx",
-            78L,
-            "idxFloat",
-            78.622547f,
-            "idxDouble",
-            78.622547d
+            78L
         ),
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
             "market",
             "spot",
-            "idxDouble",
-            198.545289,
-            "idxFloat",
-            198.5452880859375,
             "rows",
-            2L,
+            9L,
             "idx",
-            197L
+            1102L
         ),
         makeRow(
             query,
             "2011-04-01T00:00:00.000Z",
-            "idxDouble",
-            6626.151575318359,
-            "idxFloat",
-            6626.152f,
             "rows",
             13L,
             "idx",

@@ -283,7 +283,7 @@ public enum CompressionStrategy
 
   public static class LZ4Decompressor implements Decompressor
   {
-    private static final LZ4SafeDecompressor LZ_4_SAFE = LZ4Factory.fastestInstance().safeDecompressor();
+    private static final LZ4SafeDecompressor LZ4_SAFE = LZ4Factory.fastestInstance().safeDecompressor();
     private static final LZ4Decompressor DEFAULT_COMPRESSOR = new LZ4Decompressor();
 
     @Override
@@ -291,7 +291,7 @@ public enum CompressionStrategy
     {
       // Since decompressed size is NOT known, must use lz4Safe
       // lz4Safe.decompress does not modify buffer positions
-      final int numDecompressedBytes = LZ_4_SAFE.decompress(
+      final int numDecompressedBytes = LZ4_SAFE.decompress(
           in,
           in.position(),
           numBytes,
@@ -307,7 +307,7 @@ public enum CompressionStrategy
   public static class LZ4Compressor extends Compressor
   {
     private static final LZ4Compressor DEFAULT_COMPRESSOR = new LZ4Compressor();
-    private static final net.jpountz.lz4.LZ4Compressor LZ_4_HIGH = LZ4Factory.fastestInstance().highCompressor();
+    private static final net.jpountz.lz4.LZ4Compressor LZ4_HIGH = LZ4Factory.fastestInstance().highCompressor();
 
     @Override
     ByteBuffer allocateInBuffer(int inputSize, Closer closer)
@@ -320,7 +320,7 @@ public enum CompressionStrategy
     @Override
     ByteBuffer allocateOutBuffer(int inputSize, Closer closer)
     {
-      ByteBuffer outBuffer = ByteBuffer.allocateDirect(LZ_4_HIGH.maxCompressedLength(inputSize));
+      ByteBuffer outBuffer = ByteBuffer.allocateDirect(LZ4_HIGH.maxCompressedLength(inputSize));
       closer.register(() -> ByteBufferUtils.free(outBuffer));
       return outBuffer;
     }
@@ -330,7 +330,7 @@ public enum CompressionStrategy
     {
       out.clear();
       int position = in.position();
-      LZ_4_HIGH.compress(in, out);
+      LZ4_HIGH.compress(in, out);
       in.position(position);
       out.flip();
       return out;

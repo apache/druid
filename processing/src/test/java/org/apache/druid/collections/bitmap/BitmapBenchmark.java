@@ -48,7 +48,7 @@ public class BitmapBenchmark
   public static final int LENGTH = 500_000;
   public static final int SIZE = 10_000;
   static final ImmutableConciseSet CONCISE[] = new ImmutableConciseSet[SIZE];
-  static final ImmutableConciseSet OF_HEAP_CONCISE[] = new ImmutableConciseSet[SIZE];
+  static final ImmutableConciseSet OFF_HEAP_CONCISE[] = new ImmutableConciseSet[SIZE];
   static final ImmutableRoaringBitmap ROARING[] = new ImmutableRoaringBitmap[SIZE];
   static final ImmutableRoaringBitmap IMMUTABLE_ROARING[] = new ImmutableRoaringBitmap[SIZE];
   static final ImmutableRoaringBitmap OFF_HEAP_ROARING[] = new ImmutableRoaringBitmap[SIZE];
@@ -144,7 +144,7 @@ public class BitmapBenchmark
   @BenchmarkOptions(warmupRounds = 1, benchmarkRounds = 2)
   public void timeOffheapConciseUnion()
   {
-    ImmutableConciseSet union = ImmutableConciseSet.union(OF_HEAP_CONCISE);
+    ImmutableConciseSet union = ImmutableConciseSet.union(OFF_HEAP_CONCISE);
     Assert.assertEquals(unionCount, union.size());
   }
 

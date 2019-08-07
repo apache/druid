@@ -73,11 +73,11 @@ public class RangeBitmapBenchmarkTest extends BitmapBenchmark
         expectedUnion.set(k);
       }
       CONCISE[i] = ImmutableConciseSet.newImmutableFromMutable(c);
-      OF_HEAP_CONCISE[i] = makeOffheapConcise(CONCISE[i]);
+      OFF_HEAP_CONCISE[i] = makeOffheapConcise(CONCISE[i]);
       ROARING[i] = r;
       IMMUTABLE_ROARING[i] = makeImmutableRoaring(r);
       OFF_HEAP_ROARING[i] = makeOffheapRoaring(r);
-      GENERIC_CONCISE[i] = new WrappedImmutableConciseBitmap(OF_HEAP_CONCISE[i]);
+      GENERIC_CONCISE[i] = new WrappedImmutableConciseBitmap(OFF_HEAP_CONCISE[i]);
       GENERIC_ROARING[i] = new WrappedImmutableRoaringBitmap(OFF_HEAP_ROARING[i]);
     }
     unionCount = expectedUnion.cardinality();

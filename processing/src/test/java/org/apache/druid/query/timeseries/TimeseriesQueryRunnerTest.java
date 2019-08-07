@@ -1814,7 +1814,7 @@ public class TimeseriesQueryRunnerTest
                                   .aggregators(
                                       ImmutableList.of(
                                           QueryRunnerTestHelper.INDEX_DOUBLE_SUM,
-                                          QueryRunnerTestHelper.JS_INDEX_SUM_IF_PLACEMENT_IS_HA,
+                                          QueryRunnerTestHelper.JS_INDEX_SUM_IF_PLACEMENTISH_A,
                                           QueryRunnerTestHelper.JS_PLACEMENTISH_COUNT
                                       )
                                   )
@@ -1853,7 +1853,7 @@ public class TimeseriesQueryRunnerTest
                                   .aggregators(
                                       ImmutableList.of(
                                           QueryRunnerTestHelper.INDEX_DOUBLE_SUM,
-                                          QueryRunnerTestHelper.JS_INDEX_SUM_IF_PLACEMENT_IS_HA,
+                                          QueryRunnerTestHelper.JS_INDEX_SUM_IF_PLACEMENTISH_A,
                                           QueryRunnerTestHelper.JS_PLACEMENTISH_COUNT
                                       )
                                   )

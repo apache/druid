@@ -121,7 +121,7 @@ public class QueryRunnerTestHelper
   public static final DoubleSumAggregatorFactory INDEX_DOUBLE_SUM = new DoubleSumAggregatorFactory("index", INDEX_METRIC);
   public static final String JS_COMBINE_A_PLUS_B = "function combine(a, b) { return a + b; }";
   public static final String JS_RESET_0 = "function reset() { return 0; }";
-  public static final JavaScriptAggregatorFactory JS_INDEX_SUM_IF_PLACEMENT_IS_HA = new JavaScriptAggregatorFactory(
+  public static final JavaScriptAggregatorFactory JS_INDEX_SUM_IF_PLACEMENTISH_A = new JavaScriptAggregatorFactory(
       "nindex",
       Arrays.asList("placementish", "index"),
       "function aggregate(current, a, b) { if ((Array.isArray(a) && a.indexOf('a') > -1) || a === 'a') { return current + b; } else { return current; } }",
