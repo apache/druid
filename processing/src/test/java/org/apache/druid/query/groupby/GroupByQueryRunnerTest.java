@@ -6728,7 +6728,7 @@ public class GroupByQueryRunnerTest
         makeRow(
             query,
             "2011-04-02",
-            "alias2",
+            "alias",
             "technology",
             "rows",
             1L,
@@ -6780,7 +6780,7 @@ public class GroupByQueryRunnerTest
             "market2",
             "upfront",
             "rows",
-            2L,
+            1L,
             "idx",
             2681L,
             "idxPostAgg",
@@ -6805,7 +6805,7 @@ public class GroupByQueryRunnerTest
             "market2",
             "total_market",
             "rows",
-            2L,
+            9L,
             "idx",
             2514L,
             "idxPostAgg",
@@ -7180,9 +7180,9 @@ public class GroupByQueryRunnerTest
             "market2",
             "upfront",
             "rows",
-            2L,
+            1L,
             "idx",
-            2681L
+            1144L
         ),
 
         makeRow(
