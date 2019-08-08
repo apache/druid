@@ -61,6 +61,8 @@ you can subscribe to by emailing [dev-subscribe@druid.apache.org](mailto:dev-sub
 We also have a couple people hanging out on IRC in `#druid-dev` on
 `irc.freenode.net`.
 
+Some committers and users are present in the channel `#druid` on the Apache Slack team. Please use our [invitation link to join](https://druid.apache.org/community/join-slack), and once you join, add the `#druid` channel.
+
 ### Building From Source
 
 Please note that JDK 8 is required to build Druid.
