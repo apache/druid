@@ -166,7 +166,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                 taskId,
                 new TaskStatusPlus(
                     taskId,
-                    "index_sub",
+                    SinglePhaseSubTask.TYPE,
                     DateTimes.EPOCH,
                     DateTimes.EPOCH,
                     taskStatus.getStatusCode(),
@@ -182,7 +182,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                 taskId,
                 new TaskStatusPlus(
                     taskId,
-                    "index_sub",
+                    SinglePhaseSubTask.TYPE,
                     DateTimes.EPOCH,
                     DateTimes.EPOCH,
                     TaskState.RUNNING,
@@ -196,14 +196,14 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           }
         }
         catch (InterruptedException | ExecutionException e) {
-          // We don't have a way to pass this exception to the supervisorTask yet..
+          // We don't have a way to propagate this exception to the supervisorTask yet..
           // So, let's print it here.
           System.err.println(Throwables.getStackTraceAsString(e));
           return new TaskStatusResponse(
               taskId,
               new TaskStatusPlus(
                   taskId,
-                  "index_sub",
+                  SinglePhaseSubTask.TYPE,
                   DateTimes.EPOCH,
                   DateTimes.EPOCH,
                   TaskState.FAILED,
