@@ -16,7 +16,17 @@
  * limitations under the License.
  */
 
-import { Button, FormGroup, InputGroup, Intent, Switch } from '@blueprintjs/core';
+import {
+  Button,
+  FormGroup,
+  InputGroup,
+  Intent,
+  Menu,
+  MenuItem,
+  Popover,
+  Position,
+  Switch,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import classNames from 'classnames';
@@ -33,6 +43,7 @@ import {
 import { ActionIcon } from '../../components/action-icon/action-icon';
 import { SegmentTimeline } from '../../components/segment-timeline/segment-timeline';
 import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
+import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
@@ -141,6 +152,9 @@ export interface DatasourcesViewState {
   showChart: boolean;
   chartWidth: number;
   chartHeight: number;
+
+  datasourceTableActionDialogId?: string;
+  actions: BasicAction[];
 }
 
 export class DatasourcesView extends React.PureComponent<
@@ -202,6 +216,8 @@ GROUP BY 1`;
       showChart: false,
       chartWidth: window.innerWidth * 0.85,
       chartHeight: window.innerHeight * 0.4,
+
+      actions: [],
     };
 
     this.datasourceQueryManager = new QueryManager({
@@ -446,6 +462,29 @@ GROUP BY 1`;
         </p>
         <p>This action is not reversible and the data deleted will be lost.</p>
       </AsyncActionDialog>
+    );
+  }
+
+  renderBulkDatasourceActions() {
+    const { goToQuery, noSqlMode } = this.props;
+    const bulkDatasourceActionsMenu = (
+      <Menu>
+        {!noSqlMode && (
+          <MenuItem
+            icon={IconNames.APPLICATION}
+            text="View SQL query for table"
+            onClick={() => goToQuery(DatasourcesView.DATASOURCE_SQL)}
+          />
+        )}
+      </Menu>
+    );
+
+    return (
+      <>
+        <Popover content={bulkDatasourceActionsMenu} position={Position.BOTTOM_LEFT}>
+          <Button icon={IconNames.MORE} />
+        </Popover>
+      </>
     );
   }
 
@@ -895,7 +934,17 @@ GROUP BY 1`;
                   rules,
                   compaction,
                 );
-                return <ActionCell actions={datasourceActions} />;
+                return (
+                  <ActionCell
+                    onDetail={() => {
+                      this.setState({
+                        datasourceTableActionDialogId: datasource,
+                        actions: datasourceActions,
+                      });
+                    }}
+                    actions={datasourceActions}
+                  />
+                );
               },
               show: hiddenColumns.exists(ActionCell.COLUMN_LABEL),
             },
@@ -914,8 +963,16 @@ GROUP BY 1`;
   }
 
   render(): JSX.Element {
-    const { goToQuery, noSqlMode } = this.props;
-    const { showUnused, hiddenColumns, showChart, chartHeight, chartWidth } = this.state;
+    const { noSqlMode } = this.props;
+    const {
+      showUnused,
+      hiddenColumns,
+      showChart,
+      chartHeight,
+      chartWidth,
+      datasourceTableActionDialogId,
+      actions,
+    } = this.state;
 
     return (
       <div className="data-sources-view app-view">
@@ -926,13 +983,7 @@ GROUP BY 1`;
             }}
             localStorageKey={LocalStorageKeys.DATASOURCES_REFRESH_RATE}
           />
-          {!noSqlMode && (
-            <Button
-              icon={IconNames.APPLICATION}
-              text="Go to SQL"
-              onClick={() => goToQuery(DatasourcesView.DATASOURCE_SQL)}
-            />
-          )}
+          {this.renderBulkDatasourceActions()}
           <Switch
             checked={showChart}
             label="Show segment timeline"
@@ -955,6 +1006,14 @@ GROUP BY 1`;
           </div>
         )}
         {this.renderDatasourceTable()}
+        {datasourceTableActionDialogId && (
+          <DatasourceTableActionDialog
+            datasourceId={datasourceTableActionDialogId}
+            actions={actions}
+            onClose={() => this.setState({ datasourceTableActionDialogId: undefined })}
+            isOpen
+          />
+        )}
       </div>
     );
   }

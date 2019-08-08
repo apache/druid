@@ -92,9 +92,9 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       ScanQuery query = (ScanQuery) queryPlus.getQuery();
 
       // Note: this variable is effective only when queryContext has a timeout.
-      // See the comment of CTX_TIMEOUT_AT.
+      // See the comment of ResponseContext.Key.TIMEOUT_AT.
       final long timeoutAt = System.currentTimeMillis() + QueryContexts.getTimeout(queryPlus.getQuery());
-      responseContext.put(ResponseContext.CTX_TIMEOUT_AT, timeoutAt);
+      responseContext.put(ResponseContext.Key.TIMEOUT_AT, timeoutAt);
 
       if (query.getOrder().equals(ScanQuery.Order.NONE)) {
         // Use normal strategy
@@ -104,8 +104,8 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                 input -> input.run(queryPlus, responseContext)
             )
         );
-        if (query.getLimit() <= Integer.MAX_VALUE) {
-          return returnedRows.limit(Math.toIntExact(query.getLimit()));
+        if (query.getScanRowsLimit() <= Integer.MAX_VALUE) {
+          return returnedRows.limit(Math.toIntExact(query.getScanRowsLimit()));
         } else {
           return returnedRows;
         }
@@ -120,7 +120,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         int maxRowsQueuedForOrdering = (query.getMaxRowsQueuedForOrdering() == null
                                         ? scanQueryConfig.getMaxRowsQueuedForOrdering()
                                         : query.getMaxRowsQueuedForOrdering());
-        if (query.getLimit() <= maxRowsQueuedForOrdering) {
+        if (query.getScanRowsLimit() <= maxRowsQueuedForOrdering) {
           // Use priority queue strategy
           return priorityQueueSortAndLimit(
               Sequences.concat(Sequences.map(
@@ -189,7 +189,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
               + "  Try reducing the scope of the query to scan fewer partitions than the configurable limit of"
               + " %,d partitions or lower the row limit below %,d.",
               maxNumPartitionsInSegment,
-              query.getLimit(),
+              query.getScanRowsLimit(),
               scanQueryConfig.getMaxSegmentPartitionsOrderedInMemory(),
               scanQueryConfig.getMaxRowsQueuedForOrdering()
           );
@@ -207,16 +207,16 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
   {
     Comparator<ScanResultValue> priorityQComparator = new ScanResultValueTimestampComparator(scanQuery);
 
-    if (scanQuery.getLimit() > Integer.MAX_VALUE) {
+    if (scanQuery.getScanRowsLimit() > Integer.MAX_VALUE) {
       throw new UOE(
           "Limit of %,d rows not supported for priority queue strategy of time-ordering scan results",
-          scanQuery.getLimit()
+          scanQuery.getScanRowsLimit()
       );
     }
 
     // Converting the limit from long to int could theoretically throw an ArithmeticException but this branch
     // only runs if limit < MAX_LIMIT_FOR_IN_MEMORY_TIME_ORDERING (which should be < Integer.MAX_VALUE)
-    int limit = Math.toIntExact(scanQuery.getLimit());
+    int limit = Math.toIntExact(scanQuery.getScanRowsLimit());
 
     PriorityQueue<ScanResultValue> q = new PriorityQueue<>(limit, priorityQComparator);
 
@@ -337,7 +337,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                     )
             )
         );
-    long limit = ((ScanQuery) (queryPlus.getQuery())).getLimit();
+    long limit = ((ScanQuery) (queryPlus.getQuery())).getScanRowsLimit();
     if (limit == Long.MAX_VALUE) {
       return resultSequence;
     }
@@ -370,9 +370,9 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       }
 
       // it happens in unit tests
-      final Number timeoutAt = (Number) responseContext.get(ResponseContext.CTX_TIMEOUT_AT);
+      final Number timeoutAt = (Number) responseContext.get(ResponseContext.Key.TIMEOUT_AT);
       if (timeoutAt == null || timeoutAt.longValue() == 0L) {
-        responseContext.put(ResponseContext.CTX_TIMEOUT_AT, JodaUtils.MAX_INSTANT);
+        responseContext.put(ResponseContext.Key.TIMEOUT_AT, JodaUtils.MAX_INSTANT);
       }
       return engine.process((ScanQuery) query, segment, responseContext);
     }

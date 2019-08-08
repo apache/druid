@@ -74,7 +74,7 @@ public class ExpressionPostAggregator implements PostAggregator
   public ExpressionPostAggregator(
       @JsonProperty("name") String name,
       @JsonProperty("expression") String expression,
-      @JsonProperty("ordering") String ordering,
+      @JsonProperty("ordering") @Nullable String ordering,
       @JacksonInject ExprMacroTable macroTable
   )
   {
@@ -118,7 +118,7 @@ public class ExpressionPostAggregator implements PostAggregator
         macroTable,
         finalizers,
         parsed,
-        Suppliers.memoize(() -> parsed.get().analyzeInputs().getRequiredColumns()));
+        Suppliers.memoize(() -> parsed.get().analyzeInputs().getRequiredBindings()));
   }
 
   private ExpressionPostAggregator(

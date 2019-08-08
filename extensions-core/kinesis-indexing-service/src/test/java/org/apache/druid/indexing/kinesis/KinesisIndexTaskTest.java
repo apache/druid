@@ -2889,6 +2889,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
 
     toolboxFactory = new TaskToolboxFactory(
         taskConfig,
+        null, // taskExecutorNode
         taskActionClientFactory,
         emitter,
         dataSegmentPusher,

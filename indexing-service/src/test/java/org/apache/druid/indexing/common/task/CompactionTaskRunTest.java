@@ -697,6 +697,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final TaskToolbox box = new TaskToolbox(
         null,
+        null,
         actionClient,
         null,
         new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()),

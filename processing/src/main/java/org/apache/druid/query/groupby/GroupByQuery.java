@@ -229,28 +229,20 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       List<DimensionSpec> dimensions
   )
   {
-    // if subtotalsSpec exists then validate that all are subsets of dimensions spec and are in same order.
-    // For example if we had {D1, D2, D3} in dimensions spec then
-    // {D2}, {D1, D2}, {D1, D3}, {D2, D3} etc are valid in subtotalsSpec while
-    // {D2, D1} is not as it is not in same order.
-    // {D4} is not as its not a subset.
-    // This restriction as enforced because implementation does sort merge on the results of top-level query
-    // results and expects that ordering of events does not change when dimension columns are removed from
-    // results of top level query.
+    // if subtotalsSpec exists then validate that all are subsets of dimensions spec.
     if (subtotalsSpec != null) {
       for (List<String> subtotalSpec : subtotalsSpec) {
-        int i = 0;
         for (String s : subtotalSpec) {
           boolean found = false;
-          for (; i < dimensions.size(); i++) {
-            if (s.equals(dimensions.get(i).getOutputName())) {
+          for (DimensionSpec ds : dimensions) {
+            if (s.equals(ds.getOutputName())) {
               found = true;
               break;
             }
           }
           if (!found) {
             throw new IAE(
-                "Subtotal spec %s is either not a subset or items are in different order than in dimensions.",
+                "Subtotal spec %s is either not a subset of top level dimensions.",
                 subtotalSpec
             );
           }
@@ -802,7 +794,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return new Builder(this).setQuerySegmentSpec(spec).build();
   }
 
-  public GroupByQuery withDimFilter(final DimFilter dimFilter)
+  public GroupByQuery withDimFilter(@Nullable final DimFilter dimFilter)
   {
     return new Builder(this).setDimFilter(dimFilter).build();
   }
@@ -828,7 +820,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return new Builder(this).setAggregatorSpecs(aggregatorSpecs).build();
   }
 
-  public GroupByQuery withSubtotalsSpec(final List<List<String>> subtotalsSpec)
+  public GroupByQuery withSubtotalsSpec(@Nullable final List<List<String>> subtotalsSpec)
   {
     return new Builder(this).setSubtotalsSpec(subtotalsSpec).build();
   }
@@ -1006,7 +998,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       return this;
     }
 
-    public Builder setSubtotalsSpec(List<List<String>> subtotalsSpec)
+    public Builder setSubtotalsSpec(@Nullable List<List<String>> subtotalsSpec)
     {
       this.subtotalsSpec = subtotalsSpec;
       return this;
@@ -1017,7 +1009,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       return addOrderByColumn(dimension, null);
     }
 
-    public Builder addOrderByColumn(String dimension, OrderByColumnSpec.Direction direction)
+    public Builder addOrderByColumn(String dimension, @Nullable OrderByColumnSpec.Direction direction)
     {
       return addOrderByColumn(new OrderByColumnSpec(dimension, direction));
     }
@@ -1059,7 +1051,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       return this;
     }
 
-    public Builder setDimFilter(DimFilter dimFilter)
+    public Builder setDimFilter(@Nullable DimFilter dimFilter)
     {
       this.dimFilter = dimFilter;
       return this;

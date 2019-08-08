@@ -110,7 +110,8 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   private final VirtualColumns virtualColumns;
   private final ResultFormat resultFormat;
   private final int batchSize;
-  private final long limit;
+  @JsonProperty("limit")
+  private final long scanRowsLimit;
   private final DimFilter dimFilter;
   private final List<String> columns;
   private final Boolean legacy;
@@ -125,7 +126,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       @JsonProperty("virtualColumns") VirtualColumns virtualColumns,
       @JsonProperty("resultFormat") ResultFormat resultFormat,
       @JsonProperty("batchSize") int batchSize,
-      @JsonProperty("limit") long limit,
+      @JsonProperty("limit") long scanRowsLimit,
       @JsonProperty("order") Order order,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("columns") List<String> columns,
@@ -141,9 +142,9 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
         this.batchSize > 0,
         "batchSize must be greater than 0"
     );
-    this.limit = (limit == 0) ? Long.MAX_VALUE : limit;
+    this.scanRowsLimit = (scanRowsLimit == 0) ? Long.MAX_VALUE : scanRowsLimit;
     Preconditions.checkArgument(
-        this.limit > 0,
+        this.scanRowsLimit > 0,
         "limit must be greater than 0"
     );
     this.dimFilter = dimFilter;
@@ -201,9 +202,9 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   }
 
   @JsonProperty
-  public long getLimit()
+  public long getScanRowsLimit()
   {
-    return limit;
+    return scanRowsLimit;
   }
 
   @JsonProperty
@@ -311,7 +312,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     }
     final ScanQuery scanQuery = (ScanQuery) o;
     return batchSize == scanQuery.batchSize &&
-           limit == scanQuery.limit &&
+           scanRowsLimit == scanQuery.scanRowsLimit &&
            Objects.equals(legacy, scanQuery.legacy) &&
            Objects.equals(virtualColumns, scanQuery.virtualColumns) &&
            Objects.equals(resultFormat, scanQuery.resultFormat) &&
@@ -322,7 +323,8 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), virtualColumns, resultFormat, batchSize, limit, dimFilter, columns, legacy);
+    return Objects.hash(super.hashCode(), virtualColumns, resultFormat, batchSize,
+                        scanRowsLimit, dimFilter, columns, legacy);
   }
 
   @Override
@@ -334,7 +336,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
            ", virtualColumns=" + getVirtualColumns() +
            ", resultFormat='" + resultFormat + '\'' +
            ", batchSize=" + batchSize +
-           ", limit=" + limit +
+           ", scanRowsLimit=" + scanRowsLimit +
            ", dimFilter=" + dimFilter +
            ", columns=" + columns +
            ", legacy=" + legacy +
