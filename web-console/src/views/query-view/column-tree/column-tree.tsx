@@ -19,11 +19,15 @@
 import { HTMLSelect, IconName, ITreeNode, Menu, MenuItem, Position, Tree } from '@blueprintjs/core';
 import { Popover } from '@blueprintjs/core/lib/cjs';
 import { IconNames } from '@blueprintjs/icons';
+import { AdditiveExpression, Alias, FilterClause, StringType } from 'druid-query-toolkit';
 import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
 import { copyAndAlert, escapeSqlIdentifier, groupBy } from '../../../utils';
 import { ColumnMetadata } from '../../../utils/column-metadata';
+
+import { NumberMenu } from './columnTreeMenu/number-menu/number-menu';
+import { StringMenu } from './columnTreeMenu/string-menu/string-menu';
 
 import './column-tree.scss';
 
@@ -88,13 +92,33 @@ export interface ColumnTreeProps {
   onQueryStringChange: (queryString: string) => void;
   defaultSchema?: string;
   defaultTable?: string;
-  addToGroupBy: (columnName: string) => void;
-  addAggregateColumn: (columnName: string, functionName: string) => void;
+  addFunctionToGroupBy: (
+    functionName: string,
+    spacing: string[],
+    argumentsArray: (StringType | number)[],
+    run: boolean,
+  ) => void;
+  addToGroupBy: (columnName: string, run: boolean) => void;
+  addAggregateColumn: (
+    columnName: string,
+    functionName: string,
+    run: boolean,
+    alias?: Alias,
+    distinct?: boolean,
+    filter?: FilterClause,
+  ) => void;
+  filterByRow: (
+    rhs: string | number | AdditiveExpression,
+    lhs: string,
+    operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE',
+    run: boolean,
+  ) => void;
   hasGroupBy?: boolean;
 }
 
 export interface ColumnTreeState {
   prevColumnMetadata?: ColumnMetadata[];
+  prevGroupByStatus?: boolean;
   columnTree?: ITreeNode[];
   selectedTreeIndex: number;
   expandedNode: number;
@@ -103,8 +127,10 @@ export interface ColumnTreeState {
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
     const { columnMetadata, defaultSchema, defaultTable } = props;
-    console.log(props.hasGroupBy);
-    if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
+    if (
+      (columnMetadata && columnMetadata !== state.prevColumnMetadata) ||
+      (columnMetadata && props.hasGroupBy !== state.prevGroupByStatus)
+    ) {
       const columnTree = groupBy(
         columnMetadata,
         r => r.TABLE_SCHEMA,
@@ -163,6 +189,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                   <Popover
                     boundary={'window'}
                     position={Position.RIGHT}
+                    autoFocus={false}
                     content={
                       <Menu>
                         <MenuItem
@@ -181,18 +208,34 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                             );
                           }}
                         />
-                        {props.hasGroupBy && (
-                          <MenuItem
-                            icon={IconNames.GROUP_OBJECTS}
-                            text={`Add to group by: ${columnData.COLUMN_NAME}`}
-                            onClick={() => props.addToGroupBy(columnData.COLUMN_NAME)}
+                        {columnData.DATA_TYPE === 'BIGINT' && (
+                          <NumberMenu
+                            addFunctionToGroupBy={props.addFunctionToGroupBy}
+                            addToGroupBy={props.addToGroupBy}
+                            addAggregateColumn={props.addAggregateColumn}
+                            filterByRow={props.filterByRow}
+                            columnName={columnData.COLUMN_NAME}
+                            hasGroupBy={props.hasGroupBy}
                           />
                         )}
-                        {props.hasGroupBy && columnData.DATA_TYPE === 'BIGINT' && (
-                          <MenuItem
-                            icon={IconNames.GROUP_OBJECTS}
-                            text={`Aggregate: ${columnData.COLUMN_NAME}`}
-                            onClick={() => props.addAggregateColumn(columnData.COLUMN_NAME, 'SUM')}
+                        {columnData.DATA_TYPE === 'VARCHAR' && (
+                          <StringMenu
+                            addFunctionToGroupBy={props.addFunctionToGroupBy}
+                            addToGroupBy={props.addToGroupBy}
+                            addAggregateColumn={props.addAggregateColumn}
+                            filterByRow={props.filterByRow}
+                            columnName={columnData.COLUMN_NAME}
+                            hasGroupBy={props.hasGroupBy}
+                          />
+                        )}
+                        {columnData.DATA_TYPE === 'TIMESTAMP' && (
+                          <StringMenu
+                            addFunctionToGroupBy={props.addFunctionToGroupBy}
+                            addToGroupBy={props.addToGroupBy}
+                            addAggregateColumn={props.addAggregateColumn}
+                            filterByRow={props.filterByRow}
+                            columnName={columnData.COLUMN_NAME}
+                            hasGroupBy={props.hasGroupBy}
                           />
                         )}
                         <MenuItem
@@ -243,6 +286,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         columnTree,
         selectedTreeIndex,
         expandedNode,
+        prevGroupByStatus: props.hasGroupBy,
       };
     }
     return null;
@@ -296,7 +340,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   };
 
   render(): JSX.Element | null {
-    const { columnMetadataLoading } = this.props;
+    const { columnMetadataLoading, hasGroupBy } = this.props;
+    console.log(hasGroupBy);
     if (columnMetadataLoading) {
       return (
         <div className="column-tree">

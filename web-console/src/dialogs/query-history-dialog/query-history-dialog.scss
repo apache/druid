@@ -16,22 +16,17 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+.query-history-dialog {
+  &.bp3-dialog {
+    width: 600px;
+  }
 
-import { QueryPlanDialog } from './query-plan-dialog';
+  .panel {
+    width: 100%;
+  }
 
-describe('query plan dialog', () => {
-  it('matches snapshot', () => {
-    const queryPlanDialog = (
-      <QueryPlanDialog
-        setQueryString={() => null}
-        explainResult={'test'}
-        explainError={undefined}
-        onClose={() => {}}
-      />
-    );
-    render(queryPlanDialog);
-    expect(document.body.lastChild).toMatchSnapshot();
-  });
-});
+  .text-area {
+    width: 100%;
+    height: 500px;
+  }
+}

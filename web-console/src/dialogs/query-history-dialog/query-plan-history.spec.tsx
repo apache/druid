@@ -19,17 +19,12 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { QueryPlanDialog } from './query-plan-dialog';
+import { QueryHistoryDialog } from './query-history-dialog';
 
 describe('query plan dialog', () => {
   it('matches snapshot', () => {
     const queryPlanDialog = (
-      <QueryPlanDialog
-        setQueryString={() => null}
-        explainResult={'test'}
-        explainError={undefined}
-        onClose={() => {}}
-      />
+      <QueryHistoryDialog setQueryString={() => null} queryRecords={[]} onClose={() => {}} />
     );
     render(queryPlanDialog);
     expect(document.body.lastChild).toMatchSnapshot();

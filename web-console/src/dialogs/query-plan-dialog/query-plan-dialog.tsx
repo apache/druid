@@ -19,7 +19,7 @@
 import { Button, Classes, Dialog, FormGroup, InputGroup, TextArea } from '@blueprintjs/core';
 import React from 'react';
 
-import { BasicQueryExplanation, SemiJoinQueryExplanation } from '../../utils';
+import { BasicQueryExplanation, copyAndAlert, SemiJoinQueryExplanation } from '../../utils';
 
 import './query-plan-dialog.scss';
 
@@ -27,6 +27,7 @@ export interface QueryPlanDialogProps {
   explainResult?: BasicQueryExplanation | SemiJoinQueryExplanation | string;
   explainError?: string;
   onClose: () => void;
+  setQueryString: (queryString: string) => void;
 }
 
 export interface QueryPlanDialogState {}
@@ -40,8 +41,10 @@ export class QueryPlanDialog extends React.PureComponent<
     this.state = {};
   }
 
+  private queryString: string = '';
+
   render(): JSX.Element {
-    const { explainResult, explainError, onClose } = this.props;
+    const { explainResult, explainError, onClose, setQueryString } = this.props;
 
     let content: JSX.Element;
 
@@ -60,17 +63,15 @@ export class QueryPlanDialog extends React.PureComponent<
         );
       }
 
+      this.queryString = JSON.stringify(
+        (explainResult as BasicQueryExplanation).query[0],
+        undefined,
+        2,
+      );
       content = (
         <div className="one-query">
           <FormGroup label="Query">
-            <TextArea
-              readOnly
-              value={JSON.stringify(
-                (explainResult as BasicQueryExplanation).query[0],
-                undefined,
-                2,
-              )}
-            />
+            <TextArea readOnly value={this.queryString} />
           </FormGroup>
           {signature}
         </div>
@@ -135,6 +136,8 @@ export class QueryPlanDialog extends React.PureComponent<
         <div className={Classes.DIALOG_BODY}>{content}</div>
         <div className={Classes.DIALOG_FOOTER}>
           <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+            <Button text="Copy" onClick={() => copyAndAlert(this.queryString, 'Query copied')} />
+            <Button text="Open" onClick={() => setQueryString(this.queryString)} />
             <Button text="Close" onClick={onClose} />
           </div>
         </div>

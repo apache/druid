@@ -35,9 +35,9 @@ export interface QueryOutputProps {
   aggregateColumns?: string[];
   disabled: boolean;
   loading: boolean;
-  sqlFilterRow: (row: string, header: string, operator: '=' | '!=') => void;
-  sqlExcludeColumn: (header: string) => void;
-  sqlOrderBy: (header: string, direction: 'ASC' | 'DESC') => void;
+  sqlFilterRow: (row: string, header: string, operator: '=' | '!=', run: boolean) => void;
+  sqlExcludeColumn: (header: string, run: boolean) => void;
+  sqlOrderBy: (header: string, direction: 'ASC' | 'DESC', run: boolean) => void;
   sorted?: { id: string; desc: boolean }[];
   result?: HeaderRows;
   error?: string;
@@ -139,7 +139,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
             basicActions.push({
               icon: sorted.desc ? IconNames.SORT_ASC : IconNames.SORT_DESC,
               title: `Order by: ${h} ${sorted.desc ? 'ASC' : 'DESC'}`,
-              onAction: () => sqlOrderBy(h, sorted.desc ? 'ASC' : 'DESC'),
+              onAction: () => sqlOrderBy(h, sorted.desc ? 'ASC' : 'DESC', true),
             });
           }
         });
@@ -149,19 +149,19 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
           {
             icon: IconNames.SORT_ASC,
             title: `Order by: ${h} ASC`,
-            onAction: () => sqlOrderBy(h, 'ASC'),
+            onAction: () => sqlOrderBy(h, 'ASC', true),
           },
           {
             icon: IconNames.SORT_DESC,
             title: `Order by: ${h} DESC`,
-            onAction: () => sqlOrderBy(h, 'DESC'),
+            onAction: () => sqlOrderBy(h, 'DESC', true),
           },
         );
       }
       basicActions.push({
         icon: IconNames.CROSS,
         title: `Remove: ${h}`,
-        onAction: () => sqlExcludeColumn(h),
+        onAction: () => sqlExcludeColumn(h, true),
       });
       actionsMenu = basicActionsToMenu(basicActions);
     }
@@ -214,12 +214,12 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
         {
           icon: IconNames.FILTER_KEEP,
           title: `Filter by: ${header} = ${row}`,
-          onAction: () => sqlFilterRow(row, header, '='),
+          onAction: () => sqlFilterRow(row, header, '=', true),
         },
         {
           icon: IconNames.FILTER_REMOVE,
           title: `Filter by: ${header} != ${row}`,
-          onAction: () => sqlFilterRow(row, header, '!='),
+          onAction: () => sqlFilterRow(row, header, '!=', true),
         },
       ]);
     }

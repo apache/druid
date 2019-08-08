@@ -16,16 +16,22 @@
  * limitations under the License.
  */
 
-import { Intent } from '@blueprintjs/core';
+import { Button, ControlGroup, Intent, Tooltip } from '@blueprintjs/core';
+import { Position } from '@blueprintjs/core/lib/esm/common/position';
+import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import classNames from 'classnames';
 import {
+  AdditiveExpression,
+  Alias,
+  FilterClause,
   HeaderRows,
   isFirstRowHeader,
   normalizeQueryResult,
   shouldIncludeTimestamp,
   sqlParserFactory,
   SqlQuery,
+  StringType,
 } from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import React from 'react';
@@ -34,6 +40,10 @@ import SplitterLayout from 'react-splitter-layout';
 import { SQL_FUNCTIONS, SyntaxDescription } from '../../../lib/sql-function-doc';
 import { QueryPlanDialog } from '../../dialogs';
 import { EditContextDialog } from '../../dialogs/edit-context-dialog/edit-context-dialog';
+import {
+  QueryHistoryDialog,
+  QueryRecord,
+} from '../../dialogs/query-history-dialog/query-history-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import {
   BasicQueryExplanation,
@@ -97,6 +107,8 @@ export interface QueryViewState {
   ast?: SqlQuery;
 
   editContextDialogOpen: boolean;
+  historyDialogOpen: boolean;
+  queryHistory: QueryRecord[];
 }
 
 interface QueryResult {
@@ -161,6 +173,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       loadingExplain: false,
 
       editContextDialogOpen: false,
+      historyDialogOpen: false,
+      queryHistory: [],
     };
 
     this.metadataQueryManager = new QueryManager({
@@ -300,6 +314,17 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
   componentDidMount(): void {
     this.metadataQueryManager.runQuery(null);
+
+    const localStorageQueryHistoy = localStorageGet(LocalStorageKeys.QUERY_HISTORY);
+    let queryHistory;
+    if (localStorageQueryHistoy) {
+      try {
+        queryHistory = JSON.parse(localStorageQueryHistoy);
+      } catch {}
+      if (queryHistory) {
+        this.setState({ queryHistory });
+      }
+    }
   }
 
   componentWillUnmount(): void {
@@ -347,6 +372,24 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         explainResult={explainResult}
         explainError={explainError}
         onClose={() => this.setState({ explainDialogOpen: false })}
+        setQueryString={(queryString: string) =>
+          this.setState({ queryString, explainDialogOpen: false })
+        }
+      />
+    );
+  }
+
+  renderHistoryDialog() {
+    const { historyDialogOpen, queryHistory } = this.state;
+    if (!historyDialogOpen) return;
+
+    return (
+      <QueryHistoryDialog
+        setQueryString={(queryString: string) =>
+          this.setState({ queryString, historyDialogOpen: false })
+        }
+        queryRecords={queryHistory}
+        onClose={() => this.setState({ historyDialogOpen: false })}
       />
     );
   }
@@ -397,6 +440,20 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             runeMode={runeMode}
             columnMetadata={columnMetadata}
           />
+          <ControlGroup vertical>
+            <Tooltip content="QueryHistory" position={Position.LEFT}>
+              <Button
+                icon={IconNames.HISTORY}
+                onClick={() => this.setState({ historyDialogOpen: true })}
+              />
+            </Tooltip>
+            <Tooltip content="QueryHistory" position={Position.LEFT}>
+              <Button icon="filter" />
+            </Tooltip>
+            <Tooltip content="QueryHistory" position={Position.LEFT}>
+              <Button icon="filter" />
+            </Tooltip>
+          </ControlGroup>
           <div className="control-bar">
             <RunButton
               onEditContext={() => this.setState({ editContextDialogOpen: true })}
@@ -427,54 +484,93 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     );
   }
 
-  private addToGroupBy = (columnName: string): void => {
+  private addFunctionToGroupBy = (
+    functionName: string,
+    spacing: string[],
+    argumentsArray: (StringType | number)[],
+    run: boolean,
+  ): void => {
+    let { ast } = this.state;
+    if (!ast) return;
+    ast = ast.addFunctionToGroupBy(functionName, spacing, argumentsArray);
+    this.setState({
+      queryString: ast.toString(),
+    });
+    if (run) {
+      this.handleRun(true, ast.toString());
+    }
+  };
+
+  private addToGroupBy = (columnName: string, run: boolean): void => {
     let { ast } = this.state;
     if (!ast) return;
     ast = ast.addToGroupBy(columnName);
     this.setState({
       queryString: ast.toString(),
     });
-    this.handleRun(true, ast.toString());
+    if (run) {
+      this.handleRun(true, ast.toString());
+    }
   };
 
-  private addAggregateColumn = (columnName: string, functionName: string): void => {
+  private addAggregateColumn = (
+    columnName: string,
+    functionName: string,
+    run: boolean,
+    alias?: Alias,
+    distinct?: boolean,
+    filter?: FilterClause,
+  ): void => {
     let { ast } = this.state;
     if (!ast) return;
-    ast = ast.addAggregateColumn(columnName, functionName);
+    ast = ast.addAggregateColumn(columnName, functionName, alias, distinct, filter);
     this.setState({
       queryString: ast.toString(),
     });
-    this.handleRun(true, ast.toString());
+    if (run) {
+      this.handleRun(true, ast.toString());
+    }
   };
 
-  private sqlOrderBy = (header: string, direction: 'ASC' | 'DESC'): void => {
+  private sqlOrderBy = (header: string, direction: 'ASC' | 'DESC', run: boolean): void => {
     let { ast } = this.state;
     if (!ast) return;
     ast = ast.orderBy(header, direction);
     this.setState({
       queryString: ast.toString(),
     });
-    this.handleRun(true, ast.toString());
+    if (run) {
+      this.handleRun(true, ast.toString());
+    }
   };
 
-  private sqlExcludeColumn = (header: string): void => {
+  private sqlExcludeColumn = (header: string, run: boolean): void => {
     let { ast } = this.state;
     if (!ast) return;
     ast = ast.excludeColumn(header);
     this.setState({
       queryString: ast.toString(),
     });
-    this.handleRun(true, ast.toString());
+    if (run) {
+      this.handleRun(true, ast.toString());
+    }
   };
 
-  private sqlFilterRow = (row: string, header: string, operator: '!=' | '='): void => {
+  private sqlFilterRow = (
+    row: string | number | AdditiveExpression,
+    header: string,
+    operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE',
+    run: boolean,
+  ): void => {
     let { ast } = this.state;
     if (!ast) return;
     ast = ast.filterRow(header, row, operator);
     this.setState({
       queryString: ast.toString(),
     });
-    this.handleRun(true, ast.toString());
+    if (run) {
+      this.handleRun(true, ast.toString());
+    }
   };
 
   private handleQueryStringChange = (queryString: string): void => {
@@ -486,10 +582,24 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   };
 
   private handleRun = (wrapQuery: boolean, customQueryString?: string) => {
-    const { queryString, queryContext } = this.state;
+    const { queryString, queryContext, queryHistory } = this.state;
+
     if (!customQueryString) {
       customQueryString = queryString;
     }
+
+    while (queryHistory.length > 9) {
+      queryHistory.pop();
+    }
+    queryHistory.unshift({ version: `${Date.now()}`, queryString: customQueryString });
+    let queryHistoryString;
+    try {
+      queryHistoryString = JSON.stringify(queryHistory);
+    } catch {}
+    if (queryHistoryString) {
+      localStorageSet(LocalStorageKeys.QUERY_HISTORY, queryHistoryString);
+    }
+
     if (QueryView.isJsonLike(customQueryString) && !QueryView.validRune(customQueryString)) return;
 
     localStorageSet(LocalStorageKeys.QUERY_KEY, customQueryString);
@@ -546,6 +656,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       >
         {!columnMetadataError && (
           <ColumnTree
+            filterByRow={this.sqlFilterRow}
+            addFunctionToGroupBy={this.addFunctionToGroupBy}
             addAggregateColumn={this.addAggregateColumn}
             addToGroupBy={this.addToGroupBy}
             hasGroupBy={hasGroupBy}
@@ -558,6 +670,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         )}
         {this.renderMainArea()}
         {this.renderExplainDialog()}
+        {this.renderHistoryDialog()}
         {this.renderEditContextDialog()}
       </div>
     );

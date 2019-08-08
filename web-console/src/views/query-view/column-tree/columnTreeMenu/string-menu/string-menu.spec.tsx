@@ -19,46 +19,22 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { ColumnMetadata } from '../../../utils/column-metadata';
+import { StringMenu } from './string-menu';
 
-import { ColumnTree } from './column-tree';
-
-describe('column tree', () => {
+describe('string menu', () => {
   it('matches snapshot', () => {
-    const columnTree = (
-      <ColumnTree
+    const stringMenu = (
+      <StringMenu
         addFunctionToGroupBy={() => null}
-        filterByRow={() => null}
-        addAggregateColumn={() => null}
         addToGroupBy={() => null}
-        columnMetadataLoading={false}
-        columnMetadata={
-          [
-            {
-              TABLE_SCHEMA: 'druid',
-              TABLE_NAME: 'deletion-tutorial',
-              COLUMN_NAME: '__time',
-              DATA_TYPE: 'TIMESTAMP',
-            },
-            {
-              TABLE_SCHEMA: 'druid',
-              TABLE_NAME: 'deletion-tutorial',
-              COLUMN_NAME: 'added',
-              DATA_TYPE: 'BIGINT',
-            },
-            {
-              TABLE_SCHEMA: 'sys',
-              TABLE_NAME: 'tasks',
-              COLUMN_NAME: 'error_msg',
-              DATA_TYPE: 'VARCHAR',
-            },
-          ] as ColumnMetadata[]
-        }
-        onQueryStringChange={() => {}}
+        addAggregateColumn={() => null}
+        filterByRow={() => null}
+        columnName={'text'}
+        hasGroupBy
       />
     );
 
-    const { container } = render(columnTree);
+    const { container } = render(stringMenu);
     expect(container.firstChild).toMatchSnapshot();
   });
 });
