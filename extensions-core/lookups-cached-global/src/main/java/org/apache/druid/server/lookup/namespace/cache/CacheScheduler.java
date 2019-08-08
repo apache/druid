@@ -37,6 +37,7 @@ import javax.annotation.Nullable;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -197,6 +198,15 @@ public final class CacheScheduler
       }
     }
 
+    public VersionedCache createFromExisitngCache(@Nullable EntryImpl<? extends ExtractionNamespace> entryId,
+                                    String version,
+                                    ConcurrentMap<String, String> newCacheEntries)
+    {
+      VersionedCache state = (VersionedCache) cacheStateHolder.get();
+      state.cacheHandler.getCache().putAll(newCacheEntries);
+      return createVersionedCache(entryId, version, state.cacheHandler.getCache());
+    }
+
     private void updateCache()
     {
       try {
@@ -275,6 +285,7 @@ public final class CacheScheduler
       CacheState lastCacheState;
       // CAS loop
       do {
+
         lastCacheState = cacheStateHolder.get();
         if (lastCacheState == NoCache.ENTRY_CLOSED) {
           return lastCacheState;
@@ -394,6 +405,13 @@ public final class CacheScheduler
       this.version = version;
     }
 
+    private VersionedCache(String entryId, String version, ConcurrentMap<String, String> cache)
+    {
+      this.entryId = entryId;
+      this.cacheHandler = cacheManager.createCache(cache);
+      this.version = version;
+    }
+
     public Map<String, String> getCache()
     {
       return cacheHandler.getCache();
@@ -470,6 +488,14 @@ public final class CacheScheduler
   {
     updatesStarted.incrementAndGet();
     return new VersionedCache(String.valueOf(entryId), version);
+  }
+
+  public VersionedCache createVersionedCache(@Nullable EntryImpl<? extends ExtractionNamespace> entryId,
+                                             String version,
+                                             ConcurrentMap<String, String> cache)
+  {
+    updatesStarted.incrementAndGet();
+    return new VersionedCache(String.valueOf(entryId), version, cache);
   }
 
   @VisibleForTesting

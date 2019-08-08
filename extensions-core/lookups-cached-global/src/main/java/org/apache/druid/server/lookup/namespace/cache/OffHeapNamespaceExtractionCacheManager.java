@@ -187,6 +187,13 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
   }
 
   @Override
+  public CacheHandler createCache(ConcurrentMap<String, String> cache)
+  {
+    // this method is not supported for offHeap, but it's here to have consistent interface for NamespaceExtractionCacheManager.
+    return createCache();
+  }
+
+  @Override
   public CacheHandler createCache()
   {
     ConcurrentMap<String, String> cache;

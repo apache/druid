@@ -451,7 +451,12 @@ public class JdbcExtractionNamespaceTest
   {
     try (final CacheScheduler.Entry entry = ensureEntry()) {
       assertUpdated(entry, "foo", "bar");
+      Map previousCache = entry.getCache();
       insertValues(handleRef, "foo", "baz", null, "2900-01-01 00:00:00");
+      Map newCache = entry.getCache();
+      // test that underlying object for the cache is same,
+      // and incremental load is working as expected
+      Assert.assertTrue(newCache == previousCache);
       assertUpdated(entry, "foo", "baz");
     }
   }

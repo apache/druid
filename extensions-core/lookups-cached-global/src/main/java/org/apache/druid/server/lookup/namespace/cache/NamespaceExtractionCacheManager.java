@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -100,6 +101,8 @@ public abstract class NamespaceExtractionCacheManager
   }
 
   public abstract CacheHandler createCache();
+
+  public abstract CacheHandler createCache(ConcurrentMap<String, String> cache);
 
   abstract void disposeCache(CacheHandler cacheHandler);
 

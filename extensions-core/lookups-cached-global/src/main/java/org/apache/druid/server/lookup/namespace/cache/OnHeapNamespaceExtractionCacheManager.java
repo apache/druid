@@ -92,6 +92,15 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   }
 
   @Override
+  public CacheHandler createCache(ConcurrentMap<String, String> cache)
+  {
+    WeakReference<ConcurrentMap<String, String>> cacheRef = new WeakReference<>(cache);
+    expungeCollectedCaches();
+    caches.add(cacheRef);
+    return new CacheHandler(this, cache, cacheRef);
+  }
+
+  @Override
   void disposeCache(CacheHandler cacheHandler)
   {
     if (!(cacheHandler.id instanceof WeakReference)) {

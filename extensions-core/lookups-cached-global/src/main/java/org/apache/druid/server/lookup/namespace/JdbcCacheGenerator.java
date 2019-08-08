@@ -61,6 +61,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     final Long lastDBUpdate;
     final List<Pair<String, String>> pairs;
     final long dbQueryStart;
+    final boolean doIncrementalLoad;
 
     try {
       lastDBUpdate = lastUpdates(entryId, namespace);
@@ -68,9 +69,10 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
         return null;
       }
       dbQueryStart = System.currentTimeMillis();
-
+       doIncrementalLoad = lastDBUpdate != null && !Strings.isNullOrEmpty(namespace.getTsColumn())
+          && lastVersion != null;
       LOG.debug("Updating %s", entryId);
-      pairs = getLookupPairs(entryId, namespace);
+      pairs = getLookupPairs(entryId, namespace, doIncrementalLoad, lastCheck);
     }
     catch (UnableToObtainConnectionException e) {
       if (e.getMessage().contains("No suitable driver found")) {
@@ -83,24 +85,43 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
       }
     }
 
+
     final String newVersion;
-    if (lastDBUpdate != null) {
-      newVersion = lastDBUpdate.toString();
-    } else {
-      newVersion = StringUtils.format("%d", dbQueryStart);
-    }
-    final CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(entryId, newVersion);
+    CacheScheduler.VersionedCache versionedCache = null;
     try {
-      final Map<String, String> cache = versionedCache.getCache();
-      for (Pair<String, String> pair : pairs) {
-        cache.put(pair.lhs, pair.rhs);
+      if (doIncrementalLoad) {
+        newVersion = StringUtils.format("%d", lastDBUpdate);
+        ConcurrentMap<String, String> newCachedEntries = new ConcurrentHashMap<>();
+        LOG.info(" found %s new incremental entries", pairs.size());
+        for (Pair<String, String> pair : pairs) {
+          newCachedEntries.put(pair.lhs, pair.rhs);
+        }
+        versionedCache = entryId.createFromExisitngCache(entryId, newVersion, newCachedEntries);
+        return versionedCache;
+      } else {
+        LOG.info("Not doing incremental load since lastDBUpdate: %s, namespace.getTsColumn() %s, lastVersion %s," +
+              " lastCheck %s", lastDBUpdate, namespace.getTsColumn(), lastVersion, lastCheck);
+        if (lastDBUpdate != null) {
+          // for incremental lookups this will set the new version to last db update,
+          // so that during next load we will read all keys that were added after the db update.
+          newVersion = StringUtils.format("%d", lastDBUpdate);
+        } else {
+          newVersion = StringUtils.format("%d", dbQueryStart);
+        }
+        versionedCache = scheduler.createVersionedCache(entryId, newVersion);
+        final Map<String, String> cache = versionedCache.getCache();
+        for (Pair<String, String> pair : pairs) {
+          cache.put(pair.lhs, pair.rhs);
+        }
+        LOG.info("Finished loading %d values for %s", cache.size(), entryId);
+        return versionedCache;
       }
-      LOG.info("Finished loading %d values for %s", cache.size(), entryId);
-      return versionedCache;
     }
     catch (Throwable t) {
       try {
-        versionedCache.close();
+        if (versionedCache != null) {
+          versionedCache.close();
+        }
       }
       catch (Exception e) {
         t.addSuppressed(e);
@@ -111,7 +132,9 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
 
   private List<Pair<String, String>> getLookupPairs(
       final CacheScheduler.EntryImpl<JdbcExtractionNamespace> key,
-      final JdbcExtractionNamespace namespace
+      final JdbcExtractionNamespace namespace,
+      boolean doIncrementalLoad,
+      long lastCheck
   )
   {
     final DBI dbi = ensureDBI(key, namespace);
@@ -119,6 +142,11 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     final String filter = namespace.getFilter();
     final String valueColumn = namespace.getValueColumn();
     final String keyColumn = namespace.getKeyColumn();
+
+    String sqlQuery = doIncrementalLoad ?
+        buildIncrementalLookupQuery(key, namespace, namespace.getTsColumn(), lastCheck) :
+        buildLookupQuery(table, filter, keyColumn, valueColumn);
+
 
     return dbi.withHandle(
         handle -> handle
@@ -147,6 +175,41 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
         table,
         filter,
         valueColumn
+    );
+  }
+
+  private String buildIncrementalLookupQuery(
+      final CacheScheduler.EntryImpl<JdbcExtractionNamespace> key,
+      final JdbcExtractionNamespace namespace,
+      String tsColumn, Long lastLoadTs)
+  {
+    final DBI dbi = ensureDBI(key, namespace);
+    final String table = namespace.getTable();
+    final String filter = namespace.getFilter();
+    final String valueColumn = namespace.getValueColumn();
+    final String keyColumn = namespace.getKeyColumn();
+
+    if (Strings.isNullOrEmpty(filter)) {
+      return StringUtils.format(
+          "SELECT %s, %s FROM %s WHERE %s >= '%s' AND %s IS NOT NULL",
+          keyColumn,
+          valueColumn,
+          table,
+          tsColumn,
+          new Timestamp(lastLoadTs).toString(),
+          valueColumn
+      );
+    }
+
+    return StringUtils.format(
+          "SELECT %s, %s FROM %s WHERE %s AND %s >= '%s' AND %s IS NOT NULL",
+          keyColumn,
+          valueColumn,
+          table,
+          filter,
+          tsColumn,
+          new Timestamp(lastLoadTs).toString(),
+          valueColumn
     );
   }
 
