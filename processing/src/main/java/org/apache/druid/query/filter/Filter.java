@@ -103,7 +103,7 @@ public interface Filter
 
   /**
    * Indicates whether this filter can return a bitmap index for filtering, based on the information provided by the
-   * input BitmapIndexSelector.
+   * input {@link BitmapIndexSelector}.
    *
    * Returning a value of true here guarantees that {@link #getBitmapIndex(BitmapIndexSelector)} will return a non-null
    * {@link BitmapIndexSelector}, and also that all columns specified in {@link #getRequiredColumns()} have a bitmap

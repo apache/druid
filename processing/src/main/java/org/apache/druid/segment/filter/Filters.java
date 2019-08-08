@@ -673,7 +673,7 @@ public class Filters
     if (filter.supportsBitmapIndex(indexSelector) && tuning.getUseBitmapIndex()) {
       return filter.getRequiredColumns().stream().allMatch(column -> {
         final BitmapIndex index = indexSelector.getBitmapIndex(column);
-        Preconditions.checkNotNull(index, "WTF?! column doesn't have a bitmap index");
+        Preconditions.checkNotNull(index, "Column does not have a bitmap index");
         final int cardinality = index.getCardinality();
         return cardinality >= tuning.getMinCardinalityToUseBitmapIndex()
                && cardinality <= tuning.getMaxCardinalityToUseBitmapIndex();

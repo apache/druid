@@ -150,7 +150,7 @@ public class ColumnComparisonFilter implements Filter
   @Override
   public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
   {
-    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
+    return false;
   }
 
   @Override
