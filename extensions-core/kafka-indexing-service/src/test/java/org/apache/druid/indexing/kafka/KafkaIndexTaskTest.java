@@ -2733,7 +2733,8 @@ public class KafkaIndexTaskTest
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0),
-        new SingleFileTaskReportFileWriter(reportsFile)
+        new SingleFileTaskReportFileWriter(reportsFile),
+        null
     );
   }
 

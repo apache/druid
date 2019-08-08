@@ -32,14 +32,13 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
-import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
+import org.apache.druid.indexing.common.task.BatchAppenderators;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
@@ -90,15 +89,15 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 /**
- * A worker task of {@link ParallelIndexSupervisorTask}. Similar to {@link IndexTask}, but this task
- * generates and pushes segments, and reports them to the {@link ParallelIndexSupervisorTask} instead of
+ * The worker task of {@link SinglePhaseParallelIndexTaskRunner}. Similar to {@link IndexTask}, but this task
+ * generates and pushes segments, and reports them to the {@link SinglePhaseParallelIndexTaskRunner} instead of
  * publishing on its own.
  */
-public class ParallelIndexSubTask extends AbstractBatchIndexTask
+public class SinglePhaseSubTask extends AbstractBatchIndexTask
 {
-  public static final String TYPE = "index_sub";
+  public static final String TYPE = "single_phase_sub_task";
 
-  private static final Logger LOG = new Logger(ParallelIndexSubTask.class);
+  private static final Logger LOG = new Logger(SinglePhaseSubTask.class);
 
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
@@ -106,10 +105,6 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
   private final IndexingServiceClient indexingServiceClient;
   private final IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory;
   private final AppenderatorsManager appenderatorsManager;
-
-  private Appenderator appenderator;
-  private Thread runThread;
-  private boolean stopped = false;
 
   /**
    * If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
@@ -126,7 +121,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
   private final boolean missingIntervalsInOverwriteMode;
 
   @JsonCreator
-  public ParallelIndexSubTask(
+  public SinglePhaseSubTask(
       // id shouldn't be null except when this task is created by ParallelIndexSupervisorTask
       @JsonProperty("id") @Nullable final String id,
       @JsonProperty("groupId") final String groupId,
@@ -205,16 +200,8 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox) throws Exception
+  public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
   {
-    synchronized (this) {
-      if (stopped) {
-        return TaskStatus.failure(getId());
-      } else {
-        runThread = Thread.currentThread();
-      }
-    }
-
     if (missingIntervalsInOverwriteMode) {
       LOG.warn(
           "Intervals are missing in granularitySpec while this task is potentially overwriting existing segments. "
@@ -250,7 +237,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
                                                  .flatMap(holder -> holder.getObject().stream())
                                                  .map(PartitionChunk::getObject)
                                                  .collect(Collectors.toSet());
-    taskClient.report(supervisorTaskId, oldSegments, pushedSegments);
+    taskClient.report(supervisorTaskId, new PushedSegmentsReport(getId(), oldSegments, pushedSegments));
 
     return TaskStatus.success(getId());
   }
@@ -418,7 +405,6 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
       );
     }
 
-    // Initialize maxRowsPerSegment and maxTotalRows lazily
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) tuningConfig.getGivenOrDefaultPartitionsSpec();
     final long pushTimeout = tuningConfig.getPushTimeout();
@@ -426,11 +412,18 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
     final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient);
 
     try (
-        final Appenderator appenderator = newAppenderator(fireDepartmentMetrics, toolbox, dataSchema, tuningConfig);
-        final BatchAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
+        final Appenderator appenderator = BatchAppenderators.newAppenderator(
+            getId(),
+            appenderatorsManager,
+            fireDepartmentMetrics,
+            toolbox,
+            dataSchema,
+            tuningConfig
+        );
+        final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator);
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
-      this.appenderator = appenderator;
+      registerResourceCloserOnAbnormalExit(config -> appenderator.closeNow());
       driver.startJob();
 
       final Set<DataSegment> pushedSegments = new HashSet<>();
@@ -501,53 +494,6 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
     }
     catch (TimeoutException | ExecutionException e) {
       throw new RuntimeException(e);
-    }
-  }
-
-  private Appenderator newAppenderator(
-      FireDepartmentMetrics metrics,
-      TaskToolbox toolbox,
-      DataSchema dataSchema,
-      ParallelIndexTuningConfig tuningConfig
-  )
-  {
-    return appenderatorsManager.createOfflineAppenderatorForTask(
-        getId(),
-        dataSchema,
-        tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
-        metrics,
-        toolbox.getSegmentPusher(),
-        toolbox.getObjectMapper(),
-        toolbox.getIndexIO(),
-        toolbox.getIndexMergerV9()
-    );
-  }
-
-  private static BatchAppenderatorDriver newDriver(
-      final Appenderator appenderator,
-      final TaskToolbox toolbox,
-      final SegmentAllocator segmentAllocator
-  )
-  {
-    return new BatchAppenderatorDriver(
-        appenderator,
-        segmentAllocator,
-        new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
-        toolbox.getDataSegmentKiller()
-    );
-  }
-
-  @Override
-  public void stopGracefully(TaskConfig taskConfig)
-  {
-    synchronized (this) {
-      stopped = true;
-      if (appenderator != null) {
-        appenderator.closeNow();
-      }
-      if (runThread != null) {
-        runThread.interrupt();
-      }
     }
   }
 }

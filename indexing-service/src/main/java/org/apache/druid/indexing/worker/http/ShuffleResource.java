@@ -42,7 +42,6 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.List;
 
 /**
  * HTTP endpoints for shuffle system. The MiddleManager and Indexer use this resource to serve intermediary shuffle
@@ -69,26 +68,29 @@ public class ShuffleResource
   }
 
   @GET
-  @Path("/task/{supervisorTaskId}/partition")
+  @Path("/task/{supervisorTaskId}/{subTaskId}/partition")
   @Produces(MediaType.APPLICATION_OCTET_STREAM)
   public Response getPartition(
       @PathParam("supervisorTaskId") String supervisorTaskId,
+      @PathParam("subTaskId") String subTaskId,
       @QueryParam("startTime") String startTime,
       @QueryParam("endTime") String endTime,
       @QueryParam("partitionId") int partitionId
   )
   {
     final Interval interval = new Interval(DateTimes.of(startTime), DateTimes.of(endTime));
-    final List<File> partitionFiles = intermediaryDataManager.findPartitionFiles(
+    final File partitionFile = intermediaryDataManager.findPartitionFile(
         supervisorTaskId,
+        subTaskId,
         interval,
         partitionId
     );
 
-    if (partitionFiles.isEmpty()) {
+    if (partitionFile == null) {
       final String errorMessage = StringUtils.format(
-          "Can't find the partition for supervisor[%s], interval[%s], and partitionId[%s]",
+          "Can't find the partition for supervisorTask[%s], subTask[%s], interval[%s], and partitionId[%s]",
           supervisorTaskId,
+          subTaskId,
           interval,
           partitionId
       );
@@ -96,10 +98,8 @@ public class ShuffleResource
     } else {
       return Response.ok(
           (StreamingOutput) output -> {
-            for (File partitionFile : partitionFiles) {
-              try (final FileInputStream fileInputStream = new FileInputStream(partitionFile)) {
-                ByteStreams.copy(fileInputStream, output);
-              }
+            try (final FileInputStream fileInputStream = new FileInputStream(partitionFile)) {
+              ByteStreams.copy(fileInputStream, output);
             }
           }
       ).build();

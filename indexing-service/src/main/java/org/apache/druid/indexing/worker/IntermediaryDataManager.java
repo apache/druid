@@ -49,8 +49,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -236,21 +234,23 @@ public class IntermediaryDataManager
 
     LOG.info("Found [%s] expired supervisor tasks", expiredSupervisorTasks.size());
 
-    final Map<String, TaskStatus> taskStatuses = indexingServiceClient.getTaskStatuses(expiredSupervisorTasks);
-    for (Entry<String, TaskStatus> entry : taskStatuses.entrySet()) {
-      final String supervisorTaskId = entry.getKey();
-      final TaskStatus status = entry.getValue();
-      if (status.getStatusCode().isComplete()) {
-        // If it's finished, clean up all partitions for the supervisor task.
-        try {
-          deletePartitions(supervisorTaskId);
+    if (!expiredSupervisorTasks.isEmpty()) {
+      final Map<String, TaskStatus> taskStatuses = indexingServiceClient.getTaskStatuses(expiredSupervisorTasks);
+      for (Entry<String, TaskStatus> entry : taskStatuses.entrySet()) {
+        final String supervisorTaskId = entry.getKey();
+        final TaskStatus status = entry.getValue();
+        if (status.getStatusCode().isComplete()) {
+          // If it's finished, clean up all partitions for the supervisor task.
+          try {
+            deletePartitions(supervisorTaskId);
+          }
+          catch (IOException e) {
+            LOG.warn(e, "Failed to delete partitions for task[%s]", supervisorTaskId);
+          }
+        } else {
+          // If it's still running, update last access time.
+          supervisorTaskCheckTimes.put(supervisorTaskId, DateTimes.nowUtc());
         }
-        catch (IOException e) {
-          LOG.warn(e, "Failed to delete partitions for task[%s]", supervisorTaskId);
-        }
-      } else {
-        // If it's still running, update last access time.
-        supervisorTaskCheckTimes.put(supervisorTaskId, DateTimes.nowUtc());
       }
     }
   }
@@ -328,18 +328,28 @@ public class IntermediaryDataManager
     }
   }
 
-  public List<File> findPartitionFiles(String supervisorTaskId, Interval interval, int partitionId)
+  @Nullable
+  public File findPartitionFile(String supervisorTaskId, String subTaskId, Interval interval, int partitionId)
   {
     for (StorageLocation location : shuffleDataLocations) {
       final File partitionDir = new File(location.getPath(), getPartitionDir(supervisorTaskId, interval, partitionId));
       if (partitionDir.exists()) {
         supervisorTaskCheckTimes.put(supervisorTaskId, DateTimes.nowUtc());
         final File[] segmentFiles = partitionDir.listFiles();
-        return segmentFiles == null ? Collections.emptyList() : Arrays.asList(segmentFiles);
+        if (segmentFiles == null) {
+          return null;
+        } else {
+          for (File segmentFile : segmentFiles) {
+            if (segmentFile.getName().equals(subTaskId)) {
+              return segmentFile;
+            }
+          }
+          return null;
+        }
       }
     }
 
-    return Collections.emptyList();
+    return null;
   }
 
   public void deletePartitions(String supervisorTaskId) throws IOException

@@ -30,19 +30,17 @@ import java.util.Iterator;
 import java.util.Map;
 
 /**
- * An implementation of {@link ParallelIndexTaskRunner} to support best-effort roll-up. This runner can submit and
- * monitor multiple {@link SinglePhaseSubTask}s.
- * <p>
- * As its name indicates, distributed indexing is done in a single phase, i.e., without shuffling intermediate data. As
- * a result, this task can't be used for perfect rollup.
+ * {@link ParallelIndexTaskRunner} for the phase to create partitioned segments in multi-phase parallel indexing.
+ *
+ * @see PartialSegmentMergeParallelIndexTaskRunner
  */
-class SinglePhaseParallelIndexTaskRunner
-    extends ParallelIndexPhaseRunner<SinglePhaseSubTask, PushedSegmentsReport>
+class PartialSegmentGenerateParallelIndexTaskRunner
+    extends ParallelIndexPhaseRunner<PartialSegmentGenerateTask, GeneratedPartitionsReport>
 {
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final FiniteFirehoseFactory<?, ?> baseFirehoseFactory;
 
-  SinglePhaseParallelIndexTaskRunner(
+  PartialSegmentGenerateParallelIndexTaskRunner(
       TaskToolbox toolbox,
       String taskId,
       String groupId,
@@ -66,18 +64,11 @@ class SinglePhaseParallelIndexTaskRunner
   @Override
   public String getName()
   {
-    return SinglePhaseSubTask.TYPE;
+    return PartialSegmentGenerateTask.TYPE;
   }
 
-  @VisibleForTesting
-  ParallelIndexIngestionSpec getIngestionSchema()
-  {
-    return ingestionSchema;
-  }
-
-  @VisibleForTesting
   @Override
-  Iterator<SubTaskSpec<SinglePhaseSubTask>> subTaskSpecIterator() throws IOException
+  Iterator<SubTaskSpec<PartialSegmentGenerateTask>> subTaskSpecIterator() throws IOException
   {
     return baseFirehoseFactory.getSplits().map(this::newTaskSpec).iterator();
   }
@@ -89,22 +80,51 @@ class SinglePhaseParallelIndexTaskRunner
   }
 
   @VisibleForTesting
-  SubTaskSpec<SinglePhaseSubTask> newTaskSpec(InputSplit split)
+  ParallelIndexIngestionSpec getIngestionSchema()
   {
-    return new SinglePhaseSubTaskSpec(
+    return ingestionSchema;
+  }
+
+  @VisibleForTesting
+  FiniteFirehoseFactory<?, ?> getBaseFirehoseFactory()
+  {
+    return baseFirehoseFactory;
+  }
+
+  SubTaskSpec<PartialSegmentGenerateTask> newTaskSpec(InputSplit split)
+  {
+    final ParallelIndexIngestionSpec subTaskIngestionSpec = new ParallelIndexIngestionSpec(
+        ingestionSchema.getDataSchema(),
+        new ParallelIndexIOConfig(
+            baseFirehoseFactory.withSplit(split),
+            ingestionSchema.getIOConfig().isAppendToExisting()
+        ),
+        ingestionSchema.getTuningConfig()
+    );
+    return new SubTaskSpec<PartialSegmentGenerateTask>(
         getTaskId() + "_" + getAndIncrementNextSpecId(),
         getGroupId(),
         getTaskId(),
-        new ParallelIndexIngestionSpec(
-            ingestionSchema.getDataSchema(),
-            new ParallelIndexIOConfig(
-                baseFirehoseFactory.withSplit(split),
-                ingestionSchema.getIOConfig().isAppendToExisting()
-            ),
-            ingestionSchema.getTuningConfig()
-        ),
         getContext(),
         split
-    );
+    )
+    {
+      @Override
+      public PartialSegmentGenerateTask newSubTask(int numAttempts)
+      {
+        return new PartialSegmentGenerateTask(
+            null,
+            getGroupId(),
+            null,
+            getSupervisorTaskId(),
+            numAttempts,
+            subTaskIngestionSpec,
+            getContext(),
+            getIndexingServiceClient(),
+            null,
+            null
+        );
+      }
+    };
   }
 }
