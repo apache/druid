@@ -16,8 +16,16 @@
  * limitations under the License.
  */
 
-import { HTMLSelect, IconName, ITreeNode, Menu, MenuItem, Position, Tree } from '@blueprintjs/core';
-import { Popover } from '@blueprintjs/core/lib/cjs';
+import {
+  HTMLSelect,
+  IconName,
+  ITreeNode,
+  Menu,
+  MenuItem,
+  Popover,
+  Position,
+  Tree,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { AdditiveExpression, Alias, FilterClause, StringType } from 'druid-query-toolkit';
 import React, { ChangeEvent } from 'react';
@@ -26,8 +34,8 @@ import { Loader } from '../../../components';
 import { copyAndAlert, escapeSqlIdentifier, groupBy } from '../../../utils';
 import { ColumnMetadata } from '../../../utils/column-metadata';
 
-import { NumberMenu } from './columnTreeMenu/number-menu/number-menu';
-import { StringMenu } from './columnTreeMenu/string-menu/string-menu';
+import { NumberMenu } from './column-tree-menu/number-menu/number-menu';
+import { StringMenu } from './column-tree-menu/string-menu/string-menu';
 
 import './column-tree.scss';
 
