@@ -25,7 +25,6 @@ import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueGetter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.ValueMatcherColumnSelectorStrategy;
@@ -46,15 +45,12 @@ import java.util.stream.Collectors;
 public class ColumnComparisonFilter implements Filter
 {
   private final List<DimensionSpec> dimensions;
-  private final FilterTuning filterTuning;
 
   public ColumnComparisonFilter(
-      final List<DimensionSpec> dimensions,
-      final FilterTuning filterTuning
+      final List<DimensionSpec> dimensions
   )
   {
     this.dimensions = Preconditions.checkNotNull(dimensions, "dimensions");
-    this.filterTuning = filterTuning;
   }
 
   @Override

@@ -20,9 +20,7 @@
 package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
@@ -30,7 +28,6 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.filter.ColumnComparisonFilter;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -43,24 +40,14 @@ public class ColumnComparisonDimFilter implements DimFilter
   private static final Joiner COMMA_JOINER = Joiner.on(", ");
 
   private final List<DimensionSpec> dimensions;
-  @Nullable
-  private final FilterTuning filterTuning;
 
   @JsonCreator
   public ColumnComparisonDimFilter(
-      @JsonProperty("dimensions") List<DimensionSpec> dimensions,
-      @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
+      @JsonProperty("dimensions") List<DimensionSpec> dimensions
   )
   {
     this.dimensions = Preconditions.checkNotNull(dimensions, "dimensions");
     Preconditions.checkArgument(dimensions.size() >= 2, "dimensions must have a least 2 dimensions");
-    this.filterTuning = filterTuning;
-  }
-
-  @VisibleForTesting
-  public ColumnComparisonDimFilter(List<DimensionSpec> dimensions)
-  {
-    this(dimensions, null);
   }
 
   @Override
@@ -81,7 +68,7 @@ public class ColumnComparisonDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new ColumnComparisonFilter(dimensions, filterTuning);
+    return new ColumnComparisonFilter(dimensions);
   }
 
   @JsonProperty
@@ -90,19 +77,11 @@ public class ColumnComparisonDimFilter implements DimFilter
     return dimensions;
   }
 
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  @JsonProperty
-  public FilterTuning getFilterTuning()
-  {
-    return filterTuning;
-  }
-
   @Override
   public String toString()
   {
     return "ColumnComparisonDimFilter{" +
            "dimensions=[" + COMMA_JOINER.join(dimensions) + "]" +
-           ", filterTuning=" + filterTuning +
            "}";
   }
 
@@ -116,14 +95,13 @@ public class ColumnComparisonDimFilter implements DimFilter
       return false;
     }
     ColumnComparisonDimFilter that = (ColumnComparisonDimFilter) o;
-    return dimensions.equals(that.dimensions) &&
-           Objects.equals(filterTuning, that.filterTuning);
+    return dimensions.equals(that.dimensions);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dimensions, filterTuning);
+    return Objects.hash(dimensions);
   }
 
   @Override
