@@ -413,6 +413,7 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
     final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient);
 
     final Appenderator appenderator = newAppenderator(fireDepartmentMetrics, toolbox, dataSchema, tuningConfig);
+    boolean exceptionOccurred = false;
     try (
         final BatchAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
@@ -487,12 +488,19 @@ public class ParallelIndexSubTask extends AbstractBatchIndexTask
       return pushedSegments;
     }
     catch (TimeoutException | ExecutionException e) {
-      appenderator.closeNow();
+      exceptionOccurred = true;
       throw new RuntimeException(e);
     }
-    catch (RuntimeException e) {
-      appenderator.closeNow();
+    catch (Exception e) {
+      exceptionOccurred = true;
       throw e;
+    }
+    finally {
+      if (exceptionOccurred) {
+        appenderator.closeNow();
+      } else {
+        appenderator.close();
+      }
     }
   }
 
