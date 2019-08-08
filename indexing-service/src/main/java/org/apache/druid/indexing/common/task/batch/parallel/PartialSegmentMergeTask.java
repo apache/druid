@@ -64,7 +64,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -323,16 +322,15 @@ public class PartialSegmentMergeTask extends AbstractBatchIndexTask
   {
     final File zippedFile = new File(partitionDir, StringUtils.format("temp_%s", location.getSubTaskId()));
     final URI uri = location.toIntermediaryDataServerURI(supervisorTaskId);
-    try (InputStream inputStream = uri.toURL().openStream()) {
-      Fetchers.fetch(
-          inputStream,
-          zippedFile,
-          buffer,
-          t -> t instanceof IOException,
-          NUM_FETCH_RETRIES,
-          StringUtils.format("Failed to fetch file[%s]", uri)
-      );
-    }
+    Fetchers.fetch(
+        uri,
+        u -> u.toURL().openStream(),
+        zippedFile,
+        buffer,
+        t -> t instanceof IOException,
+        NUM_FETCH_RETRIES,
+        StringUtils.format("Failed to fetch file[%s]", uri)
+    );
     return zippedFile;
   }
 

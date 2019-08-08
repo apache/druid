@@ -28,6 +28,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.function.Supplier;
 
 public final class Fetchers
 {
@@ -36,17 +37,19 @@ public final class Fetchers
    * This method is supposed to be used for copying large files.
    * The output file is deleted automatically if copy fails.
    *
-   * @param inputStream    InputStream to read data
-   * @param outFile        file to write data
-   * @param fetchBuffer    a buffer to copy data from the input stream to the file
-   * @param retryCondition condition which should be satisfied for retry
-   * @param numRetries     max number of retries
-   * @param messageOnRetry log message on retry
+   * @param object              object to open
+   * @param objectOpenFunction  function to open the given object
+   * @param outFile             file to write data
+   * @param fetchBuffer         a buffer to copy data from the input stream to the file
+   * @param retryCondition      condition which should be satisfied for retry
+   * @param numRetries          max number of retries
+   * @param messageOnRetry      log message on retry
    *
    * @return the number of bytes copied
    */
-  public static long fetch(
-      InputStream inputStream,
+  public static <T> long fetch(
+      T object,
+      ObjectOpenFunction<T> objectOpenFunction,
       File outFile,
       byte[] fetchBuffer,
       Predicate<Throwable> retryCondition,
@@ -57,7 +60,8 @@ public final class Fetchers
     try {
       return RetryUtils.retry(
           () -> {
-            try (OutputStream out = new FileOutputStream(outFile)) {
+            try (InputStream inputStream = objectOpenFunction.open(object);
+                 OutputStream out = new FileOutputStream(outFile)) {
               return IOUtils.copyLarge(inputStream, out, fetchBuffer);
             }
           },

@@ -26,7 +26,6 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
@@ -35,7 +34,6 @@ import java.util.concurrent.ExecutorService;
  * See the javadoc of {@link PrefetchableTextFilesFirehoseFactory} for more details.
  */
 public class FileFetcher<T> extends Fetcher<T>
-
 {
   private static final int BUFFER_SIZE = 1024 * 4;
   private final ObjectOpenFunction<T> openObjectFunction;
@@ -44,7 +42,7 @@ public class FileFetcher<T> extends Fetcher<T>
   // maximum retry for fetching an object from the remote site
   private final int maxFetchRetry;
 
-  public int getMaxFetchRetry()
+  private int getMaxFetchRetry()
   {
     return maxFetchRetry;
   }
@@ -57,7 +55,7 @@ public class FileFetcher<T> extends Fetcher<T>
       PrefetchConfig prefetchConfig,
       ObjectOpenFunction<T> openObjectFunction,
       Predicate<Throwable> retryCondition,
-      Integer maxFetchRetries
+      int maxFetchRetries
   )
   {
 
@@ -87,16 +85,15 @@ public class FileFetcher<T> extends Fetcher<T>
   @Override
   protected long download(T object, File outFile) throws IOException
   {
-    try (final InputStream in = openObjectFunction.open(object)) {
-      return Fetchers.fetch(
-          in,
-          outFile,
-          buffer,
-          retryCondition,
-          maxFetchRetry + 1,
-          StringUtils.format("Failed to download object[%s]", object)
-      );
-    }
+    return Fetchers.fetch(
+        object,
+        openObjectFunction,
+        outFile,
+        buffer,
+        retryCondition,
+        maxFetchRetry + 1,
+        StringUtils.format("Failed to download object[%s]", object)
+    );
   }
 
   /**
