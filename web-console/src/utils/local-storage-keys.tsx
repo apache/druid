@@ -34,7 +34,6 @@ export const LocalStorageKeys = {
   SERVERS_REFRESH_RATE: 'servers-refresh-rate' as 'servers-refresh-rate',
   SUPERVISORS_REFRESH_RATE: 'supervisors-refresh-rate' as 'supervisors-refresh-rate',
   LOOKUPS_REFRESH_RATE: 'lookups-refresh-rate' as 'lookups-refresh-rate',
-  QUERY_HISTORY: 'query-history' as 'query-history',
 };
 export type LocalStorageKeys = typeof LocalStorageKeys[keyof typeof LocalStorageKeys];
 

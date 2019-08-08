@@ -49,17 +49,8 @@ $nav-width: 250px;
       .query-input {
         position: absolute;
         top: 0;
-        width: 95%;
+        width: 100%;
         bottom: 30px + $standard-padding;
-      }
-
-      .bp3-control-group {
-        position: absolute;
-        top: 0;
-        width: 5%;
-        left: 95%;
-        bottom: 30px + $standard-padding;
-        padding-left: 5px;
       }
 
       .control-bar {
