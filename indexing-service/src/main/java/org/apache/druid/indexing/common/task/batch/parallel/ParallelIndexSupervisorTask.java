@@ -27,7 +27,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.google.errorprone.annotations.concurrent.LazyInit;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -72,6 +71,7 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -140,13 +140,19 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private final ConcurrentHashMap<Interval, AtomicInteger> partitionNumCountersPerInterval = new ConcurrentHashMap<>();
 
-  // TODO: comment
-  @LazyInit
+  /**
+   * A holder for the current phase runner (parallel mode) or index task (sequential mode).
+   * This variable is lazily initialized in {@link #initializeSubTaskCleaner}.
+   * Volatile since HTTP API calls can read this variable at any time while this task is running.
+   */
+  @MonotonicNonNull
   private volatile CurrentSubTaskHolder currentSubTaskHolder;
 
-  // TODO: comment
-  // toolbox is initlized when run() is called, and can be used for processing HTTP endpoint requests.
-  @LazyInit
+  /**
+   * A variable to keep the given toolbox. This variable is lazily initialized in {@link #runTask}.
+   * Volatile since HTTP API calls can use this variable at any time while this task is running.
+   */
+  @MonotonicNonNull
   private volatile TaskToolbox toolbox;
 
   @JsonCreator
@@ -233,12 +239,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   @VisibleForTesting
-  AuthorizerMapper getAuthorizerMapper()
-  {
-    return authorizerMapper;
-  }
-
-  @VisibleForTesting
   IndexingServiceClient getIndexingServiceClient()
   {
     return indexingServiceClient;
@@ -310,12 +310,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         getContext(),
         indexingServiceClient
     );
-  }
-
-  @VisibleForTesting
-  void setRunner(ParallelIndexTaskRunner runner)
-  {
-    currentSubTaskHolder.setTask(runner);
   }
 
   @Override
@@ -437,12 +431,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private boolean isParallelMode()
   {
     return baseFirehoseFactory.isSplittable() && ingestionSchema.getTuningConfig().getMaxNumSubTasks() > 1;
-  }
-
-  @VisibleForTesting
-  void setToolbox(TaskToolbox toolbox)
-  {
-    this.toolbox = toolbox;
   }
 
   /**
