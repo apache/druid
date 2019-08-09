@@ -40,6 +40,10 @@ import SplitterLayout from 'react-splitter-layout';
 import { SQL_FUNCTIONS, SyntaxDescription } from '../../../lib/sql-function-doc';
 import { QueryPlanDialog } from '../../dialogs';
 import { EditContextDialog } from '../../dialogs/edit-context-dialog/edit-context-dialog';
+import {
+  QueryHistoryDialog,
+  QueryRecord,
+} from '../../dialogs/query-history-dialog/query-history-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import {
   BasicQueryExplanation,
@@ -104,6 +108,7 @@ export interface QueryViewState {
 
   editContextDialogOpen: boolean;
   historyDialogOpen: boolean;
+  queryHistory: QueryRecord[];
 }
 
 interface QueryResult {
@@ -169,6 +174,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
       editContextDialogOpen: false,
       historyDialogOpen: false,
+      queryHistory: [],
     };
 
     this.metadataQueryManager = new QueryManager({
@@ -308,6 +314,17 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
   componentDidMount(): void {
     this.metadataQueryManager.runQuery(null);
+
+    const localStorageQueryHistoy = localStorageGet(LocalStorageKeys.QUERY_HISTORY);
+    let queryHistory;
+    if (localStorageQueryHistoy) {
+      try {
+        queryHistory = JSON.parse(localStorageQueryHistoy);
+      } catch {}
+      if (queryHistory) {
+        this.setState({ queryHistory });
+      }
+    }
   }
 
   componentWillUnmount(): void {
@@ -358,6 +375,19 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         setQueryString={(queryString: string) =>
           this.setState({ queryString, explainDialogOpen: false })
         }
+      />
+    );
+  }
+
+  renderHistoryDialog() {
+    const { historyDialogOpen, queryHistory } = this.state;
+    if (!historyDialogOpen) return;
+
+    return (
+      <QueryHistoryDialog
+        queryRecords={queryHistory}
+        setQueryString={queryString => this.setState({ queryString, historyDialogOpen: false })}
+        onClose={() => this.setState({ historyDialogOpen: false })}
       />
     );
   }
@@ -430,6 +460,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
               onQueryContextChange={this.handleQueryContextChange}
               onRun={this.handleRun}
               onExplain={this.handleExplain}
+              onHistory={() => this.setState({ historyDialogOpen: true })}
             />
             {queryExtraInfo && (
               <QueryExtraInfo queryExtraInfo={queryExtraInfo} onDownload={this.handleDownload} />
@@ -554,10 +585,25 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   };
 
   private handleRun = (wrapQuery: boolean, customQueryString?: string) => {
-    const { queryString, queryContext } = this.state;
+    const { queryString, queryContext, queryHistory } = this.state;
 
     if (!customQueryString) {
       customQueryString = queryString;
+    }
+
+    while (queryHistory.length > 9) {
+      queryHistory.pop();
+    }
+    queryHistory.unshift({
+      version: `${new Date().toISOString()}`,
+      queryString: customQueryString,
+    });
+    let queryHistoryString;
+    try {
+      queryHistoryString = JSON.stringify(queryHistory);
+    } catch {}
+    if (queryHistoryString) {
+      localStorageSet(LocalStorageKeys.QUERY_HISTORY, queryHistoryString);
     }
 
     if (QueryView.isJsonLike(customQueryString) && !QueryView.validRune(customQueryString)) return;
@@ -630,6 +676,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         )}
         {this.renderMainArea()}
         {this.renderExplainDialog()}
+        {this.renderHistoryDialog()}
         {this.renderEditContextDialog()}
       </div>
     );

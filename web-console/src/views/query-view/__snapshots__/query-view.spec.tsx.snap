@@ -5,7 +5,11 @@ exports[`sql view matches snapshot 1`] = `
   className="query-view app-view"
 >
   <ColumnTree
+    addAggregateColumn={[Function]}
+    addFunctionToGroupBy={[Function]}
+    addToGroupBy={[Function]}
     columnMetadataLoading={true}
+    filterByRow={[Function]}
     onQueryStringChange={[Function]}
   />
   <t
@@ -28,12 +32,51 @@ exports[`sql view matches snapshot 1`] = `
         queryString="test"
         runeMode={false}
       />
+      <Blueprint3.ControlGroup
+        vertical={true}
+      >
+        <Blueprint3.Tooltip
+          content="QueryHistory"
+          hoverCloseDelay={0}
+          hoverOpenDelay={100}
+          position="left"
+          transitionDuration={100}
+        >
+          <Blueprint3.Button
+            icon="history"
+            onClick={[Function]}
+          />
+        </Blueprint3.Tooltip>
+        <Blueprint3.Tooltip
+          content="QueryHistory"
+          hoverCloseDelay={0}
+          hoverOpenDelay={100}
+          position="left"
+          transitionDuration={100}
+        >
+          <Blueprint3.Button
+            icon="filter"
+          />
+        </Blueprint3.Tooltip>
+        <Blueprint3.Tooltip
+          content="QueryHistory"
+          hoverCloseDelay={0}
+          hoverOpenDelay={100}
+          position="left"
+          transitionDuration={100}
+        >
+          <Blueprint3.Button
+            icon="filter"
+          />
+        </Blueprint3.Tooltip>
+      </Blueprint3.ControlGroup>
       <div
         className="control-bar"
       >
         <HotkeysTarget(RunButton)
           onEditContext={[Function]}
           onExplain={[Function]}
+          onHistory={[Function]}
           onQueryContextChange={[Function]}
           onRun={[Function]}
           queryContext={Object {}}

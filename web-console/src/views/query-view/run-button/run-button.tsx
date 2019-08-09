@@ -50,6 +50,7 @@ export interface RunButtonProps {
   onRun: (wrapQuery: boolean) => void;
   onExplain: () => void;
   onEditContext: () => void;
+  onHistory: () => void;
 }
 
 interface RunButtonState {
@@ -86,7 +87,14 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
   };
 
   renderExtraMenu() {
-    const { runeMode, onExplain, queryContext, onQueryContextChange, onEditContext } = this.props;
+    const {
+      runeMode,
+      onExplain,
+      queryContext,
+      onQueryContextChange,
+      onEditContext,
+      onHistory,
+    } = this.props;
     const { wrapQuery } = this.state;
 
     const useCache = getUseCache(queryContext);
@@ -104,6 +112,7 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
         {!runeMode && (
           <>
             <MenuItem icon={IconNames.CLEAN} text="Explain" onClick={onExplain} />
+            <MenuItem icon={IconNames.HISTORY} text="History" onClick={onHistory} />
             <MenuCheckbox
               checked={wrapQuery}
               label="Wrap query with limit"

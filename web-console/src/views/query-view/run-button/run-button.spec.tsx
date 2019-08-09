@@ -25,6 +25,7 @@ describe('run button', () => {
   it('matches snapshot', () => {
     const runButton = (
       <RunButton
+        onHistory={() => null}
         onEditContext={() => null}
         runeMode={false}
         queryContext={{}}
