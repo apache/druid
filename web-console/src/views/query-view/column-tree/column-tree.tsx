@@ -139,6 +139,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       (columnMetadata && columnMetadata !== state.prevColumnMetadata) ||
       (columnMetadata && props.hasGroupBy !== state.prevGroupByStatus)
     ) {
+      // @ts-ignore
       const columnTree = groupBy(
         columnMetadata,
         r => r.TABLE_SCHEMA,
@@ -271,24 +272,21 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       let selectedTreeIndex = -1;
       let expandedNode = -1;
       if (defaultSchema && columnTree) {
-        selectedTreeIndex = columnTree
-          .map(function(x) {
-            return x.id;
-          })
-          .indexOf(defaultSchema);
+        selectedTreeIndex = columnTree.findIndex(x => {
+          return x.id === defaultSchema;
+        });
       }
       if (selectedTreeIndex > -1) {
         const treeNodes = columnTree[selectedTreeIndex].childNodes;
         if (treeNodes) {
           if (defaultTable) {
-            expandedNode = treeNodes
-              .map(node => {
-                return node.id;
-              })
-              .indexOf(defaultTable);
+            expandedNode = treeNodes.findIndex(node => {
+              return node.id === defaultTable;
+            });
           }
         }
       }
+
       return {
         prevColumnMetadata: columnMetadata,
         columnTree,

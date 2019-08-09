@@ -16,8 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ControlGroup, Intent, Tooltip } from '@blueprintjs/core';
-import { Position } from '@blueprintjs/core/lib/esm/common/position';
+import { Button, ControlGroup, Intent, Position, Tooltip } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import classNames from 'classnames';
