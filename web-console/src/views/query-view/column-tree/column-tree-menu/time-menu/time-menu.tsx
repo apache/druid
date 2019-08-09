@@ -18,7 +18,14 @@
 
 import { Menu, MenuItem, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { AdditiveExpression, Alias, FilterClause, StringType } from 'druid-query-toolkit';
+import {
+  AdditiveExpression,
+  Alias,
+  FilterClause,
+  StringType,
+  TimeStamp,
+  timeStampFactory,
+} from 'druid-query-toolkit';
 import {
   aliasFactory,
   intervalFactory,
@@ -44,8 +51,8 @@ export interface TimeMenuProps {
     filter?: FilterClause,
   ) => void;
   filterByRow: (
-    rhs: string | number | AdditiveExpression,
-    lhs: string,
+    rhs: string | number | AdditiveExpression | TimeStamp,
+    lhs: string | TimeStamp,
     operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE',
     run: boolean,
   ) => void;
@@ -58,8 +65,76 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
     super(props, context);
   }
 
+  formatTime(timePart: number): string {
+    if (timePart % 10 > 0) {
+      return '0' + String(timePart);
+    } else return String(timePart);
+  }
+
+  getNextMonth(month: number, year: number): { month: string; year: number } {
+    if (month === 12) {
+      return { month: '01', year: year + 1 };
+    }
+    return { month: this.formatTime(month + 1), year: year };
+  }
+
+  getNextDay(
+    day: number,
+    month: number,
+    year: number,
+  ): { day: string; month: string; year: number } {
+    if (
+      month === 1 ||
+      month === 3 ||
+      month === 5 ||
+      month === 7 ||
+      month === 8 ||
+      month === 10 ||
+      month === 12
+    ) {
+      if (day === 31) {
+        const next = this.getNextMonth(month, year);
+        return { day: '01', month: next.month, year: next.year };
+      }
+    } else if (month === 4 || month === 6 || month === 9 || month === 11) {
+      if (day === 30) {
+        const next = this.getNextMonth(month, year);
+        return { day: '01', month: next.month, year: next.year };
+      }
+    } else if (month === 2) {
+      if ((day === 29 && year % 4 === 0) || (day === 28 && year % 4)) {
+        const next = this.getNextMonth(month, year);
+        return { day: '01', month: next.month, year: next.year };
+      }
+    }
+    return { day: this.formatTime(day + 1), month: this.formatTime(month), year: year };
+  }
+
+  getNextHour(
+    hour: number,
+    day: number,
+    month: number,
+    year: number,
+  ): { hour: string; day: string; month: string; year: number } {
+    if (hour === 23) {
+      const next = this.getNextDay(day, month, year);
+      return { hour: '00', day: next.day, month: next.month, year: next.year };
+    }
+    return {
+      hour: this.formatTime(hour + 1),
+      day: this.formatTime(day),
+      month: this.formatTime(month),
+      year: year,
+    };
+  }
+
   renderFilterMenu(): JSX.Element {
     const { columnName, filterByRow } = this.props;
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDay();
+    const hour = date.getHours();
 
     return (
       <Popover
@@ -103,6 +178,72 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
                   spacing: [' ', ' '],
                 });
                 filterByRow(additiveExpression, columnName, '>=', true);
+              }}
+            />
+            <MenuItem
+              text={`Current hour`}
+              onClick={() => {
+                const next = this.getNextHour(hour, day, month, year);
+                filterByRow(
+                  columnName,
+                  timeStampFactory(`${year}-${month}-${day} ${hour}:00:00`),
+                  '<=',
+                  false,
+                );
+                filterByRow(
+                  timeStampFactory(`${next.year}-${next.month}-${next.day} ${next.hour}:00:00`),
+                  columnName,
+                  '<',
+                  true,
+                );
+              }}
+            />
+            <MenuItem
+              text={`Current day`}
+              onClick={() => {
+                const next = this.getNextDay(day, month, year);
+                filterByRow(
+                  columnName,
+                  timeStampFactory(`${year}-${month}-${day} 00:00:00`),
+                  '<=',
+                  false,
+                );
+                filterByRow(
+                  timeStampFactory(`${next.year}-${next.month}-${next.day} 00:00:00`),
+                  columnName,
+                  '<',
+                  true,
+                );
+              }}
+            />
+            <MenuItem
+              text={`Current month`}
+              onClick={() => {
+                const next = this.getNextMonth(month, year);
+                filterByRow(
+                  columnName,
+                  timeStampFactory(`${year}-${month}-01 00:00:00`),
+                  '<=',
+                  false,
+                );
+                filterByRow(
+                  timeStampFactory(`${next.year}-${next.month}-00 00:00:00`),
+                  columnName,
+                  '<',
+                  true,
+                );
+              }}
+            />
+            <MenuItem
+              text={`Current year`}
+              onClick={() => {
+                filterByRow(columnName, timeStampFactory(`${year}-00-01 00:00:00`), '<=', false);
+                filterByRow(
+                  timeStampFactory(`${Number(year) + 1}-00-00 00:00:00`),
+                  columnName,
+                  '<',
+                  true,
+                );
               }}
             />
           </Menu>

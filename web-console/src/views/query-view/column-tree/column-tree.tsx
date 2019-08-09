@@ -27,7 +27,13 @@ import {
   Tree,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { AdditiveExpression, Alias, FilterClause, StringType } from 'druid-query-toolkit';
+import {
+  AdditiveExpression,
+  Alias,
+  FilterClause,
+  StringType,
+  TimeStamp,
+} from 'druid-query-toolkit';
 import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
@@ -36,6 +42,7 @@ import { ColumnMetadata } from '../../../utils/column-metadata';
 
 import { NumberMenu } from './column-tree-menu/number-menu/number-menu';
 import { StringMenu } from './column-tree-menu/string-menu/string-menu';
+import { TimeMenu } from './column-tree-menu/time-menu/time-menu';
 
 import './column-tree.scss';
 
@@ -116,8 +123,8 @@ export interface ColumnTreeProps {
     filter?: FilterClause,
   ) => void;
   filterByRow: (
-    rhs: string | number | AdditiveExpression,
-    lhs: string,
+    rhs: string | number | AdditiveExpression | TimeStamp,
+    lhs: string | TimeStamp,
     operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE',
     run: boolean,
   ) => void;
@@ -238,7 +245,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                           />
                         )}
                         {columnData.DATA_TYPE === 'TIMESTAMP' && (
-                          <StringMenu
+                          <TimeMenu
                             addFunctionToGroupBy={props.addFunctionToGroupBy}
                             addToGroupBy={props.addToGroupBy}
                             addAggregateColumn={props.addAggregateColumn}

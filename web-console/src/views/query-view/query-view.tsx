@@ -31,6 +31,7 @@ import {
   sqlParserFactory,
   SqlQuery,
   StringType,
+  TimeStamp,
 } from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import React from 'react';
@@ -524,8 +525,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   };
 
   private sqlFilterRow = (
-    row: string | number | AdditiveExpression,
-    header: string,
+    row: string | number | AdditiveExpression | TimeStamp,
+    header: string | TimeStamp,
     operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE',
     run: boolean,
   ): void => {
@@ -537,6 +538,10 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     });
     if (run) {
       this.handleRun(true, ast.toString());
+    } else {
+      this.setState({
+        ast,
+      });
     }
   };
 
