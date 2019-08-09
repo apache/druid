@@ -23,29 +23,27 @@ import classNames from 'classnames';
 import React from 'react';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
-import { ExternalLink } from './components/external-link/external-link';
-import { HeaderActiveTab, HeaderBar } from './components/header-bar/header-bar';
-import { Loader } from './components/loader/loader';
+import { ExternalLink, HeaderActiveTab, HeaderBar, Loader } from './components';
 import { AppToaster } from './singletons/toaster';
-import { UrlBaser } from './singletons/url-baser';
-import { QueryManager } from './utils';
+import { localStorageGet, LocalStorageKeys, QueryManager } from './utils';
 import { DRUID_DOCS_API, DRUID_DOCS_SQL } from './variables';
-import { DatasourcesView } from './views/datasource-view/datasource-view';
-import { HomeView } from './views/home-view/home-view';
-import { LoadDataView } from './views/load-data-view/load-data-view';
-import { LookupsView } from './views/lookups-view/lookups-view';
-import { SegmentsView } from './views/segments-view/segments-view';
-import { ServersView } from './views/servers-view/servers-view';
-import { SqlView } from './views/sql-view/sql-view';
-import { TasksView } from './views/task-view/tasks-view';
+import {
+  DatasourcesView,
+  HomeView,
+  LoadDataView,
+  LookupsView,
+  QueryView,
+  SegmentsView,
+  ServersView,
+  TasksView,
+} from './views';
 
 import './console-application.scss';
 
-export interface ConsoleApplicationProps extends React.Props<any> {
+type Capabilities = 'working-with-sql' | 'working-without-sql' | 'broken';
+
+export interface ConsoleApplicationProps {
   hideLegacy: boolean;
-  baseURL?: string;
-  customHeaderName?: string;
-  customHeaderValue?: string;
 }
 
 export interface ConsoleApplicationState {
@@ -54,19 +52,31 @@ export interface ConsoleApplicationState {
   capabilitiesLoading: boolean;
 }
 
-export class ConsoleApplication extends React.PureComponent<ConsoleApplicationProps, ConsoleApplicationState> {
-  static MESSAGE_KEY = 'druid-console-message';
-  static MESSAGE_DISMISSED = 'dismissed';
-  private capabilitiesQueryManager: QueryManager<string, string>;
+export class ConsoleApplication extends React.PureComponent<
+  ConsoleApplicationProps,
+  ConsoleApplicationState
+> {
+  static STATUS_TIMEOUT = 2000;
 
-  static async discoverCapabilities(): Promise<'working-with-sql' | 'working-without-sql' | 'broken'> {
+  private capabilitiesQueryManager: QueryManager<null, Capabilities>;
+
+  static async discoverCapabilities(): Promise<Capabilities> {
+    const capabilitiesOverride = localStorageGet(LocalStorageKeys.CAPABILITIES_OVERRIDE);
+    if (capabilitiesOverride) return capabilitiesOverride as Capabilities;
+
     try {
-      await axios.post('/druid/v2/sql', { query: 'SELECT 1337' });
+      await axios.post(
+        '/druid/v2/sql',
+        { query: 'SELECT 1337', context: { timeout: ConsoleApplication.STATUS_TIMEOUT } },
+        { timeout: ConsoleApplication.STATUS_TIMEOUT },
+      );
     } catch (e) {
       const { response } = e;
-      if (response.status !== 405 || response.statusText !== 'Method Not Allowed') return 'working-with-sql'; // other failure
+      if (response.status !== 405 || response.statusText !== 'Method Not Allowed') {
+        return 'working-with-sql'; // other failure
+      }
       try {
-        await axios.get('/status');
+        await axios.get('/status', { timeout: ConsoleApplication.STATUS_TIMEOUT });
       } catch (e) {
         return 'broken'; // total failure
       }
@@ -78,71 +88,65 @@ export class ConsoleApplication extends React.PureComponent<ConsoleApplicationPr
 
   static shownNotifications(capabilities: string) {
     let message: JSX.Element = <></>;
-    /* tslint:disable:jsx-alignment */
+
     if (capabilities === 'working-without-sql') {
-      message = <>
-        It appears that the SQL endpoint is disabled. The console will fall back
-        to <ExternalLink href={DRUID_DOCS_API}>native Druid APIs</ExternalLink> and will be
-        limited in functionality. Look at <ExternalLink href={DRUID_DOCS_SQL}>the SQL docs</ExternalLink> to
-        enable the SQL endpoint.
-      </>;
+      message = (
+        <>
+          It appears that the SQL endpoint is disabled. The console will fall back to{' '}
+          <ExternalLink href={DRUID_DOCS_API}>native Druid APIs</ExternalLink> and will be limited
+          in functionality. Look at <ExternalLink href={DRUID_DOCS_SQL}>the SQL docs</ExternalLink>{' '}
+          to enable the SQL endpoint.
+        </>
+      );
     } else if (capabilities === 'broken') {
-      message = <>
-        It appears that the Druid is not responding. Data cannot be retrieved right now
-      </>;
+      message = (
+        <>It appears that the Druid is not responding. Data cannot be retrieved right now</>
+      );
     }
-    /* tslint:enable:jsx-alignment */
+
     AppToaster.show({
       icon: IconNames.ERROR,
       intent: Intent.DANGER,
       timeout: 120000,
-      message: message
+      message: message,
     });
   }
 
-  private supervisorId: string | null;
-  private taskId: string | null;
-  private openDialog: string | null;
-  private datasource: string | null;
-  private onlyUnavailable: boolean | null;
-  private initSql: string | null;
-  private middleManager: string | null;
+  private supervisorId?: string;
+  private taskId?: string;
+  private openDialog?: string;
+  private datasource?: string;
+  private onlyUnavailable?: boolean;
+  private initQuery?: string;
+  private middleManager?: string;
 
   constructor(props: ConsoleApplicationProps, context: any) {
     super(props, context);
     this.state = {
       aboutDialogOpen: false,
       noSqlMode: false,
-      capabilitiesLoading: true
+      capabilitiesLoading: true,
     };
 
-    if (props.baseURL) {
-      axios.defaults.baseURL = props.baseURL;
-      UrlBaser.baseURL = props.baseURL;
-    }
-    if (props.customHeaderName && props.customHeaderValue) {
-      axios.defaults.headers.common[props.customHeaderName] = props.customHeaderValue;
-    }
-
     this.capabilitiesQueryManager = new QueryManager({
-      processQuery: async (query: string) => {
+      processQuery: async () => {
         const capabilities = await ConsoleApplication.discoverCapabilities();
         if (capabilities !== 'working-with-sql') {
           ConsoleApplication.shownNotifications(capabilities);
         }
         return capabilities;
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: ({ result, loading }) => {
         this.setState({
-          noSqlMode: result === 'working-with-sql' ? false : true,
-          capabilitiesLoading: loading
+          noSqlMode: result !== 'working-with-sql',
+          capabilitiesLoading: loading,
         });
-      }
+      },
     });
   }
 
   componentDidMount(): void {
-    this.capabilitiesQueryManager.runQuery('dummy');
+    this.capabilitiesQueryManager.runQuery(null);
   }
 
   componentWillUnmount(): void {
@@ -151,124 +155,187 @@ export class ConsoleApplication extends React.PureComponent<ConsoleApplicationPr
 
   private resetInitialsWithDelay() {
     setTimeout(() => {
-      this.taskId = null;
-      this.supervisorId = null;
-      this.openDialog = null;
-      this.datasource = null;
-      this.onlyUnavailable = null;
-      this.initSql = null;
-      this.middleManager = null;
+      this.taskId = undefined;
+      this.supervisorId = undefined;
+      this.openDialog = undefined;
+      this.datasource = undefined;
+      this.onlyUnavailable = undefined;
+      this.initQuery = undefined;
+      this.middleManager = undefined;
     }, 50);
   }
 
-  private goToLoadDataView = (supervisorId?: string, taskId?: string ) => {
+  private goToLoadData = (supervisorId?: string, taskId?: string) => {
     if (taskId) this.taskId = taskId;
     if (supervisorId) this.supervisorId = supervisorId;
     window.location.hash = 'load-data';
     this.resetInitialsWithDelay();
-  }
+  };
 
-  private goToTask = (taskId: string | null, openDialog?: string) => {
+  private goToDatasources = (datasource: string) => {
+    this.datasource = datasource;
+    window.location.hash = 'datasources';
+    this.resetInitialsWithDelay();
+  };
+
+  private goToSegments = (datasource: string, onlyUnavailable = false) => {
+    this.datasource = datasource;
+    this.onlyUnavailable = onlyUnavailable;
+    window.location.hash = 'segments';
+    this.resetInitialsWithDelay();
+  };
+
+  private goToTaskWithTaskId = (taskId?: string, openDialog?: string) => {
     this.taskId = taskId;
     if (openDialog) this.openDialog = openDialog;
     window.location.hash = 'tasks';
     this.resetInitialsWithDelay();
-  }
+  };
 
-  private goToSegments = (datasource: string, onlyUnavailable = false) => {
-    this.datasource = `"${datasource}"`;
-    this.onlyUnavailable = onlyUnavailable;
-    window.location.hash = 'segments';
+  private goToTaskWithDatasource = (datasource?: string, openDialog?: string) => {
+    this.datasource = datasource;
+    if (openDialog) this.openDialog = openDialog;
+    window.location.hash = 'tasks';
     this.resetInitialsWithDelay();
-  }
+  };
 
   private goToMiddleManager = (middleManager: string) => {
     this.middleManager = middleManager;
     window.location.hash = 'servers';
     this.resetInitialsWithDelay();
-  }
+  };
 
-  private goToSql = (initSql: string) => {
-    this.initSql = initSql;
+  private goToQuery = (initQuery: string) => {
+    this.initQuery = initQuery;
     window.location.hash = 'query';
     this.resetInitialsWithDelay();
-  }
+  };
 
-  private wrapInViewContainer = (active: HeaderActiveTab, el: JSX.Element, classType: 'normal' | 'narrow-pad' = 'normal') => {
+  private wrapInViewContainer = (
+    active: HeaderActiveTab,
+    el: JSX.Element,
+    classType: 'normal' | 'narrow-pad' = 'normal',
+  ) => {
     const { hideLegacy } = this.props;
 
-    return <>
-      <HeaderBar active={active} hideLegacy={hideLegacy}/>
-      <div className={classNames('view-container', classType)}>{el}</div>
-    </>;
-  }
+    return (
+      <>
+        <HeaderBar active={active} hideLegacy={hideLegacy} />
+        <div className={classNames('view-container', classType)}>{el}</div>
+      </>
+    );
+  };
 
   private wrappedHomeView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer(null, <HomeView noSqlMode={noSqlMode}/>);
-  }
+    return this.wrapInViewContainer(null, <HomeView noSqlMode={noSqlMode} />);
+  };
 
   private wrappedLoadDataView = () => {
+    return this.wrapInViewContainer(
+      'load-data',
+      <LoadDataView
+        initSupervisorId={this.supervisorId}
+        initTaskId={this.taskId}
+        goToTask={this.goToTaskWithTaskId}
+      />,
+      'narrow-pad',
+    );
+  };
 
-    return this.wrapInViewContainer('load-data', <LoadDataView initSupervisorId={this.supervisorId} initTaskId={this.taskId} goToTask={this.goToTask}/>, 'narrow-pad');
-  }
-
-  private wrappedSqlView = () => {
-    return this.wrapInViewContainer('query', <SqlView initSql={this.initSql}/>);
-  }
+  private wrappedQueryView = () => {
+    return this.wrapInViewContainer('query', <QueryView initQuery={this.initQuery} />);
+  };
 
   private wrappedDatasourcesView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer('datasources', <DatasourcesView goToSql={this.goToSql} goToSegments={this.goToSegments} noSqlMode={noSqlMode}/>);
-  }
+    return this.wrapInViewContainer(
+      'datasources',
+      <DatasourcesView
+        initDatasource={this.datasource}
+        goToQuery={this.goToQuery}
+        goToTask={this.goToTaskWithDatasource}
+        goToSegments={this.goToSegments}
+        noSqlMode={noSqlMode}
+      />,
+    );
+  };
 
   private wrappedSegmentsView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer('segments', <SegmentsView datasource={this.datasource} onlyUnavailable={this.onlyUnavailable} goToSql={this.goToSql} noSqlMode={noSqlMode}/>);
-  }
+    return this.wrapInViewContainer(
+      'segments',
+      <SegmentsView
+        datasource={this.datasource}
+        onlyUnavailable={this.onlyUnavailable}
+        goToQuery={this.goToQuery}
+        noSqlMode={noSqlMode}
+      />,
+    );
+  };
 
   private wrappedTasksView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer('tasks', <TasksView taskId={this.taskId} openDialog={this.openDialog} goToSql={this.goToSql} goToMiddleManager={this.goToMiddleManager} goToLoadDataView={this.goToLoadDataView} noSqlMode={noSqlMode}/>);
-  }
+    return this.wrapInViewContainer(
+      'tasks',
+      <TasksView
+        taskId={this.taskId}
+        datasourceId={this.datasource}
+        openDialog={this.openDialog}
+        goToDatasource={this.goToDatasources}
+        goToQuery={this.goToQuery}
+        goToMiddleManager={this.goToMiddleManager}
+        goToLoadData={this.goToLoadData}
+        noSqlMode={noSqlMode}
+      />,
+    );
+  };
 
   private wrappedServersView = () => {
     const { noSqlMode } = this.state;
-    return this.wrapInViewContainer('servers', <ServersView middleManager={this.middleManager} goToSql={this.goToSql} goToTask={this.goToTask} noSqlMode={noSqlMode}/>);
-  }
+    return this.wrapInViewContainer(
+      'servers',
+      <ServersView
+        middleManager={this.middleManager}
+        goToQuery={this.goToQuery}
+        goToTask={this.goToTaskWithTaskId}
+        noSqlMode={noSqlMode}
+      />,
+    );
+  };
 
   private wrappedLookupsView = () => {
-    return this.wrapInViewContainer('lookups', <LookupsView/>);
-  }
+    return this.wrapInViewContainer('lookups', <LookupsView />);
+  };
 
-  render() {
+  render(): JSX.Element {
     const { capabilitiesLoading } = this.state;
 
     if (capabilitiesLoading) {
-      return <div className="loading-capabilities">
-        <Loader
-          loadingText=""
-          loading={capabilitiesLoading}
-        />
-      </div>;
+      return (
+        <div className="loading-capabilities">
+          <Loader loadingText="" loading={capabilitiesLoading} />
+        </div>
+      );
     }
 
-    return <HashRouter hashType="noslash">
-      <div className="console-application">
-        <Switch>
-          <Route path="/load-data" component={this.wrappedLoadDataView}/>
-          <Route path="/query" component={this.wrappedSqlView}/>
-          <Route path="/sql" component={this.wrappedSqlView}/>
+    return (
+      <HashRouter hashType="noslash">
+        <div className="console-application">
+          <Switch>
+            <Route path="/load-data" component={this.wrappedLoadDataView} />
+            <Route path="/query" component={this.wrappedQueryView} />
 
-          <Route path="/datasources" component={this.wrappedDatasourcesView}/>
-          <Route path="/segments" component={this.wrappedSegmentsView}/>
-          <Route path="/tasks" component={this.wrappedTasksView}/>
-          <Route path="/servers" component={this.wrappedServersView}/>
+            <Route path="/datasources" component={this.wrappedDatasourcesView} />
+            <Route path="/segments" component={this.wrappedSegmentsView} />
+            <Route path="/tasks" component={this.wrappedTasksView} />
+            <Route path="/servers" component={this.wrappedServersView} />
 
-          <Route path="/lookups" component={this.wrappedLookupsView}/>
-          <Route component={this.wrappedHomeView}/>
-        </Switch>
-      </div>
-    </HashRouter>;
+            <Route path="/lookups" component={this.wrappedLookupsView} />
+            <Route component={this.wrappedHomeView} />
+          </Switch>
+        </div>
+      </HashRouter>
+    );
   }
 }

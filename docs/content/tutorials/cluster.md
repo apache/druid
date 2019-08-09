@@ -30,6 +30,7 @@ In this document, we'll set up a simple cluster and discuss how it can be furthe
 your needs. 
 
 This simple cluster will feature:
+
  - A Master server to host the Coordinator and Overlord processes
  - Two scalable, fault-tolerant Data servers running Historical and MiddleManager processes
  - A query server, hosting the Druid Broker and Router processes
@@ -49,6 +50,7 @@ The Coordinator and Overlord processes are responsible for handling the metadata
 In this example, we will be deploying the equivalent of one AWS [m5.2xlarge](https://aws.amazon.com/ec2/instance-types/m5/) instance.
 
 This hardware offers:
+
 - 8 vCPUs
 - 31 GB RAM
 
@@ -77,6 +79,7 @@ in-memory query cache. These servers benefit greatly from CPU and RAM.
 In this example, we will be deploying the equivalent of one AWS [m5.2xlarge](https://aws.amazon.com/ec2/instance-types/m5/) instance. 
 
 This hardware offers:
+
 - 8 vCPUs
 - 31 GB RAM
 
@@ -323,6 +326,7 @@ You can copy your existing `coordinator-overlord` configs from the single-server
 Suppose we are migrating from a single-server deployment that had 32 CPU and 256GB RAM. In the old deployment, the following configurations for Historicals and MiddleManagers were applied:
 
 Historical (Single-server)
+
 ```
 druid.processing.buffer.sizeBytes=500000000
 druid.processing.numMergeBuffers=8
@@ -330,6 +334,7 @@ druid.processing.numThreads=31
 ```
 
 MiddleManager (Single-server)
+
 ```
 druid.worker.capacity=8
 druid.indexer.fork.property.druid.processing.numMergeBuffers=2
@@ -340,11 +345,13 @@ druid.indexer.fork.property.druid.processing.numThreads=1
 In the clustered deployment, we can choose a split factor (2 in this example), and deploy 2 Data servers with 16CPU and 128GB RAM each. The areas to scale are the following:
 
 Historical
+
 - `druid.processing.numThreads`: Set to `(num_cores - 1)` based on the new hardware
 - `druid.processing.numMergeBuffers`: Divide the old value from the single-server deployment by the split factor
 - `druid.processing.buffer.sizeBytes`: Keep this unchanged
 
 MiddleManager:
+
 - `druid.worker.capacity`: Divide the old value from the single-server deployment by the split factor
 - `druid.indexer.fork.property.druid.processing.numMergeBuffers`: Keep this unchanged
 - `druid.indexer.fork.property.druid.processing.buffer.sizeBytes`: Keep this unchanged
@@ -353,6 +360,7 @@ MiddleManager:
 The resulting configs after the split:
 
 New Historical (on 2 Data servers)
+
 ```
  druid.processing.buffer.sizeBytes=500000000
  druid.processing.numMergeBuffers=8
@@ -360,6 +368,7 @@ New Historical (on 2 Data servers)
 ```
 
 New MiddleManager (on 2 Data servers)
+
 ```
 druid.worker.capacity=4
 druid.indexer.fork.property.druid.processing.numMergeBuffers=2
@@ -419,7 +428,7 @@ If you have been editing the configurations on your local machine, you can use *
 rsync -az apache-druid-#{DRUIDVERSION}/ MASTER_SERVER:apache-druid-#{DRUIDVERSION}/
 ```
 
-### No Zookeper on Master
+### No Zookeeper on Master
 
 From the distribution root, run the following command to start the Master server:
 

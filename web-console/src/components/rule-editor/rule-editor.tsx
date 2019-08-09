@@ -16,15 +16,33 @@
  * limitations under the License.
  */
 
-import { Button, Card, Collapse, ControlGroup, FormGroup, HTMLSelect, InputGroup, NumericInput, TagInput } from '@blueprintjs/core';
+import {
+  Button,
+  Card,
+  Collapse,
+  ControlGroup,
+  FormGroup,
+  HTMLSelect,
+  InputGroup,
+  NumericInput,
+  TagInput,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import React from 'react';
 
 import './rule-editor.scss';
 
 export interface Rule {
-  type: 'loadForever' | 'loadByInterval' | 'loadByPeriod' | 'dropForever' | 'dropByInterval' | 'dropByPeriod' | 'broadcastForever' | 'broadcastByInterval' | 'broadcastByPeriod';
+  type:
+    | 'loadForever'
+    | 'loadByInterval'
+    | 'loadByPeriod'
+    | 'dropForever'
+    | 'dropByInterval'
+    | 'dropByPeriod'
+    | 'broadcastForever'
+    | 'broadcastByInterval'
+    | 'broadcastByPeriod';
   interval?: string;
   period?: string;
   tieredReplicants?: Record<string, number>;
@@ -34,7 +52,7 @@ export interface Rule {
 export type LoadType = 'load' | 'drop' | 'broadcast';
 export type TimeType = 'Forever' | 'ByInterval' | 'ByPeriod';
 
-export interface RuleEditorProps extends React.Props<any> {
+export interface RuleEditorProps {
   rule: Rule;
   tiers: any[];
   onChange: (newRule: Rule) => void;
@@ -49,7 +67,11 @@ export interface RuleEditorState {
 
 export class RuleEditor extends React.PureComponent<RuleEditorProps, RuleEditorState> {
   static ruleToString(rule: Rule): string {
-    return rule.type + (rule.period ? `(${rule.period})` : '') + (rule.interval ? `(${rule.interval})` : '');
+    return (
+      rule.type +
+      (rule.period ? `(${rule.period})` : '') +
+      (rule.interval ? `(${rule.interval})` : '')
+    );
   }
 
   static getLoadType(rule: Rule): LoadType {
@@ -107,7 +129,7 @@ export class RuleEditor extends React.PureComponent<RuleEditorProps, RuleEditorS
   constructor(props: RuleEditorProps) {
     super(props);
     this.state = {
-      isOpen: true
+      isOpen: true,
     };
   }
 
@@ -117,9 +139,9 @@ export class RuleEditor extends React.PureComponent<RuleEditorProps, RuleEditorS
     const newTierReplicants = Object.assign({}, rule.tieredReplicants);
     delete newTierReplicants[key];
 
-    const newRule = Object.assign({}, rule, {tieredReplicants: newTierReplicants});
+    const newRule = Object.assign({}, rule, { tieredReplicants: newTierReplicants });
     onChange(newRule);
-  }
+  };
 
   private addTier = () => {
     const { rule, onChange, tiers } = this.props;
@@ -136,7 +158,7 @@ export class RuleEditor extends React.PureComponent<RuleEditorProps, RuleEditorS
     }
 
     onChange(RuleEditor.changeTierReplication(rule, newTierName, 1));
-  }
+  };
 
   renderTiers() {
     const { tiers, onChange, rule } = this.props;
@@ -148,35 +170,45 @@ export class RuleEditor extends React.PureComponent<RuleEditorProps, RuleEditorS
 
     const ruleTiers = Object.keys(tieredReplicants).sort();
     return ruleTiers.map(tier => {
-      return <ControlGroup key={tier}>
-        <Button minimal style={{pointerEvents: 'none'}}>Replicants:</Button>
-        <NumericInput
-          value={tieredReplicants[tier]}
-          onValueChange={(v: number) => {
-            if (isNaN(v)) return;
-            onChange(RuleEditor.changeTierReplication(rule, tier, v));
-          }}
-          min={1}
-          max={256}
-        />
-        <Button minimal style={{pointerEvents: 'none'}}>Tier:</Button>
-        <HTMLSelect
-          fill
-          value={tier}
-          onChange={(e: any) => onChange(RuleEditor.changeTier(rule, tier, e.target.value))}
-        >
-          {
-            tiers.filter(t => t === tier || !tieredReplicants[t]).map((t) => {
-              return <option key={t} value={t}>{t}</option>;
-            })
-          }
-        </HTMLSelect>
-        <Button
-          disabled={ruleTiers.length === 1}
-          onClick={() => this.removeTier(tier)}
-          icon={IconNames.TRASH}
-        />
-      </ControlGroup>;
+      return (
+        <ControlGroup key={tier}>
+          <Button minimal style={{ pointerEvents: 'none' }}>
+            Replicants:
+          </Button>
+          <NumericInput
+            value={tieredReplicants[tier]}
+            onValueChange={(v: number) => {
+              if (isNaN(v)) return;
+              onChange(RuleEditor.changeTierReplication(rule, tier, v));
+            }}
+            min={1}
+            max={256}
+          />
+          <Button minimal style={{ pointerEvents: 'none' }}>
+            Tier:
+          </Button>
+          <HTMLSelect
+            fill
+            value={tier}
+            onChange={(e: any) => onChange(RuleEditor.changeTier(rule, tier, e.target.value))}
+          >
+            {tiers
+              .filter(t => t === tier || !tieredReplicants[t])
+              .map(t => {
+                return (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                );
+              })}
+          </HTMLSelect>
+          <Button
+            disabled={ruleTiers.length === 1}
+            onClick={() => this.removeTier(tier)}
+            icon={IconNames.TRASH}
+          />
+        </ControlGroup>
+      );
     });
   }
 
@@ -184,25 +216,31 @@ export class RuleEditor extends React.PureComponent<RuleEditorProps, RuleEditorS
     const { rule, tiers } = this.props;
     if (Object.keys(rule.tieredReplicants || {}).length >= Object.keys(tiers).length) return null;
 
-    return <FormGroup className="right">
-      <Button onClick={this.addTier} minimal icon={IconNames.PLUS}>Add a tier</Button>
-    </FormGroup>;
+    return (
+      <FormGroup className="right">
+        <Button onClick={this.addTier} minimal icon={IconNames.PLUS}>
+          Add a tier
+        </Button>
+      </FormGroup>
+    );
   }
 
   renderColocatedDataSources() {
     const { rule, onChange } = this.props;
 
-    return <FormGroup label="Colocated datasources:">
-      <TagInput
-        values={rule.colocatedDataSources || []}
-        onChange={(v: any) => onChange(RuleEditor.changeColocatedDataSources(rule, v))}
-        fill
-      />
-    </FormGroup>;
+    return (
+      <FormGroup label="Colocated datasources:">
+        <TagInput
+          values={rule.colocatedDataSources || []}
+          onChange={(v: any) => onChange(RuleEditor.changeColocatedDataSources(rule, v))}
+          fill
+        />
+      </FormGroup>
+    );
   }
 
-  render() {
-    const { tiers, onChange, rule, onDelete, moveUp, moveDown } = this.props;
+  render(): JSX.Element | null {
+    const { onChange, rule, onDelete, moveUp, moveDown } = this.props;
     const { isOpen } = this.state;
 
     if (!rule) return null;
@@ -210,56 +248,77 @@ export class RuleEditor extends React.PureComponent<RuleEditorProps, RuleEditorS
     const ruleLoadType = RuleEditor.getLoadType(rule);
     const ruleTimeType = RuleEditor.getTimeType(rule);
 
-    return <div className="rule-editor">
-      <div className="title">
-        <Button className="left" minimal rightIcon={isOpen ? IconNames.CARET_DOWN : IconNames.CARET_RIGHT} onClick={() => this.setState({isOpen: !isOpen})}>
-          {RuleEditor.ruleToString(rule)}
-        </Button>
-        <div className="spacer"/>
-        {moveUp ? <Button minimal icon={IconNames.ARROW_UP} onClick={moveUp}/> : null}
-        {moveDown ? <Button minimal icon={IconNames.ARROW_DOWN} onClick={moveDown}/> : null}
-        <Button minimal icon={IconNames.TRASH} onClick={onDelete}/>
-      </div>
+    return (
+      <div className="rule-editor">
+        <div className="title">
+          <Button
+            className="left"
+            minimal
+            rightIcon={isOpen ? IconNames.CARET_DOWN : IconNames.CARET_RIGHT}
+            onClick={() => this.setState({ isOpen: !isOpen })}
+          >
+            {RuleEditor.ruleToString(rule)}
+          </Button>
+          <div className="spacer" />
+          {moveUp ? <Button minimal icon={IconNames.ARROW_UP} onClick={moveUp} /> : null}
+          {moveDown ? <Button minimal icon={IconNames.ARROW_DOWN} onClick={moveDown} /> : null}
+          <Button minimal icon={IconNames.TRASH} onClick={onDelete} />
+        </div>
 
-      <Collapse isOpen={isOpen}>
-        <Card>
-          <FormGroup>
-            <ControlGroup>
-              <HTMLSelect
-                value={ruleLoadType}
-                onChange={(e: any) => onChange(RuleEditor.changeLoadType(rule, e.target.value as any))}
-              >
-                <option value="load">Load</option>
-                <option value="drop">Drop</option>
-                <option value="broadcast">Broadcast</option>
-              </HTMLSelect>
-              <HTMLSelect
-                value={ruleTimeType}
-                onChange={(e: any) => onChange(RuleEditor.changeTimeType(rule, e.target.value as any))}
-              >
-                <option value="Forever">forever</option>
-                <option value="ByPeriod">by period</option>
-                <option value="ByInterval">by interval</option>
-              </HTMLSelect>
-              {ruleTimeType === 'ByPeriod' && <InputGroup value={rule.period || ''} onChange={(e: any) => onChange(RuleEditor.changePeriod(rule, e.target.value as any))}/>}
-              {ruleTimeType === 'ByInterval' && <InputGroup value={rule.interval || ''} onChange={(e: any) => onChange(RuleEditor.changeInterval(rule, e.target.value as any))}/>}
-            </ControlGroup>
-          </FormGroup>
-          {
-            ruleLoadType === 'load' &&
+        <Collapse isOpen={isOpen}>
+          <Card>
             <FormGroup>
-              {this.renderTiers()}
-              {this.renderTierAdder()}
+              <ControlGroup>
+                <HTMLSelect
+                  value={ruleLoadType}
+                  onChange={(e: any) =>
+                    onChange(RuleEditor.changeLoadType(rule, e.target.value as any))
+                  }
+                >
+                  <option value="load">Load</option>
+                  <option value="drop">Drop</option>
+                  <option value="broadcast">Broadcast</option>
+                </HTMLSelect>
+                <HTMLSelect
+                  value={ruleTimeType}
+                  onChange={(e: any) =>
+                    onChange(RuleEditor.changeTimeType(rule, e.target.value as any))
+                  }
+                >
+                  <option value="Forever">forever</option>
+                  <option value="ByPeriod">by period</option>
+                  <option value="ByInterval">by interval</option>
+                </HTMLSelect>
+                {ruleTimeType === 'ByPeriod' && (
+                  <InputGroup
+                    value={rule.period || ''}
+                    onChange={(e: any) =>
+                      onChange(RuleEditor.changePeriod(rule, e.target.value as any))
+                    }
+                  />
+                )}
+                {ruleTimeType === 'ByInterval' && (
+                  <InputGroup
+                    value={rule.interval || ''}
+                    onChange={(e: any) =>
+                      onChange(RuleEditor.changeInterval(rule, e.target.value as any))
+                    }
+                  />
+                )}
+              </ControlGroup>
             </FormGroup>
-          }
-          {
-            ruleLoadType === 'broadcast' &&
-            <FormGroup>
-              {this.renderColocatedDataSources()}
-            </FormGroup>
-          }
-        </Card>
-      </Collapse>
-    </div>;
+            {ruleLoadType === 'load' && (
+              <FormGroup>
+                {this.renderTiers()}
+                {this.renderTierAdder()}
+              </FormGroup>
+            )}
+            {ruleLoadType === 'broadcast' && (
+              <FormGroup>{this.renderColocatedDataSources()}</FormGroup>
+            )}
+          </Card>
+        </Collapse>
+      </div>
+    );
   }
 }

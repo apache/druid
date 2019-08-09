@@ -31,11 +31,11 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 
 import java.util.Iterator;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -89,12 +89,12 @@ public class DataSourceMetadataQueryRunnerFactory
     @Override
     public Sequence<Result<DataSourceMetadataResultValue>> run(
         QueryPlus<Result<DataSourceMetadataResultValue>> input,
-        Map<String, Object> responseContext
+        ResponseContext responseContext
     )
     {
       Query<Result<DataSourceMetadataResultValue>> query = input.getQuery();
       if (!(query instanceof DataSourceMetadataQuery)) {
-        throw new ISE("Got a [%s] which isn't a %s", query.getClass().getCanonicalName(), DataSourceMetadataQuery.class);
+        throw new ISE("Got a [%s] which isn't a %s", query.getClass().getName(), DataSourceMetadataQuery.class);
       }
 
       final DataSourceMetadataQuery legacyQuery = (DataSourceMetadataQuery) query;

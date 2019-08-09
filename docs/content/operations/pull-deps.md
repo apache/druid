@@ -92,10 +92,10 @@ To run `pull-deps`, you should
 
 Example:
 
-Suppose you want to download ```druid-rabbitmq```, ```mysql-metadata-storage``` and ```hadoop-client```(both 2.3.0 and 2.4.0) with a specific version, you can run `pull-deps` command with `-c org.apache.druid.extensions:druid-examples:#{DRUIDVERSION}`, `-c org.apache.druid.extensions:mysql-metadata-storage:#{DRUIDVERSION}`, `-h org.apache.hadoop:hadoop-client:2.3.0` and `-h org.apache.hadoop:hadoop-client:2.4.0`, an example command would be:
+Suppose you want to download ```mysql-metadata-storage``` and ```hadoop-client```(both 2.3.0 and 2.4.0) with a specific version, you can run `pull-deps` command with `-c org.apache.druid.extensions:mysql-metadata-storage:#{DRUIDVERSION}`, `-h org.apache.hadoop:hadoop-client:2.3.0` and `-h org.apache.hadoop:hadoop-client:2.4.0`, an example command would be:
 
 ```
-java -classpath "/my/druid/lib/*" org.apache.druid.cli.Main tools pull-deps --clean -c org.apache.druid.extensions:mysql-metadata-storage:#{DRUIDVERSION} -c org.apache.druid.extensions.contrib:druid-rabbitmq:#{DRUIDVERSION} -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
+java -classpath "/my/druid/lib/*" org.apache.druid.cli.Main tools pull-deps --clean -c org.apache.druid.extensions:mysql-metadata-storage:#{DRUIDVERSION} -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
 ```
 
 Because `--clean` is supplied, this command will first remove the directories specified at `druid.extensions.directory` and `druid.extensions.hadoopDependenciesDir`, then recreate them and start downloading the extensions there. After finishing downloading, if you go to the extension directories you specified, you will see
@@ -103,15 +103,6 @@ Because `--clean` is supplied, this command will first remove the directories sp
 ```
 tree extensions
 extensions
-├── druid-examples
-│   ├── commons-beanutils-1.8.3.jar
-│   ├── commons-digester-1.8.jar
-│   ├── commons-logging-1.1.1.jar
-│   ├── commons-validator-1.4.0.jar
-│   ├── druid-examples-#{DRUIDVERSION}.jar
-│   ├── twitter4j-async-3.0.3.jar
-│   ├── twitter4j-core-3.0.3.jar
-│   └── twitter4j-stream-3.0.3.jar
 └── mysql-metadata-storage
     └── mysql-metadata-storage-#{DRUIDVERSION}.jar
 ```
@@ -138,10 +129,10 @@ hadoop-dependencies/
     ..... lots of jars
 ```
 
-Note that if you specify `--defaultVersion`, you don't have to put version information in the coordinate. For example, if you want both `druid-rabbitmq` and `mysql-metadata-storage` to use version `#{DRUIDVERSION}`,  you can change the command above to
+Note that if you specify `--defaultVersion`, you don't have to put version information in the coordinate. For example, if you want `mysql-metadata-storage` to use version `#{DRUIDVERSION}`,  you can change the command above to
 
 ```
-java -classpath "/my/druid/lib/*" org.apache.druid.cli.Main tools pull-deps --defaultVersion #{DRUIDVERSION} --clean -c org.apache.druid.extensions:mysql-metadata-storage -c org.apache.druid.extensions.contrib:druid-rabbitmq -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
+java -classpath "/my/druid/lib/*" org.apache.druid.cli.Main tools pull-deps --defaultVersion #{DRUIDVERSION} --clean -c org.apache.druid.extensions:mysql-metadata-storage -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
 ```
 
 <div class="note info">

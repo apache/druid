@@ -22,11 +22,13 @@ package org.apache.druid.server.coordinator;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -34,8 +36,6 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 /**
  * Contains a representation of the current state of the cluster by tier.
@@ -43,6 +43,16 @@ import java.util.stream.StreamSupport;
  */
 public class DruidCluster
 {
+  /** This static factory method must be called only from inside DruidClusterBuilder in tests. */
+  @VisibleForTesting
+  static DruidCluster createDruidClusterFromBuilderInTest(
+      @Nullable Set<ServerHolder> realtimes,
+      Map<String, Iterable<ServerHolder>> historicals
+  )
+  {
+    return new DruidCluster(realtimes, historicals);
+  }
+
   private final Set<ServerHolder> realtimes;
   private final Map<String, NavigableSet<ServerHolder>> historicals;
 
@@ -52,22 +62,19 @@ public class DruidCluster
     this.historicals = new HashMap<>();
   }
 
-  @VisibleForTesting
-  public DruidCluster(
+  private DruidCluster(
       @Nullable Set<ServerHolder> realtimes,
       Map<String, Iterable<ServerHolder>> historicals
   )
   {
     this.realtimes = realtimes == null ? new HashSet<>() : new HashSet<>(realtimes);
-    this.historicals = historicals
-        .entrySet()
-        .stream()
-        .collect(Collectors.toMap(
-            Map.Entry::getKey,
-            e -> StreamSupport
-                .stream(e.getValue().spliterator(), false)
-                .collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
-        ));
+    this.historicals = CollectionUtils.mapValues(
+        historicals,
+        holders -> CollectionUtils.newTreeSet(
+            Comparator.reverseOrder(),
+            holders
+        )
+    );
   }
 
   public void add(ServerHolder serverHolder)

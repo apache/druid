@@ -27,11 +27,14 @@ describe('tasks view', () => {
       <TasksView
         openDialog={'test'}
         taskId={'test'}
-        goToSql={(initSql: string) => null}
-        goToMiddleManager={(middleManager: string) => null}
-        goToLoadDataView={() => null}
+        datasourceId={'datasource'}
+        goToDatasource={() => {}}
+        goToQuery={() => {}}
+        goToMiddleManager={() => {}}
+        goToLoadData={() => {}}
         noSqlMode={false}
-      />);
+      />,
+    );
     expect(taskView).toMatchSnapshot();
   });
 });

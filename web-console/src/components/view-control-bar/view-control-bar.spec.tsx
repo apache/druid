@@ -16,17 +16,18 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { ViewControlBar } from './view-control-bar';
 
 describe('view control bar snapshot', () => {
   it('matches snapshot', () => {
-    const viewControlBar =
+    const viewControlBar = (
       <ViewControlBar label="A label">
         <div>Hello world</div>
-      </ViewControlBar>;
+      </ViewControlBar>
+    );
 
     const { container } = render(viewControlBar);
     expect(container.firstChild).toMatchSnapshot();

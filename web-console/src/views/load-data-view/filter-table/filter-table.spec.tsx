@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { FilterTable } from './filter-table';
 
@@ -28,19 +28,21 @@ describe('filter table', () => {
       rows: [
         {
           raw: `{"c1":"hello"}`,
-          parsed: { c1: 'hello' }
-        }
-      ]
+          parsed: { c1: 'hello' },
+        },
+      ],
     };
 
-    const filterTable = <FilterTable
-      sampleData={sampleData}
-      columnFilter=""
-      dimensionFilters={[]}
-      selectedFilterIndex={-1}
-      onShowGlobalFilter={() => null}
-      onFilterSelect={() => null}
-    />;
+    const filterTable = (
+      <FilterTable
+        sampleData={sampleData}
+        columnFilter=""
+        dimensionFilters={[]}
+        selectedFilterIndex={-1}
+        onShowGlobalFilter={() => {}}
+        onFilterSelect={() => {}}
+      />
+    );
 
     const { container } = render(filterTable);
     expect(container.firstChild).toMatchSnapshot();

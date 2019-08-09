@@ -121,7 +121,7 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableAggregatorFa
   {
     return fieldName != null
            ? Collections.singletonList(fieldName)
-           : Parser.findRequiredBindings(fieldExpression.get());
+           : fieldExpression.get().analyzeInputs().getRequiredBindingsList();
   }
 
   @Override

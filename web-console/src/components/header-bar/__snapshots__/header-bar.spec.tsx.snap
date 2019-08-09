@@ -142,6 +142,7 @@ exports[`header bar matches snapshot 1`] = `
       }
       defaultIsOpen={false}
       disabled={false}
+      fill={false}
       hasBackdrop={false}
       hoverCloseDelay={300}
       hoverOpenDelay={150}
@@ -199,6 +200,7 @@ exports[`header bar matches snapshot 1`] = `
       }
       defaultIsOpen={false}
       disabled={false}
+      fill={false}
       hasBackdrop={false}
       hoverCloseDelay={300}
       hoverOpenDelay={150}
@@ -234,7 +236,7 @@ exports[`header bar matches snapshot 1`] = `
           />
           <Blueprint3.MenuItem
             disabled={false}
-            href="http://druid.io/docs/latest"
+            href="https://druid.apache.org/docs/latest"
             icon="th"
             multiline={false}
             popoverProps={Object {}}
@@ -254,6 +256,16 @@ exports[`header bar matches snapshot 1`] = `
           />
           <Blueprint3.MenuItem
             disabled={false}
+            href="https://druid.apache.org/community/join-slack"
+            icon="chat"
+            multiline={false}
+            popoverProps={Object {}}
+            shouldDismissPopover={true}
+            target="_blank"
+            text="ASF Slack channel"
+          />
+          <Blueprint3.MenuItem
+            disabled={false}
             href="https://github.com/apache/druid"
             icon="git-branch"
             multiline={false}
@@ -266,6 +278,7 @@ exports[`header bar matches snapshot 1`] = `
       }
       defaultIsOpen={false}
       disabled={false}
+      fill={false}
       hasBackdrop={false}
       hoverCloseDelay={300}
       hoverOpenDelay={150}

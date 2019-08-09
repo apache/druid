@@ -25,8 +25,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
-
-import java.util.Map;
+import org.apache.druid.query.context.ResponseContext;
 
 public class SerializingQueryRunner<T> implements QueryRunner<T>
 {
@@ -48,7 +47,7 @@ public class SerializingQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(
       final QueryPlus<T> queryPlus,
-      final Map<String, Object> responseContext
+      final ResponseContext responseContext
   )
   {
     return Sequences.map(

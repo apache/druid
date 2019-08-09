@@ -16,42 +16,89 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .load-data-view {
   height: 100%;
   display: grid;
-  grid-gap: 10px 5px;
+  grid-gap: 15px 5px;
   grid-template-columns: 1fr 280px;
   grid-template-rows: 55px 1fr 28px;
   grid-template-areas:
-    "navi navi"
-    "main ctrl"
-    "main next";
+    'navi navi'
+    'main ctrl'
+    'main next';
 
-  &.init {
+  &.load-data-continue-view {
     display: block;
+    text-align: center;
 
-    & > * {
-      margin-bottom: 15px;
+    .spec-card {
+      display: inline-block;
+      width: 480px;
+      height: 100px;
+      margin: 10px;
+      text-align: left;
+
+      .spec-card-icon {
+        vertical-align: top;
+      }
+
+      .spec-card-header {
+        font-size: 25px;
+        line-height: 30px;
+        display: inline-block;
+        vertical-align: top;
+        padding-left: 10px;
+
+        .spec-card-caption {
+          font-size: 15px;
+          line-height: 20px;
+        }
+      }
     }
+  }
 
-    .intro {
-      font-size: 20px;
-    }
+  &.welcome {
+    .main {
+      height: 100%;
+      padding: 0;
+      overflow: auto;
 
-    .cards {
       .bp3-card {
+        position: relative;
         display: inline-block;
         vertical-align: top;
         width: 250px;
         height: 140px;
-        margin-right: 15px;
-        margin-bottom: 15px;
-        font-size: 24px;
+        margin-top: 10px;
+        margin-left: 10px;
+        font-size: 16px;
         text-align: center;
-        padding-top: 47px;
+
+        & > * {
+          user-select: none;
+          pointer-events: none;
+        }
+
+        &.active::after {
+          position: absolute;
+          top: 0;
+          right: 0;
+          bottom: 0;
+          left: 0;
+          content: '';
+          border: 2px solid #48aff0;
+          border-radius: 2px;
+        }
 
         &.disabled {
           opacity: 0.4;
+        }
+
+        img {
+          width: 100px;
+          display: inline-block;
         }
       }
     }
@@ -61,11 +108,11 @@
   &.tuning,
   &.publish {
     grid-gap: 20px 40px;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr 280px;
     grid-template-areas:
-      "navi navi navi"
-      "main othr ctrl"
-      "main othr next";
+      'navi navi navi'
+      'main othr ctrl'
+      'main othr next';
 
     .main,
     .other {
@@ -75,25 +122,25 @@
     }
   }
 
-  .stage-nav {
+  .step-nav {
     grid-area: navi;
     white-space: nowrap;
     overflow: auto;
     padding: 0 5px;
 
-    .stage-section {
+    .step-section {
       display: inline-block;
       vertical-align: top;
       margin-right: 15px;
     }
 
-    .stage-nav-l1 {
+    .step-nav-l1 {
       height: 25px;
       font-weight: bold;
       color: #eeeeee;
     }
 
-    .stage-nav-l2 {
+    .step-nav-l2 {
       height: 30px;
     }
   }
@@ -146,7 +193,7 @@
             bottom: 0;
             left: 0;
             right: 0;
-            content: "";
+            content: '';
             border: 2px solid #ff5d10;
             border-radius: 2px;
           }
@@ -192,7 +239,7 @@
     text-align: right;
     padding: 0 5px;
 
-    .prev {
+    .left {
       float: left;
     }
   }

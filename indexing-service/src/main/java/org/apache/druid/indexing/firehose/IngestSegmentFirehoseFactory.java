@@ -159,12 +159,14 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
   }
 
   @JsonProperty
+  @Nullable
   public Interval getInterval()
   {
     return interval;
   }
 
   @JsonProperty
+  @Nullable
   public List<WindowedSegmentId> getSegments()
   {
     return segmentIds;
@@ -204,87 +206,87 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
         segmentIds
     );
 
-    try {
-      final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = getTimeline();
+    final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = getTimeline();
 
-      // Download all segments locally.
-      // Note: this requires enough local storage space to fit all of the segments, even though
-      // IngestSegmentFirehose iterates over the segments in series. We may want to change this
-      // to download files lazily, perhaps sharing code with PrefetchableTextFilesFirehoseFactory.
-      final SegmentLoader segmentLoader = segmentLoaderFactory.manufacturate(temporaryDirectory);
-      Map<DataSegment, File> segmentFileMap = Maps.newLinkedHashMap();
-      for (TimelineObjectHolder<String, DataSegment> holder : timeLineSegments) {
-        for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
-          final DataSegment segment = chunk.getObject();
-          if (!segmentFileMap.containsKey(segment)) {
-            segmentFileMap.put(segment, segmentLoader.getSegmentFiles(segment));
+    // Download all segments locally.
+    // Note: this requires enough local storage space to fit all of the segments, even though
+    // IngestSegmentFirehose iterates over the segments in series. We may want to change this
+    // to download files lazily, perhaps sharing code with PrefetchableTextFilesFirehoseFactory.
+    final SegmentLoader segmentLoader = segmentLoaderFactory.manufacturate(temporaryDirectory);
+    Map<DataSegment, File> segmentFileMap = Maps.newLinkedHashMap();
+    for (TimelineObjectHolder<String, DataSegment> holder : timeLineSegments) {
+      for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
+        final DataSegment segment = chunk.getObject();
+
+        segmentFileMap.computeIfAbsent(segment, k -> {
+          try {
+            return segmentLoader.getSegmentFiles(segment);
           }
-        }
+          catch (SegmentLoadingException e) {
+            throw new RuntimeException(e);
+          }
+        });
+
       }
+    }
 
-      final List<String> dims;
-      if (dimensions != null) {
-        dims = dimensions;
-      } else if (inputRowParser.getParseSpec().getDimensionsSpec().hasCustomDimensions()) {
-        dims = inputRowParser.getParseSpec().getDimensionsSpec().getDimensionNames();
-      } else {
-        dims = getUniqueDimensions(
-            timeLineSegments,
-            inputRowParser.getParseSpec().getDimensionsSpec().getDimensionExclusions()
-        );
-      }
+    final List<String> dims;
+    if (dimensions != null) {
+      dims = dimensions;
+    } else if (inputRowParser.getParseSpec().getDimensionsSpec().hasCustomDimensions()) {
+      dims = inputRowParser.getParseSpec().getDimensionsSpec().getDimensionNames();
+    } else {
+      dims = getUniqueDimensions(
+        timeLineSegments,
+        inputRowParser.getParseSpec().getDimensionsSpec().getDimensionExclusions()
+      );
+    }
 
-      final List<String> metricsList = metrics == null ? getUniqueMetrics(timeLineSegments) : metrics;
+    final List<String> metricsList = metrics == null ? getUniqueMetrics(timeLineSegments) : metrics;
 
-      final List<WindowedStorageAdapter> adapters = Lists.newArrayList(
-          Iterables.concat(
-              Iterables.transform(
-                  timeLineSegments,
-                  new Function<TimelineObjectHolder<String, DataSegment>, Iterable<WindowedStorageAdapter>>()
-                  {
+    final List<WindowedStorageAdapter> adapters = Lists.newArrayList(
+        Iterables.concat(
+        Iterables.transform(
+          timeLineSegments,
+          new Function<TimelineObjectHolder<String, DataSegment>, Iterable<WindowedStorageAdapter>>() {
+            @Override
+            public Iterable<WindowedStorageAdapter> apply(final TimelineObjectHolder<String, DataSegment> holder)
+            {
+              return
+                Iterables.transform(
+                  holder.getObject(),
+                  new Function<PartitionChunk<DataSegment>, WindowedStorageAdapter>() {
                     @Override
-                    public Iterable<WindowedStorageAdapter> apply(final TimelineObjectHolder<String, DataSegment> holder)
+                    public WindowedStorageAdapter apply(final PartitionChunk<DataSegment> input)
                     {
-                      return
-                          Iterables.transform(
-                              holder.getObject(),
-                              new Function<PartitionChunk<DataSegment>, WindowedStorageAdapter>()
-                              {
-                                @Override
-                                public WindowedStorageAdapter apply(final PartitionChunk<DataSegment> input)
-                                {
-                                  final DataSegment segment = input.getObject();
-                                  try {
-                                    return new WindowedStorageAdapter(
-                                        new QueryableIndexStorageAdapter(
-                                            indexIO.loadIndex(
-                                                Preconditions.checkNotNull(
-                                                    segmentFileMap.get(segment),
-                                                    "File for segment %s", segment.getId()
-                                                )
-                                            )
-                                        ),
-                                        holder.getInterval()
-                                    );
-                                  }
-                                  catch (IOException e) {
-                                    throw new RuntimeException(e);
-                                  }
-                                }
-                              }
-                          );
+                      final DataSegment segment = input.getObject();
+                      try {
+                        return new WindowedStorageAdapter(
+                          new QueryableIndexStorageAdapter(
+                            indexIO.loadIndex(
+                              Preconditions.checkNotNull(
+                                segmentFileMap.get(segment),
+                                "File for segment %s", segment.getId()
+                              )
+                            )
+                          ),
+                          holder.getInterval()
+                        );
+                      }
+                      catch (IOException e) {
+                        throw new RuntimeException(e);
+                      }
                     }
                   }
-              )
-          )
-      );
+                );
+            }
+          }
+        )
+      )
+    );
 
-      final TransformSpec transformSpec = TransformSpec.fromInputRowParser(inputRowParser);
-      return new IngestSegmentFirehose(adapters, transformSpec, dims, metricsList, dimFilter);
-    }
-    catch (SegmentLoadingException e) {
-      throw new RuntimeException(e);
-    }
+    final TransformSpec transformSpec = TransformSpec.fromInputRowParser(inputRowParser);
+    return new IngestSegmentFirehose(adapters, transformSpec, dims, metricsList, dimFilter);
   }
 
   private long jitter(long input)
@@ -508,13 +510,14 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     // segments to olders.
 
     // timelineSegments are sorted in order of interval
-    int index = 0;
+    int[] index = {0};
     for (TimelineObjectHolder<String, DataSegment> timelineHolder : Lists.reverse(timelineSegments)) {
       for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
         for (String metric : chunk.getObject().getMetrics()) {
-          if (!uniqueMetrics.containsKey(metric)) {
-            uniqueMetrics.put(metric, index++);
+          uniqueMetrics.computeIfAbsent(metric, k -> {
+            return index[0]++;
           }
+          );
         }
       }
     }

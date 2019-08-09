@@ -180,8 +180,7 @@ public class ScanQueryRunnerTest
         .virtualColumns(EXPR_COLUMN)
         .build();
 
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
 
     List<ScanResultValue> expectedResults = toExpected(
         toFullEvents(V_0112_0114),
@@ -222,8 +221,7 @@ public class ScanQueryRunnerTest
         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
         .build();
 
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
 
     List<ScanResultValue> expectedResults = toExpected(
         toFullEvents(V_0112_0114),
@@ -246,8 +244,7 @@ public class ScanQueryRunnerTest
         )
         .build();
 
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
 
     final List<List<Map<String, Object>>> expectedEvents = toEvents(
         new String[]{
@@ -293,8 +290,7 @@ public class ScanQueryRunnerTest
         .columns(QueryRunnerTestHelper.marketDimension, QueryRunnerTestHelper.indexMetric)
         .build();
 
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
 
     List<ScanResultValue> expectedResults = toExpected(
         toEvents(
@@ -328,8 +324,7 @@ public class ScanQueryRunnerTest
         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
         .build();
 
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
 
     List<ScanResultValue> expectedResults = toExpected(
         toEvents(
@@ -366,8 +361,7 @@ public class ScanQueryRunnerTest
           .limit(limit)
           .build();
 
-      HashMap<String, Object> context = new HashMap<String, Object>();
-      Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
+      Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
 
       final List<List<Map<String, Object>>> events = toEvents(
           new String[]{
@@ -426,10 +420,10 @@ public class ScanQueryRunnerTest
         .columns(QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.indexMetric)
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
     Iterable<ScanResultValue> resultsOptimize = toolChest
         .postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)))
-        .run(QueryPlus.wrap(query), new HashMap<>())
+        .run(QueryPlus.wrap(query))
         .toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
@@ -485,7 +479,7 @@ public class ScanQueryRunnerTest
         )
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
 
     List<ScanResultValue> expectedResults = Collections.emptyList();
 
@@ -500,7 +494,7 @@ public class ScanQueryRunnerTest
         .columns("foo", "foo2")
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
         legacy ? new String[]{getTimestampName() + ":TIME"} : new String[0],
@@ -535,8 +529,7 @@ public class ScanQueryRunnerTest
           .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
           .build();
 
-      HashMap<String, Object> context = new HashMap<>();
-      Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
+      Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
       String[] seg1Results = new String[]{
           "2011-01-12T00:00:00.000Z\tspot\tautomotive\tpreferred\tapreferred\t100.000000",
           "2011-01-12T00:00:00.000Z\tspot\tbusiness\tpreferred\tbpreferred\t100.000000",
@@ -623,8 +616,7 @@ public class ScanQueryRunnerTest
           .order(ScanQuery.Order.DESCENDING)
           .build();
 
-      HashMap<String, Object> context = new HashMap<>();
-      Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
+      Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
       String[] seg1Results = new String[]{
           "2011-01-12T00:00:00.000Z\tspot\tautomotive\tpreferred\tapreferred\t100.000000",
           "2011-01-12T00:00:00.000Z\tspot\tbusiness\tpreferred\tbpreferred\t100.000000",
@@ -736,8 +728,7 @@ public class ScanQueryRunnerTest
           .limit(limit)
           .build();
 
-      HashMap<String, Object> context = new HashMap<>();
-      Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
+      Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
       final List<List<Map<String, Object>>> ascendingEvents = toEvents(
           new String[]{
               legacy ? getTimestampName() + ":TIME" : ColumnHolder.TIME_COLUMN_NAME,
@@ -827,8 +818,7 @@ public class ScanQueryRunnerTest
           .limit(limit)
           .build();
 
-      HashMap<String, Object> context = new HashMap<>();
-      Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
+      Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
       String[] expectedRet = (String[]) ArrayUtils.addAll(seg1Results, seg2Results);
       ArrayUtils.reverse(expectedRet);
       final List<List<Map<String, Object>>> descendingEvents = toEvents(

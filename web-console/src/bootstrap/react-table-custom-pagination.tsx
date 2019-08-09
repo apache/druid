@@ -21,7 +21,7 @@ import React from 'react';
 
 import './react-table-custom-pagination.scss';
 
-interface ReactTableCustomPaginationProps extends React.Props<any> {
+interface ReactTableCustomPaginationProps {
   pages: number;
   page: number;
   showPageSizeOptions: boolean;
@@ -44,12 +44,15 @@ interface ReactTableCustomPaginationState {
   page: string | number;
 }
 
-export class ReactTableCustomPagination extends React.PureComponent<ReactTableCustomPaginationProps, ReactTableCustomPaginationState> {
+export class ReactTableCustomPagination extends React.PureComponent<
+  ReactTableCustomPaginationProps,
+  ReactTableCustomPaginationState
+> {
   constructor(props: ReactTableCustomPaginationProps) {
     super(props);
 
     this.state = {
-      page: props.page
+      page: props.page,
     };
   }
 
@@ -62,7 +65,7 @@ export class ReactTableCustomPagination extends React.PureComponent<ReactTableCu
       page = this.props.page;
     }
     return Math.min(Math.max(page, 0), this.props.pages - 1);
-  }
+  };
 
   changePage = (page: any) => {
     page = this.getSafePage(page);
@@ -70,7 +73,7 @@ export class ReactTableCustomPagination extends React.PureComponent<ReactTableCu
     if (this.props.page !== page) {
       this.props.onPageChange(page);
     }
-  }
+  };
 
   applyPage = (e: any) => {
     if (e) {
@@ -78,9 +81,9 @@ export class ReactTableCustomPagination extends React.PureComponent<ReactTableCu
     }
     const page = this.state.page;
     this.changePage(page === '' ? this.props.page : page);
-  }
+  };
 
-  render() {
+  render(): JSX.Element {
     const {
       pages,
       page,
@@ -96,7 +99,7 @@ export class ReactTableCustomPagination extends React.PureComponent<ReactTableCu
       nextText,
       ofText,
       pageText,
-      rowsText
+      rowsText,
     } = this.props;
 
     return (
@@ -116,8 +119,8 @@ export class ReactTableCustomPagination extends React.PureComponent<ReactTableCu
         <div className="-center">
           <span className="-pageInfo">
             {pageText}{' '}
-            {showPageJump
-              ? <div className="-pageJump">
+            {showPageJump ? (
+              <div className="-pageJump">
                 <input
                   className={Classes.INPUT}
                   type={this.state.page === '' ? 'text' : 'number'}
@@ -138,17 +141,14 @@ export class ReactTableCustomPagination extends React.PureComponent<ReactTableCu
                   }}
                 />
               </div>
-             : <span className="-currentPage">{page + 1}</span>
-            }
-            {' '}
+            ) : (
+              <span className="-currentPage">{page + 1}</span>
+            )}{' '}
             {ofText} <span className="-totalPages">{pages || 1}</span>
           </span>
           {showPageSizeOptions && (
             <span className="select-wrap -pageSizeOptions">
-              <HTMLSelect
-                onChange={e => onPageSizeChange(Number(e.target.value))}
-                value={pageSize}
-              >
+              <HTMLSelect onChange={e => onPageSizeChange(Number(e.target.value))} value={pageSize}>
                 {pageSizeOptions.map((option: any, i: number) => (
                   <option key={i} value={option}>
                     {`${option} ${rowsText}`}

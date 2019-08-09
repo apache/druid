@@ -20,15 +20,16 @@ import React from 'react';
 
 import './center-message.scss';
 
-export interface CenterMessageProps extends React.Props<any> {
-}
+export interface CenterMessageProps {}
 
 export class CenterMessage extends React.PureComponent<CenterMessageProps> {
-  render() {
-    return <div className="center-message bp3-input">
-      <div className="center-message-inner">
-        {this.props.children}
+  render(): JSX.Element {
+    const { children } = this.props;
+
+    return (
+      <div className="center-message bp3-input">
+        <div className="center-message-inner">{children}</div>
       </div>
-    </div>;
+    );
   }
 }

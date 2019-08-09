@@ -24,13 +24,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.NlsString;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -170,7 +170,6 @@ public class QueryMaker
     );
   }
 
-  @SuppressWarnings("unchecked")
   private <T> Sequence<T> runQuery(Query<T> query)
   {
     Hook.QUERY_PLAN.run(query);
@@ -261,23 +260,27 @@ public class QueryMaker
   )
   {
     final List<RelDataTypeField> fieldList = druidQuery.getOutputRowType().getFieldList();
+    final Object2IntMap<String> resultRowPositionLookup = query.getResultRowPositionLookup();
+    final List<String> sqlRowOrder = druidQuery.getOutputRowSignature().getRowOrder();
+    final int[] resultRowPositions = new int[fieldList.size()];
+
+    for (final RelDataTypeField field : fieldList) {
+      final String columnName = sqlRowOrder.get(field.getIndex());
+      final int resultRowPosition = resultRowPositionLookup.applyAsInt(columnName);
+      resultRowPositions[field.getIndex()] = resultRowPosition;
+    }
 
     return Sequences.map(
         runQuery(query),
-        new Function<Row, Object[]>()
-        {
-          @Override
-          public Object[] apply(final Row row)
-          {
-            final Object[] retVal = new Object[fieldList.size()];
-            for (RelDataTypeField field : fieldList) {
-              retVal[field.getIndex()] = coerce(
-                  row.getRaw(druidQuery.getOutputRowSignature().getRowOrder().get(field.getIndex())),
-                  field.getType().getSqlTypeName()
-              );
-            }
-            return retVal;
+        resultRow -> {
+          final Object[] retVal = new Object[fieldList.size()];
+          for (RelDataTypeField field : fieldList) {
+            retVal[field.getIndex()] = coerce(
+                resultRow.get(resultRowPositions[field.getIndex()]),
+                field.getType().getSqlTypeName()
+            );
           }
+          return retVal;
         }
     );
   }
@@ -387,6 +390,13 @@ public class QueryMaker
         }
       } else {
         coercedValue = value.getClass().getName();
+      }
+    } else if (sqlType == SqlTypeName.ARRAY) {
+      try {
+        coercedValue = jsonMapper.writeValueAsString(value);
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
       }
     } else {
       throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);

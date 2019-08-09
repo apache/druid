@@ -79,6 +79,9 @@ To run only a single test using mvn run the following command:
   mvn verify -P integration-tests -Dit.test=<test_name>
 ```
 
+Add `-rf :druid-integration-tests` when running integration tests for the second time or later without changing
+the code of core modules in between to skip up-to-date checks for the whole module dependency tree.
+
 Running Tests Using A Configuration File for Any Cluster
 -------------------
 
@@ -215,8 +218,3 @@ This will tell the test framework that the test class needs to be constructed us
 2) FromFileTestQueryHelper - reads queries with expected results from file and executes them and verifies the results using ResultVerifier
 
 Refer ITIndexerTest as an example on how to use dependency Injection
-
-### Register new tests for Travis CI
-
-Once you add new integration tests, don't forget to add them to `{DRUID_ROOT}/ci/travis_script_integration.sh`
-or `{DRUID_ROOT}/ci/travis_script_integration_part2.sh` for Travis CI to run them.

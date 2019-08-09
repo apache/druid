@@ -38,14 +38,11 @@ import java.io.File;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.expectLastCall;
-
 public class GoogleTaskLogsTest extends EasyMockSupport
 {
-  private static final String bucket = "test";
-  private static final String prefix = "test/log";
-  private static final String taskid = "taskid";
+  private static final String BUCKET = "test";
+  private static final String PREFIX = "test/log";
+  private static final String TASKID = "taskid";
 
   private GoogleStorage storage;
   private GoogleTaskLogs googleTaskLogs;
@@ -54,7 +51,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
   public void before()
   {
     storage = createMock(GoogleStorage.class);
-    GoogleTaskLogsConfig config = new GoogleTaskLogsConfig(bucket, prefix);
+    GoogleTaskLogsConfig config = new GoogleTaskLogsConfig(BUCKET, PREFIX);
     googleTaskLogs = new GoogleTaskLogs(config, storage);
   }
 
@@ -69,12 +66,16 @@ public class GoogleTaskLogsTest extends EasyMockSupport
       output.write("test");
       output.close();
 
-      storage.insert(EasyMock.eq(bucket), EasyMock.eq(prefix + "/" + taskid), EasyMock.anyObject(InputStreamContent.class));
-      expectLastCall();
+      storage.insert(
+          EasyMock.eq(BUCKET),
+          EasyMock.eq(PREFIX + "/" + TASKID),
+          EasyMock.anyObject(InputStreamContent.class)
+      );
+      EasyMock.expectLastCall();
 
       replayAll();
 
-      googleTaskLogs.pushTaskLog(taskid, logFile);
+      googleTaskLogs.pushTaskLog(TASKID, logFile);
 
       verifyAll();
     }
@@ -88,14 +89,14 @@ public class GoogleTaskLogsTest extends EasyMockSupport
   {
     final String testLog = "hello this is a log";
 
-    final String logPath = prefix + "/" + taskid;
-    expect(storage.exists(bucket, logPath)).andReturn(true);
-    expect(storage.size(bucket, logPath)).andReturn((long) testLog.length());
-    expect(storage.get(bucket, logPath)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
+    final String logPath = PREFIX + "/" + TASKID;
+    EasyMock.expect(storage.exists(BUCKET, logPath)).andReturn(true);
+    EasyMock.expect(storage.size(BUCKET, logPath)).andReturn((long) testLog.length());
+    EasyMock.expect(storage.get(BUCKET, logPath)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
 
     replayAll();
 
-    final Optional<ByteSource> byteSource = googleTaskLogs.streamTaskLog(taskid, 0);
+    final Optional<ByteSource> byteSource = googleTaskLogs.streamTaskLog(TASKID, 0);
 
     final StringWriter writer = new StringWriter();
     IOUtils.copy(byteSource.get().openStream(), writer, "UTF-8");
@@ -109,14 +110,14 @@ public class GoogleTaskLogsTest extends EasyMockSupport
   {
     final String testLog = "hello this is a log";
 
-    final String logPath = prefix + "/" + taskid;
-    expect(storage.exists(bucket, logPath)).andReturn(true);
-    expect(storage.size(bucket, logPath)).andReturn((long) testLog.length());
-    expect(storage.get(bucket, logPath)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
+    final String logPath = PREFIX + "/" + TASKID;
+    EasyMock.expect(storage.exists(BUCKET, logPath)).andReturn(true);
+    EasyMock.expect(storage.size(BUCKET, logPath)).andReturn((long) testLog.length());
+    EasyMock.expect(storage.get(BUCKET, logPath)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
 
     replayAll();
 
-    final Optional<ByteSource> byteSource = googleTaskLogs.streamTaskLog(taskid, 5);
+    final Optional<ByteSource> byteSource = googleTaskLogs.streamTaskLog(TASKID, 5);
 
     final StringWriter writer = new StringWriter();
     IOUtils.copy(byteSource.get().openStream(), writer, "UTF-8");
@@ -130,14 +131,14 @@ public class GoogleTaskLogsTest extends EasyMockSupport
   {
     final String testLog = "hello this is a log";
 
-    final String logPath = prefix + "/" + taskid;
-    expect(storage.exists(bucket, logPath)).andReturn(true);
-    expect(storage.size(bucket, logPath)).andReturn((long) testLog.length());
-    expect(storage.get(bucket, logPath)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
+    final String logPath = PREFIX + "/" + TASKID;
+    EasyMock.expect(storage.exists(BUCKET, logPath)).andReturn(true);
+    EasyMock.expect(storage.size(BUCKET, logPath)).andReturn((long) testLog.length());
+    EasyMock.expect(storage.get(BUCKET, logPath)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
 
     replayAll();
 
-    final Optional<ByteSource> byteSource = googleTaskLogs.streamTaskLog(taskid, -3);
+    final Optional<ByteSource> byteSource = googleTaskLogs.streamTaskLog(TASKID, -3);
 
     final StringWriter writer = new StringWriter();
     IOUtils.copy(byteSource.get().openStream(), writer, "UTF-8");

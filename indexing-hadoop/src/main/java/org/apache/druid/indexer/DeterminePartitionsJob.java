@@ -20,7 +20,6 @@
 package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
@@ -39,7 +38,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
@@ -73,7 +71,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -129,7 +126,10 @@ public class DeterminePartitionsJob implements Jobby
         );
       }
 
-      if (!config.getPartitionsSpec().isAssumeGrouped()) {
+      final SingleDimensionPartitionsSpec partitionsSpec =
+          (SingleDimensionPartitionsSpec) config.getPartitionsSpec();
+
+      if (!partitionsSpec.isAssumeGrouped()) {
         groupByJob = Job.getInstance(
             new Configuration(),
             StringUtils.format("%s-determine_partitions_groupby-%s", config.getDataSource(), config.getIntervals())
@@ -194,7 +194,7 @@ public class DeterminePartitionsJob implements Jobby
       JobHelper.injectSystemProperties(dimSelectionJob);
       config.addJobProperties(dimSelectionJob);
 
-      if (!config.getPartitionsSpec().isAssumeGrouped()) {
+      if (!partitionsSpec.isAssumeGrouped()) {
         // Read grouped data from the groupByJob.
         dimSelectionJob.setMapperClass(DeterminePartitionsDimSelectionPostGroupByMapper.class);
         dimSelectionJob.setInputFormatClass(SequenceFileInputFormat.class);
@@ -573,36 +573,17 @@ public class DeterminePartitionsJob implements Jobby
       return new CombiningIterable<>(
           Iterables.transform(
               input,
-              new Function<Text, DimValueCount>()
-              {
-                @Override
-                public DimValueCount apply(Text input)
-                {
-                  return DimValueCount.fromText(input);
-                }
-              }
+              DimValueCount::fromText
           ),
-          new Comparator<DimValueCount>()
-          {
-            @Override
-            public int compare(DimValueCount o1, DimValueCount o2)
-            {
-              return ComparisonChain.start().compare(o1.dim, o2.dim).compare(o1.value, o2.value).result();
+          (o1, o2) -> ComparisonChain.start().compare(o1.dim, o2.dim).compare(o1.value, o2.value).result(),
+          (arg1, arg2) -> {
+            if (arg2 == null) {
+              return arg1;
             }
-          },
-          new BinaryFn<DimValueCount, DimValueCount, DimValueCount>()
-          {
-            @Override
-            public DimValueCount apply(DimValueCount arg1, DimValueCount arg2)
-            {
-              if (arg2 == null) {
-                return arg1;
-              }
 
-              // Respect "poisoning" (negative values mean we can't use this dimension)
-              final long newNumRows = (arg1.numRows >= 0 && arg2.numRows >= 0 ? arg1.numRows + arg2.numRows : -1);
-              return new DimValueCount(arg1.dim, arg1.value, newNumRows);
-            }
+            // Respect "poisoning" (negative values mean we can't use this dimension)
+            final long newNumRows = (arg1.numRows >= 0 && arg2.numRows >= 0 ? arg1.numRows + arg2.numRows : -1);
+            return new DimValueCount(arg1.dim, arg1.value, newNumRows);
           }
       );
     }
@@ -786,8 +767,10 @@ public class DeterminePartitionsJob implements Jobby
 
         // Make sure none of these shards are oversized
         boolean oversized = false;
+        final SingleDimensionPartitionsSpec partitionsSpec =
+            (SingleDimensionPartitionsSpec) config.getPartitionsSpec();
         for (final DimPartition partition : dimPartitions.partitions) {
-          if (partition.rows > config.getMaxPartitionSize()) {
+          if (partition.rows > partitionsSpec.getMaxPartitionSize()) {
             log.info("Dimension[%s] has an oversized shard: %s", dimPartitions.dim, partition.shardSpec);
             oversized = true;
           }

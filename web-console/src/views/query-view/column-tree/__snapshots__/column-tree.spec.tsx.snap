@@ -1,0 +1,127 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`column tree matches snapshot 1`] = `
+<div
+  class="column-tree"
+>
+  <div
+    class="bp3-html-select bp3-fill bp3-large bp3-minimal schema-selector"
+  >
+    <select>
+      <option
+        value="0"
+      >
+        druid
+      </option>
+      <option
+        value="1"
+      >
+        sys
+      </option>
+    </select>
+    <span
+      class="bp3-icon bp3-icon-double-caret-vertical"
+      icon="double-caret-vertical"
+    >
+      <svg
+        data-icon="double-caret-vertical"
+        height="16"
+        viewBox="0 0 16 16"
+        width="16"
+      >
+        <desc>
+          double-caret-vertical
+        </desc>
+        <path
+          d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
+          fill-rule="evenodd"
+        />
+      </svg>
+    </span>
+  </div>
+  <div
+    class="tree-container"
+  >
+    <div
+      class="bp3-tree"
+    >
+      <ul
+        class="bp3-tree-node-list bp3-tree-root"
+      >
+        <li
+          class="bp3-tree-node"
+        >
+          <div
+            class="bp3-tree-node-content bp3-tree-node-content-0"
+          >
+            <span
+              class="bp3-icon bp3-icon-chevron-right bp3-tree-node-caret bp3-tree-node-caret-closed"
+              icon="chevron-right"
+            >
+              <svg
+                data-icon="chevron-right"
+                height="16"
+                viewBox="0 0 16 16"
+                width="16"
+              >
+                <desc>
+                  chevron-right
+                </desc>
+                <path
+                  d="M10.71 7.29l-4-4a1.003 1.003 0 00-1.42 1.42L8.59 8 5.3 11.29c-.19.18-.3.43-.3.71a1.003 1.003 0 001.71.71l4-4c.18-.18.29-.43.29-.71 0-.28-.11-.53-.29-.71z"
+                  fill-rule="evenodd"
+                />
+              </svg>
+            </span>
+            <span
+              class="bp3-icon bp3-icon-th bp3-tree-node-icon"
+              icon="th"
+            >
+              <svg
+                data-icon="th"
+                height="16"
+                viewBox="0 0 16 16"
+                width="16"
+              >
+                <desc>
+                  th
+                </desc>
+                <path
+                  d="M15 1H1c-.6 0-1 .5-1 1v12c0 .6.4 1 1 1h14c.6 0 1-.4 1-1V2c0-.5-.4-1-1-1zM6 13H2v-2h4v2zm0-3H2V8h4v2zm0-3H2V5h4v2zm8 6H7v-2h7v2zm0-3H7V8h7v2zm0-3H7V5h7v2z"
+                  fill-rule="evenodd"
+                />
+              </svg>
+            </span>
+            <span
+              class="bp3-tree-node-label"
+            >
+              <span
+                class="bp3-popover-wrapper"
+              >
+                <span
+                  class="bp3-popover-target"
+                >
+                  <div
+                    class=""
+                  >
+                    deletion-tutorial
+                  </div>
+                </span>
+              </span>
+            </span>
+          </div>
+          <div
+            class="bp3-collapse"
+          >
+            <div
+              aria-hidden="false"
+              class="bp3-collapse-body"
+              style="transform: translateY(-0px);"
+            />
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+`;

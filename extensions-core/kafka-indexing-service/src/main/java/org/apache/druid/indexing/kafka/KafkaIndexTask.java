@@ -29,11 +29,11 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -63,7 +63,8 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      @JacksonInject ObjectMapper configMapper
+      @JacksonInject ObjectMapper configMapper,
+      @JacksonInject AppenderatorsManager appenderatorsManager
   )
   {
     super(
@@ -76,7 +77,8 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
         chatHandlerProvider,
         authorizerMapper,
         rowIngestionMetersFactory,
-        getFormattedGroupId(dataSchema.getDataSource(), TYPE)
+        getFormattedGroupId(dataSchema.getDataSource(), TYPE),
+        appenderatorsManager
     );
     this.configMapper = configMapper;
     this.ioConfig = ioConfig;
@@ -135,7 +137,9 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
         authorizerMapper,
         chatHandlerProvider,
         savedParseExceptions,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager,
+        lockGranularityToUse
     );
   }
 
@@ -149,8 +153,6 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
       final Map<String, Object> props = new HashMap<>(((KafkaIndexTaskIOConfig) super.ioConfig).getConsumerProperties());
 
       props.put("auto.offset.reset", "none");
-      props.put("key.deserializer", ByteArrayDeserializer.class.getName());
-      props.put("value.deserializer", ByteArrayDeserializer.class.getName());
 
       return new KafkaRecordSupplier(props, configMapper);
     }

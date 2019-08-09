@@ -19,10 +19,12 @@
 import axios from 'axios';
 import { AxiosResponse } from 'axios';
 
-export function parseHtmlError(htmlStr: string): string | null {
+import { assemble } from './general';
+
+export function parseHtmlError(htmlStr: string): string | undefined {
   const startIndex = htmlStr.indexOf('</h3><pre>');
   const endIndex = htmlStr.indexOf('\n\tat');
-  if (startIndex === -1 || endIndex === -1) return null;
+  if (startIndex === -1 || endIndex === -1) return;
 
   return htmlStr
     .substring(startIndex + 10, endIndex)
@@ -32,15 +34,17 @@ export function parseHtmlError(htmlStr: string): string | null {
 }
 
 export function getDruidErrorMessage(e: any) {
-  const data: any = ((e.response || {}).data || {});
+  const data: any = (e.response || {}).data || {};
   switch (typeof data) {
     case 'object':
-      return [
-        data.error,
-        data.errorMessage,
-        data.errorClass,
-        data.host ? `on host ${data.host}` : null
-      ].filter(Boolean).join(' / ') || e.message;
+      return (
+        assemble(
+          data.error,
+          data.errorMessage,
+          data.errorClass,
+          data.host ? `on host ${data.host}` : undefined,
+        ).join(' / ') || e.message
+      );
 
     case 'string':
       const htmlResp = parseHtmlError(data);
@@ -61,7 +65,7 @@ export async function queryDruidRune(runeQuery: Record<string, any>): Promise<an
   return runeResultResp.data;
 }
 
-export async function queryDruidSql(sqlQuery: Record<string, any>): Promise<any[]> {
+export async function queryDruidSql<T = any>(sqlQuery: Record<string, any>): Promise<T[]> {
   let sqlResultResp: AxiosResponse<any>;
   try {
     sqlResultResp = await axios.post('/druid/v2/sql', sqlQuery);
@@ -85,7 +89,7 @@ function parseQueryPlanResult(queryPlanResult: string): BasicQueryExplanation {
   if (!queryPlanResult) {
     return {
       query: null,
-      signature: null
+      signature: null,
     };
   }
 
@@ -103,11 +107,13 @@ function parseQueryPlanResult(queryPlanResult: string): BasicQueryExplanation {
 
   return {
     query: parsedQuery || queryPlanResult,
-    signature: signatureValue || null
+    signature: signatureValue || null,
   };
 }
 
-export function parseQueryPlan(raw: string): BasicQueryExplanation | SemiJoinQueryExplanation | string {
+export function parseQueryPlan(
+  raw: string,
+): BasicQueryExplanation | SemiJoinQueryExplanation | string {
   let plan: string = raw;
   plan = plan.replace(/\n/g, '');
 
@@ -128,7 +134,7 @@ export function parseQueryPlan(raw: string): BasicQueryExplanation | SemiJoinQue
     if (keysArgumentIdx !== -1) {
       return {
         mainQuery: parseQueryPlanResult(queryArgs.substring(0, keysArgumentIdx)),
-        subQueryRight: parseQueryPlan(queryArgs.substring(queryArgs.indexOf(queryRelFnStart)))
+        subQueryRight: parseQueryPlan(queryArgs.substring(queryArgs.indexOf(queryRelFnStart))),
       } as SemiJoinQueryExplanation;
     }
   } else {

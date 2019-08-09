@@ -39,11 +39,11 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.timeline.LogicalSegment;
 
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -101,7 +101,7 @@ public class TimeBoundaryQueryQueryToolChest
       protected Sequence<Result<TimeBoundaryResultValue>> doRun(
           QueryRunner<Result<TimeBoundaryResultValue>> baseRunner,
           QueryPlus<Result<TimeBoundaryResultValue>> input,
-          Map<String, Object> context
+          ResponseContext context
       )
       {
         TimeBoundaryQuery query = (TimeBoundaryQuery) input.getQuery();

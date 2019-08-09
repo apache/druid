@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -71,6 +73,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         null,
         null,
         null,
+        null,
+        null,
         null
     );
   }
@@ -78,12 +82,14 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   @JsonCreator
   public ParallelIndexTuningConfig(
       @JsonProperty("targetPartitionSize") @Deprecated @Nullable Integer targetPartitionSize,
-      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
+      @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
-      @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
+      @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
       @JsonProperty("numShards") @Nullable Integer numShards,
+      @JsonProperty("partitionsSpec") @Nullable PartitionsSpec partitionsSpec,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
+      @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
       @JsonProperty("forceGuaranteedRollup") @Nullable Boolean forceGuaranteedRollup,
       @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
@@ -108,9 +114,10 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         null,
         numShards,
         null,
+        getValidPartitionsSpec(maxRowsPerSegment, maxTotalRows, partitionsSpec),
         indexSpec,
+        indexSpecForIntermediatePersists,
         maxPendingPersists,
-        null,
         forceGuaranteedRollup,
         reportParseExceptions,
         null,
@@ -133,6 +140,22 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
                                  : chatHandlerNumRetries;
 
     Preconditions.checkArgument(this.maxNumSubTasks > 0, "maxNumSubTasks must be positive");
+  }
+
+  private static PartitionsSpec getValidPartitionsSpec(
+      @Nullable Integer maxRowsPerSegment,
+      @Nullable Long maxTotalRows,
+      @Nullable PartitionsSpec partitionsSpec
+  )
+  {
+    if (partitionsSpec != null) {
+      if (!(partitionsSpec instanceof DynamicPartitionsSpec)) {
+        throw new UnsupportedOperationException("Parallel index task supports only dynamic partitionsSpec yet");
+      }
+      return partitionsSpec;
+    } else {
+      return new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
+    }
   }
 
   @JsonProperty
@@ -188,7 +211,6 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   @Override
   public int hashCode()
   {
-
     return Objects.hash(
         super.hashCode(),
         maxNumSubTasks,

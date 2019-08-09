@@ -22,10 +22,11 @@ import React from 'react';
 import './menu-checkbox.scss';
 
 export class MenuCheckbox extends React.PureComponent<ICheckboxProps> {
-
-  render() {
-    return <li className="menu-checkbox">
-      <Checkbox {...this.props}/>
-    </li>;
+  render(): JSX.Element {
+    return (
+      <li className="menu-checkbox">
+        <Checkbox {...this.props} />
+      </li>
+    );
   }
 }

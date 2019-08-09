@@ -28,13 +28,16 @@ import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.Permission;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.RetryUtils.Task;
+import org.apache.druid.java.util.common.logger.Logger;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Iterator;
@@ -47,6 +50,7 @@ public class S3Utils
 {
   private static final Joiner JOINER = Joiner.on("/").skipNulls();
   private static final String MIMETYPE_JETS3T_DIRECTORY = "application/x-directory";
+  private static final Logger log = new Logger(S3Utils.class);
 
   static boolean isServiceExceptionRecoverable(AmazonServiceException ex)
   {
@@ -241,5 +245,24 @@ public class S3Utils
     }
 
     return objectSummary;
+  }
+
+  /**
+   * Uploads a file to S3 if possible. First trying to set ACL to give the bucket owner full control of the file before uploading.
+   *
+   * @param service S3 client
+   * @param disableAcl true if ACL shouldn't be set for the file
+   * @param key The key under which to store the new object.
+   * @param file The path of the file to upload to Amazon S3.
+   */
+  public static void uploadFileIfPossible(ServerSideEncryptingAmazonS3 service, boolean disableAcl, String bucket, String key, File file)
+  {
+    final PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key, file);
+
+    if (!disableAcl) {
+      putObjectRequest.setAccessControlList(S3Utils.grantFullControlToBucketOwner(service, bucket));
+    }
+    log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
+    service.putObject(putObjectRequest);
   }
 }

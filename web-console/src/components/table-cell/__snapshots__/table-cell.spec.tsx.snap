@@ -4,28 +4,28 @@ exports[`table cell matches snapshot array long 1`] = `
 <span
   class="table-cell truncated"
 >
-  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+  [0, 1, 2, 3, 4, 5, 6, 7
   <span
     class="omitted"
   >
-    ...323 omitted...
+    ...357 omitted...
   </span>
   7, 98, 99]
   <span
-    class="bp3-icon bp3-icon-clipboard action-icon"
-    icon="clipboard"
+    class="bp3-icon bp3-icon-more action-icon"
+    icon="more"
   >
     <svg
-      data-icon="clipboard"
+      data-icon="more"
       height="16"
       viewBox="0 0 16 16"
       width="16"
     >
       <desc>
-        clipboard
+        more
       </desc>
       <path
-        d="M11 2c0-.55-.45-1-1-1h.22C9.88.4 9.24 0 8.5 0S7.12.4 6.78 1H7c-.55 0-1 .45-1 1v1h5V2zm2 0h-1v2H5V2H4c-.55 0-1 .45-1 1v12c0 .55.45 1 1 1h9c.55 0 1-.45 1-1V3c0-.55-.45-1-1-1z"
+        d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
         fill-rule="evenodd"
       />
     </svg>
@@ -57,28 +57,28 @@ exports[`table cell matches snapshot truncate 1`] = `
 <span
   class="table-cell truncated"
 >
-  testtesttesttesttesttesttesttesttesttesttesttesttesttestt
+  testtesttesttesttesttes
   <span
     class="omitted"
   >
-    ...329 omitted...
+    ...363 omitted...
   </span>
   sttesttest
   <span
-    class="bp3-icon bp3-icon-clipboard action-icon"
-    icon="clipboard"
+    class="bp3-icon bp3-icon-more action-icon"
+    icon="more"
   >
     <svg
-      data-icon="clipboard"
+      data-icon="more"
       height="16"
       viewBox="0 0 16 16"
       width="16"
     >
       <desc>
-        clipboard
+        more
       </desc>
       <path
-        d="M11 2c0-.55-.45-1-1-1h.22C9.88.4 9.24 0 8.5 0S7.12.4 6.78 1H7c-.55 0-1 .45-1 1v1h5V2zm2 0h-1v2H5V2H4c-.55 0-1 .45-1 1v12c0 .55.45 1 1 1h9c.55 0 1-.45 1-1V3c0-.55-.45-1-1-1z"
+        d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
         fill-rule="evenodd"
       />
     </svg>

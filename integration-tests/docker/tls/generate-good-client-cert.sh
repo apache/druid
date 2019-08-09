@@ -31,7 +31,7 @@ ST=DR
 L=Druid City
 O=Druid
 OU=IntegrationTests
-emailAddress=integration-test@druid.io
+emailAddress=integration-test@druid.apache.org
 CN = localhost
 
 [ req_ext ]

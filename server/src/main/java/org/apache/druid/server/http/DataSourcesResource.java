@@ -22,10 +22,12 @@ package org.apache.druid.server.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
@@ -50,7 +52,6 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
-import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -97,27 +98,24 @@ public class DataSourcesResource
   private static final Logger log = new Logger(DataSourcesResource.class);
 
   private final CoordinatorServerView serverInventoryView;
-  private final MetadataSegmentManager databaseSegmentManager;
-  private final MetadataRuleManager databaseRuleManager;
+  private final MetadataSegmentManager segmentsMetadata;
+  private final MetadataRuleManager metadataRuleManager;
   private final IndexingServiceClient indexingServiceClient;
-  private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
 
   @Inject
   public DataSourcesResource(
       CoordinatorServerView serverInventoryView,
-      MetadataSegmentManager databaseSegmentManager,
-      MetadataRuleManager databaseRuleManager,
+      MetadataSegmentManager segmentsMetadata,
+      MetadataRuleManager metadataRuleManager,
       @Nullable IndexingServiceClient indexingServiceClient,
-      AuthConfig authConfig,
       AuthorizerMapper authorizerMapper
   )
   {
     this.serverInventoryView = serverInventoryView;
-    this.databaseSegmentManager = databaseSegmentManager;
-    this.databaseRuleManager = databaseRuleManager;
+    this.segmentsMetadata = segmentsMetadata;
+    this.metadataRuleManager = metadataRuleManager;
     this.indexingServiceClient = indexingServiceClient;
-    this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
   }
 
@@ -130,24 +128,17 @@ public class DataSourcesResource
   )
   {
     Response.ResponseBuilder builder = Response.ok();
-    final Set<ImmutableDruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
-        req,
-        serverInventoryView,
-        authorizerMapper
-    );
+    final Set<ImmutableDruidDataSource> datasources =
+        InventoryViewUtils.getSecuredDataSources(req, serverInventoryView, authorizerMapper);
 
     final Object entity;
 
     if (full != null) {
       entity = datasources;
     } else if (simple != null) {
-      entity = datasources.stream()
-                          .map(this::makeSimpleDatasource)
-                          .collect(Collectors.toList());
+      entity = datasources.stream().map(this::makeSimpleDatasource).collect(Collectors.toList());
     } else {
-      entity = datasources.stream()
-                          .map(ImmutableDruidDataSource::getName)
-                          .collect(Collectors.toList());
+      entity = datasources.stream().map(ImmutableDruidDataSource::getName).collect(Collectors.toList());
     }
 
     return builder.entity(entity).build();
@@ -157,7 +148,7 @@ public class DataSourcesResource
   @Path("/{dataSourceName}")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response getTheDataSource(
+  public Response getDataSource(
       @PathParam("dataSourceName") final String dataSourceName,
       @QueryParam("full") final String full
   )
@@ -165,7 +156,7 @@ public class DataSourcesResource
     final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
 
     if (dataSource == null) {
-      return Response.noContent().build();
+      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
 
     if (full != null) {
@@ -175,33 +166,128 @@ public class DataSourcesResource
     return Response.ok(getSimpleDatasource(dataSourceName)).build();
   }
 
+  private interface MarkSegments
+  {
+    int markSegments() throws UnknownSegmentIdException;
+  }
+
   @POST
   @Path("/{dataSourceName}")
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response enableDataSource(
-      @PathParam("dataSourceName") final String dataSourceName
-  )
+  public Response markAsUsedAllNonOvershadowedSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
-    if (!databaseSegmentManager.enableDataSource(dataSourceName)) {
-      return Response.noContent().build();
-    }
-
-    return Response.ok().build();
+    MarkSegments markSegments = () -> segmentsMetadata.markAsUsedAllNonOvershadowedSegmentsInDataSource(dataSourceName);
+    return doMarkSegments("markAsUsedAllNonOvershadowedSegments", dataSourceName, markSegments);
   }
 
-  /* When this method is removed, a new method needs to be introduced corresponding to
-    the end point "DELETE /druid/coordinator/v1/datasources/{dataSourceName}" (with no query parameters).
-    Ultimately we want to have no method with kill parameter -
-    DELETE `{dataSourceName}` will be used to disable datasource and
-    DELETE `{dataSourceName}/intervals/{interval}` will be used to nuke segments
-  */
+  @POST
+  @Path("/{dataSourceName}/markUsed")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
+  public Response markAsUsedNonOvershadowedSegments(
+      @PathParam("dataSourceName") String dataSourceName,
+      MarkDataSourceSegmentsPayload payload
+  )
+  {
+    MarkSegments markSegments = () -> {
+      final Interval interval = payload.getInterval();
+      if (interval != null) {
+        return segmentsMetadata.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval);
+      } else {
+        final Set<String> segmentIds = payload.getSegmentIds();
+        return segmentsMetadata.markAsUsedNonOvershadowedSegments(dataSourceName, segmentIds);
+      }
+    };
+    return doMarkSegmentsWithPayload("markAsUsedNonOvershadowedSegments", dataSourceName, payload, markSegments);
+  }
+
+  @POST
+  @Path("/{dataSourceName}/markUnused")
+  @ResourceFilters(DatasourceResourceFilter.class)
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response markSegmentsAsUnused(
+      @PathParam("dataSourceName") final String dataSourceName,
+      final MarkDataSourceSegmentsPayload payload
+  )
+  {
+    MarkSegments markSegments = () -> {
+      final Interval interval = payload.getInterval();
+      if (interval != null) {
+        return segmentsMetadata.markAsUnusedSegmentsInInterval(dataSourceName, interval);
+      } else {
+        final Set<String> segmentIds = payload.getSegmentIds();
+        return segmentsMetadata.markSegmentsAsUnused(dataSourceName, segmentIds);
+      }
+    };
+    return doMarkSegmentsWithPayload("markSegmentsAsUnused", dataSourceName, payload, markSegments);
+  }
+
+  private Response doMarkSegmentsWithPayload(
+      String method,
+      String dataSourceName,
+      MarkDataSourceSegmentsPayload payload,
+      MarkSegments markSegments
+  )
+  {
+    if (payload == null || !payload.isValid()) {
+      log.warn("Invalid request payload: [%s]", payload);
+      return Response
+          .status(Response.Status.BAD_REQUEST)
+          .entity("Invalid request payload, either interval or segmentIds array must be specified")
+          .build();
+    }
+
+    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+    if (dataSource == null) {
+      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
+    }
+
+    return doMarkSegments(method, dataSourceName, markSegments);
+  }
+
+  private static Response logAndCreateDataSourceNotFoundResponse(String dataSourceName)
+  {
+    log.warn("datasource not found [%s]", dataSourceName);
+    return Response.noContent().build();
+  }
+
+  private static Response doMarkSegments(String method, String dataSourceName, MarkSegments markSegments)
+  {
+    try {
+      int numChangedSegments = markSegments.markSegments();
+      return Response.ok(ImmutableMap.of("numChangedSegments", numChangedSegments)).build();
+    }
+    catch (UnknownSegmentIdException e) {
+      log.warn("Segment ids %s are not found", e.getUnknownSegmentIds());
+      return Response
+          .status(Response.Status.NOT_FOUND)
+          .entity(ImmutableMap.of("message", e.getMessage()))
+          .build();
+    }
+    catch (Exception e) {
+      log.error(e, "Error occurred during [%s] call, data source: [%s]", method, dataSourceName);
+      return Response
+          .serverError()
+          .entity(ImmutableMap.of("error", "Exception occurred.", "message", Throwables.getRootCause(e).toString()))
+          .build();
+    }
+  }
+
+  /**
+   * When this method is removed, a new method needs to be introduced corresponding to
+   * the end point "DELETE /druid/coordinator/v1/datasources/{dataSourceName}" (with no query parameters).
+   * Ultimately we want to have no method with kill parameter -
+   * DELETE `{dataSourceName}` will be used to mark all segments belonging to a data source as unused, and
+   * DELETE `{dataSourceName}/intervals/{interval}` will be used to kill segments within an interval
+   */
   @DELETE
   @Deprecated
   @Path("/{dataSourceName}")
   @ResourceFilters(DatasourceResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response deleteDataSource(
+  public Response markAsUnusedAllSegmentsOrKillSegmentsInInterval(
       @PathParam("dataSourceName") final String dataSourceName,
       @QueryParam("kill") final String kill,
       @QueryParam("interval") final String interval
@@ -211,47 +297,20 @@ public class DataSourcesResource
       return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
     }
 
-    if (kill != null && Boolean.valueOf(kill)) {
-      try {
-        indexingServiceClient.killSegments(dataSourceName, Intervals.of(interval));
-      }
-      catch (IllegalArgumentException e) {
-        return Response.status(Response.Status.BAD_REQUEST)
-                       .entity(
-                           ImmutableMap.of(
-                               "error",
-                               "Exception occurred. Probably the interval is invalid",
-                               "message",
-                               e.toString()
-                           )
-                       )
-                       .build();
-      }
-      catch (Exception e) {
-        return Response.serverError().entity(
-            ImmutableMap.of(
-                "error",
-                "Exception occurred. Are you sure you have an indexing service?",
-                "message",
-                e.toString()
-            )
-        )
-                       .build();
-      }
+    boolean killSegments = kill != null && Boolean.valueOf(kill);
+    if (killSegments) {
+      return killSegmentsInInterval(dataSourceName, interval);
     } else {
-      if (!databaseSegmentManager.removeDataSource(dataSourceName)) {
-        return Response.noContent().build();
-      }
+      MarkSegments markSegments = () -> segmentsMetadata.markAsUnusedAllSegmentsInDataSource(dataSourceName);
+      return doMarkSegments("markAsUnusedAllSegments", dataSourceName, markSegments);
     }
-
-    return Response.ok().build();
   }
 
   @DELETE
   @Path("/{dataSourceName}/intervals/{interval}")
   @ResourceFilters(DatasourceResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response deleteDataSourceSpecificInterval(
+  public Response killSegmentsInInterval(
       @PathParam("dataSourceName") final String dataSourceName,
       @PathParam("interval") final String interval
   )
@@ -259,28 +318,32 @@ public class DataSourcesResource
     if (indexingServiceClient == null) {
       return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
     }
+    if (StringUtils.contains(interval, '_')) {
+      log.warn("Use interval with '/', not '_': [%s] given", interval);
+    }
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     try {
       indexingServiceClient.killSegments(dataSourceName, theInterval);
+      return Response.ok().build();
     }
     catch (Exception e) {
-      return Response.serverError()
-                     .entity(ImmutableMap.of(
-                         "error",
-                         "Exception occurred. Are you sure you have an indexing service?",
-                         "message",
-                         e.toString()
-                     ))
-                     .build();
+      return Response
+          .serverError()
+          .entity(
+              ImmutableMap.of(
+                  "error", "Exception occurred. Are you sure you have an indexing service?",
+                  "message", e.toString()
+              )
+          )
+          .build();
     }
-    return Response.ok().build();
   }
 
   @GET
   @Path("/{dataSourceName}/intervals")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response getSegmentDataSourceIntervals(
+  public Response getIntervalsWithServedSegmentsOrAllServedSegmentsPerIntervals(
       @PathParam("dataSourceName") String dataSourceName,
       @QueryParam("simple") String simple,
       @QueryParam("full") String full
@@ -289,21 +352,22 @@ public class DataSourcesResource
     if (simple == null && full == null) {
       final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
       if (dataSource == null) {
-        return Response.noContent().build();
+        return logAndCreateDataSourceNotFoundResponse(dataSourceName);
       }
       final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd().reversed();
       Set<Interval> intervals = new TreeSet<>(comparator);
       dataSource.getSegments().forEach(segment -> intervals.add(segment.getInterval()));
       return Response.ok(intervals).build();
+    } else {
+      return getServedSegmentsInInterval(dataSourceName, full != null, interval -> true);
     }
-    return getSegmentDataSourceIntervals(dataSourceName, full != null, interval -> true);
   }
 
   @GET
   @Path("/{dataSourceName}/intervals/{interval}")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response getSegmentDataSourceSpecificInterval(
+  public Response getServedSegmentsInInterval(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("interval") String interval,
       @QueryParam("simple") String simple,
@@ -314,7 +378,7 @@ public class DataSourcesResource
     if (simple == null && full == null) {
       final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
       if (dataSource == null) {
-        return Response.noContent().build();
+        return logAndCreateDataSourceNotFoundResponse(dataSourceName);
       }
       final Set<SegmentId> segmentIds = new TreeSet<>();
       for (DataSegment dataSegment : dataSource.getSegments()) {
@@ -324,7 +388,7 @@ public class DataSourcesResource
       }
       return Response.ok(segmentIds).build();
     }
-    return getSegmentDataSourceIntervals(dataSourceName, full != null, theInterval::contains);
+    return getServedSegmentsInInterval(dataSourceName, full != null, theInterval::contains);
   }
 
   /**
@@ -337,7 +401,7 @@ public class DataSourcesResource
     count
   }
 
-  private Response getSegmentDataSourceIntervals(
+  private Response getServedSegmentsInInterval(
       String dataSourceName,
       boolean full,
       Predicate<Interval> intervalFilter
@@ -346,7 +410,7 @@ public class DataSourcesResource
     final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
 
     if (dataSource == null) {
-      return Response.noContent().build();
+      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
 
     final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd().reversed();
@@ -357,10 +421,13 @@ public class DataSourcesResource
         if (intervalFilter.test(dataSegment.getInterval())) {
           Map<SegmentId, Object> segments = retVal.computeIfAbsent(dataSegment.getInterval(), i -> new HashMap<>());
 
-          Pair<DataSegment, Set<String>> val = getServersWhereSegmentIsServed(dataSegment.getId());
+          Pair<DataSegment, Set<String>> segmentAndServers = getServersWhereSegmentIsServed(dataSegment.getId());
 
-          if (val != null) {
-            segments.put(dataSegment.getId(), ImmutableMap.of("metadata", val.lhs, "servers", val.rhs));
+          if (segmentAndServers != null) {
+            segments.put(
+                dataSegment.getId(),
+                ImmutableMap.of("metadata", segmentAndServers.lhs, "servers", segmentAndServers.rhs)
+            );
           }
         }
       }
@@ -385,14 +452,14 @@ public class DataSourcesResource
   @Path("/{dataSourceName}/segments")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response getSegmentDataSourceSegments(
+  public Response getAllServedSegments(
       @PathParam("dataSourceName") String dataSourceName,
       @QueryParam("full") String full
   )
   {
     ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
-      return Response.noContent().build();
+      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
 
     Response.ResponseBuilder builder = Response.ok();
@@ -407,14 +474,14 @@ public class DataSourcesResource
   @Path("/{dataSourceName}/segments/{segmentId}")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response getSegmentDataSourceSegment(
+  public Response getServedSegment(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("segmentId") String segmentId
   )
   {
     ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
-      return Response.noContent().build();
+      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
 
     for (SegmentId possibleSegmentId : SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId)) {
@@ -423,44 +490,40 @@ public class DataSourcesResource
         return Response.ok(ImmutableMap.of("metadata", retVal.lhs, "servers", retVal.rhs)).build();
       }
     }
+    log.warn("Segment id [%s] is unknown", segmentId);
     return Response.noContent().build();
   }
 
   @DELETE
   @Path("/{dataSourceName}/segments/{segmentId}")
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response deleteDatasourceSegment(
+  public Response markSegmentAsUnused(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("segmentId") String segmentId
   )
   {
-    if (databaseSegmentManager.removeSegment(segmentId)) {
-      return Response.ok().build();
-    }
-    return Response.noContent().build();
+    boolean segmentStateChanged = segmentsMetadata.markSegmentAsUnused(segmentId);
+    return Response.ok(ImmutableMap.of("segmentStateChanged", segmentStateChanged)).build();
   }
 
   @POST
   @Path("/{dataSourceName}/segments/{segmentId}")
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response enableDatasourceSegment(
+  public Response markSegmentAsUsed(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("segmentId") String segmentId
   )
   {
-    if (!databaseSegmentManager.enableSegment(segmentId)) {
-      return Response.noContent().build();
-    }
-
-    return Response.ok().build();
+    boolean segmentStateChanged = segmentsMetadata.markSegmentAsUsed(segmentId);
+    return Response.ok().entity(ImmutableMap.of("segmentStateChanged", segmentStateChanged)).build();
   }
 
   @GET
   @Path("/{dataSourceName}/tiers")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response getSegmentDataSourceTiers(@PathParam("dataSourceName") String dataSourceName)
+  public Response getTiersWhereSegmentsAreServed(@PathParam("dataSourceName") String dataSourceName)
   {
     Set<String> retVal = new HashSet<>();
     for (DruidServer druidServer : serverInventoryView.getInventory()) {
@@ -475,20 +538,22 @@ public class DataSourcesResource
   @Nullable
   private ImmutableDruidDataSource getDataSource(final String dataSourceName)
   {
-    List<ImmutableDruidDataSource> dataSources = serverInventoryView
+    List<DruidDataSource> dataSources = serverInventoryView
         .getInventory()
         .stream()
         .map(server -> server.getDataSource(dataSourceName))
         .filter(Objects::nonNull)
-        .map(DruidDataSource::toImmutableDruidDataSource)
         .collect(Collectors.toList());
 
     if (dataSources.isEmpty()) {
       return null;
     }
 
+    // Note: this logic doesn't guarantee that the result is a snapshot that ever existed in the cluster because all
+    // DruidDataSource objects (belonging to different servers) are independently, concurrently mutable objects.
+    // But this is OK because a "snapshot" hardly even makes sense in a distributed system anyway.
     final SortedMap<SegmentId, DataSegment> segmentMap = new TreeMap<>();
-    for (ImmutableDruidDataSource dataSource : dataSources) {
+    for (DruidDataSource dataSource : dataSources) {
       Iterable<DataSegment> segments = dataSource.getSegments();
       for (DataSegment segment : segments) {
         segmentMap.put(segment.getId(), segment);
@@ -538,6 +603,8 @@ public class DataSourcesResource
     Map<String, HashSet<Object>> tierDistinctSegments = new HashMap<>();
 
     long totalSegmentSize = 0;
+    long totalReplicatedSize = 0;
+
     DateTime minTime = DateTimes.MAX;
     DateTime maxTime = DateTimes.MIN;
     String tier;
@@ -549,11 +616,11 @@ public class DataSourcesResource
         continue;
       }
 
-      if (!tierDistinctSegments.containsKey(tier)) {
-        tierDistinctSegments.put(tier, new HashSet<>());
-      }
+      tierDistinctSegments.computeIfAbsent(tier, t -> new HashSet<>());
 
       long dataSourceSegmentSize = 0;
+      long replicatedSegmentSize = 0;
+
       for (DataSegment dataSegment : druidDataSource.getSegments()) {
         // tier segments stats
         if (!tierDistinctSegments.get(tier).contains(dataSegment.getId())) {
@@ -567,6 +634,8 @@ public class DataSourcesResource
           minTime = DateTimes.min(minTime, dataSegment.getInterval().getStart());
           maxTime = DateTimes.max(maxTime, dataSegment.getInterval().getEnd());
         }
+        totalReplicatedSize += dataSegment.getSize();
+        replicatedSegmentSize += dataSegment.getSize();
       }
 
       // tier stats
@@ -579,24 +648,28 @@ public class DataSourcesResource
 
       long segmentSize = MapUtils.getLong(tierStats, "size", 0L);
       tierStats.put("size", segmentSize + dataSourceSegmentSize);
+
+      long replicatedSize = MapUtils.getLong(tierStats, "replicatedSize", 0L);
+      tierStats.put("replicatedSize", replicatedSize + replicatedSegmentSize);
     }
 
     segments.put("count", totalDistinctSegments.size());
     segments.put("size", totalSegmentSize);
+    segments.put("replicatedSize", totalReplicatedSize);
     segments.put("minTime", minTime);
     segments.put("maxTime", maxTime);
     return retVal;
   }
 
   /**
-   * Provides serverView for a datasource and Interval which gives details about servers hosting segments for an interval
-   * Used by the realtime tasks to fetch a view of the interval they are interested in.
+   * Provides serverView for a datasource and Interval which gives details about servers hosting segments for an
+   * interval. Used by the realtime tasks to fetch a view of the interval they are interested in.
    */
   @GET
   @Path("/{dataSourceName}/intervals/{interval}/serverview")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response getSegmentDataSourceSpecificInterval(
+  public Response getServedSegmentsInInterval(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("interval") String interval,
       @QueryParam("partial") final boolean partial
@@ -611,17 +684,25 @@ public class DataSourcesResource
       return Response.ok(new ArrayList<ImmutableSegmentLoadInfo>()).build();
     }
 
-    Iterable<TimelineObjectHolder<String, SegmentLoadInfo>> lookup = timeline.lookupWithIncompletePartitions(theInterval);
-    FunctionalIterable<ImmutableSegmentLoadInfo> retval = FunctionalIterable
-        .create(lookup).transformCat(
+    return Response.ok(prepareServedSegmentsInInterval(timeline, theInterval)).build();
+  }
+
+  private Iterable<ImmutableSegmentLoadInfo> prepareServedSegmentsInInterval(
+      TimelineLookup<String, SegmentLoadInfo> dataSourceServingTimeline,
+      Interval interval
+  )
+  {
+    Iterable<TimelineObjectHolder<String, SegmentLoadInfo>> lookup =
+        dataSourceServingTimeline.lookupWithIncompletePartitions(interval);
+    return FunctionalIterable
+        .create(lookup)
+        .transformCat(
             (TimelineObjectHolder<String, SegmentLoadInfo> input) ->
                 Iterables.transform(
                     input.getObject(),
-                    (PartitionChunk<SegmentLoadInfo> chunk) ->
-                        chunk.getObject().toImmutableSegmentLoadInfo()
+                    (PartitionChunk<SegmentLoadInfo> chunk) -> chunk.getObject().toImmutableSegmentLoadInfo()
                 )
         );
-    return Response.ok(retval).build();
   }
 
   /**
@@ -640,7 +721,7 @@ public class DataSourcesResource
   )
   {
     try {
-      final List<Rule> rules = databaseRuleManager.getRulesWithDefault(dataSourceName);
+      final List<Rule> rules = metadataRuleManager.getRulesWithDefault(dataSourceName);
       final Interval theInterval = Intervals.of(interval);
       final SegmentDescriptor descriptor = new SegmentDescriptor(theInterval, version, partitionNumber);
       final DateTime now = DateTimes.nowUtc();
@@ -667,18 +748,9 @@ public class DataSourcesResource
         return Response.ok(false).build();
       }
 
-      Iterable<TimelineObjectHolder<String, SegmentLoadInfo>> lookup = timeline.lookupWithIncompletePartitions(
-          theInterval);
-      FunctionalIterable<ImmutableSegmentLoadInfo> loadInfoIterable = FunctionalIterable
-          .create(lookup).transformCat(
-              (TimelineObjectHolder<String, SegmentLoadInfo> input) ->
-                  Iterables.transform(
-                      input.getObject(),
-                      (PartitionChunk<SegmentLoadInfo> chunk) ->
-                          chunk.getObject().toImmutableSegmentLoadInfo()
-                  )
-          );
-      if (isSegmentLoaded(loadInfoIterable, descriptor)) {
+      Iterable<ImmutableSegmentLoadInfo> servedSegmentsInInterval =
+          prepareServedSegmentsInInterval(timeline, theInterval);
+      if (isSegmentLoaded(servedSegmentsInInterval, descriptor)) {
         return Response.ok(true).build();
       }
 
@@ -690,58 +762,9 @@ public class DataSourcesResource
     }
   }
 
-  @POST
-  @Path("/{dataSourceName}/markUnused")
-  @ResourceFilters(DatasourceResourceFilter.class)
-  @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
-  public Response markDatasourceUnused(
-      @PathParam("dataSourceName") final String dataSourceName,
-      final MarkDatasourceSegmentsPayload payload
-  )
+  static boolean isSegmentLoaded(Iterable<ImmutableSegmentLoadInfo> servedSegments, SegmentDescriptor descriptor)
   {
-    if (payload == null || !payload.isValid()) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity("Invalid request payload, either interval or segmentIds array must be specified")
-                     .build();
-    }
-
-    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
-    if (dataSource == null) {
-      log.warn("datasource not found [%s]", dataSourceName);
-      return Response.noContent().build();
-    }
-
-    long markedSegmentCount = 0;
-    try {
-      final Interval interval = payload.getInterval();
-      final Set<String> segmentIds = payload.getSegmentIds();
-      if (interval != null) {
-        markedSegmentCount = databaseSegmentManager.disableSegments(dataSourceName, interval);
-      } else if (segmentIds != null) {
-        markedSegmentCount = databaseSegmentManager.disableSegments(dataSourceName, segmentIds);
-      }
-    }
-    catch (Exception e) {
-      return Response.serverError().entity(
-          ImmutableMap.of(
-              "error",
-              "Exception occurred.",
-              "message",
-              e.toString()
-          )
-      ).build();
-
-    }
-    if (markedSegmentCount == 0) {
-      return Response.noContent().build();
-    }
-    return Response.ok().build();
-  }
-
-  static boolean isSegmentLoaded(Iterable<ImmutableSegmentLoadInfo> serverView, SegmentDescriptor descriptor)
-  {
-    for (ImmutableSegmentLoadInfo segmentLoadInfo : serverView) {
+    for (ImmutableSegmentLoadInfo segmentLoadInfo : servedSegments) {
       if (segmentLoadInfo.getSegment().getInterval().contains(descriptor.getInterval())
           && segmentLoadInfo.getSegment().getShardSpec().getPartitionNum() == descriptor.getPartitionNumber()
           && segmentLoadInfo.getSegment().getVersion().compareTo(descriptor.getVersion()) >= 0
@@ -754,68 +777,14 @@ public class DataSourcesResource
     return false;
   }
 
-  @POST
-  @Path("/{dataSourceName}/markUsed")
-  @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(DatasourceResourceFilter.class)
-  public Response enableDatasourceSegments(
-      @PathParam("dataSourceName") String dataSourceName,
-      MarkDatasourceSegmentsPayload payload
-  )
-  {
-    if (payload == null || !payload.isValid()) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity("Invalid request payload, either interval or segmentIds array must be specified")
-                     .build();
-    }
-
-    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
-    if (dataSource == null) {
-      return Response.noContent().build();
-    }
-
-    int modified;
-    try {
-      if (payload.getInterval() != null) {
-        modified = databaseSegmentManager.enableSegments(dataSource.getName(), payload.getInterval());
-      } else {
-        modified = databaseSegmentManager.enableSegments(dataSource.getName(), payload.getSegmentIds());
-      }
-    }
-    catch (Exception e) {
-      if (e.getCause() instanceof UnknownSegmentIdException) {
-        return Response.status(Response.Status.NOT_FOUND).entity(
-            ImmutableMap.of(
-                "message",
-                e.getCause().getMessage()
-            )
-        ).build();
-      }
-      return Response.serverError().entity(
-          ImmutableMap.of(
-              "error",
-              "Exception occurred.",
-              "message",
-              e.getMessage()
-          )
-      ).build();
-    }
-
-    if (modified == 0) {
-      return Response.noContent().build();
-    }
-
-    return Response.ok().build();
-  }
-
   @VisibleForTesting
-  protected static class MarkDatasourceSegmentsPayload
+  protected static class MarkDataSourceSegmentsPayload
   {
     private final Interval interval;
     private final Set<String> segmentIds;
 
     @JsonCreator
-    public MarkDatasourceSegmentsPayload(
+    public MarkDataSourceSegmentsPayload(
         @JsonProperty("interval") Interval interval,
         @JsonProperty("segmentIds") Set<String> segmentIds
     )

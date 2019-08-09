@@ -2799,7 +2799,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
   }
 
-  protected Map<String, Object> createBaseTaskContexts()
+  @VisibleForTesting
+  public Map<String, Object> createBaseTaskContexts()
   {
     final Map<String, Object> contexts = new HashMap<>();
     if (spec.getContext() != null) {

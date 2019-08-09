@@ -122,7 +122,7 @@ An example dataSchema is shown below:
 
 ## Parser
 
-If `type` is not included, the parser defaults to `string`. For additional data formats, please see our [extensions list](../development/extensions.html).
+The default parser type is  `string`, though a handful of extensions provide additional parser types. `string` typed parsers operate on text based inputs that can be split into individual records by newlines. For additional data formats, please see our [extensions list](../development/extensions.html).
 
 ### String Parser
 
@@ -310,7 +310,6 @@ The IOConfig spec differs based on the ingestion task type.
 * Hadoop Batch ingestion: See [Hadoop Batch IOConfig](../ingestion/hadoop.html#ioconfig)
 * Kafka Indexing Service: See [Kafka Supervisor IOConfig](../development/extensions-core/kafka-ingestion.html#KafkaSupervisorIOConfig)
 * Stream Push Ingestion: Stream push ingestion with Tranquility does not require an IO Config.
-* Stream Pull Ingestion (Deprecated): See [Stream pull ingestion](../ingestion/stream-pull.html#ioconfig).
 
 # Tuning Config
 
@@ -320,7 +319,6 @@ The TuningConfig spec differs based on the ingestion task type.
 * Hadoop Batch ingestion: See [Hadoop Batch TuningConfig](../ingestion/hadoop.html#tuningconfig)
 * Kafka Indexing Service: See [Kafka Supervisor TuningConfig](../development/extensions-core/kafka-ingestion.html#KafkaSupervisorTuningConfig)
 * Stream Push Ingestion (Tranquility): See [Tranquility TuningConfig](http://static.druid.io/tranquility/api/latest/#com.metamx.tranquility.druid.DruidTuning).
-* Stream Pull Ingestion (Deprecated): See [Stream pull ingestion](../ingestion/stream-pull.html#tuningconfig).
 
 # Evaluating Timestamp, Dimensions and Metrics
 

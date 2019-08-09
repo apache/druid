@@ -22,6 +22,8 @@ package org.apache.druid.query.groupby.epinephelinae;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 
+import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class ByteBufferHashTable
@@ -74,8 +76,7 @@ public class ByteBufferHashTable
   // how many times the table buffer has filled/readjusted (through adjustTableWhenFull())
   protected int growthCount;
 
-
-
+  @Nullable
   protected BucketUpdateHandler bucketUpdateHandler;
 
   public ByteBufferHashTable(
@@ -85,7 +86,7 @@ public class ByteBufferHashTable
       ByteBuffer buffer,
       int keySize,
       int maxSizeForTesting,
-      BucketUpdateHandler bucketUpdateHandler
+      @Nullable BucketUpdateHandler bucketUpdateHandler
   )
   {
     this.maxLoadFactor = maxLoadFactor;
@@ -251,21 +252,25 @@ public class ByteBufferHashTable
   }
 
   /**
-   * Find a bucket for a key, attempting to resize the table with adjustTableWhenFull() if possible.
+   * Find a bucket for a key, attempting to grow the table with adjustTableWhenFull() if possible.
    *
-   * @param keyBuffer buffer containing the key
-   * @param keyHash hash of the key
+   * @param keyBuffer              buffer containing the key
+   * @param keyHash                hash of the key
+   * @param preTableGrowthRunnable runnable that executes before the table grows
+   *
    * @return bucket number of the found bucket or -1 if a bucket could not be allocated after resizing.
    */
   protected int findBucketWithAutoGrowth(
       final ByteBuffer keyBuffer,
-      final int keyHash
+      final int keyHash,
+      final Runnable preTableGrowthRunnable
   )
   {
     int bucket = findBucket(canAllowNewBucket(), maxBuckets, tableBuffer, keyBuffer, keyHash);
 
     if (bucket < 0) {
       if (size < maxSizeForTesting) {
+        preTableGrowthRunnable.run();
         adjustTableWhenFull();
         bucket = findBucket(size < regrowthThreshold, maxBuckets, tableBuffer, keyBuffer, keyHash);
       }
@@ -277,7 +282,7 @@ public class ByteBufferHashTable
   /**
    * Finds the bucket into which we should insert a key.
    *
-   * @param keyBuffer key, must have exactly keySize bytes remaining. Will not be modified.
+   * @param keyBuffer         key, must have exactly keySize bytes remaining. Will not be modified.
    * @param targetTableBuffer Need selectable buffer, since when resizing hash table,
    *                          findBucket() is used on the newly allocated table buffer
    *
@@ -379,7 +384,9 @@ public class ByteBufferHashTable
   public interface BucketUpdateHandler
   {
     void handleNewBucket(int bucketOffset);
+
     void handlePreTableSwap();
+
     void handleBucketMove(int oldBucketOffset, int newBucketOffset, ByteBuffer oldBuffer, ByteBuffer newBuffer);
   }
 }

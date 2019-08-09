@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common.guava;
 
+import com.google.common.base.Predicate;
 import com.google.common.collect.Ordering;
 
 import java.io.Closeable;
@@ -53,7 +54,7 @@ public interface Sequence<T>
    */
   <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator);
 
- /**
+  /**
    * Return a Yielder for accumulated sequence.
    *
    * @param initValue   the initial value to pass along to start the accumulation.
@@ -71,11 +72,13 @@ public interface Sequence<T>
     return new MappedSequence<>(this, mapper);
   }
 
+  default Sequence<T> filter(Predicate<? super T> predicate)
+  {
+    return Sequences.filter(this, predicate);
+  }
+
   /**
    * This will materialize the entire sequence.  Use at your own risk.
-   *
-   * Several benchmarks rely on this method to eagerly accumulate Sequences to ArrayLists.  e.g.
-   * GroupByBenchmark.
    */
   default List<T> toList()
   {

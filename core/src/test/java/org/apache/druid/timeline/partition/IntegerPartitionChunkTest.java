@@ -22,16 +22,22 @@ package org.apache.druid.timeline.partition;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.apache.druid.timeline.partition.IntegerPartitionChunk.make;
-
-/**
- */
 public class IntegerPartitionChunkTest
 {
+  private static IntegerPartitionChunk<OvershadowableInteger> make(
+      Integer start,
+      Integer end,
+      int chunkNumber,
+      int obj
+  )
+  {
+    return new IntegerPartitionChunk<>(start, end, chunkNumber, new OvershadowableInteger(obj));
+  }
+
   @Test
   public void testAbuts()
   {
-    IntegerPartitionChunk<Integer> lhs = make(null, 10, 0, 1);
+    IntegerPartitionChunk<OvershadowableInteger> lhs = make(null, 10, 0, 1);
 
     Assert.assertTrue(lhs.abuts(make(10, null, 1, 2)));
     Assert.assertFalse(lhs.abuts(make(11, null, 2, 3)));
@@ -61,14 +67,38 @@ public class IntegerPartitionChunkTest
   @Test
   public void testCompareTo()
   {
-    Assert.assertEquals(0, make(null, null, 0, 1).compareTo(make(null, null, 0, 1)));
-    Assert.assertEquals(0, make(10, null, 0, 1).compareTo(make(10, null, 0, 2)));
-    Assert.assertEquals(0, make(null, 10, 0, 1).compareTo(make(null, 10, 0, 2)));
-    Assert.assertEquals(0, make(10, 11, 0, 1).compareTo(make(10, 11, 0, 2)));
-    Assert.assertEquals(-1, make(null, 10, 0, 1).compareTo(make(10, null, 1, 2)));
-    Assert.assertEquals(-1, make(11, 20, 0, 1).compareTo(make(20, 33, 1, 1)));
-    Assert.assertEquals(1, make(20, 33, 1, 1).compareTo(make(11, 20, 0, 1)));
-    Assert.assertEquals(1, make(10, null, 1, 1).compareTo(make(null, 10, 0, 1)));
+    Assert.assertEquals(
+        0,
+        make(null, null, 0, 1).compareTo(make(null, null, 0, 1))
+    );
+    Assert.assertEquals(
+        0,
+        make(10, null, 0, 1).compareTo(make(10, null, 0, 2))
+    );
+    Assert.assertEquals(
+        0,
+        make(null, 10, 0, 1).compareTo(make(null, 10, 0, 2))
+    );
+    Assert.assertEquals(
+        0,
+        make(10, 11, 0, 1).compareTo(make(10, 11, 0, 2))
+    );
+    Assert.assertEquals(
+        -1,
+        make(null, 10, 0, 1).compareTo(make(10, null, 1, 2))
+    );
+    Assert.assertEquals(
+        -1,
+        make(11, 20, 0, 1).compareTo(make(20, 33, 1, 1))
+    );
+    Assert.assertEquals(
+        1,
+        make(20, 33, 1, 1).compareTo(make(11, 20, 0, 1))
+    );
+    Assert.assertEquals(
+        1,
+        make(10, null, 1, 1).compareTo(make(null, 10, 0, 1))
+    );
   }
 
   @Test

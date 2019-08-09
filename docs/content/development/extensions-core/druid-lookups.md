@@ -75,6 +75,7 @@ Same for Loading cache, developer can implement a new type of loading cache by i
 
 #####   Example of Polling On-heap Lookup
 This example demonstrates a polling cache that will update its on-heap cache every 10 minutes
+
 ```json
 {
     "type":"pollingLookup",

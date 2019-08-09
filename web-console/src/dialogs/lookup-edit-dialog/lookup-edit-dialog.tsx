@@ -16,7 +16,15 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, FormGroup, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
+import {
+  Button,
+  Classes,
+  Dialog,
+  FormGroup,
+  HTMLSelect,
+  InputGroup,
+  Intent,
+} from '@blueprintjs/core';
 import React from 'react';
 import AceEditor from 'react-ace';
 
@@ -24,7 +32,7 @@ import { validJson } from '../../utils';
 
 import './lookup-edit-dialog.scss';
 
-export interface LookupEditDialogProps extends React.Props<any> {
+export interface LookupEditDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: () => void;
@@ -37,116 +45,132 @@ export interface LookupEditDialogProps extends React.Props<any> {
   allLookupTiers: string[];
 }
 
-export interface LookupEditDialogState {
-}
+export interface LookupEditDialogState {}
 
-export class LookupEditDialog extends React.PureComponent<LookupEditDialogProps, LookupEditDialogState> {
-
+export class LookupEditDialog extends React.PureComponent<
+  LookupEditDialogProps,
+  LookupEditDialogState
+> {
   constructor(props: LookupEditDialogProps) {
     super(props);
-    this.state = {
-
-    };
+    this.state = {};
   }
 
   private addISOVersion = () => {
-    const {onChange} = this.props;
+    const { onChange } = this.props;
     const currentDate = new Date();
     const ISOString = currentDate.toISOString();
     onChange('lookupEditVersion', ISOString);
-  }
+  };
 
   private renderTierInput() {
     const { isEdit, lookupTier, allLookupTiers, onChange } = this.props;
     if (isEdit) {
-      return <FormGroup className="lookup-label" label="Tier: ">
-        <InputGroup
-          value={lookupTier}
-          onChange={(e: any) => onChange('lookupEditTier', e.target.value)}
-          disabled
-        />
-      </FormGroup>;
+      return (
+        <FormGroup className="lookup-label" label="Tier: ">
+          <InputGroup
+            value={lookupTier}
+            onChange={(e: any) => onChange('lookupEditTier', e.target.value)}
+            disabled
+          />
+        </FormGroup>
+      );
     } else {
-      return <FormGroup className="lookup-label" label="Tier:">
-        <HTMLSelect disabled={isEdit} value={lookupTier} onChange={(e: any) => onChange('lookupEditTier', e.target.value)}>
-          {allLookupTiers.map(tier => (
-            <option key={tier} value={tier}>{tier}</option>
-          ))}
-        </HTMLSelect>
-      </FormGroup>;
+      return (
+        <FormGroup className="lookup-label" label="Tier:">
+          <HTMLSelect
+            disabled={isEdit}
+            value={lookupTier}
+            onChange={(e: any) => onChange('lookupEditTier', e.target.value)}
+          >
+            {allLookupTiers.map(tier => (
+              <option key={tier} value={tier}>
+                {tier}
+              </option>
+            ))}
+          </HTMLSelect>
+        </FormGroup>
+      );
     }
   }
 
-  render() {
-    const { isOpen, onClose, onSubmit, lookupSpec, lookupTier, lookupName, lookupVersion, onChange, isEdit, allLookupTiers } = this.props;
+  render(): JSX.Element {
+    const {
+      isOpen,
+      onClose,
+      onSubmit,
+      lookupSpec,
+      lookupTier,
+      lookupName,
+      lookupVersion,
+      onChange,
+      isEdit,
+    } = this.props;
 
-    const disableSubmit = lookupName === '' || lookupVersion === '' ||
-      lookupTier === '' || !validJson(lookupSpec);
+    const disableSubmit =
+      lookupName === '' || lookupVersion === '' || lookupTier === '' || !validJson(lookupSpec);
 
-    return <Dialog
-      className="lookup-edit-dialog"
-      isOpen={isOpen}
-      onClose={onClose}
-      title={isEdit ? 'Edit lookup' : 'Add lookup'}
-    >
-      <FormGroup className="lookup-label" label="Name: ">
-        <InputGroup
-          value={lookupName}
-          onChange={(e: any) => onChange('lookupEditName', e.target.value)}
-          disabled={isEdit}
-          placeholder="Enter the lookup name"
-        />
-      </FormGroup>
-
-      {this.renderTierInput()}
-
-      <FormGroup className="lookup-label" label="Version:">
-        <InputGroup
-          value={lookupVersion}
-          onChange={(e: any) => onChange('lookupEditVersion', e.target.value)}
-          placeholder="Enter the lookup version"
-          rightElement={<Button minimal text="Use ISO as version" onClick={() => this.addISOVersion()} />}
-        />
-      </FormGroup>
-
-      <FormGroup className="lookup-label" label="Spec:"/>
-
-      <AceEditor
-        className="lookup-edit-dialog-textarea"
-        mode="sql"
-        theme="solarized_dark"
-        onChange={
-          (e: any) => onChange('lookupEditSpec', e)
-        }
-        fontSize={12}
-        height="40vh"
-        width="auto"
-        showPrintMargin={false}
-        showGutter={false}
-        value={lookupSpec}
-        editorProps={{$blockScrolling: Infinity}}
-        setOptions={{
-          enableBasicAutocompletion: false,
-          enableLiveAutocompletion: false,
-          tabSize: 2
-        }}
-        style={{}}
-      />
-
-      <div className={Classes.DIALOG_FOOTER}>
-        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          <Button
-            text="Close"
-            onClick={onClose}
+    return (
+      <Dialog
+        className="lookup-edit-dialog"
+        isOpen={isOpen}
+        onClose={onClose}
+        title={isEdit ? 'Edit lookup' : 'Add lookup'}
+      >
+        <FormGroup className="lookup-label" label="Name: ">
+          <InputGroup
+            value={lookupName}
+            onChange={(e: any) => onChange('lookupEditName', e.target.value)}
+            disabled={isEdit}
+            placeholder="Enter the lookup name"
           />
-          <Button
-            text="Submit"
-            intent={Intent.PRIMARY}
-            onClick={() => onSubmit()}
-            disabled={disableSubmit}
+        </FormGroup>
+
+        {this.renderTierInput()}
+
+        <FormGroup className="lookup-label" label="Version:">
+          <InputGroup
+            value={lookupVersion}
+            onChange={(e: any) => onChange('lookupEditVersion', e.target.value)}
+            placeholder="Enter the lookup version"
+            rightElement={
+              <Button minimal text="Use ISO as version" onClick={() => this.addISOVersion()} />
+            }
           />
+        </FormGroup>
+
+        <FormGroup className="lookup-label" label="Spec:" />
+
+        <AceEditor
+          className="lookup-edit-dialog-textarea"
+          mode="hjson"
+          theme="solarized_dark"
+          onChange={(e: any) => onChange('lookupEditSpec', e)}
+          fontSize={12}
+          height="40vh"
+          width="auto"
+          showPrintMargin={false}
+          showGutter={false}
+          value={lookupSpec}
+          editorProps={{ $blockScrolling: Infinity }}
+          setOptions={{
+            tabSize: 2,
+          }}
+          style={{}}
+        />
+
+        <div className={Classes.DIALOG_FOOTER}>
+          <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+            <Button text="Close" onClick={onClose} />
+            <Button
+              text="Submit"
+              intent={Intent.PRIMARY}
+              onClick={() => onSubmit()}
+              disabled={disableSubmit}
+            />
+          </div>
         </div>
-      </div>
-    </Dialog>;
+      </Dialog>
+    );
   }
 }

@@ -21,13 +21,11 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.filter.BitmapIndexSelector;
@@ -39,6 +37,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 
+import java.util.Arrays;
 import java.util.Set;
 
 public class ExpressionFilter implements Filter
@@ -49,7 +48,7 @@ public class ExpressionFilter implements Filter
   public ExpressionFilter(final Supplier<Expr> expr)
   {
     this.expr = expr;
-    this.requiredBindings = Suppliers.memoize(() -> ImmutableSet.copyOf(Parser.findRequiredBindings(expr.get())));
+    this.requiredBindings = Suppliers.memoize(() -> expr.get().analyzeInputs().getRequiredBindings());
   }
 
   @Override
@@ -64,7 +63,23 @@ public class ExpressionFilter implements Filter
         if (NullHandling.sqlCompatible() && selector.isNull()) {
           return false;
         }
-        return Evals.asBoolean(selector.getLong());
+        ExprEval eval = selector.getObject();
+        if (eval == null) {
+          return false;
+        }
+        switch (eval.type()) {
+          case LONG_ARRAY:
+            Long[] lResult = eval.asLongArray();
+            return Arrays.stream(lResult).anyMatch(Evals::asBoolean);
+          case STRING_ARRAY:
+            String[] sResult = eval.asStringArray();
+            return Arrays.stream(sResult).anyMatch(Evals::asBoolean);
+          case DOUBLE_ARRAY:
+            Double[] dResult = eval.asDoubleArray();
+            return Arrays.stream(dResult).anyMatch(Evals::asBoolean);
+          default:
+            return Evals.asBoolean(selector.getLong());
+        }
       }
 
       @Override

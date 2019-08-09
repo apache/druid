@@ -26,7 +26,7 @@ $side-bar-width: 120px;
     top: 5%;
 
     &::after {
-      content: "";
+      content: '';
       position: absolute;
       width: 0;
       top: 40px;
@@ -56,7 +56,7 @@ $side-bar-width: 120px;
         border-radius: 0;
 
         &.active {
-          background-color: #2C74A8;
+          background-color: #2c74a8;
         }
 
         .bp3-icon {
@@ -75,7 +75,7 @@ $side-bar-width: 120px;
       left: $side-bar-width;
       right: 0;
       height: 100%;
-      padding: 10px 20px;
+      padding: 10px 20px 15px 20px;
     }
   }
 

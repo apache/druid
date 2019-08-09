@@ -182,7 +182,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |-----|----|-----------|--------|
 |workingPath|String|The working path to use for intermediate results (results between Hadoop jobs).|Only used by the [CLI Hadoop Indexer](../ingestion/command-line-hadoop-indexer.html). The default is '/tmp/druid-indexing'. This field must be null otherwise.|
 |version|String|The version of created segments. Ignored for HadoopIndexTask unless useExplicitVersion is set to true|no (default == datetime that indexing starts at)|
-|partitionsSpec|Object|A specification of how to partition each time bucket into segments. Absence of this property means no partitioning will occur. See 'Partitioning specification' below.|no (default == 'hashed')|
+|partitionsSpec|Object|A specification of how to partition each time bucket into segments. Absence of this property means no partitioning will occur. See 'Partitioning specification' below.|no (default == 'hadoop_hashed_partitions')|
 |maxRowsInMemory|Integer|The number of rows to aggregate before persisting. Note that this is the number of post-aggregation rows which may not be equal to the number of input events due to roll-up. This is used to manage the required JVM heap size. Normally user does not need to set this, but depending on the nature of data, if rows are short in terms of bytes, user may not want to store a million rows in memory and this value should be set.|no (default == 1000000)|
 |maxBytesInMemory|Long|The number of bytes to aggregate in heap memory before persisting. Normally this is computed internally and user does not need to set it. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists).|no (default == One-sixth of max JVM memory)|
 |leaveIntermediate|Boolean|Leave behind intermediate files (for debugging) in the workingPath when a job completes, whether it passes or fails.|no (default == false)|
@@ -192,7 +192,8 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |combineText|Boolean|Use CombineTextInputFormat to combine multiple files into a file split. This can speed up Hadoop jobs when processing a large number of small files.|no (default == false)|
 |useCombiner|Boolean|Use Hadoop combiner to merge rows at mapper if possible.|no (default == false)|
 |jobProperties|Object|A map of properties to add to the Hadoop job configuration, see below for details.|no (default == null)|
-|indexSpec|Object|Tune how data is indexed. See below for more information.|no|
+|indexSpec|Object|Tune how data is indexed. See [IndexSpec](#indexspec) for more information.|no|
+|indexSpecForIntermediatePersists|defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](#indexspec) for possible values.|no (default = same as indexSpec)|
 |numBackgroundPersistThreads|Integer|The number of new background threads to use for incremental persists. Using this feature causes a notable increase in memory pressure and cpu usage but will make the job finish more quickly. If changing from the default of 0 (use current thread for persists), we recommend setting it to 1.|no (default == 0)|
 |forceExtendableShardSpecs|Boolean|Forces use of extendable shardSpecs. Hash-based partitioning always uses an extendable shardSpec. For single-dimension partitioning, this option should be set to true to use an extendable shardSpec. For partitioning, please check [Partitioning specification](#partitioning-specification). This option can be useful when you need to append more data to existing dataSource.|no (default = false)|
 |useExplicitVersion|Boolean|Forces HadoopIndexTask to use version.|no (default = false)|
@@ -245,8 +246,8 @@ For Roaring bitmaps:
 ## Partitioning specification
 
 Segments are always partitioned based on timestamp (according to the granularitySpec) and may be further partitioned in
-some other way depending on partition type. Druid supports two types of partitioning strategies: "hashed" (based on the
-hash of all dimensions in each row), and "dimension" (based on ranges of a single dimension).
+some other way depending on partition type. Druid supports two types of partitioning strategies: `hadoop_hashed_partitions` (based on the
+hash of all dimensions in each row), and `hadoop_single_dim_partitions` (based on ranges of a single dimension).
 
 Hashed partitioning is recommended in most cases, as it will improve indexing performance and create more uniformly
 sized data segments relative to single-dimension partitioning.
@@ -255,7 +256,7 @@ sized data segments relative to single-dimension partitioning.
 
 ```json
   "partitionsSpec": {
-     "type": "hashed",
+     "type": "hadoop_hashed_partitions",
      "targetPartitionSize": 5000000
    }
 ```
@@ -268,7 +269,7 @@ The configuration options are:
 
 |Field|Description|Required|
 |--------|-----------|---------|
-|type|Type of partitionSpec to be used.|"hashed"|
+|type|Type of partitionSpec to be used.|"hadoop_hashed_partitions"|
 |targetPartitionSize|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|either this or numShards|
 |numShards|Specify the number of partitions directly, instead of a target partition size. Ingestion will run faster, since it can skip the step necessary to select a number of partitions automatically.|either this or targetPartitionSize|
 |partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions. Only used with numShards, will be ignored when targetPartitionSize is set|no|
@@ -277,7 +278,7 @@ The configuration options are:
 
 ```json
   "partitionsSpec": {
-     "type": "dimension",
+     "type": "hadoop_single_dim_partitions",
      "targetPartitionSize": 5000000
    }
 ```
@@ -292,7 +293,7 @@ The configuration options are:
 
 |Field|Description|Required|
 |--------|-----------|---------|
-|type|Type of partitionSpec to be used.|"dimension"|
+|type|Type of partitionSpec to be used.|"hadoop_single_dim_partitions"|
 |targetPartitionSize|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|yes|
 |maxPartitionSize|Maximum number of rows to include in a partition. Defaults to 50% larger than the targetPartitionSize.|no|
 |partitionDimension|The dimension to partition on. Leave blank to select a dimension automatically.|no|

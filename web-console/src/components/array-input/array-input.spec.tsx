@@ -16,19 +16,21 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { ArrayInput } from './array-input';
 
 describe('array input', () => {
   it('matches snapshot', () => {
-    const arrayInput = <ArrayInput
-      values={['apple', 'banana', 'pear']}
-      className={'test'}
-      placeholder={'test'}
-      onChange={() => null}
-    />;
+    const arrayInput = (
+      <ArrayInput
+        values={['apple', 'banana', 'pear']}
+        className={'test'}
+        placeholder={'test'}
+        onChange={() => {}}
+      />
+    );
 
     const { container } = render(arrayInput);
     expect(container.firstChild).toMatchSnapshot();

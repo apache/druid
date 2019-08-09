@@ -284,6 +284,10 @@
       <artifactId>jetty-servlet</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.google.errorprone</groupId>
+      <artifactId>error_prone_annotations</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
@@ -358,13 +362,6 @@
       </resource>
     </resources>
   </build>
-
-  <repositories>
-    <repository>
-      <id>sigar</id>
-      <url>https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/</url>
-    </repository>
-  </repositories>
 
   <profiles>
     <profile>

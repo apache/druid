@@ -29,6 +29,8 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
+import javax.annotation.Nullable;
+
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Map;
@@ -39,13 +41,14 @@ public class SketchEstimatePostAggregator implements PostAggregator
 
   private final String name;
   private final PostAggregator field;
+  @Nullable
   private final Integer errorBoundsStdDev;
 
   @JsonCreator
   public SketchEstimatePostAggregator(
       @JsonProperty("name") String name,
       @JsonProperty("field") PostAggregator field,
-      @JsonProperty("errorBoundsStdDev") Integer errorBoundsStdDev
+      @JsonProperty("errorBoundsStdDev") @Nullable Integer errorBoundsStdDev
   )
   {
     this.name = Preconditions.checkNotNull(name, "name is null");
@@ -56,9 +59,7 @@ public class SketchEstimatePostAggregator implements PostAggregator
   @Override
   public Set<String> getDependentFields()
   {
-    Set<String> dependentFields = new HashSet<>();
-    dependentFields.addAll(field.getDependentFields());
-    return dependentFields;
+    return new HashSet<>(field.getDependentFields());
   }
 
   @Override
@@ -111,6 +112,7 @@ public class SketchEstimatePostAggregator implements PostAggregator
     return field;
   }
 
+  @Nullable
   @JsonProperty
   public Integer getErrorBoundsStdDev()
   {

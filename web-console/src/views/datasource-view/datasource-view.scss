@@ -16,20 +16,30 @@
  * limitations under the License.
  */
 
-@import "../../variables";
+@import '../../variables';
 
 .data-sources-view {
   height: 100%;
   width: 100%;
+  overflow: auto;
 
   .clickable-cell {
     cursor: pointer;
   }
 
+  .chart-container {
+    height: 40vh;
+    margin-bottom: 10px;
+  }
+
   .ReactTable {
     position: absolute;
-    top: $view-control-bar-height + $standard-padding;
+    top: 50%; //$view-control-bar-height + $standard-padding;
     bottom: 0;
     width: 100%;
+
+    &.full-height {
+      top: 50px;
+    }
   }
 }

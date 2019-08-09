@@ -25,10 +25,12 @@ describe('data source view', () => {
   it('matches snapshot', () => {
     const dataSourceView = shallow(
       <DatasourcesView
-        goToSql={(initSql: string) => {}}
-        goToSegments={(datasource: string, onlyUnavailable?: boolean) => {}}
+        goToQuery={() => {}}
+        goToTask={() => null}
+        goToSegments={() => {}}
         noSqlMode={false}
-      />);
+      />,
+    );
     expect(dataSourceView).toMatchSnapshot();
   });
 });

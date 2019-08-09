@@ -22,20 +22,16 @@ import React from 'react';
 
 import './action-icon.scss';
 
-export interface ActionIconProps extends React.Props<any> {
+export interface ActionIconProps {
   className?: string;
   icon: IconName;
   onClick?: () => void;
 }
 
 export class ActionIcon extends React.PureComponent<ActionIconProps> {
-  render() {
+  render(): JSX.Element {
     const { className, icon, onClick } = this.props;
 
-    return <Icon
-      className={classNames('action-icon', className)}
-      icon={icon}
-      onClick={onClick}
-    />;
+    return <Icon className={classNames('action-icon', className)} icon={icon} onClick={onClick} />;
   }
 }

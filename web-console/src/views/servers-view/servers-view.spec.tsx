@@ -26,10 +26,11 @@ describe('servers view', () => {
     const serversView = shallow(
       <ServersView
         middleManager={'test'}
-        goToSql={(initSql: string) => {}}
-        goToTask={(taskId: string) => {}}
+        goToQuery={() => {}}
+        goToTask={() => {}}
         noSqlMode={false}
-      />);
+      />,
+    );
     expect(serversView).toMatchSnapshot();
   });
 });

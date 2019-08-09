@@ -21,9 +21,8 @@ package org.apache.druid.query;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-
-import java.util.Map;
 
 /**
  * If there's a subquery, run it instead of the outer query
@@ -38,7 +37,7 @@ public class SubqueryQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
     DataSource dataSource = queryPlus.getQuery().getDataSource();
     boolean forcePushDownNestedQuery = queryPlus.getQuery()

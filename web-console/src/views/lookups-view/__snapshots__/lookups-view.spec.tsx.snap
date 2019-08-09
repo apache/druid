@@ -7,15 +7,14 @@ exports[`lookups view matches snapshot 1`] = `
   <ViewControlBar
     label="Lookups"
   >
-    <Blueprint3.Button
-      icon="refresh"
-      onClick={[Function]}
-      text="Refresh"
+    <RefreshButton
+      localStorageKey="lookups-refresh-rate"
+      onRefresh={[Function]}
     />
     <Blueprint3.Button
       icon="plus"
       onClick={[Function]}
-      text="Add"
+      text="Add lookup"
     />
     <TableColumnSelector
       columns={
@@ -90,28 +89,28 @@ exports[`lookups view matches snapshot 1`] = `
       Array [
         Object {
           "Header": "Lookup name",
-          "accessor": [Function],
+          "accessor": "id",
           "filterable": true,
           "id": "lookup_name",
           "show": true,
         },
         Object {
           "Header": "Tier",
-          "accessor": [Function],
+          "accessor": "tier",
           "filterable": true,
           "id": "tier",
           "show": true,
         },
         Object {
           "Header": "Type",
-          "accessor": [Function],
+          "accessor": "spec.type",
           "filterable": true,
           "id": "type",
           "show": true,
         },
         Object {
           "Header": "Version",
-          "accessor": [Function],
+          "accessor": "version",
           "filterable": true,
           "id": "version",
           "show": true,
@@ -221,17 +220,5 @@ exports[`lookups view matches snapshot 1`] = `
     onClose={[Function]}
     onSubmit={[Function]}
   />
-  <AsyncActionDialog
-    action={null}
-    confirmButtonText="Delete lookup"
-    failText="Could not delete lookup"
-    intent="danger"
-    onClose={[Function]}
-    successText="Lookup was deleted"
-  >
-    <p>
-      Are you sure you want to delete the lookup 'null'?
-    </p>
-  </AsyncActionDialog>
 </div>
 `;

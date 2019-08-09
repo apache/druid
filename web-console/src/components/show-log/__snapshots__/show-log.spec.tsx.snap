@@ -11,6 +11,7 @@ exports[`show log describe show log 1`] = `
       class="bp3-control bp3-checkbox"
     >
       <input
+        checked=""
         type="checkbox"
       />
       <span

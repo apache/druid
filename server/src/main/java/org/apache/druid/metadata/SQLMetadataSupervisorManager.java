@@ -166,9 +166,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                       {
                         try {
                           String specId = pair.lhs;
-                          if (!retVal.containsKey(specId)) {
-                            retVal.put(specId, new ArrayList<>());
-                          }
+                          retVal.putIfAbsent(specId, new ArrayList<>());
 
                           retVal.get(specId).add(pair.rhs);
                           return retVal;

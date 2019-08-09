@@ -16,62 +16,48 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { TableCell } from './table-cell';
 
 describe('table cell', () => {
   it('matches snapshot null', () => {
-    const tableCell = <TableCell
-      value={null}
-      unparseable={false}
-      timestamp={false}
-    />;
+    const tableCell = <TableCell value={null} unparseable={false} timestamp={false} />;
 
     const { container } = render(tableCell);
     expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot null timestamp', () => {
-    const tableCell = <TableCell
-      value={null}
-      unparseable={false}
-      timestamp
-    />;
+    const tableCell = <TableCell value={null} unparseable={false} timestamp />;
 
     const { container } = render(tableCell);
     expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot simple', () => {
-    const tableCell = <TableCell
-      value="Hello World"
-      unparseable={false}
-      timestamp={false}
-    />;
+    const tableCell = <TableCell value="Hello World" unparseable={false} timestamp={false} />;
 
     const { container } = render(tableCell);
     expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot array short', () => {
-    const tableCell = <TableCell
-      value={['a', 'b', 'c']}
-      unparseable={false}
-      timestamp={false}
-    />;
+    const tableCell = <TableCell value={['a', 'b', 'c']} unparseable={false} timestamp={false} />;
 
     const { container } = render(tableCell);
     expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot array long', () => {
-    const tableCell = <TableCell
-      value={Array.from(new Array(100)).map((_, i) => i)}
-      unparseable={false}
-      timestamp={false}
-    />;
+    const tableCell = (
+      <TableCell
+        value={Array.from(new Array(100)).map((_, i) => i)}
+        unparseable={false}
+        timestamp={false}
+      />
+    );
 
     const { container } = render(tableCell);
     expect(container.firstChild).toMatchSnapshot();
@@ -79,11 +65,7 @@ describe('table cell', () => {
 
   it('matches snapshot truncate', () => {
     const longString = new Array(100).join('test');
-    const tableCell = <TableCell
-      value={longString}
-      unparseable={false}
-      timestamp={false}
-    />;
+    const tableCell = <TableCell value={longString} unparseable={false} timestamp={false} />;
 
     const { container } = render(tableCell);
     expect(container.firstChild).toMatchSnapshot();

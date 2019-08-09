@@ -44,7 +44,7 @@ import java.util.List;
 import java.util.Map;
 
 
-public abstract class HadoopTask extends AbstractTask
+public abstract class HadoopTask extends AbstractBatchIndexTask
 {
   private static final Logger log = new Logger(HadoopTask.class);
   private static final ExtensionsConfig extensionsConfig;

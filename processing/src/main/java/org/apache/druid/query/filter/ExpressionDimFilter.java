@@ -77,7 +77,7 @@ public class ExpressionDimFilter implements DimFilter
   @Override
   public HashSet<String> getRequiredColumns()
   {
-    return Sets.newHashSet(Parser.findRequiredBindings(parsed.get()));
+    return Sets.newHashSet(parsed.get().analyzeInputs().getRequiredBindings());
   }
 
   @Override

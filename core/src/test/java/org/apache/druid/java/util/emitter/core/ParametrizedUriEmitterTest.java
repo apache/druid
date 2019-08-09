@@ -40,9 +40,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import static org.apache.druid.java.util.emitter.core.EmitterTest.okResponse;
-import static org.junit.Assert.assertEquals;
-
 public class ParametrizedUriEmitterTest
 {
   private static final ObjectMapper jsonMapper = new ObjectMapper();
@@ -71,7 +68,7 @@ public class ParametrizedUriEmitterTest
     props.setProperty("org.apache.druid.java.util.emitter.recipientBaseUrlPattern", uriPattern);
     lifecycle = new Lifecycle();
     Emitter emitter = Emitters.create(props, httpClient, lifecycle);
-    assertEquals(ParametrizedUriEmitter.class, emitter.getClass());
+    Assert.assertEquals(ParametrizedUriEmitter.class, emitter.getClass());
     lifecycle.start();
     return emitter;
   }
@@ -107,7 +104,7 @@ public class ParametrizedUriEmitterTest
                 StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
 
-            return GoHandlers.immediateFuture(okResponse());
+            return GoHandlers.immediateFuture(EmitterTest.okResponse());
           }
         }.times(1)
     );
@@ -140,7 +137,7 @@ public class ParametrizedUriEmitterTest
                 request.getUrl(),
                 StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
-            return GoHandlers.immediateFuture(okResponse());
+            return GoHandlers.immediateFuture(EmitterTest.okResponse());
           }
         }.times(2)
     );
@@ -152,7 +149,8 @@ public class ParametrizedUriEmitterTest
     Assert.assertTrue(httpClient.succeeded());
     Map<String, String> expected = ImmutableMap.of(
         "http://example.com/test1", StringUtils.format("[%s]\n", jsonMapper.writeValueAsString(events.get(0))),
-        "http://example.com/test2", StringUtils.format("[%s]\n", jsonMapper.writeValueAsString(events.get(1))));
+        "http://example.com/test2", StringUtils.format("[%s]\n", jsonMapper.writeValueAsString(events.get(1)))
+    );
     Assert.assertEquals(expected, results);
   }
 
@@ -181,7 +179,7 @@ public class ParametrizedUriEmitterTest
                 StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
 
-            return GoHandlers.immediateFuture(okResponse());
+            return GoHandlers.immediateFuture(EmitterTest.okResponse());
           }
         }.times(1)
     );
@@ -209,7 +207,9 @@ public class ParametrizedUriEmitterTest
       Assert.assertEquals(
           e.getMessage(),
           StringUtils.format(
-              "ParametrizedUriExtractor with pattern http://example.com/{keyNotSetInEvents} requires keyNotSetInEvents to be set in event, but found %s", event.toMap())
+              "ParametrizedUriExtractor with pattern http://example.com/{keyNotSetInEvents} requires keyNotSetInEvents to be set in event, but found %s",
+              event.toMap()
+          )
       );
     }
   }

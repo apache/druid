@@ -103,7 +103,7 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
   @Test
   public void testSimple() throws Exception
   {
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
 
     for (InputRow row : ROWS) {
       Assert.assertTrue(driver.add(row, "dummy").isOk());
@@ -115,7 +115,7 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
 
     checkSegmentStates(2, SegmentState.PUSHED_AND_DROPPED);
 
-    final SegmentsAndMetadata published = driver.publishAll(makeOkPublisher()).get(
+    final SegmentsAndMetadata published = driver.publishAll(null, makeOkPublisher()).get(
         TIMEOUT,
         TimeUnit.MILLISECONDS
     );
@@ -137,7 +137,7 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
   @Test
   public void testIncrementalPush() throws Exception
   {
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
 
     int i = 0;
     for (InputRow row : ROWS) {
@@ -151,7 +151,7 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
       checkSegmentStates(++i, SegmentState.PUSHED_AND_DROPPED);
     }
 
-    final SegmentsAndMetadata published = driver.publishAll(makeOkPublisher()).get(
+    final SegmentsAndMetadata published = driver.publishAll(null, makeOkPublisher()).get(
         TIMEOUT,
         TimeUnit.MILLISECONDS
     );
@@ -174,11 +174,11 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
   @Test
   public void testRestart()
   {
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
     driver.close();
     appenderatorTester.getAppenderator().close();
 
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
   }
 
   private void checkSegmentStates(int expectedNumSegmentsInState, SegmentState expectedState)
@@ -195,6 +195,6 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
 
   static TransactionalSegmentPublisher makeOkPublisher()
   {
-    return (segments, commitMetadata) -> SegmentPublishResult.ok(ImmutableSet.of());
+    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> SegmentPublishResult.ok(ImmutableSet.of());
   }
 }
