@@ -111,8 +111,8 @@ public class ApproximateHistogramTest
       h2.offer(VALUES[i]);
     }
 
-    merged.fold(h1);
-    merged.fold(h2);
+    merged.fold(h1, null, null, null);
+    merged.fold(h2, null, null, null);
     mergedFast.foldFast(h1);
     mergedFast.foldFast(h2);
 
@@ -144,7 +144,7 @@ public class ApproximateHistogramTest
     ApproximateHistogram aFast = buildHistogram(10, new float[]{1, 2, 3, 4, 5, 6});
     ApproximateHistogram b = buildHistogram(5, new float[]{3, 4, 5, 6});
 
-    a.fold(b);
+    a.fold(b, null, null, null);
     aFast.foldFast(b);
 
     Assert.assertEquals(
@@ -172,7 +172,7 @@ public class ApproximateHistogramTest
     for (float v : VALUES4) {
       h4.offer(v);
     }
-    h3.fold(h4);
+    h3.fold(h4, null, null, null);
     Assert.assertArrayEquals(
         "final bin positions match expected positions",
         new float[]{-50.98f, -21.77f, -9.81f, 3.73f, 13.72f, 20.1f, 29f, 44.79f, 53.8f, 64.67f},
@@ -191,7 +191,7 @@ public class ApproximateHistogramTest
     ApproximateHistogram h1 = new ApproximateHistogram(10);
     ApproximateHistogram h2 = new ApproximateHistogram(10);
 
-    h1.fold(h2);
+    h1.fold(h2, null, null, null);
     h1.foldFast(h2);
   }
 
@@ -210,8 +210,8 @@ public class ApproximateHistogramTest
       h4Fast.offer(v);
     }
 
-    h1.fold(h3);
-    h4.fold(h2);
+    h1.fold(h3, null, null, null);
+    h4.fold(h2, null, null, null);
     h1Fast.foldFast(h3);
     h4Fast.foldFast(h2);
 
@@ -300,7 +300,7 @@ public class ApproximateHistogramTest
     ApproximateHistogram h = buildHistogram(5, VALUES);
     Assert.assertEquals(h, ApproximateHistogram.fromBytes(h.toBytes()));
 
-    ApproximateHistogram h2 = new ApproximateHistogram(50).fold(h);
+    ApproximateHistogram h2 = new ApproximateHistogram(50).fold(h, null, null, null);
     Assert.assertEquals(h2, ApproximateHistogram.fromBytes(h2.toBytes()));
   }
 
@@ -331,7 +331,7 @@ public class ApproximateHistogramTest
     h = buildHistogram(5, new float[]{1f, 2f, 3f});
     Assert.assertEquals(h, ApproximateHistogram.fromBytes(h.toBytes()));
 
-    h = new ApproximateHistogram(40).fold(h);
+    h = new ApproximateHistogram(40).fold(h, null, null, null);
     Assert.assertEquals(h, ApproximateHistogram.fromBytes(h.toBytes()));
   }
 

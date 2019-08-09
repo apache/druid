@@ -40,6 +40,7 @@ As part of this repo:
 - `lib/` - A place where some overrides to the react-table stylus files live, this is outside of the normal SCSS build system.
 - `old-console/` - Files for the overlord console
 - `public/` - The compiled destination of the file powering this console
+- `assets/` - The images (and other assets) used within the console
 - `script/` - Some helper bash scripts for running this console
 - `src/` - This directory (together with `lib`) constitutes all the source code for this console 
 
@@ -59,8 +60,12 @@ POST /druid/indexer/v1/worker
 GET /druid/indexer/v1/workers
 GET /druid/coordinator/v1/loadqueue?simple
 GET /druid/coordinator/v1/config
-GET /druid/coordinator/v1/metadata/datasources?includeDisabled
+GET /druid/coordinator/v1/metadata/datasources?includeUnused
 GET /druid/coordinator/v1/rules
 GET /druid/coordinator/v1/config/compaction
 GET /druid/coordinator/v1/tiers
 ```
+
+## Updating the list of license files
+
+From the web-console directory run `script/licenses`

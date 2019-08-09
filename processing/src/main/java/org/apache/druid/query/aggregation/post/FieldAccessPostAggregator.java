@@ -27,6 +27,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
+import javax.annotation.Nullable;
+
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
@@ -35,12 +37,13 @@ import java.util.Set;
  */
 public class FieldAccessPostAggregator implements PostAggregator
 {
+  @Nullable
   private final String name;
   private final String fieldName;
 
   @JsonCreator
   public FieldAccessPostAggregator(
-      @JsonProperty("name") String name,
+      @JsonProperty("name") @Nullable String name,
       @JsonProperty("fieldName") String fieldName
   )
   {
@@ -67,6 +70,7 @@ public class FieldAccessPostAggregator implements PostAggregator
     return combinedAggregators.get(fieldName);
   }
 
+  @Nullable
   @Override
   @JsonProperty
   public String getName()

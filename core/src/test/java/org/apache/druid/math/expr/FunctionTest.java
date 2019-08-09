@@ -195,7 +195,7 @@ public class FunctionTest
   public void testArrayOffsetOf()
   {
     assertExpr("array_offset_of([1, 2, 3], 3)", 2L);
-    assertExpr("array_offset_of([1, 2, 3], 4)", null);
+    assertExpr("array_offset_of([1, 2, 3], 4)", NullHandling.replaceWithDefault() ? -1L : null);
     assertExpr("array_offset_of(a, 'baz')", 2);
   }
 
@@ -203,7 +203,7 @@ public class FunctionTest
   public void testArrayOrdinalOf()
   {
     assertExpr("array_ordinal_of([1, 2, 3], 3)", 3L);
-    assertExpr("array_ordinal_of([1, 2, 3], 4)", null);
+    assertExpr("array_ordinal_of([1, 2, 3], 4)", NullHandling.replaceWithDefault() ? -1L : null);
     assertExpr("array_ordinal_of(a, 'baz')", 3);
   }
 

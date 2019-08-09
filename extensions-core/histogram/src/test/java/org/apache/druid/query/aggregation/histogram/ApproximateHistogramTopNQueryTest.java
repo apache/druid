@@ -48,7 +48,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -142,11 +141,9 @@ public class ApproximateHistogramTopNQueryTest
             )
         )
         .postAggregators(
-            Arrays.asList(
-                QueryRunnerTestHelper.addRowsIndexConstant,
-                QueryRunnerTestHelper.dependentPostAgg,
-                new QuantilePostAggregator("quantile", "apphisto", 0.5f)
-            )
+            QueryRunnerTestHelper.addRowsIndexConstant,
+            QueryRunnerTestHelper.dependentPostAgg,
+            new QuantilePostAggregator("quantile", "apphisto", 0.5f)
         )
         .build();
 
@@ -252,8 +249,6 @@ public class ApproximateHistogramTopNQueryTest
             )
         )
     );
-    HashMap<String, Object> context = new HashMap<String, Object>();
-
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 }

@@ -1719,44 +1719,6 @@ http://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html
 
 
 
-############ BINARY/EXTENSIONS/druid-kafka-eight ############
-
-================= metrics-core-2.2.0.jar =================
-Metrics
-Copyright 2010-2012 Coda Hale and Yammer, Inc.
-
-This product includes software developed by Coda Hale and Yammer, Inc.
-
-This product includes code derived from the JSR-166 project (ThreadLocalRandom), which was released
-with the following comments:
-
-    Written by Doug Lea with assistance from members of JCP JSR-166
-    Expert Group and released to the public domain, as explained at
-    http://creativecommons.org/publicdomain/zero/1.0/
-
-
-
-
-================= snappy-1.1.1.6.jar =================
-This product includes software developed by Google
- Snappy: http://code.google.com/p/snappy/ (New BSD License)
-
-This product includes software developed by Apache
- PureJavaCrc32C from apache-hadoop-common http://hadoop.apache.org/
- (Apache 2.0 license)
-
-This library containd statically linked libstdc++. This inclusion is allowed by
-"GCC RUntime Library Exception"
-http://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html
-
-== Contributors ==
-  * Tatu Saloranta
-    * Providing benchmark suite
-  * Alec Wysoker
-    * Performance and memory usage improvement
-
-
-
 
 ############ BINARY/EXTENSIONS/druid-kafka-indexing-service ############
 

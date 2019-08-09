@@ -22,77 +22,108 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
-import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.LockTryAcquireAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.AbstractTask;
+import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
+import org.apache.druid.indexing.common.task.SegmentLockHelper;
+import org.apache.druid.indexing.common.task.SegmentLockHelper.OverwritingRootGenerationPartitions;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
+import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.RealtimeMetricsMonitor;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
-import org.apache.druid.segment.realtime.appenderator.Appenderators;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.NumberedOverwritingShardSpecFactory;
+import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
+import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedSet;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 /**
  * A worker task of {@link ParallelIndexSupervisorTask}. Similar to {@link IndexTask}, but this task
  * generates and pushes segments, and reports them to the {@link ParallelIndexSupervisorTask} instead of
  * publishing on its own.
  */
-public class ParallelIndexSubTask extends AbstractTask
+public class ParallelIndexSubTask extends AbstractBatchIndexTask
 {
   public static final String TYPE = "index_sub";
 
-  private static final Logger log = new Logger(ParallelIndexSubTask.class);
+  private static final Logger LOG = new Logger(ParallelIndexSubTask.class);
 
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
   private final IndexingServiceClient indexingServiceClient;
   private final IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory;
+  private final AppenderatorsManager appenderatorsManager;
+
+  private Appenderator appenderator;
+  private Thread runThread;
+  private boolean stopped = false;
+
+  /**
+   * If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
+   * In this mode, sub tasks ask new locks whenever they see a new row which is not covered by existing locks.
+   * If this task is overwriting existing segments, then we should know this task is changing segment granularity
+   * in advance to know what types of lock we should use. However, if intervals are missing, we can't know
+   * the segment granularity of existing segments until the task reads all data because we don't know what segments
+   * are going to be overwritten. As a result, we assume that segment granularity is going to be changed if intervals
+   * are missing and force to use timeChunk lock.
+   *
+   * This variable is initialized in the constructor and used in {@link #run} to log that timeChunk lock was enforced
+   * in the task logs.
+   */
+  private final boolean missingIntervalsInOverwriteMode;
 
   @JsonCreator
   public ParallelIndexSubTask(
@@ -105,7 +136,8 @@ public class ParallelIndexSubTask extends AbstractTask
       @JsonProperty("spec") final ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context,
       @JacksonInject IndexingServiceClient indexingServiceClient,
-      @JacksonInject IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory
+      @JacksonInject IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory,
+      @JacksonInject AppenderatorsManager appenderatorsManager
   )
   {
     super(
@@ -125,6 +157,15 @@ public class ParallelIndexSubTask extends AbstractTask
     this.supervisorTaskId = supervisorTaskId;
     this.indexingServiceClient = indexingServiceClient;
     this.taskClientFactory = taskClientFactory;
+    this.appenderatorsManager = appenderatorsManager;
+    this.missingIntervalsInOverwriteMode = !ingestionSchema.getIOConfig().isAppendToExisting()
+                                           && !ingestionSchema.getDataSchema()
+                                                              .getGranularitySpec()
+                                                              .bucketIntervals()
+                                                              .isPresent();
+    if (missingIntervalsInOverwriteMode) {
+      addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
+    }
   }
 
   @Override
@@ -140,25 +181,9 @@ public class ParallelIndexSubTask extends AbstractTask
   }
 
   @Override
-  public boolean isReady(TaskActionClient taskActionClient)
+  public boolean isReady(TaskActionClient taskActionClient) throws IOException
   {
-    final Optional<SortedSet<Interval>> intervals = ingestionSchema.getDataSchema()
-                                                                   .getGranularitySpec()
-                                                                   .bucketIntervals();
-
-    return !intervals.isPresent() || checkLockAcquired(taskActionClient, intervals.get());
-  }
-
-  private boolean checkLockAcquired(TaskActionClient actionClient, SortedSet<Interval> intervals)
-  {
-    try {
-      tryAcquireExclusiveSurrogateLocks(actionClient, intervals);
-      return true;
-    }
-    catch (Exception e) {
-      log.error(e, "Failed to acquire locks for intervals[%s]", intervals);
-      return false;
-    }
+    return determineLockGranularityAndTryLock(taskActionClient, ingestionSchema.getDataSchema().getGranularitySpec());
   }
 
   @JsonProperty
@@ -182,6 +207,20 @@ public class ParallelIndexSubTask extends AbstractTask
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
+    synchronized (this) {
+      if (stopped) {
+        return TaskStatus.failure(getId());
+      } else {
+        runThread = Thread.currentThread();
+      }
+    }
+
+    if (missingIntervalsInOverwriteMode) {
+      LOG.warn(
+          "Intervals are missing in granularitySpec while this task is potentially overwriting existing segments. "
+          + "Forced to use timeChunk lock."
+      );
+    }
     final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
 
     final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
@@ -195,63 +234,147 @@ public class ParallelIndexSubTask extends AbstractTask
         ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
         ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
     );
-    final List<DataSegment> pushedSegments = generateAndPushSegments(
+    final Set<DataSegment> pushedSegments = generateAndPushSegments(
         toolbox,
         taskClient,
         firehoseFactory,
         firehoseTempDir
     );
-    taskClient.report(supervisorTaskId, pushedSegments);
+
+    // Find inputSegments overshadowed by pushedSegments
+    final Set<DataSegment> allSegments = new HashSet<>(getSegmentLockHelper().getLockedExistingSegments());
+    allSegments.addAll(pushedSegments);
+    final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(allSegments);
+    final Set<DataSegment> oldSegments = timeline.findFullyOvershadowed()
+                                                 .stream()
+                                                 .flatMap(holder -> holder.getObject().stream())
+                                                 .map(PartitionChunk::getObject)
+                                                 .collect(Collectors.toSet());
+    taskClient.report(supervisorTaskId, oldSegments, pushedSegments);
 
     return TaskStatus.success(getId());
   }
 
-  private void tryAcquireExclusiveSurrogateLocks(
-      TaskActionClient client,
-      SortedSet<Interval> intervals
-  )
+  @Override
+  public boolean requireLockExistingSegments()
+  {
+    return !ingestionSchema.getIOConfig().isAppendToExisting();
+  }
+
+  @Override
+  public List<DataSegment> findSegmentsToLock(TaskActionClient taskActionClient, List<Interval> intervals)
       throws IOException
   {
-    for (Interval interval : Tasks.computeCompactIntervals(intervals)) {
-      Preconditions.checkNotNull(
-          client.submit(
-              new SurrogateAction<>(supervisorTaskId, new LockTryAcquireAction(TaskLockType.EXCLUSIVE, interval))
-          ),
-          "Cannot acquire a lock for interval[%s]", interval
-      );
+    return findInputSegments(
+        getDataSource(),
+        taskActionClient,
+        intervals,
+        ingestionSchema.getIOConfig().getFirehoseFactory()
+    );
+  }
+
+  @Override
+  public boolean isPerfectRollup()
+  {
+    return false;
+  }
+
+  @Nullable
+  @Override
+  public Granularity getSegmentGranularity()
+  {
+    final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
+    if (granularitySpec instanceof ArbitraryGranularitySpec) {
+      return null;
+    } else {
+      return granularitySpec.getSegmentGranularity();
     }
   }
 
-  private SegmentAllocator createSegmentAllocator(
-      TaskToolbox toolbox,
-      ParallelIndexTaskClient taskClient,
-      ParallelIndexIngestionSpec ingestionSchema
-  )
+  @VisibleForTesting
+  SegmentAllocator createSegmentAllocator(TaskToolbox toolbox, ParallelIndexTaskClient taskClient)
   {
-    final DataSchema dataSchema = ingestionSchema.getDataSchema();
-    final ParallelIndexIOConfig ioConfig = ingestionSchema.getIOConfig();
-    if (ioConfig.isAppendToExisting()) {
-      return new ActionBasedSegmentAllocator(
-          toolbox.getTaskActionClient(),
-          dataSchema,
-          (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> new SurrogateAction<>(
-              supervisorTaskId,
-              new SegmentAllocateAction(
-                  schema.getDataSource(),
-                  row.getTimestamp(),
-                  schema.getGranularitySpec().getQueryGranularity(),
-                  schema.getGranularitySpec().getSegmentGranularity(),
-                  sequenceName,
-                  previousSegmentId,
-                  skipSegmentLineageCheck
-              )
-          )
-      );
-    } else {
-      return (row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> taskClient.allocateSegment(
-          supervisorTaskId,
-          row.getTimestamp()
-      );
+    return new WrappingSegmentAllocator(toolbox, taskClient);
+  }
+
+  private class WrappingSegmentAllocator implements SegmentAllocator
+  {
+    private final TaskToolbox toolbox;
+    private final ParallelIndexTaskClient taskClient;
+
+    private SegmentAllocator internalAllocator;
+
+    private WrappingSegmentAllocator(TaskToolbox toolbox, ParallelIndexTaskClient taskClient)
+    {
+      this.toolbox = toolbox;
+      this.taskClient = taskClient;
+    }
+
+    @Override
+    public SegmentIdWithShardSpec allocate(
+        InputRow row,
+        String sequenceName,
+        String previousSegmentId,
+        boolean skipSegmentLineageCheck
+    ) throws IOException
+    {
+      if (internalAllocator == null) {
+        internalAllocator = createSegmentAllocator();
+      }
+      return internalAllocator.allocate(row, sequenceName, previousSegmentId, skipSegmentLineageCheck);
+    }
+
+    private SegmentAllocator createSegmentAllocator()
+    {
+      final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
+      final SegmentLockHelper segmentLockHelper = getSegmentLockHelper();
+      if (ingestionSchema.getIOConfig().isAppendToExisting() || isUseSegmentLock()) {
+        return new ActionBasedSegmentAllocator(
+            toolbox.getTaskActionClient(),
+            ingestionSchema.getDataSchema(),
+            (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> {
+              final Interval interval = granularitySpec
+                  .bucketInterval(row.getTimestamp())
+                  .or(granularitySpec.getSegmentGranularity().bucket(row.getTimestamp()));
+
+              final ShardSpecFactory shardSpecFactory;
+              if (segmentLockHelper.hasOverwritingRootGenerationPartition(interval)) {
+                final OverwritingRootGenerationPartitions overwritingSegmentMeta = segmentLockHelper
+                    .getOverwritingRootGenerationPartition(interval);
+                if (overwritingSegmentMeta == null) {
+                  throw new ISE("Can't find overwritingSegmentMeta for interval[%s]", interval);
+                }
+                shardSpecFactory = new NumberedOverwritingShardSpecFactory(
+                    overwritingSegmentMeta.getStartRootPartitionId(),
+                    overwritingSegmentMeta.getEndRootPartitionId(),
+                    overwritingSegmentMeta.getMinorVersionForNewSegments()
+                );
+              } else {
+                shardSpecFactory = NumberedShardSpecFactory.instance();
+              }
+
+              return new SurrogateAction<>(
+                  supervisorTaskId,
+                  new SegmentAllocateAction(
+                      schema.getDataSource(),
+                      row.getTimestamp(),
+                      schema.getGranularitySpec().getQueryGranularity(),
+                      schema.getGranularitySpec().getSegmentGranularity(),
+                      sequenceName,
+                      previousSegmentId,
+                      skipSegmentLineageCheck,
+                      shardSpecFactory,
+                      isUseSegmentLock() ? LockGranularity.SEGMENT : LockGranularity.TIME_CHUNK
+                  )
+              );
+            }
+        );
+      } else {
+        return (row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> taskClient.allocateSegment(
+            supervisorTaskId,
+            row.getTimestamp()
+        );
+      }
     }
   }
 
@@ -262,10 +385,10 @@ public class ParallelIndexSubTask extends AbstractTask
    *
    * <ul>
    * <li>
-   * If the number of rows in a segment exceeds {@link ParallelIndexTuningConfig#maxRowsPerSegment}
+   * If the number of rows in a segment exceeds {@link DynamicPartitionsSpec#maxRowsPerSegment}
    * </li>
    * <li>
-   * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link ParallelIndexTuningConfig#maxTotalRows}
+   * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link DynamicPartitionsSpec#maxTotalRows}
    * </li>
    * </ul>
    *
@@ -273,7 +396,7 @@ public class ParallelIndexSubTask extends AbstractTask
    *
    * @return true if generated segments are successfully published, otherwise false
    */
-  private List<DataSegment> generateAndPushSegments(
+  private Set<DataSegment> generateAndPushSegments(
       final TaskToolbox toolbox,
       final ParallelIndexTaskClient taskClient,
       final FirehoseFactory firehoseFactory,
@@ -283,7 +406,7 @@ public class ParallelIndexSubTask extends AbstractTask
     final DataSchema dataSchema = ingestionSchema.getDataSchema();
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
     final FireDepartment fireDepartmentForMetrics =
-        new FireDepartment(dataSchema, new RealtimeIOConfig(null, null, null), null);
+        new FireDepartment(dataSchema, new RealtimeIOConfig(null, null), null);
     final FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
 
     if (toolbox.getMonitorScheduler() != null) {
@@ -297,20 +420,20 @@ public class ParallelIndexSubTask extends AbstractTask
 
     // Initialize maxRowsPerSegment and maxTotalRows lazily
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
-    @Nullable final Integer maxRowsPerSegment = IndexTask.getValidMaxRowsPerSegment(tuningConfig);
-    @Nullable final Long maxTotalRows = IndexTask.getValidMaxTotalRows(tuningConfig);
+    final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) tuningConfig.getGivenOrDefaultPartitionsSpec();
     final long pushTimeout = tuningConfig.getPushTimeout();
     final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
-    final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient, ingestionSchema);
+    final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient);
 
     try (
         final Appenderator appenderator = newAppenderator(fireDepartmentMetrics, toolbox, dataSchema, tuningConfig);
         final BatchAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
+      this.appenderator = appenderator;
       driver.startJob();
 
-      final List<DataSegment> pushedSegments = new ArrayList<>();
+      final Set<DataSegment> pushedSegments = new HashSet<>();
 
       while (firehose.hasMore()) {
         try {
@@ -343,13 +466,17 @@ public class ParallelIndexSubTask extends AbstractTask
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 
           if (addResult.isOk()) {
-            if (addResult.isPushRequired(maxRowsPerSegment, maxTotalRows)) {
+            final boolean isPushRequired = addResult.isPushRequired(
+                partitionsSpec.getMaxRowsPerSegment(),
+                partitionsSpec.getMaxTotalRows()
+            );
+            if (isPushRequired) {
               // There can be some segments waiting for being published even though any rows won't be added to them.
               // If those segments are not published here, the available space in appenderator will be kept to be small
               // which makes the size of segments smaller.
               final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
               pushedSegments.addAll(pushed.getSegments());
-              log.info("Pushed segments[%s]", pushed.getSegments());
+              LOG.info("Pushed segments[%s]", pushed.getSegments());
             }
           } else {
             throw new ISE("Failed to add a row with timestamp[%s]", inputRow.getTimestamp());
@@ -368,7 +495,7 @@ public class ParallelIndexSubTask extends AbstractTask
 
       final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
       pushedSegments.addAll(pushed.getSegments());
-      log.info("Pushed segments[%s]", pushed.getSegments());
+      LOG.info("Pushed segments[%s]", pushed.getSegments());
 
       return pushedSegments;
     }
@@ -377,14 +504,15 @@ public class ParallelIndexSubTask extends AbstractTask
     }
   }
 
-  private static Appenderator newAppenderator(
+  private Appenderator newAppenderator(
       FireDepartmentMetrics metrics,
       TaskToolbox toolbox,
       DataSchema dataSchema,
       ParallelIndexTuningConfig tuningConfig
   )
   {
-    return Appenderators.createOffline(
+    return appenderatorsManager.createOfflineAppenderatorForTask(
+        getId(),
         dataSchema,
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
         metrics,
@@ -407,5 +535,19 @@ public class ParallelIndexSubTask extends AbstractTask
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getDataSegmentKiller()
     );
+  }
+
+  @Override
+  public void stopGracefully(TaskConfig taskConfig)
+  {
+    synchronized (this) {
+      stopped = true;
+      if (appenderator != null) {
+        appenderator.closeNow();
+      }
+      if (runThread != null) {
+        runThread.interrupt();
+      }
+    }
   }
 }

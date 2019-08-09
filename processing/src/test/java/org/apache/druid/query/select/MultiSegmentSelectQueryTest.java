@@ -22,7 +22,6 @@ package org.apache.druid.query.select;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CharSource;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -42,6 +41,7 @@ import org.apache.druid.query.UnionQueryRunner;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.IncrementalIndexSegment;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -147,11 +147,22 @@ public class MultiSegmentSelectQueryTest
     segment1 = new IncrementalIndexSegment(index1, makeIdentifier(index1, "v1"));
     segment_override = new IncrementalIndexSegment(index2, makeIdentifier(index2, "v2"));
 
-    VersionedIntervalTimeline<String, Segment> timeline =
-        new VersionedIntervalTimeline<>(StringComparators.LEXICOGRAPHIC);
-    timeline.add(index0.getInterval(), "v1", new SingleElementPartitionChunk<>(segment0));
-    timeline.add(index1.getInterval(), "v1", new SingleElementPartitionChunk<>(segment1));
-    timeline.add(index2.getInterval(), "v2", new SingleElementPartitionChunk<>(segment_override));
+    VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = new VersionedIntervalTimeline<>(StringComparators.LEXICOGRAPHIC);
+    timeline.add(
+        index0.getInterval(),
+        "v1",
+        new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment0))
+    );
+    timeline.add(
+        index1.getInterval(),
+        "v1",
+        new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment1))
+    );
+    timeline.add(
+        index2.getInterval(),
+        "v2",
+        new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment_override))
+    );
 
     segmentIdentifiers = new ArrayList<>();
     for (TimelineObjectHolder<String, ?> holder : timeline.lookup(Intervals.of("2011-01-12/2011-01-14"))) {
@@ -243,7 +254,7 @@ public class MultiSegmentSelectQueryTest
   private void runAllGranularityTest(SelectQuery query, int[][] expectedOffsets)
   {
     for (int[] expected : expectedOffsets) {
-      List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
+      List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
       Assert.assertEquals(1, results.size());
 
       SelectResultValue value = results.get(0).getValue();
@@ -285,7 +296,7 @@ public class MultiSegmentSelectQueryTest
   private void runDayGranularityTest(SelectQuery query, int[][] expectedOffsets)
   {
     for (int[] expected : expectedOffsets) {
-      List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
+      List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
       Assert.assertEquals(2, results.size());
 
       SelectResultValue value0 = results.get(0).getValue();
@@ -327,12 +338,12 @@ public class MultiSegmentSelectQueryTest
     SelectQuery query = selectQueryBuilder.build();
     QueryRunner unionQueryRunner = new UnionQueryRunner(runner);
 
-    List<Result<SelectResultValue>> results = unionQueryRunner.run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
+    List<Result<SelectResultValue>> results = unionQueryRunner.run(QueryPlus.wrap(query)).toList();
 
     Map<String, Integer> pagingIdentifiers = results.get(0).getValue().getPagingIdentifiers();
     query = query.withPagingSpec(toNextCursor(PagingSpec.merge(Collections.singletonList(pagingIdentifiers)), query, 3));
 
-    unionQueryRunner.run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
+    unionQueryRunner.run(QueryPlus.wrap(query)).toList();
   }
 
   private PagingSpec toNextCursor(Map<String, Integer> merged, SelectQuery query, int threshold)

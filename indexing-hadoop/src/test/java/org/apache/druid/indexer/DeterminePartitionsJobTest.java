@@ -72,7 +72,7 @@ public class DeterminePartitionsJobTest
         new Object[][]{
             {
                 true,
-                3L,
+                3,
                 "2014-10-22T00:00:00Z/P1D",
                 1,
                 new int[]{5},
@@ -100,7 +100,7 @@ public class DeterminePartitionsJobTest
             },
             {
                 false,
-                3L,
+                3,
                 "2014-10-20T00:00:00Z/P1D",
                 1,
                 new int[]{5},
@@ -138,7 +138,7 @@ public class DeterminePartitionsJobTest
             },
             {
                 true,
-                6L,
+                6,
                 "2014-10-20T00:00:00Z/P3D",
                 3,
                 new int[]{2, 2, 2},
@@ -198,7 +198,7 @@ public class DeterminePartitionsJobTest
 
   public DeterminePartitionsJobTest(
       boolean assumeGrouped,
-      Long targetPartitionSize,
+      Integer targetPartitionSize,
       String interval,
       int expectedNumOfSegments,
       int[] expectedNumOfShardsForEachSegment,
@@ -257,7 +257,8 @@ public class DeterminePartitionsJobTest
             new HadoopTuningConfig(
                 tmpDir.getCanonicalPath(),
                 null,
-                new SingleDimensionPartitionsSpec(null, targetPartitionSize, null, assumeGrouped),
+                new SingleDimensionPartitionsSpec(targetPartitionSize, null, null, assumeGrouped),
+                null,
                 null,
                 null,
                 null,

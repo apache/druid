@@ -28,14 +28,18 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
- * The result of a NullableBufferAggregator will be null if all the values to be aggregated are null values or no values
- * are aggregated at all. If any of the value is non-null, the result would be the aggregated value of the delegate
- * aggregator. Note that the delegate aggregator is not required to perform check for
- * {@link BaseNullableColumnValueSelector#isNull()} on the selector as only non-null values will be passed to the
- * delegate aggregator. This class is only used when SQL compatible null handling is enabled.
- * When writing aggregated result to buffer, it will write an additional byte to store the nullability of the
- * aggregated result.
- * Buffer Layout - 1 byte for storing nullability + delegate storage bytes.
+ * A wrapper around a non-null-aware BufferAggregator that makes it null-aware. This removes the need for each
+ * aggregator class to handle nulls on its own.
+ *
+ * The result of this aggregator will be null if all the values to be aggregated are null values or no values are
+ * aggregated at all. If any of the values are non-null, the result will be the aggregated value of the delegate
+ * aggregator.
+ *
+ * When wrapped by this class, the underlying aggregator's required storage space is increased by one byte. The extra
+ * byte is a boolean that stores whether or not any non-null values have been seen. The extra byte is placed before
+ * the underlying aggregator's normal state. (Buffer layout = [nullability byte] [delegate storage bytes])
+ *
+ * @see NullableVectorAggregator, the vectorized version.
  */
 @PublicApi
 public final class NullableBufferAggregator implements BufferAggregator
@@ -109,6 +113,12 @@ public final class NullableBufferAggregator implements BufferAggregator
   public boolean isNull(ByteBuffer buf, int position)
   {
     return buf.get(position) == NullHandling.IS_NULL_BYTE || delegate.isNull(buf, position + Byte.BYTES);
+  }
+
+  @Override
+  public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
+  {
+    delegate.relocate(oldPosition + Byte.BYTES, newPosition + Byte.BYTES, oldBuffer, newBuffer);
   }
 
   @Override

@@ -69,15 +69,15 @@ public class DruidCoordinatorCleanupPendingSegments implements DruidCoordinatorH
     // is no running/pending/waiting tasks.
     Preconditions.checkState(!createdTimes.isEmpty(), "Failed to gather createdTimes of tasks");
 
-    // If there is no running/pending/waiting/complete tasks, pendingSegmentsCleanupEndTime is
+    // If there is no running/pending/waiting/complete tasks, stalePendingSegmentsCutoffCreationTime is
     // (DateTimes.nowUtc() - KEEP_PENDING_SEGMENTS_OFFSET).
-    final DateTime pendingSegmentsCleanupEndTime = createdTimes.get(0).minus(KEEP_PENDING_SEGMENTS_OFFSET);
-    for (String dataSource : params.getDataSources().keySet()) {
-      if (!params.getCoordinatorDynamicConfig().getProtectedPendingSegmentDatasources().contains(dataSource)) {
+    final DateTime stalePendingSegmentsCutoffCreationTime = createdTimes.get(0).minus(KEEP_PENDING_SEGMENTS_OFFSET);
+    for (String dataSource : params.getUsedSegmentsTimelinesPerDataSource().keySet()) {
+      if (!params.getCoordinatorDynamicConfig().getDataSourcesToNotKillStalePendingSegmentsIn().contains(dataSource)) {
         log.info(
             "Killed [%d] pendingSegments created until [%s] for dataSource[%s]",
-            indexingServiceClient.killPendingSegments(dataSource, pendingSegmentsCleanupEndTime),
-            pendingSegmentsCleanupEndTime,
+            indexingServiceClient.killPendingSegments(dataSource, stalePendingSegmentsCutoffCreationTime),
+            stalePendingSegmentsCutoffCreationTime,
             dataSource
         );
       }

@@ -25,29 +25,23 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.IndexedInts;
-import org.apache.druid.segment.data.SingleIndexedInt;
-import org.apache.druid.segment.data.ZeroIndexedInts;
 
 import javax.annotation.Nullable;
 
 /**
- * A DimensionSelector decorator that computes an expression on top of it.
+ * A DimensionSelector decorator that computes an expression on top of it. See {@link ExpressionSelectors} for details
+ * on how expression selectors are constructed.
  */
 public class SingleStringInputDimensionSelector implements DimensionSelector
 {
   private final DimensionSelector selector;
   private final Expr expression;
   private final SingleInputBindings bindings = new SingleInputBindings();
-  private final SingleIndexedInt nullAdjustedRow = new SingleIndexedInt();
-
-  /**
-   * 0 if selector has null as a value; 1 if it doesn't.
-   */
-  private final int nullAdjustment;
 
   public SingleStringInputDimensionSelector(
       final DimensionSelector selector,
@@ -55,19 +49,18 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   )
   {
     // Verify expression has just one binding.
-    if (expression.analyzeInputs().getFreeVariables().size() != 1) {
+    if (expression.analyzeInputs().getRequiredBindings().size() != 1) {
       throw new ISE("WTF?! Expected expression with just one binding");
     }
 
     // Verify selector has a working dictionary.
-    if (selector.getValueCardinality() == DimensionSelector.CARDINALITY_UNKNOWN
+    if (selector.getValueCardinality() == DimensionDictionarySelector.CARDINALITY_UNKNOWN
         || !selector.nameLookupPossibleInAdvance()) {
       throw new ISE("Selector of class[%s] does not have a dictionary, cannot use it.", selector.getClass().getName());
     }
 
     this.selector = Preconditions.checkNotNull(selector, "selector");
     this.expression = Preconditions.checkNotNull(expression, "expression");
-    this.nullAdjustment = selector.getValueCardinality() == 0 || selector.lookupName(0) != null ? 1 : 0;
   }
 
   @Override
@@ -78,27 +71,12 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   }
 
   /**
-   * Treats any non-single-valued row as a row containing a single null value, to ensure consistency with
-   * other expression selectors. See also {@link ExpressionSelectors#supplierFromDimensionSelector} for similar
-   * behavior.
+   * Get the underlying selector {@link IndexedInts} row
    */
   @Override
   public IndexedInts getRow()
   {
-    final IndexedInts row = selector.getRow();
-
-    if (row.size() == 1) {
-      if (nullAdjustment == 0) {
-        return row;
-      } else {
-        nullAdjustedRow.setValue(row.get(0) + nullAdjustment);
-        return nullAdjustedRow;
-      }
-    } else {
-      // Can't handle non-singly-valued rows in expressions.
-      // Treat them as nulls until we think of something better to do.
-      return ZeroIndexedInts.instance();
-    }
+    return selector.getRow();
   }
 
   @Override
@@ -116,7 +94,7 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   @Override
   public int getValueCardinality()
   {
-    return selector.getValueCardinality() + nullAdjustment;
+    return selector.getValueCardinality();
   }
 
   @Override
@@ -124,12 +102,7 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   {
     final String value;
 
-    if (id == 0) {
-      // id 0 is always null for this selector impl.
-      value = null;
-    } else {
-      value = selector.lookupName(id - nullAdjustment);
-    }
+    value = selector.lookupName(id);
 
     bindings.set(value);
     return expression.eval(bindings).asString();

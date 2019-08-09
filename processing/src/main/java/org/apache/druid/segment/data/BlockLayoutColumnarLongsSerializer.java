@@ -24,6 +24,8 @@ import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -47,6 +49,7 @@ public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializ
   private int numInserted = 0;
   private int numInsertedForNextFlush;
 
+  @Nullable
   private ByteBuffer endBuffer;
 
   BlockLayoutColumnarLongsSerializer(

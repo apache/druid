@@ -36,6 +36,7 @@ import { AboutDialog } from '../../dialogs/about-dialog/about-dialog';
 import { CoordinatorDynamicConfigDialog } from '../../dialogs/coordinator-dynamic-config-dialog/coordinator-dynamic-config-dialog';
 import { OverlordDynamicConfigDialog } from '../../dialogs/overlord-dynamic-config-dialog/overlord-dynamic-config-dialog';
 import {
+  DRUID_ASF_SLACK,
   DRUID_DOCS,
   DRUID_GITHUB,
   DRUID_USER_GROUP,
@@ -127,7 +128,7 @@ export class HeaderBar extends React.PureComponent<HeaderBarProps, HeaderBarStat
     );
   }
 
-  render() {
+  render(): JSX.Element {
     const { active, hideLegacy } = this.props;
     const {
       aboutDialogOpen,
@@ -163,6 +164,12 @@ export class HeaderBar extends React.PureComponent<HeaderBarProps, HeaderBarStat
         />
         <MenuItem icon={IconNames.TH} text="Docs" href={DRUID_DOCS} target="_blank" />
         <MenuItem icon={IconNames.USER} text="User group" href={DRUID_USER_GROUP} target="_blank" />
+        <MenuItem
+          icon={IconNames.CHAT}
+          text="ASF Slack channel"
+          href={DRUID_ASF_SLACK}
+          target="_blank"
+        />
         <MenuItem icon={IconNames.GIT_BRANCH} text="GitHub" href={DRUID_GITHUB} target="_blank" />
       </Menu>
     );

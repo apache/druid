@@ -34,11 +34,43 @@ exports[`servers view action servers view 1`] = `
       localStorageKey="servers-refresh-rate"
       onRefresh={[Function]}
     />
-    <Blueprint3.Button
-      icon="application"
-      onClick={[Function]}
-      text="Go to SQL"
-    />
+    <Blueprint3.Popover
+      boundary="scrollParent"
+      captureDismiss={false}
+      content={
+        <Blueprint3.Menu>
+          <Blueprint3.MenuItem
+            disabled={false}
+            icon="application"
+            multiline={false}
+            onClick={[Function]}
+            popoverProps={Object {}}
+            shouldDismissPopover={true}
+            text="View SQL query for table"
+          />
+        </Blueprint3.Menu>
+      }
+      defaultIsOpen={false}
+      disabled={false}
+      fill={false}
+      hasBackdrop={false}
+      hoverCloseDelay={300}
+      hoverOpenDelay={150}
+      inheritDarkTheme={true}
+      interactionKind="click"
+      minimal={false}
+      modifiers={Object {}}
+      openOnTargetFocus={true}
+      position="bottom-left"
+      targetTagName="span"
+      transitionDuration={300}
+      usePortal={true}
+      wrapperTagName="span"
+    >
+      <Blueprint3.Button
+        icon="more"
+      />
+    </Blueprint3.Popover>
     <TableColumnSelector
       columns={
         Array [
@@ -284,29 +316,5 @@ exports[`servers view action servers view 1`] = `
     style={Object {}}
     subRowsKey="_subRows"
   />
-  <AsyncActionDialog
-    action={null}
-    confirmButtonText="Disable worker"
-    failText="Could not disable worker"
-    intent="danger"
-    onClose={[Function]}
-    successText="Worker has been disabled"
-  >
-    <p>
-      Are you sure you want to disable worker 'null'?
-    </p>
-  </AsyncActionDialog>
-  <AsyncActionDialog
-    action={null}
-    confirmButtonText="Enable worker"
-    failText="Could not enable worker"
-    intent="primary"
-    onClose={[Function]}
-    successText="Worker has been enabled"
-  >
-    <p>
-      Are you sure you want to enable worker 'null'?
-    </p>
-  </AsyncActionDialog>
 </div>
 `;

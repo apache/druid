@@ -966,7 +966,7 @@ public class Druids
           .virtualColumns(query.getVirtualColumns())
           .resultFormat(query.getResultFormat())
           .batchSize(query.getBatchSize())
-          .limit(query.getLimit())
+          .limit(query.getScanRowsLimit())
           .filters(query.getFilter())
           .columns(query.getColumns())
           .legacy(query.isLegacy())

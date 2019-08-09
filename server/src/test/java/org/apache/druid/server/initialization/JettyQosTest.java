@@ -51,7 +51,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
@@ -131,7 +130,7 @@ public class JettyQosTest extends BaseJettyTest
               ListenableFuture<StatusResponseHolder> go =
                   slowClient.go(
                       new Request(HttpMethod.GET, new URL("http://localhost:" + port + "/slow/hello")),
-                      new StatusResponseHandler(Charset.defaultCharset())
+                      StatusResponseHandler.getInstance()
                   );
               go.get();
               slowCount.incrementAndGet();
@@ -166,7 +165,7 @@ public class JettyQosTest extends BaseJettyTest
               ListenableFuture<StatusResponseHolder> go =
                   fastClient.go(
                       new Request(HttpMethod.GET, new URL("http://localhost:" + port + "/default")),
-                      new StatusResponseHandler(Charset.defaultCharset())
+                    StatusResponseHandler.getInstance()
                   );
               go.get();
               fastCount.incrementAndGet();

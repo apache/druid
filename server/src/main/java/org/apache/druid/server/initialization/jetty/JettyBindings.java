@@ -40,7 +40,7 @@ public class JettyBindings
     // No instantiation.
   }
 
-  public static void addQosFilter(Binder binder, String path, int maxRequests)
+  public static void addQosFilter(Binder binder, String paths, int maxRequests)
   {
     if (maxRequests <= 0) {
       return;
@@ -48,7 +48,18 @@ public class JettyBindings
 
     Multibinder.newSetBinder(binder, ServletFilterHolder.class)
                .addBinding()
-               .toInstance(new QosFilterHolder(path, maxRequests));
+               .toInstance(new QosFilterHolder(new String[]{paths}, maxRequests));
+  }
+
+  public static void addQosFilter(Binder binder, String[] paths, int maxRequests)
+  {
+    if (maxRequests <= 0) {
+      return;
+    }
+
+    Multibinder.newSetBinder(binder, ServletFilterHolder.class)
+               .addBinding()
+               .toInstance(new QosFilterHolder(paths, maxRequests));
   }
 
   public static void addHandler(Binder binder, Class<? extends Handler> handlerClass)
@@ -60,12 +71,12 @@ public class JettyBindings
 
   private static class QosFilterHolder implements ServletFilterHolder
   {
-    private final String path;
+    private final String[] paths;
     private final int maxRequests;
 
-    public QosFilterHolder(String path, int maxRequests)
+    public QosFilterHolder(String[] paths, int maxRequests)
     {
-      this.path = path;
+      this.paths = paths;
       this.maxRequests = maxRequests;
     }
 
@@ -90,7 +101,13 @@ public class JettyBindings
     @Override
     public String getPath()
     {
-      return path;
+      return null;
+    }
+
+    @Override
+    public String[] getPaths()
+    {
+      return paths;
     }
 
     @Override

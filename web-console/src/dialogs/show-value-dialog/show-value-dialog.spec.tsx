@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { ShowValueDialog } from './show-value-dialog';
 
@@ -25,7 +25,7 @@ describe('clipboard dialog', () => {
   it('matches snapshot', () => {
     const compactionDialog = (
       <ShowValueDialog
-        onClose={() => null}
+        onClose={() => {}}
         str={
           'Bot: Automatska zamjena teksta  (-[[Administrativna podjela Meksika|Admin]] +[[Administrativna podjela Meksika|Admi]])'
         }

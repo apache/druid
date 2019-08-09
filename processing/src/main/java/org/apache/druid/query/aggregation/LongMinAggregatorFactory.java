@@ -40,7 +40,7 @@ public class LongMinAggregatorFactory extends SimpleLongAggregatorFactory
   public LongMinAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("expression") String expression,
+      @JsonProperty("expression") @Nullable String expression,
       @JacksonInject ExprMacroTable macroTable
   )
   {

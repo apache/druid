@@ -35,10 +35,6 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 
-import static org.apache.druid.data.input.AvroStreamInputRowParserTest.DIMENSIONS;
-import static org.apache.druid.data.input.AvroStreamInputRowParserTest.PARSE_SPEC;
-import static org.apache.druid.data.input.AvroStreamInputRowParserTest.assertInputRowCorrect;
-import static org.apache.druid.data.input.AvroStreamInputRowParserTest.buildSomeAvroDatum;
 
 public class AvroHadoopInputRowParserTest
 {
@@ -55,7 +51,7 @@ public class AvroHadoopInputRowParserTest
   @Test
   public void testParseNotFromSpark() throws IOException
   {
-    testParse(buildSomeAvroDatum());
+    testParse(AvroStreamInputRowParserTest.buildSomeAvroDatum());
   }
 
   @Test
@@ -66,19 +62,19 @@ public class AvroHadoopInputRowParserTest
 
   private void testParse(GenericRecord record) throws IOException
   {
-    AvroHadoopInputRowParser parser = new AvroHadoopInputRowParser(PARSE_SPEC);
+    AvroHadoopInputRowParser parser = new AvroHadoopInputRowParser(AvroStreamInputRowParserTest.PARSE_SPEC);
     AvroHadoopInputRowParser parser2 = jsonMapper.readValue(
         jsonMapper.writeValueAsBytes(parser),
         AvroHadoopInputRowParser.class
     );
     InputRow inputRow = parser2.parseBatch(record).get(0);
-    assertInputRowCorrect(inputRow, DIMENSIONS);
+    AvroStreamInputRowParserTest.assertInputRowCorrect(inputRow, AvroStreamInputRowParserTest.DIMENSIONS);
   }
 
   private static GenericRecord buildAvroFromFile() throws IOException
   {
     return buildAvroFromFile(
-        buildSomeAvroDatum()
+        AvroStreamInputRowParserTest.buildSomeAvroDatum()
     );
   }
 
@@ -107,5 +103,4 @@ public class AvroHadoopInputRowParserTest
 
     return record;
   }
-
 }

@@ -293,6 +293,9 @@ public abstract class ExprEval<T>
     @Override
     public Expr toExpr()
     {
+      if (isNumericNull()) {
+        return new NullDoubleExpr();
+      }
       return new DoubleExpr(value.doubleValue());
     }
   }
@@ -357,9 +360,11 @@ public abstract class ExprEval<T>
     @Override
     public Expr toExpr()
     {
+      if (isNumericNull()) {
+        return new NullLongExpr();
+      }
       return new LongExpr(value.longValue());
     }
-
   }
 
   private static class StringExprEval extends ExprEval<String>

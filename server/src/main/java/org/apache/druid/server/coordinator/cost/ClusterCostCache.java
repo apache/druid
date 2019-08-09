@@ -21,11 +21,11 @@ package org.apache.druid.server.coordinator.cost;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CollectionUtils;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class ClusterCostCache
 {
@@ -82,10 +82,7 @@ public class ClusterCostCache
     public ClusterCostCache build()
     {
       return new ClusterCostCache(
-          serversCostCache
-              .entrySet()
-              .stream()
-              .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build()))
+          CollectionUtils.mapValues(serversCostCache, ServerCostCache.Builder::build)
       );
     }
   }

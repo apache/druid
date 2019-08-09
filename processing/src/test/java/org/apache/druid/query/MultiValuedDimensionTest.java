@@ -26,7 +26,6 @@ import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
@@ -47,6 +46,9 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
+import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.topn.TopNQuery;
@@ -82,7 +84,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -226,7 +227,7 @@ public class MultiValuedDimensionTest
         .setAggregatorSpecs(new CountAggregatorFactory("count"))
         .build();
 
-    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+    Sequence<ResultRow> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
             new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
             new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
@@ -234,21 +235,22 @@ public class MultiValuedDimensionTest
         query
     );
 
-    List<Row> expectedResults = Arrays.asList(
+    List<ResultRow> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
-            "1970-01-01T00:00:00.000Z",
+            query,
+            "1970",
             "tags",
             NullHandling.replaceWithDefault() ? null : "",
             "count",
             2L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t1", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t2", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t3", "count", 4L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t4", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t5", "count", 4L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t6", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t7", "count", 2L)
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tags", "t1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tags", "t2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tags", "t3", "count", 4L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tags", "t4", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tags", "t5", "count", 4L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tags", "t6", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tags", "t7", "count", 2L)
     );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "noFilter");
@@ -268,7 +270,7 @@ public class MultiValuedDimensionTest
         .setContext(context)
         .build();
 
-    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+    Sequence<ResultRow> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
             new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
             new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
@@ -276,12 +278,12 @@ public class MultiValuedDimensionTest
         query
     );
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t1", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t2", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t3", "count", 4L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t4", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t5", "count", 2L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", "t1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", "t2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", "t3", "count", 4L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", "t4", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", "t5", "count", 2L)
     );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "dimFilter");
@@ -301,7 +303,7 @@ public class MultiValuedDimensionTest
         .setContext(context)
         .build();
 
-    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+    Sequence<ResultRow> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
             new QueryableIndexSegment(queryableIndexNullSampler, SegmentId.dummy("sid1")),
             new IncrementalIndexSegment(incrementalIndexNullSampler, SegmentId.dummy("sid2"))
@@ -309,8 +311,8 @@ public class MultiValuedDimensionTest
         query
     );
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", null, "count", 2L)
+    List<ResultRow> expectedResults = Collections.singletonList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", null, "count", 2L)
     );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "filter-empty");
@@ -332,7 +334,7 @@ public class MultiValuedDimensionTest
         .setContext(context)
         .build();
 
-    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+    Sequence<ResultRow> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
             new QueryableIndexSegment(queryableIndexNullSampler, SegmentId.dummy("sid1")),
             new IncrementalIndexSegment(incrementalIndexNullSampler, SegmentId.dummy("sid2"))
@@ -340,20 +342,20 @@ public class MultiValuedDimensionTest
         query
     );
 
-    List<Row> expectedResults;
+    List<ResultRow> expectedResults;
     // an empty row e.g. [], or group by 'missing' value, is grouped with the default string value, "" or null
     // grouping input is filtered to [], null, [""]
     if (NullHandling.replaceWithDefault()) {
       // when sql compatible null handling is disabled, the inputs are effectively [], null, [null] and
       // are all grouped as null
       expectedResults = Collections.singletonList(
-          GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", null, "count", 6L)
+          GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", null, "count", 6L)
       );
     } else {
       // with sql compatible null handling, null and [] = null, but [""] = ""
       expectedResults = ImmutableList.of(
-          GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", null, "count", 4L),
-          GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "", "count", 2L)
+          GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", null, "count", 4L),
+          GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", "", "count", 2L)
       );
     }
 
@@ -374,7 +376,7 @@ public class MultiValuedDimensionTest
         .setContext(context)
         .build();
 
-    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+    Sequence<ResultRow> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
             new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
             new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
@@ -382,8 +384,8 @@ public class MultiValuedDimensionTest
         query
     );
 
-    List<Row> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t3", "count", 4L)
+    List<ResultRow> expectedResults = Collections.singletonList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", "t3", "count", 4L)
     );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "filteredDim");
@@ -414,7 +416,7 @@ public class MultiValuedDimensionTest
         .setContext(context)
         .build();
 
-    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+    Sequence<ResultRow> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
             new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
             new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
@@ -422,15 +424,15 @@ public class MultiValuedDimensionTest
         query
     );
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "foo", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t1foo", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t2foo", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t3foo", "count", 4L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t4foo", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t5foo", "count", 4L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t6foo", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t7foo", "count", 2L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t3foo", "count", 4L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t4foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t5foo", "count", 4L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t6foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t7foo", "count", 2L)
     );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr");
@@ -462,7 +464,7 @@ public class MultiValuedDimensionTest
         .setContext(context)
         .build();
 
-    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+    Sequence<ResultRow> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
             new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
             new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
@@ -470,12 +472,12 @@ public class MultiValuedDimensionTest
         query
     );
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t1u1", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t1u2", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t2u1", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t2u2", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t3u1", "count", 2L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t3u1", "count", 2L)
     );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-multi-multi");
@@ -507,7 +509,7 @@ public class MultiValuedDimensionTest
         .setContext(context)
         .build();
 
-    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+    Sequence<ResultRow> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
             new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
             new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
@@ -515,12 +517,12 @@ public class MultiValuedDimensionTest
         query
     );
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t1u1", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t1u2", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t2u1", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t2u2", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t3u1", "count", 2L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t3u1", "count", 2L)
     );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-multi-multi-auto");
@@ -552,7 +554,7 @@ public class MultiValuedDimensionTest
         .setContext(context)
         .build();
 
-    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+    Sequence<ResultRow> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
             new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
             new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
@@ -560,15 +562,61 @@ public class MultiValuedDimensionTest
         query
     );
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t1u1", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t1u2", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t2u1", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t2u2", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t3u1", "count", 2L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t3u1", "count", 2L)
     );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-multi-multi-auto-auto");
+  }
+
+  @Test
+  public void testGroupByExpressionMultiMultiAutoAutoDupeIdentifier()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+    }
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource("xx")
+        .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("texpr", "texpr"))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "texpr",
+                "concat(tags, tags)",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setLimitSpec(new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("count", OrderByColumnSpec.Direction.DESCENDING)), 5))
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setContext(context)
+        .build();
+
+    Sequence<ResultRow> result = helper.runQueryOnSegmentsObjs(
+        ImmutableList.of(
+            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
+        ),
+        query
+    );
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t3t3", "count", 4L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t5t5", "count", 4L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2t1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1t2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t7t7", "count", 2L)
+    );
+
+    System.out.println(result.toList());
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-multi-multi-auto-auto-self");
   }
 
   @Test
@@ -598,7 +646,7 @@ public class MultiValuedDimensionTest
         .setContext(context)
         .build();
 
-    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+    Sequence<ResultRow> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
             new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
             new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
@@ -606,12 +654,12 @@ public class MultiValuedDimensionTest
         query
     );
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t1u1", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t1u2", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t2u1", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t2u2", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "texpr", "t3u1", "count", 2L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u2", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t3u1", "count", 2L)
     );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-multi-multi-auto-auto");
@@ -620,10 +668,8 @@ public class MultiValuedDimensionTest
   @Test
   public void testGroupByExpressionAuto()
   {
-    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedException.expect(RuntimeException.class);
-      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
-    }
+    // virtual column is a single input column and input is not used explicitly as an array,
+    // so this one will work for group by v1, even with multi-value inputs
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource("xx")
@@ -642,7 +688,7 @@ public class MultiValuedDimensionTest
         .setContext(context)
         .build();
 
-    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+    Sequence<ResultRow> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
             new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
             new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
@@ -650,15 +696,56 @@ public class MultiValuedDimensionTest
         query
     );
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "foo", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "t1foo", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "t2foo", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "t3foo", "count", 4L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "t4foo", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "t5foo", "count", 4L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "t6foo", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "t7foo", "count", 2L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "t1foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "t2foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "t3foo", "count", 4L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "t4foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "t5foo", "count", 4L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "t6foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "t7foo", "count", 2L)
+    );
+
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-auto");
+  }
+
+  @Test
+  public void testGroupByExpressionArrayExpressionFilter()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING.");
+    }
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource("xx")
+        .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("tt", "tt", ValueType.LONG))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "tt",
+                "array_offset_of(tags, 't2')",
+                ValueType.LONG,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setContext(context)
+        .build();
+
+    Sequence<ResultRow> result = helper.runQueryOnSegmentsObjs(
+        ImmutableList.of(
+            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
+        ),
+        query
+    );
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", NullHandling.replaceWithDefault() ? -1L : null, "count", 6L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", 1L, "count", 2L)
     );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-auto");
@@ -689,7 +776,7 @@ public class MultiValuedDimensionTest
         .setContext(context)
         .build();
 
-    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+    Sequence<ResultRow> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
             new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
             new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
@@ -697,11 +784,11 @@ public class MultiValuedDimensionTest
         query
     );
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "foo", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "foot1, foot2, foot3", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "foot3, foot4, foot5", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "foot5, foot6, foot7", "count", 2L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foot1, foot2, foot3", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foot3, foot4, foot5", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foot5, foot6, foot7", "count", 2L)
     );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-array-fn");
@@ -732,7 +819,7 @@ public class MultiValuedDimensionTest
         .setContext(context)
         .build();
 
-    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+    Sequence<ResultRow> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
             new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
             new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
@@ -740,11 +827,11 @@ public class MultiValuedDimensionTest
         query
     );
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "foo", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "foot1, foot2, foot3", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "foot3, foot4, foot5", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "foot5, foot6, foot7", "count", 2L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foot1, foot2, foot3", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foot3, foot4, foot5", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foot5, foot6, foot7", "count", 2L)
     );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-arrayfn-auto");
@@ -775,7 +862,7 @@ public class MultiValuedDimensionTest
         .setContext(context)
         .build();
 
-    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+    Sequence<ResultRow> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
             new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
             new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
@@ -784,17 +871,18 @@ public class MultiValuedDimensionTest
     );
 
 
-    List<Row> expectedResults = Arrays.asList(
+    List<ResultRow> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             "tt",
             NullHandling.replaceWithDefault() ? null : "",
             "count",
             2L
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "t1t2t3", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "t3t4t5", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "t5t6t7", "count", 2L)
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "t1t2t3", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "t3t4t5", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "t5t6t7", "count", 2L)
     );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-arrayfn-auto");
@@ -825,7 +913,7 @@ public class MultiValuedDimensionTest
         .setContext(context)
         .build();
 
-    Sequence<Row> result = helper.runQueryOnSegmentsObjs(
+    Sequence<ResultRow> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
             new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
             new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
@@ -833,11 +921,11 @@ public class MultiValuedDimensionTest
         query
     );
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "foo", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "foot1, foot2, foot3", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "foot3, foot4, foot5", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tt", "foot5, foot6, foot7", "count", 2L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foot1, foot2, foot3", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foot3, foot4, foot5", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foot5, foot6, foot7", "count", 2L)
     );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-arrayfn-auto");
@@ -927,7 +1015,7 @@ public class MultiValuedDimensionTest
         ))
         .metric("count")
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-        .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
+        .aggregators(new CountAggregatorFactory("count"))
         .threshold(5)
         .filters(new SelectorDimFilter("tags", "t3", null))
         .build();
@@ -946,8 +1034,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
-      Map<String, Object> context = new HashMap<>();
-      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
+      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query));
       List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
           new Result<TopNResultValue>(
               DateTimes.of("2011-01-12T00:00:00.000Z"),
@@ -982,7 +1069,7 @@ public class MultiValuedDimensionTest
         )
         .metric("count")
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-        .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
+        .aggregators(new CountAggregatorFactory("count"))
         .threshold(15)
         .build();
 
@@ -1000,8 +1087,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
-      Map<String, Object> context = new HashMap<>();
-      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
+      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query));
       List<Map<String, Object>> expected =
           ImmutableList.<Map<String, Object>>builder()
                        .add(ImmutableMap.of("texpr", "t3foo", "count", 2L))
@@ -1043,7 +1129,7 @@ public class MultiValuedDimensionTest
         )
         .metric("count")
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-        .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
+        .aggregators(new CountAggregatorFactory("count"))
         .threshold(15)
         .build();
 
@@ -1061,8 +1147,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
-      Map<String, Object> context = new HashMap<>();
-      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
+      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query));
 
       List<Map<String, Object>> expected =
           ImmutableList.<Map<String, Object>>builder()

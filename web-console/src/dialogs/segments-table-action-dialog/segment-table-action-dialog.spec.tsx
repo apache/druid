@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { SegmentTableActionDialog } from './segment-table-action-dialog';
 
@@ -25,10 +25,10 @@ describe('task table action dialog', () => {
   it('matches snapshot', () => {
     const taskTableActionDialog = (
       <SegmentTableActionDialog
-        dataSourceId="test"
+        datasourceId="test"
         segmentId="test"
         actions={[{ title: 'test', onAction: () => null }]}
-        onClose={() => null}
+        onClose={() => {}}
         isOpen
       />
     );

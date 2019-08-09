@@ -48,7 +48,13 @@ import org.apache.druid.sql.calcite.expression.UnaryPrefixOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnarySuffixOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayConstructorOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayContainsOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayLengthOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayOffsetOfOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayOffsetOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayOrdinalOfOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayOrdinalOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayOverlapOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayToStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.BTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CastOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CeilOperatorConversion;
@@ -56,11 +62,18 @@ import org.apache.druid.sql.calcite.expression.builtin.ConcatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.FloorOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressMatchOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressParseOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressStringifyOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LikeOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MillisToTimestampOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringAppendOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringConcatOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringPrependOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringSliceOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.PositionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
@@ -72,10 +85,12 @@ import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.StringToMultiValueStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SubstringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TextcatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeArithmeticOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.TimeCeilOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFormatOperatorConversion;
@@ -114,6 +129,93 @@ public class DruidOperatorTable implements SqlOperatorTable
       SqlStdOperatorTable.CHARACTER_LENGTH,
       "strlen"
   );
+
+  private static final List<SqlOperatorConversion> TIME_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+          .add(new CeilOperatorConversion())
+          .add(new DateTruncOperatorConversion())
+          .add(new ExtractOperatorConversion())
+          .add(new FloorOperatorConversion())
+          .add(new MillisToTimestampOperatorConversion())
+          .add(new TimeArithmeticOperatorConversion.TimeMinusIntervalOperatorConversion())
+          .add(new TimeArithmeticOperatorConversion.TimePlusIntervalOperatorConversion())
+          .add(new TimeExtractOperatorConversion())
+          .add(new TimeCeilOperatorConversion())
+          .add(new TimeFloorOperatorConversion())
+          .add(new TimeFormatOperatorConversion())
+          .add(new TimeParseOperatorConversion())
+          .add(new TimeShiftOperatorConversion())
+          .add(new TimestampToMillisOperatorConversion())
+          .build();
+
+  private static final List<SqlOperatorConversion> STRING_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+          .add(new BTrimOperatorConversion())
+          .add(new LikeOperatorConversion())
+          .add(new LTrimOperatorConversion())
+          .add(new PositionOperatorConversion())
+          .add(new RegexpExtractOperatorConversion())
+          .add(new RTrimOperatorConversion())
+          .add(new ParseLongOperatorConversion())
+          .add(new StringFormatOperatorConversion())
+          .add(new StrposOperatorConversion())
+          .add(new SubstringOperatorConversion())
+          .add(new RightOperatorConversion())
+          .add(new LeftOperatorConversion())
+          .add(new ReverseOperatorConversion())
+          .add(new RepeatOperatorConversion())
+          .add(new AliasedOperatorConversion(new SubstringOperatorConversion(), "SUBSTR"))
+          .add(new ConcatOperatorConversion())
+          .add(new TextcatOperatorConversion())
+          .add(new TrimOperatorConversion())
+          .add(new TruncateOperatorConversion())
+          .add(new AliasedOperatorConversion(new TruncateOperatorConversion(), "TRUNC"))
+          .add(new LPadOperatorConversion())
+          .add(new RPadOperatorConversion())
+          .build();
+
+  private static final List<SqlOperatorConversion> VALUE_COERCION_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+          .add(new CastOperatorConversion())
+          .add(new ReinterpretOperatorConversion())
+          .build();
+
+  private static final List<SqlOperatorConversion> ARRAY_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+          .add(new ArrayConstructorOperatorConversion())
+          .add(new ArrayContainsOperatorConversion())
+          .add(new ArrayOverlapOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayContainsOperatorConversion(), "MV_CONTAINS"))
+          .add(new AliasedOperatorConversion(new ArrayOverlapOperatorConversion(), "MV_OVERLAP"))
+          .add(new ArrayLengthOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayLengthOperatorConversion(), "MV_LENGTH"))
+          .add(new ArrayOffsetOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayOffsetOperatorConversion(), "MV_OFFSET"))
+          .add(new ArrayOrdinalOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayOrdinalOperatorConversion(), "MV_ORDINAL"))
+          .add(new ArrayOffsetOfOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayOffsetOfOperatorConversion(), "MV_OFFSET_OF"))
+          .add(new ArrayOrdinalOfOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayOrdinalOfOperatorConversion(), "MV_ORDINAL_OF"))
+          .add(new ArrayToStringOperatorConversion())
+          .add(new AliasedOperatorConversion(new ArrayToStringOperatorConversion(), "MV_TO_STRING"))
+          .build();
+
+  private static final List<SqlOperatorConversion> MULTIVALUE_STRING_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+          .add(new MultiValueStringAppendOperatorConversion())
+          .add(new MultiValueStringConcatOperatorConversion())
+          .add(new MultiValueStringPrependOperatorConversion())
+          .add(new MultiValueStringSliceOperatorConversion())
+          .add(new StringToMultiValueStringOperatorConversion())
+          .build();
+
+  private static final List<SqlOperatorConversion> IPV4ADDRESS_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+          .add(new IPv4AddressMatchOperatorConversion())
+          .add(new IPv4AddressParseOperatorConversion())
+          .add(new IPv4AddressStringifyOperatorConversion())
+          .build();
 
   private static final List<SqlOperatorConversion> STANDARD_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
@@ -166,52 +268,12 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new BinaryOperatorConversion(SqlStdOperatorTable.AND, "&&"))
           .add(new BinaryOperatorConversion(SqlStdOperatorTable.OR, "||"))
           .add(new RoundOperatorConversion())
-          // time operators
-          .add(new CeilOperatorConversion())
-          .add(new DateTruncOperatorConversion())
-          .add(new ExtractOperatorConversion())
-          .add(new FloorOperatorConversion())
-          .add(new MillisToTimestampOperatorConversion())
-          .add(new TimeArithmeticOperatorConversion.TimeMinusIntervalOperatorConversion())
-          .add(new TimeArithmeticOperatorConversion.TimePlusIntervalOperatorConversion())
-          .add(new TimeExtractOperatorConversion())
-          .add(new TimeFloorOperatorConversion())
-          .add(new TimeFormatOperatorConversion())
-          .add(new TimeParseOperatorConversion())
-          .add(new TimeShiftOperatorConversion())
-          .add(new TimestampToMillisOperatorConversion())
-          // string operators
-          .add(new BTrimOperatorConversion())
-          .add(new LikeOperatorConversion())
-          .add(new LTrimOperatorConversion())
-          .add(new PositionOperatorConversion())
-          .add(new RegexpExtractOperatorConversion())
-          .add(new RTrimOperatorConversion())
-          .add(new ParseLongOperatorConversion())
-          .add(new StringFormatOperatorConversion())
-          .add(new StrposOperatorConversion())
-          .add(new SubstringOperatorConversion())
-          .add(new RightOperatorConversion())
-          .add(new LeftOperatorConversion())
-          .add(new ReverseOperatorConversion())
-          .add(new RepeatOperatorConversion())
-          .add(new AliasedOperatorConversion(new SubstringOperatorConversion(), "SUBSTR"))
-          .add(new ConcatOperatorConversion())
-          .add(new TextcatOperatorConversion())
-          .add(new TrimOperatorConversion())
-          .add(new TruncateOperatorConversion())
-          .add(new AliasedOperatorConversion(new TruncateOperatorConversion(), "TRUNC"))
-          .add(new LPadOperatorConversion())
-          .add(new RPadOperatorConversion())
-          // value coercion operators
-          .add(new CastOperatorConversion())
-          .add(new ReinterpretOperatorConversion())
-          // array and multi-value string operators
-          .add(new ArrayConstructorOperatorConversion())
-          .add(new ArrayContainsOperatorConversion())
-          .add(new ArrayOverlapOperatorConversion())
-          .add(new AliasedOperatorConversion(new ArrayContainsOperatorConversion(), "MV_CONTAINS"))
-          .add(new AliasedOperatorConversion(new ArrayOverlapOperatorConversion(), "MV_OVERLAP"))
+          .addAll(TIME_OPERATOR_CONVERSIONS)
+          .addAll(STRING_OPERATOR_CONVERSIONS)
+          .addAll(VALUE_COERCION_OPERATOR_CONVERSIONS)
+          .addAll(ARRAY_OPERATOR_CONVERSIONS)
+          .addAll(MULTIVALUE_STRING_OPERATOR_CONVERSIONS)
+          .addAll(IPV4ADDRESS_OPERATOR_CONVERSIONS)
           .build();
 
   // Operators that have no conversion, but are handled in the convertlet table, so they still need to exist.

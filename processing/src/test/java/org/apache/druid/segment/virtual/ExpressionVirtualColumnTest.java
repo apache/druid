@@ -176,7 +176,7 @@ public class ExpressionVirtualColumnTest
 
   private static final ThreadLocal<Row> CURRENT_ROW = new ThreadLocal<>();
   private static final ColumnSelectorFactory COLUMN_SELECTOR_FACTORY = RowBasedColumnSelectorFactory.create(
-      CURRENT_ROW,
+      CURRENT_ROW::get,
       null
   );
 
@@ -588,7 +588,7 @@ public class ExpressionVirtualColumnTest
     Assert.assertEquals(ImmutableList.of("x", "y"), X_PLUS_Y.requiredColumns());
     Assert.assertEquals(ImmutableList.of(), CONSTANT_LIKE.requiredColumns());
     Assert.assertEquals(ImmutableList.of("z"), Z_LIKE.requiredColumns());
-    Assert.assertEquals(ImmutableList.of("z", "x"), Z_CONCAT_X.requiredColumns());
+    Assert.assertEquals(ImmutableList.of("x", "z"), Z_CONCAT_X.requiredColumns());
   }
 
   @Test
@@ -596,7 +596,7 @@ public class ExpressionVirtualColumnTest
   {
     final ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(
         RowBasedColumnSelectorFactory.create(
-            CURRENT_ROW,
+            CURRENT_ROW::get,
             ImmutableMap.of("x", ValueType.LONG)
         ),
         Parser.parse(SCALE_LONG.getExpression(), TestExprMacroTable.INSTANCE)
@@ -617,7 +617,7 @@ public class ExpressionVirtualColumnTest
   {
     final ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(
         RowBasedColumnSelectorFactory.create(
-            CURRENT_ROW,
+            CURRENT_ROW::get,
             ImmutableMap.of("x", ValueType.DOUBLE)
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)
@@ -638,7 +638,7 @@ public class ExpressionVirtualColumnTest
   {
     final ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(
         RowBasedColumnSelectorFactory.create(
-            CURRENT_ROW,
+            CURRENT_ROW::get,
             ImmutableMap.of("x", ValueType.FLOAT)
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)

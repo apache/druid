@@ -113,7 +113,6 @@
 
     <modules>
         <module>core</module>
-        <module>examples</module>
         <module>indexing-hadoop</module>
         <module>indexing-service</module>
         <module>processing</module>
@@ -136,7 +135,6 @@
         <module>extensions-core/hdfs-storage</module>
         <module>extensions-core/histogram</module>
         <module>extensions-core/stats</module>
-        <module>extensions-core/kafka-eight</module>
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>
         <module>extensions-core/kinesis-indexing-service</module>
@@ -156,11 +154,8 @@
         <module>extensions-contrib/influx-extensions</module>
         <module>extensions-contrib/azure-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
-        <module>extensions-contrib/druid-rocketmq</module>
         <module>extensions-contrib/cloudfiles-extensions</module>
         <module>extensions-contrib/graphite-emitter</module>
-        <module>extensions-contrib/kafka-eight-simpleConsumer</module>
-        <module>extensions-contrib/rabbitmq</module>
         <module>extensions-contrib/distinctcount</module>
         <module>extensions-contrib/statsd-emitter</module>
         <module>extensions-contrib/time-min-max</module>
@@ -186,6 +181,12 @@
             <id>${repoOrgId}</id>
             <name>${repoOrgName}</name>
             <url>${repoOrgUrl}</url>
+        </repository>
+
+        <!-- Only used by core, but moved to root for parallel build dependency resolution -->
+        <repository>
+          <id>sigar</id>
+          <url>https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/</url>
         </repository>
     </repositories>
 
@@ -217,6 +218,11 @@
                 <artifactId>commons-lang</artifactId>
                 <version>2.6</version>
             </dependency>
+           <dependency>
+               <groupId>commons-net</groupId>
+               <artifactId>commons-net</artifactId>
+               <version>3.6</version>
+           </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk-ec2</artifactId>
@@ -1130,7 +1136,7 @@
                 <version>1.4.1</version>
                 <executions>
                     <execution>
-                        <id>enforce-banned-dependencies</id>
+                        <id>default-cli</id>
                         <goals>
                             <goal>enforce</goal>
                         </goals>
@@ -1232,7 +1238,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>2.19.1</version>
+                    <version>2.22.2</version>
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
                         <!-- set default options -->
@@ -1296,7 +1302,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-resources-plugin</artifactId>
-                    <version>2.5</version>
+                    <version>3.1.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -1331,7 +1337,7 @@
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>exec-maven-plugin</artifactId>
-                    <version>1.2.1</version>
+                    <version>1.6.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -1614,6 +1620,7 @@
                                 <exclude>node_modules/**</exclude>
                                 <exclude>coordinator-console/**</exclude>
                                 <exclude>src/**/*.snap</exclude>
+                                <exclude>examples/conf/**</exclude>
                             </excludes>
                         </configuration>
                     </plugin>

@@ -25,14 +25,13 @@ import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.path.StaticPathSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.util.List;
-
-import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 public class WikiParquetInputTest extends BaseParquetInputTest
@@ -67,10 +66,10 @@ public class WikiParquetInputTest extends BaseParquetInputTest
 
     Object data = getFirstRow(job, parserType, ((StaticPathSpec) config.getPathSpec()).getPaths());
     List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
-    assertEquals(rows.get(0).getDimension("page").get(0), "Gypsy Danger");
+    Assert.assertEquals("Gypsy Danger", rows.get(0).getDimension("page").get(0));
     String s1 = rows.get(0).getDimension("language").get(0);
     String s2 = rows.get(0).getDimension("language").get(1);
-    assertEquals("en", s1);
-    assertEquals("zh", s2);
+    Assert.assertEquals("en", s1);
+    Assert.assertEquals("zh", s2);
   }
 }

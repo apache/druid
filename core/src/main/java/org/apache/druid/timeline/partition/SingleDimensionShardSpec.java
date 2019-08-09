@@ -33,9 +33,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Class uses getters/setters to work around http://jira.codehaus.org/browse/MSHADE-92
- *
- * Adjust to JsonCreator and final fields when resolved.
+ * {@link ShardSpec} for range partitioning based on a single dimension
  */
 public class SingleDimensionShardSpec implements ShardSpec
 {
@@ -46,6 +44,12 @@ public class SingleDimensionShardSpec implements ShardSpec
   private final String end;
   private final int partitionNum;
 
+  /**
+   * @param dimension    partition dimension
+   * @param start        inclusive start of this range
+   * @param end          exclusive end of this range
+   * @param partitionNum unique ID for this shard
+   */
   @JsonCreator
   public SingleDimensionShardSpec(
       @JsonProperty("dimension") String dimension,
@@ -54,6 +58,7 @@ public class SingleDimensionShardSpec implements ShardSpec
       @JsonProperty("partitionNum") int partitionNum
   )
   {
+    Preconditions.checkArgument(partitionNum >= 0, "partitionNum >= 0");
     this.dimension = Preconditions.checkNotNull(dimension, "dimension");
     this.start = start;
     this.end = end;
@@ -129,6 +134,12 @@ public class SingleDimensionShardSpec implements ShardSpec
       return true;
     }
     return !rangeSet.subRangeSet(getRange()).isEmpty();
+  }
+
+  @Override
+  public boolean isCompatible(Class<? extends ShardSpec> other)
+  {
+    return other == SingleDimensionShardSpec.class;
   }
 
   @Override

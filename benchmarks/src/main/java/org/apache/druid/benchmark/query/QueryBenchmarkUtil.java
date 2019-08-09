@@ -30,10 +30,9 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.timeline.SegmentId;
-
-import java.util.Map;
 
 public class QueryBenchmarkUtil
 {
@@ -57,7 +56,7 @@ public class QueryBenchmarkUtil
       {
         return new QueryRunner<T>() {
           @Override
-          public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+          public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
           {
             return delegate.run(queryPlus, responseContext);
           }

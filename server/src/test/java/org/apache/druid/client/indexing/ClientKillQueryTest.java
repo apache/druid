@@ -32,35 +32,35 @@ public class ClientKillQueryTest
   private static final String DATA_SOURCE = "data_source";
   public static final DateTime START = DateTimes.nowUtc();
   private static final Interval INTERVAL = new Interval(START, START.plus(1));
-  ClientKillQuery clientKillQuery;
+  ClientKillQuery clientKillUnusedSegmentsQuery;
 
   @Before
   public void setUp()
   {
-    clientKillQuery = new ClientKillQuery(DATA_SOURCE, INTERVAL);
+    clientKillUnusedSegmentsQuery = new ClientKillQuery(DATA_SOURCE, INTERVAL);
   }
 
   @After
   public void tearDown()
   {
-    clientKillQuery = null;
+    clientKillUnusedSegmentsQuery = null;
   }
 
   @Test
   public void testGetType()
   {
-    Assert.assertEquals("kill", clientKillQuery.getType());
+    Assert.assertEquals("kill", clientKillUnusedSegmentsQuery.getType());
   }
 
   @Test
   public void testGetDataSource()
   {
-    Assert.assertEquals(DATA_SOURCE, clientKillQuery.getDataSource());
+    Assert.assertEquals(DATA_SOURCE, clientKillUnusedSegmentsQuery.getDataSource());
   }
 
   @Test
   public void testGetInterval()
   {
-    Assert.assertEquals(INTERVAL, clientKillQuery.getInterval());
+    Assert.assertEquals(INTERVAL, clientKillUnusedSegmentsQuery.getInterval());
   }
 }

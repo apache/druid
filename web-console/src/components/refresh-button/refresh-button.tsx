@@ -31,7 +31,7 @@ export class RefreshButton extends React.PureComponent<RefreshButtonProps> {
     super(props, context);
   }
 
-  render() {
+  render(): JSX.Element {
     const { onRefresh, localStorageKey } = this.props;
     const intervals = [
       { label: '5 seconds', value: 5000 },

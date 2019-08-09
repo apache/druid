@@ -74,7 +74,7 @@ public class StringLastBufferAggregator implements BufferAggregator
       } else {
         throw new ISE(
             "Try to aggregate unsuported class type [%s].Supported class types: String or SerializablePairLongString",
-            value.getClass().getCanonicalName()
+            value.getClass().getName()
         );
       }
     }
@@ -108,7 +108,7 @@ public class StringLastBufferAggregator implements BufferAggregator
     mutationBuffer.position(position);
 
     Long timeValue = mutationBuffer.getLong(position);
-    Integer stringSizeBytes = mutationBuffer.getInt(position + Long.BYTES);
+    int stringSizeBytes = mutationBuffer.getInt(position + Long.BYTES);
 
     SerializablePairLongString serializablePair;
 

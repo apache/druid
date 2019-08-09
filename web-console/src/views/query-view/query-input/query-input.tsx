@@ -18,9 +18,9 @@
 
 import { IResizeEntry, ResizeSensor } from '@blueprintjs/core';
 import ace from 'brace';
+import escape from 'lodash.escape';
 import React from 'react';
 import AceEditor from 'react-ace';
-import ReactDOMServer from 'react-dom/server';
 
 import { SQL_DATE_TYPES, SQL_FUNCTIONS, SyntaxDescription } from '../../../../lib/sql-function-doc';
 import { uniq } from '../../../utils';
@@ -37,14 +37,14 @@ export interface QueryInputProps {
   queryString: string;
   onQueryStringChange: (newQueryString: string) => void;
   runeMode: boolean;
-  columnMetadata: ColumnMetadata[] | null;
+  columnMetadata?: ColumnMetadata[];
 }
 
 export interface QueryInputState {
   // For reasons (https://github.com/securingsincity/react-ace/issues/415) react ace editor needs an explicit height
   // Since this component will grown and shrink dynamically we will measure its height and then set it.
   editorHeight: number;
-  prevColumnMetadata: ColumnMetadata[] | null;
+  prevColumnMetadata?: ColumnMetadata[];
 }
 
 export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputState> {
@@ -87,7 +87,6 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     super(props, context);
     this.state = {
       editorHeight: 200,
-      prevColumnMetadata: null,
     };
   }
 
@@ -143,23 +142,22 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
       getDocTooltip: (item: any) => {
         if (item.meta === 'function') {
           const functionName = item.caption.slice(0, -2);
-          item.docHTML = ReactDOMServer.renderToStaticMarkup(
-            <div className="function-doc">
-              <div className="function-doc-name">
-                <b>{functionName}</b>
-              </div>
-              <hr />
-              <div>
-                <b>Syntax:</b>
-              </div>
-              <div>{item.syntax}</div>
-              <br />
-              <div>
-                <b>Description:</b>
-              </div>
-              <div>{item.description}</div>
-            </div>,
-          );
+          item.docHTML = `
+<div class="function-doc">
+  <div class="function-doc-name">
+    <b>${escape(functionName)}</b>
+  </div>
+  <hr />
+  <div>
+    <b>Syntax:</b>
+  </div>
+  <div>${escape(item.syntax)}</div>
+  <br />
+  <div>
+    <b>Description:</b>
+  </div>
+  <div>${escape(item.description)}</div>
+</div>`;
         }
       },
     });
@@ -175,7 +173,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     this.setState({ editorHeight: entries[0].contentRect.height });
   };
 
-  render() {
+  render(): JSX.Element {
     const { queryString, runeMode, onQueryStringChange } = this.props;
     const { editorHeight } = this.state;
 
@@ -185,8 +183,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
         <ResizeSensor onResize={this.handleAceContainerResize}>
           <div className="ace-container">
             <AceEditor
-              key={runeMode ? 'hjson' : 'sql'}
-              mode={runeMode ? 'hjson' : 'sql'}
+              mode={runeMode ? 'hjson' : 'dsql'}
               theme="solarized_dark"
               name="ace-editor"
               onChange={onQueryStringChange}
@@ -206,6 +203,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
                 tabSize: 2,
               }}
               style={{}}
+              placeholder="SELECT * FROM ..."
             />
           </div>
         </ResizeSensor>
