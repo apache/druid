@@ -71,7 +71,7 @@ Copy or symlink this file to `extensions/mysql-metadata-storage` under the distr
   CREATE DATABASE druid DEFAULT CHARACTER SET utf8mb4;
 
   -- create a druid user
-  CREATE USER 'druid'@'localhost' IDENTIFIED BY 'diurd';
+  CREATE USER 'druid'@'localhost' IDENTIFIED BY 'druid';
 
   -- grant the user all the permissions on the database we just created
   GRANT ALL PRIVILEGES ON druid.* TO 'druid'@'localhost';
