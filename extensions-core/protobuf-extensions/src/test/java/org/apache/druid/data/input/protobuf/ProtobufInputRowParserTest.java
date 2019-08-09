@@ -36,6 +36,7 @@ import org.apache.druid.js.JavaScriptConfig;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -44,8 +45,6 @@ import org.junit.rules.ExpectedException;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.util.List;
-
-import static org.junit.Assert.assertEquals;
 
 public class ProtobufInputRowParserTest
 {
@@ -127,12 +126,11 @@ public class ProtobufInputRowParserTest
   @Test
   public void testParse() throws Exception
   {
-
     //configure parser with desc file
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
 
     //create binary of proto test event
-    DateTime dateTime = new DateTime(2012, 07, 12, 9, 30, ISOChronology.getInstanceUTC());
+    DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
     ProtoTestEventWrapper.ProtoTestEvent event = ProtoTestEventWrapper.ProtoTestEvent.newBuilder()
                                                                                      .setDescription("description")
                                                                                      .setEventType(ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ONE)
@@ -160,7 +158,7 @@ public class ProtobufInputRowParserTest
     InputRow row = parser.parseBatch(ByteBuffer.wrap(out.toByteArray())).get(0);
     System.out.println(row);
 
-    assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
+    Assert.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
 
     assertDimensionEquals(row, "id", "4711");
     assertDimensionEquals(row, "isValid", "true");
@@ -172,9 +170,9 @@ public class ProtobufInputRowParserTest
     assertDimensionEquals(row, "bar0", "bar0");
 
 
-    assertEquals(47.11F, row.getMetric("someFloatColumn").floatValue(), 0.0);
-    assertEquals(815.0F, row.getMetric("someIntColumn").floatValue(), 0.0);
-    assertEquals(816.0F, row.getMetric("someLongColumn").floatValue(), 0.0);
+    Assert.assertEquals(47.11F, row.getMetric("someFloatColumn").floatValue(), 0.0);
+    Assert.assertEquals(815.0F, row.getMetric("someIntColumn").floatValue(), 0.0);
+    Assert.assertEquals(816.0F, row.getMetric("someLongColumn").floatValue(), 0.0);
   }
 
   @Test
@@ -200,13 +198,14 @@ public class ProtobufInputRowParserTest
     expectedException.expect(CoreMatchers.instanceOf(IllegalStateException.class));
     expectedException.expectMessage("JavaScript is disabled");
 
+    //noinspection ResultOfMethodCallIgnored (this method call will trigger the expected exception)
     parser.parseBatch(ByteBuffer.allocate(1)).get(0);
   }
 
   private void assertDimensionEquals(InputRow row, String dimension, Object expected)
   {
     List<String> values = row.getDimension(dimension);
-    assertEquals(1, values.size());
-    assertEquals(expected, values.get(0));
+    Assert.assertEquals(1, values.size());
+    Assert.assertEquals(expected, values.get(0));
   }
 }

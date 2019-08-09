@@ -24,8 +24,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-
-import java.util.Map;
+import org.apache.druid.query.context.ResponseContext;
 
 public class UnionQueryRunner<T> implements QueryRunner<T>
 {
@@ -39,7 +38,7 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
   {
     Query<T> query = queryPlus.getQuery();
     DataSource dataSource = query.getDataSource();

@@ -60,6 +60,7 @@ public class Main
         CliHistorical.class,
         CliBroker.class,
         CliOverlord.class,
+        CliIndexer.class,
         CliMiddleManager.class,
         CliRouter.class
     );

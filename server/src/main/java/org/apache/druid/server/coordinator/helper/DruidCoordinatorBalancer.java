@@ -94,8 +94,8 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
   )
   {
 
-    if (params.getAvailableSegments().size() == 0) {
-      log.warn("Metadata segments are not available. Cannot balance.");
+    if (params.getUsedSegments().size() == 0) {
+      log.info("Metadata segments are not available. Cannot balance.");
       // suppress emit zero stats
       return;
     }
@@ -134,7 +134,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
     int numSegments = 0;
     for (ServerHolder sourceHolder : servers) {
-      numSegments += sourceHolder.getServer().getLazyAllSegments().size();
+      numSegments += sourceHolder.getServer().getNumSegments();
     }
 
     if (numSegments == 0) {
@@ -195,13 +195,12 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
         log.info("All servers to move segments from are empty, ending run.");
         break;
       }
-      // DruidCoordinatorRuntimeParams.getAvailableSegments originate from MetadataSegmentManager, i. e. that's a
-      // "desired" or "theoretical" set of segments. segmentToMoveHolder.getSegment originates from ServerInventoryView,
-      // i. e. that may be any segment that happens to be loaded on some server, even if it "shouldn't" from the
-      // "theoretical" point of view (Coordinator closes such discrepancies eventually via
-      // DruidCoordinatorCleanupUnneeded). Therefore the picked segmentToMoveHolder's segment may not need to be
-      // balanced.
-      boolean needToBalancePickedSegment = params.getAvailableSegments().contains(segmentToMoveHolder.getSegment());
+      // DruidCoordinatorRuntimeParams.getUsedSegments originate from SegmentsMetadata, i. e. that's a set of segments
+      // that *should* be loaded. segmentToMoveHolder.getSegment originates from ServerInventoryView,  i. e. that may be
+      // any segment that happens to be loaded on some server, even if it is not used. (Coordinator closes such
+      // discrepancies eventually via DruidCoordinatorUnloadUnusedSegments). Therefore the picked segmentToMoveHolder's
+      // segment may not need to be balanced.
+      boolean needToBalancePickedSegment = params.getUsedSegments().contains(segmentToMoveHolder.getSegment());
       if (needToBalancePickedSegment) {
         final DataSegment segmentToMove = segmentToMoveHolder.getSegment();
         final ImmutableDruidServer fromServer = segmentToMoveHolder.getFromServer();
@@ -269,6 +268,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
         movingSegments.put(segmentId, segment);
         callback = () -> movingSegments.remove(segmentId);
         coordinator.moveSegment(
+            params,
             fromServer,
             toServer,
             segmentToMove,

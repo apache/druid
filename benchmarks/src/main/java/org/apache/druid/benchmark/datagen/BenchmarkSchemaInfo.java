@@ -68,4 +68,15 @@ public class BenchmarkSchemaInfo
   {
     return withRollup;
   }
+
+  @Override
+  public String toString()
+  {
+    return "BenchmarkSchemaInfo{" +
+           "columnSchemas=" + columnSchemas +
+           ", aggs=" + aggs +
+           ", dataInterval=" + dataInterval +
+           ", withRollup=" + withRollup +
+           '}';
+  }
 }

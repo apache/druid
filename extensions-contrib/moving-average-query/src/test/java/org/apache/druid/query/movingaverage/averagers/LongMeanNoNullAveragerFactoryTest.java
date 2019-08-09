@@ -19,19 +19,16 @@
 
 package org.apache.druid.query.movingaverage.averagers;
 
+import org.hamcrest.core.IsInstanceOf;
+import org.junit.Assert;
 import org.junit.Test;
-
-import static org.hamcrest.core.IsInstanceOf.instanceOf;
-import static org.junit.Assert.assertThat;
 
 public class LongMeanNoNullAveragerFactoryTest
 {
-
   @Test
   public void testCreateAverager()
   {
     AveragerFactory<?, ?> fac = new LongMeanNoNullAveragerFactory("test", 5, 1, "field");
-    assertThat(fac.createAverager(), instanceOf(LongMeanNoNullAverager.class));
+    Assert.assertThat(fac.createAverager(), IsInstanceOf.instanceOf(LongMeanNoNullAverager.class));
   }
-
 }

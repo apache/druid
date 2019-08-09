@@ -37,31 +37,21 @@ import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
-import org.apache.druid.indexing.common.TaskLock;
-import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskReport;
-import org.apache.druid.indexing.common.TaskReportFileWriter;
-import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.actions.LockAcquireAction;
-import org.apache.druid.indexing.common.actions.LockListAction;
-import org.apache.druid.indexing.common.actions.LockTryAcquireAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
-import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
-import org.apache.druid.indexing.common.actions.TaskAction;
-import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
-import org.apache.druid.indexing.overlord.SegmentPublishResult;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -71,7 +61,6 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -79,15 +68,11 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.loading.DataSegmentKiller;
-import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.loading.LocalDataSegmentPusher;
-import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.segment.transform.ExpressionTransform;
@@ -95,16 +80,18 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.PartitionIds;
 import org.joda.time.Interval;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.BufferedWriter;
@@ -119,7 +106,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class IndexTaskTest
+@RunWith(Parameterized.class)
+public class IndexTaskTest extends IngestionTestBase
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -144,58 +132,38 @@ public class IndexTaskTest
       0
   );
 
-  private DataSegmentPusher pusher;
-  private SegmentLoader segmentLoader;
-  private List<DataSegment> segments;
+  @Parameterized.Parameters(name = "{0}")
+  public static Iterable<Object[]> constructorFeeder()
+  {
+    return ImmutableList.of(
+        new Object[]{LockGranularity.TIME_CHUNK},
+        new Object[]{LockGranularity.SEGMENT}
+    );
+  }
 
   private static final IndexSpec indexSpec = new IndexSpec();
   private final ObjectMapper jsonMapper;
-  private IndexMergerV9 indexMergerV9;
-  private IndexIO indexIO;
-  private volatile int segmentAllocatePartitionCounter;
-  private File reportsFile;
-  private RowIngestionMetersFactory rowIngestionMetersFactory;
+  private AppenderatorsManager appenderatorsManager;
+  private final IndexIO indexIO;
+  private final RowIngestionMetersFactory rowIngestionMetersFactory;
+  private final LockGranularity lockGranularity;
+  private SegmentLoader segmentLoader;
+  private TestTaskRunner taskRunner;
 
-  public IndexTaskTest()
+  public IndexTaskTest(LockGranularity lockGranularity)
   {
-    TestUtils testUtils = new TestUtils();
-    jsonMapper = testUtils.getTestObjectMapper();
-
-    indexMergerV9 = testUtils.getTestIndexMergerV9();
-    indexIO = testUtils.getTestIndexIO();
-    rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
+    this.jsonMapper = getObjectMapper();
+    this.indexIO = getIndexIO();
+    this.rowIngestionMetersFactory = getRowIngestionMetersFactory();
+    this.lockGranularity = lockGranularity;
   }
 
   @Before
   public void setup() throws IOException
   {
-    reportsFile = temporaryFolder.newFile(
-        StringUtils.format("IndexTaskTestReports-%s.json", System.currentTimeMillis())
-    );
+    appenderatorsManager = new TestAppenderatorsManager();
 
-    final File deepStorageDir = temporaryFolder.newFolder();
     final File cacheDir = temporaryFolder.newFolder();
-
-    pusher = new LocalDataSegmentPusher(
-        new LocalDataSegmentPusherConfig()
-        {
-          @Override
-          public File getStorageDirectory()
-          {
-            return deepStorageDir;
-          }
-        }
-    )
-    {
-      @Override
-      public DataSegment push(final File dataSegmentFile, final DataSegment segment, final boolean useUniquePath)
-          throws IOException
-      {
-        final DataSegment returnSegment = super.push(dataSegmentFile, segment, useUniquePath);
-        segments.add(returnSegment);
-        return returnSegment;
-      }
-    };
     segmentLoader = new SegmentLoaderLocalCacheManager(
         indexIO,
         new SegmentLoaderConfig()
@@ -204,20 +172,13 @@ public class IndexTaskTest
           public List<StorageLocationConfig> getLocations()
           {
             return Collections.singletonList(
-                new StorageLocationConfig().setPath(cacheDir)
+                new StorageLocationConfig(cacheDir, null, null)
             );
           }
         },
         jsonMapper
     );
-    segments = new ArrayList<>();
-
-  }
-
-  @After
-  public void teardown()
-  {
-    reportsFile.delete();
+    taskRunner = new TestTaskRunner();
   }
 
   @Test
@@ -237,6 +198,7 @@ public class IndexTaskTest
         null,
         null,
         createIngestionSpec(
+            jsonMapper,
             tmpDir,
             null,
             null,
@@ -246,7 +208,8 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -283,6 +246,7 @@ public class IndexTaskTest
         null,
         null,
         createIngestionSpec(
+            jsonMapper,
             tmpDir,
             null,
             new TransformSpec(
@@ -298,7 +262,8 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     Assert.assertEquals(indexTask.getId(), indexTask.getGroupId());
@@ -330,6 +295,7 @@ public class IndexTaskTest
         null,
         null,
         createIngestionSpec(
+            jsonMapper,
             tmpDir,
             null,
             new ArbitraryGranularitySpec(
@@ -342,7 +308,8 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -366,6 +333,7 @@ public class IndexTaskTest
         null,
         null,
         createIngestionSpec(
+            jsonMapper,
             tmpDir,
             null,
             new UniformGranularitySpec(
@@ -379,7 +347,8 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -403,6 +372,7 @@ public class IndexTaskTest
         null,
         null,
         createIngestionSpec(
+            jsonMapper,
             tmpDir,
             null,
             null,
@@ -412,7 +382,8 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -441,6 +412,7 @@ public class IndexTaskTest
         null,
         null,
         createIngestionSpec(
+            jsonMapper,
             tmpDir,
             null,
             null,
@@ -450,10 +422,11 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
-    runTask(indexTask);
+    final List<DataSegment> segments = runTask(indexTask).rhs;
 
     Assert.assertEquals(2, segments.size());
 
@@ -502,7 +475,6 @@ public class IndexTaskTest
   @Test
   public void testAppendToExisting() throws Exception
   {
-    segmentAllocatePartitionCounter = 0;
     File tmpDir = temporaryFolder.newFolder();
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
@@ -516,6 +488,7 @@ public class IndexTaskTest
         null,
         null,
         createIngestionSpec(
+            jsonMapper,
             tmpDir,
             null,
             null,
@@ -525,14 +498,15 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     Assert.assertEquals("index_append_test", indexTask.getGroupId());
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
 
-    Assert.assertEquals(2, segmentAllocatePartitionCounter);
+    Assert.assertEquals(2, taskRunner.getTaskActionClient().getActionCount(SegmentAllocateAction.class));
     Assert.assertEquals(2, segments.size());
 
     Assert.assertEquals("test", segments.get(0).getDataSource());
@@ -562,6 +536,7 @@ public class IndexTaskTest
         null,
         null,
         createIngestionSpec(
+            jsonMapper,
             tmpDir,
             null,
             new UniformGranularitySpec(
@@ -575,7 +550,8 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -614,6 +590,7 @@ public class IndexTaskTest
         null,
         null,
         createIngestionSpec(
+            jsonMapper,
             tmpDir,
             new CSVParseSpec(
                 new TimestampSpec(
@@ -638,7 +615,8 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -666,6 +644,7 @@ public class IndexTaskTest
         null,
         null,
         createIngestionSpec(
+            jsonMapper,
             tmpDir,
             new CSVParseSpec(
                 new TimestampSpec(
@@ -690,7 +669,8 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -724,6 +704,7 @@ public class IndexTaskTest
         null,
         null,
         createIngestionSpec(
+            jsonMapper,
             tmpDir,
             null,
             new UniformGranularitySpec(
@@ -737,7 +718,8 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -768,6 +750,7 @@ public class IndexTaskTest
         null,
         null,
         createIngestionSpec(
+            jsonMapper,
             tmpDir,
             null,
             new UniformGranularitySpec(
@@ -782,7 +765,8 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -812,6 +796,7 @@ public class IndexTaskTest
         null,
         null,
         createIngestionSpec(
+            jsonMapper,
             tmpDir,
             null,
             new UniformGranularitySpec(
@@ -826,16 +811,17 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
 
     Assert.assertEquals(5, segments.size());
 
+    final Interval expectedInterval = Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z");
     for (int i = 0; i < 5; i++) {
       final DataSegment segment = segments.get(i);
-      final Interval expectedInterval = Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z");
 
       Assert.assertEquals("test", segment.getDataSource());
       Assert.assertEquals(expectedInterval, segment.getInterval());
@@ -875,6 +861,7 @@ public class IndexTaskTest
     // GranularitySpec.intervals and numShards must be null to verify reportParseException=false is respected both in
     // IndexTask.determineShardSpecs() and IndexTask.generateAndPublishSegments()
     final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
+        jsonMapper,
         tmpDir,
         new CSVParseSpec(
             new TimestampSpec(
@@ -904,7 +891,8 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -928,6 +916,7 @@ public class IndexTaskTest
     }
 
     final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
+        jsonMapper,
         tmpDir,
         new CSVParseSpec(
             new TimestampSpec(
@@ -957,7 +946,8 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -984,27 +974,32 @@ public class IndexTaskTest
     try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
       writer.write("{\"time\":\"unparseable\",\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}\n"); // unparseable time
       writer.write("{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}\n"); // valid row
-      writer.write("{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":\"notnumber\",\"dimFloat\":3.0,\"val\":1}\n"); // row with invalid long dimension
-      writer.write("{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":2,\"dimFloat\":\"notnumber\",\"val\":1}\n"); // row with invalid float dimension
-      writer.write("{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":2,\"dimFloat\":4.0,\"val\":\"notnumber\"}\n"); // row with invalid metric
+      writer.write(
+          "{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":\"notnumber\",\"dimFloat\":3.0,\"val\":1}\n"); // row with invalid long dimension
+      writer.write(
+          "{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":2,\"dimFloat\":\"notnumber\",\"val\":1}\n"); // row with invalid float dimension
+      writer.write(
+          "{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":2,\"dimFloat\":4.0,\"val\":\"notnumber\"}\n"); // row with invalid metric
       writer.write("{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}\n"); // invalid JSON
-      writer.write("{\"time\":\"3014-03-01T00:00:10Z\",\"dim\":\"outsideofinterval\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}\n"); // thrown away
+      writer.write(
+          "{\"time\":\"3014-03-01T00:00:10Z\",\"dim\":\"outsideofinterval\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}\n"); // thrown away
       writer.write("{\"time\":\"99999999999-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}\n"); // unparseable time
       writer.write("this is not JSON\n"); // invalid JSON
     }
 
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
         null,
-        2,
         null,
         null,
         null,
         null,
         null,
         null,
+        null,
+        new HashedPartitionsSpec(2, null, null),
         indexSpec,
         null,
-        true,
+        null,
         true,
         false,
         null,
@@ -1016,6 +1011,7 @@ public class IndexTaskTest
     );
 
     final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
+        jsonMapper,
         tmpDir,
         new JSONParseSpec(
             new TimestampSpec(
@@ -1047,7 +1043,8 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1117,16 +1114,17 @@ public class IndexTaskTest
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
         null,
-        2,
         null,
         null,
         null,
         null,
         null,
         null,
+        null,
+        new DynamicPartitionsSpec(2, null),
         indexSpec,
         null,
-        true,
+        null,
         false,
         false,
         null,
@@ -1138,6 +1136,7 @@ public class IndexTaskTest
     );
 
     final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
+        jsonMapper,
         tmpDir,
         new CSVParseSpec(
             new TimestampSpec(
@@ -1171,7 +1170,8 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1232,16 +1232,17 @@ public class IndexTaskTest
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
         null,
-        2,
         null,
         null,
         null,
         null,
         null,
         null,
+        null,
+        new HashedPartitionsSpec(2, null, null),
         indexSpec,
         null,
-        true,
+        null,
         true,
         false,
         null,
@@ -1253,6 +1254,7 @@ public class IndexTaskTest
     );
 
     final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
+        jsonMapper,
         tmpDir,
         new CSVParseSpec(
             new TimestampSpec(
@@ -1286,7 +1288,8 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1356,6 +1359,7 @@ public class IndexTaskTest
     }
 
     final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
+        jsonMapper,
         tmpDir,
         new CSVParseSpec(
             new TimestampSpec(
@@ -1385,7 +1389,8 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -1426,6 +1431,7 @@ public class IndexTaskTest
     }
 
     final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
+        jsonMapper,
         tmpDir,
         new CSVParseSpec(
             new TimestampSpec(
@@ -1455,7 +1461,8 @@ public class IndexTaskTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1475,178 +1482,135 @@ public class IndexTaskTest
     Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
   }
 
+  @Test
+  public void testOverwriteWithSameSegmentGranularity() throws Exception
+  {
+    final File tmpDir = temporaryFolder.newFolder();
+    final File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    populateRollupTestData(tmpFile);
+
+    for (int i = 0; i < 2; i++) {
+      final IndexTask indexTask = new IndexTask(
+          null,
+          null,
+          createIngestionSpec(
+              jsonMapper,
+              tmpDir,
+              null,
+              new UniformGranularitySpec(
+                  Granularities.DAY,
+                  Granularities.DAY,
+                  true,
+                  null
+              ),
+              createTuningConfig(3, 2, null, 2L, null, null, false, true),
+              false
+          ),
+          null,
+          AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+          null,
+          rowIngestionMetersFactory,
+          appenderatorsManager
+      );
+
+      final List<DataSegment> segments = runTask(indexTask).rhs;
+
+      Assert.assertEquals(5, segments.size());
+
+      final Interval expectedInterval = Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z");
+      for (int j = 0; j < 5; j++) {
+        final DataSegment segment = segments.get(j);
+        Assert.assertEquals("test", segment.getDataSource());
+        Assert.assertEquals(expectedInterval, segment.getInterval());
+        if (i == 0) {
+          Assert.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
+          Assert.assertEquals(j, segment.getShardSpec().getPartitionNum());
+        } else {
+          if (lockGranularity == LockGranularity.SEGMENT) {
+            Assert.assertEquals(NumberedOverwriteShardSpec.class, segment.getShardSpec().getClass());
+            final NumberedOverwriteShardSpec numberedOverwriteShardSpec =
+                (NumberedOverwriteShardSpec) segment.getShardSpec();
+            Assert.assertEquals(
+                j + PartitionIds.NON_ROOT_GEN_START_PARTITION_ID,
+                numberedOverwriteShardSpec.getPartitionNum()
+            );
+            Assert.assertEquals(1, numberedOverwriteShardSpec.getMinorVersion());
+            Assert.assertEquals(5, numberedOverwriteShardSpec.getAtomicUpdateGroupSize());
+            Assert.assertEquals(0, numberedOverwriteShardSpec.getStartRootPartitionId());
+            Assert.assertEquals(5, numberedOverwriteShardSpec.getEndRootPartitionId());
+          } else {
+            Assert.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
+            final NumberedShardSpec numberedShardSpec = (NumberedShardSpec) segment.getShardSpec();
+            Assert.assertEquals(j, numberedShardSpec.getPartitionNum());
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testOverwriteWithDifferentSegmentGranularity() throws Exception
+  {
+    final File tmpDir = temporaryFolder.newFolder();
+    final File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    populateRollupTestData(tmpFile);
+
+    for (int i = 0; i < 2; i++) {
+      final Granularity segmentGranularity = i == 0 ? Granularities.DAY : Granularities.MONTH;
+      final IndexTask indexTask = new IndexTask(
+          null,
+          null,
+          createIngestionSpec(
+              jsonMapper,
+              tmpDir,
+              null,
+              new UniformGranularitySpec(
+                  segmentGranularity,
+                  Granularities.DAY,
+                  true,
+                  null
+              ),
+              createTuningConfig(3, 2, null, 2L, null, null, false, true),
+              false
+          ),
+          null,
+          AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+          null,
+          rowIngestionMetersFactory,
+          appenderatorsManager
+      );
+
+      final List<DataSegment> segments = runTask(indexTask).rhs;
+
+      Assert.assertEquals(5, segments.size());
+
+      final Interval expectedInterval = i == 0
+                                        ? Intervals.of("2014-01-01/2014-01-02")
+                                        : Intervals.of("2014-01-01/2014-02-01");
+      for (int j = 0; j < 5; j++) {
+        final DataSegment segment = segments.get(j);
+        Assert.assertEquals("test", segment.getDataSource());
+        Assert.assertEquals(expectedInterval, segment.getInterval());
+        Assert.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
+        Assert.assertEquals(j, segment.getShardSpec().getPartitionNum());
+      }
+    }
+  }
+
   public static void checkTaskStatusErrorMsgForParseExceptionsExceeded(TaskStatus status)
   {
     // full stacktrace will be too long and make tests brittle (e.g. if line # changes), just match the main message
     Assert.assertTrue(status.getErrorMsg().contains("Max parse exceptions exceeded, terminating task..."));
   }
 
-  private Pair<TaskStatus, List<DataSegment>> runTask(IndexTask indexTask) throws Exception
+  private Pair<TaskStatus, List<DataSegment>> runTask(IndexTask task) throws Exception
   {
-    final TaskActionClient actionClient = new TaskActionClient()
-    {
-      @Override
-      public <RetType> RetType submit(TaskAction<RetType> taskAction)
-      {
-        if (taskAction instanceof LockListAction) {
-          return (RetType) Collections.singletonList(
-              new TaskLock(
-                  TaskLockType.EXCLUSIVE,
-                  "",
-                  "",
-                  Intervals.of("2014/P1Y"), DateTimes.nowUtc().toString(),
-                  Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY
-              )
-          );
-        }
-
-        if (taskAction instanceof LockAcquireAction) {
-          return (RetType) new TaskLock(
-              TaskLockType.EXCLUSIVE,
-              "groupId",
-              "test",
-              ((LockAcquireAction) taskAction).getInterval(),
-              DateTimes.nowUtc().toString(),
-              Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY
-          );
-        }
-
-        if (taskAction instanceof LockTryAcquireAction) {
-          return (RetType) new TaskLock(
-              TaskLockType.EXCLUSIVE,
-              "groupId",
-              "test",
-              ((LockTryAcquireAction) taskAction).getInterval(),
-              DateTimes.nowUtc().toString(),
-              Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY
-          );
-        }
-
-        if (taskAction instanceof SegmentTransactionalInsertAction) {
-          return (RetType) SegmentPublishResult.ok(((SegmentTransactionalInsertAction) taskAction).getSegments());
-        }
-
-        if (taskAction instanceof SegmentAllocateAction) {
-          SegmentAllocateAction action = (SegmentAllocateAction) taskAction;
-          Interval interval = action.getPreferredSegmentGranularity().bucket(action.getTimestamp());
-          ShardSpec shardSpec = new NumberedShardSpec(segmentAllocatePartitionCounter++, 0);
-          return (RetType) new SegmentIdWithShardSpec(action.getDataSource(), interval, "latestVersion", shardSpec);
-        }
-
-        return null;
-      }
-    };
-
-    final DataSegmentKiller killer = new DataSegmentKiller()
-    {
-      @Override
-      public void kill(DataSegment segment)
-      {
-
-      }
-
-      @Override
-      public void killAll()
-      {
-
-      }
-    };
-
-    final TaskToolbox box = new TaskToolbox(
-        null,
-        actionClient,
-        null,
-        pusher,
-        killer,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        jsonMapper,
-        temporaryFolder.newFolder(),
-        indexIO,
-        null,
-        null,
-        null,
-        indexMergerV9,
-        null,
-        null,
-        null,
-        null,
-        new TaskReportFileWriter(reportsFile)
-    );
-
-    indexTask.isReady(box.getTaskActionClient());
-    TaskStatus status = indexTask.run(box);
-
-    segments.sort((s1, s2) -> {
-      final int comp = Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval());
-      if (comp != 0) {
-        return comp;
-      }
-      //noinspection SubtractionInCompareTo
-      return s1.getShardSpec().getPartitionNum() - s2.getShardSpec().getPartitionNum();
-    });
-
+    task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
+    final TaskStatus status = taskRunner.run(task).get();
+    final List<DataSegment> segments = taskRunner.getPublishedSegments();
     return Pair.of(status, segments);
-  }
-
-  private IndexTask.IndexIngestionSpec createIngestionSpec(
-      File baseDir,
-      ParseSpec parseSpec,
-      GranularitySpec granularitySpec,
-      IndexTuningConfig tuningConfig,
-      boolean appendToExisting
-  )
-  {
-    return createIngestionSpec(baseDir, parseSpec, TransformSpec.NONE, granularitySpec, tuningConfig, appendToExisting);
-  }
-
-  private IndexTask.IndexIngestionSpec createIngestionSpec(
-      File baseDir,
-      ParseSpec parseSpec,
-      TransformSpec transformSpec,
-      GranularitySpec granularitySpec,
-      IndexTuningConfig tuningConfig,
-      boolean appendToExisting
-  )
-  {
-    return new IndexTask.IndexIngestionSpec(
-        new DataSchema(
-            "test",
-            jsonMapper.convertValue(
-                new StringInputRowParser(
-                    parseSpec != null ? parseSpec : DEFAULT_PARSE_SPEC,
-                    null
-                ),
-                Map.class
-            ),
-            new AggregatorFactory[]{
-                new LongSumAggregatorFactory("val", "val")
-            },
-            granularitySpec != null ? granularitySpec : new UniformGranularitySpec(
-                Granularities.DAY,
-                Granularities.MINUTE,
-                Collections.singletonList(Intervals.of("2014/2015"))
-            ),
-            transformSpec,
-            jsonMapper
-        ),
-        new IndexTask.IndexIOConfig(
-            new LocalFirehoseFactory(
-                baseDir,
-                "druid*",
-                null
-            ),
-            appendToExisting
-        ),
-        tuningConfig
-    );
   }
 
   private static IndexTuningConfig createTuningConfigWithMaxRowsPerSegment(
@@ -1704,9 +1668,10 @@ public class IndexTaskTest
         null,
         numShards,
         partitionDimensions,
+        null,
         indexSpec,
         null,
-        true,
+        null,
         forceGuaranteedRollup,
         reportParseException,
         null,
@@ -1721,13 +1686,76 @@ public class IndexTaskTest
   private IngestionStatsAndErrorsTaskReportData getTaskReportData() throws IOException
   {
     Map<String, TaskReport> taskReports = jsonMapper.readValue(
-        reportsFile,
+        taskRunner.getTaskReportsFile(),
         new TypeReference<Map<String, TaskReport>>()
         {
         }
     );
     return IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
         taskReports
+    );
+  }
+
+  public static IndexTask.IndexIngestionSpec createIngestionSpec(
+      ObjectMapper objectMapper,
+      File baseDir,
+      ParseSpec parseSpec,
+      GranularitySpec granularitySpec,
+      IndexTuningConfig tuningConfig,
+      boolean appendToExisting
+  )
+  {
+    return createIngestionSpec(
+        objectMapper,
+        baseDir,
+        parseSpec,
+        TransformSpec.NONE,
+        granularitySpec,
+        tuningConfig,
+        appendToExisting
+    );
+  }
+
+  public static IndexTask.IndexIngestionSpec createIngestionSpec(
+      ObjectMapper objectMapper,
+      File baseDir,
+      ParseSpec parseSpec,
+      TransformSpec transformSpec,
+      GranularitySpec granularitySpec,
+      IndexTuningConfig tuningConfig,
+      boolean appendToExisting
+  )
+  {
+    return new IndexTask.IndexIngestionSpec(
+        new DataSchema(
+            "test",
+            objectMapper.convertValue(
+                new StringInputRowParser(
+                    parseSpec != null ? parseSpec : DEFAULT_PARSE_SPEC,
+                    null
+                ),
+                Map.class
+            ),
+            new AggregatorFactory[]{
+                new LongSumAggregatorFactory("val", "val")
+            },
+            granularitySpec != null ? granularitySpec : new UniformGranularitySpec(
+                Granularities.DAY,
+                Granularities.MINUTE,
+                Collections.singletonList(Intervals.of("2014/2015"))
+            ),
+            transformSpec,
+            objectMapper
+        ),
+        new IndexTask.IndexIOConfig(
+            new LocalFirehoseFactory(
+                baseDir,
+                "druid*",
+                null
+            ),
+            appendToExisting
+        ),
+        tuningConfig
     );
   }
 }

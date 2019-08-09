@@ -16,15 +16,9 @@
     "target": "es5",
     "module": "commonjs",
     "moduleResolution": "node",
-    "lib": ["dom", "es2016"],
+    "lib": ["dom", "es2016", "esnext"],
     "jsx": "react",
-    "rootDirs": ["lib","src"],
-
-    "outDir": "build"
+    "rootDirs": ["lib", "src"]
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "lib/sql-function-doc.ts"
-  ]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "lib/sql-function-doc.ts"]
 }

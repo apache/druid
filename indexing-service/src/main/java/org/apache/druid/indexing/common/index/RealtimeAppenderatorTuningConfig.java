@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
@@ -39,7 +40,6 @@ import java.io.File;
 public class RealtimeAppenderatorTuningConfig implements TuningConfig, AppenderatorConfig
 {
   private static final int defaultMaxRowsInMemory = TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY;
-  private static final int defaultMaxRowsPerSegment = 5_000_000;
   private static final Period defaultIntermediatePersistPeriod = new Period("PT10M");
   private static final int defaultMaxPendingPersists = 0;
   private static final ShardSpec defaultShardSpec = new NumberedShardSpec(0, 1);
@@ -55,14 +55,13 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
 
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
-  private final int maxRowsPerSegment;
-  @Nullable
-  private final Long maxTotalRows;
+  private final DynamicPartitionsSpec partitionsSpec;
   private final Period intermediatePersistPeriod;
   private final File basePersistDirectory;
   private final int maxPendingPersists;
   private final ShardSpec shardSpec;
   private final IndexSpec indexSpec;
+  private final IndexSpec indexSpecForIntermediatePersists;
   private final boolean reportParseExceptions;
   private final long publishAndHandoffTimeout;
   private final long alertTimeout;
@@ -84,6 +83,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("shardSpec") ShardSpec shardSpec,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
+      @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("publishAndHandoffTimeout") Long publishAndHandoffTimeout,
       @JsonProperty("alertTimeout") Long alertTimeout,
@@ -94,11 +94,10 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   )
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
-    this.maxRowsPerSegment = maxRowsPerSegment == null ? defaultMaxRowsPerSegment : maxRowsPerSegment;
     // initializing this to 0, it will be lazily intialized to a value
     // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
-    this.maxTotalRows = maxTotalRows;
+    this.partitionsSpec = new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaultIntermediatePersistPeriod
                                      : intermediatePersistPeriod;
@@ -106,6 +105,8 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     this.maxPendingPersists = maxPendingPersists == null ? defaultMaxPendingPersists : maxPendingPersists;
     this.shardSpec = shardSpec == null ? defaultShardSpec : shardSpec;
     this.indexSpec = indexSpec == null ? defaultIndexSpec : indexSpec;
+    this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
+                                            this.indexSpec : indexSpecForIntermediatePersists;
     this.reportParseExceptions = reportParseExceptions == null
                                  ? defaultReportParseExceptions
                                  : reportParseExceptions;
@@ -151,7 +152,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   @JsonProperty
   public Integer getMaxRowsPerSegment()
   {
-    return maxRowsPerSegment;
+    return partitionsSpec.getMaxRowsPerSegment();
   }
 
   @Override
@@ -159,7 +160,12 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   @Nullable
   public Long getMaxTotalRows()
   {
-    return maxTotalRows;
+    return partitionsSpec.getMaxTotalRows();
+  }
+
+  public DynamicPartitionsSpec getPartitionsSpec()
+  {
+    return partitionsSpec;
   }
 
   @Override
@@ -194,6 +200,13 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   public IndexSpec getIndexSpec()
   {
     return indexSpec;
+  }
+
+  @JsonProperty
+  @Override
+  public IndexSpec getIndexSpecForIntermediatePersists()
+  {
+    return indexSpecForIntermediatePersists;
   }
 
   @Override
@@ -246,13 +259,14 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     return new RealtimeAppenderatorTuningConfig(
         maxRowsInMemory,
         maxBytesInMemory,
-        maxRowsPerSegment,
-        maxTotalRows,
+        partitionsSpec.getMaxRowsPerSegment(),
+        partitionsSpec.getMaxTotalRows(),
         intermediatePersistPeriod,
         dir,
         maxPendingPersists,
         shardSpec,
         indexSpec,
+        indexSpecForIntermediatePersists,
         reportParseExceptions,
         publishAndHandoffTimeout,
         alertTimeout,

@@ -48,7 +48,7 @@ public class ExpressionFilter implements Filter
   public ExpressionFilter(final Supplier<Expr> expr)
   {
     this.expr = expr;
-    this.requiredBindings = Suppliers.memoize(() -> expr.get().analyzeInputs().getFreeVariables());
+    this.requiredBindings = Suppliers.memoize(() -> expr.get().analyzeInputs().getRequiredBindings());
   }
 
   @Override

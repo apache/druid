@@ -75,6 +75,7 @@ public class ParserTest
     validateParser("x!=y", "(!= x y)", ImmutableList.of("x", "y"));
     validateParser("x && y", "(&& x y)", ImmutableList.of("x", "y"));
     validateParser("x || y", "(|| x y)", ImmutableList.of("x", "y"));
+
   }
 
   @Test
@@ -92,7 +93,7 @@ public class ParserTest
     validateParser("x-y+z", "(+ (- x y) z)", ImmutableList.of("x", "y", "z"));
     validateParser("x-y-z", "(- (- x y) z)", ImmutableList.of("x", "y", "z"));
 
-    validateParser("x-y-x", "(- (- x y) x)", ImmutableList.of("x", "y"));
+    validateParser("x-y-x", "(- (- x y) x)", ImmutableList.of("x", "y"), ImmutableSet.of("x", "x_0", "y"));
   }
 
   @Test
@@ -195,7 +196,7 @@ public class ParserTest
   public void testFunctions()
   {
     validateParser("sqrt(x)", "(sqrt [x])", ImmutableList.of("x"));
-    validateParser("if(cond,then,else)", "(if [cond, then, else])", ImmutableList.of("cond", "then", "else"));
+    validateParser("if(cond,then,else)", "(if [cond, then, else])", ImmutableList.of("else", "then", "cond"));
     validateParser("cast(x, 'STRING')", "(cast [x, STRING])", ImmutableList.of("x"));
     validateParser("cast(x, 'LONG')", "(cast [x, LONG])", ImmutableList.of("x"));
     validateParser("cast(x, 'DOUBLE')", "(cast [x, DOUBLE])", ImmutableList.of("x"));
@@ -275,12 +276,12 @@ public class ParserTest
         "(+ x (map ([x] -> (+ x 1)), [x]))",
         ImmutableList.of("x"),
         ImmutableSet.of("x"),
-        ImmutableSet.of("x")
+        ImmutableSet.of("x_0")
     );
     validateParser(
         "map((x) -> concat(x, y), z)",
         "(map ([x] -> (concat [x, y])), [z])",
-        ImmutableList.of("z", "y"),
+        ImmutableList.of("y", "z"),
         ImmutableSet.of("y"),
         ImmutableSet.of("z")
     );
@@ -303,14 +304,14 @@ public class ParserTest
     validateParser(
         "array_append(z, fold((x, acc) -> acc + x, map((x) -> x + 1, x), y))",
         "(array_append [z, (fold ([x, acc] -> (+ acc x)), [(map ([x] -> (+ x 1)), [x]), y])])",
-        ImmutableList.of("z", "x", "y"),
+        ImmutableList.of("x", "y", "z"),
         ImmutableSet.of(),
         ImmutableSet.of("x", "z")
     );
     validateParser(
         "map(z -> z + 1, array_append(z, fold((x, acc) -> acc + x, map((x) -> x + 1, x), y)))",
         "(map ([z] -> (+ z 1)), [(array_append [z, (fold ([x, acc] -> (+ acc x)), [(map ([x] -> (+ x 1)), [x]), y])])])",
-        ImmutableList.of("z", "x", "y"),
+        ImmutableList.of("x", "y", "z"),
         ImmutableSet.of(),
         ImmutableSet.of("x", "z")
     );
@@ -318,7 +319,7 @@ public class ParserTest
     validateParser(
         "array_append(map(z -> z + 1, array_append(z, fold((x, acc) -> acc + x, map((x) -> x + 1, x), y))), a)",
         "(array_append [(map ([z] -> (+ z 1)), [(array_append [z, (fold ([x, acc] -> (+ acc x)), [(map ([x] -> (+ x 1)), [x]), y])])]), a])",
-        ImmutableList.of("z", "x", "y", "a"),
+        ImmutableList.of("a", "x", "y", "z"),
         ImmutableSet.of("a"),
         ImmutableSet.of("x", "z")
     );
@@ -400,6 +401,48 @@ public class ParserTest
     );
   }
 
+  @Test
+  public void testUniquify()
+  {
+    validateParser("x-x", "(- x x)", ImmutableList.of("x"), ImmutableSet.of("x", "x_0"));
+    validateParser(
+        "x - x + x",
+        "(+ (- x x) x)",
+        ImmutableList.of("x"),
+        ImmutableSet.of("x", "x_0", "x_1")
+    );
+
+    validateParser(
+        "map((x) -> x + x, x)",
+        "(map ([x] -> (+ x x)), [x])",
+        ImmutableList.of("x"),
+        ImmutableSet.of(),
+        ImmutableSet.of("x")
+    );
+
+    validateApplyUnapplied(
+        "x + x",
+        "(+ x x)",
+        "(cartesian_map ([x, x_0] -> (+ x x_0)), [x, x])",
+        ImmutableList.of("x")
+    );
+
+    validateApplyUnapplied(
+        "x + x + x",
+        "(+ (+ x x) x)",
+        "(cartesian_map ([x, x_0, x_1] -> (+ (+ x x_0) x_1)), [x, x, x])",
+        ImmutableList.of("x")
+    );
+
+    // heh
+    validateApplyUnapplied(
+        "x + x + x + y + y + y + y + z + z + z",
+        "(+ (+ (+ (+ (+ (+ (+ (+ (+ x x) x) y) y) y) y) z) z) z)",
+        "(cartesian_map ([x, x_0, x_1, y, y_2, y_3, y_4, z, z_5, z_6] -> (+ (+ (+ (+ (+ (+ (+ (+ (+ x x_0) x_1) y) y_2) y_3) y_4) z) z_5) z_6)), [x, x, x, y, y, y, y, z, z, z])",
+        ImmutableList.of("x", "y", "z")
+    );
+  }
+
 
   private void validateFlatten(String expression, String withoutFlatten, String withFlatten)
   {
@@ -428,7 +471,7 @@ public class ParserTest
     final Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
     final Expr.BindingDetails deets = parsed.analyzeInputs();
     Assert.assertEquals(expression, expected, parsed.toString());
-    Assert.assertEquals(expression, identifiers, deets.getRequiredColumns());
+    Assert.assertEquals(expression, identifiers, deets.getRequiredBindingsList());
     Assert.assertEquals(expression, scalars, deets.getScalarVariables());
     Assert.assertEquals(expression, arrays, deets.getArrayVariables());
   }
@@ -443,7 +486,7 @@ public class ParserTest
     final Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
     Expr.BindingDetails deets = parsed.analyzeInputs();
     Parser.validateExpr(parsed, deets);
-    final Expr transformed = Parser.applyUnappliedIdentifiers(parsed, deets, identifiers);
+    final Expr transformed = Parser.applyUnappliedBindings(parsed, deets, identifiers);
     Assert.assertEquals(expression, unapplied, parsed.toString());
     Assert.assertEquals(applied, applied, transformed.toString());
   }

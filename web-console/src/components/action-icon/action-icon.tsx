@@ -29,7 +29,7 @@ export interface ActionIconProps {
 }
 
 export class ActionIcon extends React.PureComponent<ActionIconProps> {
-  render() {
+  render(): JSX.Element {
     const { className, icon, onClick } = this.props;
 
     return <Icon className={classNames('action-icon', className)} icon={icon} onClick={onClick} />;

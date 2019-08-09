@@ -16,19 +16,15 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { QueryPlanDialog } from './query-plan-dialog';
 
 describe('query plan dialog', () => {
   it('matches snapshot', () => {
     const queryPlanDialog = (
-      <QueryPlanDialog
-        explainResult={'test'}
-        explainError={{ name: 'test', message: 'test' }}
-        onClose={() => null}
-      />
+      <QueryPlanDialog explainResult={'test'} explainError={undefined} onClose={() => {}} />
     );
     render(queryPlanDialog);
     expect(document.body.lastChild).toMatchSnapshot();

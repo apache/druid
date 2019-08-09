@@ -240,6 +240,10 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
     final String checkpoints = sortingMapper.writerFor(CHECKPOINTS_TYPE_REF).writeValueAsString(sequenceOffsets);
     final Map<String, Object> context = createBaseTaskContexts();
     context.put(CHECKPOINTS_CTX_KEY, checkpoints);
+    // Kafka index task always uses incremental handoff since 0.16.0.
+    // The below is for the compatibility when you want to downgrade your cluster to something earlier than 0.16.0.
+    // Kafka index task will pick up LegacyKafkaIndexTaskRunner without the below configuration.
+    context.put("IS_INCREMENTAL_HANDOFF_SUPPORTED", true);
 
     List<SeekableStreamIndexTask<Integer, Long>> taskList = new ArrayList<>();
     for (int i = 0; i < replicas; i++) {
@@ -254,7 +258,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
           null,
           null,
           rowIngestionMetersFactory,
-          sortingMapper
+          sortingMapper,
+          null
       ));
     }
     return taskList;
@@ -262,6 +267,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
 
 
   @Override
+  // suppress use of CollectionUtils.mapValues() since the valueMapper function is dependent on map key here
+  @SuppressWarnings("SSBasedInspection")
   protected Map<Integer, Long> getLagPerPartition(Map<Integer, Long> currentOffsets)
   {
     return currentOffsets

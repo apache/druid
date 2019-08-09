@@ -29,7 +29,6 @@ import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.query.QueryBenchmarkUtil;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -53,6 +52,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.IntervalDimFilter;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -286,7 +286,7 @@ public class TimeCompareBenchmark
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
-    ComplexMetrics.registerSerde("hyperUnique", () -> new HyperUniquesSerde(HyperLogLogHash.getDefault()));
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
     executorService = Execs.multiThreaded(numSegments, "TopNThreadPool");
 
@@ -418,7 +418,7 @@ public class TimeCompareBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void queryMultiQueryableIndexTopN(Blackhole blackhole)
   {
-    Sequence<Result<TopNResultValue>> queryResult = topNRunner.run(QueryPlus.wrap(topNQuery), new HashMap<>());
+    Sequence<Result<TopNResultValue>> queryResult = topNRunner.run(QueryPlus.wrap(topNQuery), ResponseContext.createEmpty());
     List<Result<TopNResultValue>> results = queryResult.toList();
     blackhole.consume(results);
   }
@@ -431,7 +431,7 @@ public class TimeCompareBenchmark
   {
     Sequence<Result<TimeseriesResultValue>> queryResult = timeseriesRunner.run(
         QueryPlus.wrap(timeseriesQuery),
-        new HashMap<>()
+        ResponseContext.createEmpty()
     );
     List<Result<TimeseriesResultValue>> results = queryResult.toList();
     blackhole.consume(results);

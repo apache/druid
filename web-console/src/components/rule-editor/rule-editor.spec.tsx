@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { RuleEditor } from './rule-editor';
 
@@ -27,8 +27,8 @@ describe('rule editor', () => {
       <RuleEditor
         rule={{ type: 'loadForever' }}
         tiers={['test', 'test', 'test']}
-        onChange={() => null}
-        onDelete={() => null}
+        onChange={() => {}}
+        onDelete={() => {}}
         moveUp={null}
         moveDown={null}
       />

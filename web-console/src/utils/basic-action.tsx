@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, IconName, Intent, Menu, MenuItem } from '@blueprintjs/core';
+import { IconName, Intent, Menu, MenuItem } from '@blueprintjs/core';
 import React from 'react';
 
 export interface BasicAction {
@@ -26,13 +26,13 @@ export interface BasicAction {
   onAction: () => void;
 }
 
-export function basicActionsToMenu(basicActions: BasicAction[]) {
-  if (!basicActions.length) return null;
+export function basicActionsToMenu(basicActions: BasicAction[]): JSX.Element | undefined {
+  if (!basicActions.length) return;
   return (
     <Menu>
-      {basicActions.map(action => (
+      {basicActions.map((action, i) => (
         <MenuItem
-          key={action.title}
+          key={i}
           icon={action.icon}
           text={action.title}
           intent={action.intent}
@@ -40,22 +40,5 @@ export function basicActionsToMenu(basicActions: BasicAction[]) {
         />
       ))}
     </Menu>
-  );
-}
-
-export function basicActionsToButtons(basicActions: BasicAction[]) {
-  if (!basicActions.length) return null;
-  return (
-    <>
-      {basicActions.map(action => (
-        <Button
-          key={action.title}
-          icon={action.icon}
-          text={action.title}
-          intent={action.intent}
-          onClick={action.onAction}
-        />
-      ))}
-    </>
   );
 }

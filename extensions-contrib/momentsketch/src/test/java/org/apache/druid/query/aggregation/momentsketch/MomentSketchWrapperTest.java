@@ -19,9 +19,8 @@
 
 package org.apache.druid.query.aggregation.momentsketch;
 
+import org.junit.Assert;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
 
 public class MomentSketchWrapperTest
 {
@@ -34,7 +33,7 @@ public class MomentSketchWrapperTest
     byte[] bs = mw.toByteArray();
     MomentSketchWrapper mw2 = MomentSketchWrapper.fromByteArray(bs);
 
-    assertEquals(10, mw2.getPowerSums()[1], 1e-10);
+    Assert.assertEquals(10, mw2.getPowerSums()[1], 1e-10);
   }
 
   @Test
@@ -47,7 +46,7 @@ public class MomentSketchWrapperTest
     }
     double[] ps = {0.0, 0.5, 1.0};
     double[] qs = mw.getQuantiles(ps);
-    assertEquals(0, qs[0], 1.0);
-    assertEquals(50, qs[1], 1.0);
+    Assert.assertEquals(0, qs[0], 1.0);
+    Assert.assertEquals(50, qs[1], 1.0);
   }
 }

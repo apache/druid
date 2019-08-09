@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { SchemaTable } from './schema-table';
 
@@ -43,7 +43,7 @@ describe('schema table', () => {
         columnFilter=""
         selectedDimensionSpecIndex={-1}
         selectedMetricSpecIndex={-1}
-        onDimensionOrMetricSelect={() => null}
+        onDimensionOrMetricSelect={() => {}}
       />
     );
 

@@ -108,7 +108,8 @@ public class YeOldePlumberSchool implements PlumberSchool
         config.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
         config.isReportParseExceptions(),
-        config.getDedupColumn()
+        config.getDedupColumn(),
+        null
     );
 
     // Temporary directory to hold spilled segments.
@@ -236,7 +237,7 @@ public class YeOldePlumberSchool implements PlumberSchool
             indexMergerV9.persist(
                 indexToPersist.getIndex(),
                 dirToPersist,
-                config.getIndexSpec(),
+                config.getIndexSpecForIntermediatePersists(),
                 config.getSegmentWriteOutMediumFactory()
             );
 

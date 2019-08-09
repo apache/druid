@@ -130,7 +130,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       final boolean deserializeComplexMetrics
   )
   {
-    final RowBasedColumnSelectorFactory baseSelectorFactory = RowBasedColumnSelectorFactory.create(in, null);
+    final RowBasedColumnSelectorFactory baseSelectorFactory = RowBasedColumnSelectorFactory.create(in::get, null);
 
     class IncrementalIndexInputRowColumnSelectorFactory implements ColumnSelectorFactory
     {
@@ -330,6 +330,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   public static class Builder
   {
+    @Nullable
     private IncrementalIndexSchema incrementalIndexSchema;
     private boolean deserializeComplexMetrics;
     private boolean reportParseExceptions;
@@ -505,8 +506,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   static class IncrementalIndexRowResult
   {
-    private IncrementalIndexRow incrementalIndexRow;
-    private List<String> parseExceptionMessages;
+    private final IncrementalIndexRow incrementalIndexRow;
+    private final List<String> parseExceptionMessages;
 
     IncrementalIndexRowResult(IncrementalIndexRow incrementalIndexRow, List<String> parseExceptionMessages)
     {
@@ -527,9 +528,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   static class AddToFactsResult
   {
-    private int rowCount;
+    private final int rowCount;
     private final long bytesInMemory;
-    private List<String> parseExceptionMessages;
+    private final List<String> parseExceptionMessages;
 
     public AddToFactsResult(
         int rowCount,
@@ -995,55 +996,50 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return iterableWithPostAggregations(null, false).iterator();
   }
 
-  public Iterable<Row> iterableWithPostAggregations(final List<PostAggregator> postAggs, final boolean descending)
+  public Iterable<Row> iterableWithPostAggregations(@Nullable final List<PostAggregator> postAggs, final boolean descending)
   {
-    return new Iterable<Row>()
-    {
-      @Override
-      public Iterator<Row> iterator()
-      {
-        final List<DimensionDesc> dimensions = getDimensions();
+    return () -> {
+      final List<DimensionDesc> dimensions = getDimensions();
 
-        return Iterators.transform(
-            getFacts().iterator(descending),
-            incrementalIndexRow -> {
-              final int rowOffset = incrementalIndexRow.getRowIndex();
+      return Iterators.transform(
+          getFacts().iterator(descending),
+          incrementalIndexRow -> {
+            final int rowOffset = incrementalIndexRow.getRowIndex();
 
-              Object[] theDims = incrementalIndexRow.getDims();
+            Object[] theDims = incrementalIndexRow.getDims();
 
-              Map<String, Object> theVals = Maps.newLinkedHashMap();
-              for (int i = 0; i < theDims.length; ++i) {
-                Object dim = theDims[i];
-                DimensionDesc dimensionDesc = dimensions.get(i);
-                if (dimensionDesc == null) {
-                  continue;
-                }
-                String dimensionName = dimensionDesc.getName();
-                DimensionHandler handler = dimensionDesc.getHandler();
-                if (dim == null || handler.getLengthOfEncodedKeyComponent(dim) == 0) {
-                  theVals.put(dimensionName, null);
-                  continue;
-                }
-                final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualList(dim);
-                theVals.put(dimensionName, rowVals);
+            Map<String, Object> theVals = Maps.newLinkedHashMap();
+            for (int i = 0; i < theDims.length; ++i) {
+              Object dim = theDims[i];
+              DimensionDesc dimensionDesc = dimensions.get(i);
+              if (dimensionDesc == null) {
+                continue;
               }
-
-              AggregatorType[] aggs = getAggsForRow(rowOffset);
-              for (int i = 0; i < aggs.length; ++i) {
-                theVals.put(metrics[i].getName(), getAggVal(aggs[i], rowOffset, i));
+              String dimensionName = dimensionDesc.getName();
+              DimensionHandler handler = dimensionDesc.getHandler();
+              if (dim == null || handler.getLengthOfEncodedKeyComponent(dim) == 0) {
+                theVals.put(dimensionName, null);
+                continue;
               }
-
-              if (postAggs != null) {
-                for (PostAggregator postAgg : postAggs) {
-                  theVals.put(postAgg.getName(), postAgg.compute(theVals));
-                }
-              }
-
-              return new MapBasedRow(incrementalIndexRow.getTimestamp(), theVals);
+              final DimensionIndexer indexer = dimensionDesc.getIndexer();
+              Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualList(dim);
+              theVals.put(dimensionName, rowVals);
             }
-        );
-      }
+
+            AggregatorType[] aggs = getAggsForRow(rowOffset);
+            for (int i = 0; i < aggs.length; ++i) {
+              theVals.put(metrics[i].getName(), getAggVal(aggs[i], rowOffset, i));
+            }
+
+            if (postAggs != null) {
+              for (PostAggregator postAgg : postAggs) {
+                theVals.put(postAgg.getName(), postAgg.compute(theVals));
+              }
+            }
+
+            return new MapBasedRow(incrementalIndexRow.getTimestamp(), theVals);
+          }
+      );
     };
   }
 

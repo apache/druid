@@ -46,10 +46,11 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
       @JsonProperty("name") final String name,
       @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("lgK") @Nullable final Integer lgK,
-      @JsonProperty("tgtHllType") @Nullable final String tgtHllType
+      @JsonProperty("tgtHllType") @Nullable final String tgtHllType,
+      @JsonProperty("round") final boolean round
   )
   {
-    super(name, fieldName, lgK, tgtHllType);
+    super(name, fieldName, lgK, tgtHllType, round);
   }
 
   @Override
@@ -59,10 +60,11 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
       HllSketchMergeAggregatorFactory castedOther = (HllSketchMergeAggregatorFactory) other;
 
       return new HllSketchMergeAggregatorFactory(
-              getName(),
-              getName(),
-              Math.max(getLgK(), castedOther.getLgK()),
-              getTgtHllType().compareTo(castedOther.getTgtHllType()) < 0 ? castedOther.getTgtHllType() : getTgtHllType()
+          getName(),
+          getName(),
+          Math.max(getLgK(), castedOther.getLgK()),
+          getTgtHllType().compareTo(castedOther.getTgtHllType()) < 0 ? castedOther.getTgtHllType() : getTgtHllType(),
+          isRound() || castedOther.isRound()
       );
     } else {
       throw new AggregatorFactoryNotMergeableException(this, other);

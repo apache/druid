@@ -239,7 +239,7 @@ export class RuleEditor extends React.PureComponent<RuleEditorProps, RuleEditorS
     );
   }
 
-  render() {
+  render(): JSX.Element | null {
     const { onChange, rule, onDelete, moveUp, moveDown } = this.props;
     const { isOpen } = this.state;
 

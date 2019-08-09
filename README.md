@@ -17,7 +17,7 @@
   ~ under the License.
   -->
 
-[![Build Status](https://travis-ci.org/apache/incubator-druid.svg?branch=master)](https://travis-ci.org/apache/incubator-druid) [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) [![Coverage Status](https://coveralls.io/repos/apache/incubator-druid/badge.svg?branch=master)](https://coveralls.io/r/apache/incubator-druid?branch=master) [![IRC#druid-dev](https://img.shields.io/badge/IRC-druid--dev-blue.svg)](https://webchat.freenode.net?channels=druid-dev)
+[![Build Status](https://travis-ci.org/apache/incubator-druid.svg?branch=master)](https://travis-ci.org/apache/incubator-druid) [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) [![Coverage Status](https://coveralls.io/repos/apache/incubator-druid/badge.svg?branch=master)](https://coveralls.io/r/apache/incubator-druid?branch=master)
 
 ## Apache Druid (incubating)
 
@@ -58,8 +58,7 @@ is hosted at Google Groups.
 Development discussions occur on [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org), which
 you can subscribe to by emailing [dev-subscribe@druid.apache.org](mailto:dev-subscribe@druid.apache.org).
 
-We also have a couple people hanging out on IRC in `#druid-dev` on
-`irc.freenode.net`.
+Some committers and users are present in the channel `#druid` on the Apache Slack team. Please use our [invitation link to join](https://druid.apache.org/community/join-slack), and once you join, add the `#druid` channel.
 
 ### Building From Source
 

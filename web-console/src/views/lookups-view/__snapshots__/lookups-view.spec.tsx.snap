@@ -14,7 +14,7 @@ exports[`lookups view matches snapshot 1`] = `
     <Blueprint3.Button
       icon="plus"
       onClick={[Function]}
-      text="Add"
+      text="Add lookup"
     />
     <TableColumnSelector
       columns={
@@ -220,17 +220,5 @@ exports[`lookups view matches snapshot 1`] = `
     onClose={[Function]}
     onSubmit={[Function]}
   />
-  <AsyncActionDialog
-    action={null}
-    confirmButtonText="Delete lookup"
-    failText="Could not delete lookup"
-    intent="danger"
-    onClose={[Function]}
-    successText="Lookup was deleted"
-  >
-    <p>
-      Are you sure you want to delete the lookup 'null'?
-    </p>
-  </AsyncActionDialog>
 </div>
 `;

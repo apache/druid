@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -33,20 +34,18 @@ import java.util.Objects;
 
 public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfig, AppenderatorConfig
 {
-  private static final int DEFAULT_MAX_ROWS_PER_SEGMENT = 5_000_000;
   private static final boolean DEFAULT_RESET_OFFSET_AUTOMATICALLY = false;
   private static final boolean DEFAULT_SKIP_SEQUENCE_NUMBER_AVAILABILITY_CHECK = false;
 
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
-  private final int maxRowsPerSegment;
-  @Nullable
-  private final Long maxTotalRows;
+  private final DynamicPartitionsSpec partitionsSpec;
   private final Period intermediatePersistPeriod;
   private final File basePersistDirectory;
   @Deprecated
   private final int maxPendingPersists;
   private final IndexSpec indexSpec;
+  private final IndexSpec indexSpecForIntermediatePersists;
   private final boolean reportParseExceptions;
   private final long handoffConditionTimeout;
   private final boolean resetOffsetAutomatically;
@@ -68,6 +67,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
       @Nullable File basePersistDirectory,
       @Nullable Integer maxPendingPersists,
       @Nullable IndexSpec indexSpec,
+      @Nullable IndexSpec indexSpecForIntermediatePersists,
       // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
       @Deprecated @JsonProperty("buildV9Directly") @Nullable Boolean buildV9Directly,
       @Deprecated @Nullable Boolean reportParseExceptions,
@@ -85,8 +85,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     final RealtimeTuningConfig defaults = RealtimeTuningConfig.makeDefaultTuningConfig(basePersistDirectory);
 
     this.maxRowsInMemory = maxRowsInMemory == null ? defaults.getMaxRowsInMemory() : maxRowsInMemory;
-    this.maxRowsPerSegment = maxRowsPerSegment == null ? DEFAULT_MAX_ROWS_PER_SEGMENT : maxRowsPerSegment;
-    this.maxTotalRows = maxTotalRows;
+    this.partitionsSpec = new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
     // initializing this to 0, it will be lazily initialized to a value
     // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
@@ -96,6 +95,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     this.basePersistDirectory = defaults.getBasePersistDirectory();
     this.maxPendingPersists = maxPendingPersists == null ? 0 : maxPendingPersists;
     this.indexSpec = indexSpec == null ? defaults.getIndexSpec() : indexSpec;
+    this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
+                                            this.indexSpec : indexSpecForIntermediatePersists;
     this.reportParseExceptions = reportParseExceptions == null
                                  ? defaults.isReportParseExceptions()
                                  : reportParseExceptions;
@@ -147,7 +148,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   @JsonProperty
   public Integer getMaxRowsPerSegment()
   {
-    return maxRowsPerSegment;
+    return partitionsSpec.getMaxRowsPerSegment();
   }
 
   @JsonProperty
@@ -155,7 +156,12 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   @Nullable
   public Long getMaxTotalRows()
   {
-    return maxTotalRows;
+    return partitionsSpec.getMaxTotalRows();
+  }
+
+  public DynamicPartitionsSpec getPartitionsSpec()
+  {
+    return partitionsSpec;
   }
 
   @Override
@@ -185,6 +191,13 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   public IndexSpec getIndexSpec()
   {
     return indexSpec;
+  }
+
+  @JsonProperty
+  @Override
+  public IndexSpec getIndexSpecForIntermediatePersists()
+  {
+    return indexSpecForIntermediatePersists;
   }
 
   /**
@@ -268,7 +281,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     SeekableStreamIndexTaskTuningConfig that = (SeekableStreamIndexTaskTuningConfig) o;
     return maxRowsInMemory == that.maxRowsInMemory &&
            maxBytesInMemory == that.maxBytesInMemory &&
-           maxRowsPerSegment == that.maxRowsPerSegment &&
            maxPendingPersists == that.maxPendingPersists &&
            reportParseExceptions == that.reportParseExceptions &&
            handoffConditionTimeout == that.handoffConditionTimeout &&
@@ -277,10 +289,11 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
            logParseExceptions == that.logParseExceptions &&
            maxParseExceptions == that.maxParseExceptions &&
            maxSavedParseExceptions == that.maxSavedParseExceptions &&
-           Objects.equals(maxTotalRows, that.maxTotalRows) &&
+           Objects.equals(partitionsSpec, that.partitionsSpec) &&
            Objects.equals(intermediatePersistPeriod, that.intermediatePersistPeriod) &&
            Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
            Objects.equals(indexSpec, that.indexSpec) &&
+           Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
            Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
            Objects.equals(intermediateHandoffPeriod, that.intermediateHandoffPeriod);
   }
@@ -291,12 +304,12 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     return Objects.hash(
         maxRowsInMemory,
         maxBytesInMemory,
-        maxRowsPerSegment,
-        maxTotalRows,
+        partitionsSpec,
         intermediatePersistPeriod,
         basePersistDirectory,
         maxPendingPersists,
         indexSpec,
+        indexSpecForIntermediatePersists,
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,

@@ -26,15 +26,19 @@ import com.google.common.primitives.Floats;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.dimension.VectorColumnStrategizer;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
@@ -63,7 +67,7 @@ public final class DimensionHandlerUtils
   public static DimensionHandler getHandlerFromCapabilities(
       String dimensionName,
       ColumnCapabilities capabilities,
-      MultiValueHandling multiValueHandling
+      @Nullable MultiValueHandling multiValueHandling
   )
   {
     if (capabilities == null) {
@@ -240,6 +244,80 @@ public final class DimensionHandlerUtils
   {
     capabilities = getEffectiveCapabilities(dimSpec, capabilities);
     return strategyFactory.makeColumnSelectorStrategy(capabilities, selector);
+  }
+
+  /**
+   * Equivalent to calling makeVectorProcessor(DefaultDimensionSpec.of(column), strategyFactory, selectorFactory).
+   *
+   * @see #makeVectorProcessor(DimensionSpec, VectorColumnStrategizer, VectorColumnSelectorFactory)
+   */
+  public static <T> T makeVectorProcessor(
+      final String column,
+      final VectorColumnStrategizer<T> strategyFactory,
+      final VectorColumnSelectorFactory selectorFactory
+  )
+  {
+    return makeVectorProcessor(DefaultDimensionSpec.of(column), strategyFactory, selectorFactory);
+  }
+
+  /**
+   * Creates "vector processors", which are objects that wrap a single vectorized input column and provide some
+   * functionality on top of it. Used by things like query engines and filter matchers.
+   *
+   * Supports the basic types STRING, LONG, DOUBLE, and FLOAT.
+   *
+   * @param dimensionSpec   dimensionSpec for the input to the processor
+   * @param strategyFactory object that encapsulates the knowledge about how to create processors
+   * @param selectorFactory column selector factory used for creating the vector processor
+   */
+  public static <T> T makeVectorProcessor(
+      final DimensionSpec dimensionSpec,
+      final VectorColumnStrategizer<T> strategyFactory,
+      final VectorColumnSelectorFactory selectorFactory
+  )
+  {
+    final ColumnCapabilities capabilities = getEffectiveCapabilities(
+        dimensionSpec,
+        selectorFactory.getColumnCapabilities(dimensionSpec.getDimension())
+    );
+
+    final ValueType type = capabilities.getType();
+
+    if (type == ValueType.STRING) {
+      if (capabilities.hasMultipleValues()) {
+        return strategyFactory.makeMultiValueDimensionStrategy(
+            selectorFactory.makeMultiValueDimensionSelector(dimensionSpec)
+        );
+      } else {
+        return strategyFactory.makeSingleValueDimensionStrategy(
+            selectorFactory.makeSingleValueDimensionSelector(dimensionSpec)
+        );
+      }
+    } else {
+      Preconditions.checkState(
+          dimensionSpec.getExtractionFn() == null && !dimensionSpec.mustDecorate(),
+          "Uh oh, was about to try to make a value selector for type[%s] with a dimensionSpec of class[%s] that "
+          + "requires decoration. Possible bug.",
+          type,
+          dimensionSpec.getClass().getName()
+      );
+
+      if (type == ValueType.LONG) {
+        return strategyFactory.makeLongStrategy(
+            selectorFactory.makeValueSelector(dimensionSpec.getDimension())
+        );
+      } else if (type == ValueType.FLOAT) {
+        return strategyFactory.makeFloatStrategy(
+            selectorFactory.makeValueSelector(dimensionSpec.getDimension())
+        );
+      } else if (type == ValueType.DOUBLE) {
+        return strategyFactory.makeDoubleStrategy(
+            selectorFactory.makeValueSelector(dimensionSpec.getDimension())
+        );
+      } else {
+        throw new ISE("Unsupported type[%s]", capabilities.getType());
+      }
+    }
   }
 
   @Nullable

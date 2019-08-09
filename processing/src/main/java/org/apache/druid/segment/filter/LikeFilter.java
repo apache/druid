@@ -30,11 +30,15 @@ import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcherColumnStrategizer;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -73,6 +77,22 @@ public class LikeFilter implements Filter
   public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
     return Filters.makeValueMatcher(factory, dimension, likeMatcher.predicateFactory(extractionFn));
+  }
+
+  @Override
+  public VectorValueMatcher makeVectorMatcher(final VectorColumnSelectorFactory factory)
+  {
+    return DimensionHandlerUtils.makeVectorProcessor(
+        dimension,
+        VectorValueMatcherColumnStrategizer.instance(),
+        factory
+    ).makeMatcher(likeMatcher.predicateFactory(extractionFn));
+  }
+
+  @Override
+  public boolean canVectorizeMatcher()
+  {
+    return true;
   }
 
   @Override

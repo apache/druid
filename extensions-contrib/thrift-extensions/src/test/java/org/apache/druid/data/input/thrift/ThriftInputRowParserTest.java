@@ -39,15 +39,13 @@ import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.protocol.TJSONProtocol;
 import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.nio.ByteBuffer;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class ThriftInputRowParserTest
 {
@@ -82,10 +80,10 @@ public class ThriftInputRowParserTest
         "example/book.jar",
         "org.apache.druid.data.input.thrift.Book"
     );
-    assertEquals(parser1.getThriftClass().getName(), "org.apache.druid.data.input.thrift.Book");
+    Assert.assertEquals("org.apache.druid.data.input.thrift.Book", parser1.getThriftClass().getName());
 
     ThriftInputRowParser parser2 = new ThriftInputRowParser(parseSpec, null, "org.apache.druid.data.input.thrift.Book");
-    assertEquals(parser2.getThriftClass().getName(), "org.apache.druid.data.input.thrift.Book");
+    Assert.assertEquals("org.apache.druid.data.input.thrift.Book", parser2.getThriftClass().getName());
   }
 
   @Test
@@ -144,17 +142,18 @@ public class ThriftInputRowParserTest
     expectedException.expect(CoreMatchers.instanceOf(IllegalStateException.class));
     expectedException.expectMessage("JavaScript is disabled");
 
+    //noinspection ResultOfMethodCallIgnored (this method call will trigger the expected exception)
     parser.parseBatch(ByteBuffer.allocate(1)).get(0);
   }
 
-  public void serializationAndTest(ThriftInputRowParser parser, byte[] bytes)
+  private void serializationAndTest(ThriftInputRowParser parser, byte[] bytes)
   {
     ByteBuffer buffer = ByteBuffer.wrap(bytes);
 
     InputRow row1 = parser.parseBatch(buffer).get(0);
-    assertTrue(row1.getDimension("title").get(0).equals("title"));
+    Assert.assertEquals("title", row1.getDimension("title").get(0));
 
     InputRow row2 = parser.parseBatch(new BytesWritable(bytes)).get(0);
-    assertTrue(row2.getDimension("lastName").get(0).equals("last"));
+    Assert.assertEquals("last", row2.getDimension("lastName").get(0));
   }
 }

@@ -23,10 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.collections.SerializablePair;
 
+import javax.annotation.Nullable;
+
 public class SerializablePairLongString extends SerializablePair<Long, String>
 {
   @JsonCreator
-  public SerializablePairLongString(@JsonProperty("lhs") Long lhs, @JsonProperty("rhs") String rhs)
+  public SerializablePairLongString(@JsonProperty("lhs") Long lhs, @JsonProperty("rhs") @Nullable String rhs)
   {
     super(lhs, rhs);
   }

@@ -625,10 +625,7 @@ public class NewestSegmentFirstPolicyTest
       SegmentGenerateSpec... specs
   )
   {
-    VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
-        String.CASE_INSENSITIVE_ORDER
-    );
-
+    List<DataSegment> segments = new ArrayList<>();
     final String version = DateTimes.nowUtc().toString();
 
     final List<SegmentGenerateSpec> orderedSpecs = Arrays.asList(specs);
@@ -647,7 +644,7 @@ public class NewestSegmentFirstPolicyTest
         }
 
         for (int i = 0; i < spec.numSegmentsPerShard; i++) {
-          final ShardSpec shardSpec = new NumberedShardSpec(spec.numSegmentsPerShard, i);
+          final ShardSpec shardSpec = new NumberedShardSpec(i, spec.numSegmentsPerShard);
           final DataSegment segment = new DataSegment(
               DATA_SOURCE,
               segmentInterval,
@@ -659,18 +656,14 @@ public class NewestSegmentFirstPolicyTest
               0,
               spec.segmentSize
           );
-          timeline.add(
-              segmentInterval,
-              version,
-              shardSpec.createChunk(segment)
-          );
+          segments.add(segment);
         }
 
         remaininInterval = SegmentCompactorUtil.removeIntervalFromEnd(remaininInterval, segmentInterval);
       }
     }
 
-    return timeline;
+    return VersionedIntervalTimeline.forSegments(segments);
   }
 
   private DataSourceCompactionConfig createCompactionConfig(

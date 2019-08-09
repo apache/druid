@@ -40,7 +40,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -57,8 +56,6 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
 
   private static final String marketDimension = "market";
   private static final SegmentId segmentId = SegmentId.dummy("testSegment");
-
-  private static final HashMap<String, Object> context = new HashMap<String, Object>();
 
   private static final TopNQuery query = new TopNQueryBuilder()
       .dataSource(QueryRunnerTestHelper.dataSource)
@@ -78,7 +75,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
               )
           )
       )
-      .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+      .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
       .build();
   private static final Map<TestCases, QueryRunner> testCaseMap = new HashMap<>();
 
@@ -133,7 +130,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   @Test
   public void testmMapped()
   {
-    testCaseMap.get(TestCases.mMappedTestIndex).run(QueryPlus.wrap(query), context);
+    testCaseMap.get(TestCases.mMappedTestIndex).run(QueryPlus.wrap(query));
   }
 
   @Ignore
@@ -141,7 +138,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   @Test
   public void testrtIndex()
   {
-    testCaseMap.get(TestCases.rtIndex).run(QueryPlus.wrap(query), context);
+    testCaseMap.get(TestCases.rtIndex).run(QueryPlus.wrap(query));
   }
 
   @Ignore
@@ -149,7 +146,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   @Test
   public void testMerged()
   {
-    testCaseMap.get(TestCases.mergedRealtimeIndex).run(QueryPlus.wrap(query), context);
+    testCaseMap.get(TestCases.mergedRealtimeIndex).run(QueryPlus.wrap(query));
   }
 
   @Ignore
@@ -157,6 +154,6 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   @Test
   public void testOffHeap()
   {
-    testCaseMap.get(TestCases.rtIndexOffheap).run(QueryPlus.wrap(query), context);
+    testCaseMap.get(TestCases.rtIndexOffheap).run(QueryPlus.wrap(query));
   }
 }

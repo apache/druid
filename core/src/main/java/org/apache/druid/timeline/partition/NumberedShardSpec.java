@@ -83,6 +83,12 @@ public class NumberedShardSpec implements ShardSpec
     return true;
   }
 
+  @Override
+  public boolean isCompatible(Class<? extends ShardSpec> other)
+  {
+    return other == NumberedShardSpec.class || other == NumberedOverwriteShardSpec.class;
+  }
+
   @JsonProperty("partitions")
   public int getPartitions()
   {

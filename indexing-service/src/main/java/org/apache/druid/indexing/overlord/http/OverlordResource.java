@@ -372,9 +372,7 @@ public class OverlordResource
   @Path("/taskStatus")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
-  public Response getMultipleTaskStatuses(
-      Set<String> taskIds
-  )
+  public Response getMultipleTaskStatuses(Set<String> taskIds)
   {
     if (taskIds == null || taskIds.size() == 0) {
       return Response.status(Response.Status.BAD_REQUEST).entity("No TaskIds provided.").build();
@@ -720,7 +718,7 @@ public class OverlordResource
               log.debug(
                   "Task runner [%s] of type [%s] does not support listing workers",
                   taskRunner,
-                  taskRunner.getClass().getCanonicalName()
+                  taskRunner.getClass().getName()
               );
               return Response.serverError()
                              .entity(ImmutableMap.of("error", "Task Runner does not support worker listing"))

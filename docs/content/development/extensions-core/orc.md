@@ -269,6 +269,7 @@ This extension, first available in version 0.15.0, replaces the previous 'contri
 ingestion task is *incompatible*, and will need modified to work with the newer 'core' extension. 
 
 To migrate to 0.15.0+:
+
 * In `inputSpec` of `ioConfig`, `inputFormat` must be changed from `"org.apache.hadoop.hive.ql.io.orc.OrcNewInputFormat"` to 
 `"org.apache.orc.mapreduce.OrcInputFormat"`
 * The 'contrib' extension supported a `typeString` property, which provided the schema of the
@@ -276,6 +277,7 @@ ORC file, of which was essentially required to have the types correct, but notab
 facilitated column renaming. In the 'core' extension, column renaming can be achieved with 
 [`flattenSpec` expressions](../../ingestion/flatten-json.html). For example, `"typeString":"struct<time:string,name:string>"`
 with the actual schema `struct<_col0:string,_col1:string>`, to preserve Druid schema would need replaced with:
+
 ```json
 "flattenSpec": {
   "fields": [
@@ -293,10 +295,12 @@ with the actual schema `struct<_col0:string,_col1:string>`, to preserve Druid sc
   ...
 }
 ```
+
 * The 'contrib' extension supported a `mapFieldNameFormat` property, which provided a way to specify a dimension to
  flatten `OrcMap` columns with primitive types. This functionality has also been replaced with
  [`flattenSpec` expressions](../../ingestion/flatten-json.html). For example: `"mapFieldNameFormat": "<PARENT>_<CHILD>"`
  for a dimension `nestedData_dim1`, to preserve Druid schema could be replaced with 
+
  ```json
 "flattenSpec": {
   "fields": [

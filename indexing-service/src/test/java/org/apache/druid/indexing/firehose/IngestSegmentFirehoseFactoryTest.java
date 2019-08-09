@@ -59,6 +59,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -84,10 +85,14 @@ import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -97,8 +102,10 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -112,8 +119,12 @@ public class IngestSegmentFirehoseFactoryTest
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   private static final TaskStorage TASK_STORAGE;
+  private static final IndexerSQLMetadataStorageCoordinator MDC;
   private static final TaskLockbox TASK_LOCKBOX;
   private static final Task TASK;
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   static {
     TestUtils testUtils = new TestUtils();
@@ -125,7 +136,48 @@ public class IngestSegmentFirehoseFactoryTest
         {
         }
     );
-    TASK_LOCKBOX = new TaskLockbox(TASK_STORAGE);
+    MDC = new IndexerSQLMetadataStorageCoordinator(null, null, null)
+    {
+      private final Set<DataSegment> published = new HashSet<>();
+
+      @Override
+      public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
+      {
+        return ImmutableList.copyOf(segmentSet);
+      }
+
+      @Override
+      public List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> interval)
+      {
+        return ImmutableList.copyOf(segmentSet);
+      }
+
+      @Override
+      public List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval)
+      {
+        return ImmutableList.of();
+      }
+
+      @Override
+      public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
+      {
+        Set<DataSegment> added = new HashSet<>();
+        for (final DataSegment segment : segments) {
+          if (published.add(segment)) {
+            added.add(segment);
+          }
+        }
+
+        return ImmutableSet.copyOf(added);
+      }
+
+      @Override
+      public void deleteSegments(Set<DataSegment> segments)
+      {
+        // do nothing
+      }
+    };
+    TASK_LOCKBOX = new TaskLockbox(TASK_STORAGE, MDC);
     TASK = NoopTask.create();
     TASK_LOCKBOX.add(TASK);
   }
@@ -299,6 +351,7 @@ public class IngestSegmentFirehoseFactoryTest
 
   private final FirehoseFactory<InputRowParser> factory;
   private final InputRowParser rowParser;
+  private File tempDir;
 
   private static final InputRowParser<Map<String, Object>> ROW_PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
@@ -376,6 +429,18 @@ public class IngestSegmentFirehoseFactoryTest
     }
   }
 
+  @Before
+  public void setup() throws IOException
+  {
+    tempDir = temporaryFolder.newFolder();
+  }
+
+  @After
+  public void teardown()
+  {
+    tempDir.delete();
+  }
+
   @Test
   public void sanityTest()
   {
@@ -402,7 +467,7 @@ public class IngestSegmentFirehoseFactoryTest
   {
     Assert.assertEquals(MAX_SHARD_NUMBER.longValue(), segmentSet.size());
     Integer rowcount = 0;
-    try (final Firehose firehose = factory.connect(rowParser, null)) {
+    try (final Firehose firehose = factory.connect(rowParser, tmpDir)) {
       while (firehose.hasMore()) {
         InputRow row = firehose.nextRow();
         Assert.assertArrayEquals(new String[]{DIM_NAME}, row.getDimensions().toArray());
@@ -432,7 +497,7 @@ public class IngestSegmentFirehoseFactoryTest
     );
     int skipped = 0;
     try (final Firehose firehose =
-             factory.connect(transformSpec.decorate(rowParser), null)) {
+             factory.connect(transformSpec.decorate(rowParser), tmpDir)) {
       while (firehose.hasMore()) {
         InputRow row = firehose.nextRow();
         if (row == null) {

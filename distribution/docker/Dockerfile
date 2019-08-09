@@ -19,9 +19,13 @@
 
 FROM maven:3-jdk-8 as builder
 
+RUN apt-get update && apt-get install --no-install-recommends -y python3-pip python3-setuptools python3-wheel\
+  && rm -rf /var/lib/apt/lists/*
+RUN pip3 install --no-cache-dir pyyaml
+
 COPY . /src
 WORKDIR /src
-RUN mvn install -ff -DskipTests -Dforbiddenapis.skip=true -Pdist -Pbundle-contrib-exts
+RUN mvn dependency:go-offline install -ff -q -B -DskipTests -Dforbiddenapis.skip=true -Pdist -Pbundle-contrib-exts
 
 RUN \
  VER=$(mvn -B org.apache.maven.plugins:maven-help-plugin:3.1.1:evaluate -Dexpression=project.version -q -DforceStdout=true -f pom.xml 2>/dev/null) \
