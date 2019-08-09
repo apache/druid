@@ -20,13 +20,33 @@ import { jodaFormatToRegExp } from './joda-to-regexp';
 
 describe('jodaFormatToRegExp', () => {
   it('works for common formats', () => {
-    expect(jodaFormatToRegExp('d/M/yyyy').toString()).toMatchSnapshot();
-    expect(jodaFormatToRegExp('MM/dd/YYYY').toString()).toMatchSnapshot();
-    expect(jodaFormatToRegExp('M/d/YY').toString()).toMatchSnapshot();
-    expect(jodaFormatToRegExp('d-M-yyyy hh:mm:ss a').toString()).toMatchSnapshot();
-    expect(jodaFormatToRegExp('MM/dd/YYYY hh:mm:ss a').toString()).toMatchSnapshot();
-    expect(jodaFormatToRegExp('YYYY-MM-dd HH:mm:ss').toString()).toMatchSnapshot();
-    expect(jodaFormatToRegExp('YYYY-MM-dd HH:mm:ss.S').toString()).toMatchSnapshot();
+    expect(jodaFormatToRegExp('d/M/yyyy').toString()).toMatchInlineSnapshot(
+      `"/^(?:3[0-1]|[12][0-9]|[1-9])\\\\/(?:1[0-2]|[1-9])\\\\/[0-9]{4}$/i"`,
+    );
+
+    expect(jodaFormatToRegExp('MM/dd/YYYY').toString()).toMatchInlineSnapshot(
+      `"/^(?:1[0-2]|0[1-9])\\\\/(?:3[0-1]|[12][0-9]|0[1-9])\\\\/[0-9]{4}$/i"`,
+    );
+
+    expect(jodaFormatToRegExp('M/d/YY').toString()).toMatchInlineSnapshot(
+      `"/^(?:1[0-2]|[1-9])\\\\/(?:3[0-1]|[12][0-9]|[1-9])\\\\/[0-9]{2}$/i"`,
+    );
+
+    expect(jodaFormatToRegExp('d-M-yyyy hh:mm:ss a').toString()).toMatchInlineSnapshot(
+      `"/^(?:3[0-1]|[12][0-9]|[1-9])-(?:1[0-2]|[1-9])-[0-9]{4} (?:1[0-2]|0[1-9]):[0-5][0-9]:[0-5][0-9] [ap]m$/i"`,
+    );
+
+    expect(jodaFormatToRegExp('MM/dd/YYYY hh:mm:ss a').toString()).toMatchInlineSnapshot(
+      `"/^(?:1[0-2]|0[1-9])\\\\/(?:3[0-1]|[12][0-9]|0[1-9])\\\\/[0-9]{4} (?:1[0-2]|0[1-9]):[0-5][0-9]:[0-5][0-9] [ap]m$/i"`,
+    );
+
+    expect(jodaFormatToRegExp('YYYY-MM-dd HH:mm:ss').toString()).toMatchInlineSnapshot(
+      `"/^[0-9]{4}-(?:1[0-2]|0[1-9])-(?:3[0-1]|[12][0-9]|0[1-9]) (?:2[0-3]|1[0-9]|0[0-9]):[0-5][0-9]:[0-5][0-9]$/i"`,
+    );
+
+    expect(jodaFormatToRegExp('YYYY-MM-dd HH:mm:ss.S').toString()).toMatchInlineSnapshot(
+      `"/^[0-9]{4}-(?:1[0-2]|0[1-9])-(?:3[0-1]|[12][0-9]|0[1-9]) (?:2[0-3]|1[0-9]|0[0-9]):[0-5][0-9]:[0-5][0-9].[0-9]{1,3}$/i"`,
+    );
   });
 
   it('matches dates when needed', () => {

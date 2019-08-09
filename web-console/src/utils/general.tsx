@@ -16,14 +16,16 @@
  * limitations under the License.
  */
 
-import { Button, HTMLSelect, InputGroup } from '@blueprintjs/core';
+import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import copy from 'copy-to-clipboard';
 import FileSaver from 'file-saver';
 import hasOwnProp from 'has-own-prop';
 import numeral from 'numeral';
 import React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
+import { AppToaster } from '../singletons/toaster';
 export function wait(ms: number): Promise<void> {
   return new Promise(resolve => {
     setTimeout(resolve, ms);
@@ -31,7 +33,10 @@ export function wait(ms: number): Promise<void> {
 }
 
 export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
-  value = `"${value}"`;
+  return addFilterRaw(filters, id, `"${value}"`);
+}
+
+export function addFilterRaw(filters: Filter[], id: string, value: string): Filter[] {
   const currentFilter = filters.find(f => f.id === id);
   if (currentFilter) {
     filters = filters.filter(f => f.id !== id);
@@ -320,4 +325,16 @@ export function downloadFile(text: string, type: string, filename: string): void
     type: blobType,
   });
   FileSaver.saveAs(blob, filename);
+}
+
+export function escapeSqlIdentifier(identifier: string): string {
+  return `"${identifier.replace(/"/g, '""')}"`;
+}
+
+export function copyAndAlert(copyString: string, alertMessage: string): void {
+  copy(copyString, { format: 'text/plain' });
+  AppToaster.show({
+    message: alertMessage,
+    intent: Intent.SUCCESS,
+  });
 }

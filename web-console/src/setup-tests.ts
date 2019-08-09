@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import 'core-js/stable';
 import { configure } from 'enzyme';
 import enzymeAdapterReact16 from 'enzyme-adapter-react-16';
 

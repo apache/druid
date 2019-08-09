@@ -44,6 +44,7 @@ import {
 import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
+  addFilterRaw,
   booleanCustomTableFilter,
   formatDuration,
   getDruidErrorMessage,
@@ -78,10 +79,12 @@ const taskTableColumns: string[] = [
 
 export interface TasksViewProps {
   taskId: string | undefined;
+  datasourceId: string | undefined;
   openDialog: string | undefined;
+  goToDatasource: (datasource: string) => void;
   goToQuery: (initSql: string) => void;
   goToMiddleManager: (middleManager: string) => void;
-  goToLoadDataView: (supervisorId?: string, taskId?: string) => void;
+  goToLoadData: (supervisorId?: string, taskId?: string) => void;
   noSqlMode: boolean;
 }
 
@@ -102,7 +105,10 @@ export interface TasksViewState {
   tasksLoading: boolean;
   tasks?: any[];
   tasksError?: string;
+
   taskFilter: Filter[];
+  supervisorFilter: Filter[];
+
   groupTasksBy?: 'type' | 'datasource' | 'status';
 
   killTaskId?: string;
@@ -198,6 +204,14 @@ ORDER BY "rank" DESC, "created_time" DESC`;
 
   constructor(props: TasksViewProps, context: any) {
     super(props, context);
+
+    const taskFilter: Filter[] = [];
+    if (props.taskId) taskFilter.push({ id: 'task_id', value: props.taskId });
+    if (props.datasourceId) taskFilter.push({ id: 'datasource', value: props.datasourceId });
+
+    const supervisorFilter: Filter[] = [];
+    if (props.datasourceId) supervisorFilter.push({ id: 'datasource', value: props.datasourceId });
+
     this.state = {
       supervisorsLoading: true,
       supervisors: [],
@@ -207,7 +221,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       showTerminateAllSupervisors: false,
 
       tasksLoading: true,
-      taskFilter: props.taskId ? [{ id: 'task_id', value: props.taskId }] : [],
+      taskFilter: taskFilter,
+      supervisorFilter: supervisorFilter,
 
       supervisorSpecDialogOpen: props.openDialog === 'supervisor',
       taskSpecDialogOpen: props.openDialog === 'task',
@@ -350,13 +365,22 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     supervisorSuspended: boolean,
     type: string,
   ): BasicAction[] {
+    const { goToDatasource, goToLoadData } = this.props;
+
     const actions: BasicAction[] = [];
     if (type === 'kafka' || type === 'kinesis') {
-      actions.push({
-        icon: IconNames.CLOUD_UPLOAD,
-        title: 'Open in data loader',
-        onAction: () => this.props.goToLoadDataView(id),
-      });
+      actions.push(
+        {
+          icon: IconNames.MULTI_SELECT,
+          title: 'Go to datasource',
+          onAction: () => goToDatasource(id),
+        },
+        {
+          icon: IconNames.CLOUD_UPLOAD,
+          title: 'Open in data loader',
+          onAction: () => goToLoadData(id),
+        },
+      );
     }
     actions.push(
       {
@@ -507,6 +531,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       supervisorsLoading,
       supervisorsError,
       hiddenSupervisorColumns,
+      taskFilter,
+      supervisorFilter,
     } = this.state;
     return (
       <>
@@ -518,6 +544,19 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               ? 'No supervisors'
               : supervisorsError || ''
           }
+          filtered={supervisorFilter}
+          onFilteredChange={filtered => {
+            const datasourceFilter = filtered.find(filter => filter.id === 'datasource');
+            let newTaskFilter = taskFilter.filter(filter => filter.id !== 'datasource');
+            if (datasourceFilter) {
+              newTaskFilter = addFilterRaw(
+                newTaskFilter,
+                datasourceFilter.id,
+                datasourceFilter.value,
+              );
+            }
+            this.setState({ supervisorFilter: filtered, taskFilter: newTaskFilter });
+          }}
           filterable
           columns={[
             {
@@ -604,13 +643,27 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     );
   }
 
-  private getTaskActions(id: string, status: string, type: string): BasicAction[] {
+  private getTaskActions(
+    id: string,
+    datasource: string,
+    status: string,
+    type: string,
+  ): BasicAction[] {
+    const { goToDatasource, goToLoadData } = this.props;
+
     const actions: BasicAction[] = [];
+    if (datasource && status === 'SUCCESS') {
+      actions.push({
+        icon: IconNames.MULTI_SELECT,
+        title: 'Go to datasource',
+        onAction: () => goToDatasource(datasource),
+      });
+    }
     if (type === 'index' || type === 'index_parallel') {
       actions.push({
         icon: IconNames.CLOUD_UPLOAD,
         title: 'Open in data loader',
-        onAction: () => this.props.goToLoadDataView(undefined, id),
+        onAction: () => goToLoadData(undefined, id),
       });
     }
     if (status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') {
@@ -659,8 +712,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       taskFilter,
       groupTasksBy,
       hiddenTaskColumns,
+      supervisorFilter,
     } = this.state;
-
     return (
       <>
         <ReactTable
@@ -670,7 +723,16 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           filterable
           filtered={taskFilter}
           onFilteredChange={filtered => {
-            this.setState({ taskFilter: filtered });
+            const datasourceFilter = filtered.find(filter => filter.id === 'datasource');
+            let newSupervisorFilter = supervisorFilter.filter(filter => filter.id !== 'datasource');
+            if (datasourceFilter) {
+              newSupervisorFilter = addFilterRaw(
+                newSupervisorFilter,
+                datasourceFilter.id,
+                datasourceFilter.value,
+              );
+            }
+            this.setState({ supervisorFilter: newSupervisorFilter, taskFilter: filtered });
           }}
           defaultSorted={[{ id: 'status', desc: true }]}
           pivotBy={groupTasksBy ? [groupTasksBy] : []}
@@ -811,8 +873,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                 if (row.aggregated) return '';
                 const id = row.value;
                 const type = row.row.type;
-                const { status } = row.original;
-                const taskActions = this.getTaskActions(id, status, type);
+                const { datasource, status } = row.original;
+                const taskActions = this.getTaskActions(id, datasource, status, type);
                 return (
                   <ActionCell
                     onDetail={() =>
@@ -948,8 +1010,32 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     );
   }
 
+  renderBulkTasksActions() {
+    const { goToQuery, noSqlMode } = this.props;
+
+    const bulkTaskActionsMenu = (
+      <Menu>
+        {!noSqlMode && (
+          <MenuItem
+            icon={IconNames.APPLICATION}
+            text="View SQL query for table"
+            onClick={() => goToQuery(TasksView.TASK_SQL)}
+          />
+        )}
+      </Menu>
+    );
+
+    return (
+      <>
+        <Popover content={bulkTaskActionsMenu} position={Position.BOTTOM_LEFT}>
+          <Button icon={IconNames.MORE} />
+        </Popover>
+      </>
+    );
+  }
+
   render(): JSX.Element {
-    const { goToQuery, goToLoadDataView, noSqlMode } = this.props;
+    const { goToLoadData } = this.props;
     const {
       groupTasksBy,
       supervisorSpecDialogOpen,
@@ -969,7 +1055,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         <MenuItem
           icon={IconNames.CLOUD_UPLOAD}
           text="Go to data loader"
-          onClick={() => goToLoadDataView()}
+          onClick={() => goToLoadData()}
         />
         <MenuItem
           icon={IconNames.MANUALLY_ENTERED_DATA}
@@ -984,7 +1070,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         <MenuItem
           icon={IconNames.CLOUD_UPLOAD}
           text="Go to data loader"
-          onClick={() => goToLoadDataView()}
+          onClick={() => goToLoadData()}
         />
         <MenuItem
           icon={IconNames.MANUALLY_ENTERED_DATA}
@@ -1060,16 +1146,10 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                 localStorageKey={LocalStorageKeys.TASKS_REFRESH_RATE}
                 onRefresh={auto => this.taskQueryManager.rerunLastQuery(auto)}
               />
-              {!noSqlMode && (
-                <Button
-                  icon={IconNames.APPLICATION}
-                  text="Go to SQL"
-                  onClick={() => goToQuery(TasksView.TASK_SQL)}
-                />
-              )}
               <Popover content={submitTaskMenu} position={Position.BOTTOM_LEFT}>
                 <Button icon={IconNames.PLUS} text="Submit task" />
               </Popover>
+              {this.renderBulkTasksActions()}
               <TableColumnSelector
                 columns={taskTableColumns}
                 onChange={column =>

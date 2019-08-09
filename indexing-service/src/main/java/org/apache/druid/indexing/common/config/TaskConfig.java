@@ -126,6 +126,11 @@ public class TaskConfig
     return new File(getTaskDir(taskId), "work");
   }
 
+  public File getTaskTempDir(String taskId)
+  {
+    return new File(getTaskDir(taskId), "temp");
+  }
+
   public File getTaskLockFile(String taskId)
   {
     return new File(getTaskDir(taskId), "lock");

@@ -108,6 +108,7 @@ public class WorkerTaskManagerTest
         new TestTaskRunner(
             new TaskToolboxFactory(
                 taskConfig,
+                null,
                 taskActionClientFactory,
                 null,
                 null,

@@ -25,7 +25,7 @@ describe('task table action dialog', () => {
   it('matches snapshot', () => {
     const taskTableActionDialog = (
       <SegmentTableActionDialog
-        dataSourceId="test"
+        datasourceId="test"
         segmentId="test"
         actions={[{ title: 'test', onAction: () => null }]}
         onClose={() => {}}

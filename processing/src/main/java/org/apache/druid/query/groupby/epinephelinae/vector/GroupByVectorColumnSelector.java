@@ -19,8 +19,9 @@
 
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
+import org.apache.druid.query.groupby.ResultRow;
+
 import java.nio.ByteBuffer;
-import java.util.Map;
 
 public interface GroupByVectorColumnSelector
 {
@@ -29,9 +30,9 @@ public interface GroupByVectorColumnSelector
   void writeKeys(int[] keySpace, int keySize, int keyOffset, int startRow, int endRow);
 
   void writeKeyToResultRow(
-      String outputName,
       ByteBuffer keyBuffer,
       int keyOffset,
-      Map<String, Object> resultMap
+      ResultRow resultRow,
+      int resultRowPosition
   );
 }

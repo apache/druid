@@ -145,8 +145,16 @@ public class TimeBoundaryQueryRunnerTest
     segment1 = new IncrementalIndexSegment(index1, makeIdentifier(index1, "v1"));
 
     VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = new VersionedIntervalTimeline<>(StringComparators.LEXICOGRAPHIC);
-    timeline.add(index0.getInterval(), "v1", new SingleElementPartitionChunk<>(new ReferenceCountingSegment(segment0)));
-    timeline.add(index1.getInterval(), "v1", new SingleElementPartitionChunk<>(new ReferenceCountingSegment(segment1)));
+    timeline.add(
+        index0.getInterval(),
+        "v1",
+        new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment0))
+    );
+    timeline.add(
+        index1.getInterval(),
+        "v1",
+        new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment1))
+    );
 
     return QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, factory);
   }
@@ -216,7 +224,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .bound(TimeBoundaryQuery.MAX_TIME)
                                                 .build();
     ResponseContext context = ConcurrentResponseContext.createEmpty();
-    context.put(ResponseContext.CTX_MISSING_SEGMENTS, new ArrayList<>());
+    context.put(ResponseContext.Key.MISSING_SEGMENTS, new ArrayList<>());
     Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();
@@ -235,7 +243,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .bound(TimeBoundaryQuery.MIN_TIME)
                                                 .build();
     ResponseContext context = ConcurrentResponseContext.createEmpty();
-    context.put(ResponseContext.CTX_MISSING_SEGMENTS, new ArrayList<>());
+    context.put(ResponseContext.Key.MISSING_SEGMENTS, new ArrayList<>());
     Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();

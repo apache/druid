@@ -84,7 +84,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     timeline.add(
         descriptor.getInterval(),
         descriptor.getVersion(),
-        descriptor.getShardSpec().createChunk(new ReferenceCountingSegment(segment))
+        descriptor.getShardSpec().createChunk(ReferenceCountingSegment.wrapSegment(segment, descriptor.getShardSpec()))
     );
     segments.add(descriptor);
     closeables.add(index);

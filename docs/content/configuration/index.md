@@ -378,6 +378,7 @@ For native query, only request logs where query/time is above the threshold are 
 |--------|-----------|-------|
 |`druid.request.logging.queryTimeThresholdMs`|Threshold value for query/time in milliseconds.|0 i.e no filtering|
 |`druid.request.logging.sqlQueryTimeThresholdMs`|Threshold value for sqlQuery/time in milliseconds.|0 i.e no filtering|
+|`druid.request.logging.mutedQueryTypes` | Query requests of these types are not logged. Query types are defined as string objects corresponding to the "queryType" value for the specified query in the Druid's [native JSON query API](http://druid.apache.org/docs/latest/querying/querying.html). Misspelled query types will be ignored. Example to ignore scan and timeBoundary queries: ["scan", "timeBoundary"]| []|
 |`druid.request.logging.delegate.type`|Type of delegate request logger to log requests.|none|
 
 #### Composite Request Logging
@@ -905,6 +906,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.indexer.runner.type`|Choices "local" or "remote". Indicates whether tasks should be run locally or in a distributed environment. Experimental task runner "httpRemote" is also available which is same as "remote" but uses HTTP to interact with Middle Manaters instead of Zookeeper.|local|
 |`druid.indexer.storage.type`|Choices are "local" or "metadata". Indicates whether incoming tasks should be stored locally (in heap) or in metadata storage. Storing incoming tasks in metadata storage allows for tasks to be resumed if the Overlord should fail.|local|
 |`druid.indexer.storage.recentlyFinishedThreshold`|A duration of time to store task results.|PT24H|
+|`druid.indexer.tasklock.forceTimeChunkLock`|If set, all tasks are enforced to use time chunk lock. If not set, each task automatically chooses a lock type to use. This configuration can be overwritten by setting `forceTimeChunkLock` in the [task context](../ingestion/locking-and-priority.html#task-context). See [Task Locking & Priority](../ingestion/locking-and-priority.html) for more details about locking in tasks.|true|
 |`druid.indexer.queue.maxSize`|Maximum number of active tasks at one time.|Integer.MAX_VALUE|
 |`druid.indexer.queue.startDelay`|Sleep this long before starting Overlord queue management. This can be useful to give a cluster time to re-orient itself after e.g. a widespread network issue.|PT1M|
 |`druid.indexer.queue.restartDelay`|Sleep this long when Overlord queue management throws an exception before trying again.|PT30S|

@@ -33,7 +33,7 @@ import java.io.InputStream;
  * {@link PrefetchableTextFilesFirehoseFactory.ResourceCloseableLineIterator} consumes the objectStream and closes
  * it with the resourceCloser.
  */
-class OpenedObject<T>
+public class OpenedObject<T>
 {
   // Original object
   private final T object;
@@ -42,29 +42,29 @@ class OpenedObject<T>
   // Closer which is called when the file is not needed anymore. Usually this deletes the file except for cached files.
   private final Closeable resourceCloser;
 
-  OpenedObject(FetchedFile<T> fetchedFile) throws IOException
+  public OpenedObject(FetchedFile<T> fetchedFile) throws IOException
   {
     this(fetchedFile.getObject(), FileUtils.openInputStream(fetchedFile.getFile()), fetchedFile.getResourceCloser());
   }
 
-  OpenedObject(T object, InputStream objectStream, Closeable resourceCloser)
+  public OpenedObject(T object, InputStream objectStream, Closeable resourceCloser)
   {
     this.object = object;
     this.objectStream = objectStream;
     this.resourceCloser = resourceCloser;
   }
 
-  T getObject()
+  public T getObject()
   {
     return object;
   }
 
-  InputStream getObjectStream()
+  public InputStream getObjectStream()
   {
     return objectStream;
   }
 
-  Closeable getResourceCloser()
+  public Closeable getResourceCloser()
   {
     return resourceCloser;
   }

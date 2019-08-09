@@ -60,6 +60,18 @@ public interface ApplyFunction
    */
   Set<Expr> getArrayInputs(List<Expr> args);
 
+  /**
+   * Returns true if apply function produces an array output. All {@link ApplyFunction} implementations are expected to
+   * exclusively produce either scalar or array values.
+   */
+  default boolean hasArrayOutput(LambdaExpr lambdaExpr)
+  {
+    return false;
+  }
+
+  /**
+   * Validate apply function arguments, throwing an exception if incorrect
+   */
   void validateArguments(LambdaExpr lambdaExpr, List<Expr> args);
 
   /**
@@ -69,6 +81,12 @@ public interface ApplyFunction
    */
   abstract class BaseMapFunction implements ApplyFunction
   {
+    @Override
+    public boolean hasArrayOutput(LambdaExpr lambdaExpr)
+    {
+      return true;
+    }
+
     /**
      * Evaluate {@link LambdaExpr} against every index position of an {@link IndexableMapLambdaObjectBinding}
      */
@@ -260,6 +278,13 @@ public interface ApplyFunction
       }
       return ExprEval.bestEffortOf(accumulator);
     }
+
+    @Override
+    public boolean hasArrayOutput(LambdaExpr lambdaExpr)
+    {
+      Expr.BindingDetails lambdaBindingDetails = lambdaExpr.analyzeInputs();
+      return lambdaBindingDetails.isOutputArray();
+    }
   }
 
   /**
@@ -395,6 +420,12 @@ public interface ApplyFunction
     public String name()
     {
       return NAME;
+    }
+
+    @Override
+    public boolean hasArrayOutput(LambdaExpr lambdaExpr)
+    {
+      return true;
     }
 
     @Override

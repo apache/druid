@@ -21,7 +21,8 @@ import React from 'react';
 
 import { ShowJson } from '../../components';
 import { ShowHistory } from '../../components/show-history/show-history';
-import { BasicAction, basicActionsToButtons } from '../../utils/basic-action';
+import { SupervisorStatisticsTable } from '../../components/supervisor-statistics-table/supervisor-statistics-table';
+import { BasicAction } from '../../utils/basic-action';
 import { deepGet } from '../../utils/object-change';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
@@ -82,7 +83,7 @@ export class SupervisorTableActionDialog extends React.PureComponent<
         sideButtonMetadata={supervisorTableSideButtonMetadata}
         onClose={onClose}
         title={`Supervisor: ${supervisorId}`}
-        bottomButtons={basicActionsToButtons(actions)}
+        actions={actions}
       >
         {activeTab === 'status' && (
           <ShowJson
@@ -92,7 +93,7 @@ export class SupervisorTableActionDialog extends React.PureComponent<
           />
         )}
         {activeTab === 'stats' && (
-          <ShowJson
+          <SupervisorStatisticsTable
             endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/stats`}
             downloadFilename={`supervisor-stats-${supervisorId}.json`}
           />
