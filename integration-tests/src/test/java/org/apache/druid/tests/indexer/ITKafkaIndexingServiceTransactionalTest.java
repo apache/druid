@@ -21,6 +21,7 @@ package org.apache.druid.tests.indexer;
 
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -28,6 +29,7 @@ import org.testng.annotations.Test;
 /**
  * This is a test for the Kafka indexing service with transactional topics
  */
+@Test(groups = TestNGGroup.KAFKA_INDEX)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITKafkaIndexingServiceTransactionalTest extends AbstractKafkaIndexerTest
 {
