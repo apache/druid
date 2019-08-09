@@ -365,7 +365,7 @@
             <dependency>
                 <groupId>org.mozilla</groupId>
                 <artifactId>rhino</artifactId>
-                <version>1.7R5</version>
+                <version>1.7.11</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
