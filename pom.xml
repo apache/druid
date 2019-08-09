@@ -182,6 +182,12 @@
             <name>${repoOrgName}</name>
             <url>${repoOrgUrl}</url>
         </repository>
+
+        <!-- Only used by core, but moved to root for parallel build dependency resolution -->
+        <repository>
+          <id>sigar</id>
+          <url>https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/</url>
+        </repository>
     </repositories>
 
     <dependencyManagement>
