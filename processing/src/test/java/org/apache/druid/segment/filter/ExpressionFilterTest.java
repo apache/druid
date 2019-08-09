@@ -269,6 +269,6 @@ public class ExpressionFilterTest extends BaseFilterTest
 
   private static ExpressionDimFilter edf(final String expression)
   {
-    return new ExpressionDimFilter(expression, TestExprMacroTable.INSTANCE);
+    return new ExpressionDimFilter(expression, null, TestExprMacroTable.INSTANCE);
   }
 }

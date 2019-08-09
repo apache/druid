@@ -39,10 +39,10 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   public SketchMergeAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
-      @Nullable @JsonProperty("size") Integer size,
-      @Nullable @JsonProperty("shouldFinalize") Boolean shouldFinalize,
-      @Nullable @JsonProperty("isInputThetaSketch") Boolean isInputThetaSketch,
-      @Nullable @JsonProperty("errorBoundsStdDev") Integer errorBoundsStdDev
+      @JsonProperty("size") @Nullable Integer size,
+      @JsonProperty("shouldFinalize") @Nullable Boolean shouldFinalize,
+      @JsonProperty("isInputThetaSketch") @Nullable Boolean isInputThetaSketch,
+      @JsonProperty("errorBoundsStdDev") @Nullable Integer errorBoundsStdDev
   )
   {
     super(name, fieldName, size, AggregatorUtil.SKETCH_MERGE_CACHE_TYPE_ID);

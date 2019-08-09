@@ -40,7 +40,7 @@ public class FloatNumericColumnPartSerdeV2 implements ColumnPartSerde
   @JsonCreator
   public static FloatNumericColumnPartSerdeV2 createDeserializer(
       @JsonProperty("byteOrder") ByteOrder byteOrder,
-      @Nullable @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory
+      @JsonProperty("bitmapSerdeFactory") @Nullable BitmapSerdeFactory bitmapSerdeFactory
   )
   {
     return new FloatNumericColumnPartSerdeV2(
