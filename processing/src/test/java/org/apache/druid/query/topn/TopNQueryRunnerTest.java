@@ -4327,11 +4327,20 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.INDEX_METRIC)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
-        .aggregators(Lists.newArrayList(Iterables.concat(commonAggregators, Lists.newArrayList(
-            new FilteredAggregatorFactory(new DoubleMaxAggregatorFactory("maxIndex", "index"),
-                                          extractionFilter),
-            //new DoubleMaxAggregatorFactory("maxIndex", "index"),
-            new DoubleMinAggregatorFactory("minIndex", "index")))))
+        .aggregators(
+            Lists.newArrayList(
+                Iterables.concat(
+                    commonAggregators,
+                    Lists.newArrayList(
+                        new FilteredAggregatorFactory(
+                            new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                            extractionFilter
+                        ),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
         .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT);
     TopNQuery topNQueryWithNULLValueExtraction = topNQueryBuilder
         .filters(extractionFilter)
@@ -5681,7 +5690,7 @@ public class TopNQueryRunnerTest
       }
       queryBuilder.metric(metric);
       if (hasIndexAggregator && hasRowsAggregator) {
-        queryBuilder.postAggregators(Collections.singletonList(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT));
+        queryBuilder.postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT);
       }
       TopNQuery query = queryBuilder.build();
 

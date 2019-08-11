@@ -146,7 +146,7 @@ public class QueryResourceTest
     );
   }
 
-  private static final String SIMPLE_TIME_SERIES_QUERY = "{\n"
+  private static final String SIMPLE_TIMESERIES_QUERY = "{\n"
                                                       + "    \"queryType\": \"timeseries\",\n"
                                                       + "    \"dataSource\": \"mmx_metrics\",\n"
                                                       + "    \"granularity\": \"hour\",\n"
@@ -178,7 +178,7 @@ public class QueryResourceTest
 
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIME_SERIES_QUERY.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
         null /*pretty*/,
         testServletRequest
     );
@@ -210,7 +210,7 @@ public class QueryResourceTest
 
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIME_SERIES_QUERY.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
         null /*pretty*/,
         testServletRequest
     );
@@ -245,7 +245,7 @@ public class QueryResourceTest
 
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIME_SERIES_QUERY.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
         null /*pretty*/,
         testServletRequest
     );
@@ -284,7 +284,7 @@ public class QueryResourceTest
 
     EasyMock.replay(smileRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIME_SERIES_QUERY.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
         null /*pretty*/,
         smileRequest
     );
@@ -370,7 +370,7 @@ public class QueryResourceTest
 
     try {
       queryResource.doPost(
-          new ByteArrayInputStream(SIMPLE_TIME_SERIES_QUERY.getBytes("UTF-8")),
+          new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
           null /*pretty*/,
           testServletRequest
       );

@@ -92,7 +92,7 @@ public class Initialization
   private static final Logger log = new Logger(Initialization.class);
   private static final ConcurrentHashMap<File, URLClassLoader> LOADERS_MAP = new ConcurrentHashMap<>();
 
-  private static final ConcurrentHashMap<Class<?>, Collection<?>> EXTENTIONS_MAP = new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<Class<?>, Collection<?>> EXTENSIONS_MAP = new ConcurrentHashMap<>();
 
   /**
    * @param clazz service class
@@ -103,7 +103,7 @@ public class Initialization
   public static <T> Collection<T> getLoadedImplementations(Class<T> clazz)
   {
     @SuppressWarnings("unchecked")
-    Collection<T> retVal = (Collection<T>) EXTENTIONS_MAP.get(clazz);
+    Collection<T> retVal = (Collection<T>) EXTENSIONS_MAP.get(clazz);
     if (retVal == null) {
       return new HashSet<>();
     }
@@ -113,7 +113,7 @@ public class Initialization
   @VisibleForTesting
   static void clearLoadedImplementations()
   {
-    EXTENTIONS_MAP.clear();
+    EXTENSIONS_MAP.clear();
   }
 
   @VisibleForTesting
@@ -138,7 +138,7 @@ public class Initialization
   {
     // It's not clear whether we should recompute modules even if they have been computed already for the serviceClass,
     // but that's how it used to be an preserving the old behaviour here.
-    Collection<?> modules = EXTENTIONS_MAP.compute(
+    Collection<?> modules = EXTENSIONS_MAP.compute(
         serviceClass,
         (serviceC, ignored) -> new ServiceLoadingFromExtensions<>(config, serviceC).implsToLoad
     );

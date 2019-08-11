@@ -79,7 +79,7 @@ public class MultiSegmentSelectQueryTest
   );
 
   private static final QueryRunnerFactory FACTORY = new SelectQueryRunnerFactory(
-          TOOL_CHEST,
+      TOOL_CHEST,
       new SelectQueryEngine(),
       QueryRunnerTestHelper.NOOP_QUERYWATCHER
   );

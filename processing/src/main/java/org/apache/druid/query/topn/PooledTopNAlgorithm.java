@@ -97,9 +97,9 @@ public class PooledTopNAlgorithm
       new Generic1AggPooledTopNScannerPrototype();
   private static final Generic2AggPooledTopNScanner DEFAULT_GENERIC_TWO_AGG_SCANNER =
       new Generic2AggPooledTopNScannerPrototype();
-  private static final Historical1AggPooledTopNScanner DEFAULT_HISTORICAL_ONE_SIMPLE_DOUBLE_AGG_SCANNER =
+  private static final Historical1AggPooledTopNScanner DEFAULT_HISTORICAL_SINGLE_VALUE_DIM_SELECTOR_ONE_SIMPLE_DOUBLE_AGG_SCANNER =
       new Historical1SimpleDoubleAggPooledTopNScannerPrototype();
-  private static final Historical1AggPooledTopNScanner DEFAULT_HISTORICAL_SINGLE_VALUE_DIM_SELECTOR1_SIMPLE_DOUBLE_AGG_SCANNER =
+  private static final Historical1AggPooledTopNScanner DEFAULT_HISTORICAL_SINGLE_VALUE_DIM_SELECTOR_ONE_SIMPLE_DOUBLE_AGG_SCANNER =
       new HistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopNScannerPrototype();
 
   private interface ScanAndAggregate
@@ -143,7 +143,7 @@ public class PooledTopNAlgorithm
                 positions,
                 (SimpleDoubleBufferAggregator) aggregator,
                 (HistoricalCursor) cursor,
-                DEFAULT_HISTORICAL_SINGLE_VALUE_DIM_SELECTOR1_SIMPLE_DOUBLE_AGG_SCANNER
+                DEFAULT_HISTORICAL_SINGLE_VALUE_DIM_SELECTOR_ONE_SIMPLE_DOUBLE_AGG_SCANNER
             );
           }
         }
@@ -168,7 +168,7 @@ public class PooledTopNAlgorithm
                 positions,
                 (SimpleDoubleBufferAggregator) aggregator,
                 (HistoricalCursor) cursor,
-                DEFAULT_HISTORICAL_ONE_SIMPLE_DOUBLE_AGG_SCANNER
+                DEFAULT_HISTORICAL_SINGLE_VALUE_DIM_SELECTOR_ONE_SIMPLE_DOUBLE_AGG_SCANNER
             );
           }
         }
