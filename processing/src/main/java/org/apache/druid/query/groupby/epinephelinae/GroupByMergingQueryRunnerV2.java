@@ -39,8 +39,8 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.BaseSequence;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.AbstractPrioritizedCallable;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
@@ -58,7 +58,6 @@ import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBas
 
 import java.io.File;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
@@ -166,7 +165,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
           @Override
           public CloseableGrouperIterator<RowBasedKey, ResultRow> make()
           {
-            final List<ReferenceCountingResourceHolder> resources = new ArrayList<>();
+            final Closer resources = Closer.create();
 
             try {
               final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
@@ -175,7 +174,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
               );
               final ReferenceCountingResourceHolder<LimitedTemporaryStorage> temporaryStorageHolder =
                   ReferenceCountingResourceHolder.fromCloseable(temporaryStorage);
-              resources.add(temporaryStorageHolder);
+              resources.register(temporaryStorageHolder);
 
               // If parallelCombine is enabled, we need two merge buffers for parallel aggregating and parallel combining
               final int numMergeBuffers = querySpecificConfig.getNumParallelCombineThreads() > 1 ? 2 : 1;
@@ -185,7 +184,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
                   hasTimeout,
                   timeoutAt
               );
-              resources.addAll(mergeBufferHolders);
+              resources.registerAll(mergeBufferHolders);
 
               final ReferenceCountingResourceHolder<ByteBuffer> mergeBufferHolder = mergeBufferHolders.get(0);
               final ReferenceCountingResourceHolder<ByteBuffer> combineBufferHolder = numMergeBuffers == 2 ?
@@ -214,7 +213,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
 
               final ReferenceCountingResourceHolder<Grouper<RowBasedKey>> grouperHolder =
                   ReferenceCountingResourceHolder.fromCloseable(grouper);
-              resources.add(grouperHolder);
+              resources.register(grouperHolder);
 
               ListenableFuture<List<AggregateResult>> futures = Futures.allAsList(
                   Lists.newArrayList(
@@ -280,13 +279,18 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
               return RowBasedGrouperHelper.makeGrouperIterator(
                   grouper,
                   query,
-                  () -> Lists.reverse(resources).forEach(CloseQuietly::close)
+                  resources
               );
             }
-            catch (Throwable e) {
+            catch (Throwable t) {
               // Exception caught while setting up the iterator; release resources.
-              Lists.reverse(resources).forEach(CloseQuietly::close);
-              throw e;
+              try {
+                resources.close();
+              }
+              catch (Exception ex) {
+                t.addSuppressed(ex);
+              }
+              throw t;
             }
           }
 

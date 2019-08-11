@@ -46,7 +46,7 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
       @JsonProperty("numBuckets") Integer numBuckets,
       @JsonProperty("lowerLimit") Float lowerLimit,
       @JsonProperty("upperLimit") Float upperLimit,
-      @Nullable @JsonProperty("finalizeAsBase64Binary") Boolean finalizeAsBase64Binary
+      @JsonProperty("finalizeAsBase64Binary") @Nullable Boolean finalizeAsBase64Binary
   )
   {
     super(name, fieldName, resolution, numBuckets, lowerLimit, upperLimit, finalizeAsBase64Binary);

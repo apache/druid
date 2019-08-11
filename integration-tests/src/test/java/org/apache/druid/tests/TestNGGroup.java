@@ -17,46 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.query.filter;
-
-import com.google.common.collect.RangeSet;
-import org.apache.druid.segment.filter.TrueFilter;
-
-import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.Set;
+package org.apache.druid.tests;
 
 /**
+ * These groups are used by continuous integration to split the integration tests into multiple jobs. Any tests that
+ * are not annotated with a group will still be run by an "other" integration test continuous integration job.
  */
-public class TrueDimFilter implements DimFilter
+public class TestNGGroup
 {
-  @Override
-  public byte[] getCacheKey()
-  {        
-    return ByteBuffer.allocate(1).put(DimFilterUtils.TRUE_CACHE_ID).array();
-  }
-
-  @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
-  @Override
-  public Filter toFilter()
-  {
-    return new TrueFilter();
-  }
-
-  @Override
-  public RangeSet<String> getDimensionRangeSet(String dimension)
-  {
-    return null;
-  }
-
-  @Override
-  public Set<String> getRequiredColumns()
-  {
-    return Collections.emptySet();
-  }
+  public static final String BATCH_INDEX = "batch-index";
+  public static final String HADOOP_INDEX = "hadoop-index";
+  public static final String KAFKA_INDEX = "kafka-index";
+  public static final String OTHER_INDEX = "other-index";
+  public static final String QUERY = "query";
+  public static final String REALTIME_INDEX = "realtime-index";
+  public static final String SECURITY = "security";
 }

@@ -42,6 +42,7 @@ import org.apache.druid.server.security.TLSUtils;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.ITTLSCertificateChecker;
+import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
@@ -55,6 +56,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.net.URL;
 
+@Test(groups = TestNGGroup.SECURITY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITTLSTest
 {

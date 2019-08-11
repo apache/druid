@@ -234,6 +234,7 @@
                                 -Ddruid.client.https.keyManagerPassword=druid123
                                 -Ddruid.client.https.keyStorePassword=druid123
                             </argLine>
+                            <reportFormat>plain</reportFormat>  <!-- show elapsed time for each test -->
                             <suiteXmlFiles>
                                 <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
                             </suiteXmlFiles>

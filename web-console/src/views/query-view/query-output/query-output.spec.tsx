@@ -23,7 +23,17 @@ import { QueryOutput } from './query-output';
 
 describe('query output', () => {
   it('matches snapshot', () => {
-    const queryOutput = <QueryOutput loading={false} error="lol" />;
+    const queryOutput = (
+      <QueryOutput
+        runeMode={false}
+        sqlOrderBy={() => null}
+        sqlFilterRow={() => null}
+        sqlExcludeColumn={() => null}
+        disabled={false}
+        loading={false}
+        error="lol"
+      />
+    );
 
     const { container } = render(queryOutput);
     expect(container.firstChild).toMatchSnapshot();
