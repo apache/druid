@@ -91,33 +91,31 @@ public class StatsDEmitterConfig
 
     StatsDEmitterConfig that = (StatsDEmitterConfig) o;
 
-    if (hostname != null ? !hostname.equals(that.hostname) : that.hostname != null) {
+    if (!Objects.equals(hostname, that.hostname)) {
       return false;
     }
-    if (port != null ? !port.equals(that.port) : that.port != null) {
+    if (!Objects.equals(port, that.port)) {
       return false;
     }
-    if (prefix != null ? !prefix.equals(that.prefix) : that.prefix != null) {
+    if (!Objects.equals(prefix, that.prefix)) {
       return false;
     }
-    if (separator != null ? !separator.equals(that.separator) : that.separator != null) {
+    if (!Objects.equals(separator, that.separator)) {
       return false;
     }
-    if (includeHost != null ? !includeHost.equals(that.includeHost) : that.includeHost != null) {
+    if (!Objects.equals(includeHost, that.includeHost)) {
       return false;
     }
-    if (dimensionMapPath != null ? !dimensionMapPath.equals(that.dimensionMapPath) : that.dimensionMapPath != null) {
+    if (!Objects.equals(dimensionMapPath, that.dimensionMapPath)) {
       return false;
     }
-    if (dogstatsd != null ? !dogstatsd.equals(that.dogstatsd) : that.dogstatsd != null) {
+    if (!Objects.equals(dogstatsd, that.dogstatsd)) {
       return false;
     }
-    if (dogstatsdServiceAsTag != null ? !dogstatsdServiceAsTag.equals(that.dogstatsdServiceAsTag) : that.dogstatsdServiceAsTag != null) {
+    if (!Objects.equals(dogstatsdServiceAsTag, that.dogstatsdServiceAsTag)) {
       return false;
     }
-    return dogstatsdConstantTags != null ? dogstatsdConstantTags.equals(that.dogstatsdConstantTags)
-            : that.dogstatsdConstantTags == null;
-
+    return Objects.equals(dogstatsdConstantTags, that.dogstatsdConstantTags);
   }
 
   @Override
