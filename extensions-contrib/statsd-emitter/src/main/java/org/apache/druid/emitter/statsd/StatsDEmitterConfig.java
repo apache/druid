@@ -186,5 +186,4 @@ public class StatsDEmitterConfig
   {
     return dogstatsdServiceAsTag;
   }
-
 }

@@ -192,5 +192,4 @@ public class StatsDEmitterTest
     );
     EasyMock.verify(client);
   }
-
 }
