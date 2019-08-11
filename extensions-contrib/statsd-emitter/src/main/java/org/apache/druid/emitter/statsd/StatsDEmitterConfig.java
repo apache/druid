@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -43,6 +44,7 @@ public class StatsDEmitterConfig
   @JsonProperty
   private final Boolean includeHost;
   @JsonProperty
+  @Nullable
   private final String dimensionMapPath;
   @JsonProperty
   private final String blankHolder;
@@ -57,14 +59,14 @@ public class StatsDEmitterConfig
   public StatsDEmitterConfig(
       @JsonProperty("hostname") String hostname,
       @JsonProperty("port") Integer port,
-      @JsonProperty("prefix") String prefix,
-      @JsonProperty("separator") String separator,
-      @JsonProperty("includeHost") Boolean includeHost,
-      @JsonProperty("dimensionMapPath") String dimensionMapPath,
-      @JsonProperty("blankHolder") String blankHolder,
-      @JsonProperty("dogstatsd") Boolean dogstatsd,
-      @JsonProperty("dogstatsdConstantTags") List<String> dogstatsdConstantTags,
-      @JsonProperty("dogstatsdServiceAsTag") Boolean dogstatsdServiceAsTag
+      @JsonProperty("prefix") @Nullable String prefix,
+      @JsonProperty("separator") @Nullable String separator,
+      @JsonProperty("includeHost") @Nullable Boolean includeHost,
+      @JsonProperty("dimensionMapPath") @Nullable String dimensionMapPath,
+      @JsonProperty("blankHolder") @Nullable String blankHolder,
+      @JsonProperty("dogstatsd") @Nullable Boolean dogstatsd,
+      @JsonProperty("dogstatsdConstantTags") @Nullable List<String> dogstatsdConstantTags,
+      @JsonProperty("dogstatsdServiceAsTag") @Nullable Boolean dogstatsdServiceAsTag
   )
   {
     this.hostname = Preconditions.checkNotNull(hostname, "StatsD hostname cannot be null.");
@@ -156,6 +158,7 @@ public class StatsDEmitterConfig
   }
 
   @JsonProperty
+  @Nullable
   public String getDimensionMapPath()
   {
     return dimensionMapPath;
