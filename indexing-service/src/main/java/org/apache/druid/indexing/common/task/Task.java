@@ -164,12 +164,10 @@ public interface Task
    * Asks a task to arrange for its "run" method to exit promptly. Tasks that take too long to stop gracefully will be
    * terminated with extreme prejudice.
    *
-   * This method can be called at any time while {@link #run} is being called when the task is killed. If this task
-   * is not started yet, that is {@link #run} is not called yet, this method will be never called.
-   * Once this task is started, this method can be called even after {@link #run} returns. Implementations of this
-   * method may want to avoid unnecessary work if {@link #run} already returned.
-   * Depending on the task executor type, one of the two cases below can happen when the task is killed.
+   * Regardless when this method is called with respect to {@link #run}, its implementations must not allow a resource
+   * leak or lingering executions (local or remote).
    *
+   * Depending on the task executor type, one of the two cases below can happen when the task is killed.
    * - When the task is executed by a middleManager, {@link org.apache.druid.indexing.overlord.ForkingTaskRunner} kills
    *   the process running the task, which triggers
    *   {@link org.apache.druid.indexing.overlord.SingleTaskBackgroundRunner#stop}.
