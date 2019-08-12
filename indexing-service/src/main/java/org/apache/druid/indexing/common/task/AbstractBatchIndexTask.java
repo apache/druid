@@ -100,7 +100,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   }
 
   /**
-   * Run this task. Before running the task, ithecks the the current task is already stopped and
+   * Run this task. Before running the task, it checks the the current task is already stopped and
    * registers a cleaner to interrupt the thread running this task on abnormal exits.
    *
    * @see #runTask(TaskToolbox)
