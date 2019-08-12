@@ -603,25 +603,20 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     let tempAst;
     try {
       tempAst = parser(queryString);
+      this.ast = tempAst;
     } catch {}
 
     let defaultSchema;
     if (this.ast && this.ast instanceof SqlQuery) {
       defaultSchema = this.ast.getSchema();
-    } else if (tempAst && tempAst instanceof SqlQuery) {
-      defaultSchema = tempAst.getSchema();
     }
     let defaultTable;
     if (this.ast && this.ast instanceof SqlQuery) {
       defaultTable = this.ast.getTableName();
-    } else if (tempAst && tempAst instanceof SqlQuery) {
-      defaultTable = tempAst.getTableName();
     }
     let hasGroupBy;
     if (this.ast && this.ast instanceof SqlQuery) {
       hasGroupBy = !!this.ast.groupByClause;
-    } else if (tempAst && tempAst instanceof SqlQuery) {
-      hasGroupBy = !!tempAst.groupByClause;
     }
 
     return (

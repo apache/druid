@@ -270,13 +270,6 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
                 );
               }}
             />
-            <MenuItem
-              text={`test`}
-              onClick={() => {
-                filterByRow(timeStampFactory('2018-08-08 00:00:00'), 'name', '=', false);
-                filterByRow('name', timeStampFactory('2018-08-08 00:00:00'), '>=', true);
-              }}
-            />
           </Menu>
         }
       >
