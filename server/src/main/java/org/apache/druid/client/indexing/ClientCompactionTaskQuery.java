@@ -46,8 +46,8 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   @JsonCreator
   public ClientCompactionTaskQuery(
       @JsonProperty("dataSource") String dataSource,
-      @Nullable @JsonProperty("interval") final Interval interval,
-      @Nullable @JsonProperty("segments") final List<DataSegment> segments,
+      @JsonProperty("interval") @Nullable final Interval interval,
+      @JsonProperty("segments") @Nullable final List<DataSegment> segments,
       @JsonProperty("targetCompactionSizeBytes") @Nullable Long targetCompactionSizeBytes,
       @JsonProperty("tuningConfig") ClientCompactionTaskQueryTuningConfig tuningConfig,
       @JsonProperty("context") Map<String, Object> context

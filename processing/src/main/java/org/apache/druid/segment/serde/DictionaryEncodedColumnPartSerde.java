@@ -98,7 +98,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
   @JsonCreator
   public static DictionaryEncodedColumnPartSerde createDeserializer(
-      @Nullable @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory,
+      @JsonProperty("bitmapSerdeFactory") @Nullable BitmapSerdeFactory bitmapSerdeFactory,
       @NotNull @JsonProperty("byteOrder") ByteOrder byteOrder
   )
   {

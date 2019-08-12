@@ -42,8 +42,9 @@ env:
       "
 
 # Add various options to make 'mvn install' fast and skip javascript compile (-Ddruid.console.skip=true) since it is not
-# needed. Use travis_retry to address intermittent connection timeouts when resolving the SIGAR dependency.
-install: MAVEN_OPTS='-Xmx3000m' travis_retry $MVN clean install -q -ff ${MAVEN_SKIP} -DskipTests -T1.0C
+# needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
+# output.  To compensate, use travis_wait to extend the timeout.
+install: MAVEN_OPTS='-Xmx3000m' travis_wait 15 $MVN clean install -q -ff ${MAVEN_SKIP} -DskipTests -T1.0C
 
 matrix:
   include:
