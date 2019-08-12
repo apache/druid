@@ -32,7 +32,7 @@ import {
   Alias,
   FilterClause,
   StringType,
-  TimeStamp,
+  Timestamp,
 } from 'druid-query-toolkit';
 import React, { ChangeEvent } from 'react';
 
@@ -123,8 +123,8 @@ export interface ColumnTreeProps {
     filter?: FilterClause,
   ) => void;
   filterByRow: (
-    rhs: string | number | AdditiveExpression | TimeStamp,
-    lhs: string | TimeStamp,
+    rhs: string | number | AdditiveExpression | Timestamp,
+    lhs: string | Timestamp,
     operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE',
     run: boolean,
   ) => void;

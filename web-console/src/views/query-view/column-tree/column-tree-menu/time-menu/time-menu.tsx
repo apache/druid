@@ -23,7 +23,7 @@ import {
   Alias,
   FilterClause,
   StringType,
-  TimeStamp,
+  Timestamp,
   timeStampFactory,
 } from 'druid-query-toolkit';
 import {
@@ -51,8 +51,8 @@ export interface TimeMenuProps {
     filter?: FilterClause,
   ) => void;
   filterByRow: (
-    rhs: string | number | AdditiveExpression | TimeStamp,
-    lhs: string | TimeStamp,
+    rhs: string | number | AdditiveExpression | Timestamp,
+    lhs: string | Timestamp,
     operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE',
     run: boolean,
   ) => void;
@@ -145,7 +145,7 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
         content={
           <Menu>
             <MenuItem
-              text={`"${columnName}" >= CURRENT_TIMESTAMP - INTERVAL '1' HOUR`}
+              text={`Latest hour`}
               onClick={() => {
                 const additiveExpression = new AdditiveExpression({
                   parens: [],
@@ -157,7 +157,7 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
               }}
             />
             <MenuItem
-              text={`"${columnName}" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`}
+              text={`Latest day`}
               onClick={() => {
                 const additiveExpression = new AdditiveExpression({
                   parens: [],
@@ -169,12 +169,36 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
               }}
             />
             <MenuItem
-              text={`"${columnName}" >= CURRENT_TIMESTAMP - INTERVAL '7' DAY`}
+              text={`Latest week`}
               onClick={() => {
                 const additiveExpression = new AdditiveExpression({
                   parens: [],
                   op: ['-'],
                   ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('day', '7')],
+                  spacing: [' ', ' '],
+                });
+                filterByRow(additiveExpression, columnName, '>=', true);
+              }}
+            />
+            <MenuItem
+              text={`Latest month`}
+              onClick={() => {
+                const additiveExpression = new AdditiveExpression({
+                  parens: [],
+                  op: ['-'],
+                  ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('month', '1')],
+                  spacing: [' ', ' '],
+                });
+                filterByRow(additiveExpression, columnName, '>=', true);
+              }}
+            />
+            <MenuItem
+              text={`Latest year`}
+              onClick={() => {
+                const additiveExpression = new AdditiveExpression({
+                  parens: [],
+                  op: ['-'],
+                  ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('year', '1')],
                   spacing: [' ', ' '],
                 });
                 filterByRow(additiveExpression, columnName, '>=', true);

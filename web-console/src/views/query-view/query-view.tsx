@@ -16,8 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ControlGroup, Intent, Position, Tooltip } from '@blueprintjs/core';
-import { IconNames } from '@blueprintjs/icons';
+import { Intent } from '@blueprintjs/core';
 import axios from 'axios';
 import classNames from 'classnames';
 import {
@@ -31,7 +30,7 @@ import {
   sqlParserFactory,
   SqlQuery,
   StringType,
-  TimeStamp,
+  Timestamp,
 } from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import React from 'react';
@@ -438,20 +437,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             runeMode={runeMode}
             columnMetadata={columnMetadata}
           />
-          <ControlGroup vertical>
-            <Tooltip content="QueryHistory" position={Position.LEFT}>
-              <Button
-                icon={IconNames.HISTORY}
-                onClick={() => this.setState({ historyDialogOpen: true })}
-              />
-            </Tooltip>
-            <Tooltip content="QueryHistory" position={Position.LEFT}>
-              <Button icon="filter" />
-            </Tooltip>
-            <Tooltip content="QueryHistory" position={Position.LEFT}>
-              <Button icon="filter" />
-            </Tooltip>
-          </ControlGroup>
           <div className="control-bar">
             <RunButton
               onEditContext={() => this.setState({ editContextDialogOpen: true })}
@@ -548,7 +533,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     if (!ast) return;
     ast = ast.excludeColumn(header);
     this.setState({
-      queryString: ast.toString(),
+      ast,
     });
     if (run) {
       this.handleRun(true, ast.toString());
@@ -556,8 +541,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   };
 
   private sqlFilterRow = (
-    row: string | number | AdditiveExpression | TimeStamp,
-    header: string | TimeStamp,
+    row: string | number | AdditiveExpression | Timestamp,
+    header: string | Timestamp,
     operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE',
     run: boolean,
   ): void => {
@@ -565,7 +550,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     if (!ast) return;
     ast = ast.filterRow(header, row, operator);
     this.setState({
-      queryString: ast.toString(),
+      ast,
     });
     if (run) {
       this.handleRun(true, ast.toString());
@@ -635,6 +620,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     if (!ast) {
       try {
         tempAst = parser(queryString);
+        this.setState({ ast: tempAst });
       } catch {}
     }
     let defaultSchema;
