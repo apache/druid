@@ -103,7 +103,6 @@ export interface QueryViewState {
 
   defaultSchema?: string;
   defaultTable?: string;
-  ast?: SqlQuery;
 
   editContextDialogOpen: boolean;
   historyDialogOpen: boolean;
@@ -175,7 +174,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       historyDialogOpen: false,
       queryHistory: [],
     };
-
+    this.ast = props.initQuery ? parser(props.initQuery) : undefined;
     this.metadataQueryManager = new QueryManager({
       processQuery: async () => {
         return await queryDruidSql<ColumnMetadata>({
@@ -283,8 +282,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           queryExtraInfo: result ? result.queryExtraInfo : undefined,
           loading,
           error,
-          ast: result ? result.parsedQuery : undefined,
         });
+        this.ast = result ? result.parsedQuery : undefined;
       },
     });
 
@@ -310,7 +309,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       },
     });
   }
-
+  private ast: SqlQuery | undefined;
   componentDidMount(): void {
     this.metadataQueryManager.runQuery(null);
 
@@ -415,7 +414,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       queryExtraInfo,
       error,
       columnMetadata,
-      ast,
     } = this.state;
     const runeMode = QueryView.isJsonLike(queryString);
 
@@ -453,9 +451,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           </div>
         </div>
         <QueryOutput
-          aggregateColumns={ast ? ast.getAggregateColumns() : undefined}
-          disabled={!ast}
-          sorted={ast ? ast.getSorted() : undefined}
+          aggregateColumns={this.ast ? this.ast.getAggregateColumns() : undefined}
+          disabled={!this.ast}
+          sorted={this.ast ? this.ast.getSorted() : undefined}
           sqlExcludeColumn={this.sqlExcludeColumn}
           sqlFilterRow={this.sqlFilterRow}
           sqlOrderBy={this.sqlOrderBy}
@@ -474,26 +472,24 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     argumentsArray: (StringType | number)[],
     run: boolean,
   ): void => {
-    let { ast } = this.state;
-    if (!ast) return;
-    ast = ast.addFunctionToGroupBy(functionName, spacing, argumentsArray);
+    if (!this.ast) return;
+    this.ast = this.ast.addFunctionToGroupBy(functionName, spacing, argumentsArray);
     this.setState({
-      queryString: ast.toString(),
+      queryString: this.ast.toString(),
     });
     if (run) {
-      this.handleRun(true, ast.toString());
+      this.handleRun(true, this.ast.toString());
     }
   };
 
   private addToGroupBy = (columnName: string, run: boolean): void => {
-    let { ast } = this.state;
-    if (!ast) return;
-    ast = ast.addToGroupBy(columnName);
+    if (!this.ast) return;
+    this.ast = this.ast.addToGroupBy(columnName);
     this.setState({
-      queryString: ast.toString(),
+      queryString: this.ast.toString(),
     });
     if (run) {
-      this.handleRun(true, ast.toString());
+      this.handleRun(true, this.ast.toString());
     }
   };
 
@@ -505,38 +501,35 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     distinct?: boolean,
     filter?: FilterClause,
   ): void => {
-    let { ast } = this.state;
-    if (!ast) return;
-    ast = ast.addAggregateColumn(columnName, functionName, alias, distinct, filter);
+    if (!this.ast) return;
+    this.ast = this.ast.addAggregateColumn(columnName, functionName, alias, distinct, filter);
     this.setState({
-      queryString: ast.toString(),
+      queryString: this.ast.toString(),
     });
     if (run) {
-      this.handleRun(true, ast.toString());
+      this.handleRun(true, this.ast.toString());
     }
   };
 
   private sqlOrderBy = (header: string, direction: 'ASC' | 'DESC', run: boolean): void => {
-    let { ast } = this.state;
-    if (!ast) return;
-    ast = ast.orderBy(header, direction);
+    if (!this.ast) return;
+    this.ast = this.ast.orderBy(header, direction);
     this.setState({
-      queryString: ast.toString(),
+      queryString: this.ast.toString(),
     });
     if (run) {
-      this.handleRun(true, ast.toString());
+      this.handleRun(true, this.ast.toString());
     }
   };
 
   private sqlExcludeColumn = (header: string, run: boolean): void => {
-    let { ast } = this.state;
-    if (!ast) return;
-    ast = ast.excludeColumn(header);
+    if (!this.ast) return;
+    this.ast = this.ast.excludeColumn(header);
     this.setState({
-      ast,
+      queryString: this.ast.toString(),
     });
     if (run) {
-      this.handleRun(true, ast.toString());
+      this.handleRun(true, this.ast.toString());
     }
   };
 
@@ -546,18 +539,15 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE',
     run: boolean,
   ): void => {
-    let { ast } = this.state;
+    let ast = this.ast;
     if (!ast) return;
     ast = ast.filterRow(header, row, operator);
     this.setState({
-      ast,
+      queryString: ast.toString(),
     });
+    this.ast = ast;
     if (run) {
       this.handleRun(true, ast.toString());
-    } else {
-      this.setState({
-        ast,
-      });
     }
   };
 
@@ -608,36 +598,28 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   };
 
   render(): JSX.Element {
-    const {
-      columnMetadata,
-      columnMetadataLoading,
-      columnMetadataError,
-      ast,
-      queryString,
-    } = this.state;
+    const { columnMetadata, columnMetadataLoading, columnMetadataError, queryString } = this.state;
 
-    let tempAst: SqlQuery | undefined;
-    if (!ast) {
-      try {
-        tempAst = parser(queryString);
-        this.setState({ ast: tempAst });
-      } catch {}
-    }
+    let tempAst;
+    try {
+      tempAst = parser(queryString);
+    } catch {}
+
     let defaultSchema;
-    if (ast && ast instanceof SqlQuery) {
-      defaultSchema = ast.getSchema();
+    if (this.ast && this.ast instanceof SqlQuery) {
+      defaultSchema = this.ast.getSchema();
     } else if (tempAst && tempAst instanceof SqlQuery) {
       defaultSchema = tempAst.getSchema();
     }
     let defaultTable;
-    if (ast && ast instanceof SqlQuery) {
-      defaultTable = ast.getTableName();
+    if (this.ast && this.ast instanceof SqlQuery) {
+      defaultTable = this.ast.getTableName();
     } else if (tempAst && tempAst instanceof SqlQuery) {
       defaultTable = tempAst.getTableName();
     }
     let hasGroupBy;
-    if (ast && ast instanceof SqlQuery) {
-      hasGroupBy = !!ast.groupByClause;
+    if (this.ast && this.ast instanceof SqlQuery) {
+      hasGroupBy = !!this.ast.groupByClause;
     } else if (tempAst && tempAst instanceof SqlQuery) {
       hasGroupBy = !!tempAst.groupByClause;
     }

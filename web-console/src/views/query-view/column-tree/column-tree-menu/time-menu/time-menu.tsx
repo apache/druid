@@ -251,7 +251,7 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
                   false,
                 );
                 filterByRow(
-                  timeStampFactory(`${next.year}-${next.month}-00 00:00:00`),
+                  timeStampFactory(`${next.year}-${next.month}-01 00:00:00`),
                   columnName,
                   '<',
                   true,
@@ -261,13 +261,20 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
             <MenuItem
               text={`Current year`}
               onClick={() => {
-                filterByRow(columnName, timeStampFactory(`${year}-00-01 00:00:00`), '<=', false);
+                filterByRow(columnName, timeStampFactory(`${year}-01-01 00:00:00`), '<=', false);
                 filterByRow(
-                  timeStampFactory(`${Number(year) + 1}-00-00 00:00:00`),
+                  timeStampFactory(`${Number(year) + 1}-01-01 00:00:00`),
                   columnName,
                   '<',
                   true,
                 );
+              }}
+            />
+            <MenuItem
+              text={`test`}
+              onClick={() => {
+                filterByRow(timeStampFactory('2018-08-08 00:00:00'), 'name', '=', false);
+                filterByRow('name', timeStampFactory('2018-08-08 00:00:00'), '>=', true);
               }}
             />
           </Menu>

@@ -353,8 +353,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   };
 
   render(): JSX.Element | null {
-    const { columnMetadataLoading, hasGroupBy } = this.props;
-    console.log(hasGroupBy);
+    const { columnMetadataLoading } = this.props;
     if (columnMetadataLoading) {
       return (
         <div className="column-tree">
