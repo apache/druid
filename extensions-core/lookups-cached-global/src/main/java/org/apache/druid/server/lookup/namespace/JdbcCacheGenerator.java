@@ -92,7 +92,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
       if (doIncrementalLoad) {
         newVersion = StringUtils.format("%d", lastDBUpdate);
         ConcurrentMap<String, String> newCachedEntries = new ConcurrentHashMap<>();
-        LOG.info(" found %s new incremental entries", pairs.size());
+        LOG.info(" found %s new incremental entries for %s", pairs.size(), entryId);
         for (Pair<String, String> pair : pairs) {
           newCachedEntries.put(pair.lhs, pair.rhs);
         }
