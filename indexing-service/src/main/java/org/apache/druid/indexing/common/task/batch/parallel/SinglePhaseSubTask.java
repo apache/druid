@@ -411,19 +411,19 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
     final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
     final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient);
 
+    final Appenderator appenderator = BatchAppenderators.newAppenderator(
+        getId(),
+        appenderatorsManager,
+        fireDepartmentMetrics,
+        toolbox,
+        dataSchema,
+        tuningConfig
+    );
+    boolean exceptionOccurred = false;
     try (
-        final Appenderator appenderator = BatchAppenderators.newAppenderator(
-            getId(),
-            appenderatorsManager,
-            fireDepartmentMetrics,
-            toolbox,
-            dataSchema,
-            tuningConfig
-        );
         final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator);
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
-      registerResourceCloserOnAbnormalExit(config -> appenderator.closeNow());
       driver.startJob();
 
       final Set<DataSegment> pushedSegments = new HashSet<>();
@@ -493,7 +493,19 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
       return pushedSegments;
     }
     catch (TimeoutException | ExecutionException e) {
+      exceptionOccurred = true;
       throw new RuntimeException(e);
+    }
+    catch (Exception e) {
+      exceptionOccurred = true;
+      throw e;
+    }
+    finally {
+      if (exceptionOccurred) {
+        appenderator.closeNow();
+      } else {
+        appenderator.close();
+      }
     }
   }
 }

@@ -35,8 +35,18 @@ import java.util.function.Consumer;
  */
 public class CurrentSubTaskHolder implements Consumer<TaskConfig>
 {
+  /**
+   * A flag to indicate the {@link Task} of this holder is already stopped and its child tasks shouldn't be
+   * created. See {@link #currentSubTaskReference} for more details.
+   */
   private static final Object SPECIAL_VALUE_STOPPED = new Object();
 
+  /**
+   * Reference to the sub-task that is currently running.
+   *
+   * When {@link #accept} is called, this class gets the reference to the current running task,
+   * and calls {@link #cleanFunction} for that task. This reference will be updated to {@link #SPECIAL_VALUE_STOPPED}.
+   */
   private final AtomicReference<Object> currentSubTaskReference = new AtomicReference<>();
 
   private final BiConsumer<Object, TaskConfig> cleanFunction;

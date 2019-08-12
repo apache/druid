@@ -149,10 +149,15 @@ public class CompactionTask extends AbstractBatchIndexTask
   private final AppenderatorsManager appenderatorsManager;
 
   @JsonIgnore
-  private List<IndexTask> indexTaskSpecs;
+  private final CurrentSubTaskHolder currentSubTaskHolder = new CurrentSubTaskHolder(
+      (taskObject, config) -> {
+        final IndexTask indexTask = (IndexTask) taskObject;
+        indexTask.stopGracefully(config);
+      }
+  );
 
-  @Nullable
-  private volatile IndexTask currentRunningTaskSpec = null;
+  @JsonIgnore
+  private List<IndexTask> indexTaskSpecs;
 
   @JsonCreator
   public CompactionTask(
@@ -329,22 +334,16 @@ public class CompactionTask extends AbstractBatchIndexTask
       log.warn("Interval[%s] has no segments, nothing to do.", interval);
       return TaskStatus.failure(getId());
     } else {
+      registerResourceCloserOnAbnormalExit(currentSubTaskHolder);
       final int totalNumSpecs = indexTaskSpecs.size();
       log.info("Generated [%d] compaction task specs", totalNumSpecs);
 
       int failCnt = 0;
-      registerResourceCloserOnAbnormalExit(config -> {
-        if (currentRunningTaskSpec != null) {
-          currentRunningTaskSpec.stopGracefully(config);
-        }
-      });
       for (IndexTask eachSpec : indexTaskSpecs) {
         final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
-        log.info("Running indexSpec: " + json);
-
         try {
-          if (eachSpec.isReady(toolbox.getTaskActionClient())) {
-            currentRunningTaskSpec = eachSpec;
+          if (currentSubTaskHolder.setTask(eachSpec) && eachSpec.isReady(toolbox.getTaskActionClient())) {
+            log.info("Running indexSpec: " + json);
             final TaskStatus eachResult = eachSpec.run(toolbox);
             if (!eachResult.isSuccess()) {
               failCnt++;

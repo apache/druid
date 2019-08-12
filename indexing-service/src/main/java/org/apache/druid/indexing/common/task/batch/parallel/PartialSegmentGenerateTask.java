@@ -280,25 +280,17 @@ public class PartialSegmentGenerateTask extends AbstractBatchIndexTask
         shardSpecs
     );
 
-    try (
-        final Appenderator appenderator = BatchAppenderators.newAppenderator(
-            getId(),
-            appenderatorsManager,
-            fireDepartmentMetrics,
-            toolbox,
-            dataSchema,
-            tuningConfig,
-            new ShuffleDataSegmentPusher(supervisorTaskId, getId(), toolbox.getIntermediaryDataManager())
-        );
-        final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)
-    ) {
-      // Appenderator has two methods for cleanup, i.e., close() and closeNow(), and closeNow() is supposed to be called
-      // on abnormal exits. If the current thread is interrupted before closeNow() is called, the above
-      // try-with-resources block will call close() first, which leads to the laster closeNow() call to be ignored.
-      // As a result, closeNow() should be called before the current thread is interrupted.
-      // Note that Closer closes registered closeables in LIFO order.
-      registerResourceCloserOnAbnormalExit(config -> appenderator.closeNow());
-
+    final Appenderator appenderator = BatchAppenderators.newAppenderator(
+        getId(),
+        appenderatorsManager,
+        fireDepartmentMetrics,
+        toolbox,
+        dataSchema,
+        tuningConfig,
+        new ShuffleDataSegmentPusher(supervisorTaskId, getId(), toolbox.getIntermediaryDataManager())
+    );
+    boolean exceptionOccurred = false;
+    try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
       driver.startJob();
 
       final FiniteFirehoseProcessor firehoseProcessor = new FiniteFirehoseProcessor(
@@ -318,6 +310,17 @@ public class PartialSegmentGenerateTask extends AbstractBatchIndexTask
       );
 
       return pushed.getSegments();
+    }
+    catch (Exception e) {
+      exceptionOccurred = true;
+      throw e;
+    }
+    finally {
+      if (exceptionOccurred) {
+        appenderator.closeNow();
+      } else {
+        appenderator.close();
+      }
     }
   }
 }

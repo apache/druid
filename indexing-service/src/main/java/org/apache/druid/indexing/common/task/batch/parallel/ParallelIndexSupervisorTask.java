@@ -607,7 +607,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         throw new ISE("Failed to publish segments[%s]", newSegments);
       }
     }
-
   }
 
   private TaskStatus runSequential(TaskToolbox toolbox) throws Exception
@@ -651,7 +650,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         tuningConfig.getIndexSpec(),
         tuningConfig.getIndexSpecForIntermediatePersists(),
         tuningConfig.getMaxPendingPersists(),
-        false,
+        tuningConfig.isForceGuaranteedRollup(),
         tuningConfig.isReportParseExceptions(),
         null,
         tuningConfig.getPushTimeout(),
