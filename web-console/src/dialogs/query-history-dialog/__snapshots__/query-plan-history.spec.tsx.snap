@@ -89,27 +89,17 @@ exports[`query plan dialog matches snapshot 1`] = `
               <span
                 class="bp3-button-text"
               >
-                Copy
+                Close
               </span>
             </button>
             <button
-              class="bp3-button"
+              class="bp3-button bp3-intent-primary"
               type="button"
             >
               <span
                 class="bp3-button-text"
               >
                 Open
-              </span>
-            </button>
-            <button
-              class="bp3-button"
-              type="button"
-            >
-              <span
-                class="bp3-button-text"
-              >
-                Close
               </span>
             </button>
           </div>

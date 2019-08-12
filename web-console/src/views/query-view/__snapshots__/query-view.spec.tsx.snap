@@ -8,6 +8,7 @@ exports[`sql view matches snapshot 1`] = `
     addAggregateColumn={[Function]}
     addFunctionToGroupBy={[Function]}
     addToGroupBy={[Function]}
+    clear={[Function]}
     columnMetadataLoading={true}
     filterByRow={[Function]}
     onQueryStringChange={[Function]}
@@ -32,44 +33,6 @@ exports[`sql view matches snapshot 1`] = `
         queryString="test"
         runeMode={false}
       />
-      <Blueprint3.ControlGroup
-        vertical={true}
-      >
-        <Blueprint3.Tooltip
-          content="QueryHistory"
-          hoverCloseDelay={0}
-          hoverOpenDelay={100}
-          position="left"
-          transitionDuration={100}
-        >
-          <Blueprint3.Button
-            icon="history"
-            onClick={[Function]}
-          />
-        </Blueprint3.Tooltip>
-        <Blueprint3.Tooltip
-          content="QueryHistory"
-          hoverCloseDelay={0}
-          hoverOpenDelay={100}
-          position="left"
-          transitionDuration={100}
-        >
-          <Blueprint3.Button
-            icon="filter"
-          />
-        </Blueprint3.Tooltip>
-        <Blueprint3.Tooltip
-          content="QueryHistory"
-          hoverCloseDelay={0}
-          hoverOpenDelay={100}
-          position="left"
-          transitionDuration={100}
-        >
-          <Blueprint3.Button
-            icon="filter"
-          />
-        </Blueprint3.Tooltip>
-      </Blueprint3.ControlGroup>
       <div
         className="control-bar"
       >

@@ -51,13 +51,14 @@ export interface TimeMenuProps {
     filter?: FilterClause,
   ) => void;
   filterByRow: (
-    rhs: string | number | AdditiveExpression | Timestamp,
-    lhs: string | Timestamp,
+    rhs: string | number | AdditiveExpression | Timestamp | StringType,
+    lhs: string | Timestamp | StringType,
     operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE',
     run: boolean,
   ) => void;
   hasGroupBy?: boolean;
   columnName: string;
+  clear: () => void;
 }
 
 export class TimeMenu extends React.PureComponent<TimeMenuProps> {
@@ -67,8 +68,8 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
 
   formatTime(timePart: number): string {
     if (timePart % 10 > 0) {
-      return '0' + String(timePart);
-    } else return String(timePart);
+      return String(timePart);
+    } else return '0' + String(timePart);
   }
 
   getNextMonth(month: number, year: number): { month: string; year: number } {
@@ -129,7 +130,7 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
   }
 
   renderFilterMenu(): JSX.Element {
-    const { columnName, filterByRow } = this.props;
+    const { columnName, filterByRow, clear } = this.props;
     const date = new Date();
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -153,6 +154,7 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
                   ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('HOUR', '1')],
                   spacing: [' ', ' '],
                 });
+                clear();
                 filterByRow(additiveExpression, columnName, '>=', true);
               }}
             />
@@ -177,6 +179,7 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
                   ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('day', '7')],
                   spacing: [' ', ' '],
                 });
+                clear();
                 filterByRow(additiveExpression, columnName, '>=', true);
               }}
             />
@@ -189,6 +192,7 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
                   ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('month', '1')],
                   spacing: [' ', ' '],
                 });
+                clear();
                 filterByRow(additiveExpression, columnName, '>=', true);
               }}
             />
@@ -201,6 +205,7 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
                   ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('year', '1')],
                   spacing: [' ', ' '],
                 });
+                clear();
                 filterByRow(additiveExpression, columnName, '>=', true);
               }}
             />
@@ -208,9 +213,10 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
               text={`Current hour`}
               onClick={() => {
                 const next = this.getNextHour(hour, day, month, year);
+                clear();
                 filterByRow(
-                  columnName,
-                  timeStampFactory(`${year}-${month}-${day} ${hour}:00:00`),
+                  stringFactory(columnName, `"`),
+                  timeStampFactory(`${year}-${month}-${day} ${this.formatTime(hour)}:00:00`),
                   '<=',
                   false,
                 );
@@ -226,8 +232,9 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
               text={`Current day`}
               onClick={() => {
                 const next = this.getNextDay(day, month, year);
+                clear();
                 filterByRow(
-                  columnName,
+                  stringFactory(columnName, `"`),
                   timeStampFactory(`${year}-${month}-${day} 00:00:00`),
                   '<=',
                   false,
@@ -244,8 +251,9 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
               text={`Current month`}
               onClick={() => {
                 const next = this.getNextMonth(month, year);
+                clear();
                 filterByRow(
-                  columnName,
+                  stringFactory(columnName, `"`),
                   timeStampFactory(`${year}-${month}-01 00:00:00`),
                   '<=',
                   false,
@@ -261,7 +269,13 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
             <MenuItem
               text={`Current year`}
               onClick={() => {
-                filterByRow(columnName, timeStampFactory(`${year}-01-01 00:00:00`), '<=', false);
+                clear();
+                filterByRow(
+                  stringFactory(columnName, `"`),
+                  timeStampFactory(`${year}-01-01 00:00:00`),
+                  '<=',
+                  false,
+                );
                 filterByRow(
                   timeStampFactory(`${Number(year) + 1}-01-01 00:00:00`),
                   columnName,

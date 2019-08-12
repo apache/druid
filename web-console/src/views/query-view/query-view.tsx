@@ -67,11 +67,17 @@ import { RunButton } from './run-button/run-button';
 
 import './query-view.scss';
 
-const parser = sqlParserFactory(
+const rawParser = sqlParserFactory(
   SQL_FUNCTIONS.map((sql_function: SyntaxDescription) => {
     return sql_function.syntax.substr(0, sql_function.syntax.indexOf('('));
   }),
 );
+
+const parser = (query: string) => {
+  try {
+    return rawParser(query);
+  } catch {}
+};
 
 interface QueryWithContext {
   queryString: string;
@@ -534,8 +540,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   };
 
   private sqlFilterRow = (
-    row: string | number | AdditiveExpression | Timestamp,
-    header: string | Timestamp,
+    row: string | number | AdditiveExpression | Timestamp | StringType,
+    header: string | Timestamp | StringType,
     operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE',
     run: boolean,
   ): void => {
@@ -548,6 +554,13 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     this.ast = ast;
     if (run) {
       this.handleRun(true, ast.toString());
+    }
+  };
+
+  private sqlClearWhere = (): void => {
+    if (!this.ast) return;
+    if (this.ast.whereClause) {
+      this.ast.whereClause = undefined;
     }
   };
 
@@ -625,6 +638,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       >
         {!columnMetadataError && (
           <ColumnTree
+            clear={this.sqlClearWhere}
             filterByRow={this.sqlFilterRow}
             addFunctionToGroupBy={this.addFunctionToGroupBy}
             addAggregateColumn={this.addAggregateColumn}

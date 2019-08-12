@@ -123,12 +123,13 @@ export interface ColumnTreeProps {
     filter?: FilterClause,
   ) => void;
   filterByRow: (
-    rhs: string | number | AdditiveExpression | Timestamp,
-    lhs: string | Timestamp,
+    rhs: string | number | AdditiveExpression | Timestamp | StringType,
+    lhs: string | Timestamp | StringType,
     operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE',
     run: boolean,
   ) => void;
   hasGroupBy?: boolean;
+  clear: () => void;
 }
 
 export interface ColumnTreeState {
@@ -142,11 +143,7 @@ export interface ColumnTreeState {
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
     const { columnMetadata, defaultSchema, defaultTable } = props;
-    if (
-      (columnMetadata && columnMetadata !== state.prevColumnMetadata) ||
-      (columnMetadata && props.hasGroupBy !== state.prevGroupByStatus)
-    ) {
-      // @ts-ignore
+    if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
       const columnTree = groupBy(
         columnMetadata,
         r => r.TABLE_SCHEMA,
@@ -246,6 +243,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                         )}
                         {columnData.DATA_TYPE === 'TIMESTAMP' && (
                           <TimeMenu
+                            clear={props.clear}
                             addFunctionToGroupBy={props.addFunctionToGroupBy}
                             addToGroupBy={props.addToGroupBy}
                             addAggregateColumn={props.addAggregateColumn}

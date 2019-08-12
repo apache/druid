@@ -16,10 +16,8 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, Tab, Tabs, TextArea } from '@blueprintjs/core';
+import { Button, Classes, Dialog, Intent, Tab, Tabs, TextArea } from '@blueprintjs/core';
 import React from 'react';
-
-import { copyAndAlert } from '../../utils';
 
 import './query-history-dialog.scss';
 
@@ -79,20 +77,12 @@ export class QueryHistoryDialog extends React.PureComponent<
         </div>
         <div className={Classes.DIALOG_FOOTER}>
           <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-            <Button
-              text="Copy"
-              onClick={() =>
-                copyAndAlert(
-                  queryRecords[activeTab].queryString,
-                  `Query version ${queryRecords[activeTab].version} copied`,
-                )
-              }
-            />
+            <Button text="Close" onClick={onClose} />
             <Button
               text="Open"
+              intent={Intent.PRIMARY}
               onClick={() => setQueryString(queryRecords[activeTab].queryString)}
             />
-            <Button text="Close" onClick={onClose} />
           </div>
         </div>
       </Dialog>
