@@ -21,7 +21,6 @@ package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig.UserCompactTuningConfig;
 
@@ -39,13 +38,9 @@ public class ClientCompactQueryTuningConfig
   @Nullable
   private final Long maxTotalRows;
   @Nullable
-  private final PartitionsSpec partitionsSpec;
-  @Nullable
   private final IndexSpec indexSpec;
   @Nullable
   private final Integer maxPendingPersists;
-  @Nullable
-  private final Boolean forceGuaranteedRollup;
   @Nullable
   private final Long pushTimeout;
 
@@ -59,14 +54,10 @@ public class ClientCompactQueryTuningConfig
         userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getMaxRowsInMemory(),
         userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getMaxBytesInMemory(),
         userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getMaxTotalRows(),
-        userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getPartitionsSpec(),
         userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getIndexSpec(),
         userCompactionTaskQueryTuningConfig == null
         ? null
         : userCompactionTaskQueryTuningConfig.getMaxPendingPersists(),
-        userCompactionTaskQueryTuningConfig == null
-        ? null
-        : userCompactionTaskQueryTuningConfig.isForceGuaranteedRollup(),
         userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getPushTimeout()
     );
   }
@@ -77,10 +68,8 @@ public class ClientCompactQueryTuningConfig
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
-      @JsonProperty("partitionsSpec") @Nullable PartitionsSpec partitionsSpec,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
-      @JsonProperty("forceGuaranteedRollup") @Nullable Boolean forceGuaranteedRollup,
       @JsonProperty("pushTimeout") @Nullable Long pushTimeout
   )
   {
@@ -88,10 +77,8 @@ public class ClientCompactQueryTuningConfig
     this.maxBytesInMemory = maxBytesInMemory;
     this.maxRowsInMemory = maxRowsInMemory;
     this.maxTotalRows = maxTotalRows;
-    this.partitionsSpec = partitionsSpec;
     this.indexSpec = indexSpec;
     this.maxPendingPersists = maxPendingPersists;
-    this.forceGuaranteedRollup = forceGuaranteedRollup;
     this.pushTimeout = pushTimeout;
   }
 
@@ -131,13 +118,6 @@ public class ClientCompactQueryTuningConfig
 
   @JsonProperty
   @Nullable
-  public PartitionsSpec getPartitionsSpec()
-  {
-    return partitionsSpec;
-  }
-
-  @JsonProperty
-  @Nullable
   public IndexSpec getIndexSpec()
   {
     return indexSpec;
@@ -148,13 +128,6 @@ public class ClientCompactQueryTuningConfig
   public Integer getMaxPendingPersists()
   {
     return maxPendingPersists;
-  }
-
-  @JsonProperty
-  @Nullable
-  public Boolean isForceGuaranteedRollup()
-  {
-    return forceGuaranteedRollup;
   }
 
   @JsonProperty
@@ -178,10 +151,8 @@ public class ClientCompactQueryTuningConfig
            Objects.equals(maxBytesInMemory, that.maxBytesInMemory) &&
            Objects.equals(maxRowsInMemory, that.maxRowsInMemory) &&
            Objects.equals(maxTotalRows, that.maxTotalRows) &&
-           Objects.equals(partitionsSpec, that.partitionsSpec) &&
            Objects.equals(indexSpec, that.indexSpec) &&
            Objects.equals(maxPendingPersists, that.maxPendingPersists) &&
-           Objects.equals(forceGuaranteedRollup, that.forceGuaranteedRollup) &&
            Objects.equals(pushTimeout, that.pushTimeout);
   }
 
@@ -193,10 +164,8 @@ public class ClientCompactQueryTuningConfig
         maxBytesInMemory,
         maxRowsInMemory,
         maxTotalRows,
-        partitionsSpec,
         indexSpec,
         maxPendingPersists,
-        forceGuaranteedRollup,
         pushTimeout
     );
   }
@@ -209,10 +178,8 @@ public class ClientCompactQueryTuningConfig
            ", maxBytesInMemory=" + maxBytesInMemory +
            ", maxRowsInMemory=" + maxRowsInMemory +
            ", maxTotalRows=" + maxTotalRows +
-           ", partitionsSpec=" + partitionsSpec +
            ", indexSpec=" + indexSpec +
            ", maxPendingPersists=" + maxPendingPersists +
-           ", forceGuaranteedRollup=" + forceGuaranteedRollup +
            ", pushTimeout=" + pushTimeout +
            '}';
   }

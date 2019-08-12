@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.client.indexing.ClientCompactQueryTuningConfig;
-import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
 import org.joda.time.Period;
 
@@ -240,10 +239,8 @@ public class DataSourceCompactionConfig
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
         @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
         @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
-        @JsonProperty("partitionsSpec") @Nullable PartitionsSpec partitionsSpec,
         @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
         @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
-        @JsonProperty("forceGuaranteedRollup") @Nullable Boolean forceGuaranteedRollup,
         @JsonProperty("pushTimeout") @Nullable Long pushTimeout
     )
     {
@@ -252,10 +249,8 @@ public class DataSourceCompactionConfig
           maxRowsInMemory,
           maxBytesInMemory,
           maxTotalRows,
-          partitionsSpec,
           indexSpec,
           maxPendingPersists,
-          forceGuaranteedRollup,
           pushTimeout
       );
     }
