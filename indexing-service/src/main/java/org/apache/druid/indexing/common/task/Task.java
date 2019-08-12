@@ -164,8 +164,9 @@ public interface Task
    * Asks a task to arrange for its "run" method to exit promptly. Tasks that take too long to stop gracefully will be
    * terminated with extreme prejudice.
    *
-   * Regardless when this method is called with respect to {@link #run}, its implementations must not allow a resource
-   * leak or lingering executions (local or remote).
+   * This method can be called at any time no matter when {@link #run} is executed. Regardless of when this method is
+   * called with respect to {@link #run}, its implementations must not allow a resource leak or lingering executions
+   * (local or remote).
    *
    * Depending on the task executor type, one of the two cases below can happen when the task is killed.
    * - When the task is executed by a middleManager, {@link org.apache.druid.indexing.overlord.ForkingTaskRunner} kills
