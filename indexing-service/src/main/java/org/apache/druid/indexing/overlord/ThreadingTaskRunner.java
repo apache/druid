@@ -233,7 +233,7 @@ public class ThreadingTaskRunner
                           finally {
                             try {
                               taskReportFileWriter.delete(task.getId());
-                              appenderatorsManager.removeAppenderatorForTask(task.getId());
+                              appenderatorsManager.removeAppenderatorsForTask(task.getId(), task.getDataSource());
 
                               synchronized (tasks) {
                                 tasks.remove(task.getId());
