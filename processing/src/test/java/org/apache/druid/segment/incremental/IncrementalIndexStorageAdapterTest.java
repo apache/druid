@@ -77,6 +77,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -694,9 +695,21 @@ public class IncrementalIndexStorageAdapterTest
     }
 
     @Override
+    public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+    {
+      return true;
+    }
+
+    @Override
     public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
     {
       return true;
+    }
+
+    @Override
+    public Set<String> getRequiredColumns()
+    {
+      return Collections.emptySet();
     }
 
     private class DictionaryRaceTestFilterDruidPredicateFactory implements DruidPredicateFactory

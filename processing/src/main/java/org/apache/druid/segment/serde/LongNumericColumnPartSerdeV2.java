@@ -40,7 +40,7 @@ public class LongNumericColumnPartSerdeV2 implements ColumnPartSerde
   @JsonCreator
   public static LongNumericColumnPartSerdeV2 createDeserializer(
       @JsonProperty("byteOrder") ByteOrder byteOrder,
-      @Nullable @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory
+      @JsonProperty("bitmapSerdeFactory") @Nullable BitmapSerdeFactory bitmapSerdeFactory
   )
   {
     return new LongNumericColumnPartSerdeV2(

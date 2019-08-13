@@ -109,6 +109,12 @@ public class CompactionTask extends AbstractBatchIndexTask
   private static final Logger log = new Logger(CompactionTask.class);
   private static final String TYPE = "compact";
 
+  /**
+   * A flag to indicate this task is already stopped and its child indexTasks shouldn't be created.
+   * See {@link #currentRunningTaskSpec} for more details.
+   */
+  private static final Object SPECIAL_VALUE_STOPPED = new Object();
+
   private final Interval interval;
   private final List<DataSegment> segments;
   @Nullable
@@ -164,15 +170,15 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JsonProperty("id") final String id,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("dataSource") final String dataSource,
-      @Nullable @JsonProperty("interval") final Interval interval,
-      @Nullable @JsonProperty("segments") final List<DataSegment> segments,
-      @Nullable @JsonProperty("dimensions") final DimensionsSpec dimensions,
-      @Nullable @JsonProperty("dimensionsSpec") final DimensionsSpec dimensionsSpec,
-      @Nullable @JsonProperty("metricsSpec") final AggregatorFactory[] metricsSpec,
-      @Nullable @JsonProperty("segmentGranularity") final Granularity segmentGranularity,
-      @Nullable @JsonProperty("targetCompactionSizeBytes") final Long targetCompactionSizeBytes,
-      @Nullable @JsonProperty("tuningConfig") final IndexTuningConfig tuningConfig,
-      @Nullable @JsonProperty("context") final Map<String, Object> context,
+      @JsonProperty("interval") @Nullable final Interval interval,
+      @JsonProperty("segments") @Nullable final List<DataSegment> segments,
+      @JsonProperty("dimensions") @Nullable final DimensionsSpec dimensions,
+      @JsonProperty("dimensionsSpec") @Nullable final DimensionsSpec dimensionsSpec,
+      @JsonProperty("metricsSpec") @Nullable final AggregatorFactory[] metricsSpec,
+      @JsonProperty("segmentGranularity") @Nullable final Granularity segmentGranularity,
+      @JsonProperty("targetCompactionSizeBytes") @Nullable final Long targetCompactionSizeBytes,
+      @JsonProperty("tuningConfig") @Nullable final IndexTuningConfig tuningConfig,
+      @JsonProperty("context") @Nullable final Map<String, Object> context,
       @JacksonInject ObjectMapper jsonMapper,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,

@@ -867,6 +867,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                                              : null;
       // Probably we can publish atomicUpdateGroup along with segments.
       final SegmentsAndMetadata published = awaitPublish(driver.publishAll(inputSegments, publisher), pushTimeout);
+      appenderator.close();
 
       ingestionState = IngestionState.COMPLETED;
       if (published == null) {

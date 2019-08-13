@@ -489,6 +489,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
       final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
       pushedSegments.addAll(pushed.getSegments());
       LOG.info("Pushed segments[%s]", pushed.getSegments());
+      appenderator.close();
 
       return pushedSegments;
     }

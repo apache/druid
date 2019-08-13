@@ -44,7 +44,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   @JsonCreator
   public OrcHadoopInputRowParser(
       @JsonProperty("parseSpec") ParseSpec parseSpec,
-      @Nullable @JsonProperty("binaryAsString") Boolean binaryAsString
+      @JsonProperty("binaryAsString") @Nullable Boolean binaryAsString
   )
   {
     this.parseSpec = parseSpec;

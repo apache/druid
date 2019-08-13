@@ -81,13 +81,15 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public abstract class BaseFilterTest
 {
-  private static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
+  static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
       ImmutableList.of(
           new ExpressionVirtualColumn("expr", "1.0 + 0.1", ValueType.FLOAT, TestExprMacroTable.INSTANCE),
           new ExpressionVirtualColumn("exprDouble", "1.0 + 1.1", ValueType.DOUBLE, TestExprMacroTable.INSTANCE),
@@ -397,9 +399,21 @@ public abstract class BaseFilterTest
       }
 
       @Override
+      public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+      {
+        return false;
+      }
+
+      @Override
       public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
       {
         return false;
+      }
+
+      @Override
+      public Set<String> getRequiredColumns()
+      {
+        return Collections.emptySet();
       }
 
       @Override
@@ -459,6 +473,12 @@ public abstract class BaseFilterTest
       }
 
       @Override
+      public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+      {
+        return false;
+      }
+
+      @Override
       public VectorValueMatcher makeVectorMatcher(VectorColumnSelectorFactory factory)
       {
         return theFilter.makeVectorMatcher(factory);
@@ -468,6 +488,12 @@ public abstract class BaseFilterTest
       public boolean canVectorizeMatcher()
       {
         return theFilter.canVectorizeMatcher();
+      }
+
+      @Override
+      public Set<String> getRequiredColumns()
+      {
+        return null;
       }
 
       @Override
