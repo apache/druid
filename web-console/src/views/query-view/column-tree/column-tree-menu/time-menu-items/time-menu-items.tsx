@@ -206,6 +206,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
             filterByRow(additiveExpression, columnName, '>=', autoRun);
           }}
         />
+        <MenuDivider />
         <MenuItem
           text={`Current hour`}
           onClick={() => {
@@ -263,7 +264,6 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
             );
           }}
         />
-        <MenuDivider />
         <MenuItem
           text={`Current year`}
           onClick={() => {
