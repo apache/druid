@@ -125,7 +125,7 @@ public interface DimensionIndexer
    * @param reportParseExceptions
    * @return An array containing an encoded representation of the input row value.
    */
-  EncodedKeyComponentType processRowValsToUnsortedEncodedKeyComponent(Object dimValues, boolean reportParseExceptions);
+  EncodedKeyComponentType processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions);
 
   /**
    * Gives the estimated size in bytes for the given key

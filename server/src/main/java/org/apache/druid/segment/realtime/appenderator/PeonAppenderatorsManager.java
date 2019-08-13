@@ -167,4 +167,10 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
   {
     return true;
   }
+
+  @Override
+  public void shutdown()
+  {
+    // nothing to shut down
+  }
 }

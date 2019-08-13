@@ -61,6 +61,7 @@ import java.util.Map;
 import java.util.function.BinaryOperator;
 
 /**
+ *
  */
 public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery>
 {
@@ -333,7 +334,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
             List<Object> results = (List<Object>) input;
             final Map<String, Object> retVal = Maps.newLinkedHashMap();
 
-            Iterator<AggregatorFactory> aggsIter = aggs.iterator();
             Iterator<Object> resultIter = results.iterator();
 
             final Number timestampNumber = (Number) resultIter.next();
@@ -345,12 +345,11 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
             }
 
             CacheStrategy.fetchAggregatorsFromCache(
-                aggsIter,
+                aggs,
                 resultIter,
                 isResultLevelCache,
-                (aggName, aggValueObject) -> {
+                (aggName, aggPosition, aggValueObject) -> {
                   retVal.put(aggName, aggValueObject);
-                  return null;
                 }
             );
 

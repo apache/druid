@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Floats;
 
+import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -470,11 +472,6 @@ public class ApproximateHistogram
     }
   }
 
-  public ApproximateHistogram fold(ApproximateHistogram h)
-  {
-    return fold(h, null, null, null);
-  }
-
   public ApproximateHistogram fold(ApproximateHistogram h, float[] mergedPositions, long[] mergedBins, float[] deltas)
   {
     if (size == 0) {
@@ -496,7 +493,7 @@ public class ApproximateHistogram
    *
    * @return returns this histogram with h folded into it
    */
-  public ApproximateHistogram foldFast(ApproximateHistogram h, float[] mergedPositions, long[] mergedBins)
+  public ApproximateHistogram foldFast(ApproximateHistogram h, @Nullable float[] mergedPositions, @Nullable long[] mergedBins)
   {
     if (size == 0) {
       return copy(h);
@@ -612,7 +609,7 @@ public class ApproximateHistogram
     return this;
   }
 
-  protected ApproximateHistogram foldRule(ApproximateHistogram h, float[] mergedPositions, long[] mergedBins)
+  protected ApproximateHistogram foldRule(ApproximateHistogram h, @Nullable float[] mergedPositions, @Nullable long[] mergedBins)
   {
     // ruleCombine bins requires at least one bin
     if (h.binCount == 0) {
@@ -1079,8 +1076,8 @@ public class ApproximateHistogram
       float[] rightPositions,
       long[] rightBins,
       float[] mergedPositions,
-      long[] mergedBins,
-      float[] deltas
+      @Nullable long[] mergedBins,
+      @Nullable float[] deltas
   )
   {
     int i = 0;

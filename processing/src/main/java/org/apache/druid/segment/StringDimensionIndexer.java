@@ -87,7 +87,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       valueToId.defaultReturnValue(-1);
     }
 
-    public int getId(String value)
+    public int getId(@Nullable String value)
     {
       lock.readLock().lock();
       try {
@@ -245,7 +245,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public int[] processRowValsToUnsortedEncodedKeyComponent(Object dimValues, boolean reportParseExceptions)
+  public int[] processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
     final int[] encodedDimensionValues;
     final int oldDictSize = dimLookup.size();

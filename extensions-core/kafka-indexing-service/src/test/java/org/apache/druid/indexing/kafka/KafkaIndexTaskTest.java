@@ -2709,6 +2709,7 @@ public class KafkaIndexTaskTest
 
     toolboxFactory = new TaskToolboxFactory(
         taskConfig,
+        null, // taskExecutorNode
         taskActionClientFactory,
         emitter,
         dataSegmentPusher,

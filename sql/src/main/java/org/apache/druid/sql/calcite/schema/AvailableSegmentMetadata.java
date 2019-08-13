@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 
@@ -34,7 +35,7 @@ public class AvailableSegmentMetadata
   public static Builder builder(
       DataSegment segment,
       long isRealtime,
-      Set<String> segmentServers,
+      Set<DruidServerMetadata> segmentServers,
       RowSignature rowSignature,
       long numRows
   )
@@ -58,7 +59,7 @@ public class AvailableSegmentMetadata
   // to make it easy to count number of segments which are realtime
   private final long isRealtime;
   // set of servers that contain the segment
-  private final Set<String> segmentServers;
+  private final Set<DruidServerMetadata> segmentServers;
   private final long numRows;
   @Nullable
   private final RowSignature rowSignature;
@@ -82,7 +83,7 @@ public class AvailableSegmentMetadata
     return segment;
   }
 
-  public Set<String> getReplicas()
+  public Set<DruidServerMetadata> getReplicas()
   {
     return segmentServers;
   }
@@ -106,9 +107,9 @@ public class AvailableSegmentMetadata
   public static class Builder
   {
     private final DataSegment segment;
-    private final long isRealtime;
 
-    private Set<String> segmentServers;
+    private long isRealtime;
+    private Set<DruidServerMetadata> segmentServers;
     @Nullable
     private RowSignature rowSignature;
     private long numRows;
@@ -116,7 +117,7 @@ public class AvailableSegmentMetadata
     private Builder(
         DataSegment segment,
         long isRealtime,
-        Set<String> servers,
+        Set<DruidServerMetadata> servers,
         @Nullable RowSignature rowSignature,
         long numRows
     )
@@ -140,9 +141,15 @@ public class AvailableSegmentMetadata
       return this;
     }
 
-    public Builder withReplicas(Set<String> servers)
+    public Builder withReplicas(Set<DruidServerMetadata> servers)
     {
       this.segmentServers = servers;
+      return this;
+    }
+
+    public Builder withRealtime(long isRealtime)
+    {
+      this.isRealtime = isRealtime;
       return this;
     }
 
