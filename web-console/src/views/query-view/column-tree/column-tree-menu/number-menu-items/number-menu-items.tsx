@@ -78,7 +78,7 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
       <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by...`}>
         <MenuItem text={`"${columnName}"`} onClick={() => addToGroupBy(columnName, true)} />
         <MenuItem
-          text={`TRUNCATE("${columnName}" AS __${columnName}-truncated, 1)`}
+          text={`TRUNCATE("${columnName}" AS ${columnName}-truncated, 1)`}
           onClick={() =>
             addFunctionToGroupBy(
               'TRUNCATE',
@@ -92,7 +92,7 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
                 1,
               ],
               true,
-              aliasFactory(`__${columnName}-truncated`),
+              aliasFactory(`${columnName}-truncated`),
             )
           }
         />

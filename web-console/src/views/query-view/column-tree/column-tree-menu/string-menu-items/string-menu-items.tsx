@@ -86,14 +86,14 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
       <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by...`}>
         <MenuItem text={`"${columnName}"`} onClick={() => addToGroupBy(columnName, true)} />
         <MenuItem
-          text={`SUBSTRING("${columnName}", 1, 2) AS __${columnName}-substring`}
+          text={`SUBSTRING("${columnName}", 1, 2) AS ${columnName}-substring`}
           onClick={() =>
             addFunctionToGroupBy(
               'SUBSTRING',
               [' ', ' '],
               [stringFactory(columnName, `"`), 1, 2],
               false,
-              aliasFactory(`__${columnName}-substring`),
+              aliasFactory(`${columnName}-substring`),
             )
           }
         />

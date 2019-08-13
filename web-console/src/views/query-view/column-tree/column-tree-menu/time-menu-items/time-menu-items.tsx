@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { MenuItem } from '@blueprintjs/core';
+import { MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import {
   AdditiveExpression,
@@ -162,6 +162,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('DAY', '1')],
               spacing: [' ', ' '],
             });
+            clear();
             filterByRow(additiveExpression, columnName, '>=', true);
           }}
         />
@@ -261,6 +262,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
             );
           }}
         />
+        <MenuDivider />
         <MenuItem
           text={`Current year`}
           onClick={() => {
@@ -289,38 +291,38 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
     return (
       <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by...`}>
         <MenuItem
-          text={`TIME_FLOOR("${columnName}", 'PT1H') AS __${columnName}-time_floor`}
+          text={`TIME_FLOOR("${columnName}", 'PT1H') AS ${columnName}-time_floor`}
           onClick={() =>
             addFunctionToGroupBy(
               'TIME_FLOOR',
               ['', '', ' ', ' '],
               [stringFactory(columnName, `"`), stringFactory('PT1H', `'`)],
               true,
-              aliasFactory(`__${columnName}TimeFloor`),
+              aliasFactory(`${columnName}TimeFloor`),
             )
           }
         />
         <MenuItem
-          text={`TIME_FLOOR("${columnName}", 'P1D') AS __${columnName}-time_floor`}
+          text={`TIME_FLOOR("${columnName}", 'P1D') AS ${columnName}-time_floor`}
           onClick={() =>
             addFunctionToGroupBy(
               'TIME_FLOOR',
               ['', '', ' ', ' '],
               [stringFactory(columnName, `"`), stringFactory('P1D', `'`)],
               true,
-              aliasFactory(`__${columnName}TimeFloor`),
+              aliasFactory(`${columnName}TimeFloor`),
             )
           }
         />
         <MenuItem
-          text={`TIME_FLOOR("${columnName}", 'P7D') AS __${columnName}-time_floor`}
+          text={`TIME_FLOOR("${columnName}", 'P7D') AS ${columnName}-time_floor`}
           onClick={() =>
             addFunctionToGroupBy(
               'TIME_FLOOR',
               ['', '', ' ', ' '],
               [stringFactory(columnName, `"`), stringFactory('P7D', `'`)],
               true,
-              aliasFactory(`__${columnName}TimeFloor`),
+              aliasFactory(`${columnName}TimeFloor`),
             )
           }
         />
