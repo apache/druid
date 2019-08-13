@@ -40,6 +40,12 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * This is an abstract class inherited by various {@link AggregatorFactory} implementations that consume double input
+ * and produce double output on aggregation.
+ * It extends "NullableAggregatorFactory<ColumnValueSelector>" instead of "NullableAggregatorFactory<BaseDoubleColumnValueSelector>"
+ * to additionally support aggregation on single/multi value string column types.
+ */
 public abstract class SimpleDoubleAggregatorFactory extends NullableAggregatorFactory<ColumnValueSelector>
 {
   protected final String name;
