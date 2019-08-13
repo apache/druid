@@ -710,7 +710,7 @@
             <dependency>
                 <groupId>net.thisptr</groupId>
                 <artifactId>jackson-jq</artifactId>
-                <version>0.0.7</version>
+                <version>0.0.10</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
