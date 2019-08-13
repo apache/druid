@@ -60,6 +60,7 @@ export interface TimeMenuItemsProps {
   hasGroupBy?: boolean;
   columnName: string;
   clear: () => void;
+  autoRun: boolean;
 }
 
 export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
@@ -131,7 +132,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
   }
 
   renderFilterMenu(): JSX.Element {
-    const { columnName, filterByRow, clear } = this.props;
+    const { columnName, filterByRow, clear, autoRun } = this.props;
     const date = new Date();
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -150,7 +151,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               spacing: [' ', ' '],
             });
             clear();
-            filterByRow(additiveExpression, columnName, '>=', true);
+            filterByRow(additiveExpression, columnName, '>=', autoRun);
           }}
         />
         <MenuItem
@@ -163,7 +164,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               spacing: [' ', ' '],
             });
             clear();
-            filterByRow(additiveExpression, columnName, '>=', true);
+            filterByRow(additiveExpression, columnName, '>=', autoRun);
           }}
         />
         <MenuItem
@@ -176,7 +177,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               spacing: [' ', ' '],
             });
             clear();
-            filterByRow(additiveExpression, columnName, '>=', true);
+            filterByRow(additiveExpression, columnName, '>=', autoRun);
           }}
         />
         <MenuItem
@@ -189,7 +190,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               spacing: [' ', ' '],
             });
             clear();
-            filterByRow(additiveExpression, columnName, '>=', true);
+            filterByRow(additiveExpression, columnName, '>=', autoRun);
           }}
         />
         <MenuItem
@@ -202,7 +203,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               spacing: [' ', ' '],
             });
             clear();
-            filterByRow(additiveExpression, columnName, '>=', true);
+            filterByRow(additiveExpression, columnName, '>=', autoRun);
           }}
         />
         <MenuItem
@@ -220,7 +221,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               timestampFactory(`${next.year}-${next.month}-${next.day} ${next.hour}:00:00`),
               columnName,
               '<',
-              true,
+              autoRun,
             );
           }}
         />
@@ -233,13 +234,13 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               stringFactory(columnName, `"`),
               timestampFactory(`${year}-${month}-${day} 00:00:00`),
               '<=',
-              false,
+              autoRun,
             );
             filterByRow(
               timestampFactory(`${next.year}-${next.month}-${next.day} 00:00:00`),
               columnName,
               '<',
-              true,
+              autoRun,
             );
           }}
         />
@@ -258,7 +259,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               timestampFactory(`${next.year}-${next.month}-01 00:00:00`),
               columnName,
               '<',
-              true,
+              autoRun,
             );
           }}
         />
@@ -277,7 +278,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               timestampFactory(`${Number(year) + 1}-01-01 00:00:00`),
               columnName,
               '<',
-              true,
+              autoRun,
             );
           }}
         />
@@ -286,7 +287,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
   }
 
   renderGroupByMenu(): JSX.Element {
-    const { columnName, addFunctionToGroupBy } = this.props;
+    const { columnName, addFunctionToGroupBy, autoRun } = this.props;
 
     return (
       <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by...`}>
@@ -297,7 +298,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               'TIME_FLOOR',
               ['', '', ' ', ' '],
               [stringFactory(columnName, `"`), stringFactory('PT1H', `'`)],
-              true,
+              autoRun,
               aliasFactory(`${columnName}TimeFloor`),
             )
           }
@@ -309,7 +310,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               'TIME_FLOOR',
               ['', '', ' ', ' '],
               [stringFactory(columnName, `"`), stringFactory('P1D', `'`)],
-              true,
+              autoRun,
               aliasFactory(`${columnName}TimeFloor`),
             )
           }
@@ -321,7 +322,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               'TIME_FLOOR',
               ['', '', ' ', ' '],
               [stringFactory(columnName, `"`), stringFactory('P7D', `'`)],
-              true,
+              autoRun,
               aliasFactory(`${columnName}TimeFloor`),
             )
           }
@@ -331,19 +332,19 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
   }
 
   renderAggregateMenu(): JSX.Element {
-    const { columnName, addAggregateColumn } = this.props;
+    const { columnName, addAggregateColumn, autoRun } = this.props;
     return (
       <MenuItem icon={IconNames.FUNCTION} text={`Aggregate...`}>
         <MenuItem
           text={`MAX("${columnName}") AS "max_${columnName}"`}
           onClick={() =>
-            addAggregateColumn(columnName, 'MAX', true, aliasFactory(`max_${columnName}`))
+            addAggregateColumn(columnName, 'MAX', autoRun, aliasFactory(`max_${columnName}`))
           }
         />
         <MenuItem
           text={`MIN("${columnName}") AS "min_${columnName}"`}
           onClick={() =>
-            addAggregateColumn(columnName, 'MIN', true, aliasFactory(`min_${columnName}`))
+            addAggregateColumn(columnName, 'MIN', autoRun, aliasFactory(`min_${columnName}`))
           }
         />
       </MenuItem>

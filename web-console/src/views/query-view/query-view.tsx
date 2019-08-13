@@ -116,6 +116,8 @@ export interface QueryViewState {
   editContextDialogOpen: boolean;
   historyDialogOpen: boolean;
   queryHistory: QueryRecord[];
+
+  autoRun: boolean;
 }
 
 interface QueryResult {
@@ -182,6 +184,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       editContextDialogOpen: false,
       historyDialogOpen: false,
       queryHistory: [],
+
+      autoRun: true,
     };
     this.ast = props.initQuery ? parser(props.initQuery) : undefined;
     this.metadataQueryManager = new QueryManager({
@@ -332,6 +336,17 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         this.setState({ queryHistory });
       }
     }
+
+    const localStorageAutoRun = localStorageGet(LocalStorageKeys.AUTO_RUN);
+    let autoRun;
+    if (localStorageAutoRun) {
+      try {
+        autoRun = JSON.parse(localStorageAutoRun);
+      } catch {}
+      if (typeof autoRun === 'boolean') {
+        this.setState({ autoRun });
+      }
+    }
   }
 
   componentWillUnmount(): void {
@@ -423,6 +438,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       queryExtraInfo,
       error,
       columnMetadata,
+      autoRun,
     } = this.state;
     const runeMode = QueryView.isJsonLike(queryString);
 
@@ -446,6 +462,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           />
           <div className="control-bar">
             <RunButton
+              autoRun={autoRun}
+              setAutoRun={(autoRun: boolean) => this.setAutoRun(autoRun)}
               onEditContext={() => this.setState({ editContextDialogOpen: true })}
               runeMode={runeMode}
               queryContext={queryContext}
@@ -470,6 +488,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           loading={loading}
           result={result}
           error={error}
+          autoRun={autoRun}
         />
       </SplitterLayout>
     );
@@ -576,6 +595,11 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     this.setState({ queryContext });
   };
 
+  private setAutoRun = (autoRun: boolean) => {
+    this.setState({ autoRun });
+    localStorageSet(LocalStorageKeys.AUTO_RUN, String(autoRun));
+  };
+
   private handleRun = (wrapQuery: boolean, customQueryString?: string) => {
     const { queryString, queryContext, queryHistory } = this.state;
 
@@ -631,6 +655,11 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     return hasGroupBy;
   };
 
+  private getAutoRun = () => {
+    const { autoRun } = this.state;
+    return autoRun;
+  };
+
   render(): JSX.Element {
     const { columnMetadata, columnMetadataLoading, columnMetadataError, queryString } = this.state;
 
@@ -661,6 +690,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             addAggregateColumn={this.addAggregateColumn}
             addToGroupBy={this.addToGroupBy}
             hasGroupBy={this.getGroupBySetting}
+            autoRun={this.getAutoRun}
             columnMetadataLoading={columnMetadataLoading}
             columnMetadata={columnMetadata}
             onQueryStringChange={this.handleQueryStringChange}

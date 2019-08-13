@@ -27,6 +27,7 @@ describe('column tree', () => {
   it('matches snapshot', () => {
     const columnTree = (
       <ColumnTree
+        autoRun={() => true}
         hasGroupBy={() => false}
         clear={() => null}
         addFunctionToGroupBy={() => null}

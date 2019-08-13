@@ -25,6 +25,8 @@ describe('run button', () => {
   it('matches snapshot', () => {
     const runButton = (
       <RunButton
+        autoRun
+        setAutoRun={() => null}
         onHistory={() => null}
         onEditContext={() => null}
         runeMode={false}

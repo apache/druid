@@ -47,6 +47,7 @@ export interface NumberMenuItemsProps {
   ) => void;
   hasGroupBy?: boolean;
   columnName: string;
+  autoRun: boolean;
 }
 
 export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
@@ -72,13 +73,13 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
   }
 
   renderGroupByMenu(): JSX.Element {
-    const { columnName, addFunctionToGroupBy, addToGroupBy } = this.props;
+    const { columnName, addFunctionToGroupBy, addToGroupBy, autoRun } = this.props;
 
     return (
       <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by...`}>
-        <MenuItem text={`"${columnName}"`} onClick={() => addToGroupBy(columnName, true)} />
+        <MenuItem text={`"${columnName}"`} onClick={() => addToGroupBy(columnName, autoRun)} />
         <MenuItem
-          text={`TRUNCATE("${columnName}" AS ${columnName}-truncated, 1)`}
+          text={`TRUNCATE("${columnName}", 1) AS ${columnName}-truncated`}
           onClick={() =>
             addFunctionToGroupBy(
               'TRUNCATE',
@@ -91,7 +92,7 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
                 }),
                 1,
               ],
-              true,
+              autoRun,
               aliasFactory(`${columnName}-truncated`),
             )
           }
@@ -101,25 +102,25 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
   }
 
   renderAggregateMenu(): JSX.Element {
-    const { columnName, addAggregateColumn } = this.props;
+    const { columnName, addAggregateColumn, autoRun } = this.props;
     return (
       <MenuItem icon={IconNames.FUNCTION} text={`Aggregate...`}>
         <MenuItem
           text={`SUM(${columnName}) AS "sum_${columnName}"`}
           onClick={() =>
-            addAggregateColumn(columnName, 'SUM', true, aliasFactory(`sum_${columnName}`))
+            addAggregateColumn(columnName, 'SUM', autoRun, aliasFactory(`sum_${columnName}`))
           }
         />
         <MenuItem
           text={`MAX(${columnName}) AS "max_${columnName}"`}
           onClick={() =>
-            addAggregateColumn(columnName, 'MAX', true, aliasFactory(`max_${columnName}`))
+            addAggregateColumn(columnName, 'MAX', autoRun, aliasFactory(`max_${columnName}`))
           }
         />
         <MenuItem
           text={`MIN(${columnName}) AS "min_${columnName}"`}
           onClick={() =>
-            addAggregateColumn(columnName, 'MIN', true, aliasFactory(`min_${columnName}`))
+            addAggregateColumn(columnName, 'MIN', autoRun, aliasFactory(`min_${columnName}`))
           }
         />
       </MenuItem>

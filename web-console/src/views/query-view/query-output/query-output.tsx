@@ -42,6 +42,7 @@ export interface QueryOutputProps {
   result?: HeaderRows;
   error?: string;
   runeMode: boolean;
+  autoRun: boolean;
 }
 
 export class QueryOutput extends React.PureComponent<QueryOutputProps> {
@@ -131,7 +132,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
         </Menu>
       );
     } else {
-      const { sorted } = this.props;
+      const { sorted, autoRun } = this.props;
       const basicActions: BasicAction[] = [];
       if (sorted) {
         sorted.map(sorted => {
@@ -139,7 +140,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
             basicActions.push({
               icon: sorted.desc ? IconNames.SORT_ASC : IconNames.SORT_DESC,
               title: `Order by: ${h} ${sorted.desc ? 'ASC' : 'DESC'}`,
-              onAction: () => sqlOrderBy(h, sorted.desc ? 'ASC' : 'DESC', true),
+              onAction: () => sqlOrderBy(h, sorted.desc ? 'ASC' : 'DESC', autoRun),
             });
           }
         });
@@ -149,19 +150,19 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
           {
             icon: IconNames.SORT_ASC,
             title: `Order by: ${h} ASC`,
-            onAction: () => sqlOrderBy(h, 'ASC', true),
+            onAction: () => sqlOrderBy(h, 'ASC', autoRun),
           },
           {
             icon: IconNames.SORT_DESC,
             title: `Order by: ${h} DESC`,
-            onAction: () => sqlOrderBy(h, 'DESC', true),
+            onAction: () => sqlOrderBy(h, 'DESC', autoRun),
           },
         );
       }
       basicActions.push({
         icon: IconNames.CROSS,
         title: `Remove: ${h}`,
-        onAction: () => sqlExcludeColumn(h, true),
+        onAction: () => sqlExcludeColumn(h, autoRun),
       });
       actionsMenu = basicActionsToMenu(basicActions);
     }
@@ -169,7 +170,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
   }
 
   getRowActions(row: string, header: string) {
-    const { disabled, sqlFilterRow, runeMode } = this.props;
+    const { disabled, sqlFilterRow, runeMode, autoRun } = this.props;
     let actionsMenu;
     if (disabled) {
       actionsMenu = (
@@ -214,12 +215,12 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
         {
           icon: IconNames.FILTER_KEEP,
           title: `Filter by: ${header} = ${row}`,
-          onAction: () => sqlFilterRow(row, header, '=', true),
+          onAction: () => sqlFilterRow(row, header, '=', autoRun),
         },
         {
           icon: IconNames.FILTER_REMOVE,
           title: `Filter by: ${header} != ${row}`,
-          onAction: () => sqlFilterRow(row, header, '!=', true),
+          onAction: () => sqlFilterRow(row, header, '!=', autoRun),
         },
       ]);
     }

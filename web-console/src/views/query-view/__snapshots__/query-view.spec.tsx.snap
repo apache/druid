@@ -8,6 +8,7 @@ exports[`sql view matches snapshot 1`] = `
     addAggregateColumn={[Function]}
     addFunctionToGroupBy={[Function]}
     addToGroupBy={[Function]}
+    autoRun={[Function]}
     clear={[Function]}
     columnMetadataLoading={true}
     filterByRow={[Function]}
@@ -38,6 +39,7 @@ exports[`sql view matches snapshot 1`] = `
         className="control-bar"
       >
         <HotkeysTarget(RunButton)
+          autoRun={true}
           onEditContext={[Function]}
           onExplain={[Function]}
           onHistory={[Function]}
@@ -45,10 +47,12 @@ exports[`sql view matches snapshot 1`] = `
           onRun={[Function]}
           queryContext={Object {}}
           runeMode={false}
+          setAutoRun={[Function]}
         />
       </div>
     </div>
     <QueryOutput
+      autoRun={true}
       disabled={true}
       loading={false}
       runeMode={false}

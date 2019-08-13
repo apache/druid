@@ -25,6 +25,7 @@ describe('time menu', () => {
   it('matches snapshot', () => {
     const timeMenu = (
       <TimeMenuItems
+        autoRun
         clear={() => null}
         addFunctionToGroupBy={() => null}
         addToGroupBy={() => null}

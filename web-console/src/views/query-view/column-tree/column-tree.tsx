@@ -132,6 +132,7 @@ export interface ColumnTreeProps {
   ) => void;
   hasGroupBy: () => boolean;
   clear: () => void;
+  autoRun: () => boolean;
 }
 
 export interface ColumnTreeState {
@@ -145,7 +146,6 @@ export interface ColumnTreeState {
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
     const { columnMetadata, defaultSchema, defaultTable } = props;
-    console.log(props.hasGroupBy);
     if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
       const columnTree = groupBy(
         columnMetadata,
@@ -234,6 +234,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 filterByRow={props.filterByRow}
                                 columnName={columnData.COLUMN_NAME}
                                 hasGroupBy={props.hasGroupBy()}
+                                autoRun={props.autoRun()}
                               />
                             )}
                             {columnData.DATA_TYPE === 'VARCHAR' && (
@@ -244,6 +245,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 filterByRow={props.filterByRow}
                                 columnName={columnData.COLUMN_NAME}
                                 hasGroupBy={props.hasGroupBy()}
+                                autoRun={props.autoRun()}
                               />
                             )}
                             {columnData.DATA_TYPE === 'TIMESTAMP' && (
@@ -255,6 +257,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 filterByRow={props.filterByRow}
                                 columnName={columnData.COLUMN_NAME}
                                 hasGroupBy={props.hasGroupBy()}
+                                autoRun={props.autoRun()}
                               />
                             )}
                             <MenuItem
