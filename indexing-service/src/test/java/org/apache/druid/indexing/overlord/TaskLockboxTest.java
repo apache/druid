@@ -34,6 +34,7 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -1230,6 +1231,11 @@ public class TaskLockboxTest
     public boolean isReady(TaskActionClient taskActionClient)
     {
       return true;
+    }
+
+    @Override
+    public void stopGracefully(TaskConfig taskConfig)
+    {
     }
 
     @Override

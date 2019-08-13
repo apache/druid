@@ -182,6 +182,12 @@
             <name>${repoOrgName}</name>
             <url>${repoOrgUrl}</url>
         </repository>
+
+        <!-- Only used by core, but moved to root for parallel build dependency resolution -->
+        <repository>
+          <id>sigar</id>
+          <url>https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/</url>
+        </repository>
     </repositories>
 
     <dependencyManagement>
@@ -359,7 +365,7 @@
             <dependency>
                 <groupId>org.mozilla</groupId>
                 <artifactId>rhino</artifactId>
-                <version>1.7R5</version>
+                <version>1.7.11</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -634,7 +640,7 @@
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
-                <version>4.4.4</version>
+                <version>4.4.11</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.hadoop</groupId>

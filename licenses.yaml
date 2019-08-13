@@ -676,7 +676,7 @@ name: Apache HttpCore
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.4.4
+version: 4.4.11
 libraries:
   - org.apache.httpcomponents: httpcore
 
@@ -2068,7 +2068,7 @@ name: Rhino
 license_category: binary
 module: java-core
 license_name: Mozilla Public License Version 2.0
-version: 1.7R5
+version: 1.7.11
 copyright: Mozilla and individual contributors.
 license_file_path: licenses/bin/rhino.MPL2
 libraries:

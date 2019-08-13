@@ -23,8 +23,10 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.java.util.common.Cacheable;
+import org.apache.druid.query.extraction.ExtractionFn;
 
-import java.util.HashSet;
+import javax.annotation.Nullable;
+import java.util.Set;
 
 /**
  */
@@ -81,5 +83,70 @@ public interface DimFilter extends Cacheable
   /**
    * @return a HashSet that represents all columns' name which the DimFilter required to do filter.
    */
-  HashSet<String> getRequiredColumns();
+  Set<String> getRequiredColumns();
+
+  /**
+   * Wrapper for {@link StringBuilder} to re-use common patterns in custom {@link DimFilter#toString()} implementations
+   */
+  class DimFilterToStringBuilder
+  {
+    private final StringBuilder builder;
+
+    public DimFilterToStringBuilder()
+    {
+      this.builder = new StringBuilder();
+    }
+
+    /**
+     * Append dimension name OR {@link ExtractionFn#toString()} with dimension wrapped in parenthesis
+     */
+    DimFilterToStringBuilder appendDimension(String dimension, @Nullable ExtractionFn extractionFn)
+    {
+      if (extractionFn != null) {
+        builder.append(extractionFn).append("(");
+      }
+
+      builder.append(dimension);
+
+      if (extractionFn != null) {
+        builder.append(")");
+      }
+      return this;
+    }
+
+    /**
+     * Add "=" expression
+     */
+    DimFilterToStringBuilder appendEquals(String value)
+    {
+      builder.append(" = ").append(value);
+      return this;
+    }
+
+    /**
+     * Add filter tuning to {@link #builder} if tuning exists
+     */
+    DimFilterToStringBuilder appendFilterTuning(@Nullable FilterTuning tuning)
+    {
+      if (tuning != null) {
+        builder.append(" (filterTuning=").append(tuning).append(")");
+      }
+
+      return this;
+    }
+
+    /**
+     * Generic passthrough to {@link StringBuilder#append}
+     */
+    <T> DimFilterToStringBuilder append(T s)
+    {
+      builder.append(s);
+      return this;
+    }
+
+    public String build()
+    {
+      return builder.toString();
+    }
+  }
 }

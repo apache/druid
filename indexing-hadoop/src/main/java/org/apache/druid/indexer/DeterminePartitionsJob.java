@@ -694,8 +694,9 @@ public class DeterminePartitionsJob implements Jobby
             // One more shard to go
             final ShardSpec shardSpec;
 
-            if (currentDimPartition.rows < config.getTargetPartitionSize() * SHARD_COMBINE_THRESHOLD) {
-              // Combine with previous shard
+            if (currentDimPartition.rows < config.getTargetPartitionSize() * SHARD_COMBINE_THRESHOLD &&
+                !currentDimPartitions.partitions.isEmpty()) {
+              // Combine with previous shard if it exists and the current shard is small enough
               final DimPartition previousDimPartition = currentDimPartitions.partitions.remove(
                   currentDimPartitions.partitions.size() - 1
               );
