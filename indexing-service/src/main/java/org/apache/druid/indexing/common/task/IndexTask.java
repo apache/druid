@@ -1431,18 +1431,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       );
     }
 
-    /**
-     * Return the max number of rows per segment. This returns null if it's not specified in tuningConfig.
-     * Deprecated in favor of {@link #getGivenOrDefaultPartitionsSpec()}.
-     */
-    @Nullable
-    @Override
-    @Deprecated
-    public Integer getMaxRowsPerSegment()
-    {
-      return partitionsSpec == null ? null : partitionsSpec.getMaxRowsPerSegment();
-    }
-
     @JsonProperty
     @Override
     public int getMaxRowsInMemory()
@@ -1455,37 +1443,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public long getMaxBytesInMemory()
     {
       return maxBytesInMemory;
-    }
-
-    /**
-     * Return the max number of total rows in appenderator. This returns null if it's not specified in tuningConfig.
-     * Deprecated in favor of {@link #getGivenOrDefaultPartitionsSpec()}.
-     */
-    @Override
-    @Nullable
-    @Deprecated
-    public Long getMaxTotalRows()
-    {
-      return partitionsSpec instanceof DynamicPartitionsSpec
-             ? ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows()
-             : null;
-    }
-
-    @Deprecated
-    @Nullable
-    public Integer getNumShards()
-    {
-      return partitionsSpec instanceof HashedPartitionsSpec
-             ? ((HashedPartitionsSpec) partitionsSpec).getNumShards()
-             : null;
-    }
-
-    @Deprecated
-    public List<String> getPartitionDimensions()
-    {
-      return partitionsSpec instanceof HashedPartitionsSpec
-             ? ((HashedPartitionsSpec) partitionsSpec).getPartitionDimensions()
-             : Collections.emptyList();
     }
 
     @JsonProperty
@@ -1517,12 +1474,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public IndexSpec getIndexSpecForIntermediatePersists()
     {
       return indexSpecForIntermediatePersists;
-    }
-
-    @Override
-    public File getBasePersistDirectory()
-    {
-      return basePersistDirectory;
     }
 
     @JsonProperty
@@ -1561,6 +1512,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return pushTimeout;
     }
 
+    @Nullable
+    @Override
+    @JsonProperty
+    public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()
+    {
+      return segmentWriteOutMediumFactory;
+    }
+
     @JsonProperty
     public boolean isLogParseExceptions()
     {
@@ -1579,18 +1538,59 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return maxSavedParseExceptions;
     }
 
+    /**
+     * Return the max number of rows per segment. This returns null if it's not specified in tuningConfig.
+     * Deprecated in favor of {@link #getGivenOrDefaultPartitionsSpec()}.
+     */
+    @Nullable
+    @Override
+    @Deprecated
+    public Integer getMaxRowsPerSegment()
+    {
+      return partitionsSpec == null ? null : partitionsSpec.getMaxRowsPerSegment();
+    }
+
+    /**
+     * Return the max number of total rows in appenderator. This returns null if it's not specified in tuningConfig.
+     * Deprecated in favor of {@link #getGivenOrDefaultPartitionsSpec()}.
+     */
+    @Override
+    @Nullable
+    @Deprecated
+    public Long getMaxTotalRows()
+    {
+      return partitionsSpec instanceof DynamicPartitionsSpec
+             ? ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows()
+             : null;
+    }
+
+    @Deprecated
+    @Nullable
+    public Integer getNumShards()
+    {
+      return partitionsSpec instanceof HashedPartitionsSpec
+             ? ((HashedPartitionsSpec) partitionsSpec).getNumShards()
+             : null;
+    }
+
+    @Deprecated
+    public List<String> getPartitionDimensions()
+    {
+      return partitionsSpec instanceof HashedPartitionsSpec
+             ? ((HashedPartitionsSpec) partitionsSpec).getPartitionDimensions()
+             : Collections.emptyList();
+    }
+
+    @Override
+    public File getBasePersistDirectory()
+    {
+      return basePersistDirectory;
+    }
+
     @Override
     public Period getIntermediatePersistPeriod()
     {
       return new Period(Integer.MAX_VALUE); // intermediate persist doesn't make much sense for batch jobs
-    }
-
-    @Nullable
-    @Override
-    @JsonProperty
-    public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()
-    {
-      return segmentWriteOutMediumFactory;
     }
 
     @Override
