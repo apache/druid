@@ -46,7 +46,7 @@ public class IndexingWorkerInfo
       @JsonProperty("availabilityGroups") Set<String> availabilityGroups,
       @JsonProperty("runningTasks") Collection<String> runningTasks,
       @JsonProperty("lastCompletedTaskTime") DateTime lastCompletedTaskTime,
-      @Nullable @JsonProperty("blacklistedUntil") DateTime blacklistedUntil
+      @JsonProperty("blacklistedUntil") @Nullable DateTime blacklistedUntil
   )
   {
     this.worker = worker;

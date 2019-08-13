@@ -32,6 +32,7 @@ import org.apache.druid.timeline.partition.ImmutablePartitionHolder;
 import org.apache.druid.timeline.partition.IntegerPartitionChunk;
 import org.apache.druid.timeline.partition.NumberedOverwritingPartitionChunk;
 import org.apache.druid.timeline.partition.NumberedPartitionChunk;
+import org.apache.druid.timeline.partition.OvershadowableInteger;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.apache.druid.timeline.partition.PartitionIds;
@@ -48,7 +49,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -2144,117 +2144,5 @@ public class VersionedIntervalTimelineTest
   private VersionedIntervalTimeline<String, OvershadowableInteger> makeStringIntegerTimeline()
   {
     return new VersionedIntervalTimeline<>(Ordering.natural());
-  }
-
-  private static class OvershadowableInteger implements Overshadowable<OvershadowableInteger>
-  {
-    private final String majorVersion;
-    private final int partitionNum;
-    private final int val;
-    private final int startRootPartitionId;
-    private final int endRootPartitionId;
-    private final short minorVersion;
-    private final short atomicUpdateGroupSize;
-
-    private OvershadowableInteger(String majorVersion, int partitionNum, int val)
-    {
-      this(majorVersion, partitionNum, val, partitionNum, partitionNum + 1, 0, 1);
-    }
-
-    private OvershadowableInteger(
-        String majorVersion,
-        int partitionNum,
-        int val,
-        int startRootPartitionId,
-        int endRootPartitionId,
-        int minorVersion,
-        int atomicUpdateGroupSize
-    )
-    {
-      this.majorVersion = majorVersion;
-      this.partitionNum = partitionNum;
-      this.val = val;
-      this.startRootPartitionId = startRootPartitionId;
-      this.endRootPartitionId = endRootPartitionId;
-      this.minorVersion = (short) minorVersion;
-      this.atomicUpdateGroupSize = (short) atomicUpdateGroupSize;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      OvershadowableInteger that = (OvershadowableInteger) o;
-      return partitionNum == that.partitionNum &&
-             val == that.val &&
-             startRootPartitionId == that.startRootPartitionId &&
-             endRootPartitionId == that.endRootPartitionId &&
-             minorVersion == that.minorVersion &&
-             atomicUpdateGroupSize == that.atomicUpdateGroupSize &&
-             Objects.equals(majorVersion, that.majorVersion);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(
-          majorVersion,
-          partitionNum,
-          val,
-          startRootPartitionId,
-          endRootPartitionId,
-          minorVersion,
-          atomicUpdateGroupSize
-      );
-    }
-
-    @Override
-    public String toString()
-    {
-      return "OvershadowableInteger{" +
-             "majorVersion='" + majorVersion + '\'' +
-             ", partitionNum=" + partitionNum +
-             ", val=" + val +
-             ", startRootPartitionId=" + startRootPartitionId +
-             ", endRootPartitionId=" + endRootPartitionId +
-             ", minorVersion=" + minorVersion +
-             ", atomicUpdateGroupSize=" + atomicUpdateGroupSize +
-             '}';
-    }
-
-    @Override
-    public int getStartRootPartitionId()
-    {
-      return startRootPartitionId;
-    }
-
-    @Override
-    public int getEndRootPartitionId()
-    {
-      return endRootPartitionId;
-    }
-
-    @Override
-    public String getVersion()
-    {
-      return majorVersion;
-    }
-
-    @Override
-    public short getMinorVersion()
-    {
-      return minorVersion;
-    }
-
-    @Override
-    public short getAtomicUpdateGroupSize()
-    {
-      return atomicUpdateGroupSize;
-    }
   }
 }

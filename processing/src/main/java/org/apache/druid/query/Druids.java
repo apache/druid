@@ -204,7 +204,7 @@ public class Druids
 
     public TimeseriesQueryBuilder filters(String dimensionName, String value, String... values)
     {
-      dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null);
+      dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null, null);
       return this;
     }
 
@@ -361,7 +361,7 @@ public class Druids
 
     public SearchQueryBuilder filters(String dimensionName, String value)
     {
-      dimFilter = new SelectorDimFilter(dimensionName, value, null);
+      dimFilter = new SelectorDimFilter(dimensionName, value, null, null);
       return this;
     }
 
@@ -966,7 +966,7 @@ public class Druids
           .virtualColumns(query.getVirtualColumns())
           .resultFormat(query.getResultFormat())
           .batchSize(query.getBatchSize())
-          .limit(query.getLimit())
+          .limit(query.getScanRowsLimit())
           .filters(query.getFilter())
           .columns(query.getColumns())
           .legacy(query.isLegacy())

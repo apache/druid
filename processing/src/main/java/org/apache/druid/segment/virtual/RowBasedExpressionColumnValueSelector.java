@@ -53,7 +53,7 @@ public class RowBasedExpressionColumnValueSelector extends ExpressionColumnValue
   {
     super(expression, bindings);
     this.unknownColumns = unknownColumnsSet.stream()
-                                           .filter(x -> !baseExprBindingDetails.getArrayColumns().contains(x))
+                                           .filter(x -> !baseExprBindingDetails.getArrayBindings().contains(x))
                                            .collect(Collectors.toList());
     this.baseExprBindingDetails = baseExprBindingDetails;
     this.ignoredColumns = new HashSet<>();
@@ -79,7 +79,7 @@ public class RowBasedExpressionColumnValueSelector extends ExpressionColumnValue
       if (transformedCache.containsKey(key)) {
         return transformedCache.get(key).eval(bindings);
       }
-      Expr transformed = Parser.applyUnappliedIdentifiers(expression, baseExprBindingDetails, arrayBindings);
+      Expr transformed = Parser.applyUnappliedBindings(expression, baseExprBindingDetails, arrayBindings);
       transformedCache.put(key, transformed);
       return transformed.eval(bindings);
     }

@@ -67,6 +67,7 @@ import java.util.concurrent.ExecutorService;
 public class TaskToolbox
 {
   private final TaskConfig config;
+  private final DruidNode taskExecutorNode;
   private final TaskActionClient taskActionClient;
   private final ServiceEmitter emitter;
   private final DataSegmentPusher segmentPusher;
@@ -101,6 +102,7 @@ public class TaskToolbox
 
   public TaskToolbox(
       TaskConfig config,
+      DruidNode taskExecutorNode,
       TaskActionClient taskActionClient,
       ServiceEmitter emitter,
       DataSegmentPusher segmentPusher,
@@ -129,6 +131,7 @@ public class TaskToolbox
   )
   {
     this.config = config;
+    this.taskExecutorNode = taskExecutorNode;
     this.taskActionClient = taskActionClient;
     this.emitter = emitter;
     this.segmentPusher = segmentPusher;
@@ -160,6 +163,11 @@ public class TaskToolbox
   public TaskConfig getConfig()
   {
     return config;
+  }
+
+  public DruidNode getTaskExecutorNode()
+  {
+    return taskExecutorNode;
   }
 
   public TaskActionClient getTaskActionClient()

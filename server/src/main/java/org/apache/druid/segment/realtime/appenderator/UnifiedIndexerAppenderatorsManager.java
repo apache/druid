@@ -110,9 +110,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     this.cacheConfig = cacheConfig;
     this.cachePopulatorStats = cachePopulatorStats;
 
-    int concurrentMerges = Math.max(1, workerConfig.getCapacity() / 2);
     this.mergeExecutor = MoreExecutors.listeningDecorator(
-        Execs.multiThreaded(concurrentMerges, "unified-indexer-merge-pool-%d")
+        Execs.multiThreaded(workerConfig.getNumConcurrentMerges(), "unified-indexer-merge-pool-%d")
     );
   }
 

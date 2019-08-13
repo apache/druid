@@ -32,6 +32,7 @@ import org.apache.druid.segment.filter.Filters;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -99,7 +100,7 @@ public class AndDimFilter implements DimFilter
   }
 
   @Override
-  public HashSet<String> getRequiredColumns()
+  public Set<String> getRequiredColumns()
   {
     HashSet<String> requiredColumns = new HashSet<>();
     fields.forEach(field -> requiredColumns.addAll(field.getRequiredColumns()));
