@@ -238,7 +238,7 @@ public class DataSourceCompactionConfig
     public UserCompactTuningConfig(
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
         @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
-        @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
+        @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
         @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
         @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
         @JsonProperty("pushTimeout") @Nullable Long pushTimeout
