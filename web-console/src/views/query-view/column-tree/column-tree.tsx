@@ -129,7 +129,7 @@ export interface ColumnTreeProps {
     operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE',
     run: boolean,
   ) => void;
-  hasGroupBy?: boolean;
+  hasGroupBy?: () => boolean;
   clear: () => void;
 }
 
@@ -232,7 +232,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 addAggregateColumn={props.addAggregateColumn}
                                 filterByRow={props.filterByRow}
                                 columnName={columnData.COLUMN_NAME}
-                                hasGroupBy={props.hasGroupBy}
+                                hasGroupBy={props.hasGroupBy()}
                               />
                             )}
                             {columnData.DATA_TYPE === 'VARCHAR' && (
@@ -242,7 +242,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 addAggregateColumn={props.addAggregateColumn}
                                 filterByRow={props.filterByRow}
                                 columnName={columnData.COLUMN_NAME}
-                                hasGroupBy={props.hasGroupBy}
+                                hasGroupBy={props.hasGroupBy()}
                               />
                             )}
                             {columnData.DATA_TYPE === 'TIMESTAMP' && (
@@ -253,7 +253,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 addAggregateColumn={props.addAggregateColumn}
                                 filterByRow={props.filterByRow}
                                 columnName={columnData.COLUMN_NAME}
-                                hasGroupBy={props.hasGroupBy}
+                                hasGroupBy={props.hasGroupBy()}
                               />
                             )}
                             <MenuItem
