@@ -471,7 +471,7 @@ GROUP BY 1`;
         {!noSqlMode && (
           <MenuItem
             icon={IconNames.APPLICATION}
-            text="See in SQL view"
+            text="View SQL query for table"
             onClick={() => goToQuery(DatasourcesView.DATASOURCE_SQL)}
           />
         )}

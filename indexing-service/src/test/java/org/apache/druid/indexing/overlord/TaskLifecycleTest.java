@@ -948,6 +948,11 @@ public class TaskLifecycleTest
       }
 
       @Override
+      public void stopGracefully(TaskConfig taskConfig)
+      {
+      }
+
+      @Override
       public TaskStatus run(TaskToolbox toolbox) throws Exception
       {
         final Interval interval = Intervals.of("2012-01-01/P1D");
@@ -991,6 +996,11 @@ public class TaskLifecycleTest
       }
 
       @Override
+      public void stopGracefully(TaskConfig taskConfig)
+      {
+      }
+
+      @Override
       public TaskStatus run(TaskToolbox toolbox) throws Exception
       {
         final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
@@ -1022,6 +1032,11 @@ public class TaskLifecycleTest
       public String getType()
       {
         return "test";
+      }
+
+      @Override
+      public void stopGracefully(TaskConfig taskConfig)
+      {
       }
 
       @Override

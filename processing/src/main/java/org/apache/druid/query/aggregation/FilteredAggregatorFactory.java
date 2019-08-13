@@ -63,7 +63,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   public FilteredAggregatorFactory(
       @JsonProperty("aggregator") AggregatorFactory delegate,
       @JsonProperty("filter") DimFilter dimFilter,
-      @Nullable @JsonProperty("name") String name
+      @JsonProperty("name") @Nullable String name
   )
   {
     Preconditions.checkNotNull(delegate, "aggregator");
@@ -243,7 +243,8 @@ public class FilteredAggregatorFactory extends AggregatorFactory
           new IntervalDimFilter(
               intervalDimFilter.getDimension(),
               effectiveFilterIntervals,
-              intervalDimFilter.getExtractionFn()
+              intervalDimFilter.getExtractionFn(),
+              intervalDimFilter.getFilterTuning()
           ),
           this.name
       );

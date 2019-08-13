@@ -100,7 +100,8 @@ public class BloomFilterOperatorConversion extends DirectOperatorConversion
       return new BloomDimFilter(
           druidExpression.getSimpleExtraction().getColumn(),
           holder,
-          druidExpression.getSimpleExtraction().getExtractionFn()
+          druidExpression.getSimpleExtraction().getExtractionFn(),
+          null
       );
     } else if (virtualColumnRegistry != null) {
       VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
@@ -114,6 +115,7 @@ public class BloomFilterOperatorConversion extends DirectOperatorConversion
       return new BloomDimFilter(
           virtualColumn.getOutputName(),
           holder,
+          null,
           null
       );
     } else {
