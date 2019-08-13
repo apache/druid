@@ -42,6 +42,7 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
@@ -233,7 +234,12 @@ public class TaskLifecycleTest
   private TaskConfig taskConfig;
   private DataSegmentPusher dataSegmentPusher;
   private AppenderatorsManager appenderatorsManager;
-
+  private DruidNode druidNode = new DruidNode("dummy", "dummy", false, 10000, null, true, false);
+  private TaskLocation taskLocation = TaskLocation.create(
+      druidNode.getHost(),
+      druidNode.getPlaintextPort(),
+      druidNode.getTlsPort()
+  );
   private int pushedSegments;
   private int announcedSinks;
   private SegmentHandoffNotifierFactory handoffNotifierFactory;
@@ -644,7 +650,7 @@ public class TaskLifecycleTest
         tb,
         taskConfig,
         emitter,
-        new DruidNode("dummy", "dummy", false, 10000, null, true, false),
+        druidNode,
         new ServerConfig()
     );
   }
@@ -731,6 +737,7 @@ public class TaskLifecycleTest
     final List<DataSegment> loggedSegments = byIntervalOrdering.sortedCopy(tsqa.getInsertedSegments(indexTask.getId()));
 
     Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
+    Assert.assertEquals(taskLocation, status.getLocation());
     Assert.assertEquals("merged statusCode", TaskState.SUCCESS, mergedStatus.getStatusCode());
     Assert.assertEquals("segments logged vs published", loggedSegments, publishedSegments);
     Assert.assertEquals("num segments published", 2, mdc.getPublished().size());
@@ -808,6 +815,7 @@ public class TaskLifecycleTest
     final TaskStatus status = runTask(indexTask);
 
     Assert.assertEquals("statusCode", TaskState.FAILED, status.getStatusCode());
+    Assert.assertEquals(taskLocation, status.getLocation());
     Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
     Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
   }
@@ -875,6 +883,7 @@ public class TaskLifecycleTest
     final Task killTask = new KillTask(null, "test_kill_task", Intervals.of("2011-04-01/P4D"), null);
 
     final TaskStatus status = runTask(killTask);
+    Assert.assertEquals(taskLocation, status.getLocation());
     Assert.assertEquals("merged statusCode", TaskState.SUCCESS, status.getStatusCode());
     Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
     Assert.assertEquals("num segments nuked", 3, mdc.getNuked().size());
@@ -897,6 +906,7 @@ public class TaskLifecycleTest
     final TaskStatus status = runTask(rtishTask);
 
     Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
+    Assert.assertEquals(taskLocation, status.getLocation());
     Assert.assertEquals("num segments published", 2, mdc.getPublished().size());
     Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
   }
@@ -911,6 +921,7 @@ public class TaskLifecycleTest
     final TaskStatus status = runTask(noopTask);
 
     Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
+    Assert.assertEquals(taskLocation, status.getLocation());
     Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
     Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
   }
@@ -925,6 +936,7 @@ public class TaskLifecycleTest
     final TaskStatus status = runTask(neverReadyTask);
 
     Assert.assertEquals("statusCode", TaskState.FAILED, status.getStatusCode());
+    Assert.assertEquals(taskLocation, status.getLocation());
     Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
     Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
   }
@@ -973,7 +985,7 @@ public class TaskLifecycleTest
     };
 
     final TaskStatus status = runTask(task);
-
+    Assert.assertEquals(taskLocation, status.getLocation());
     Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
     Assert.assertEquals("segments published", 1, mdc.getPublished().size());
     Assert.assertEquals("segments nuked", 0, mdc.getNuked().size());
@@ -1009,6 +1021,7 @@ public class TaskLifecycleTest
     final TaskStatus status = runTask(task);
 
     Assert.assertEquals("statusCode", TaskState.FAILED, status.getStatusCode());
+    Assert.assertEquals(taskLocation, status.getLocation());
     Assert.assertEquals("segments published", 0, mdc.getPublished().size());
     Assert.assertEquals("segments nuked", 0, mdc.getNuked().size());
   }
@@ -1043,6 +1056,7 @@ public class TaskLifecycleTest
     final TaskStatus status = runTask(task);
 
     Assert.assertEquals("statusCode", TaskState.FAILED, status.getStatusCode());
+    Assert.assertEquals(taskLocation, status.getLocation());
     Assert.assertEquals("segments published", 0, mdc.getPublished().size());
     Assert.assertEquals("segments nuked", 0, mdc.getNuked().size());
   }
@@ -1076,7 +1090,9 @@ public class TaskLifecycleTest
       Thread.sleep(10);
     }
 
-    Assert.assertTrue("Task should be in Success state", tsqa.getStatus(taskId).get().isSuccess());
+    TaskStatus status = tsqa.getStatus(taskId).get();
+    Assert.assertTrue("Task should be in Success state", status.isSuccess());
+    Assert.assertEquals(taskLocation, status.getLocation());
 
     Assert.assertEquals(1, announcedSinks);
     Assert.assertEquals(1, pushedSegments);
@@ -1146,7 +1162,9 @@ public class TaskLifecycleTest
       Thread.sleep(10);
     }
 
-    Assert.assertTrue("Task should be in Failure state", tsqa.getStatus(taskId).get().isFailure());
+    TaskStatus status = tsqa.getStatus(taskId).get();
+    Assert.assertTrue("Task should be in Failure state", status.isFailure());
+    Assert.assertEquals(taskLocation, status.getLocation());
 
     EasyMock.verify(monitorScheduler, queryRunnerFactoryConglomerate);
   }
@@ -1220,6 +1238,7 @@ public class TaskLifecycleTest
     final List<DataSegment> loggedSegments = byIntervalOrdering.sortedCopy(tsqa.getInsertedSegments(indexTask.getId()));
 
     Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
+    Assert.assertEquals(taskLocation, status.getLocation());
     Assert.assertEquals("segments logged vs published", loggedSegments, publishedSegments);
     Assert.assertEquals("num segments published", 2, mdc.getPublished().size());
     Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
