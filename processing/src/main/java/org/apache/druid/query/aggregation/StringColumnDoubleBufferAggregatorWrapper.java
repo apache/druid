@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation;
 
+import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableValueDoubleColumnValueSelector;
@@ -58,11 +59,11 @@ public class StringColumnDoubleBufferAggregatorWrapper extends DelegatingBufferA
       delegate.aggregate(buf, position);
     } else if (update instanceof List) {
       for (Object o : (List) update) {
-        doubleSelector.setValue(StringColumnDoubleAggregatorWrapper.tryParseDouble(o, nullValue));
+        doubleSelector.setValue(Numbers.tryParseDouble(o, nullValue));
         delegate.aggregate(buf, position);
       }
     } else {
-      doubleSelector.setValue(StringColumnDoubleAggregatorWrapper.tryParseDouble(update, nullValue));
+      doubleSelector.setValue(Numbers.tryParseDouble(update, nullValue));
       delegate.aggregate(buf, position);
     }
   }

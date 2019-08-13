@@ -75,7 +75,8 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableAggregatorFa
   protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
     if (shouldUseStringColumnAggregatorWrapper(metricFactory)) {
-      return new StringColumnDoubleAggregatorWrapper(selector, SimpleDoubleAggregatorFactory.this::buildAggregator, nullValue());
+      return new StringColumnDoubleAggregatorWrapper(
+          selector, SimpleDoubleAggregatorFactory.this::buildAggregator, nullValue());
     } else {
       return buildAggregator(selector);
     }
@@ -88,7 +89,8 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableAggregatorFa
   )
   {
     if (shouldUseStringColumnAggregatorWrapper(metricFactory)) {
-      return new StringColumnDoubleBufferAggregatorWrapper(selector, SimpleDoubleAggregatorFactory.this::buildBufferAggregator, nullValue());
+      return new StringColumnDoubleBufferAggregatorWrapper(
+          selector, SimpleDoubleAggregatorFactory.this::buildBufferAggregator, nullValue());
     } else {
       return buildBufferAggregator(selector);
     }

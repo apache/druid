@@ -21,7 +21,12 @@ package org.apache.druid.segment.selector.settable;
 
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
+import org.apache.druid.segment.ColumnValueSelector;
 
+/**
+ * A BaseDoubleColumnValueSelector impl to return settable double value on calls to
+ * {@link ColumnValueSelector#getDouble()}
+ */
 public class SettableValueDoubleColumnValueSelector implements BaseDoubleColumnValueSelector
 {
   private double value;

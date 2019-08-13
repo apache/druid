@@ -19,8 +19,7 @@
 
 package org.apache.druid.query.aggregation;
 
-import com.google.common.primitives.Doubles;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableValueDoubleColumnValueSelector;
@@ -59,26 +58,12 @@ public class StringColumnDoubleAggregatorWrapper extends DelegatingAggregator
       delegate.aggregate();
     } else if (update instanceof List) {
       for (Object o : (List) update) {
-        doubleSelector.setValue(tryParseDouble(o, nullValue));
+        doubleSelector.setValue(Numbers.tryParseDouble(o, nullValue));
         delegate.aggregate();
       }
     } else {
-      doubleSelector.setValue(tryParseDouble(update, nullValue));
+      doubleSelector.setValue(Numbers.tryParseDouble(update, nullValue));
       delegate.aggregate();
-    }
-  }
-
-  public static double tryParseDouble(Object val, double nullValue)
-  {
-    if (val == null) {
-      return nullValue;
-    } else if (val instanceof Number) {
-      return ((Number) val).doubleValue();
-    } else if (val instanceof String) {
-      Double d = Doubles.tryParse((String) val);
-      return d == null ? nullValue : d.doubleValue();
-    } else {
-      throw new IAE("Unknown object type [%s]", val.getClass().getName());
     }
   }
 }
