@@ -90,8 +90,8 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
           onClick={() =>
             addFunctionToGroupBy(
               'SUBSTRING',
-              ['', '', ' ', ' '],
-              [stringFactory(columnName, `"`), 0, 2],
+              [' ', ' '],
+              [stringFactory(columnName, `"`), 1, 2],
               false,
               aliasFactory(`__${columnName}-substring`),
             )
