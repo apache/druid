@@ -753,7 +753,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     name: 'firehose.type',
     label: 'Firehose type',
     type: 'string',
-    suggestions: ['local', 'http', 'static-s3', 'static-google-blobstore'],
+    suggestions: ['local', 'http', 'inline', 'static-s3', 'static-google-blobstore'],
     info: (
       <p>
         Druid connects to raw data through{' '}
@@ -895,12 +895,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     case 'index:inline':
       return [
         firehoseType,
-        {
-          name: 'firehose.data',
-          label: 'Data',
-          type: 'string',
-          info: <p>The data to ingest.</p>,
-        },
+        // do not add 'data' here as it has special handling in the load-data view
       ];
 
     case 'index:static-s3':

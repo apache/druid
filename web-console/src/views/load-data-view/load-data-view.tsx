@@ -855,9 +855,22 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const specType = getSpecType(spec);
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
     const isBlank = !ioConfig.type;
+    const inlineMode = deepGet(spec, 'ioConfig.firehose.type') === 'inline';
 
     let mainFill: JSX.Element | string = '';
-    if (inputQueryState.isInit()) {
+    if (inlineMode) {
+      mainFill = (
+        <TextArea
+          className="inline-data"
+          placeholder="Paste your data here"
+          value={deepGet(spec, 'ioConfig.firehose.data')}
+          onChange={(e: any) => {
+            const stringValue = e.target.value.substr(0, 65536);
+            this.updateSpec(deepSet(spec, 'ioConfig.firehose.data', stringValue));
+          }}
+        />
+      );
+    } else if (inputQueryState.isInit()) {
       mainFill = (
         <CenterMessage>
           Please fill out the fields on the right sidebar to get started{' '}
@@ -899,11 +912,20 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </ExternalLink>{' '}
               format that is optimized for analytic queries.
             </p>
-            <p>
-              To get started, please specify where your raw data is stored and what data you want to
-              ingest.
-            </p>
-            <p>Click "Preview" to look at the sampled raw data.</p>
+            {inlineMode ? (
+              <>
+                <p>To get started, please paste some data in the box to the left.</p>
+                <p>Click "Register" to verify your data with Druid.</p>
+              </>
+            ) : (
+              <>
+                <p>
+                  To get started, please specify where your raw data is stored and what data you
+                  want to ingest.
+                </p>
+                <p>Click "Preview" to look at the sampled raw data.</p>
+              </>
+            )}
           </Callout>
           {ingestionComboType ? (
             <AutoForm
@@ -938,7 +960,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </HTMLSelect>
             </FormGroup>
           )}
-          <Button text="Preview" disabled={isBlank} onClick={() => this.queryForConnect()} />
+          <Button
+            text={inlineMode ? 'Register' : 'Preview'}
+            disabled={isBlank}
+            onClick={() => this.queryForConnect()}
+          />
         </div>
         {this.renderNextBar({
           disabled: !inputQueryState.data,
