@@ -19,12 +19,12 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { NumberMenu } from './number-menu';
+import { StringMenuItems } from './string-menu-items';
 
-describe('number menu', () => {
+describe('string menu', () => {
   it('matches snapshot', () => {
-    const numberMenu = (
-      <NumberMenu
+    const stringMenu = (
+      <StringMenuItems
         addFunctionToGroupBy={() => null}
         addToGroupBy={() => null}
         addAggregateColumn={() => null}
@@ -34,7 +34,7 @@ describe('number menu', () => {
       />
     );
 
-    const { container } = render(numberMenu);
+    const { container } = render(stringMenu);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

@@ -41,9 +41,9 @@ import { Deferred } from '../../../components/deferred/deferred';
 import { copyAndAlert, escapeSqlIdentifier, groupBy } from '../../../utils';
 import { ColumnMetadata } from '../../../utils/column-metadata';
 
-import { NumberMenu } from './column-tree-menu/number-menu/number-menu';
-import { StringMenu } from './column-tree-menu/string-menu/string-menu';
-import { TimeMenu } from './column-tree-menu/time-menu/time-menu';
+import { NumberMenuItems } from './column-tree-menu/number-menu-items/number-menu-items';
+import { StringMenuItems } from './column-tree-menu/string-menu-items/string-menu-items';
+import { TimeMenuItems } from './column-tree-menu/time-menu-items/time-menu-items';
 
 import './column-tree.scss';
 
@@ -227,7 +227,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                               }}
                             />
                             {columnData.DATA_TYPE === 'BIGINT' && (
-                              <NumberMenu
+                              <NumberMenuItems
                                 addFunctionToGroupBy={props.addFunctionToGroupBy}
                                 addToGroupBy={props.addToGroupBy}
                                 addAggregateColumn={props.addAggregateColumn}
@@ -237,7 +237,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                               />
                             )}
                             {columnData.DATA_TYPE === 'VARCHAR' && (
-                              <StringMenu
+                              <StringMenuItems
                                 addFunctionToGroupBy={props.addFunctionToGroupBy}
                                 addToGroupBy={props.addToGroupBy}
                                 addAggregateColumn={props.addAggregateColumn}
@@ -247,7 +247,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                               />
                             )}
                             {columnData.DATA_TYPE === 'TIMESTAMP' && (
-                              <TimeMenu
+                              <TimeMenuItems
                                 clear={props.clear}
                                 addFunctionToGroupBy={props.addFunctionToGroupBy}
                                 addToGroupBy={props.addToGroupBy}

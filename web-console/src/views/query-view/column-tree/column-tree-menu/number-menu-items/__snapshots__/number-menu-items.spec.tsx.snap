@@ -1,17 +1,17 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`time menu matches snapshot 1`] = `
-<div
-  class="bp3-popover-wrapper bp3-fill"
+exports[`number menu matches snapshot 1`] = `
+<li
+  class="bp3-submenu"
 >
-  <div
-    class="bp3-popover-target"
+  <span
+    class="bp3-popover-wrapper"
   >
-    <li
-      class=""
+    <span
+      class="bp3-popover-target"
     >
       <a
-        class="bp3-menu-item bp3-popover-dismiss"
+        class="bp3-menu-item"
         tabindex="0"
       >
         <span
@@ -38,8 +38,27 @@ exports[`time menu matches snapshot 1`] = `
         >
           Filter by...
         </div>
+        <span
+          class="bp3-icon bp3-icon-caret-right"
+          icon="caret-right"
+        >
+          <svg
+            data-icon="caret-right"
+            height="16"
+            viewBox="0 0 16 16"
+            width="16"
+          >
+            <desc>
+              caret-right
+            </desc>
+            <path
+              d="M11 8c0-.15-.07-.28-.17-.37l-4-3.5A.495.495 0 006 4.5v7a.495.495 0 00.83.37l4-3.5c.1-.09.17-.22.17-.37z"
+              fill-rule="evenodd"
+            />
+          </svg>
+        </span>
       </a>
-    </li>
-  </div>
-</div>
+    </span>
+  </span>
+</li>
 `;

@@ -11,6 +11,7 @@ exports[`sql view matches snapshot 1`] = `
     clear={[Function]}
     columnMetadataLoading={true}
     filterByRow={[Function]}
+    hasGroupBy={[Function]}
     onQueryStringChange={[Function]}
   />
   <t

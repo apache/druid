@@ -19,13 +19,12 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { TimeMenu } from './time-menu';
+import { NumberMenuItems } from './number-menu-items';
 
-describe('time menu', () => {
+describe('number menu', () => {
   it('matches snapshot', () => {
-    const timeMenu = (
-      <TimeMenu
-        clear={() => null}
+    const numberMenu = (
+      <NumberMenuItems
         addFunctionToGroupBy={() => null}
         addToGroupBy={() => null}
         addAggregateColumn={() => null}
@@ -35,7 +34,7 @@ describe('time menu', () => {
       />
     );
 
-    const { container } = render(timeMenu);
+    const { container } = render(numberMenu);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

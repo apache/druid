@@ -19,12 +19,13 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { StringMenu } from './string-menu';
+import { TimeMenuItems } from './time-menu-items';
 
-describe('string menu', () => {
+describe('time menu', () => {
   it('matches snapshot', () => {
-    const stringMenu = (
-      <StringMenu
+    const timeMenu = (
+      <TimeMenuItems
+        clear={() => null}
         addFunctionToGroupBy={() => null}
         addToGroupBy={() => null}
         addAggregateColumn={() => null}
@@ -34,7 +35,7 @@ describe('string menu', () => {
       />
     );
 
-    const { container } = render(stringMenu);
+    const { container } = render(timeMenu);
     expect(container.firstChild).toMatchSnapshot();
   });
 });
