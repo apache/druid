@@ -143,6 +143,7 @@ export interface ColumnTreeState {
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
     const { columnMetadata, defaultSchema, defaultTable } = props;
+    console.log(props.hasGroupBy);
     if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
       const columnTree = groupBy(
         columnMetadata,

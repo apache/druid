@@ -101,7 +101,7 @@ export class StringMenu extends React.PureComponent<StringMenuProps> {
           <Menu>
             <MenuItem text={`"${columnName}"`} onClick={() => addToGroupBy(columnName, true)} />
             <MenuItem
-              text={`SUBSTRING("${columnName}", 0, 2)`}
+              text={`SUBSTRING("${columnName}", 1, 2)`}
               onClick={() =>
                 addFunctionToGroupBy(
                   'SUBSTRING',

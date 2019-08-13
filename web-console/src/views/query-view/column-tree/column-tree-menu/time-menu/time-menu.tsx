@@ -24,7 +24,7 @@ import {
   FilterClause,
   StringType,
   Timestamp,
-  timeStampFactory,
+  timestampFactory,
 } from 'druid-query-toolkit';
 import {
   aliasFactory,
@@ -164,7 +164,7 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
                 const additiveExpression = new AdditiveExpression({
                   parens: [],
                   op: ['-'],
-                  ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('day', '1')],
+                  ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('DAY', '1')],
                   spacing: [' ', ' '],
                 });
                 filterByRow(additiveExpression, columnName, '>=', true);
@@ -176,7 +176,7 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
                 const additiveExpression = new AdditiveExpression({
                   parens: [],
                   op: ['-'],
-                  ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('day', '7')],
+                  ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('DAY', '7')],
                   spacing: [' ', ' '],
                 });
                 clear();
@@ -189,7 +189,7 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
                 const additiveExpression = new AdditiveExpression({
                   parens: [],
                   op: ['-'],
-                  ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('month', '1')],
+                  ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('MONTH', '1')],
                   spacing: [' ', ' '],
                 });
                 clear();
@@ -202,7 +202,7 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
                 const additiveExpression = new AdditiveExpression({
                   parens: [],
                   op: ['-'],
-                  ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('year', '1')],
+                  ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('YEAR', '1')],
                   spacing: [' ', ' '],
                 });
                 clear();
@@ -216,12 +216,12 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
                 clear();
                 filterByRow(
                   stringFactory(columnName, `"`),
-                  timeStampFactory(`${year}-${month}-${day} ${this.formatTime(hour)}:00:00`),
+                  timestampFactory(`${year}-${month}-${day} ${this.formatTime(hour)}:00:00`),
                   '<=',
                   false,
                 );
                 filterByRow(
-                  timeStampFactory(`${next.year}-${next.month}-${next.day} ${next.hour}:00:00`),
+                  timestampFactory(`${next.year}-${next.month}-${next.day} ${next.hour}:00:00`),
                   columnName,
                   '<',
                   true,
@@ -235,12 +235,12 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
                 clear();
                 filterByRow(
                   stringFactory(columnName, `"`),
-                  timeStampFactory(`${year}-${month}-${day} 00:00:00`),
+                  timestampFactory(`${year}-${month}-${day} 00:00:00`),
                   '<=',
                   false,
                 );
                 filterByRow(
-                  timeStampFactory(`${next.year}-${next.month}-${next.day} 00:00:00`),
+                  timestampFactory(`${next.year}-${next.month}-${next.day} 00:00:00`),
                   columnName,
                   '<',
                   true,
@@ -254,12 +254,12 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
                 clear();
                 filterByRow(
                   stringFactory(columnName, `"`),
-                  timeStampFactory(`${year}-${month}-01 00:00:00`),
+                  timestampFactory(`${year}-${month}-01 00:00:00`),
                   '<=',
                   false,
                 );
                 filterByRow(
-                  timeStampFactory(`${next.year}-${next.month}-01 00:00:00`),
+                  timestampFactory(`${next.year}-${next.month}-01 00:00:00`),
                   columnName,
                   '<',
                   true,
@@ -272,12 +272,12 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
                 clear();
                 filterByRow(
                   stringFactory(columnName, `"`),
-                  timeStampFactory(`${year}-01-01 00:00:00`),
+                  timestampFactory(`${year}-01-01 00:00:00`),
                   '<=',
                   false,
                 );
                 filterByRow(
-                  timeStampFactory(`${Number(year) + 1}-01-01 00:00:00`),
+                  timestampFactory(`${Number(year) + 1}-01-01 00:00:00`),
                   columnName,
                   '<',
                   true,
