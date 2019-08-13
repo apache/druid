@@ -47,15 +47,15 @@ public class Plumbers
       final Plumber plumber,
       final boolean reportParseExceptions,
       final FireDepartmentMetrics metrics
-  )
+  ) throws IOException
   {
     final InputRow inputRow;
     try {
       inputRow = firehose.nextRow();
     }
-    catch (ParseException | IOException e) {
-      if (e instanceof ParseException && reportParseExceptions) {
-        throw (ParseException) e;
+    catch (ParseException e) {
+      if (reportParseExceptions) {
+        throw e;
       } else {
         log.debug(e, "Discarded row due to exception, considering unparseable.");
         metrics.incrementUnparseable();
