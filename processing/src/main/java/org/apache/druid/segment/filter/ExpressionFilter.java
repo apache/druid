@@ -30,6 +30,7 @@ import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelector;
@@ -44,11 +45,13 @@ public class ExpressionFilter implements Filter
 {
   private final Supplier<Expr> expr;
   private final Supplier<Set<String>> requiredBindings;
+  private final FilterTuning filterTuning;
 
-  public ExpressionFilter(final Supplier<Expr> expr)
+  public ExpressionFilter(final Supplier<Expr> expr, final FilterTuning filterTuning)
   {
     this.expr = expr;
     this.requiredBindings = Suppliers.memoize(() -> expr.get().analyzeInputs().getRequiredBindings());
+    this.filterTuning = filterTuning;
   }
 
   @Override
@@ -109,6 +112,12 @@ public class ExpressionFilter implements Filter
   }
 
   @Override
+  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+  {
+    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
+  }
+
+  @Override
   public <T> T getBitmapResult(final BitmapIndexSelector selector, final BitmapResultFactory<T> bitmapResultFactory)
   {
     if (requiredBindings.get().isEmpty()) {
@@ -150,5 +159,11 @@ public class ExpressionFilter implements Filter
   {
     // Selectivity estimation not supported.
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return requiredBindings.get();
   }
 }

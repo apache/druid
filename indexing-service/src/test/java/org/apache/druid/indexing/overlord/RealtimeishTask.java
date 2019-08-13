@@ -30,6 +30,7 @@ import org.apache.druid.indexing.common.actions.LockReleaseAction;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.Intervals;
@@ -58,6 +59,11 @@ public class RealtimeishTask extends AbstractTask
   public boolean isReady(TaskActionClient taskActionClient)
   {
     return true;
+  }
+
+  @Override
+  public void stopGracefully(TaskConfig taskConfig)
+  {
   }
 
   @Override

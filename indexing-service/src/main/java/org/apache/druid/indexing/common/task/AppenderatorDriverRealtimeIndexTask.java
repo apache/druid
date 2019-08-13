@@ -437,7 +437,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       }
 
       CloseQuietly.close(firehose);
-      CloseQuietly.close(appenderator);
+      appenderator.close();
       CloseQuietly.close(driver);
 
       toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);

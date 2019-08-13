@@ -44,7 +44,7 @@ env:
 # Add various options to make 'mvn install' fast and skip javascript compile (-Ddruid.console.skip=true) since it is not
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
 # output.  To compensate, use travis_wait to extend the timeout.
-install: MAVEN_OPTS='-Xmx3000m' travis_wait 15 $MVN clean install -q -ff ${MAVEN_SKIP} -DskipTests -T1.0C
+install: MAVEN_OPTS='-Xmx3000m' travis_wait 15 $MVN clean install -q -ff ${MAVEN_SKIP} -DskipTests -T1C
 
 matrix:
   include:
@@ -72,10 +72,20 @@ matrix:
 
     - name: "license checks"
       install: skip
-      script: >
-        $MVN apache-rat:check -Prat --fail-at-end
-        -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
-        -Drat.consoleOutput=true
+      before_script: &setup_generate_license
+        - sudo apt-get update && sudo apt-get install python3 python3-pip python3-setuptools -y
+        - pip3 install wheel  # install wheel first explicitly
+        - pip3 install pyyaml
+      script:
+        - >
+          $MVN apache-rat:check -Prat --fail-at-end
+          -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+          -Drat.consoleOutput=true
+        # Generate dependency reports and checks they are valid. When running on Travis CI, 2 cores are available
+        # (https://docs.travis-ci.com/user/reference/overview/#virtualisation-environment-vs-operating-system).
+        - mkdir -p target
+        - docs/_bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
+        - docs/_bin/generate-license.py licenses/APACHE2 licenses.yaml LICENSES.BINARY --dependency-reports target/license-reports
 
     - name: "strict compilation"
       install: skip
@@ -85,11 +95,11 @@ matrix:
         -pl '!benchmarks' ${MAVEN_SKIP} -DskipTests
 
     - name: "packaging check"
-      before_script:
-        - sudo apt-get update && sudo apt-get install python3 python3-pip python3-setuptools -y
-        - pip3 install wheel  # install wheel first explicitly
-        - pip3 install pyyaml
-      script: ./build.sh
+      install: skip
+      before_script: *setup_generate_license
+      script: >
+        MAVEN_OPTS='-Xmx3000m' $MVN clean install -Pdist -Pbundle-contrib-exts --fail-at-end
+        -pl '!benchmarks' ${MAVEN_SKIP} -DskipTests -Ddruid.console.skip=false -T1C
 
     - name: "processing module test"
       env: &processing_env
