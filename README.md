@@ -58,8 +58,7 @@ is hosted at Google Groups.
 Development discussions occur on [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org), which
 you can subscribe to by emailing [dev-subscribe@druid.apache.org](mailto:dev-subscribe@druid.apache.org).
 
-We also have a couple people hanging out on IRC in `#druid-dev` on
-`irc.freenode.net`.
+Some committers and users are present in the channel `#druid` on the Apache Slack team. Please use our [invitation link to join](https://druid.apache.org/community/join-slack), and once you join, add the `#druid` channel.
 
 ### Building From Source
 

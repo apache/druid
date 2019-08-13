@@ -32,17 +32,22 @@ exports[`sql view matches snapshot 1`] = `
         className="control-bar"
       >
         <HotkeysTarget(RunButton)
+          onEditContext={[Function]}
           onExplain={[Function]}
           onQueryContextChange={[Function]}
           onRun={[Function]}
           queryContext={Object {}}
-          renderEditContextDialog={[Function]}
           runeMode={false}
         />
       </div>
     </div>
     <QueryOutput
+      disabled={true}
       loading={false}
+      runeMode={false}
+      sqlExcludeColumn={[Function]}
+      sqlFilterRow={[Function]}
+      sqlOrderBy={[Function]}
     />
   </t>
 </div>

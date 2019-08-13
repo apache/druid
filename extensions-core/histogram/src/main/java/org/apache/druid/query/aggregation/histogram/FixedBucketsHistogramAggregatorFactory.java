@@ -59,11 +59,11 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
   public FixedBucketsHistogramAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
-      @Nullable @JsonProperty("numBuckets") Integer numBuckets,
+      @JsonProperty("numBuckets") @Nullable Integer numBuckets,
       @JsonProperty("lowerLimit") double lowerLimit,
       @JsonProperty("upperLimit") double upperLimit,
       @JsonProperty("outlierHandlingMode") FixedBucketsHistogram.OutlierHandlingMode outlierHandlingMode,
-      @Nullable @JsonProperty("finalizeAsBase64Binary") Boolean finalizeAsBase64Binary
+      @JsonProperty("finalizeAsBase64Binary") @Nullable Boolean finalizeAsBase64Binary
   )
   {
     this.name = name;

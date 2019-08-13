@@ -28,6 +28,7 @@ import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -136,6 +137,11 @@ public class NoopTask extends AbstractTask
       default:
         throw new AssertionError("#notreached");
     }
+  }
+
+  @Override
+  public void stopGracefully(TaskConfig taskConfig)
+  {
   }
 
   @Override

@@ -676,7 +676,7 @@ name: Apache HttpCore
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.4.4
+version: 4.4.11
 libraries:
   - org.apache.httpcomponents: httpcore
 
@@ -2068,7 +2068,7 @@ name: Rhino
 license_category: binary
 module: java-core
 license_name: Mozilla Public License Version 2.0
-version: 1.7R5
+version: 1.7.11
 copyright: Mozilla and individual contributors.
 license_file_path: licenses/bin/rhino.MPL2
 libraries:
@@ -2378,6 +2378,16 @@ license_file_path: licenses/bin/classnames.MIT
 
 ---
 
+name: "commander"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: TJ Holowaychuk
+version: 2.20.0
+license_file_path: licenses/bin/commander.MIT
+
+---
+
 name: "copy-to-clipboard"
 license_category: binary
 module: web-console
@@ -2433,8 +2443,328 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
+version: 1.2.4
+license_file_path: licenses/bin/d3-array.BSD3
+
+---
+
+name: "d3-array"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
 version: 2.2.0
 license_file_path: licenses/bin/d3-array.BSD3
+
+---
+
+name: "d3-axis"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.12
+license_file_path: licenses/bin/d3-axis.BSD3
+
+---
+
+name: "d3-brush"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.6
+license_file_path: licenses/bin/d3-brush.BSD3
+
+---
+
+name: "d3-chord"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.6
+license_file_path: licenses/bin/d3-chord.BSD3
+
+---
+
+name: "d3-collection"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.7
+license_file_path: licenses/bin/d3-collection.BSD3
+
+---
+
+name: "d3-color"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.2.8
+license_file_path: licenses/bin/d3-color.BSD3
+
+---
+
+name: "d3-contour"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.3.2
+license_file_path: licenses/bin/d3-contour.BSD3
+
+---
+
+name: "d3-dispatch"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.5
+license_file_path: licenses/bin/d3-dispatch.BSD3
+
+---
+
+name: "d3-drag"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.2.3
+license_file_path: licenses/bin/d3-drag.BSD3
+
+---
+
+name: "d3-dsv"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.1.1
+license_file_path: licenses/bin/d3-dsv.BSD3
+
+---
+
+name: "d3-ease"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.5
+license_file_path: licenses/bin/d3-ease.BSD3
+
+---
+
+name: "d3-fetch"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.1.2
+license_file_path: licenses/bin/d3-fetch.BSD3
+
+---
+
+name: "d3-force"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.2.1
+license_file_path: licenses/bin/d3-force.BSD3
+
+---
+
+name: "d3-format"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.3.2
+license_file_path: licenses/bin/d3-format.BSD3
+
+---
+
+name: "d3-geo"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.11.6
+license_file_path: licenses/bin/d3-geo.BSD3
+
+---
+
+name: "d3-hierarchy"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.1.8
+license_file_path: licenses/bin/d3-hierarchy.BSD3
+
+---
+
+name: "d3-interpolate"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.3.2
+license_file_path: licenses/bin/d3-interpolate.BSD3
+
+---
+
+name: "d3-path"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.7
+license_file_path: licenses/bin/d3-path.BSD3
+
+---
+
+name: "d3-polygon"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.5
+license_file_path: licenses/bin/d3-polygon.BSD3
+
+---
+
+name: "d3-quadtree"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.6
+license_file_path: licenses/bin/d3-quadtree.BSD3
+
+---
+
+name: "d3-random"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.1.2
+license_file_path: licenses/bin/d3-random.BSD3
+
+---
+
+name: "d3-scale-chromatic"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.3.3
+license_file_path: licenses/bin/d3-scale-chromatic.BSD3
+
+---
+
+name: "d3-scale"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 2.2.2
+license_file_path: licenses/bin/d3-scale.BSD3
+
+---
+
+name: "d3-selection"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.4.0
+license_file_path: licenses/bin/d3-selection.BSD3
+
+---
+
+name: "d3-shape"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.3.5
+license_file_path: licenses/bin/d3-shape.BSD3
+
+---
+
+name: "d3-time-format"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 2.1.3
+license_file_path: licenses/bin/d3-time-format.BSD3
+
+---
+
+name: "d3-time"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.11
+license_file_path: licenses/bin/d3-time.BSD3
+
+---
+
+name: "d3-timer"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.9
+license_file_path: licenses/bin/d3-timer.BSD3
+
+---
+
+name: "d3-transition"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.2.0
+license_file_path: licenses/bin/d3-transition.BSD3
+
+---
+
+name: "d3-voronoi"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.1.4
+license_file_path: licenses/bin/d3-voronoi.BSD3
+
+---
+
+name: "d3-zoom"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.7.3
+license_file_path: licenses/bin/d3-zoom.BSD3
+
+---
+
+name: "d3"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 5.9.7
+license_file_path: licenses/bin/d3.BSD3
 
 ---
 
@@ -2483,6 +2813,15 @@ module: web-console
 license_name: Apache License version 2.0
 copyright: Tarek Rached
 version: 0.0.2
+
+---
+
+name: "druid-query-toolkit"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Imply Data
+version: 0.3.8
 
 ---
 
@@ -2933,6 +3272,16 @@ license_name: MIT License
 copyright: Michael Jackson
 version: 2.2.0
 license_file_path: licenses/bin/resolve-pathname.MIT
+
+---
+
+name: "rw"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.3.3
+license_file_path: licenses/bin/rw.BSD3
 
 ---
 

@@ -42,7 +42,7 @@ public class DoubleNumericColumnPartSerdeV2 implements ColumnPartSerde
   @JsonCreator
   public static DoubleNumericColumnPartSerdeV2 getDoubleGenericColumnPartSerde(
       @JsonProperty("byteOrder") ByteOrder byteOrder,
-      @Nullable @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory
+      @JsonProperty("bitmapSerdeFactory") @Nullable BitmapSerdeFactory bitmapSerdeFactory
   )
   {
     return new DoubleNumericColumnPartSerdeV2(

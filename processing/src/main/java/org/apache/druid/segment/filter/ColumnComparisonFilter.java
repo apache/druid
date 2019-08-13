@@ -37,6 +37,8 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -142,9 +144,21 @@ public class ColumnComparisonFilter implements Filter
   }
 
   @Override
+  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+  {
+    return false;
+  }
+
+  @Override
   public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
   {
     return false;
+  }
+
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return dimensions.stream().map(DimensionSpec::getDimension).collect(Collectors.toSet());
   }
 
   @Override

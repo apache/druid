@@ -45,7 +45,7 @@ class AtomicUpdateGroup<T extends Overshadowable<T>> implements Overshadowable<A
   // This may matter if there are a lot of segments to keep in memory as in brokers or the coordinator.
   private final List<PartitionChunk<T>> chunks = new ArrayList<>();
 
-  public AtomicUpdateGroup(PartitionChunk<T> chunk)
+  AtomicUpdateGroup(PartitionChunk<T> chunk)
   {
     this.chunks.add(chunk);
   }
@@ -60,7 +60,7 @@ class AtomicUpdateGroup<T extends Overshadowable<T>> implements Overshadowable<A
     }
     for (PartitionChunk<T> existing : chunks) {
       if (existing.equals(chunk)) {
-        return;
+        throw new ISE("Can't add same chunk[%s] again", chunk);
       }
     }
     chunks.add(chunk);
@@ -95,7 +95,7 @@ class AtomicUpdateGroup<T extends Overshadowable<T>> implements Overshadowable<A
   }
 
   @Nullable
-  public PartitionChunk<T> findChunk(int partitionId)
+  PartitionChunk<T> findChunk(int partitionId)
   {
     return chunks.stream().filter(chunk -> chunk.getChunkNumber() == partitionId).findFirst().orElse(null);
   }

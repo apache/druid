@@ -43,14 +43,16 @@ public class FireHydrant
   public FireHydrant(IncrementalIndex index, int count, SegmentId segmentId)
   {
     this.index = index;
-    this.adapter = new AtomicReference<>(new ReferenceCountingSegment(new IncrementalIndexSegment(index, segmentId)));
+    this.adapter = new AtomicReference<>(
+        ReferenceCountingSegment.wrapRootGenerationSegment(new IncrementalIndexSegment(index, segmentId))
+    );
     this.count = count;
   }
 
   public FireHydrant(Segment adapter, int count)
   {
     this.index = null;
-    this.adapter = new AtomicReference<>(new ReferenceCountingSegment(adapter));
+    this.adapter = new AtomicReference<>(ReferenceCountingSegment.wrapRootGenerationSegment(adapter));
     this.count = count;
   }
 
@@ -120,7 +122,7 @@ public class FireHydrant
         throw new ISE("Cannot swap to the same segment");
       }
       ReferenceCountingSegment newReferenceCountingSegment =
-          newSegment != null ? new ReferenceCountingSegment(newSegment) : null;
+          newSegment != null ? ReferenceCountingSegment.wrapRootGenerationSegment(newSegment) : null;
       if (adapter.compareAndSet(currentSegment, newReferenceCountingSegment)) {
         if (currentSegment != null) {
           currentSegment.close();

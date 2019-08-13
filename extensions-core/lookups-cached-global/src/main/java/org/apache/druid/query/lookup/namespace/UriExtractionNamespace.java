@@ -85,7 +85,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
           String fileRegex,
       @JsonProperty(value = "namespaceParseSpec", required = true)
           FlatDataParser namespaceParseSpec,
-      @Min(0) @Nullable @JsonProperty(value = "pollPeriod", required = false)
+      @Min(0) @JsonProperty(value = "pollPeriod", required = false) @Nullable
           Period pollPeriod,
       @Deprecated
       @JsonProperty(value = "versionRegex", required = false)
