@@ -32,9 +32,11 @@ public class ClientCompactQueryTuningConfig
   @Nullable
   private final Integer maxRowsPerSegment;
   @Nullable
+  private final Long maxBytesInMemory;
+  @Nullable
   private final Integer maxRowsInMemory;
   @Nullable
-  private final Integer maxTotalRows;
+  private final Long maxTotalRows;
   @Nullable
   private final IndexSpec indexSpec;
   @Nullable
@@ -50,9 +52,12 @@ public class ClientCompactQueryTuningConfig
     return new ClientCompactQueryTuningConfig(
         maxRowsPerSegment,
         userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getMaxRowsInMemory(),
+        userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getMaxBytesInMemory(),
         userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getMaxTotalRows(),
         userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getIndexSpec(),
-        userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getMaxPendingPersists(),
+        userCompactionTaskQueryTuningConfig == null
+        ? null
+        : userCompactionTaskQueryTuningConfig.getMaxPendingPersists(),
         userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getPushTimeout()
     );
   }
@@ -61,13 +66,15 @@ public class ClientCompactQueryTuningConfig
   public ClientCompactQueryTuningConfig(
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
-      @JsonProperty("maxTotalRows") @Nullable Integer maxTotalRows,
+      @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
+      @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
       @JsonProperty("pushTimeout") @Nullable Long pushTimeout
   )
   {
     this.maxRowsPerSegment = maxRowsPerSegment;
+    this.maxBytesInMemory = maxBytesInMemory;
     this.maxRowsInMemory = maxRowsInMemory;
     this.maxTotalRows = maxTotalRows;
     this.indexSpec = indexSpec;
@@ -97,7 +104,14 @@ public class ClientCompactQueryTuningConfig
 
   @JsonProperty
   @Nullable
-  public Integer getMaxTotalRows()
+  public Long getMaxBytesInMemory()
+  {
+    return maxBytesInMemory;
+  }
+
+  @JsonProperty
+  @Nullable
+  public Long getMaxTotalRows()
   {
     return maxTotalRows;
   }
@@ -134,6 +148,7 @@ public class ClientCompactQueryTuningConfig
     }
     ClientCompactQueryTuningConfig that = (ClientCompactQueryTuningConfig) o;
     return Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&
+           Objects.equals(maxBytesInMemory, that.maxBytesInMemory) &&
            Objects.equals(maxRowsInMemory, that.maxRowsInMemory) &&
            Objects.equals(maxTotalRows, that.maxTotalRows) &&
            Objects.equals(indexSpec, that.indexSpec) &&
@@ -144,14 +159,23 @@ public class ClientCompactQueryTuningConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(maxRowsPerSegment, maxRowsInMemory, maxTotalRows, indexSpec, maxPendingPersists, pushTimeout);
+    return Objects.hash(
+        maxRowsPerSegment,
+        maxBytesInMemory,
+        maxRowsInMemory,
+        maxTotalRows,
+        indexSpec,
+        maxPendingPersists,
+        pushTimeout
+    );
   }
 
   @Override
   public String toString()
   {
-    return getClass().getSimpleName() + "{" +
+    return "ClientCompactQueryTuningConfig{" +
            "maxRowsPerSegment=" + maxRowsPerSegment +
+           ", maxBytesInMemory=" + maxBytesInMemory +
            ", maxRowsInMemory=" + maxRowsInMemory +
            ", maxTotalRows=" + maxTotalRows +
            ", indexSpec=" + indexSpec +
