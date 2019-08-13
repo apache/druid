@@ -20,13 +20,15 @@
 package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.BoundType;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
@@ -41,32 +43,38 @@ import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
-import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 public class BoundDimFilter implements DimFilter
 {
   private final String dimension;
+  @Nullable
   private final String upper;
+  @Nullable
   private final String lower;
   private final boolean lowerStrict;
   private final boolean upperStrict;
+  @Nullable
   private final ExtractionFn extractionFn;
   private final StringComparator ordering;
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
   private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
+  @Nullable
+  private final FilterTuning filterTuning;
 
   @JsonCreator
   public BoundDimFilter(
       @JsonProperty("dimension") String dimension,
-      @JsonProperty("lower") String lower,
-      @JsonProperty("upper") String upper,
-      @JsonProperty("lowerStrict") Boolean lowerStrict,
-      @JsonProperty("upperStrict") Boolean upperStrict,
-      @Deprecated @JsonProperty("alphaNumeric") Boolean alphaNumeric,
-      @JsonProperty("extractionFn") ExtractionFn extractionFn,
-      @JsonProperty("ordering") StringComparator ordering
+      @JsonProperty("lower") @Nullable String lower,
+      @JsonProperty("upper") @Nullable String upper,
+      @JsonProperty("lowerStrict") @Nullable Boolean lowerStrict,
+      @JsonProperty("upperStrict") @Nullable Boolean upperStrict,
+      @Deprecated @JsonProperty("alphaNumeric") @Nullable Boolean alphaNumeric,
+      @JsonProperty("extractionFn") @Nullable ExtractionFn extractionFn,
+      @JsonProperty("ordering") @Nullable StringComparator ordering,
+      @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
     this.dimension = Preconditions.checkNotNull(dimension, "dimension can not be null");
@@ -98,6 +106,22 @@ public class BoundDimFilter implements DimFilter
     this.longPredicateSupplier = makeLongPredicateSupplier();
     this.floatPredicateSupplier = makeFloatPredicateSupplier();
     this.doublePredicateSupplier = makeDoublePredicateSupplier();
+    this.filterTuning = filterTuning;
+  }
+
+  @VisibleForTesting
+  public BoundDimFilter(
+      String dimension,
+      @Nullable String lower,
+      @Nullable String upper,
+      @Nullable Boolean lowerStrict,
+      @Nullable Boolean upperStrict,
+      @Nullable Boolean alphaNumeric,
+      @Nullable ExtractionFn extractionFn,
+      @Nullable StringComparator ordering
+  )
+  {
+    this(dimension, lower, upper, lowerStrict, upperStrict, alphaNumeric, extractionFn, ordering, null);
   }
 
   @JsonProperty
@@ -106,12 +130,14 @@ public class BoundDimFilter implements DimFilter
     return dimension;
   }
 
+  @Nullable
   @JsonProperty
   public String getUpper()
   {
     return upper;
   }
 
+  @Nullable
   @JsonProperty
   public String getLower()
   {
@@ -140,6 +166,7 @@ public class BoundDimFilter implements DimFilter
     return upper != null;
   }
 
+  @Nullable
   @JsonProperty
   public ExtractionFn getExtractionFn()
   {
@@ -150,6 +177,14 @@ public class BoundDimFilter implements DimFilter
   public StringComparator getOrdering()
   {
     return ordering;
+  }
+
+  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonProperty
+  public FilterTuning getFilterTuning()
+  {
+    return filterTuning;
   }
 
   public Supplier<DruidLongPredicate> getLongPredicateSupplier()
@@ -249,9 +284,9 @@ public class BoundDimFilter implements DimFilter
   }
 
   @Override
-  public HashSet<String> getRequiredColumns()
+  public Set<String> getRequiredColumns()
   {
-    return Sets.newHashSet(dimension);
+    return ImmutableSet.of(dimension);
   }
 
   @Override
@@ -263,49 +298,36 @@ public class BoundDimFilter implements DimFilter
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     BoundDimFilter that = (BoundDimFilter) o;
-
-    if (isLowerStrict() != that.isLowerStrict()) {
-      return false;
-    }
-    if (isUpperStrict() != that.isUpperStrict()) {
-      return false;
-    }
-    if (!getDimension().equals(that.getDimension())) {
-      return false;
-    }
-    if (getUpper() != null ? !getUpper().equals(that.getUpper()) : that.getUpper() != null) {
-      return false;
-    }
-    if (getLower() != null ? !getLower().equals(that.getLower()) : that.getLower() != null) {
-      return false;
-    }
-    if (getExtractionFn() != null
-        ? !getExtractionFn().equals(that.getExtractionFn())
-        : that.getExtractionFn() != null) {
-      return false;
-    }
-    return getOrdering().equals(that.getOrdering());
+    return lowerStrict == that.lowerStrict &&
+           upperStrict == that.upperStrict &&
+           dimension.equals(that.dimension) &&
+           Objects.equals(upper, that.upper) &&
+           Objects.equals(lower, that.lower) &&
+           Objects.equals(extractionFn, that.extractionFn) &&
+           Objects.equals(ordering, that.ordering) &&
+           Objects.equals(filterTuning, that.filterTuning);
   }
 
   @Override
   public int hashCode()
   {
-    int result = getDimension().hashCode();
-    result = 31 * result + (getUpper() != null ? getUpper().hashCode() : 0);
-    result = 31 * result + (getLower() != null ? getLower().hashCode() : 0);
-    result = 31 * result + (isLowerStrict() ? 1 : 0);
-    result = 31 * result + (isUpperStrict() ? 1 : 0);
-    result = 31 * result + (getExtractionFn() != null ? getExtractionFn().hashCode() : 0);
-    result = 31 * result + getOrdering().hashCode();
-    return result;
+    return Objects.hash(
+        dimension,
+        upper,
+        lower,
+        lowerStrict,
+        upperStrict,
+        extractionFn,
+        ordering,
+        filterTuning
+    );
   }
 
   @Override
   public String toString()
   {
-    final StringBuilder builder = new StringBuilder();
+    final DimFilterToStringBuilder builder = new DimFilterToStringBuilder();
 
     if (lower != null) {
       builder.append(lower);
@@ -316,11 +338,7 @@ public class BoundDimFilter implements DimFilter
       }
     }
 
-    if (extractionFn != null) {
-      builder.append(StringUtils.format("%s(%s)", extractionFn, dimension));
-    } else {
-      builder.append(dimension);
-    }
+    builder.appendDimension(dimension, extractionFn);
 
     if (!ordering.equals(StringComparators.LEXICOGRAPHIC)) {
       builder.append(StringUtils.format(" as %s", ordering.toString()));
@@ -335,7 +353,7 @@ public class BoundDimFilter implements DimFilter
       builder.append(upper);
     }
 
-    return builder.toString();
+    return builder.appendFilterTuning(filterTuning).build();
   }
 
   private Supplier<DruidLongPredicate> makeLongPredicateSupplier()

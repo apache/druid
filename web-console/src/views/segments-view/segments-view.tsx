@@ -16,7 +16,16 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Label } from '@blueprintjs/core';
+import {
+  Button,
+  ButtonGroup,
+  Intent,
+  Label,
+  Menu,
+  MenuItem,
+  Popover,
+  Position,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import React from 'react';
@@ -28,6 +37,7 @@ import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import {
   addFilter,
+  compact,
   filterMap,
   formatBytes,
   formatNumber,
@@ -171,24 +181,28 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         });
 
         let queryParts: string[];
+
+        let whereClause = '';
+        if (whereParts.length) {
+          whereClause = whereParts.join(' AND ');
+        }
+
         if (query.groupByInterval) {
-          queryParts = [
+          queryParts = compact([
             `SELECT`,
             `  ("start" || '/' || "end") AS "interval",`,
             `  "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
             `FROM sys.segments`,
             `WHERE`,
-          ];
-          if (whereParts.length) {
-            queryParts.push(whereParts.join(' AND ') + 'AND');
-          }
-          queryParts.push(
-            ` ("start" || '/' || "end") IN (SELECT "start" || '/' || "end" FROM sys.segments GROUP BY 1 LIMIT ${totalQuerySize})`,
-          );
-
-          if (whereParts.length) {
-            queryParts.push('AND ' + whereParts.join(' AND '));
-          }
+            `  ("start" || '/' || "end") IN (`,
+            `     SELECT "start" || '/' || "end"`,
+            `     FROM sys.segments`,
+            whereClause ? `     WHERE ${whereClause}` : '',
+            `     GROUP BY 1`,
+            `     LIMIT ${totalQuerySize}`,
+            `  )`,
+            whereClause ? `  AND ${whereClause}` : '',
+          ]);
 
           if (query.sorted.length) {
             queryParts.push(
@@ -206,8 +220,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             `FROM sys.segments`,
           ];
 
-          if (whereParts.length) {
-            queryParts.push('WHERE ' + whereParts.join(' AND '));
+          if (whereClause) {
+            queryParts.push(`WHERE ${whereClause}`);
           }
 
           if (query.sorted.length) {
@@ -607,6 +621,35 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     );
   }
 
+  renderBulkSegmentsActions() {
+    const { goToQuery, noSqlMode } = this.props;
+    const lastSegmentsQuery = this.segmentsSqlQueryManager.getLastIntermediateQuery();
+
+    const bulkSegmentsActionsMenu = (
+      <Menu>
+        {!noSqlMode && (
+          <MenuItem
+            icon={IconNames.APPLICATION}
+            text="View SQL query for table"
+            disabled={!lastSegmentsQuery}
+            onClick={() => {
+              if (!lastSegmentsQuery) return;
+              goToQuery(lastSegmentsQuery);
+            }}
+          />
+        )}
+      </Menu>
+    );
+
+    return (
+      <>
+        <Popover content={bulkSegmentsActionsMenu} position={Position.BOTTOM_LEFT}>
+          <Button icon={IconNames.MORE} />
+        </Popover>
+      </>
+    );
+  }
+
   render(): JSX.Element {
     const {
       segmentTableActionDialogId,
@@ -614,9 +657,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       actions,
       hiddenColumns,
     } = this.state;
-    const { goToQuery, noSqlMode } = this.props;
+    const { noSqlMode } = this.props;
     const { groupByInterval } = this.state;
-    const lastSegmentsQuery = this.segmentsSqlQueryManager.getLastIntermediateQuery();
 
     return (
       <>
@@ -630,17 +672,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               }
               localStorageKey={LocalStorageKeys.SEGMENTS_REFRESH_RATE}
             />
-            {!noSqlMode && (
-              <Button
-                icon={IconNames.APPLICATION}
-                text="Go to SQL"
-                disabled={!lastSegmentsQuery}
-                onClick={() => {
-                  if (!lastSegmentsQuery) return;
-                  goToQuery(lastSegmentsQuery);
-                }}
-              />
-            )}
             <Label>Group by</Label>
             <ButtonGroup>
               <Button
@@ -662,6 +693,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 Interval
               </Button>
             </ButtonGroup>
+            {this.renderBulkSegmentsActions()}
             <TableColumnSelector
               columns={noSqlMode ? tableColumnsNoSql : tableColumns}
               onChange={column => this.setState({ hiddenColumns: hiddenColumns.toggle(column) })}

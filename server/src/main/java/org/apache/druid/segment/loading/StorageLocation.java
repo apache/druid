@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -115,7 +114,7 @@ public class StorageLocation
   @Nullable
   public synchronized File reserve(String segmentDir, DataSegment segment)
   {
-    return reserve(segmentDir, segment.getId(), segment.getSize());
+    return reserve(segmentDir, segment.getId().toString(), segment.getSize());
   }
 
   /**
@@ -124,7 +123,7 @@ public class StorageLocation
    * Returns null otherwise.
    */
   @Nullable
-  public synchronized File reserve(String segmentFilePathToAdd, SegmentId segmentId, long segmentSize)
+  public synchronized File reserve(String segmentFilePathToAdd, String segmentId, long segmentSize)
   {
     final File segmentFileToAdd = new File(path, segmentFilePathToAdd);
     if (files.contains(segmentFileToAdd)) {
@@ -145,7 +144,7 @@ public class StorageLocation
    */
   @VisibleForTesting
   @GuardedBy("this")
-  boolean canHandle(SegmentId segmentId, long segmentSize)
+  boolean canHandle(String segmentId, long segmentSize)
   {
     if (availableSizeBytes() < segmentSize) {
       log.warn(

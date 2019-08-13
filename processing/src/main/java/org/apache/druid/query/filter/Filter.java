@@ -28,6 +28,8 @@ import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import java.util.Set;
+
 public interface Filter
 {
   /**
@@ -100,8 +102,12 @@ public interface Filter
   }
 
   /**
-   * Indicates whether this filter can return a bitmap index for filtering, based on
-   * the information provided by the input BitmapIndexSelector.
+   * Indicates whether this filter can return a bitmap index for filtering, based on the information provided by the
+   * input {@link BitmapIndexSelector}.
+   *
+   * Returning a value of true here guarantees that {@link #getBitmapIndex(BitmapIndexSelector)} will return a non-null
+   * {@link BitmapIndexSelector}, and also that all columns specified in {@link #getRequiredColumns()} have a bitmap
+   * index retrievable via {@link BitmapIndexSelector#getBitmapIndex(String)}.
    *
    * @param selector Object used to retrieve bitmap indexes
    *
@@ -109,6 +115,27 @@ public interface Filter
    */
   boolean supportsBitmapIndex(BitmapIndexSelector selector);
 
+  /**
+   * Determine if a filter *should* use a bitmap index based on information collected from the supplied
+   * {@link BitmapIndexSelector}. This method differs from {@link #supportsBitmapIndex(BitmapIndexSelector)} in that
+   * the former only indicates if a bitmap index is available and {@link #getBitmapIndex(BitmapIndexSelector)} may be
+   * used.
+   *
+   * If shouldUseFilter(selector) returns true, {@link #supportsBitmapIndex} must also return true when called with the
+   * same selector object. Returning a value of true here guarantees that {@link #getBitmapIndex(BitmapIndexSelector)}
+   * will return a non-null {@link BitmapIndexSelector}, and also that all columns specified in
+   * {@link #getRequiredColumns()} have a bitmap index retrievable via
+   * {@link BitmapIndexSelector#getBitmapIndex(String)}.
+   *
+   * Implementations of this methods typically consider a {@link FilterTuning} to make decisions about when to
+   * use an available index. A "standard" implementation of this is available to all {@link Filter} implementations in
+   * {@link org.apache.druid.segment.filter.Filters#shouldUseBitmapIndex(Filter, BitmapIndexSelector, FilterTuning)}.
+   *
+   * @param selector Object used to retrieve bitmap indexes and provide information about the column
+   *
+   * @return true if this Filter should provide a bitmap index using the selector, false otherwise.
+   */
+  boolean shouldUseBitmapIndex(BitmapIndexSelector selector);
 
   /**
    * Indicates whether this filter supports selectivity estimation.
@@ -129,4 +156,10 @@ public interface Filter
   {
     return false;
   }
+
+  /**
+   * Set of columns used by a filter. If {@link #supportsBitmapIndex} returns true, all columns returned by this method
+   * can be expected to have a bitmap index retrievable via {@link BitmapIndexSelector#getBitmapIndex(String)}
+   */
+  Set<String> getRequiredColumns();
 }

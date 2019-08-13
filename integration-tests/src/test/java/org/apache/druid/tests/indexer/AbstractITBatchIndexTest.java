@@ -36,9 +36,10 @@ import org.junit.Assert;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-public class AbstractITBatchIndexTest extends AbstractIndexerTest
+public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 {
   private static final Logger LOG = new Logger(AbstractITBatchIndexTest.class);
 
@@ -70,7 +71,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
       String queryResponseTemplate;
       try {
         InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(queryFilePath);
-        queryResponseTemplate = IOUtils.toString(is, "UTF-8");
+        queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
       }
       catch (IOException e) {
         throw new ISE(e, "could not read query file: %s", queryFilePath);
@@ -117,7 +118,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
       String queryResponseTemplate;
       try {
         InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(queryFilePath);
-        queryResponseTemplate = IOUtils.toString(is, "UTF-8");
+        queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
       }
       catch (IOException e) {
         throw new ISE(e, "could not read query file: %s", queryFilePath);

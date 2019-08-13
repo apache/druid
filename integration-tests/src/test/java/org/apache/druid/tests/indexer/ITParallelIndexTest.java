@@ -20,28 +20,30 @@
 package org.apache.druid.tests.indexer;
 
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import java.io.Closeable;
 
+@Test(groups = TestNGGroup.BATCH_INDEX)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITParallelIndexTest extends AbstractITBatchIndexTest
 {
-  private static String INDEX_TASK = "/indexer/wikipedia_parallel_index_task.json";
-  private static String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_parallel_index_queries.json";
-  private static String REINDEX_TASK = "/indexer/wikipedia_parallel_reindex_task.json";
-  private static String REINDEX_QUERIES_RESOURCE = "/indexer/wikipedia_parallel_reindex_queries.json";
-  private static String INDEX_DATASOURCE = "wikipedia_parallel_index_test";
-  private static String INDEX_INGEST_SEGMENT_DATASOURCE = "wikipedia_parallel_ingest_segment_index_test";
-  private static String INDEX_INGEST_SEGMENT_TASK = "/indexer/wikipedia_parallel_ingest_segment_index_task.json";
+  private static final String INDEX_TASK = "/indexer/wikipedia_parallel_index_task.json";
+  private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_parallel_index_queries.json";
+  private static final String REINDEX_TASK = "/indexer/wikipedia_parallel_reindex_task.json";
+  private static final String REINDEX_QUERIES_RESOURCE = "/indexer/wikipedia_parallel_reindex_queries.json";
+  private static final String INDEX_DATASOURCE = "wikipedia_parallel_index_test";
+  private static final String INDEX_INGEST_SEGMENT_DATASOURCE = "wikipedia_parallel_ingest_segment_index_test";
+  private static final String INDEX_INGEST_SEGMENT_TASK = "/indexer/wikipedia_parallel_ingest_segment_index_task.json";
 
   @Test
   public void testIndexData() throws Exception
   {
-    try (final Closeable indexCloseable = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
-         final Closeable ingestSegmentCloseable = unloader(
-             INDEX_INGEST_SEGMENT_DATASOURCE + config.getExtraDatasourceNameSuffix());
+    try (final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
+         final Closeable ignored2 = unloader(
+             INDEX_INGEST_SEGMENT_DATASOURCE + config.getExtraDatasourceNameSuffix())
     ) {
       doIndexTestTest(
           INDEX_DATASOURCE,

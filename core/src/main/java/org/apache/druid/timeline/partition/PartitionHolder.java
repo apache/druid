@@ -113,13 +113,13 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
   @Override
   public Iterator<PartitionChunk<T>> iterator()
   {
-    return overshadowableManager.getVisibles().iterator();
+    return overshadowableManager.getVisibleChunks().iterator();
   }
 
   @Override
   public Spliterator<PartitionChunk<T>> spliterator()
   {
-    return overshadowableManager.getVisibles().spliterator();
+    return overshadowableManager.getVisibleChunks().spliterator();
   }
 
   public Stream<PartitionChunk<T>> stream()
@@ -129,7 +129,7 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
 
   public List<PartitionChunk<T>> getOvershadowed()
   {
-    return overshadowableManager.getOvershadowed();
+    return overshadowableManager.getOvershadowedChunks();
   }
 
   public Iterable<T> payloads()

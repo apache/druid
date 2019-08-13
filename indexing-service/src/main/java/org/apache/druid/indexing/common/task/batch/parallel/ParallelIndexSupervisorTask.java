@@ -38,7 +38,6 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
-import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -127,8 +126,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private volatile ParallelIndexTaskRunner runner;
   private volatile IndexTask sequentialIndexTask;
-
-  private boolean stopped = false;
 
   // toolbox is initlized when run() is called, and can be used for processing HTTP endpoint requests.
   private volatile TaskToolbox toolbox;
@@ -287,20 +284,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   @Override
-  public void stopGracefully(TaskConfig taskConfig)
-  {
-    synchronized (this) {
-      stopped = true;
-    }
-    if (runner != null) {
-      runner.stopGracefully();
-    } else if (sequentialIndexTask != null) {
-      sequentialIndexTask.stopGracefully(taskConfig);
-    }
-  }
-
-  @Override
-  public TaskStatus run(TaskToolbox toolbox) throws Exception
+  public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
     if (missingIntervalsInOverwriteMode) {
       LOG.warn(
@@ -357,39 +341,31 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private TaskStatus runParallel(TaskToolbox toolbox) throws Exception
   {
-    synchronized (this) {
-      if (stopped) {
-        return TaskStatus.failure(getId());
-      }
-      createRunner(toolbox);
-    }
+    createRunner(toolbox);
+    registerResourceCloserOnAbnormalExit(config -> runner.stopGracefully());
     return TaskStatus.fromCode(getId(), Preconditions.checkNotNull(runner, "runner").run());
   }
 
   private TaskStatus runSequential(TaskToolbox toolbox) throws Exception
   {
-    synchronized (this) {
-      if (stopped) {
-        return TaskStatus.failure(getId());
-      }
-      sequentialIndexTask = new IndexTask(
-          getId(),
-          getGroupId(),
-          getTaskResource(),
-          getDataSource(),
-          new IndexIngestionSpec(
-              getIngestionSchema().getDataSchema(),
-              getIngestionSchema().getIOConfig(),
-              convertToIndexTuningConfig(getIngestionSchema().getTuningConfig())
-          ),
-          getContext(),
-          authorizerMapper,
-          chatHandlerProvider,
-          rowIngestionMetersFactory,
-          appenderatorsManager
-      );
-    }
+    sequentialIndexTask = new IndexTask(
+        getId(),
+        getGroupId(),
+        getTaskResource(),
+        getDataSource(),
+        new IndexIngestionSpec(
+            getIngestionSchema().getDataSchema(),
+            getIngestionSchema().getIOConfig(),
+            convertToIndexTuningConfig(getIngestionSchema().getTuningConfig())
+        ),
+        getContext(),
+        authorizerMapper,
+        chatHandlerProvider,
+        rowIngestionMetersFactory,
+        appenderatorsManager
+    );
     if (sequentialIndexTask.isReady(toolbox.getTaskActionClient())) {
+      registerResourceCloserOnAbnormalExit(config -> sequentialIndexTask.stopGracefully(config));
       return sequentialIndexTask.run(toolbox);
     } else {
       return TaskStatus.failure(getId());
