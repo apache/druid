@@ -82,7 +82,10 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableAggregatorFa
   {
     if (shouldUseStringColumnAggregatorWrapper(metricFactory)) {
       return new StringColumnDoubleAggregatorWrapper(
-          selector, SimpleDoubleAggregatorFactory.this::buildAggregator, nullValue());
+          selector,
+          SimpleDoubleAggregatorFactory.this::buildAggregator,
+          nullValue()
+      );
     } else {
       return buildAggregator(selector);
     }
@@ -96,7 +99,10 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableAggregatorFa
   {
     if (shouldUseStringColumnAggregatorWrapper(metricFactory)) {
       return new StringColumnDoubleBufferAggregatorWrapper(
-          selector, SimpleDoubleAggregatorFactory.this::buildBufferAggregator, nullValue());
+          selector,
+          SimpleDoubleAggregatorFactory.this::buildBufferAggregator,
+          nullValue()
+      );
     } else {
       return buildBufferAggregator(selector);
     }
