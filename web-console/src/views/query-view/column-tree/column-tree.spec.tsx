@@ -27,6 +27,7 @@ describe('column tree', () => {
   it('matches snapshot', () => {
     const columnTree = (
       <ColumnTree
+        hasGroupBy={() => false}
         clear={() => null}
         addFunctionToGroupBy={() => null}
         filterByRow={() => null}

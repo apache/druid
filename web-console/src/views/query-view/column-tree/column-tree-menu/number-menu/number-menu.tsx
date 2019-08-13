@@ -28,6 +28,7 @@ export interface NumberMenuProps {
     spacing: string[],
     argumentsArray: (StringType | number)[],
     run: boolean,
+    alias: Alias,
   ) => void;
   addToGroupBy: (columnName: string, run: boolean) => void;
   addAggregateColumn: (
@@ -93,7 +94,7 @@ export class NumberMenu extends React.PureComponent<NumberMenuProps> {
           <Menu>
             <MenuItem text={`"${columnName}"`} onClick={() => addToGroupBy(columnName, true)} />
             <MenuItem
-              text={`TRUNCATE("${columnName}", 1)`}
+              text={`TRUNCATE("${columnName}" AS __${columnName}-truncated, 1)`}
               onClick={() =>
                 addFunctionToGroupBy(
                   'TRUNCATE',
@@ -107,6 +108,7 @@ export class NumberMenu extends React.PureComponent<NumberMenuProps> {
                     1,
                   ],
                   true,
+                  aliasFactory(`__${columnName}-truncated`),
                 )
               }
             />

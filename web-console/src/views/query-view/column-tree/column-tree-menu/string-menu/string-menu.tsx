@@ -36,6 +36,7 @@ export interface StringMenuProps {
     spacing: string[],
     argumentsArray: (StringType | number)[],
     run: boolean,
+    alias: Alias,
   ) => void;
   addToGroupBy: (columnName: string, run: boolean) => void;
   addAggregateColumn: (
@@ -101,13 +102,14 @@ export class StringMenu extends React.PureComponent<StringMenuProps> {
           <Menu>
             <MenuItem text={`"${columnName}"`} onClick={() => addToGroupBy(columnName, true)} />
             <MenuItem
-              text={`SUBSTRING("${columnName}", 1, 2)`}
+              text={`SUBSTRING("${columnName}", 1, 2) AS __${columnName}-substring`}
               onClick={() =>
                 addFunctionToGroupBy(
                   'SUBSTRING',
                   ['', '', ' ', ' '],
                   [stringFactory(columnName, `"`), 0, 2],
                   false,
+                  aliasFactory(`__${columnName}-substring`),
                 )
               }
             />

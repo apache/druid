@@ -33,6 +33,7 @@ import {
   Timestamp,
 } from 'druid-query-toolkit';
 import Hjson from 'hjson';
+import memoizeOne from 'memoize-one';
 import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
 
@@ -67,17 +68,19 @@ import { RunButton } from './run-button/run-button';
 
 import './query-view.scss';
 
-const rawParser = sqlParserFactory(
+const parserRaw = sqlParserFactory(
   SQL_FUNCTIONS.map((sql_function: SyntaxDescription) => {
     return sql_function.syntax.substr(0, sql_function.syntax.indexOf('('));
   }),
 );
 
-const parser = (query: string) => {
+const parser = memoizeOne((sql: string) => {
   try {
-    return rawParser(query);
-  } catch {}
-};
+    return parserRaw(sql);
+  } catch {
+    return;
+  }
+});
 
 interface QueryWithContext {
   queryString: string;
@@ -477,9 +480,10 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     spacing: string[],
     argumentsArray: (StringType | number)[],
     run: boolean,
+    alias: Alias,
   ): void => {
     if (!this.ast) return;
-    this.ast = this.ast.addFunctionToGroupBy(functionName, spacing, argumentsArray);
+    this.ast = this.ast.addFunctionToGroupBy(functionName, spacing, argumentsArray, alias);
     this.setState({
       queryString: this.ast.toString(),
     });
@@ -610,6 +614,23 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     localStorageSet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE, String(secondaryPaneSize));
   };
 
+  private getGroupBySetting = () => {
+    const { queryString } = this.state;
+    const ast = this.ast;
+    let tempAst: SqlQuery | undefined;
+    if (!ast) {
+      tempAst = parser(queryString);
+    }
+
+    let hasGroupBy = false;
+    if (ast && ast instanceof SqlQuery) {
+      hasGroupBy = !!ast.groupByClause;
+    } else if (tempAst && tempAst instanceof SqlQuery) {
+      hasGroupBy = !!tempAst.groupByClause;
+    }
+    return hasGroupBy;
+  };
+
   render(): JSX.Element {
     const { columnMetadata, columnMetadataLoading, columnMetadataError, queryString } = this.state;
 
@@ -627,10 +648,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     if (this.ast && this.ast instanceof SqlQuery) {
       defaultTable = this.ast.getTableName();
     }
-    let hasGroupBy;
-    if (this.ast && this.ast instanceof SqlQuery) {
-      hasGroupBy = !!this.ast.groupByClause;
-    }
 
     return (
       <div
@@ -643,7 +660,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             addFunctionToGroupBy={this.addFunctionToGroupBy}
             addAggregateColumn={this.addAggregateColumn}
             addToGroupBy={this.addToGroupBy}
-            hasGroupBy={hasGroupBy}
+            hasGroupBy={this.getGroupBySetting}
             columnMetadataLoading={columnMetadataLoading}
             columnMetadata={columnMetadata}
             onQueryStringChange={this.handleQueryStringChange}

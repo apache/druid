@@ -40,6 +40,7 @@ export interface TimeMenuProps {
     spacing: string[],
     argumentsArray: (StringType | number)[],
     run: boolean,
+    alias: Alias,
   ) => void;
   addToGroupBy: (columnName: string, run: boolean) => void;
   addAggregateColumn: (
@@ -304,35 +305,38 @@ export class TimeMenu extends React.PureComponent<TimeMenuProps> {
         content={
           <Menu>
             <MenuItem
-              text={`TIME_FLOOR("${columnName}", 'PT1H')`}
+              text={`TIME_FLOOR("${columnName}", 'PT1H') AS __${columnName}-time_floor`}
               onClick={() =>
                 addFunctionToGroupBy(
                   'TIME_FLOOR',
                   ['', '', ' ', ' '],
                   [stringFactory(columnName, `"`), stringFactory('PT1H', `'`)],
                   true,
+                  aliasFactory(`__${columnName}TimeFloor`),
                 )
               }
             />
             <MenuItem
-              text={`TIME_FLOOR("${columnName}", 'P1D')`}
+              text={`TIME_FLOOR("${columnName}", 'P1D') AS __${columnName}-time_floor`}
               onClick={() =>
                 addFunctionToGroupBy(
                   'TIME_FLOOR',
                   ['', '', ' ', ' '],
                   [stringFactory(columnName, `"`), stringFactory('P1D', `'`)],
                   true,
+                  aliasFactory(`__${columnName}TimeFloor`),
                 )
               }
             />
             <MenuItem
-              text={`TIME_FLOOR("${columnName}", 'P7D')`}
+              text={`TIME_FLOOR("${columnName}", 'P7D') AS __${columnName}-time_floor`}
               onClick={() =>
                 addFunctionToGroupBy(
                   'TIME_FLOOR',
                   ['', '', ' ', ' '],
                   [stringFactory(columnName, `"`), stringFactory('P7D', `'`)],
                   true,
+                  aliasFactory(`__${columnName}TimeFloor`),
                 )
               }
             />

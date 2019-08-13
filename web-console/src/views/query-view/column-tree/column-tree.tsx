@@ -113,6 +113,7 @@ export interface ColumnTreeProps {
     spacing: string[],
     argumentsArray: (StringType | number)[],
     run: boolean,
+    alias: Alias,
   ) => void;
   addToGroupBy: (columnName: string, run: boolean) => void;
   addAggregateColumn: (
@@ -129,7 +130,7 @@ export interface ColumnTreeProps {
     operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE',
     run: boolean,
   ) => void;
-  hasGroupBy?: () => boolean;
+  hasGroupBy: () => boolean;
   clear: () => void;
 }
 
