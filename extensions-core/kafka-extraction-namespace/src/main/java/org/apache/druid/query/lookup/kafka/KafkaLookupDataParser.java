@@ -22,11 +22,10 @@ package org.apache.druid.query.lookup.kafka;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.java.util.common.parsers.Parser;
-import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "format")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "customJson", value = UriExtractionNamespace.JSONFlatDataParser.class),
+    @JsonSubTypes.Type(name = "customJson", value = JSONKafkaFlatDataParser.class),
     @JsonSubTypes.Type(name = "jqJson", value = JqJsonKafkaLookupDataParser.class)
 })
 public interface KafkaLookupDataParser

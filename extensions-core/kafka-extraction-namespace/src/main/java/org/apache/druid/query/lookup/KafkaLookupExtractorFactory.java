@@ -269,13 +269,12 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         }
       };
     }
-
     final Parser<String, String> parser = namespaceParseSpec.getParser();
     try {
       return parser.parseToMap(message);
     }
     catch (Exception exp) {
-      LOG.error(exp, "Failed to parse kafka message [%s], msg: [%s]", this.getKafkaTopic(), message);
+      LOG.warn(exp, "Failed to parse kafka message [%s], msg: [%s]", this.getKafkaTopic(), message);
       return null;
     }
   }
@@ -420,10 +419,13 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     // Workaround for Kafka String Serializer could not be found
     // Adopted from org.apache.druid.indexing.kafka.KafkaRecordSupplier#getKafkaConsumer
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
+    verifyKafkaProperties();
     final Properties properties = getConsumerProperties();
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-      return new KafkaConsumer<>(properties, new StringDeserializer(), new StringDeserializer());
+      KafkaConsumer<String, String> kafkaConsumer = new KafkaConsumer<>(properties, new StringDeserializer(), new StringDeserializer());
+      kafkaConsumer.subscribe(Collections.singletonList(getKafkaTopic()));
+      return kafkaConsumer;
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
@@ -435,6 +437,8 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   {
     final Properties properties = new Properties();
     properties.putAll(kafkaProperties);
+    kafkaProperties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+    kafkaProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
     // Enable publish-subscribe
     properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
     properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, factoryId);
