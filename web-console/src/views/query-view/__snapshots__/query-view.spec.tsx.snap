@@ -8,9 +8,9 @@ exports[`sql view matches snapshot 1`] = `
     addAggregateColumn={[Function]}
     addFunctionToGroupBy={[Function]}
     addToGroupBy={[Function]}
-    autoRun={[Function]}
     clear={[Function]}
     columnMetadataLoading={true}
+    defaultSchema="druid"
     filterByRow={[Function]}
     hasGroupBy={[Function]}
     onQueryStringChange={[Function]}
@@ -52,7 +52,6 @@ exports[`sql view matches snapshot 1`] = `
       </div>
     </div>
     <QueryOutput
-      autoRun={true}
       disabled={true}
       loading={false}
       runeMode={false}
