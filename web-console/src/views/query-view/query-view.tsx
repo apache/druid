@@ -92,6 +92,12 @@ export interface QueryViewProps {
   initQuery: string | undefined;
 }
 
+export interface RowFilter {
+  row: string | number | AdditiveExpression | Timestamp | StringType;
+  header: string | Timestamp | StringType;
+  operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE';
+}
+
 export interface QueryViewState {
   queryString: string;
   queryContext: QueryContext;
@@ -116,6 +122,8 @@ export interface QueryViewState {
   editContextDialogOpen: boolean;
   historyDialogOpen: boolean;
   queryHistory: QueryRecord[];
+
+  parsedQuery?: SqlQuery;
 
   autoRun: boolean;
 }
@@ -295,6 +303,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           queryExtraInfo: result ? result.queryExtraInfo : undefined,
           loading,
           error,
+          parsedQuery: result ? result.parsedQuery : undefined,
         });
         this.ast = result ? result.parsedQuery : undefined;
       },
@@ -439,6 +448,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       error,
       columnMetadata,
       autoRun,
+      parsedQuery,
     } = this.state;
     const runeMode = QueryView.isJsonLike(queryString);
 
@@ -478,9 +488,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           </div>
         </div>
         <QueryOutput
-          aggregateColumns={this.ast ? this.ast.getAggregateColumns() : undefined}
-          disabled={!this.ast}
-          sorted={this.ast ? this.ast.getSorted() : undefined}
+          aggregateColumns={parsedQuery ? parsedQuery.getAggregateColumns() : undefined}
+          disabled={!parsedQuery}
+          sorted={parsedQuery ? parsedQuery.getSorted() : undefined}
           sqlExcludeColumn={this.sqlExcludeColumn}
           sqlFilterRow={this.sqlFilterRow}
           sqlOrderBy={this.sqlOrderBy}
@@ -488,7 +498,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           loading={loading}
           result={result}
           error={error}
-          autoRun={autoRun}
         />
       </SplitterLayout>
     );
@@ -562,20 +571,21 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     }
   };
 
-  private sqlFilterRow = (
-    row: string | number | AdditiveExpression | Timestamp | StringType,
-    header: string | Timestamp | StringType,
-    operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE',
-    run: boolean,
-  ): void => {
+  private sqlFilterRow = (filters: RowFilter[], preferablyRun: boolean): void => {
+    const { autoRun } = this.state;
     let ast = this.ast;
     if (!ast) return;
-    ast = ast.filterRow(header, row, operator);
+
+    filters.map(filter => {
+      if (ast) {
+        ast = ast.filterRow(filter.header, filter.row, filter.operator);
+      }
+    });
     this.setState({
       queryString: ast.toString(),
     });
     this.ast = ast;
-    if (run) {
+    if (autoRun && preferablyRun) {
       this.handleRun(true, ast.toString());
     }
   };
@@ -655,11 +665,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     return hasGroupBy;
   };
 
-  private getAutoRun = () => {
-    const { autoRun } = this.state;
-    return autoRun;
-  };
-
   render(): JSX.Element {
     const { columnMetadata, columnMetadataLoading, columnMetadataError, queryString } = this.state;
 
@@ -690,11 +695,10 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             addAggregateColumn={this.addAggregateColumn}
             addToGroupBy={this.addToGroupBy}
             hasGroupBy={this.getGroupBySetting}
-            autoRun={this.getAutoRun}
             columnMetadataLoading={columnMetadataLoading}
             columnMetadata={columnMetadata}
             onQueryStringChange={this.handleQueryStringChange}
-            defaultSchema={defaultSchema}
+            defaultSchema={defaultSchema ? defaultSchema : 'druid'}
             defaultTable={defaultTable}
           />
         )}

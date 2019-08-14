@@ -19,7 +19,6 @@
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import {
-  AdditiveExpression,
   Alias,
   ComparisonExpression,
   ComparisonExpressionRhs,
@@ -29,6 +28,8 @@ import {
 } from 'druid-query-toolkit';
 import { aliasFactory, stringFactory } from 'druid-query-toolkit/build/ast/sql-query/helpers';
 import React from 'react';
+
+import { RowFilter } from '../../../query-view';
 
 export interface StringMenuItemsProps {
   addFunctionToGroupBy: (
@@ -47,15 +48,9 @@ export interface StringMenuItemsProps {
     distinct?: boolean,
     filter?: FilterClause,
   ) => void;
-  filterByRow: (
-    rhs: string | number | AdditiveExpression,
-    lhs: string,
-    operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE',
-    run: boolean,
-  ) => void;
+  filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
   hasGroupBy?: boolean;
   columnName: string;
-  autoRun: boolean;
 }
 
 export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
@@ -70,22 +65,22 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
       <MenuItem icon={IconNames.FILTER} text={`Filter by...`}>
         <MenuItem
           text={`"${columnName}" = 'xxx'`}
-          onClick={() => filterByRow('xxx', columnName, '=', false)}
+          onClick={() => filterByRow([{ row: 'xxx', header: columnName, operator: '=' }], false)}
         />
         <MenuItem
           text={`"${columnName}" LIKE '%xxx%'`}
-          onClick={() => filterByRow('%xxx%', columnName, 'LIKE', false)}
+          onClick={() => filterByRow([{ row: 'xxx', header: columnName, operator: 'LIKE' }], false)}
         />
       </MenuItem>
     );
   }
 
   renderGroupByMenu(): JSX.Element {
-    const { columnName, addFunctionToGroupBy, addToGroupBy, autoRun } = this.props;
+    const { columnName, addFunctionToGroupBy, addToGroupBy } = this.props;
 
     return (
       <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by...`}>
-        <MenuItem text={`"${columnName}"`} onClick={() => addToGroupBy(columnName, autoRun)} />
+        <MenuItem text={`"${columnName}"`} onClick={() => addToGroupBy(columnName, true)} />
         <MenuItem
           text={`SUBSTRING("${columnName}", 1, 2) AS ${columnName}-substring`}
           onClick={() =>
@@ -103,19 +98,13 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
   }
 
   renderAggregateMenu(): JSX.Element {
-    const { columnName, addAggregateColumn, autoRun } = this.props;
+    const { columnName, addAggregateColumn } = this.props;
     return (
       <MenuItem icon={IconNames.FUNCTION} text={`Aggregate...`}>
         <MenuItem
           text={`COUNT(DISTINCT "${columnName}") AS "dist_${columnName}"`}
           onClick={() =>
-            addAggregateColumn(
-              columnName,
-              'COUNT',
-              autoRun,
-              aliasFactory(`dist_${columnName}`),
-              autoRun,
-            )
+            addAggregateColumn(columnName, 'COUNT', true, aliasFactory(`dist_${columnName}`), true)
           }
         />
         <MenuItem

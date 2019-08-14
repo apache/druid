@@ -25,7 +25,6 @@ describe('number menu', () => {
   it('matches snapshot', () => {
     const numberMenu = (
       <NumberMenuItems
-        autoRun
         addFunctionToGroupBy={() => null}
         addToGroupBy={() => null}
         addAggregateColumn={() => null}

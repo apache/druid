@@ -25,7 +25,6 @@ describe('string menu', () => {
   it('matches snapshot', () => {
     const stringMenu = (
       <StringMenuItems
-        autoRun
         addFunctionToGroupBy={() => null}
         addToGroupBy={() => null}
         addAggregateColumn={() => null}

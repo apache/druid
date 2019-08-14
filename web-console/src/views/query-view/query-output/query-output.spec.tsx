@@ -25,7 +25,6 @@ describe('query output', () => {
   it('matches snapshot', () => {
     const queryOutput = (
       <QueryOutput
-        autoRun
         runeMode={false}
         sqlOrderBy={() => null}
         sqlFilterRow={() => null}

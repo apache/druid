@@ -28,6 +28,7 @@ import ReactTable from 'react-table';
 
 import { copyAndAlert } from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
+import { RowFilter } from '../query-view';
 
 import './query-output.scss';
 
@@ -35,14 +36,13 @@ export interface QueryOutputProps {
   aggregateColumns?: string[];
   disabled: boolean;
   loading: boolean;
-  sqlFilterRow: (row: string, header: string, operator: '=' | '!=', run: boolean) => void;
+  sqlFilterRow: (filters: RowFilter[], run: boolean) => void;
   sqlExcludeColumn: (header: string, run: boolean) => void;
   sqlOrderBy: (header: string, direction: 'ASC' | 'DESC', run: boolean) => void;
   sorted?: { id: string; desc: boolean }[];
   result?: HeaderRows;
   error?: string;
   runeMode: boolean;
-  autoRun: boolean;
 }
 
 export class QueryOutput extends React.PureComponent<QueryOutputProps> {
@@ -132,7 +132,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
         </Menu>
       );
     } else {
-      const { sorted, autoRun } = this.props;
+      const { sorted } = this.props;
       const basicActions: BasicAction[] = [];
       if (sorted) {
         sorted.map(sorted => {
@@ -140,7 +140,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
             basicActions.push({
               icon: sorted.desc ? IconNames.SORT_ASC : IconNames.SORT_DESC,
               title: `Order by: ${h} ${sorted.desc ? 'ASC' : 'DESC'}`,
-              onAction: () => sqlOrderBy(h, sorted.desc ? 'ASC' : 'DESC', autoRun),
+              onAction: () => sqlOrderBy(h, sorted.desc ? 'ASC' : 'DESC', true),
             });
           }
         });
@@ -150,19 +150,19 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
           {
             icon: IconNames.SORT_ASC,
             title: `Order by: ${h} ASC`,
-            onAction: () => sqlOrderBy(h, 'ASC', autoRun),
+            onAction: () => sqlOrderBy(h, 'ASC', true),
           },
           {
             icon: IconNames.SORT_DESC,
             title: `Order by: ${h} DESC`,
-            onAction: () => sqlOrderBy(h, 'DESC', autoRun),
+            onAction: () => sqlOrderBy(h, 'DESC', true),
           },
         );
       }
       basicActions.push({
         icon: IconNames.CROSS,
         title: `Remove: ${h}`,
-        onAction: () => sqlExcludeColumn(h, autoRun),
+        onAction: () => sqlExcludeColumn(h, true),
       });
       actionsMenu = basicActionsToMenu(basicActions);
     }
@@ -170,7 +170,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
   }
 
   getRowActions(row: string, header: string) {
-    const { disabled, sqlFilterRow, runeMode, autoRun } = this.props;
+    const { disabled, sqlFilterRow, runeMode } = this.props;
     let actionsMenu;
     if (disabled) {
       actionsMenu = (
@@ -215,12 +215,12 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
         {
           icon: IconNames.FILTER_KEEP,
           title: `Filter by: ${header} = ${row}`,
-          onAction: () => sqlFilterRow(row, header, '=', autoRun),
+          onAction: () => sqlFilterRow([{ row, header, operator: '=' }], true),
         },
         {
           icon: IconNames.FILTER_REMOVE,
           title: `Filter by: ${header} != ${row}`,
-          onAction: () => sqlFilterRow(row, header, '!=', autoRun),
+          onAction: () => sqlFilterRow([{ row, header, operator: '!=' }], true),
         },
       ]);
     }

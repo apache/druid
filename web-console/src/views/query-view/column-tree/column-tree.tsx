@@ -27,19 +27,14 @@ import {
   Tree,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import {
-  AdditiveExpression,
-  Alias,
-  FilterClause,
-  StringType,
-  Timestamp,
-} from 'druid-query-toolkit';
+import { Alias, FilterClause, StringType } from 'druid-query-toolkit';
 import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
 import { Deferred } from '../../../components/deferred/deferred';
 import { copyAndAlert, escapeSqlIdentifier, groupBy } from '../../../utils';
 import { ColumnMetadata } from '../../../utils/column-metadata';
+import { RowFilter } from '../query-view';
 
 import { NumberMenuItems } from './column-tree-menu/number-menu-items/number-menu-items';
 import { StringMenuItems } from './column-tree-menu/string-menu-items/string-menu-items';
@@ -124,15 +119,9 @@ export interface ColumnTreeProps {
     distinct?: boolean,
     filter?: FilterClause,
   ) => void;
-  filterByRow: (
-    rhs: string | number | AdditiveExpression | Timestamp | StringType,
-    lhs: string | Timestamp | StringType,
-    operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE',
-    run: boolean,
-  ) => void;
+  filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
   hasGroupBy: () => boolean;
   clear: () => void;
-  autoRun: () => boolean;
 }
 
 export interface ColumnTreeState {
@@ -234,7 +223,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 filterByRow={props.filterByRow}
                                 columnName={columnData.COLUMN_NAME}
                                 hasGroupBy={props.hasGroupBy()}
-                                autoRun={props.autoRun()}
                               />
                             )}
                             {columnData.DATA_TYPE === 'VARCHAR' && (
@@ -245,7 +233,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 filterByRow={props.filterByRow}
                                 columnName={columnData.COLUMN_NAME}
                                 hasGroupBy={props.hasGroupBy()}
-                                autoRun={props.autoRun()}
                               />
                             )}
                             {columnData.DATA_TYPE === 'TIMESTAMP' && (
@@ -257,7 +244,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 filterByRow={props.filterByRow}
                                 columnName={columnData.COLUMN_NAME}
                                 hasGroupBy={props.hasGroupBy()}
-                                autoRun={props.autoRun()}
                               />
                             )}
                             <MenuItem
@@ -291,6 +277,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
           return x.id === defaultSchema;
         });
       }
+
       if (selectedTreeIndex > -1) {
         const treeNodes = columnTree[selectedTreeIndex].childNodes;
         if (treeNodes) {

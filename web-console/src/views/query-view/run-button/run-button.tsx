@@ -124,7 +124,7 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
             />
             <MenuCheckbox
               checked={autoRun}
-              label="Allow query auto run"
+              label="Auto run queries"
               onChange={() => setAutoRun(!autoRun)}
             />
             <MenuCheckbox

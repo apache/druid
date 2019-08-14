@@ -25,20 +25,8 @@ export interface DeferredProps {
 export interface DeferredState {}
 
 export class Deferred extends React.PureComponent<DeferredProps, DeferredState> {
-  private id = String(Math.random()).substr(2);
-
   constructor(props: DeferredProps, context: any) {
     super(props, context);
-    // this.state = {};
-    console.log(`construct ${this.id}`);
-  }
-
-  componentDidMount(): void {
-    console.log(`did mount ${this.id}`);
-  }
-
-  componentWillUnmount(): void {
-    console.log(`will unmount ${this.id}`);
   }
 
   render(): JSX.Element {
