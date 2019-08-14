@@ -2385,18 +2385,12 @@ granted provided that the copyright notice appears in all copies.
 Hive Storage API
 Copyright 2018 The Apache Software Foundation
 
-This product includes software developed at
-The Apache Software Foundation (http://www.apache.org/).
-
 
 
 
 ================= orc-core-1.5.5.jar =================
 ORC Core
 Copyright 2013-2019 The Apache Software Foundation
-
-This product includes software developed at
-The Apache Software Foundation (http://www.apache.org/).
 
 
 
@@ -2405,18 +2399,12 @@ The Apache Software Foundation (http://www.apache.org/).
 ORC MapReduce
 Copyright 2013-2019 The Apache Software Foundation
 
-This product includes software developed at
-The Apache Software Foundation (http://www.apache.org/).
-
 
 
 
 ================= orc-shims-1.5.5.jar =================
 ORC Shims
 Copyright 2013-2019 The Apache Software Foundation
-
-This product includes software developed at
-The Apache Software Foundation (http://www.apache.org/).
 
 
 
@@ -2435,9 +2423,6 @@ its NOTICE file:
 
   Apache Avro
   Copyright 2010-2015 The Apache Software Foundation
-
-  This product includes software developed at
-  The Apache Software Foundation (http://www.apache.org/).
 
 
 
