@@ -30,7 +30,6 @@ describe('string menu', () => {
         addAggregateColumn={() => null}
         filterByRow={() => null}
         columnName={'text'}
-        hasGroupBy
       />
     );
 

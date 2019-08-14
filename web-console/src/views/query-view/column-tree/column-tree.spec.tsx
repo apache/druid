@@ -20,13 +20,13 @@ import { render } from '@testing-library/react';
 import React from 'react';
 
 import { ColumnMetadata } from '../../../utils/column-metadata';
-
 import { ColumnTree } from './column-tree';
 
 describe('column tree', () => {
   it('matches snapshot', () => {
     const columnTree = (
       <ColumnTree
+        queryAst={() => undefined}
         hasGroupBy={() => false}
         clear={() => null}
         addFunctionToGroupBy={() => null}

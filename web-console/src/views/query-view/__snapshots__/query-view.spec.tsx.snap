@@ -14,6 +14,7 @@ exports[`sql view matches snapshot 1`] = `
     filterByRow={[Function]}
     hasGroupBy={[Function]}
     onQueryStringChange={[Function]}
+    queryAst={[Function]}
   />
   <t
     customClassName=""

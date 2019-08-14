@@ -18,7 +18,7 @@
 
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Alias, FilterClause, StringType } from 'druid-query-toolkit';
+import { Alias, FilterClause, SqlQuery, StringType } from 'druid-query-toolkit';
 import { aliasFactory } from 'druid-query-toolkit/build/ast/sql-query/helpers';
 import React from 'react';
 
@@ -42,7 +42,7 @@ export interface NumberMenuItemsProps {
     filter?: FilterClause,
   ) => void;
   filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
-  hasGroupBy?: boolean;
+  queryAst?: SqlQuery;
   columnName: string;
 }
 
@@ -124,10 +124,15 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
   }
 
   render(): JSX.Element {
-    const { hasGroupBy } = this.props;
+    const { queryAst } = this.props;
+    let hasGroupBy;
+    if (queryAst) {
+      hasGroupBy = queryAst.groupByClause;
+    }
+
     return (
       <>
-        {this.renderFilterMenu()}
+        {queryAst && this.renderFilterMenu()}
         {hasGroupBy && this.renderGroupByMenu()}
         {hasGroupBy && this.renderAggregateMenu()}
       </>

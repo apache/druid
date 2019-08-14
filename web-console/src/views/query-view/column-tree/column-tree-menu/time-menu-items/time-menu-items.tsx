@@ -22,6 +22,7 @@ import {
   AdditiveExpression,
   Alias,
   FilterClause,
+  SqlQuery,
   StringType,
   timestampFactory,
 } from 'druid-query-toolkit';
@@ -53,7 +54,7 @@ export interface TimeMenuItemsProps {
     filter?: FilterClause,
   ) => void;
   filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
-  hasGroupBy?: boolean;
+  queryAst?: SqlQuery;
   columnName: string;
   clear: () => void;
 }
@@ -363,10 +364,14 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
   }
 
   render(): JSX.Element {
-    const { hasGroupBy } = this.props;
+    const { queryAst } = this.props;
+    let hasGroupBy;
+    if (queryAst) {
+      hasGroupBy = queryAst.groupByClause;
+    }
     return (
       <>
-        {this.renderFilterMenu()}
+        {queryAst && this.renderFilterMenu()}
         {hasGroupBy && this.renderGroupByMenu()}
         {hasGroupBy && this.renderAggregateMenu()}
       </>

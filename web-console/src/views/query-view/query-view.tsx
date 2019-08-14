@@ -607,7 +607,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     let modifiedAst: SqlQuery = queryAst;
     if (queryAst) {
       for (const filter of filters) {
-        modifiedAst = queryAst.filterRow(filter.header, filter.row, filter.operator);
+        modifiedAst = modifiedAst.filterRow(filter.header, filter.row, filter.operator);
       }
     }
     const queryString = modifiedAst.toString();
@@ -696,6 +696,11 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     return hasGroupBy;
   };
 
+  private getQueryAst = () => {
+    const { queryAst } = this.state;
+    return queryAst;
+  };
+
   render(): JSX.Element {
     const { columnMetadata, columnMetadataLoading, columnMetadataError, queryAst } = this.state;
 
@@ -720,6 +725,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             addAggregateColumn={this.addAggregateColumn}
             addToGroupBy={this.addToGroupBy}
             hasGroupBy={this.getGroupBySetting}
+            queryAst={this.getQueryAst}
             columnMetadataLoading={columnMetadataLoading}
             columnMetadata={columnMetadata}
             onQueryStringChange={this.handleQueryStringChange}

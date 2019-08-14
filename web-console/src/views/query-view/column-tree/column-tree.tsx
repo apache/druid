@@ -27,7 +27,7 @@ import {
   Tree,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Alias, FilterClause, StringType } from 'druid-query-toolkit';
+import { Alias, FilterClause, SqlQuery, StringType } from 'druid-query-toolkit';
 import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
@@ -121,6 +121,7 @@ export interface ColumnTreeProps {
   ) => void;
   filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
   hasGroupBy: () => boolean;
+  queryAst: () => SqlQuery | undefined;
   clear: () => void;
 }
 
@@ -223,7 +224,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 addAggregateColumn={props.addAggregateColumn}
                                 filterByRow={props.filterByRow}
                                 columnName={columnData.COLUMN_NAME}
-                                hasGroupBy={props.hasGroupBy()}
+                                queryAst={props.queryAst()}
                               />
                             )}
                             {columnData.DATA_TYPE === 'VARCHAR' && (
@@ -233,7 +234,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 addAggregateColumn={props.addAggregateColumn}
                                 filterByRow={props.filterByRow}
                                 columnName={columnData.COLUMN_NAME}
-                                hasGroupBy={props.hasGroupBy()}
+                                queryAst={props.queryAst()}
                               />
                             )}
                             {columnData.DATA_TYPE === 'TIMESTAMP' && (
@@ -244,7 +245,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 addAggregateColumn={props.addAggregateColumn}
                                 filterByRow={props.filterByRow}
                                 columnName={columnData.COLUMN_NAME}
-                                hasGroupBy={props.hasGroupBy()}
+                                queryAst={props.queryAst()}
                               />
                             )}
                             <MenuItem

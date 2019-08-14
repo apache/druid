@@ -23,6 +23,7 @@ import {
   ComparisonExpression,
   ComparisonExpressionRhs,
   FilterClause,
+  SqlQuery,
   StringType,
   WhereClause,
 } from 'druid-query-toolkit';
@@ -49,7 +50,7 @@ export interface StringMenuItemsProps {
     filter?: FilterClause,
   ) => void;
   filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
-  hasGroupBy?: boolean;
+  queryAst?: SqlQuery;
   columnName: string;
 }
 
@@ -142,10 +143,14 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
   }
 
   render(): JSX.Element {
-    const { hasGroupBy } = this.props;
+    const { queryAst } = this.props;
+    let hasGroupBy;
+    if (queryAst) {
+      hasGroupBy = queryAst.groupByClause;
+    }
     return (
       <>
-        {this.renderFilterMenu()}
+        {queryAst && this.renderFilterMenu()}
         {hasGroupBy && this.renderGroupByMenu()}
         {hasGroupBy && this.renderAggregateMenu()}
       </>
