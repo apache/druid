@@ -68,7 +68,7 @@ public class CompressionUtilsTest
 
   static {
     final StringBuilder builder = new StringBuilder();
-    try (InputStream stream = CompressionUtilsTest.class.getClassLoader().getResourceAsStream("loremipsum.txt")) {
+    try (InputStream stream = CompressionUtilsTest.class.getClassLoader().getResourceAsStream("apache-license.txt")) {
       final Iterator<String> it = new Scanner(
           new InputStreamReader(stream, StandardCharsets.UTF_8)
       ).useDelimiter(Pattern.quote("|"));
