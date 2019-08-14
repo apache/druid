@@ -507,26 +507,28 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     functionName: string,
     spacing: string[],
     argumentsArray: (StringType | number)[],
-    run: boolean,
+    preferablyRun: boolean,
     alias: Alias,
   ): void => {
+    const { autoRun } = this.state;
     if (!this.ast) return;
     this.ast = this.ast.addFunctionToGroupBy(functionName, spacing, argumentsArray, alias);
     this.setState({
       queryString: this.ast.toString(),
     });
-    if (run) {
+    if (autoRun && preferablyRun) {
       this.handleRun(true, this.ast.toString());
     }
   };
 
-  private addToGroupBy = (columnName: string, run: boolean): void => {
+  private addToGroupBy = (columnName: string, preferablyRun: boolean): void => {
+    const { autoRun } = this.state;
     if (!this.ast) return;
     this.ast = this.ast.addToGroupBy(columnName);
     this.setState({
       queryString: this.ast.toString(),
     });
-    if (run) {
+    if (autoRun && preferablyRun) {
       this.handleRun(true, this.ast.toString());
     }
   };
@@ -534,39 +536,46 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   private addAggregateColumn = (
     columnName: string,
     functionName: string,
-    run: boolean,
+    preferablyRun: boolean,
     alias?: Alias,
     distinct?: boolean,
     filter?: FilterClause,
   ): void => {
+    const { autoRun } = this.state;
     if (!this.ast) return;
     this.ast = this.ast.addAggregateColumn(columnName, functionName, alias, distinct, filter);
     this.setState({
       queryString: this.ast.toString(),
     });
-    if (run) {
+    if (autoRun && preferablyRun) {
       this.handleRun(true, this.ast.toString());
     }
   };
 
-  private sqlOrderBy = (header: string, direction: 'ASC' | 'DESC', run: boolean): void => {
+  private sqlOrderBy = (
+    header: string,
+    direction: 'ASC' | 'DESC',
+    preferablyRun: boolean,
+  ): void => {
+    const { autoRun } = this.state;
     if (!this.ast) return;
     this.ast = this.ast.orderBy(header, direction);
     this.setState({
       queryString: this.ast.toString(),
     });
-    if (run) {
+    if (autoRun && preferablyRun) {
       this.handleRun(true, this.ast.toString());
     }
   };
 
-  private sqlExcludeColumn = (header: string, run: boolean): void => {
+  private sqlExcludeColumn = (header: string, preferablyRun: boolean): void => {
+    const { autoRun } = this.state;
     if (!this.ast) return;
     this.ast = this.ast.excludeColumn(header);
     this.setState({
       queryString: this.ast.toString(),
     });
-    if (run) {
+    if (autoRun && preferablyRun) {
       this.handleRun(true, this.ast.toString());
     }
   };
