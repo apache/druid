@@ -46,6 +46,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
 import java.nio.ByteBuffer;
@@ -268,55 +269,14 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         }
       };
     }
-
     final Parser<String, String> parser = namespaceParseSpec.getParser();
     try {
       return parser.parseToMap(message);
     }
     catch (Exception exp) {
-      LOG.error(exp, "Failed to parse kafka message [%s], msg: [%s]", this.getKafkaTopic(), message);
+      LOG.warn(exp, "Failed to parse kafka message [%s], msg: [%s]", this.getKafkaTopic(), message);
       return null;
     }
-  }
-
-  Consumer<String, String> getConsumer()
-  {
-    //Adopted from - https://stackoverflow.com/a/54118010/2586315
-    ClassLoader original = Thread.currentThread().getContextClassLoader();
-    Thread.currentThread().setContextClassLoader(null);
-
-    final Properties kafkaProperties = new Properties();
-    kafkaProperties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-    kafkaProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-
-    kafkaProperties.putAll(getKafkaProperties());
-    if (kafkaProperties.containsKey(ConsumerConfig.GROUP_ID_CONFIG)) {
-      throw new IAE(
-              "Cannot set kafka property [group.id]. Property is randomly generated for you. Found [%s]",
-              kafkaProperties.getProperty(ConsumerConfig.GROUP_ID_CONFIG)
-      );
-    }
-    if (kafkaProperties.containsKey(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)) {
-      throw new IAE(
-              "Cannot set kafka property [auto.offset.reset]. Property will be forced to [smallest]. Found [%s]",
-              kafkaProperties.getProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)
-      );
-    }
-    Preconditions.checkNotNull(
-            kafkaProperties.getProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG),
-            "zookeeper.connect required property"
-    );
-
-    // Enable publish-subscribe
-    kafkaProperties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    kafkaProperties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, factoryId);
-
-    KafkaConsumer<String, String> kafkaConsumer = new KafkaConsumer<>(kafkaProperties);
-
-    kafkaConsumer.subscribe(Collections.singletonList(getKafkaTopic()));
-
-    Thread.currentThread().setContextClassLoader(original);
-    return kafkaConsumer;
   }
 
   @Override
@@ -430,5 +390,57 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   ListenableFuture<?> getFuture()
   {
     return future;
+  }
+
+  private void verifyKafkaProperties()
+  {
+    if (kafkaProperties.containsKey(ConsumerConfig.GROUP_ID_CONFIG)) {
+      throw new IAE(
+              "Cannot set kafka property [group.id]. Property is randomly generated for you. Found [%s]",
+              kafkaProperties.get(ConsumerConfig.GROUP_ID_CONFIG)
+      );
+    }
+    if (kafkaProperties.containsKey(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)) {
+      throw new IAE(
+              "Cannot set kafka property [auto.offset.reset]. Property will be forced to [smallest]. Found [%s]",
+              kafkaProperties.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)
+      );
+    }
+    Preconditions.checkNotNull(
+            kafkaProperties.get(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG),
+            "bootstrap.servers required property"
+    );
+  }
+
+  // Overridden in tests
+  Consumer<String, String> getConsumer()
+  {
+    // Workaround for Kafka String Serializer could not be found
+    // Adopted from org.apache.druid.indexing.kafka.KafkaRecordSupplier#getKafkaConsumer
+    ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
+    verifyKafkaProperties();
+    final Properties properties = getConsumerProperties();
+    try {
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+      KafkaConsumer<String, String> kafkaConsumer = new KafkaConsumer<>(properties, new StringDeserializer(), new StringDeserializer());
+      kafkaConsumer.subscribe(Collections.singletonList(getKafkaTopic()));
+      return kafkaConsumer;
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(currCtxCl);
+    }
+  }
+
+  @Nonnull
+  private Properties getConsumerProperties()
+  {
+    final Properties properties = new Properties();
+    properties.putAll(kafkaProperties);
+    kafkaProperties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+    kafkaProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+    // Enable publish-subscribe
+    properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+    properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, factoryId);
+    return properties;
   }
 }

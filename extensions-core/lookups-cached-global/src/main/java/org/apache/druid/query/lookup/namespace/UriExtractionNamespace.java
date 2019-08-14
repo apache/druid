@@ -195,13 +195,13 @@ public class UriExtractionNamespace implements ExtractionNamespace
     return result;
   }
 
-  private static class DelegateParser implements Parser<String, String>
+  public static class DelegateParser implements Parser<String, String>
   {
     private final Parser<String, Object> delegate;
     private final String key;
     private final String value;
 
-    private DelegateParser(
+    public DelegateParser(
             Parser<String, Object> delegate,
             @NotNull String key,
             @NotNull String value
