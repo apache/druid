@@ -66,7 +66,11 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   private final String groupId;
   private final ParallelIndexTuningConfig tuningConfig;
   private final Map<String, Object> context;
-  private final int maxNumTasks;
+
+  /**
+   * Max number of sub tasks which can be executed concurrently at the same time.
+   */
+  private final int maxNumConcurrentSubTasks;
   private final IndexingServiceClient indexingServiceClient;
 
   private final BlockingQueue<SubTaskCompleteEvent<SubTaskType>> taskCompleteEvents = new LinkedBlockingDeque<>();
@@ -93,7 +97,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     this.groupId = groupId;
     this.tuningConfig = tuningConfig;
     this.context = context;
-    this.maxNumTasks = tuningConfig.getMaxNumSubTasks();
+    this.maxNumConcurrentSubTasks = tuningConfig.getMaxNumSubTasks();
     this.indexingServiceClient = Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient");
   }
 
@@ -130,7 +134,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     try {
       LOG.info("Submitting initial tasks");
       // Submit initial tasks
-      while (isRunning() && subTaskSpecIterator.hasNext() && taskMonitor.getNumRunningTasks() < maxNumTasks) {
+      while (isRunning() && subTaskSpecIterator.hasNext() && taskMonitor.getNumRunningTasks() < maxNumConcurrentSubTasks) {
         submitNewTask(taskMonitor, subTaskSpecIterator.next());
       }
 
@@ -172,7 +176,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
                     );
                   }
                 }
-              } else if (taskMonitor.getNumRunningTasks() < maxNumTasks) {
+              } else if (taskMonitor.getNumRunningTasks() < maxNumConcurrentSubTasks) {
                 // We have more subTasks to run
                 submitNewTask(taskMonitor, subTaskSpecIterator.next());
               } else {
@@ -231,7 +235,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
           @Override
           public void onSuccess(SubTaskCompleteEvent<SubTaskType> completeEvent)
           {
-            // this callback is called if a task completed wheter it succeeded or not.
+            // this callback is called if a task completed whether it succeeded or not.
             taskCompleteEvents.offer(completeEvent);
           }
 

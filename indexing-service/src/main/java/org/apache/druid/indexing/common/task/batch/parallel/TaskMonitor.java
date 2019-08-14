@@ -136,7 +136,7 @@ public class TaskMonitor<T extends Task>
                       log.warn("task[%s] failed!", taskId);
                       if (monitorEntry.numTries() < maxRetry) {
                         log.info(
-                            "We still have chances[%d/%d] to complete for spec[%s].",
+                            "We still have more chances[%d/%d] to process the spec[%s].",
                             monitorEntry.numTries(),
                             maxRetry,
                             monitorEntry.spec.getId()
