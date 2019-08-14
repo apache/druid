@@ -52,7 +52,6 @@ exports[`sql view matches snapshot 1`] = `
       </div>
     </div>
     <QueryOutput
-      disabled={true}
       loading={false}
       runeMode={false}
       sqlExcludeColumn={[Function]}

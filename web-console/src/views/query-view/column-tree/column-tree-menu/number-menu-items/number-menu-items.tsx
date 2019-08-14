@@ -79,7 +79,7 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
           onClick={() =>
             addFunctionToGroupBy(
               'TRUNCATE',
-              ['', '', ' '],
+              [' '],
               [
                 new StringType({
                   spacing: [],

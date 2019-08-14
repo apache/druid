@@ -307,7 +307,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
           onClick={() =>
             addFunctionToGroupBy(
               'TIME_FLOOR',
-              ['', '', ' ', ' '],
+              [' '],
               [stringFactory(columnName, `"`), stringFactory('PT1H', `'`)],
               true,
               aliasFactory(`${columnName}TimeFloor`),
@@ -319,7 +319,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
           onClick={() =>
             addFunctionToGroupBy(
               'TIME_FLOOR',
-              ['', '', ' ', ' '],
+              [' '],
               [stringFactory(columnName, `"`), stringFactory('P1D', `'`)],
               true,
               aliasFactory(`${columnName}TimeFloor`),
@@ -331,7 +331,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
           onClick={() =>
             addFunctionToGroupBy(
               'TIME_FLOOR',
-              ['', '', ' ', ' '],
+              [' '],
               [stringFactory(columnName, `"`), stringFactory('P7D', `'`)],
               true,
               aliasFactory(`${columnName}TimeFloor`),
