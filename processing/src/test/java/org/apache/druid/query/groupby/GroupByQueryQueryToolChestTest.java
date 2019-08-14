@@ -512,12 +512,12 @@ public class GroupByQueryQueryToolChestTest
   {
     final GroupByQuery query = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(Collections.singletonList(DefaultDimensionSpec.of("test")))
-        .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
+        .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT))
         .setPostAggregatorSpecs(Collections.singletonList(new ConstantPostAggregator("post", 10)))
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
