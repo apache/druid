@@ -261,7 +261,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private TaskState runNextPhase(@Nullable ParallelIndexTaskRunner nextPhaseRunner) throws Exception
   {
     if (nextPhaseRunner == null) {
-      LOG.info("Task is already stopped");
+      LOG.info("Task is asked to stop. Finish as failed");
       return TaskState.FAILED;
     } else {
       return nextPhaseRunner.run();
@@ -631,6 +631,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (currentSubTaskHolder.setTask(indexTask) && indexTask.isReady(toolbox.getTaskActionClient())) {
       return indexTask.run(toolbox);
     } else {
+      LOG.info("Task is asked to stop. Finish as failed");
       return TaskStatus.failure(getId());
     }
   }

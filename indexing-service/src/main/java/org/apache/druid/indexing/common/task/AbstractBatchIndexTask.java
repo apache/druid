@@ -52,6 +52,7 @@ import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import java.io.IOException;
@@ -414,7 +415,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       GranularitySpec granularitySpec,
       IndexIOConfig ioConfig,
       IndexTuningConfig tuningConfig,
-      PartitionsSpec nonNullPartitionsSpec
+      @Nonnull PartitionsSpec nonNullPartitionsSpec
   )
   {
     final Map<Interval, Pair<ShardSpecFactory, Integer>> allocateSpec = new HashMap<>();

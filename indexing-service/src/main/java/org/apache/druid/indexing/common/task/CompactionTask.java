@@ -109,12 +109,6 @@ public class CompactionTask extends AbstractBatchIndexTask
   private static final Logger log = new Logger(CompactionTask.class);
   private static final String TYPE = "compact";
 
-  /**
-   * A flag to indicate this task is already stopped and its child indexTasks shouldn't be created.
-   * See {@link #currentRunningTaskSpec} for more details.
-   */
-  private static final Object SPECIAL_VALUE_STOPPED = new Object();
-
   private final Interval interval;
   private final List<DataSegment> segments;
   @Nullable
@@ -347,8 +341,12 @@ public class CompactionTask extends AbstractBatchIndexTask
       int failCnt = 0;
       for (IndexTask eachSpec : indexTaskSpecs) {
         final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
+        if (!currentSubTaskHolder.setTask(eachSpec)) {
+          log.info("Task is asked to stop. Finish as failed.");
+          return TaskStatus.failure(getId());
+        }
         try {
-          if (currentSubTaskHolder.setTask(eachSpec) && eachSpec.isReady(toolbox.getTaskActionClient())) {
+          if (eachSpec.isReady(toolbox.getTaskActionClient())) {
             log.info("Running indexSpec: " + json);
             final TaskStatus eachResult = eachSpec.run(toolbox);
             if (!eachResult.isSuccess()) {
