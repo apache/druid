@@ -370,6 +370,10 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
   }
 
+  /**
+   * We currently don't support appending perfectly rolled up segments. This might be supported in the future if there
+   * is a good use case.
+   */
   static boolean isGuaranteedRollup(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
   {
     Preconditions.checkState(
