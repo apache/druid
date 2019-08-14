@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -50,6 +51,7 @@ import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
@@ -116,6 +118,12 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     public String runTask(Object taskObject)
     {
       final ParallelIndexSubTask subTask = (ParallelIndexSubTask) taskObject;
+      try {
+        getTaskStorage().insert(subTask, TaskStatus.running(subTask.getId()));
+      }
+      catch (EntryExistsException e) {
+        throw new RuntimeException(e);
+      }
       tasks.put(subTask.getId(), service.submit(() -> {
         try {
           final TaskToolbox toolbox = createTaskToolbox(subTask);
@@ -136,6 +144,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     public TaskStatusResponse getTaskStatus(String taskId)
     {
       final Future<TaskStatus> taskStatusFuture = tasks.get(taskId);
+      final Optional<Task> task = getTaskStorage().getTask(taskId);
+      final String groupId = task.isPresent() ? task.orNull().getGroupId() : taskId;
       if (taskStatusFuture != null) {
         try {
           if (taskStatusFuture.isDone()) {
@@ -144,6 +154,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                 taskId,
                 new TaskStatusPlus(
                     taskId,
+                    groupId,
                     "index_sub",
                     DateTimes.EPOCH,
                     DateTimes.EPOCH,
@@ -160,6 +171,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                 taskId,
                 new TaskStatusPlus(
                     taskId,
+                    groupId,
                     "index_sub",
                     DateTimes.EPOCH,
                     DateTimes.EPOCH,
@@ -181,6 +193,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
               taskId,
               new TaskStatusPlus(
                   taskId,
+                  groupId,
                   "index_sub",
                   DateTimes.EPOCH,
                   DateTimes.EPOCH,

@@ -159,8 +159,9 @@ public class HeapMemoryTaskStorage implements TaskStorage
       Preconditions.checkNotNull(taskId, "taskId");
       final TaskStuff taskStuff = tasks.get(taskId);
       if (taskStuff != null) {
-        return new TaskInfo<>(
+        return TaskInfo.createTaskInfoWithGroupId(
             taskStuff.getTask().getId(),
+            taskStuff.getTask().getGroupId(),
             taskStuff.getCreatedDate(),
             taskStuff.getStatus(),
             taskStuff.getDataSource(),
@@ -203,8 +204,9 @@ public class HeapMemoryTaskStorage implements TaskStorage
       final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
       for (final TaskStuff taskStuff : tasks.values()) {
         if (taskStuff.getStatus().isRunnable()) {
-          TaskInfo t = new TaskInfo(
+          TaskInfo t = TaskInfo.createTaskInfoWithGroupId(
               taskStuff.getTask().getId(),
+              taskStuff.getTask().getGroupId(),
               taskStuff.getCreatedDate(),
               taskStuff.getStatus(),
               taskStuff.getDataSource(),
@@ -267,8 +269,9 @@ public class HeapMemoryTaskStorage implements TaskStorage
       final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
       for (final TaskStuff taskStuff : list) {
         String id = taskStuff.getTask().getId();
-        TaskInfo t = new TaskInfo(
+        TaskInfo t = TaskInfo.createTaskInfoWithGroupId(
             id,
+            taskStuff.getTask().getGroupId(),
             taskStuff.getCreatedDate(),
             taskStuff.getStatus(),
             taskStuff.getDataSource(),
@@ -297,8 +300,9 @@ public class HeapMemoryTaskStorage implements TaskStorage
       final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
       for (final TaskStuff taskStuff : list) {
         String id = taskStuff.getTask().getId();
-        TaskInfo t = new TaskInfo<>(
+        TaskInfo t = TaskInfo.createTaskInfoWithGroupId(
             id,
+            taskStuff.getTask().getGroupId(),
             taskStuff.getCreatedDate(),
             taskStuff.getStatus(),
             taskStuff.getDataSource(),

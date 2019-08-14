@@ -31,6 +31,7 @@ import java.util.Objects;
 public class TaskStatusPlus
 {
   private final String id;
+  private final String groupId;
   private final String type;
   private final DateTime createdTime;
   private final DateTime queueInsertionTime;
@@ -45,6 +46,7 @@ public class TaskStatusPlus
 
   public TaskStatusPlus(
       String id,
+      String groupId,
       String type, // nullable for backward compatibility
       DateTime createdTime,
       DateTime queueInsertionTime,
@@ -58,6 +60,7 @@ public class TaskStatusPlus
   {
     this(
         id,
+        groupId,
         type,
         createdTime,
         queueInsertionTime,
@@ -74,6 +77,7 @@ public class TaskStatusPlus
   @JsonCreator
   public TaskStatusPlus(
       @JsonProperty("id") String id,
+      @JsonProperty("groupId") String groupId,
       @JsonProperty("type") @Nullable String type, // nullable for backward compatibility
       @JsonProperty("createdTime") DateTime createdTime,
       @JsonProperty("queueInsertionTime") DateTime queueInsertionTime,
@@ -90,6 +94,7 @@ public class TaskStatusPlus
       Preconditions.checkNotNull(duration, "duration");
     }
     this.id = Preconditions.checkNotNull(id, "id");
+    this.groupId = Preconditions.checkNotNull(groupId, "groupId");
     this.type = type;
     this.createdTime = Preconditions.checkNotNull(createdTime, "createdTime");
     this.queueInsertionTime = Preconditions.checkNotNull(queueInsertionTime, "queueInsertionTime");
@@ -115,6 +120,12 @@ public class TaskStatusPlus
   public String getId()
   {
     return id;
+  }
+
+  @JsonProperty
+  public String getGroupId()
+  {
+    return groupId;
   }
 
   @Nullable
@@ -195,6 +206,7 @@ public class TaskStatusPlus
     }
     TaskStatusPlus that = (TaskStatusPlus) o;
     return Objects.equals(getId(), that.getId()) &&
+           Objects.equals(getGroupId(), that.getGroupId()) &&
            Objects.equals(getType(), that.getType()) &&
            Objects.equals(getCreatedTime(), that.getCreatedTime()) &&
            Objects.equals(getQueueInsertionTime(), that.getQueueInsertionTime()) &&
@@ -210,6 +222,7 @@ public class TaskStatusPlus
   {
     return Objects.hash(
         getId(),
+        getGroupId(),
         getType(),
         getCreatedTime(),
         getQueueInsertionTime(),
@@ -226,6 +239,7 @@ public class TaskStatusPlus
   {
     return "TaskStatusPlus{" +
            "id='" + id + '\'' +
+           "groupId='" + groupId + '\'' +
            ", type='" + type + '\'' +
            ", createdTime=" + createdTime +
            ", queueInsertionTime=" + queueInsertionTime +

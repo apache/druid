@@ -30,13 +30,14 @@ import javax.annotation.Nullable;
 public class TaskInfo<EntryType, StatusType>
 {
   private final String id;
+  private String groupId;
   private final DateTime createdTime;
   private final StatusType status;
   private final String dataSource;
   @Nullable
   private final EntryType task;
 
-  public TaskInfo(
+  private TaskInfo(
       String id,
       DateTime createdTime,
       StatusType status,
@@ -51,9 +52,54 @@ public class TaskInfo<EntryType, StatusType>
     this.task = task;
   }
 
+  private TaskInfo(
+      String id,
+      String groupId,
+      DateTime createdTime,
+      StatusType status,
+      String dataSource,
+      @Nullable EntryType task
+  )
+  {
+    this.id = Preconditions.checkNotNull(id, "id");
+    this.groupId = Preconditions.checkNotNull(groupId, "groupId");
+    this.createdTime = Preconditions.checkNotNull(createdTime, "createdTime");
+    this.status = Preconditions.checkNotNull(status, "status");
+    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
+    this.task = task;
+  }
+
+  public static <EntryType, StatusType> TaskInfo<EntryType, StatusType> createTaskInfo(
+      String id,
+      DateTime createdTime,
+      StatusType status,
+      String dataSource,
+      @Nullable EntryType task
+  )
+  {
+    return new TaskInfo(id, createdTime, status, dataSource, task);
+  }
+
+  public static <EntryType, StatusType> TaskInfo<EntryType, StatusType> createTaskInfoWithGroupId(
+      String id,
+      String groupId,
+      DateTime createdTime,
+      StatusType status,
+      String dataSource,
+      @Nullable EntryType task
+  )
+  {
+    return new TaskInfo(id, groupId, createdTime, status, dataSource, task);
+  }
+
   public String getId()
   {
     return id;
+  }
+
+  public String getGroupId()
+  {
+    return groupId;
   }
 
   public DateTime getCreatedTime()

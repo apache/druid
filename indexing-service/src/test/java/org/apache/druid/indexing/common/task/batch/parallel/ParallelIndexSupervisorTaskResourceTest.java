@@ -607,6 +607,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           getId(),
           new TaskStatusPlus(
               subTask.getId(),
+              subTask.getGroupId(),
               subTask.getType(),
               DateTimes.EPOCH,
               DateTimes.EPOCH,
@@ -706,6 +707,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
       taskHistories.computeIfAbsent(specId, k -> new ArrayList<>()).add(
           new TaskStatusPlus(
               getId(),
+              getGroupId(),
               getType(),
               DateTimes.EPOCH,
               DateTimes.EPOCH,

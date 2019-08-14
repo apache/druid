@@ -61,15 +61,17 @@ public class IndexerMetadataStorageAdapterTest
   public void testDeletePendingSegments()
   {
     final List<TaskInfo<Task, TaskStatus>> taskInfos = ImmutableList.of(
-        new TaskInfo<>(
+        TaskInfo.createTaskInfoWithGroupId(
             "id1",
+            "group_id1",
             DateTimes.of("2017-12-01"),
             TaskStatus.running("id1"),
             "dataSource",
             NoopTask.create("id1", 0)
         ),
-        new TaskInfo<>(
+        TaskInfo.createTaskInfoWithGroupId(
             "id1",
+            "group_id1",
             DateTimes.of("2017-12-02"),
             TaskStatus.running("id2"),
             "dataSource",
@@ -93,15 +95,17 @@ public class IndexerMetadataStorageAdapterTest
   public void testDeletePendingSegmentsOfRunningTasks()
   {
     final ImmutableList<TaskInfo<Task, TaskStatus>> taskInfos = ImmutableList.of(
-        new TaskInfo<>(
+        TaskInfo.createTaskInfoWithGroupId(
             "id1",
+            "group_id1",
             DateTimes.of("2017-11-01"),
             TaskStatus.running("id1"),
             "dataSource",
             NoopTask.create("id1", 0)
         ),
-        new TaskInfo<>(
+        TaskInfo.createTaskInfoWithGroupId(
             "id1",
+            "group_id1",
             DateTimes.of("2017-12-02"),
             TaskStatus.running("id2"),
             "dataSource",
