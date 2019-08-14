@@ -386,7 +386,7 @@ name: Apache Commons Collections
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1
+version: 4.2
 libraries:
   - org.apache.commons: commons-collections4
 
@@ -416,7 +416,7 @@ name: Apache Commons Lang
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.7
+version: 3.8.1
 libraries:
   - org.apache.commons: commons-lang3
 
@@ -3463,4 +3463,3 @@ version: 1.2.2
 copyright: Jeremy Ashkenas, DocumentCloud
 license_file_path: licenses/src/underscore.MIT
 # Legacy console modules end
-
