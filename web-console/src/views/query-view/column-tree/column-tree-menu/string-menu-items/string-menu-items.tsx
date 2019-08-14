@@ -62,7 +62,7 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
     const { columnName, filterByRow } = this.props;
 
     return (
-      <MenuItem icon={IconNames.FILTER} text={`Filter by...`}>
+      <MenuItem icon={IconNames.FILTER} text={`Filter`}>
         <MenuItem
           text={`"${columnName}" = 'xxx'`}
           onClick={() => filterByRow([{ row: 'xxx', header: columnName, operator: '=' }], false)}
@@ -79,17 +79,17 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
     const { columnName, addFunctionToGroupBy, addToGroupBy } = this.props;
 
     return (
-      <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by...`}>
+      <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by`}>
         <MenuItem text={`"${columnName}"`} onClick={() => addToGroupBy(columnName, true)} />
         <MenuItem
-          text={`SUBSTRING("${columnName}", 1, 2) AS ${columnName}-substring`}
+          text={`SUBSTRING("${columnName}", 1, 2) AS" "${columnName}_substring"`}
           onClick={() =>
             addFunctionToGroupBy(
               'SUBSTRING',
               [' ', ' '],
               [stringFactory(columnName, `"`), 1, 2],
-              false,
-              aliasFactory(`${columnName}-substring`),
+              true,
+              aliasFactory(`${columnName}_substring`),
             )
           }
         />
@@ -100,7 +100,7 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
   renderAggregateMenu(): JSX.Element {
     const { columnName, addAggregateColumn } = this.props;
     return (
-      <MenuItem icon={IconNames.FUNCTION} text={`Aggregate...`}>
+      <MenuItem icon={IconNames.FUNCTION} text={`Aggregate`}>
         <MenuItem
           text={`COUNT(DISTINCT "${columnName}") AS "dist_${columnName}"`}
           onClick={() =>

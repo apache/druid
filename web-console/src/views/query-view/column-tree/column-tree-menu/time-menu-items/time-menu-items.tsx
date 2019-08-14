@@ -135,7 +135,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
     const hour = date.getHours();
 
     return (
-      <MenuItem icon={IconNames.FILTER} text={`Filter by...`}>
+      <MenuItem icon={IconNames.FILTER} text={`Filter`}>
         <MenuItem
           text={`Latest hour`}
           onClick={() => {
@@ -301,40 +301,40 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
     const { columnName, addFunctionToGroupBy } = this.props;
 
     return (
-      <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by...`}>
+      <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by`}>
         <MenuItem
-          text={`TIME_FLOOR("${columnName}", 'PT1H') AS ${columnName}-time_floor`}
+          text={`TIME_FLOOR("${columnName}", 'PT1H') AS "${columnName}_time_floor"`}
           onClick={() =>
             addFunctionToGroupBy(
               'TIME_FLOOR',
               [' '],
               [stringFactory(columnName, `"`), stringFactory('PT1H', `'`)],
               true,
-              aliasFactory(`${columnName}TimeFloor`),
+              aliasFactory(`${columnName}_time_floor`),
             )
           }
         />
         <MenuItem
-          text={`TIME_FLOOR("${columnName}", 'P1D') AS ${columnName}-time_floor`}
+          text={`TIME_FLOOR("${columnName}", 'P1D') AS "${columnName}_time_floor"`}
           onClick={() =>
             addFunctionToGroupBy(
               'TIME_FLOOR',
               [' '],
               [stringFactory(columnName, `"`), stringFactory('P1D', `'`)],
               true,
-              aliasFactory(`${columnName}TimeFloor`),
+              aliasFactory(`${columnName}_time_floor`),
             )
           }
         />
         <MenuItem
-          text={`TIME_FLOOR("${columnName}", 'P7D') AS ${columnName}-time_floor`}
+          text={`TIME_FLOOR("${columnName}", 'P7D') AS "${columnName}_time_floor"`}
           onClick={() =>
             addFunctionToGroupBy(
               'TIME_FLOOR',
               [' '],
               [stringFactory(columnName, `"`), stringFactory('P7D', `'`)],
               true,
-              aliasFactory(`${columnName}TimeFloor`),
+              aliasFactory(`${columnName}_time_floor`),
             )
           }
         />
@@ -345,7 +345,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
   renderAggregateMenu(): JSX.Element {
     const { columnName, addAggregateColumn } = this.props;
     return (
-      <MenuItem icon={IconNames.FUNCTION} text={`Aggregate...`}>
+      <MenuItem icon={IconNames.FUNCTION} text={`Aggregate`}>
         <MenuItem
           text={`MAX("${columnName}") AS "max_${columnName}"`}
           onClick={() =>

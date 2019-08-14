@@ -630,7 +630,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   };
 
   private handleQueryStringChange = (queryString: string): void => {
-    this.setState({ queryString });
+    this.setState({ queryString, queryAst: parser(queryString) });
   };
 
   private handleQueryContextChange = (queryContext: QueryContext) => {

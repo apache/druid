@@ -156,7 +156,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                     <Menu>
                       <MenuItem
                         icon={IconNames.FULLSCREEN}
-                        text={`Show: ${table}`}
+                        text={`Select ... from ${table}`}
                         onClick={() => {
                           handleTableClick(
                             schema,
@@ -195,6 +195,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                     boundary={'window'}
                     position={Position.RIGHT}
                     autoFocus={false}
+                    targetClassName={'bp3-popover-open'}
                     content={
                       <Deferred
                         content={() => (

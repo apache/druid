@@ -16,10 +16,18 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, FormGroup, InputGroup, TextArea } from '@blueprintjs/core';
+import {
+  Button,
+  Classes,
+  Dialog,
+  FormGroup,
+  InputGroup,
+  Intent,
+  TextArea,
+} from '@blueprintjs/core';
 import React from 'react';
 
-import { BasicQueryExplanation, copyAndAlert, SemiJoinQueryExplanation } from '../../utils';
+import { BasicQueryExplanation, SemiJoinQueryExplanation } from '../../utils';
 
 import './query-plan-dialog.scss';
 
@@ -136,9 +144,12 @@ export class QueryPlanDialog extends React.PureComponent<
         <div className={Classes.DIALOG_BODY}>{content}</div>
         <div className={Classes.DIALOG_FOOTER}>
           <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-            <Button text="Copy" onClick={() => copyAndAlert(this.queryString, 'Query copied')} />
-            <Button text="Open" onClick={() => setQueryString(this.queryString)} />
             <Button text="Close" onClick={onClose} />
+            <Button
+              text="Open"
+              intent={Intent.PRIMARY}
+              onClick={() => setQueryString(this.queryString)}
+            />
           </div>
         </div>
       </Dialog>

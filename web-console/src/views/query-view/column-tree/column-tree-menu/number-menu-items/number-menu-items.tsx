@@ -55,7 +55,7 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
     const { columnName, filterByRow } = this.props;
 
     return (
-      <MenuItem icon={IconNames.FILTER} text={`Filter by...`}>
+      <MenuItem icon={IconNames.FILTER} text={`Filter`}>
         <MenuItem
           text={`"${columnName}" > 100`}
           onClick={() => filterByRow([{ row: 100, header: columnName, operator: '>' }], false)}
@@ -72,10 +72,10 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
     const { columnName, addFunctionToGroupBy, addToGroupBy } = this.props;
 
     return (
-      <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by...`}>
+      <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by`}>
         <MenuItem text={`"${columnName}"`} onClick={() => addToGroupBy(columnName, true)} />
         <MenuItem
-          text={`TRUNCATE("${columnName}", 1) AS ${columnName}-truncated`}
+          text={`TRUNCATE("${columnName}", 1) AS "${columnName}_truncated"`}
           onClick={() =>
             addFunctionToGroupBy(
               'TRUNCATE',
@@ -89,7 +89,7 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
                 1,
               ],
               true,
-              aliasFactory(`${columnName}-truncated`),
+              aliasFactory(`${columnName}_truncated`),
             )
           }
         />
@@ -100,7 +100,7 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
   renderAggregateMenu(): JSX.Element {
     const { columnName, addAggregateColumn } = this.props;
     return (
-      <MenuItem icon={IconNames.FUNCTION} text={`Aggregate...`}>
+      <MenuItem icon={IconNames.FUNCTION} text={`Aggregate`}>
         <MenuItem
           text={`SUM(${columnName}) AS "sum_${columnName}"`}
           onClick={() =>
