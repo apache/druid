@@ -1545,6 +1545,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     @Nullable
     @Override
     @Deprecated
+    @JsonProperty
     public Integer getMaxRowsPerSegment()
     {
       return partitionsSpec == null ? null : partitionsSpec.getMaxRowsPerSegment();
@@ -1557,6 +1558,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     @Override
     @Nullable
     @Deprecated
+    @JsonProperty
     public Long getMaxTotalRows()
     {
       return partitionsSpec instanceof DynamicPartitionsSpec
@@ -1566,6 +1568,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     @Deprecated
     @Nullable
+    @JsonProperty
     public Integer getNumShards()
     {
       return partitionsSpec instanceof HashedPartitionsSpec
@@ -1574,6 +1577,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
 
     @Deprecated
+    @JsonProperty
     public List<String> getPartitionDimensions()
     {
       return partitionsSpec instanceof HashedPartitionsSpec
