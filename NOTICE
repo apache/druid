@@ -7,7 +7,7 @@ The Apache Software Foundation (http://www.apache.org/).
 
 ############ SOURCE/JAVA-CORE ############
 
-================= Apache Calcite 1.10.0 =================
+================= Apache Calcite =================
 Apache Calcite
 Copyright 2012-2019 The Apache Software Foundation
 
@@ -42,7 +42,17 @@ Apache Lucene
 Copyright 2001-2019 The Apache Software Foundation
 
 
-================= Metamarkets extendedset 1.3.10 =================
+================= Metamarkets bytebuffer-collections =================
+bytebuffer-collections
+Copyright 2011-2015 Metamarkets Group Inc.
+
+
+================= Metamarkets java-util =================
+java-util
+Copyright 2011-2017 Metamarkets Group Inc.
+
+
+================= Metamarkets extendedset =================
 extendedset
 Copyright 2012 Metamarkets Group Inc.
 
