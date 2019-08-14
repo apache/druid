@@ -298,12 +298,13 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         };
       },
       onStateChange: ({ result, loading, error }) => {
+        const { autoRun } = this.state;
         this.setState({
           result: result ? result.queryResult : undefined,
           queryExtraInfo: result ? result.queryExtraInfo : undefined,
           loading,
           error,
-          parsedQuery: result ? result.parsedQuery : undefined,
+          parsedQuery: result && autoRun ? result.parsedQuery : undefined,
         });
         this.ast = result ? result.parsedQuery : undefined;
       },
@@ -451,7 +452,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       parsedQuery,
     } = this.state;
     const runeMode = QueryView.isJsonLike(queryString);
-
     return (
       <SplitterLayout
         vertical
