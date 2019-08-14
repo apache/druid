@@ -30,12 +30,12 @@ import javax.annotation.Nullable;
 public class TaskInfo<EntryType, StatusType>
 {
   private final String id;
-  private String groupId;
   private final DateTime createdTime;
   private final StatusType status;
   private final String dataSource;
   @Nullable
   private final EntryType task;
+  private String groupId;
 
   private TaskInfo(
       String id,

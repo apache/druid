@@ -1088,6 +1088,10 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals("NONE", row0[7].toString());
     Assert.assertEquals(-1L, row0[8]);
     Assert.assertEquals("testHost:1234", row0[9]);
+    Assert.assertEquals("testHost", row0[10]);
+    Assert.assertEquals(1234L, row0[11]);
+    Assert.assertEquals(-1L, row0[12]);
+    Assert.assertEquals(null, row0[13]);
 
     Object[] row1 = rows.get(1);
     Assert.assertEquals("index_wikipedia_2018-09-21T18:38:47.773Z", row1[0].toString());
@@ -1100,6 +1104,10 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals("RUNNING", row1[7].toString());
     Assert.assertEquals(0L, row1[8]);
     Assert.assertEquals("192.168.1.6:8100", row1[9]);
+    Assert.assertEquals("192.168.1.6", row1[10]);
+    Assert.assertEquals(8100L, row1[11]);
+    Assert.assertEquals(-1L, row1[12]);
+    Assert.assertEquals(null, row1[13]);
 
     // Verify value types.
     verifyTypes(rows, SystemSchema.TASKS_SIGNATURE);
