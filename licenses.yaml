@@ -1557,7 +1557,7 @@ name: JCodings
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 1.0.13
+version: 1.0.43
 copyright: JRuby Team
 license_file_path: licenses/bin/jcodings.MIT
 libraries:
@@ -1569,7 +1569,7 @@ name: Joni
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 2.1.11
+version: 2.1.27
 copyright: JRuby Team
 license_file_path: licenses/bin/joni.MIT
 libraries:
@@ -3463,4 +3463,3 @@ version: 1.2.2
 copyright: Jeremy Ashkenas, DocumentCloud
 license_file_path: licenses/src/underscore.MIT
 # Legacy console modules end
-
