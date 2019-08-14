@@ -17,37 +17,40 @@
  * under the License.
  */
 
-package org.apache.druid.storage.azure;
+package org.apache.druid.segment.selector.settable;
 
-import com.google.common.base.Predicate;
-import com.microsoft.azure.storage.StorageException;
-import org.apache.druid.java.util.common.RetryUtils;
-import org.apache.druid.java.util.common.RetryUtils.Task;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.BaseDoubleColumnValueSelector;
+import org.apache.druid.segment.ColumnValueSelector;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-
-public class AzureUtils
+/**
+ * A BaseDoubleColumnValueSelector impl to return settable double value on calls to
+ * {@link ColumnValueSelector#getDouble()}
+ */
+public class SettableValueDoubleColumnValueSelector implements BaseDoubleColumnValueSelector
 {
+  private double value;
 
-  public static final Predicate<Throwable> AZURE_RETRY = e -> {
-    if (e instanceof URISyntaxException) {
-      return false;
-    }
-
-    if (e instanceof StorageException) {
-      return true;
-    }
-
-    if (e instanceof IOException) {
-      return true;
-    }
-
-    return false;
-  };
-
-  static <T> T retryAzureOperation(Task<T> f, int maxTries) throws Exception
+  @Override
+  public double getDouble()
   {
-    return RetryUtils.retry(f, AZURE_RETRY, maxTries);
+    return value;
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+
+  }
+
+  @Override
+  public boolean isNull()
+  {
+    return false;
+  }
+
+  public void setValue(double value)
+  {
+    this.value = value;
   }
 }

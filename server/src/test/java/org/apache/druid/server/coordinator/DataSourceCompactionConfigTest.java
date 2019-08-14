@@ -22,6 +22,10 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
+import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig.UserCompactTuningConfig;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -97,7 +101,7 @@ public class DataSourceCompactionConfigTest
   @Test
   public void testSerdeUserCompactTuningConfig() throws IOException
   {
-    final UserCompactTuningConfig config = new UserCompactTuningConfig(null, null, null, null, null);
+    final UserCompactTuningConfig config = new UserCompactTuningConfig(null, null, null, null, null, null);
     final String json = OBJECT_MAPPER.writeValueAsString(config);
     // Check maxRowsPerSegment doesn't exist in the JSON string
     Assert.assertFalse(json.contains("maxRowsPerSegment"));
@@ -118,7 +122,8 @@ public class DataSourceCompactionConfigTest
         new Period(3600),
         new UserCompactTuningConfig(
             null,
-            10000,
+            null,
+            10000L,
             null,
             null,
             null
@@ -140,7 +145,7 @@ public class DataSourceCompactionConfigTest
   }
 
   @Test
-  public void testTargetCompactionSizeBytesWithMaxRowsPerSegment()
+  public void testSerdeTargetCompactionSizeBytesWithMaxRowsPerSegment()
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage(
@@ -160,7 +165,7 @@ public class DataSourceCompactionConfigTest
   }
 
   @Test
-  public void testTargetCompactionSizeBytesWithMaxTotalRows()
+  public void testSerdeTargetCompactionSizeBytesWithMaxTotalRows()
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage(
@@ -176,7 +181,8 @@ public class DataSourceCompactionConfigTest
         new Period(3600),
         new UserCompactTuningConfig(
             null,
-            10000,
+            null,
+            10000L,
             null,
             null,
             null
@@ -198,7 +204,8 @@ public class DataSourceCompactionConfigTest
         new Period(3600),
         new UserCompactTuningConfig(
             null,
-            10000,
+            null,
+            10000L,
             null,
             null,
             null
@@ -218,5 +225,27 @@ public class DataSourceCompactionConfigTest
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
+  }
+
+  @Test
+  public void testSerdeUserCompactionTuningConfig() throws IOException
+  {
+    final UserCompactTuningConfig tuningConfig = new UserCompactTuningConfig(
+        1000,
+        10000L,
+        2000L,
+        new IndexSpec(
+            new RoaringBitmapSerdeFactory(false),
+            CompressionStrategy.LZF,
+            CompressionStrategy.UNCOMPRESSED,
+            LongEncodingStrategy.LONGS
+        ),
+        1,
+        3000L
+    );
+
+    final String json = objectMapper.writeValueAsString(tuningConfig);
+    final UserCompactTuningConfig fromJson = objectMapper.readValue(json, UserCompactTuningConfig.class);
+    Assert.assertEquals(tuningConfig, fromJson);
   }
 }
