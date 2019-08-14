@@ -169,7 +169,7 @@ public class IncrementalIndexTest
   )
   {
     if (null == aggregatorFactories) {
-      aggregatorFactories = DEAFAULT_AGGREGATOR_FACTORIES;
+      aggregatorFactories = DEFAULT_AGGREGATOR_FACTORIES;
     }
 
     return new IncrementalIndex.Builder()
@@ -186,7 +186,7 @@ public class IncrementalIndexTest
   public static IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories)
   {
     if (null == aggregatorFactories) {
-      aggregatorFactories = DEAFAULT_AGGREGATOR_FACTORIES;
+      aggregatorFactories = DEFAULT_AGGREGATOR_FACTORIES;
     }
 
     return new IncrementalIndex.Builder()
@@ -198,7 +198,7 @@ public class IncrementalIndexTest
   public static IncrementalIndex createNoRollupIndex(AggregatorFactory[] aggregatorFactories)
   {
     if (null == aggregatorFactories) {
-      aggregatorFactories = DEAFAULT_AGGREGATOR_FACTORIES;
+      aggregatorFactories = DEFAULT_AGGREGATOR_FACTORIES;
     }
 
     return new IncrementalIndex.Builder()
@@ -250,21 +250,21 @@ public class IncrementalIndexTest
     return new MapBasedInputRow(timestamp, dimensionList, builder.build());
   }
 
-  private static final AggregatorFactory[] DEAFAULT_AGGREGATOR_FACTORIES = new AggregatorFactory[]{
+  private static final AggregatorFactory[] DEFAULT_AGGREGATOR_FACTORIES = new AggregatorFactory[]{
       new CountAggregatorFactory(
           "count"
       )
   };
 
   private static final AggregatorFactory[] DEFAULT_COMBINING_AGGREGATOR_FACTORIES = new AggregatorFactory[]{
-      DEAFAULT_AGGREGATOR_FACTORIES[0].getCombiningFactory()
+      DEFAULT_AGGREGATOR_FACTORIES[0].getCombiningFactory()
   };
 
   @Test
   public void testCaseSensitivity() throws Exception
   {
     long timestamp = System.currentTimeMillis();
-    IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex(DEAFAULT_AGGREGATOR_FACTORIES));
+    IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex(DEFAULT_AGGREGATOR_FACTORIES));
 
     populateIndex(timestamp, index);
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensionNames());
@@ -675,7 +675,7 @@ public class IncrementalIndexTest
   @Test
   public void testConcurrentAdd() throws Exception
   {
-    final IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex(DEAFAULT_AGGREGATOR_FACTORIES));
+    final IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex(DEFAULT_AGGREGATOR_FACTORIES));
     final int threadCount = 10;
     final int elementsPerThread = 200;
     final int dimensionCount = 5;

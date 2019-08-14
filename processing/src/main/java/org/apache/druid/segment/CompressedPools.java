@@ -92,7 +92,7 @@ public class CompressedPools
       }
   );
 
-  private static final NonBlockingPool<ByteBuffer> BIG_ENDIAN_BYTE_BUF_POOL = new StupidPool<ByteBuffer>(
+  private static final NonBlockingPool<ByteBuffer> LITTLE_ENDIAN_BYTE_BUF_POOL = new StupidPool<ByteBuffer>(
       "littleEndByteBufPool",
       new Supplier<ByteBuffer>()
       {
@@ -110,7 +110,7 @@ public class CompressedPools
   public static ResourceHolder<ByteBuffer> getByteBuf(ByteOrder order)
   {
     if (order == ByteOrder.LITTLE_ENDIAN) {
-      return BIG_ENDIAN_BYTE_BUF_POOL.take();
+      return LITTLE_ENDIAN_BYTE_BUF_POOL.take();
     }
     return BIG_ENDIAN_BYTE_BUF_POOL.take();
   }
