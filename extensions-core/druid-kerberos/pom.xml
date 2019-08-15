@@ -86,6 +86,10 @@
           <artifactId>commons-lang</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>commons-net</groupId>
+          <artifactId>commons-net</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>log4j</groupId>
           <artifactId>log4j</artifactId>
         </exclusion>
