@@ -161,7 +161,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 |ulp|ulp(x) would return the size of an ulp of the argument x|
 
 
-## Array Functions
+## Array functions
 
 | function | description |
 | --- | --- |
@@ -181,7 +181,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | string_to_array(str1,str2) | splits str1 into an array on the delimiter specified by str2 |
 
 
-## Apply Functions
+## Apply functions
 
 | function | description |
 | --- | --- |
@@ -194,7 +194,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | all(lambda,arr) | returns 1 if all elements in the array matches the lambda expression, else 0 |
 
 
-## IP Address Functions
+## IP address functions
 
 For the IPv4 address functions, the `address` argument can either be an IPv4 dotted-decimal string
 (e.g., "192.168.0.1") or an IP address represented as a long (e.g., 3232235521). The `subnet`

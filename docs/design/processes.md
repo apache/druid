@@ -35,7 +35,7 @@ Druid has several process types:
 * [Indexer (Optional)](../design/indexer.md)
 * [Router (Optional)](../design/router.md)
 
-## Server Types
+## Server types
 
 Druid processes can be deployed any way you like, but for ease of deployment we suggest organizing them into three server types:
 

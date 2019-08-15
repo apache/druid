@@ -78,7 +78,7 @@ To query for results, "variance" aggregator with "variance" input type or simply
 |`estimator`|Set "population" to get variance_pop rather than variance_sample, which is default.|null|
 
 
-### Standard Deviation post-aggregator
+### Standard deviation post-aggregator
 
 To acquire standard deviation from variance, user can use "stddev" post aggregator.
 
@@ -91,7 +91,7 @@ To acquire standard deviation from variance, user can use "stddev" post aggregat
 }
 ```
 
-## Query Examples:
+## Query examples:
 
 ### Timeseries query
 
@@ -113,7 +113,7 @@ To acquire standard deviation from variance, user can use "stddev" post aggregat
 }
 ```
 
-### TopN Query
+### TopN query
 
 ```json
 {

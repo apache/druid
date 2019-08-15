@@ -375,7 +375,7 @@ See [Compaction Configuration](../configuration/index.html#compaction-dynamic-co
 
 Removes the compaction config for a dataSource.
 
-#### Server Information
+#### Server information
 
 ##### GET
 
@@ -580,7 +580,8 @@ Shutdown a supervisor.
 > This API is deprecated and will be removed in future releases.
 > Please use the equivalent 'terminate' instead.
 
-#### Dynamic Configuration
+#### Dynamic configuration
+
 See [Overlord Dynamic Configuration](../configuration/index.html#overlord-dynamic-configuration) for details.
 
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`

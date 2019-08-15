@@ -35,7 +35,7 @@ The table data source is the most common type. It's represented by a string, or 
 }
 ```
 
-### Union Data Source
+### Union datasource
 
 This data source unions two or more table data sources.
 
@@ -49,7 +49,7 @@ This data source unions two or more table data sources.
 Note that the data sources being unioned should have the same schema.
 Union Queries should be always sent to a Broker/Router process and are *NOT* supported directly by the Historical processes.
 
-### Query Data Source
+### Query datasource
 
 This is used for nested groupBys and is only currently supported for groupBys.
 

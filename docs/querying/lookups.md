@@ -249,7 +249,8 @@ For example, a config might look something like:
 
 All entries in the map will UPDATE existing entries. No entries will be deleted.
 
-## Update Lookup
+## Update lookup
+
 A `POST` to a particular lookup extractor factory via `/druid/coordinator/v1/lookups/config/{tier}/{id}` will update that specific extractor factory.
 
 For example, a post to `/druid/coordinator/v1/lookups/config/realtime_customer1/site_id_customer1` might contain the following:
@@ -268,10 +269,12 @@ For example, a post to `/druid/coordinator/v1/lookups/config/realtime_customer1/
 
 This will replace the `site_id_customer1` lookup in the `realtime_customer1` with the definition above.
 
-## Get All Lookups
+## Get all lookups
+
 A `GET` to `/druid/coordinator/v1/lookups/config/all` will return all known lookup specs for all tiers.
 
-## Get Lookup
+## Get lookup
+
 A `GET` to a particular lookup extractor factory is accomplished via `/druid/coordinator/v1/lookups/config/{tier}/{id}`
 
 Using the prior example, a `GET` to `/druid/coordinator/v1/lookups/config/realtime_customer2/site_id_customer2` should return
@@ -288,37 +291,47 @@ Using the prior example, a `GET` to `/druid/coordinator/v1/lookups/config/realti
 }
 ```
 
-## Delete Lookup
+## Delete lookup
+
 A `DELETE` to `/druid/coordinator/v1/lookups/config/{tier}/{id}` will remove that lookup from the cluster. If it was last lookup in the tier, then tier is deleted as well.
 
-## Delete Tier
+## Delete tier
+
 A `DELETE` to `/druid/coordinator/v1/lookups/config/{tier}` will remove that tier from the cluster.
 
 ## List tier names
+
 A `GET` to `/druid/coordinator/v1/lookups/config` will return a list of known tier names in the dynamic configuration.
 To discover a list of tiers currently active in the cluster in addition to ones known in the dynamic configuration, the parameter `discover=true` can be added as per `/druid/coordinator/v1/lookups/config?discover=true`.
 
 ## List lookup names
+
 A `GET` to `/druid/coordinator/v1/lookups/config/{tier}` will return a list of known lookup names for that tier.
 
 These end points can be used to get the propagation status of configured lookups to processes using lookups such as Historicals.
 
 ## List load status of all lookups
+
 `GET /druid/coordinator/v1/lookups/status` with optional query parameter `detailed`.
 
 ## List load status of lookups in a tier
+
 `GET /druid/coordinator/v1/lookups/status/{tier}` with optional query parameter `detailed`.
 
 ## List load status of single lookup
+
 `GET /druid/coordinator/v1/lookups/status/{tier}/{lookup}` with optional query parameter `detailed`.
 
 ## List lookup state of all processes
+
 `GET /druid/coordinator/v1/lookups/nodeStatus` with optional query parameter `discover` to discover tiers from zookeeper or configured lookup tiers are listed.
 
 ## List lookup state of processes in a tier
+
 `GET /druid/coordinator/v1/lookups/nodeStatus/{tier}`
 
 ## List lookup state of single process
+
 `GET /druid/coordinator/v1/lookups/nodeStatus/{tier}/{host:port}`
 
 
@@ -327,7 +340,7 @@ There is an internal API these processes use to list/load/drop their lookups sta
 These follow the same convention for return values as the cluster wide dynamic configuration. Following endpoints
 can be used for debugging purposes but not otherwise.
 
-## Get Lookups
+## Get lookups
 
 A `GET` to the process at `/druid/listen/v1/lookups` will return a json map of all the lookups currently active on the process.
 The return value will be a json map of the lookups to their extractor factories.
@@ -346,7 +359,7 @@ The return value will be a json map of the lookups to their extractor factories.
 }
 ```
 
-## Get Lookup
+## Get lookup
 
 A `GET` to the process at `/druid/listen/v1/lookups/some_lookup_name` will return the LookupExtractorFactory for the lookup identified by `some_lookup_name`.
 The return value will be the json representation of the factory.

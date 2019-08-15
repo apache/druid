@@ -42,7 +42,7 @@ In production, we recommend deploying multiple Master servers and multiple Query
 
 If you do not have an existing Druid cluster, and wish to start running Druid in a clustered deployment, this guide provides an example clustered deployment with pre-made configurations.
 
-#### Master Server
+#### Master server
 
 The Coordinator and Overlord processes are responsible for handling the metadata and coordination needs of your cluster. They can be colocated together on the same server.
 
@@ -55,7 +55,7 @@ This hardware offers:
 
 Example Master server configurations that have been sized for this hardware can be found under `conf/druid/cluster/master`.
 
-#### Data Server
+#### Data server
 
 Historicals and MiddleManagers can be colocated on the same server to handle the actual data in your cluster. These servers benefit greatly from CPU, RAM,
 and SSDs.
@@ -70,7 +70,7 @@ This hardware offers:
 
 Example Data server configurations that have been sized for this hardware can be found under `conf/druid/cluster/data`.
 
-#### Query Server
+#### Query server
 
 Druid Brokers accept queries and farm them out to the rest of the cluster. They also optionally maintain an
 in-memory query cache. These servers benefit greatly from CPU and RAM.
@@ -96,11 +96,11 @@ If your use case has complex scaling requirements, you can also choose to not co
 
 The information in the [basic cluster tuning guide](../operations/basic-cluster-tuning.md) can help with your decision-making process and with sizing your configurations.
 
-### Migrating from a Single-Server Deployment
+### Migrating from a single-server deployment
 
 If you have an existing single-server deployment, such as the ones from the [single-server deployment examples](../operations/single-server.md), and you wish to migrate to a clustered deployment of similar scale, the following section contains guidelines for choosing equivalent hardware using the Master/Data/Query server organization.
 
-#### Master Server
+#### Master server
 
 The main considerations for the Master server are available CPUs and RAM for the Coordinator and Overlord heaps.
 
@@ -108,7 +108,7 @@ Sum up the allocated heap sizes for your Coordinator and Overlord from the singl
 
 For CPU cores, you can choose hardware with approximately 1/4th of the cores of the single-server deployment.
 
-#### Data Server
+#### Data server
 
 When choosing Data server hardware for the cluster, the main considerations are available CPUs and RAM, and using SSD storage if feasible.
 
@@ -118,7 +118,7 @@ When choosing the Data server hardware, you can choose a split factor `N`, divid
 
 Instructions for adjusting the Historical/MiddleManager configs for the split are described in a later section in this guide.
 
-#### Query Server
+#### Query derver
 
 The main considerations for the Query server are available CPUs and RAM for the Broker heap + direct memory, and Router heap.
 

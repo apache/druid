@@ -27,7 +27,7 @@ title: "Overlord Process"
 
 For Apache Druid (incubating) Overlord Process Configuration, see [Overlord Configuration](../configuration/index.html#overlord).
 
-### HTTP Endpoints
+### HTTP endpoints
 
 For a list of API endpoints supported by the Overlord, please see the [API reference](../operations/api-reference.html#overlord).
 
@@ -42,7 +42,7 @@ This mode is recommended if you intend to use the indexing service as the single
 
 The Overlord provides a UI for managing tasks and workers. For more details, please see [overlord console](../operations/management-uis.html#overlord-console).
 
-### Blacklisted Workers
+### Blacklisted workers
 
 If a MiddleManager has task failures above a threshold, the Overlord will blacklist these MiddleManagers. No more than 20% of the MiddleManagers can be blacklisted. Blacklisted MiddleManagers will be periodically whitelisted.
 

@@ -107,30 +107,30 @@ The `payload` column stores a JSON blob that has all of the metadata for the seg
 
 Note that the format of this blob can and will change from time-to-time.
 
-### Rule Table
+### Rule table
 
 The rule table is used to store the various rules about where segments should
 land. These rules are used by the [Coordinator](../design/coordinator.md)
   when making segment (re-)allocation decisions about the cluster.
 
-### Config Table
+### Config table
 
 The config table is used to store runtime configuration objects. We do not have
 many of these yet and we are not sure if we will keep this mechanism going
 forward, but it is the beginnings of a method of changing some configuration
 parameters across the cluster at runtime.
 
-### Task-related Tables
+### Task-related tables
 
 There are also a number of tables created and used by the [Overlord](../design/overlord.md) and [MiddleManager](../design/middlemanager.md) when managing tasks.
 
-### Audit Table
+### Audit table
 
 The Audit table is used to store the audit history for configuration changes
 e.g rule changes done by [Coordinator](../design/coordinator.md) and other
 config changes.
 
-##Accessed By: ##
+##Accessed by: ##
 
 The Metadata Storage is accessed only by:
 

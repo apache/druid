@@ -204,11 +204,11 @@ The number of workers needed in your cluster depends on how many concurrent inge
 
 You can allocate more MiddleManager machines to your cluster to add task capacity.
 
-#### Task Configurations
+#### Task configurations
 
 The following section below describes configuration for Tasks launched by the MiddleManager. The Tasks can be queried and perform ingestion workloads, so they require more resources than the MM.
 
-##### Task Heap Sizing
+##### Task heap sizing
 
 A 1GB heap is usually enough for Tasks.
 
@@ -228,7 +228,7 @@ For Tasks, 1 or 2 processing threads are often enough, as the Tasks tend to hold
 - `druid.indexer.fork.property.druid.processing.numMergeBuffers`: set this to 2
 - `druid.indexer.fork.property.druid.processing.buffer.sizeBytes`: can be set to 100MB
 
-##### Direct Memory Sizing
+##### Direct memory sizing
 
 The processing and merge buffers described above are direct memory buffers.
 
@@ -242,7 +242,7 @@ A formula for estimating direct memory usage follows:
 
 The `+ 1` factor is a fuzzy estimate meant to account for the segment decompression buffers and dictionary merging buffers.
 
-##### Connection Pool Sizing
+##### Connection pool sizing
 
 Please see the [General Connection Pool Guidelines](#general-connection-pool-guidelines) section for an overview of connection pool configuration.
 

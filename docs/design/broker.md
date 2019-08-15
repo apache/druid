@@ -42,7 +42,7 @@ On start up, Historical processes announce themselves and the segments they are 
 org.apache.druid.cli.Main server broker
 ```
 
-### Forwarding Queries
+### Forwarding queries
 
 Most Druid queries contain an interval object that indicates a span of time for which data is requested. Likewise, Druid [Segments](../design/segments.md) are partitioned to contain data for some interval of time and segments are distributed across a cluster. Consider a simple datasource with 7 segments where each segment contains data for a given day of the week. Any query issued to the datasource for more than one day of data will hit more than one segment. These segments will likely be distributed across multiple processes, and hence, the query will likely hit multiple processes.
 

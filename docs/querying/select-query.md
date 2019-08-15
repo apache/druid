@@ -181,7 +181,7 @@ The results above include:
     },
 ```
 
-### Result Pagination
+### Result pagination
 
 The PagingSpec allows the user to specify that the results of a select query should be returned as a paginated set.
 
@@ -199,7 +199,7 @@ To retrieve the next part of the result set, the user should issue the same sele
 
 When an empty result set is received, all rows have been returned.
 
-#### fromNext Backwards Compatibility
+#### fromNext backwards compatibility
 
 In older versions of Druid, when using paginated select queries, it was necessary for the user to manually increment the paging offset by 1 in each `pagingIdentifiers` before submitting the next query to retrieve the next set of results. This offset increment happens automatically in the current version of Druid by default, the user does not need to modify the `pagingIdentifiers` offset to retrieve the next result set.
 

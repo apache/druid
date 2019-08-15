@@ -43,7 +43,7 @@ the Overlord APIs.
 
 ## Task reports
 
-### Completion Report
+### Completion report
 
 After a task completes, a report containing information about the number of rows ingested and any parse exceptions that occurred is available at:
 

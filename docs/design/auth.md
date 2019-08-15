@@ -52,11 +52,11 @@ If no Authenticator in the chain successfully authenticated a request or sent an
 
 Druid includes two built-in Authenticators, one of which is used for the default unsecured configuration.
 
-### AllowAll Authenticator
+### AllowAll authenticator
 
 This built-in Authenticator authenticates all requests, and always directs them to an Authorizer named "allowAll". It is not intended to be used for anything other than the default unsecured configuration.
 
-### Anonymous Authenticator
+### Anonymous authenticator
 
 This built-in Authenticator authenticates all requests, and directs them to an Authorizer specified in the configuration by the user. It is intended to be used for adding a default level of access so
 the Anonymous Authenticator should be added to the end of the authentication chain. A request that reaches the Anonymous Authenticator at the end of the chain will succeed or fail depending on how the Authorizer linked to the Anonymous Authenticator is configured.
@@ -84,7 +84,7 @@ The `druid.escalator.type` property determines what authentication scheme should
 
 The Escalator chosen for this property must use an authentication scheme that is supported by an Authenticator in `druid.auth.authenticationChain`. Authenticator extension implementors must also provide a corresponding Escalator implementation if they intend to use a particular authentication scheme for internal Druid communications.
 
-### Noop Escalator
+### Noop escalator
 
 This built-in default Escalator is intended for use only with the default AllowAll Authenticator and Authorizer.
 
@@ -104,7 +104,8 @@ Only a single Authorizer will authorize any given request.
 
 Druid includes one built in authorizer:
 
-### AllowAll Authorizer
+### AllowAll authorizer
+
 The Authorizer with type name "allowAll" accepts all requests.
 
 ## Default Unsecured Configuration

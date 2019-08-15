@@ -23,7 +23,7 @@ title: "Management UIs"
   -->
 
 
-## Druid Console
+## Druid console
 
 Druid provides a console for managing datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. The user can also run SQL and native Druid queries within the console.
 
@@ -44,11 +44,11 @@ The Druid Console contains all of the functionality provided by the older consol
 
 For more information on the features of the Druid Console have a look at the [Druid Console overview](./druid-console.md)
 
-## Legacy Consoles
+## Legacy consoles
 
 These older consoles provide a subset of the functionality of the Druid Console. We recommend using the Druid Console if possible.
 
-### Coordinator Consoles
+### Coordinator consoles
 
 #### Version 2
 
@@ -70,7 +70,7 @@ The oldest version of Druid's Coordinator console is still available for backwar
 http://<COORDINATOR_IP>:<COORDINATOR_PORT>/old-console
 ```
 
-### Overlord Console
+### Overlord console
 
 The Overlord console can be used to view pending tasks, running tasks, available workers, and recent worker creation and termination. The console can be accessed at:
 

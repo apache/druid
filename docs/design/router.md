@@ -153,7 +153,7 @@ To accomplish this, Druid provides two built-in balancers that use rendezvous ha
 
 Note that when multiple Routers are used, all Routers should have identical balancer configuration to ensure that they make the same routing decisions.
 
-### Rendezvous Hash Balancer
+### Rendezvous hash balancer
 
 This balancer uses [Rendezvous Hashing](https://en.wikipedia.org/wiki/Rendezvous_hashing) on an Avatica request's connection ID to assign the request to a Broker.
 
@@ -165,7 +165,7 @@ druid.router.avatica.balancer.type=rendezvousHash
 
 If no `druid.router.avatica.balancer` property is set, the Router will also default to using the Rendezvous Hash Balancer.
 
-### Consistent Hash Balancer
+### Consistent hash balancer
 
 This balancer uses [Consistent Hashing](https://en.wikipedia.org/wiki/Consistent_hashing) on an Avatica request's connection ID to assign the request to a Broker.
 
@@ -177,7 +177,7 @@ druid.router.avatica.balancer.type=consistentHash
 
 This is a non-default implementation that is provided for experimentation purposes. The consistent hasher has longer setup times on initialization and when the set of Brokers changes, but has a faster Broker assignment time than the rendezous hasher when tested with 5 Brokers. Benchmarks for both implementations have been provided in `ConsistentHasherBenchmark` and `RendezvousHasherBenchmark`. The consistent hasher also requires locking, while the rendezvous hasher does not.
 
-HTTP Endpoints
+HTTP endpoints
 --------------
 
 The Router process exposes several HTTP endpoints for interactions.

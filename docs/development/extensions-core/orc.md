@@ -53,7 +53,7 @@ the set of ingested dimensions, if missing the discovered fields will make up th
 Auto field discovery will automatically create a string dimension for every (non-timestamp) primitive or `list` of
 primitives, as well as any flatten expressions defined in the `flattenSpec`.
 
-### Hadoop Job Properties
+### Hadoop job properties
 Like most Hadoop jobs, the best outcomes will add `"mapreduce.job.user.classpath.first": "true"` or
 `"mapreduce.job.classloader": "true"` to the `jobProperties` section of `tuningConfig`. Note that it is likely if using
 `"mapreduce.job.classloader": "true"` that you will need to set `mapreduce.job.classloader.system.classes` to include

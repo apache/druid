@@ -57,7 +57,7 @@ Each Apache Druid (incubating) query can accept a list of virtual columns as a p
 ```
 
 
-## Virtual Column Types
+## Virtual column types
 
 ### Expression virtual column
 

@@ -36,11 +36,11 @@ different types of columns. `Column.java` and the classes that extend it is a gr
 
 Raw data is ingested in `IncrementalIndex.java`, and segments are created in `IndexMerger.java`.
 
-## Storage Engine
+## Storage engine
 
 Druid segments are memory mapped in `IndexIO.java` to be exposed for querying.
 
-## Query Engine
+## Query engine
 
 Most of the logic related to Druid queries can be found in the Query* classes. Druid leverages query runners to run queries.
 Query runners often embed other query runners and each query runner adds on a layer of logic. A good starting point to trace
@@ -69,7 +69,7 @@ Druid currently has two internal UIs. One is for the Coordinator and one is for 
 
 At some point in the future, we will likely move the internal UI code out of core Druid.
 
-## Client Libraries
+## Client libraries
 
 We welcome contributions for new client libraries to interact with Druid. See the
 [Community and third-party libraries](https://druid.apache.org/libraries.html) page for links to existing client
