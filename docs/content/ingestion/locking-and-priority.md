@@ -130,7 +130,7 @@ The task context is used for various individual task configuration. The followin
 |property|default|description|
 |--------|-------|-----------|
 |taskLockTimeout|300000|task lock timeout in millisecond. For more details, see [Locking](#locking).|
-|forceTimeChunkLock|true|_**Setting this to false is still experimental**_<br/> Force to always use time chunk lock. If not set, each task automatically chooses a lock type to use. If this set, it will overwrite the `druid.indexer.tasklock.forceTimeChunkLock` [configuration for the overlord](../configuration/index.html#overlord-operations). See [Locking](#locking) for more details.|
+|forceTimeChunkLock|true|_**Setting this to false is still experimental**_<br/> Force to always use time chunk lock. If not set, each task automatically chooses a lock type to use. If this is set, it will overwrite the `druid.indexer.tasklock.forceTimeChunkLock` [configuration for the overlord](../configuration/index.html#overlord-operations). See [Locking](#locking) for more details.|
 |priority|Different based on task types. See [Priority](#priority).|Task priority|
 
 <div class="note caution">
