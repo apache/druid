@@ -20,6 +20,7 @@ import { render } from '@testing-library/react';
 import React from 'react';
 
 import { ColumnMetadata } from '../../../utils/column-metadata';
+
 import { ColumnTree } from './column-tree';
 
 describe('column tree', () => {

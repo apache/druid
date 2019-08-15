@@ -111,13 +111,13 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
           }
         />
         <MenuItem
-          text={`COUNT(*) FILTER(WHERE "${columnName}" = 'xxx') `}
+          text={`COUNT(*) FILTER (WHERE "${columnName}" = 'xxx') AS ${columnName}_filtered_count `}
           onClick={() =>
             addAggregateColumn(
               refExpressionFactory('*'),
               'COUNT',
               false,
-              undefined,
+              aliasFactory(`${columnName}_filtered_count`),
               false,
               new FilterClause({
                 keyword: 'FILTER',
