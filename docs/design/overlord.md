@@ -38,7 +38,7 @@ In local mode Overlord is also responsible for creating Peons for executing task
 Local mode is typically used for simple workflows.  In remote mode, the Overlord and MiddleManager are run in separate processes and you can run each on a different server.
 This mode is recommended if you intend to use the indexing service as the single endpoint for all Druid indexing.
 
-### Overlord Console
+### Overlord console
 
 The Overlord provides a UI for managing tasks and workers. For more details, please see [overlord console](../operations/management-uis.html#overlord-console).
 

@@ -60,7 +60,7 @@ class DependencyReportParser(HTMLParser):
         if self.state == "none":
             if tag == "h2":
                 self.state = "h2_start"
-
+        
         if self.state == "h2_start":
             if tag == "a":
                 for attr in attrs:
@@ -71,13 +71,13 @@ class DependencyReportParser(HTMLParser):
         if self.state == "h2_end":
             if tag == "h3":
                 self.state = "h3_start"
-
+        
         if self.state == "h3_start":
             if tag == "a":
                 for attr in attrs:
                     if attr[0] == "name" and attr[1] == "compile":
                         self.state = "compile_start"
-
+            
         if self.state == "h3_end":
             if tag == "table":
                 self.state = "table_start"
@@ -91,7 +91,7 @@ class DependencyReportParser(HTMLParser):
             if tag == "tr":
                 self.state = "row_start"
                 self.clear_attr()
-
+        
         if self.state == "row_start":
             if tag == "td":
                 self.state = "td_start"
@@ -101,7 +101,7 @@ class DependencyReportParser(HTMLParser):
         if self.state == "th_end":
             if tag == "th":
                 self.state = "th_start"
-
+        
         if self.state == "td_end":
             if tag == "td":
                 self.state = "td_start"
@@ -115,11 +115,11 @@ class DependencyReportParser(HTMLParser):
         if self.state == "h2_start":
             if tag == "h2":
                 self.state = "h2_end"
-
+        
         if self.state == "project_dependencies_end":
             if tag == "h2":
                 self.state = "h2_end"
-
+        
         if self.state == "compile_start":
             if tag == "a":
                 self.state = "compile_end"
@@ -127,7 +127,7 @@ class DependencyReportParser(HTMLParser):
         if self.state == "compile_end":
             if tag == "h3":
                 self.state = "h3_end"
-
+        
         if self.state == "table_start":
             if tag == "table":
                 self.state = "none"
@@ -136,7 +136,7 @@ class DependencyReportParser(HTMLParser):
             if tag == "td":
                 self.state = "td_end"
                 self.attr_index = self.attr_index + 1
-
+        
         if self.state == "th_start":
             if tag == "th":
                 self.state = "th_end"
@@ -148,14 +148,14 @@ class DependencyReportParser(HTMLParser):
         if self.state == "th_end":
             if tag == "tr":
                 self.state = "row_end"
-
+        
         if self.state == "td_end":
             if tag == "tr":
                 self.state = "row_end"
                 # print(json.dumps({"groupId": self.group_id, "artifactId": self.artifact_id, "version": self.version, "classifier": self.classifier, "type": self.dep_type, "license": self.license}))
                 if self.group_id.find("org.apache.druid") < 0:
                     self.dep_to_license[get_dep_key(self.group_id, self.artifact_id, self.version)] = (self.license, self.druid_module_name)
-
+        
         if self.state == "row_end":
             if tag == "table":
                 self.state = "none"
@@ -359,7 +359,7 @@ def print_license(license):
                     license_phrase += "see {}".format(each_file)
                 else:
                     license_phrase += ", {}".format(each_file)
-
+    
     license_phrase += "."
 
     print_license_phrase(license_phrase)
@@ -401,7 +401,7 @@ def find_druid_module_name(dirpath):
 def check_licenses(license_yaml, dependency_reports_root):
     # Build a dictionary to facilitate comparing reported licenses and registered ones.
     # These dictionaries are the mapping of (group_id, artifact_id, version) to license_name.
-
+    
     # Build reported license dictionary.
     reported_dep_to_licenses = {}
     compatible_license_names = build_compatible_license_names()
@@ -449,7 +449,7 @@ def check_licenses(license_yaml, dependency_reports_root):
 
     if len(registered_dep_to_licenses) == 0:
         raise Exception("No registered licenses are found")
-
+    
     # Compare licenses in registry and those in dependency reports.
     mismatched_licenses = []
     missing_licenses = []
@@ -465,14 +465,14 @@ def check_licenses(license_yaml, dependency_reports_root):
                 artifact_id = key[1]
                 version = key[2]
                 mismatched_licenses.append((druid_module, group_id, artifact_id, version, reported_license, registered_license))
-
+    
     # If we find any mismatched license, stop immediately.
     if len(mismatched_licenses) > 0:
         print_error("Error: found {} mismatches between reported licenses and registered licenses".format(len(mismatched_licenses)))
         for mismatched_license in mismatched_licenses:
             print_error("druid_module: {}, groupId: {}, artifactId: {}, version: {}, reported_license: {}, registered_license: {}".format(mismatched_license[0], mismatched_license[1], mismatched_license[2], mismatched_license[3], mismatched_license[4], mismatched_license[5]))
         print_error("")
-
+    
     # Let's find missing licenses, which are reported but missing in the registry.
     for key, reported_license_druid_module in reported_dep_to_licenses.items():
         if reported_license_druid_module[0] != "-" and key not in registered_dep_to_licenses and key not in skipping_licenses:
@@ -483,7 +483,7 @@ def check_licenses(license_yaml, dependency_reports_root):
         for missing_license in missing_licenses:
             print_error("druid_module: {}, groupId: {}, artifactId: {}, version: {}, license: {}".format(missing_license[0], missing_license[1], missing_license[2], missing_license[3], missing_license[4]))
         print_error("")
-
+    
     # Let's find unchecked licenses, which are registered but missing in the report.
     # These licenses should be checked manually.
     for key, registered_license in registered_dep_to_licenses.items():
@@ -491,7 +491,7 @@ def check_licenses(license_yaml, dependency_reports_root):
             unchecked_licenses.append((key[0], key[1], key[2], registered_license))
         elif reported_dep_to_licenses[key][0] == "-":
             unchecked_licenses.append((key[0], key[1], key[2], registered_license))
-
+    
     if len(unchecked_licenses) > 0:
         print_error("Warn: found {} unchecked licenses. These licenses are registered, but not found in dependency reports.".format(len(unchecked_licenses)))
         print_error("These licenses must be checked manually.")
@@ -513,7 +513,7 @@ def print_license_name_underbar(license_name):
 def generate_license(apache_license_v2, license_yaml):
     # Generate LICENSE.BINARY file
     print_error("=== Generating the contents of LICENSE.BINARY file ===\n")
-
+    
     # Print Apache license first.
     print_outfile(apache_license_v2)
     with open(license_yaml) as registry_file:
@@ -553,7 +553,7 @@ if __name__ == "__main__":
         parser.add_argument('out_path', metavar='<path to output file>', type=str)
         parser.add_argument('--dependency-reports', dest='dependency_reports_root', type=str, default=None, metavar='<root to maven dependency reports>')
         args = parser.parse_args()
-
+        
         with open(args.apache_license) as apache_license_file:
             apache_license_v2 = apache_license_file.read()
         license_yaml = args.license_yaml

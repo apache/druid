@@ -35,7 +35,7 @@ This document describes non-extension specific Apache Druid (incubating) authent
 
 ## Enabling Authentication/AuthorizationLoadingLookupTest
 
-## Authenticator Chain
+## Authenticator chain
 Authentication decisions are handled by a chain of Authenticator instances. A request will be checked by Authenticators in the sequence defined by the `druid.auth.authenticatorChain`.
 
 Authenticator implementions are provided by extensions.
@@ -122,7 +122,7 @@ When an Authenticator successfully authenticates a request, it must attach a Aut
 
 An Authenticator implementation should provide some means through configuration to allow users to select what Authorizer(s) the Authenticator should route requests to.
 
-## Internal System User
+## Internal system user
 
 Internal requests between Druid processes (non-user initiated communications) need to have authentication credentials attached.
 

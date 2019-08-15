@@ -23,7 +23,7 @@ title: "Processes and servers"
   -->
 
 
-## Process Types
+## Process types
 
 Druid has several process types:
 

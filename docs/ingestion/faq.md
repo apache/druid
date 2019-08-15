@@ -23,7 +23,7 @@ sidebar_label: "Troubleshooting FAQ"
   ~ under the License.
   -->
 
-### Realtime Ingestion
+### Realtime ingestion
 
 The most common cause of this is because events being ingested are out of band of Druid's `windowPeriod`. Druid realtime ingestion
 only accepts events within a configurable windowPeriod of the current time. You can verify this is what is happening by looking at the logs of your real-time process for log lines containing `ingest/events/*`. These metrics will indicate the events ingested, rejected, etc.

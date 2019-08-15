@@ -153,7 +153,7 @@ The format of the result when resultFormat equals `compactedList`:
 } ]
 ```
 
-## Time Ordering
+## Time ordering
 
 The Scan query currently supports ordering based on timestamp for non-legacy queries.  Note that using time ordering
 will yield results that do not indicate which segment rows are from (`segmentId` will show up as `null`).  Furthermore,

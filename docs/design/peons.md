@@ -27,7 +27,7 @@ title: "Peons"
 
 For Apache Druid (incubating) Peon Configuration, see [Peon Query Configuration](../configuration/index.html#peon-query-configuration) and [Additional Peon Configuration](../configuration/index.html#additional-peon-configuration).
 
-### HTTP Endpoints
+### HTTP endpoints
 
 For a list of API endpoints supported by the Peon, please see the [Peon API reference](../operations/api-reference.html#peon).
 

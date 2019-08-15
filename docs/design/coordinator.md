@@ -80,9 +80,9 @@ Compaction tasks might fail due to the following reasons.
 
 Once a compaction task fails, the Coordinator simply finds the segments for the interval of the failed task again, and launches a new compaction task in the next run.
 
-### Segment Search Policy
+### Segment search policy
 
-#### Newest Segment First Policy
+#### Newest segment first policy
 
 At every coordinator run, this policy searches for segments to compact by iterating segments from the latest to the oldest.
 Once it finds the latest segment among all dataSources, it checks if the segment is _compactible_ with other segments of the same dataSource which have the same or abutting intervals.

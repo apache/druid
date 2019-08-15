@@ -42,7 +42,7 @@ Most metric values reset each emission period. By default druid emission period 
 Available Metrics
 -----------------
 
-## Query Metrics
+## Query metrics
 
 ### Broker
 
@@ -144,7 +144,7 @@ These metrics are applicable for the Kafka Indexing Service.
 |`ingest/kafka/maxLag`|Max lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
 |`ingest/kafka/avgLag`|Average lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
 
-## Ingestion Metrics (Realtime process)
+## Ingestion metrics (Realtime process)
 
 These metrics are only available if the RealtimeMetricsMonitor is included in the monitors list for the Realtime process. These metrics are deltas for each emission period.
 
@@ -170,7 +170,7 @@ These metrics are only available if the RealtimeMetricsMonitor is included in th
 
 Note: If the JVM does not support CPU time measurement for the current thread, ingest/merge/cpu and ingest/persists/cpu will be 0.
 
-### Indexing Service
+### Indexing service
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
