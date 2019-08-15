@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import org.apache.druid.client.CachingQueryRunner;
+import org.apache.druid.client.CloseableCachingQueryRunner;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -234,7 +234,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                                                       // 1) Only use caching if data is immutable
                                                       // 2) Hydrants are not the same between replicas, make sure cache is local
                                                       if (hydrantDefinitelySwapped && cache.isLocal()) {
-                                                        return new CachingQueryRunner<>(
+                                                        return new CloseableCachingQueryRunner<>(
                                                             makeHydrantCacheIdentifier(hydrant),
                                                             descriptor,
                                                             objectMapper,
@@ -247,7 +247,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                                                                 cachePopulatorStats,
                                                                 cacheConfig.getMaxEntrySize()
                                                             ),
-                                                            cacheConfig
+                                                            cacheConfig,
+                                                            segment.rhs
                                                         );
                                                       } else {
                                                         return baseRunner;

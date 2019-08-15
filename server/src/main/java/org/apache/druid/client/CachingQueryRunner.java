@@ -76,6 +76,10 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
     this.cacheConfig = cacheConfig;
   }
 
+  protected void close()
+  {
+  }
+
   @Override
   public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
   {
@@ -96,6 +100,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
     }
 
     if (useCache) {
+      close();
       final Function cacheFn = strategy.pullFromSegmentLevelCache();
       final byte[] cachedResult = cache.get(key);
       if (cachedResult != null) {
