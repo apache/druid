@@ -702,11 +702,11 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   };
 
   private onQueryStringChange = (queryString: string) => {
-    const { autoRun, queryContext } = this.state;
+    const { autoRun } = this.state;
 
     this.handleQueryStringChange(queryString);
     if (autoRun) {
-      this.sqlQueryManager.runQuery({ queryString: queryString, queryContext, wrapQuery: true });
+      this.handleRun(true, queryString);
     }
   };
 
