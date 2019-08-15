@@ -370,8 +370,9 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         log.error(e, "Encountered exception while deserializing task status_payload");
         throw new SQLException(e);
       }
-      taskInfo = TaskInfo.createTaskInfo(
+      taskInfo = new TaskInfo<>(
           resultSet.getString("id"),
+          null,
           DateTimes.of(resultSet.getString("created_date")),
           status,
           resultSet.getString("datasource"),

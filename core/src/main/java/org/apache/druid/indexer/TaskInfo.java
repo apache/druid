@@ -35,10 +35,12 @@ public class TaskInfo<EntryType, StatusType>
   private final String dataSource;
   @Nullable
   private final EntryType task;
-  private String groupId;
+  @Nullable
+  private final String groupId;
 
-  private TaskInfo(
+  public TaskInfo(
       String id,
+      String groupId,
       DateTime createdTime,
       StatusType status,
       String dataSource,
@@ -50,46 +52,7 @@ public class TaskInfo<EntryType, StatusType>
     this.status = Preconditions.checkNotNull(status, "status");
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.task = task;
-  }
-
-  private TaskInfo(
-      String id,
-      String groupId,
-      DateTime createdTime,
-      StatusType status,
-      String dataSource,
-      @Nullable EntryType task
-  )
-  {
-    this.id = Preconditions.checkNotNull(id, "id");
-    this.groupId = Preconditions.checkNotNull(groupId, "groupId");
-    this.createdTime = Preconditions.checkNotNull(createdTime, "createdTime");
-    this.status = Preconditions.checkNotNull(status, "status");
-    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-    this.task = task;
-  }
-
-  public static <EntryType, StatusType> TaskInfo<EntryType, StatusType> createTaskInfo(
-      String id,
-      DateTime createdTime,
-      StatusType status,
-      String dataSource,
-      @Nullable EntryType task
-  )
-  {
-    return new TaskInfo(id, createdTime, status, dataSource, task);
-  }
-
-  public static <EntryType, StatusType> TaskInfo<EntryType, StatusType> createTaskInfoWithGroupId(
-      String id,
-      String groupId,
-      DateTime createdTime,
-      StatusType status,
-      String dataSource,
-      @Nullable EntryType task
-  )
-  {
-    return new TaskInfo(id, groupId, createdTime, status, dataSource, task);
+    this.groupId = groupId;
   }
 
   public String getId()
@@ -97,6 +60,7 @@ public class TaskInfo<EntryType, StatusType>
     return id;
   }
 
+  @Nullable
   public String getGroupId()
   {
     return groupId;

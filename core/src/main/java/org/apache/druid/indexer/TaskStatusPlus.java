@@ -31,7 +31,6 @@ import java.util.Objects;
 public class TaskStatusPlus
 {
   private final String id;
-  private final String groupId;
   private final String type;
   private final DateTime createdTime;
   private final DateTime queueInsertionTime;
@@ -43,10 +42,12 @@ public class TaskStatusPlus
 
   @Nullable
   private final String errorMsg;
+  @Nullable
+  private final String groupId;
 
   public TaskStatusPlus(
       String id,
-      String groupId,
+      @Nullable String groupId,
       String type, // nullable for backward compatibility
       DateTime createdTime,
       DateTime queueInsertionTime,
@@ -94,7 +95,7 @@ public class TaskStatusPlus
       Preconditions.checkNotNull(duration, "duration");
     }
     this.id = Preconditions.checkNotNull(id, "id");
-    this.groupId = Preconditions.checkNotNull(groupId, "groupId");
+    this.groupId = groupId;
     this.type = type;
     this.createdTime = Preconditions.checkNotNull(createdTime, "createdTime");
     this.queueInsertionTime = Preconditions.checkNotNull(queueInsertionTime, "queueInsertionTime");
@@ -122,6 +123,7 @@ public class TaskStatusPlus
     return id;
   }
 
+  @Nullable
   @JsonProperty
   public String getGroupId()
   {

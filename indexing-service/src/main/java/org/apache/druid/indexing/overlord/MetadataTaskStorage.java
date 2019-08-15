@@ -184,9 +184,9 @@ public class MetadataTaskStorage implements TaskStorage
   public TaskInfo<Task, TaskStatus> getTaskInfo(String taskId)
   {
     final TaskInfo<Task, TaskStatus> taskInfo = handler.getTaskInfo(taskId);
-    return TaskInfo.createTaskInfoWithGroupId(
+    return new TaskInfo<>(
         taskInfo.getId(),
-        taskInfo.getTask().getGroupId(),
+        taskInfo.getTask() == null ? null : taskInfo.getTask().getGroupId(),
         taskInfo.getCreatedTime(),
         taskInfo.getStatus(),
         taskInfo.getDataSource(),
@@ -213,9 +213,9 @@ public class MetadataTaskStorage implements TaskStorage
         handler.getActiveTaskInfo(dataSource)
     );
     return taskInfoImmutableList.stream()
-                                .map(t -> TaskInfo.createTaskInfoWithGroupId(
+                                .map(t -> new TaskInfo<>(
                                     t.getId(),
-                                    t.getTask().getGroupId(),
+                                    t.getTask() == null ? null : t.getTask().getGroupId(),
                                     t.getCreatedTime(),
                                     t.getStatus(),
                                     t.getDataSource(),
@@ -240,9 +240,9 @@ public class MetadataTaskStorage implements TaskStorage
         )
     );
     return taskInfoImmutableList.stream()
-                                .map(t -> TaskInfo.createTaskInfoWithGroupId(
+                                .map(t -> new TaskInfo<>(
                                     t.getId(),
-                                    t.getTask().getGroupId(),
+                                    t.getTask() == null ? null : t.getTask().getGroupId(),
                                     t.getCreatedTime(),
                                     t.getStatus(),
                                     t.getDataSource(),
