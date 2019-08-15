@@ -146,6 +146,21 @@
                                 </configuration>
                             </execution>
                             <execution>
+                                <id>generate-binary-notice</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${project.parent.basedir}/docs/_bin/generate-notice-binary.py</executable>
+                                    <arguments>
+                                        <argument>${project.basedir}/../NOTICE</argument>
+                                        <argument>${project.basedir}/../licenses.yaml</argument>
+                                        <argument>${project.basedir}/../NOTICE.BINARY</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
                                 <id>pull-deps</id>
                                 <phase>package</phase>
                                 <goals>
