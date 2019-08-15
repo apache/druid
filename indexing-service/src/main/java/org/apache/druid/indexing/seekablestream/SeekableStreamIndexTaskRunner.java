@@ -1333,11 +1333,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             new ResetDataSourceMetadataAction(
                 task.getDataSource(),
                 createDataSourceMetadata(
-                    new SeekableStreamStartSequenceNumbers<>(
+                    new SeekableStreamEndSequenceNumbers<>(
                         ioConfig.getStartSequenceNumbers().getStream(),
-                        partitionOffsetMap,
-                        // Clear all exclusive start offsets for automatic reset
-                        Collections.emptySet()
+                        partitionOffsetMap
                     )
                 )
             )

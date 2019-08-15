@@ -21,7 +21,6 @@ package org.apache.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.TuningConfigs;
@@ -177,7 +176,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
   }
 
   @Override
-  public SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig()
+  public KafkaIndexTaskTuningConfig convertToTaskTuningConfig()
   {
     return new KafkaIndexTaskTuningConfig(
         getMaxRowsInMemory(),

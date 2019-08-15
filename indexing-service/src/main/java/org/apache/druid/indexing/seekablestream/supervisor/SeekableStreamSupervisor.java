@@ -1227,7 +1227,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                              "DataSourceMetadata is updated while reset"
                          );
                          activelyReadingTaskGroups.remove(groupId);
-                         partitionGroups.get(groupId).replaceAll((partitionId, sequence) -> getNotSetMarker());
+                         // killTaskGroupForPartitions() cleans up partitionGroups.
+                         // Add the removed groups back.
+                         partitionGroups.computeIfAbsent(groupId, k -> new ConcurrentHashMap<>())
+                                        .put(partition, getNotSetMarker());
                        });
         } else {
           throw new ISE("Unable to reset metadata");
@@ -2502,8 +2505,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
-   * Queries the dataSource metadata table to see if there is a previous ending sequence for this partition. If it doesn't
-   * find any data, it will retrieve the latest or earliest Kafka/Kinesis sequence depending on the useEarliestOffset config.
+   * Queries the dataSource metadata table to see if there is a previous ending sequence for this partition. If it
+   * doesn't find any data, it will retrieve the latest or earliest Kafka/Kinesis sequence depending on the
+   * {@link SeekableStreamSupervisorIOConfig#useEarliestSequenceNumber}.
    */
   private OrderedSequenceNumber<SequenceOffsetType> getOffsetFromStorageForPartition(PartitionIdType partition)
   {
@@ -2517,18 +2521,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             resetInternal(
                 createDataSourceMetaDataForReset(ioConfig.getStream(), ImmutableMap.of(partition, sequence))
             );
-            throw new StreamException(new ISE(
-                "Previous sequenceNumber [%s] is no longer available for partition [%s] - automatically resetting sequence",
-                sequence,
-                partition
-            ));
-
+            throw new StreamException(
+                new ISE(
+                    "Previous sequenceNumber [%s] is no longer available for partition [%s] - automatically resetting"
+                    + " sequence",
+                    sequence,
+                    partition
+                )
+            );
           } else {
-            throw new StreamException(new ISE(
-                "Previous sequenceNumber [%s] is no longer available for partition [%s]. You can clear the previous sequenceNumber and start reading from a valid message by using the supervisor's reset API.",
-                sequence,
-                partition
-            ));
+            throw new StreamException(
+                new ISE(
+                    "Previous sequenceNumber [%s] is no longer available for partition [%s]. You can clear the previous"
+                    + " sequenceNumber and start reading from a valid message by using the supervisor's reset API.",
+                    sequence,
+                    partition
+                )
+            );
           }
         }
       }
