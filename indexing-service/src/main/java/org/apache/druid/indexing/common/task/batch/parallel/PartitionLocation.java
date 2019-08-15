@@ -34,6 +34,7 @@ public class PartitionLocation
 {
   private final String host;
   private final int port;
+  private final boolean useHttps;
   private final String subTaskId;
   private final Interval interval;
   private final int partitionId;
@@ -42,6 +43,7 @@ public class PartitionLocation
   public PartitionLocation(
       @JsonProperty("host") String host,
       @JsonProperty("port") int port,
+      @JsonProperty("useHttps") boolean useHttps,
       @JsonProperty("subTaskId") String subTaskId,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("partitionId") int partitionId
@@ -49,6 +51,7 @@ public class PartitionLocation
   {
     this.host = host;
     this.port = port;
+    this.useHttps = useHttps;
     this.subTaskId = subTaskId;
     this.interval = interval;
     this.partitionId = partitionId;
@@ -64,6 +67,12 @@ public class PartitionLocation
   public int getPort()
   {
     return port;
+  }
+
+  @JsonProperty
+  public boolean isUseHttps()
+  {
+    return useHttps;
   }
 
   @JsonProperty
@@ -88,7 +97,8 @@ public class PartitionLocation
   {
     return URI.create(
         StringUtils.format(
-            "http://%s:%d/druid/worker/v1/shuffle/task/%s/%s/partition?startTime=%s&endTime=%s&partitionId=%d",
+            "%s://%s:%d/druid/worker/v1/shuffle/task/%s/%s/partition?startTime=%s&endTime=%s&partitionId=%d",
+            useHttps ? "https" : "http",
             host,
             port,
             StringUtils.urlEncode(supervisorTaskId),
@@ -106,6 +116,7 @@ public class PartitionLocation
     return "PartitionLocation{" +
            "host='" + host + '\'' +
            ", port=" + port +
+           ", useHttps=" + useHttps +
            ", subTaskId='" + subTaskId + '\'' +
            ", interval=" + interval +
            ", partitionId=" + partitionId +

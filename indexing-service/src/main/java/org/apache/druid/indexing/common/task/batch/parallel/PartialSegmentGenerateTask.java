@@ -226,6 +226,7 @@ public class PartialSegmentGenerateTask extends AbstractBatchIndexTask
         .map(segment -> new PartitionStat(
             toolbox.getTaskExecutorNode().getHost(),
             toolbox.getTaskExecutorNode().getPortToUse(),
+            toolbox.getTaskExecutorNode().isEnableTlsPort(),
             segment.getInterval(),
             segment.getShardSpec().getPartitionNum(),
             null, // numRows is not supported yet

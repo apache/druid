@@ -55,7 +55,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   /**
    * Max number of segments to merge at the same time.
    * Used only by {@link PartialSegmentMergeTask}.
-   * This configuration was temporally added to avoid using too much memory while merging segments,
+   * This configuration was temporarily added to avoid using too much memory while merging segments,
    * and will be removed once {@link org.apache.druid.segment.IndexMerger} is improved to not use much memory.
    */
   private final int maxNumSegmentsToMerge;

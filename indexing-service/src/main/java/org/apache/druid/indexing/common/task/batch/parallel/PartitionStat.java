@@ -36,6 +36,7 @@ public class PartitionStat
   // Host and port of the task executor
   private final String taskExecutorHost;
   private final int taskExecutorPort;
+  private final boolean useHttps;
 
   // Primary partition key
   private final Interval interval;
@@ -52,6 +53,7 @@ public class PartitionStat
   public PartitionStat(
       @JsonProperty("taskExecutorHost") String taskExecutorHost,
       @JsonProperty("taskExecutorPort") int taskExecutorPort,
+      @JsonProperty("useHttps") boolean useHttps,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("partitionId") int partitionId,
       @JsonProperty("numRows") @Nullable Integer numRows,
@@ -60,6 +62,7 @@ public class PartitionStat
   {
     this.taskExecutorHost = taskExecutorHost;
     this.taskExecutorPort = taskExecutorPort;
+    this.useHttps = useHttps;
     this.interval = interval;
     this.partitionId = partitionId;
     this.numRows = numRows == null ? 0 : numRows;
@@ -76,6 +79,12 @@ public class PartitionStat
   public int getTaskExecutorPort()
   {
     return taskExecutorPort;
+  }
+
+  @JsonProperty
+  public boolean isUseHttps()
+  {
+    return useHttps;
   }
 
   @JsonProperty
@@ -115,6 +124,7 @@ public class PartitionStat
     }
     PartitionStat that = (PartitionStat) o;
     return taskExecutorPort == that.taskExecutorPort &&
+           useHttps == that.useHttps &&
            partitionId == that.partitionId &&
            Objects.equals(taskExecutorHost, that.taskExecutorHost) &&
            Objects.equals(interval, that.interval) &&
@@ -125,6 +135,6 @@ public class PartitionStat
   @Override
   public int hashCode()
   {
-    return Objects.hash(taskExecutorHost, taskExecutorPort, interval, partitionId, numRows, sizeBytes);
+    return Objects.hash(taskExecutorHost, taskExecutorPort, useHttps, interval, partitionId, numRows, sizeBytes);
   }
 }

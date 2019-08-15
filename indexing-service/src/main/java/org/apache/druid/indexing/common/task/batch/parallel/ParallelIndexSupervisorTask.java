@@ -520,6 +520,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             new PartitionLocation(
                 partitionStat.getTaskExecutorHost(),
                 partitionStat.getTaskExecutorPort(),
+                partitionStat.isUseHttps(),
                 subTaskId,
                 partitionStat.getInterval(),
                 partitionStat.getPartitionId()
