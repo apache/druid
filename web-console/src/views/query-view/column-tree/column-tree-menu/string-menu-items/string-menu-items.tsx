@@ -23,6 +23,8 @@ import {
   ComparisonExpression,
   ComparisonExpressionRhs,
   FilterClause,
+  RefExpression,
+  refExpressionFactory,
   SqlQuery,
   StringType,
   WhereClause,
@@ -42,7 +44,7 @@ export interface StringMenuItemsProps {
   ) => void;
   addToGroupBy: (columnName: string, run: boolean) => void;
   addAggregateColumn: (
-    columnName: string,
+    columnName: string | RefExpression,
     functionName: string,
     run: boolean,
     alias?: Alias,
@@ -83,7 +85,7 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
       <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by`}>
         <MenuItem text={`"${columnName}"`} onClick={() => addToGroupBy(columnName, true)} />
         <MenuItem
-          text={`SUBSTRING("${columnName}", 1, 2) AS" "${columnName}_substring"`}
+          text={`SUBSTRING("${columnName}", 1, 2) AS "${columnName}_substring"`}
           onClick={() =>
             addFunctionToGroupBy(
               'SUBSTRING',
@@ -112,7 +114,7 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
           text={`COUNT(*) FILTER(WHERE "${columnName}" = 'xxx') `}
           onClick={() =>
             addAggregateColumn(
-              '*',
+              refExpressionFactory('*'),
               'COUNT',
               false,
               undefined,

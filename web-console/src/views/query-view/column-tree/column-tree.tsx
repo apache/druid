@@ -27,7 +27,7 @@ import {
   Tree,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Alias, FilterClause, SqlQuery, StringType } from 'druid-query-toolkit';
+import { Alias, FilterClause, RefExpression, SqlQuery, StringType } from 'druid-query-toolkit';
 import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
@@ -112,7 +112,7 @@ export interface ColumnTreeProps {
   ) => void;
   addToGroupBy: (columnName: string, run: boolean) => void;
   addAggregateColumn: (
-    columnName: string,
+    columnName: string | RefExpression,
     functionName: string,
     run: boolean,
     alias?: Alias,

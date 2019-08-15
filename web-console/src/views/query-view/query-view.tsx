@@ -26,6 +26,7 @@ import {
   HeaderRows,
   isFirstRowHeader,
   normalizeQueryResult,
+  RefExpression,
   shouldIncludeTimestamp,
   sqlParserFactory,
   SqlQuery,
@@ -542,7 +543,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   };
 
   private addAggregateColumn = (
-    columnName: string,
+    columnName: string | RefExpression,
     functionName: string,
     preferablyRun: boolean,
     alias?: Alias,
