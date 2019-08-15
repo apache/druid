@@ -701,6 +701,15 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     return queryAst;
   };
 
+  private onQueryStringChange = (queryString: string) => {
+    const { autoRun, queryContext } = this.state;
+
+    this.handleQueryStringChange(queryString);
+    if (autoRun) {
+      this.sqlQueryManager.runQuery({ queryString: queryString, queryContext, wrapQuery: true });
+    }
+  };
+
   render(): JSX.Element {
     const { columnMetadata, columnMetadataLoading, columnMetadataError, queryAst } = this.state;
 
@@ -728,7 +737,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             queryAst={this.getQueryAst}
             columnMetadataLoading={columnMetadataLoading}
             columnMetadata={columnMetadata}
-            onQueryStringChange={this.handleQueryStringChange}
+            onQueryStringChange={this.onQueryStringChange}
             defaultSchema={defaultSchema ? defaultSchema : 'druid'}
             defaultTable={defaultTable}
           />
