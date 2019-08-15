@@ -162,7 +162,7 @@ Rollup is controlled by the `rollup` setting in the [`granularitySpec`](#granula
 
 ### Example of rollup
 
-For an example of how to configure rollup, and of what how the feature will modify your data, check out the
+For an example of how to configure rollup, and of how the feature will modify your data, check out the
 [rollup tutorial](../tutorials/tutorial-rollup.md).
 
 ### Maximizing rollup ratio
@@ -198,7 +198,7 @@ rollup, you can potentially improve your rollup ratio by switching to a guarante
 ### Best-effort rollup
 
 Some Druid ingestion methods guarantee _perfect rollup_, meaning that input data are perfectly aggregated at ingestion
-time. Others offer _best-effort rollup_, meaming that input data might not be perfectly aggregated and thus there could
+time. Others offer _best-effort rollup_, meaning that input data might not be perfectly aggregated and thus there could
 be multiple segments holding rows with the same timestamp and dimension values.
 
 In general, ingestion methods that offer best-effort rollup do this because they are either parallelizing ingestion
@@ -237,8 +237,8 @@ improve locality, meaning that rows with the same value for that dimension are s
 quickly.
 
 You will usually get the best performance and smallest overall footprint by partitioning your data on some "natural"
-dimension that you often filter by, if one exists. This will often improve compression — users have reported threefold
-storage size decreases — and it also tends to improve query performance as well.
+dimension that you often filter by, if one exists. This will often improve compression - users have reported threefold
+storage size decreases - and it also tends to improve query performance as well.
 
 > Partitioning and sorting are best friends! If you do have a "natural" partitioning dimension, you should also consider
 > placing it first in the `dimensions` list of your `dimensionsSpec`, which tells Druid to sort rows within each segment
