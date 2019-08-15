@@ -19,22 +19,22 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { QueryOutput } from './query-output';
+import { TimeMenuItems } from './time-menu-items';
 
-describe('query output', () => {
+describe('time menu', () => {
   it('matches snapshot', () => {
-    const queryOutput = (
-      <QueryOutput
-        runeMode={false}
-        sqlOrderBy={() => null}
-        sqlFilterRow={() => null}
-        sqlExcludeColumn={() => null}
-        loading={false}
-        error="lol"
+    const timeMenu = (
+      <TimeMenuItems
+        clear={() => null}
+        addFunctionToGroupBy={() => null}
+        addToGroupBy={() => null}
+        addAggregateColumn={() => null}
+        filterByRow={() => null}
+        columnName={'text'}
       />
     );
 
-    const { container } = render(queryOutput);
+    const { container } = render(timeMenu);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

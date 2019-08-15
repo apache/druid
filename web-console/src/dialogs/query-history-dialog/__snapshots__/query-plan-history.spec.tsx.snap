@@ -16,7 +16,7 @@ exports[`query plan dialog matches snapshot 1`] = `
       tabindex="0"
     >
       <div
-        class="bp3-dialog query-plan-dialog"
+        class="bp3-dialog query-history-dialog"
       >
         <div
           class="bp3-dialog-header"
@@ -24,7 +24,7 @@ exports[`query plan dialog matches snapshot 1`] = `
           <h4
             class="bp3-heading"
           >
-            Query plan
+            Query history
           </h4>
           <button
             aria-label="Close"
@@ -55,8 +55,25 @@ exports[`query plan dialog matches snapshot 1`] = `
         <div
           class="bp3-dialog-body"
         >
-          <div>
-            test
+          <div
+            class="bp3-tabs bp3-vertical tab-area"
+          >
+            <div
+              class="bp3-tab-list"
+              role="tablist"
+            >
+              <div
+                class="bp3-tab-indicator-wrapper"
+                style="display: none;"
+              >
+                <div
+                  class="bp3-tab-indicator"
+                />
+              </div>
+              <div
+                class="bp3-flex-expander"
+              />
+            </div>
           </div>
         </div>
         <div
