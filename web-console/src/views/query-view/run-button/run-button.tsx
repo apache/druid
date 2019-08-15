@@ -45,11 +45,14 @@ import { DRUID_DOCS_RUNE, DRUID_DOCS_SQL } from '../../../variables';
 
 export interface RunButtonProps {
   runeMode: boolean;
+  autoRun: boolean;
   queryContext: QueryContext;
   onQueryContextChange: (newQueryContext: QueryContext) => void;
   onRun: (wrapQuery: boolean) => void;
   onExplain: () => void;
   onEditContext: () => void;
+  onHistory: () => void;
+  setAutoRun: (autoRun: boolean) => void;
 }
 
 interface RunButtonState {
@@ -86,7 +89,16 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
   };
 
   renderExtraMenu() {
-    const { runeMode, onExplain, queryContext, onQueryContextChange, onEditContext } = this.props;
+    const {
+      runeMode,
+      onExplain,
+      queryContext,
+      onQueryContextChange,
+      onEditContext,
+      onHistory,
+      setAutoRun,
+      autoRun,
+    } = this.props;
     const { wrapQuery } = this.state;
 
     const useCache = getUseCache(queryContext);
@@ -104,10 +116,16 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
         {!runeMode && (
           <>
             <MenuItem icon={IconNames.CLEAN} text="Explain" onClick={onExplain} />
+            <MenuItem icon={IconNames.HISTORY} text="History" onClick={onHistory} />
             <MenuCheckbox
               checked={wrapQuery}
               label="Wrap query with limit"
               onChange={() => this.setState({ wrapQuery: !wrapQuery })}
+            />
+            <MenuCheckbox
+              checked={autoRun}
+              label="Auto run queries"
+              onChange={() => setAutoRun(!autoRun)}
             />
             <MenuCheckbox
               checked={useApproximateCountDistinct}

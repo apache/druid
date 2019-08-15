@@ -19,22 +19,14 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { QueryOutput } from './query-output';
+import { QueryHistoryDialog } from './query-history-dialog';
 
-describe('query output', () => {
+describe('query plan dialog', () => {
   it('matches snapshot', () => {
-    const queryOutput = (
-      <QueryOutput
-        runeMode={false}
-        sqlOrderBy={() => null}
-        sqlFilterRow={() => null}
-        sqlExcludeColumn={() => null}
-        loading={false}
-        error="lol"
-      />
+    const queryPlanDialog = (
+      <QueryHistoryDialog setQueryString={() => null} queryRecords={[]} onClose={() => {}} />
     );
-
-    const { container } = render(queryOutput);
-    expect(container.firstChild).toMatchSnapshot();
+    render(queryPlanDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

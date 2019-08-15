@@ -16,25 +16,21 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
 import React from 'react';
 
-import { QueryOutput } from './query-output';
+export interface DeferredProps {
+  content: () => JSX.Element;
+}
 
-describe('query output', () => {
-  it('matches snapshot', () => {
-    const queryOutput = (
-      <QueryOutput
-        runeMode={false}
-        sqlOrderBy={() => null}
-        sqlFilterRow={() => null}
-        sqlExcludeColumn={() => null}
-        loading={false}
-        error="lol"
-      />
-    );
+export interface DeferredState {}
 
-    const { container } = render(queryOutput);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+export class Deferred extends React.PureComponent<DeferredProps, DeferredState> {
+  constructor(props: DeferredProps, context: any) {
+    super(props, context);
+  }
+
+  render(): JSX.Element {
+    const { content } = this.props;
+    return content();
+  }
+}

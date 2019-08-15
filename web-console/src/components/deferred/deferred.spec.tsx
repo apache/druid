@@ -19,22 +19,13 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { QueryOutput } from './query-output';
+import { Deferred } from './deferred';
 
-describe('query output', () => {
+describe('deferred', () => {
   it('matches snapshot', () => {
-    const queryOutput = (
-      <QueryOutput
-        runeMode={false}
-        sqlOrderBy={() => null}
-        sqlFilterRow={() => null}
-        sqlExcludeColumn={() => null}
-        loading={false}
-        error="lol"
-      />
-    );
+    const deferred = <Deferred content={() => <div />} />;
 
-    const { container } = render(queryOutput);
+    const { container } = render(deferred);
     expect(container.firstChild).toMatchSnapshot();
   });
 });
