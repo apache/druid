@@ -1151,16 +1151,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       activelyReadingTaskGroups.clear();
       partitionGroups.clear();
     } else {
-
       if (!checkSourceMetadataMatch(dataSourceMetadata)) {
         throw new IAE(
             "Datasource metadata instance does not match required, found instance of [%s]",
             dataSourceMetadata.getClass()
         );
       }
+      log.info("Reset dataSource[%s] with metadata[%s]", dataSource, dataSourceMetadata);
       // Reset only the partitions in dataSourceMetadata if it has not been reset yet
       @SuppressWarnings("unchecked")
-      final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata = (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) dataSourceMetadata;
+      final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata =
+          (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) dataSourceMetadata;
 
       if (resetMetadata.getSeekableStreamSequenceNumbers().getStream().equals(ioConfig.getStream())) {
         // metadata can be null
@@ -1173,19 +1174,22 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
 
         @SuppressWarnings("unchecked")
-        final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentMetadata = (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) metadata;
+        final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentMetadata =
+            (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) metadata;
 
         // defend against consecutive reset requests from replicas
         // as well as the case where the metadata store do not have an entry for the reset partitions
         boolean doReset = false;
-        for (Entry<PartitionIdType, SequenceOffsetType> resetPartitionOffset : resetMetadata.getSeekableStreamSequenceNumbers()
-                                                                                            .getPartitionSequenceNumberMap()
-                                                                                            .entrySet()) {
+        for (Entry<PartitionIdType, SequenceOffsetType> resetPartitionOffset : resetMetadata
+            .getSeekableStreamSequenceNumbers()
+            .getPartitionSequenceNumberMap()
+            .entrySet()) {
           final SequenceOffsetType partitionOffsetInMetadataStore = currentMetadata == null
                                                                     ? null
-                                                                    : currentMetadata.getSeekableStreamSequenceNumbers()
-                                                                                     .getPartitionSequenceNumberMap()
-                                                                                     .get(resetPartitionOffset.getKey());
+                                                                    : currentMetadata
+                                                                        .getSeekableStreamSequenceNumbers()
+                                                                        .getPartitionSequenceNumberMap()
+                                                                        .get(resetPartitionOffset.getKey());
           final TaskGroup partitionTaskGroup = activelyReadingTaskGroups.get(
               getTaskGroupIdForPartition(resetPartitionOffset.getKey())
           );
@@ -2477,7 +2481,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return notices.size();
   }
 
-  private ImmutableMap<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> generateStartingSequencesForPartitionGroup(
+  private Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> generateStartingSequencesForPartitionGroup(
       int groupId
   )
   {
