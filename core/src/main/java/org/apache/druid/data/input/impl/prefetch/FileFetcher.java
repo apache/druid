@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl.prefetch;
 
 import com.google.common.base.Predicate;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -85,7 +86,7 @@ public class FileFetcher<T> extends Fetcher<T>
   @Override
   protected long download(T object, File outFile) throws IOException
   {
-    return Fetchers.fetch(
+    return FileUtils.copyLarge(
         object,
         openObjectFunction,
         outFile,

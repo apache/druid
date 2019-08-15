@@ -372,7 +372,10 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
   /**
    * We currently don't support appending perfectly rolled up segments. This might be supported in the future if there
-   * is a good use case.
+   * is a good use case. If we want to support appending perfectly rolled up segments, we need to fix some other places
+   * first. For example, {@link org.apache.druid.timeline.partition.HashBasedNumberedShardSpec#getLookup} assumes that
+   * the start partition ID of the set of perfectly rolled up segments is 0. Instead it might need to store an ordinal
+   * in addition to the partition ID which represents the ordinal in the perfectly rolled up segment set.
    */
   static boolean isGuaranteedRollup(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
   {
@@ -426,8 +429,9 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     final SortedSet<Interval> intervals = granularitySpec.bucketIntervals().get();
 
     if (isGuaranteedRollup(ioConfig, tuningConfig)) {
-      // Overwrite mode, guaranteed rollup: shardSpecs must be known in advance.
+      // SingleDimensionPartitionsSpec or more partitionsSpec types will be supported in the future.
       assert nonNullPartitionsSpec instanceof HashedPartitionsSpec;
+      // Overwrite mode, guaranteed rollup: shardSpecs must be known in advance.
       final HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) nonNullPartitionsSpec;
       final int numShards = partitionsSpec.getNumShards() == null ? 1 : partitionsSpec.getNumShards();
 

@@ -200,7 +200,7 @@ public class IntermediaryDataManager
                   }
                 }
                 numDiscovered.increment();
-                return DateTimes.nowUtc().plus(intermediaryPartitionTimeout);
+                return getExpiryTimeFromNow();
               }
           );
         }
@@ -249,7 +249,7 @@ public class IntermediaryDataManager
           }
         } else {
           // If it's still running, update last access time.
-          supervisorTaskCheckTimes.put(supervisorTaskId, DateTimes.nowUtc());
+          supervisorTaskCheckTimes.put(supervisorTaskId, getExpiryTimeFromNow());
         }
       }
     }
@@ -334,7 +334,7 @@ public class IntermediaryDataManager
     for (StorageLocation location : shuffleDataLocations) {
       final File partitionDir = new File(location.getPath(), getPartitionDir(supervisorTaskId, interval, partitionId));
       if (partitionDir.exists()) {
-        supervisorTaskCheckTimes.put(supervisorTaskId, DateTimes.nowUtc());
+        supervisorTaskCheckTimes.put(supervisorTaskId, getExpiryTimeFromNow());
         final File[] segmentFiles = partitionDir.listFiles();
         if (segmentFiles == null) {
           return null;
@@ -350,6 +350,11 @@ public class IntermediaryDataManager
     }
 
     return null;
+  }
+
+  private DateTime getExpiryTimeFromNow()
+  {
+    return DateTimes.nowUtc().plus(intermediaryPartitionTimeout);
   }
 
   public void deletePartitions(String supervisorTaskId) throws IOException

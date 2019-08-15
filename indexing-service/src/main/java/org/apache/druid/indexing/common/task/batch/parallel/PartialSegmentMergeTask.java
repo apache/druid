@@ -29,7 +29,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.data.input.impl.prefetch.Fetchers;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.TaskLock;
@@ -322,7 +321,7 @@ public class PartialSegmentMergeTask extends AbstractBatchIndexTask
   {
     final File zippedFile = new File(partitionDir, StringUtils.format("temp_%s", location.getSubTaskId()));
     final URI uri = location.toIntermediaryDataServerURI(supervisorTaskId);
-    Fetchers.fetch(
+    org.apache.druid.java.util.common.FileUtils.copyLarge(
         uri,
         u -> u.toURL().openStream(),
         zippedFile,

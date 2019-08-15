@@ -552,21 +552,21 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     final List<PartialSegmentMergeIOConfig> assignedPartitionLocations = new ArrayList<>(numMergeTasks);
     for (int i = 0; i < numMergeTasks - 1; i++) {
-      final List<PartitionLocation> assingedToSameTask = partitions
+      final List<PartitionLocation> assignedToSameTask = partitions
           .subList(i * numPartitionsPerTask, (i + 1) * numPartitionsPerTask)
           .stream()
           .flatMap(intervalAndPartitionId -> partitionToLocations.get(intervalAndPartitionId).stream())
           .collect(Collectors.toList());
-      assignedPartitionLocations.add(new PartialSegmentMergeIOConfig(assingedToSameTask));
+      assignedPartitionLocations.add(new PartialSegmentMergeIOConfig(assignedToSameTask));
     }
 
     // The last task is assigned all remaining partitions.
-    final List<PartitionLocation> assingedToSameTask = partitions
+    final List<PartitionLocation> assignedToSameTask = partitions
         .subList((numMergeTasks - 1) * numPartitionsPerTask, partitions.size())
         .stream()
         .flatMap(intervalAndPartitionId -> partitionToLocations.get(intervalAndPartitionId).stream())
         .collect(Collectors.toList());
-    assignedPartitionLocations.add(new PartialSegmentMergeIOConfig(assingedToSameTask));
+    assignedPartitionLocations.add(new PartialSegmentMergeIOConfig(assignedToSameTask));
 
     return assignedPartitionLocations;
   }
@@ -813,7 +813,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   @GET
   @Path("/phase")
-  @Produces(MediaType.APPLICATION_ATOM_XML)
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getPhaseName(@Context final HttpServletRequest req)
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);

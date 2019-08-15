@@ -210,6 +210,12 @@ public class TaskMonitor<T extends Task>
     }
   }
 
+  /**
+   * Submits a {@link SubTaskSpec} to process to this TaskMonitor. TaskMonitor can issue one or more tasks to process
+   * the given spec. The returned future is done when
+   * 1) a sub task successfully processed the given spec or
+   * 2) the last sub task for the spec failed after all retries were exhausted.
+   */
   public ListenableFuture<SubTaskCompleteEvent<T>> submit(SubTaskSpec<T> spec)
   {
     synchronized (startStopLock) {
