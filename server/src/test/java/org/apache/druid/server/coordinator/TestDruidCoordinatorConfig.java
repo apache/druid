@@ -44,10 +44,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration coordinatorKillDurationToRetain,
       int coordinatorKillMaxSegments,
       String consoleStatic,
-      boolean mergeSegments,
-      boolean convertSegments,
-      Duration getLoadQueuePeonRepeatDelay,
-      Duration CuratorCreateZkNodesRepeatDelay
+      Duration getLoadQueuePeonRepeatDelay
   )
   {
     this.coordinatorStartDelay = coordinatorStartDelay;

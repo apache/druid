@@ -71,7 +71,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   public BloomFilterAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("field") final DimensionSpec field,
-      @Nullable @JsonProperty("maxNumEntries") Integer maxNumEntries
+      @JsonProperty("maxNumEntries") @Nullable Integer maxNumEntries
   )
   {
     this.name = name;
@@ -82,95 +82,13 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory columnFactory)
   {
-    ColumnCapabilities capabilities = columnFactory.getColumnCapabilities(field.getDimension());
-
-    if (capabilities == null) {
-      BaseNullableColumnValueSelector selector = columnFactory.makeColumnValueSelector(field.getDimension());
-      if (selector instanceof NilColumnValueSelector) {
-        // BloomKFilter must be the same size so we cannot use a constant for the empty agg
-        return new NoopBloomFilterAggregator(maxNumEntries, true);
-      }
-      throw new IAE(
-          "Cannot create bloom filter buffer aggregator for column selector type [%s]",
-          selector.getClass().getName()
-      );
-    }
-    ValueType type = capabilities.getType();
-    switch (type) {
-      case STRING:
-        return new StringBloomFilterAggregator(
-            columnFactory.makeDimensionSelector(field),
-            maxNumEntries,
-            true
-        );
-      case LONG:
-        return new LongBloomFilterAggregator(
-            columnFactory.makeColumnValueSelector(field.getDimension()),
-            maxNumEntries,
-            true
-        );
-      case FLOAT:
-        return new FloatBloomFilterAggregator(
-            columnFactory.makeColumnValueSelector(field.getDimension()),
-            maxNumEntries,
-            true
-        );
-      case DOUBLE:
-        return new DoubleBloomFilterAggregator(
-            columnFactory.makeColumnValueSelector(field.getDimension()),
-            maxNumEntries,
-            true
-        );
-      default:
-        throw new IAE("Cannot create bloom filter aggregator for invalid column type [%s]", type);
-    }
+    return factorizeInternal(columnFactory, true);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory columnFactory)
   {
-    ColumnCapabilities capabilities = columnFactory.getColumnCapabilities(field.getDimension());
-
-    if (capabilities == null) {
-      BaseNullableColumnValueSelector selector = columnFactory.makeColumnValueSelector(field.getDimension());
-      if (selector instanceof NilColumnValueSelector) {
-        return new NoopBloomFilterAggregator(maxNumEntries, false);
-      }
-      throw new IAE(
-          "Cannot create bloom filter buffer aggregator for column selector type [%s]",
-          selector.getClass().getName()
-      );
-    }
-
-    ValueType type = capabilities.getType();
-    switch (type) {
-      case STRING:
-        return new StringBloomFilterAggregator(
-            columnFactory.makeDimensionSelector(field),
-            maxNumEntries,
-            false
-        );
-      case LONG:
-        return new LongBloomFilterAggregator(
-            columnFactory.makeColumnValueSelector(field.getDimension()),
-            maxNumEntries,
-            false
-        );
-      case FLOAT:
-        return new FloatBloomFilterAggregator(
-            columnFactory.makeColumnValueSelector(field.getDimension()),
-            maxNumEntries,
-            false
-        );
-      case DOUBLE:
-        return new DoubleBloomFilterAggregator(
-            columnFactory.makeColumnValueSelector(field.getDimension()),
-            maxNumEntries,
-            false
-        );
-      default:
-        throw new IAE("Cannot create bloom filter buffer aggregator for invalid column type [%s]", type);
-    }
+    return factorizeInternal(columnFactory, false);
   }
 
   @Override
@@ -227,8 +145,9 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
     }
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
     return object;
   }
@@ -308,5 +227,68 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
            ", field=" + field +
            ", maxNumEntries=" + maxNumEntries +
            '}';
+  }
+
+  private BaseBloomFilterAggregator factorizeInternal(ColumnSelectorFactory columnFactory, boolean onHeap)
+  {
+    if (field == null || field.getDimension() == null) {
+      return new NoopBloomFilterAggregator(maxNumEntries, onHeap);
+    }
+
+    ColumnCapabilities capabilities = columnFactory.getColumnCapabilities(field.getDimension());
+
+    if (capabilities != null) {
+      ValueType type = capabilities.getType();
+      switch (type) {
+        case STRING:
+          return new StringBloomFilterAggregator(
+              columnFactory.makeDimensionSelector(field),
+              maxNumEntries,
+              onHeap
+          );
+        case LONG:
+          return new LongBloomFilterAggregator(
+              columnFactory.makeColumnValueSelector(field.getDimension()),
+              maxNumEntries,
+              onHeap
+          );
+        case FLOAT:
+          return new FloatBloomFilterAggregator(
+              columnFactory.makeColumnValueSelector(field.getDimension()),
+              maxNumEntries,
+              onHeap
+          );
+        case DOUBLE:
+          return new DoubleBloomFilterAggregator(
+              columnFactory.makeColumnValueSelector(field.getDimension()),
+              maxNumEntries,
+              onHeap
+          );
+        case COMPLEX:
+          // in an ideal world, we would check complex type, but until then assume it's a bloom filter
+          return new BloomFilterMergeAggregator(
+              columnFactory.makeColumnValueSelector(field.getDimension()),
+              maxNumEntries,
+              onHeap
+          );
+        default:
+          throw new IAE(
+              "Cannot create bloom filter %s for invalid column type [%s]",
+              onHeap ? "aggregator" : "buffer aggregator",
+              type
+          );
+      }
+    } else {
+      BaseNullableColumnValueSelector selector = columnFactory.makeColumnValueSelector(field.getDimension());
+      if (selector instanceof NilColumnValueSelector) {
+        return new NoopBloomFilterAggregator(maxNumEntries, onHeap);
+      }
+      // no column capabilities, use fallback 'object' aggregator
+      return new ObjectBloomFilterAggregator(
+          columnFactory.makeColumnValueSelector(field.getDimension()),
+          maxNumEntries,
+          onHeap
+      );
+    }
   }
 }

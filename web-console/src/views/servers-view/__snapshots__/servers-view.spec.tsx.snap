@@ -1,0 +1,320 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`servers view action servers view 1`] = `
+<div
+  className="servers-view app-view"
+>
+  <ViewControlBar
+    label="Servers"
+  >
+    <Component>
+      Group by
+    </Component>
+    <Blueprint3.ButtonGroup>
+      <Blueprint3.Button
+        active={true}
+        onClick={[Function]}
+      >
+        None
+      </Blueprint3.Button>
+      <Blueprint3.Button
+        active={false}
+        onClick={[Function]}
+      >
+        Type
+      </Blueprint3.Button>
+      <Blueprint3.Button
+        active={false}
+        onClick={[Function]}
+      >
+        Tier
+      </Blueprint3.Button>
+    </Blueprint3.ButtonGroup>
+    <RefreshButton
+      localStorageKey="servers-refresh-rate"
+      onRefresh={[Function]}
+    />
+    <Blueprint3.Popover
+      boundary="scrollParent"
+      captureDismiss={false}
+      content={
+        <Blueprint3.Menu>
+          <Blueprint3.MenuItem
+            disabled={false}
+            icon="application"
+            multiline={false}
+            onClick={[Function]}
+            popoverProps={Object {}}
+            shouldDismissPopover={true}
+            text="View SQL query for table"
+          />
+        </Blueprint3.Menu>
+      }
+      defaultIsOpen={false}
+      disabled={false}
+      fill={false}
+      hasBackdrop={false}
+      hoverCloseDelay={300}
+      hoverOpenDelay={150}
+      inheritDarkTheme={true}
+      interactionKind="click"
+      minimal={false}
+      modifiers={Object {}}
+      openOnTargetFocus={true}
+      position="bottom-left"
+      targetTagName="span"
+      transitionDuration={300}
+      usePortal={true}
+      wrapperTagName="span"
+    >
+      <Blueprint3.Button
+        icon="more"
+      />
+    </Blueprint3.Popover>
+    <TableColumnSelector
+      columns={
+        Array [
+          "Server",
+          "Type",
+          "Tier",
+          "Host",
+          "Port",
+          "Curr size",
+          "Max size",
+          "Usage",
+          "Detail",
+          "Actions",
+        ]
+      }
+      onChange={[Function]}
+      tableColumnsHidden={Array []}
+    />
+  </ViewControlBar>
+  <ReactTable
+    AggregatedComponent={[Function]}
+    ExpanderComponent={[Function]}
+    FilterComponent={[Function]}
+    LoadingComponent={[Function]}
+    NoDataComponent={[Function]}
+    PadRowComponent={[Function]}
+    PaginationComponent={[Function]}
+    PivotValueComponent={[Function]}
+    ResizerComponent={[Function]}
+    TableComponent={[Function]}
+    TbodyComponent={[Function]}
+    TdComponent={[Function]}
+    TfootComponent={[Function]}
+    ThComponent={[Function]}
+    TheadComponent={[Function]}
+    TrComponent={[Function]}
+    TrGroupComponent={[Function]}
+    aggregatedKey="_aggregated"
+    className=""
+    collapseOnDataChange={true}
+    collapseOnPageChange={true}
+    collapseOnSortingChange={true}
+    column={
+      Object {
+        "Aggregated": undefined,
+        "Cell": undefined,
+        "Expander": undefined,
+        "Filter": undefined,
+        "Footer": undefined,
+        "Header": undefined,
+        "Pivot": undefined,
+        "PivotValue": undefined,
+        "Placeholder": undefined,
+        "aggregate": undefined,
+        "className": "",
+        "filterAll": false,
+        "filterMethod": undefined,
+        "filterable": undefined,
+        "footerClassName": "",
+        "footerStyle": Object {},
+        "getFooterProps": [Function],
+        "getHeaderProps": [Function],
+        "getProps": [Function],
+        "headerClassName": "",
+        "headerStyle": Object {},
+        "minResizeWidth": 11,
+        "minWidth": 100,
+        "resizable": undefined,
+        "show": true,
+        "sortMethod": undefined,
+        "sortable": undefined,
+        "style": Object {},
+      }
+    }
+    columns={
+      Array [
+        Object {
+          "Aggregated": [Function],
+          "Header": "Server",
+          "accessor": "server",
+          "show": true,
+          "width": 300,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Type",
+          "accessor": "server_type",
+          "show": true,
+          "width": 150,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Tier",
+          "accessor": "tier",
+          "show": true,
+        },
+        Object {
+          "Aggregated": [Function],
+          "Header": "Host",
+          "accessor": "host",
+          "show": true,
+        },
+        Object {
+          "Aggregated": [Function],
+          "Header": "Port",
+          "accessor": [Function],
+          "id": "port",
+          "show": true,
+        },
+        Object {
+          "Aggregated": [Function],
+          "Cell": [Function],
+          "Header": "Curr size",
+          "accessor": "curr_size",
+          "filterable": false,
+          "id": "curr_size",
+          "show": true,
+          "width": 100,
+        },
+        Object {
+          "Aggregated": [Function],
+          "Cell": [Function],
+          "Header": "Max size",
+          "accessor": "max_size",
+          "filterable": false,
+          "id": "max_size",
+          "show": true,
+          "width": 100,
+        },
+        Object {
+          "Aggregated": [Function],
+          "Cell": [Function],
+          "Header": "Usage",
+          "accessor": [Function],
+          "filterable": false,
+          "id": "usage",
+          "show": true,
+          "width": 100,
+        },
+        Object {
+          "Aggregated": [Function],
+          "Cell": [Function],
+          "Header": "Detail",
+          "accessor": [Function],
+          "filterable": false,
+          "id": "queue",
+          "show": true,
+          "width": 400,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Actions",
+          "accessor": [Function],
+          "filterable": false,
+          "id": "actions",
+          "show": true,
+          "width": 70,
+        },
+      ]
+    }
+    data={Array []}
+    defaultExpanded={Object {}}
+    defaultFilterMethod={[Function]}
+    defaultFiltered={Array []}
+    defaultPage={0}
+    defaultPageSize={50}
+    defaultResized={Array []}
+    defaultSortDesc={false}
+    defaultSortMethod={[Function]}
+    defaultSorted={Array []}
+    expanderDefaults={
+      Object {
+        "filterable": false,
+        "resizable": false,
+        "sortable": false,
+        "width": 35,
+      }
+    }
+    filterable={true}
+    filtered={Array []}
+    freezeWhenExpanded={false}
+    getLoadingProps={[Function]}
+    getNoDataProps={[Function]}
+    getPaginationProps={[Function]}
+    getProps={[Function]}
+    getResizerProps={[Function]}
+    getTableProps={[Function]}
+    getTbodyProps={[Function]}
+    getTdProps={[Function]}
+    getTfootProps={[Function]}
+    getTfootTdProps={[Function]}
+    getTfootTrProps={[Function]}
+    getTheadFilterProps={[Function]}
+    getTheadFilterThProps={[Function]}
+    getTheadFilterTrProps={[Function]}
+    getTheadGroupProps={[Function]}
+    getTheadGroupThProps={[Function]}
+    getTheadGroupTrProps={[Function]}
+    getTheadProps={[Function]}
+    getTheadThProps={[Function]}
+    getTheadTrProps={[Function]}
+    getTrGroupProps={[Function]}
+    getTrProps={[Function]}
+    groupedByPivotKey="_groupedByPivot"
+    indexKey="_index"
+    loading={true}
+    loadingText="Loading..."
+    multiSort={true}
+    nestingLevelKey="_nestingLevel"
+    nextText="Next"
+    noDataText=""
+    ofText="of"
+    onFetchData={[Function]}
+    onFilteredChange={[Function]}
+    originalKey="_original"
+    pageJumpText="jump to page"
+    pageSizeOptions={
+      Array [
+        5,
+        10,
+        20,
+        25,
+        50,
+        100,
+      ]
+    }
+    pageText="Page"
+    pivotBy={Array []}
+    pivotDefaults={Object {}}
+    pivotIDKey="_pivotID"
+    pivotValKey="_pivotVal"
+    previousText="Previous"
+    resizable={true}
+    resolveData={[Function]}
+    rowsSelectorText="rows per page"
+    rowsText="rows"
+    showPageJump={true}
+    showPageSizeOptions={true}
+    showPagination={true}
+    showPaginationBottom={true}
+    showPaginationTop={false}
+    sortable={true}
+    style={Object {}}
+    subRowsKey="_subRows"
+  />
+</div>
+`;

@@ -19,12 +19,26 @@
 
 package org.apache.druid.segment.column;
 
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.vector.ReadableVectorOffset;
+import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import java.io.Closeable;
 
 public interface BaseColumn extends Closeable
 {
   ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset);
+
+  default VectorValueSelector makeVectorValueSelector(ReadableVectorOffset offset)
+  {
+    throw new UOE("Cannot make VectorValueSelector for column with class[%s]", getClass().getName());
+  }
+
+  default VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
+  {
+    throw new UOE("Cannot make VectorObjectSelector for column with class[%s]", getClass().getName());
+  }
 }

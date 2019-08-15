@@ -271,7 +271,7 @@ JavaScript-based functionality is disabled by default. Please refer to the Druid
 
 #### DataSketches Theta Sketch
 
-The [DataSketches Theta Sketch](../development/extensions-core/datasketches-theta.html) extension-provided aggregator gives distinct count estimates with support for set union, intersection, and difference post-aggregators, using Theta sketches from the [datasketches](http://datasketches.github.io/) library.
+The [DataSketches Theta Sketch](../development/extensions-core/datasketches-theta.html) extension-provided aggregator gives distinct count estimates with support for set union, intersection, and difference post-aggregators, using Theta sketches from the [datasketches](https://datasketches.github.io/) library.
 
 #### DataSketches HLL Sketch
 
@@ -304,7 +304,7 @@ Note the DataSketches Theta and HLL aggregators currently only support single-co
 
 #### DataSketches Quantiles Sketch
 
-The [DataSketches Quantiles Sketch](../development/extensions-core/datasketches-quantiles.html) extension-provided aggregator provides quantile estimates and histogram approximations using the numeric quantiles DoublesSketch from the [datasketches](http://datasketches.github.io/) library.
+The [DataSketches Quantiles Sketch](../development/extensions-core/datasketches-quantiles.html) extension-provided aggregator provides quantile estimates and histogram approximations using the numeric quantiles DoublesSketch from the [datasketches](https://datasketches.github.io/) library.
 
 We recommend this aggregator in general for quantiles/histogram use cases, as it provides formal error bounds and has distribution-independent accuracy.
 
@@ -337,6 +337,7 @@ The [Approximate Histogram](../development/extensions-core/approximate-histogram
 The algorithm used by this deprecated aggregator is highly distribution-dependent and its output is subject to serious distortions when the input does not fit within the algorithm's limitations.
 
 A [study published by the DataSketches team](https://datasketches.github.io/docs/Quantiles/DruidApproxHistogramStudy.html) demonstrates some of the known failure modes of this algorithm:
+
 - The algorithm's quantile calculations can fail to provide results for a large range of rank values (all ranks less than 0.89 in the example used in the study), returning all zeroes instead.
 - The algorithm can completely fail to record spikes in the tail ends of the distribution
 - In general, the histogram produced by the algorithm can deviate significantly from the true histogram, with no bounds on the errors.

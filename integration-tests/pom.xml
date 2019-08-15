@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.15.0-incubating-SNAPSHOT</version>
+        <version>0.16.0-incubating-SNAPSHOT</version>
     </parent>
 
     <properties>
@@ -234,6 +234,7 @@
                                 -Ddruid.client.https.keyManagerPassword=druid123
                                 -Ddruid.client.https.keyStorePassword=druid123
                             </argLine>
+                            <reportFormat>plain</reportFormat>  <!-- show elapsed time for each test -->
                             <suiteXmlFiles>
                                 <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
                             </suiteXmlFiles>

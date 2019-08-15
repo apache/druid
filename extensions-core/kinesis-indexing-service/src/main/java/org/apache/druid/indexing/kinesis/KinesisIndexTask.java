@@ -28,6 +28,7 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 
@@ -50,7 +51,8 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      @JacksonInject AWSCredentialsConfig awsCredentialsConfig
+      @JacksonInject AWSCredentialsConfig awsCredentialsConfig,
+      @JacksonInject AppenderatorsManager appenderatorsManager
   )
   {
     super(
@@ -63,22 +65,25 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
         chatHandlerProvider,
         authorizerMapper,
         rowIngestionMetersFactory,
-        getFormattedGroupId(dataSchema.getDataSource(), TYPE)
+        getFormattedGroupId(dataSchema.getDataSource(), TYPE),
+        appenderatorsManager
     );
     this.awsCredentialsConfig = awsCredentialsConfig;
   }
 
-
   @Override
   protected SeekableStreamIndexTaskRunner<String, String> createTaskRunner()
   {
+    //noinspection unchecked
     return new KinesisIndexTaskRunner(
         this,
-        parser,
+        dataSchema.getParser(),
         authorizerMapper,
         chatHandlerProvider,
         savedParseExceptions,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager,
+        lockGranularityToUse
     );
   }
 

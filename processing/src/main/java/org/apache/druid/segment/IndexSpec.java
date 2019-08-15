@@ -29,6 +29,8 @@ import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 
+import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
@@ -90,10 +92,10 @@ public class IndexSpec
    */
   @JsonCreator
   public IndexSpec(
-      @JsonProperty("bitmap") BitmapSerdeFactory bitmapSerdeFactory,
-      @JsonProperty("dimensionCompression") CompressionStrategy dimensionCompression,
-      @JsonProperty("metricCompression") CompressionStrategy metricCompression,
-      @JsonProperty("longEncoding") CompressionFactory.LongEncodingStrategy longEncoding
+      @JsonProperty("bitmap") @Nullable BitmapSerdeFactory bitmapSerdeFactory,
+      @JsonProperty("dimensionCompression") @Nullable CompressionStrategy dimensionCompression,
+      @JsonProperty("metricCompression") @Nullable CompressionStrategy metricCompression,
+      @JsonProperty("longEncoding") @Nullable CompressionFactory.LongEncodingStrategy longEncoding
   )
   {
     Preconditions.checkArgument(dimensionCompression == null || DIMENSION_COMPRESSION.contains(dimensionCompression),

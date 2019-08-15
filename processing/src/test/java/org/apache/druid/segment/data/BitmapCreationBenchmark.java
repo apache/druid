@@ -82,7 +82,7 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   {
     List<Class<? extends BitmapSerdeFactory>[]> classes = factoryClasses();
     for (int i = 0; i < classes.size(); ++i) {
-      log.info("Entry [%d] is %s", i, classes.get(i)[0].getCanonicalName());
+      log.info("Entry [%d] is %s", i, classes.get(i)[0].getName());
     }
   }
 

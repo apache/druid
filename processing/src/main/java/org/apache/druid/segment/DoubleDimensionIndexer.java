@@ -39,7 +39,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   public static final Comparator<Double> DOUBLE_COMPARATOR = Comparators.naturalNullsFirst();
 
   @Override
-  public Double processRowValsToUnsortedEncodedKeyComponent(Object dimValues, boolean reportParseExceptions)
+  public Double processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
     if (dimValues instanceof List) {
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
@@ -80,7 +80,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   @Override
   public int getCardinality()
   {
-    return DimensionSelector.CARDINALITY_UNKNOWN;
+    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 
   @Override

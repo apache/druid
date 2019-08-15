@@ -43,7 +43,9 @@ import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.client.InventoryView;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
@@ -184,6 +186,7 @@ public class SystemSchema extends AbstractSchema
       final DruidSchema druidSchema,
       final MetadataSegmentView metadataView,
       final TimelineServerView serverView,
+      final InventoryView serverInventoryView,
       final AuthorizerMapper authorizerMapper,
       final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
       final @IndexingService DruidLeaderClient overlordDruidLeaderClient,
@@ -201,7 +204,7 @@ public class SystemSchema extends AbstractSchema
     );
     this.tableMap = ImmutableMap.of(
         SEGMENTS_TABLE, segmentsTable,
-        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, authorizerMapper),
+        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper),
         SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
         TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, responseHandler, authorizerMapper)
     );
@@ -252,8 +255,9 @@ public class SystemSchema extends AbstractSchema
     public Enumerable<Object[]> scan(DataContext root)
     {
       //get available segments from druidSchema
-      final Map<DataSegment, AvailableSegmentMetadata> availableSegmentMetadata = druidSchema.getSegmentMetadata();
-      final Iterator<Entry<DataSegment, AvailableSegmentMetadata>> availableSegmentEntries =
+      final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadata =
+          druidSchema.getSegmentMetadataSnapshot();
+      final Iterator<Entry<SegmentId, AvailableSegmentMetadata>> availableSegmentEntries =
           availableSegmentMetadata.entrySet().iterator();
 
       // in memory map to store segment data from available segments
@@ -262,10 +266,11 @@ public class SystemSchema extends AbstractSchema
       for (AvailableSegmentMetadata h : availableSegmentMetadata.values()) {
         PartialSegmentData partialSegmentData =
             new PartialSegmentData(IS_AVAILABLE_TRUE, h.isRealtime(), h.getNumReplicas(), h.getNumRows());
-        partialSegmentDataMap.put(h.getSegmentId(), partialSegmentData);
+        partialSegmentDataMap.put(h.getSegment().getId(), partialSegmentData);
       }
 
-      //get published segments from metadata segment cache (if enabled in sql planner config), else directly from coordinator
+      // get published segments from metadata segment cache (if enabled in sql planner config), else directly from
+      // coordinator
       final Iterator<SegmentWithOvershadowedStatus> metadataStoreSegments = metadataView.getPublishedSegments();
 
       final Set<SegmentId> segmentsAlreadySeen = new HashSet<>();
@@ -316,19 +321,19 @@ public class SystemSchema extends AbstractSchema
           ))
           .transform(val -> {
             try {
-              if (segmentsAlreadySeen.contains(val.getKey().getId())) {
+              if (segmentsAlreadySeen.contains(val.getKey())) {
                 return null;
               }
-              final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getKey().getId());
+              final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getKey());
               final long numReplicas = partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas();
               return new Object[]{
-                  val.getKey().getId(),
+                  val.getKey(),
                   val.getKey().getDataSource(),
                   val.getKey().getInterval().getStart().toString(),
                   val.getKey().getInterval().getEnd().toString(),
-                  val.getKey().getSize(),
+                  val.getValue().getSegment().getSize(),
                   val.getKey().getVersion(),
-                  Long.valueOf(val.getKey().getShardSpec().getPartitionNum()),
+                  (long) val.getValue().getSegment().getShardSpec().getPartitionNum(),
                   numReplicas,
                   val.getValue().getNumRows(),
                   IS_PUBLISHED_FALSE, // is_published is false for unpublished segments
@@ -339,7 +344,7 @@ public class SystemSchema extends AbstractSchema
               };
             }
             catch (JsonProcessingException e) {
-              throw new RE(e, "Error getting segment payload for segment %s", val.getKey().getId());
+              throw new RE(e, "Error getting segment payload for segment %s", val.getKey());
             }
           });
 
@@ -359,27 +364,28 @@ public class SystemSchema extends AbstractSchema
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
 
-      final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
-          authenticationResult,
-          () -> it,
-          SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR,
-          authorizerMapper
-      );
+      final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils
+          .filterAuthorizedResources(
+              authenticationResult,
+              () -> it,
+              SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR,
+              authorizerMapper
+          );
       return authorizedSegments.iterator();
     }
 
-    private Iterator<Entry<DataSegment, AvailableSegmentMetadata>> getAuthorizedAvailableSegments(
-        Iterator<Entry<DataSegment, AvailableSegmentMetadata>> availableSegmentEntries,
+    private Iterator<Entry<SegmentId, AvailableSegmentMetadata>> getAuthorizedAvailableSegments(
+        Iterator<Entry<SegmentId, AvailableSegmentMetadata>> availableSegmentEntries,
         DataContext root
     )
     {
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
 
-      Function<Entry<DataSegment, AvailableSegmentMetadata>, Iterable<ResourceAction>> raGenerator = segment -> Collections
+      Function<Entry<SegmentId, AvailableSegmentMetadata>, Iterable<ResourceAction>> raGenerator = segment -> Collections
           .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getKey().getDataSource()));
 
-      final Iterable<Entry<DataSegment, AvailableSegmentMetadata>> authorizedSegments =
+      final Iterable<Entry<SegmentId, AvailableSegmentMetadata>> authorizedSegments =
           AuthorizationUtils.filterAuthorizedResources(
               authenticationResult,
               () -> availableSegmentEntries,
@@ -441,14 +447,17 @@ public class SystemSchema extends AbstractSchema
   {
     private final AuthorizerMapper authorizerMapper;
     private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
+    private final InventoryView serverInventoryView;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
+        InventoryView serverInventoryView,
         AuthorizerMapper authorizerMapper
     )
     {
       this.authorizerMapper = authorizerMapper;
       this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
+      this.serverInventoryView = serverInventoryView;
     }
 
     @Override
@@ -477,7 +486,10 @@ public class SystemSchema extends AbstractSchema
           .transform(val -> {
             boolean isDataNode = false;
             final DruidNode node = val.getDruidNode();
+            long currHistoricalSize = 0;
             if (val.getNodeType().equals(NodeType.HISTORICAL)) {
+              final DruidServer server = serverInventoryView.getInventoryValue(val.toDruidServer().getName());
+              currHistoricalSize = server.getCurrSize();
               isDataNode = true;
             }
             return new Object[]{
@@ -487,7 +499,7 @@ public class SystemSchema extends AbstractSchema
                 (long) extractPort(node.getHostAndTlsPort()),
                 StringUtils.toLowerCase(toStringOrNull(val.getNodeType())),
                 isDataNode ? val.toDruidServer().getTier() : null,
-                isDataNode ? val.toDruidServer().getCurrSize() : CURRENT_SERVER_SIZE,
+                isDataNode ? currHistoricalSize : CURRENT_SERVER_SIZE,
                 isDataNode ? val.toDruidServer().getMaxSize() : MAX_SERVER_SIZE
             };
           });
@@ -543,7 +555,7 @@ public class SystemSchema extends AbstractSchema
       for (ImmutableDruidServer druidServer : druidServers) {
         final Iterable<DataSegment> authorizedServerSegments = AuthorizationUtils.filterAuthorizedResources(
             authenticationResult,
-            druidServer.getLazyAllSegments(),
+            druidServer.iterateAllSegments(),
             SEGMENT_RA_GENERATOR,
             authorizerMapper
         );

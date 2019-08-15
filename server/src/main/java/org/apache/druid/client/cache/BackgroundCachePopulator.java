@@ -38,6 +38,10 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
+/**
+ * {@link CachePopulator} implementation that uses a {@link ExecutorService} thread pool to populate a cache in the
+ * background. Used if config "druid.*.cache.numBackgroundThreads" is greater than 0.
+ */
 public class BackgroundCachePopulator implements CachePopulator
 {
   private static final Logger log = new Logger(BackgroundCachePopulator.class);

@@ -25,8 +25,6 @@ import javax.validation.constraints.NotNull;
 
 /**
  * Cassandra Config
- * 
- * @author boneill42
  */
 public class CassandraDataSegmentConfig
 {

@@ -91,3 +91,10 @@ Bounds
 |--------|-----------|---------|
 |coords|Origin coordinates in the form [x, y, z, …]|yes|
 |radius|The float radius value|yes|
+
+### PolygonBound
+
+|property|description|required?|
+|--------|-----------|---------|
+|abscissa|Horizontal coordinate for corners of the polygon|yes|
+|ordinate|Vertical coordinate for corners of the polygon|yes|

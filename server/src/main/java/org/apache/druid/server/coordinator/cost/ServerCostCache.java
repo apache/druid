@@ -21,10 +21,10 @@ package org.apache.druid.server.coordinator.cost;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CollectionUtils;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class ServerCostCache
 {
@@ -89,10 +89,7 @@ public class ServerCostCache
     {
       return new ServerCostCache(
           allSegmentsCostCache.build(),
-          segmentsPerDataSource
-              .entrySet()
-              .stream()
-              .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build()))
+          CollectionUtils.mapValues(segmentsPerDataSource, SegmentsCostCache.Builder::build)
       );
     }
   }

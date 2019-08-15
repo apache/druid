@@ -37,6 +37,7 @@ import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
@@ -52,7 +53,7 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class Sink implements Iterable<FireHydrant>
+public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 {
   private static final IncrementalIndexAddResult ALREADY_SWAPPED =
       new IncrementalIndexAddResult(-1, -1, null, "write after index swapped");
@@ -140,11 +141,6 @@ public class Sink implements Iterable<FireHydrant>
   public void clearDedupCache()
   {
     dedupSet.clear();
-  }
-
-  public String getVersion()
-  {
-    return version;
   }
 
   public Interval getInterval()
@@ -407,5 +403,43 @@ public class Sink implements Iterable<FireHydrant>
            "interval=" + interval +
            ", schema=" + schema +
            '}';
+  }
+
+  @Override
+  public boolean overshadows(Sink other)
+  {
+    // Sink is currently used in timeline only for querying stream data.
+    // In this case, sinks never overshadow each other.
+    return false;
+  }
+
+  @Override
+  public int getStartRootPartitionId()
+  {
+    return shardSpec.getStartRootPartitionId();
+  }
+
+  @Override
+  public int getEndRootPartitionId()
+  {
+    return shardSpec.getEndRootPartitionId();
+  }
+
+  @Override
+  public String getVersion()
+  {
+    return version;
+  }
+
+  @Override
+  public short getMinorVersion()
+  {
+    return shardSpec.getMinorVersion();
+  }
+
+  @Override
+  public short getAtomicUpdateGroupSize()
+  {
+    return shardSpec.getAtomicUpdateGroupSize();
   }
 }

@@ -26,6 +26,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -40,7 +42,7 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   public LongSumAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("expression") String expression,
+      @JsonProperty("expression") @Nullable String expression,
       @JacksonInject ExprMacroTable macroTable
   )
   {
@@ -62,9 +64,9 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   }
 
   @Override
-  protected Aggregator factorize(ColumnSelectorFactory metricFactory, BaseLongColumnValueSelector selector)
+  protected VectorValueSelector vectorSelector(VectorColumnSelectorFactory columnSelectorFactory)
   {
-    return new LongSumAggregator(selector);
+    return columnSelectorFactory.makeValueSelector(fieldName);
   }
 
   @Override
@@ -74,6 +76,27 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   )
   {
     return new LongSumBufferAggregator(selector);
+  }
+
+  @Override
+  protected VectorAggregator factorizeVector(
+      VectorColumnSelectorFactory columnSelectorFactory,
+      VectorValueSelector selector
+  )
+  {
+    return new LongSumVectorAggregator(selector);
+  }
+
+  @Override
+  protected Aggregator factorize(ColumnSelectorFactory metricFactory, BaseLongColumnValueSelector selector)
+  {
+    return new LongSumAggregator(selector);
+  }
+
+  @Override
+  public boolean canVectorize()
+  {
+    return expression == null;
   }
 
   @Override

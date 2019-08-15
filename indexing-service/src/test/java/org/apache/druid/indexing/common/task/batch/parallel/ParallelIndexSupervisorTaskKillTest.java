@@ -31,6 +31,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -39,11 +40,14 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -51,12 +55,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
 
 public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSupervisorTaskTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private ExecutorService service;
 
   @Before
@@ -97,7 +105,9 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
       Thread.sleep(100);
     }
     task.stopGracefully(null);
-    Assert.assertEquals(TaskState.FAILED, future.get());
+    expectedException.expect(ExecutionException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(InterruptedException.class));
+    future.get();
 
     final TestParallelIndexTaskRunner runner = (TestParallelIndexTaskRunner) task.getRunner();
     Assert.assertTrue(runner.getRunningTaskIds().isEmpty());
@@ -176,6 +186,8 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
         ),
         ioConfig,
         new ParallelIndexTuningConfig(
+            null,
+            null,
             null,
             null,
             null,
@@ -395,7 +407,8 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
           ingestionSchema,
           context,
           indexingServiceClient,
-          taskClientFactory
+          taskClientFactory,
+          new TestAppenderatorsManager()
       );
     }
 

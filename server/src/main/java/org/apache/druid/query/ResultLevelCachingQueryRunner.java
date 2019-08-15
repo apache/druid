@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResource;
 
 import javax.annotation.Nullable;
@@ -41,7 +42,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Map;
 
 public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
 {
@@ -76,7 +76,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(QueryPlus queryPlus, Map responseContext)
+  public Sequence<T> run(QueryPlus queryPlus, ResponseContext responseContext)
   {
     if (useResultCache || populateResultCache) {
 
@@ -92,7 +92,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
           QueryPlus.wrap(query),
           responseContext
       );
-      String newResultSetId = (String) responseContext.get(QueryResource.HEADER_ETAG);
+      String newResultSetId = (String) responseContext.get(ResponseContext.Key.ETAG);
 
       if (useResultCache && newResultSetId != null && newResultSetId.equals(existingResultSetId)) {
         log.debug("Return cached result set as there is no change in identifiers for query %s ", query.getId());

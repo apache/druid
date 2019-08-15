@@ -521,6 +521,7 @@ public class IndexGeneratorJobTest
                 null,
                 null,
                 null,
+                null,
                 maxRowsInMemory,
                 maxBytesInMemory,
                 true,
@@ -535,6 +536,7 @@ public class IndexGeneratorJobTest
                 null,
                 forceExtendableShardSpecs,
                 false,
+                null,
                 null,
                 null,
                 null

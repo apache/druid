@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Apache Druid (incubating) Quickstart"
+title: "Apache Druid (incubating) Single-Server Quickstart"
 ---
 
 <!--
@@ -22,7 +22,7 @@ title: "Apache Druid (incubating) Quickstart"
   ~ under the License.
   -->
 
-# Apache Druid (incubating) Quickstart
+# Apache Druid (incubating) Single-Server Quickstart
 
 In this quickstart, we will download Druid and set it up on a single machine. The cluster will be ready to load data
 after completing this initial setup.
@@ -35,17 +35,21 @@ Before beginning the quickstart, it is helpful to read the [general Druid overvi
 ### Software
 
 You will need:
-  * Java 8 (8u92+)
-  * Linux, Mac OS X, or other Unix-like OS (Windows is not supported)
+
+* Java 8 (8u92+)
+* Linux, Mac OS X, or other Unix-like OS (Windows is not supported)
 
 
 ### Hardware
 
-Druid includes several example [single-server configurations](../operations/single-server.html), along with scripts to start the Druid processes using these configurations.
+Druid includes several example [single-server configurations](../operations/single-server.html), along with scripts to
+start the Druid processes using these configurations.
 
-If you're running on a small machine such as a laptop for a quick evaluation, the `micro-quickstart` configuration is a good choice, sized for a 4CPU/16GB RAM environment.
+If you're running on a small machine such as a laptop for a quick evaluation, the `micro-quickstart` configuration is
+a good choice, sized for a 4CPU/16GB RAM environment.
 
-If you plan to use the single-machine deployment for further evaluation beyond the tutorials, we recommend a larger configuration than `micro-quickstart`. 
+If you plan to use the single-machine deployment for further evaluation beyond the tutorials, we recommend a larger
+configuration than `micro-quickstart`.
 
 ## Getting started
 
@@ -63,7 +67,7 @@ In the package, you should find:
 
 * `DISCLAIMER`, `LICENSE`, and `NOTICE` files
 * `bin/*` - scripts useful for this quickstart
-* `conf/*` - template configurations for a clustered setup
+* `conf/*` - example configurations for single-server and clustered setup
 * `extensions/*` - core Druid extensions
 * `hadoop-dependencies/*` - Druid Hadoop dependencies
 * `lib/*` - libraries and dependencies for core Druid
@@ -82,11 +86,14 @@ tar -xzf zookeeper-3.4.11.tar.gz
 mv zookeeper-3.4.11 zk
 ```
 
-The startup scripts for the tutorial will expect the contents of the Zookeeper tarball to be located at `zk` under the apache-druid-#{DRUIDVERSION} package root.
+The startup scripts for the tutorial will expect the contents of the Zookeeper tarball to be located at `zk` under the
+apache-druid-#{DRUIDVERSION} package root.
 
 ## Start up Druid services
 
-The following commands will assume that you are using the `micro-quickstart` single-machine configuration. If you are using a different configuration, the `bin` directory has equivalent scripts for each configuration, such as `bin/start-single-server-small`.
+The following commands will assume that you are using the `micro-quickstart` single-machine configuration. If you are
+using a different configuration, the `bin` directory has equivalent scripts for each configuration, such as
+`bin/start-single-server-small`.
 
 From the apache-druid-#{DRUIDVERSION} package root, run the following command:
 
@@ -110,21 +117,13 @@ All persistent state such as the cluster metadata store and segments for the ser
 
 Later on, if you'd like to stop the services, CTRL-C to exit the `bin/start-micro-quickstart` script, which will terminate the Druid processes.
 
-### Resetting cluster state
+Once the cluster has started, you can navigate to [http://localhost:8888](http://localhost:8888).
+The [Druid router process](../development/router.html), which serves the Druid console, resides at this address.
 
-If you want a clean start after stopping the services, delete the `var` directory and run the `bin/start-micro-quickstart` script again.
+![Druid console](../tutorials/img/tutorial-quickstart-01.png "Druid console")
 
-Once every service has started, you are now ready to load data.
+It takes a few seconds for all the Druid processes to fully start up. If you open the console immediately after starting the services, you may see some errors that you can safely ignore.
 
-#### Resetting Kafka
-
-If you completed [Tutorial: Loading stream data from Kafka](./tutorial-kafka.html) and wish to reset the cluster state, you should additionally clear out any Kafka state.
-
-Shut down the Kafka broker with CTRL-C before stopping Zookeeper and the Druid services, and then delete the Kafka log directory at `/tmp/kafka-logs`:
-
-```bash
-rm -rf /tmp/kafka-logs
-```
 
 ## Loading Data
 
@@ -132,7 +131,8 @@ rm -rf /tmp/kafka-logs
 
 For the following data loading tutorials, we have included a sample data file containing Wikipedia page edit events that occurred on 2015-09-12.
 
-This sample data is located at `quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz` from the Druid package root. The page edit events are stored as JSON objects in a text file.
+This sample data is located at `quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz` from the Druid package root.
+The page edit events are stored as JSON objects in a text file.
 
 The sample data has the following columns, and an example event is shown below:
 
@@ -180,24 +180,31 @@ The sample data has the following columns, and an example event is shown below:
 }
 ```
 
+
+### Data loading tutorials
+
 The following tutorials demonstrate various methods of loading data into Druid, including both batch and streaming use cases.
+All tutorials assume that you are using the `micro-quickstart` single-machine configuration mentioned above.
 
-### [Tutorial: Loading a file](./tutorial-batch.html)
+- [Loading a file](./tutorial-batch.html) - this tutorial demonstrates how to perform a batch file load, using Druid's native batch ingestion.
+- [Loading stream data from Apache Kafka](./tutorial-kafka.html) - this tutorial demonstrates how to load streaming data from a Kafka topic.
+- [Loading a file using Apache Hadoop](./tutorial-batch-hadoop.html) - this tutorial demonstrates how to perform a batch file load, using a remote Hadoop cluster.
+- [Loading data using Tranquility](./tutorial-tranquility.html) - this tutorial demonstrates how to load streaming data by pushing events to Druid using the Tranquility service.
+- [Writing your own ingestion spec](./tutorial-ingestion-spec.html) - this tutorial demonstrates how to write a new ingestion spec and use it to load data.
 
-This tutorial demonstrates how to perform a batch file load, using Druid's native batch ingestion.
 
-### [Tutorial: Loading stream data from Apache Kafka](./tutorial-kafka.html)
+### Resetting cluster state
 
-This tutorial demonstrates how to load streaming data from a Kafka topic.
+If you want a clean start after stopping the services, delete the `var` directory and run the `bin/start-micro-quickstart` script again.
 
-### [Tutorial: Loading a file using Apache Hadoop](./tutorial-batch-hadoop.html)
+Once every service has started, you are now ready to load data.
 
-This tutorial demonstrates how to perform a batch file load, using a remote Hadoop cluster.
+#### Resetting Kafka
 
-### [Tutorial: Loading data using Tranquility](./tutorial-tranquility.html)
+If you completed [Tutorial: Loading stream data from Kafka](./tutorial-kafka.html) and wish to reset the cluster state, you should additionally clear out any Kafka state.
 
-This tutorial demonstrates how to load streaming data by pushing events to Druid using the Tranquility service.
+Shut down the Kafka broker with CTRL-C before stopping Zookeeper and the Druid services, and then delete the Kafka log directory at `/tmp/kafka-logs`:
 
-### [Tutorial: Writing your own ingestion spec](./tutorial-ingestion-spec.html)
-
-This tutorial demonstrates how to write a new ingestion spec and use it to load data.
+```bash
+rm -rf /tmp/kafka-logs
+```

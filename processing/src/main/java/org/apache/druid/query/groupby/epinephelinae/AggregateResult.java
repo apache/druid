@@ -19,13 +19,19 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
+import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.ISE;
+
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 public class AggregateResult
 {
-  private static final AggregateResult OK = new AggregateResult(true, null);
+  private static final AggregateResult OK = new AggregateResult(0, null);
 
-  private final boolean ok;
+  private final int count;
+
+  @Nullable
   private final String reason;
 
   public static AggregateResult ok()
@@ -33,29 +39,47 @@ public class AggregateResult
     return OK;
   }
 
-  public static AggregateResult failure(final String reason)
+  public static AggregateResult partial(final int count, final String reason)
   {
-    return new AggregateResult(false, reason);
+    return new AggregateResult(count, Preconditions.checkNotNull(reason, "reason"));
   }
 
-  private AggregateResult(final boolean ok, final String reason)
+  private AggregateResult(final int count, @Nullable final String reason)
   {
-    this.ok = ok;
+    Preconditions.checkArgument(count >= 0, "count >= 0");
+    this.count = count;
     this.reason = reason;
   }
 
+  /**
+   * True if all rows have been processed.
+   */
   public boolean isOk()
   {
-    return ok;
+    return reason == null;
   }
 
+  public int getCount()
+  {
+    if (isOk()) {
+      throw new ISE("Cannot call getCount when isOk = true");
+    }
+
+    return count;
+  }
+
+  @Nullable
   public String getReason()
   {
+    if (isOk()) {
+      throw new ISE("Cannot call getReason when isOk = true");
+    }
+
     return reason;
   }
 
   @Override
-  public boolean equals(final Object o)
+  public boolean equals(Object o)
   {
     if (this == o) {
       return true;
@@ -63,22 +87,22 @@ public class AggregateResult
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final AggregateResult that = (AggregateResult) o;
-    return ok == that.ok &&
+    AggregateResult that = (AggregateResult) o;
+    return count == that.count &&
            Objects.equals(reason, that.reason);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(ok, reason);
+    return Objects.hash(count, reason);
   }
 
   @Override
   public String toString()
   {
     return "AggregateResult{" +
-           "ok=" + ok +
+           "count=" + count +
            ", reason='" + reason + '\'' +
            '}';
   }

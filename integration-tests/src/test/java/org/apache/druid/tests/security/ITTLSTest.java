@@ -42,6 +42,7 @@ import org.apache.druid.server.security.TLSUtils;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.ITTLSCertificateChecker;
+import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
@@ -54,8 +55,8 @@ import javax.net.ssl.SSLException;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 
+@Test(groups = TestNGGroup.SECURITY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITTLSTest
 {
@@ -85,7 +86,6 @@ public class ITTLSTest
   @Inject
   TLSCertificateChecker certificateChecker;
 
-  StatusResponseHandler responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
 
   @Test
   public void testPlaintextAccess()
@@ -504,7 +504,7 @@ public class ITTLSTest
       while (true) {
         response = httpClient.go(
             request,
-            responseHandler
+            StatusResponseHandler.getInstance()
         ).get();
 
         if (!response.getStatus().equals(HttpResponseStatus.OK)) {

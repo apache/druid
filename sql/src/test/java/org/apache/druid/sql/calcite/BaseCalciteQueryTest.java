@@ -35,6 +35,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
@@ -89,6 +90,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -222,6 +224,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  public boolean cannotVectorize = false;
+  public boolean skipVectorize = false;
+
   public SpecificSegmentsQuerySegmentWalker walker = null;
   public QueryLogHook queryLogHook;
 
@@ -493,6 +499,19 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     testQuery(plannerConfig, QUERY_CONTEXT_DEFAULT, sql, authenticationResult, expectedQueries, expectedResults);
   }
 
+  private Query recursivelyOverrideContext(final Query q, final Map<String, Object> context)
+  {
+    final Query q2;
+    if (q.getDataSource() instanceof QueryDataSource) {
+      final Query subQuery = ((QueryDataSource) q.getDataSource()).getQuery();
+      q2 = q.withDataSource(new QueryDataSource(recursivelyOverrideContext(subQuery, context)));
+    } else {
+      q2 = q;
+    }
+
+    return q2.withOverriddenContext(context);
+  }
+
   public void testQuery(
       final PlannerConfig plannerConfig,
       final Map<String, Object> queryContext,
@@ -503,9 +522,38 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   ) throws Exception
   {
     log.info("SQL: %s", sql);
-    queryLogHook.clearRecordedQueries();
-    final List<Object[]> plannerResults = getResults(plannerConfig, queryContext, sql, authenticationResult);
-    verifyResults(sql, expectedQueries, expectedResults, plannerResults);
+
+    final List<String> vectorizeValues = new ArrayList<>();
+
+    vectorizeValues.add("false");
+
+    if (!skipVectorize) {
+      vectorizeValues.add("force");
+    }
+
+    for (final String vectorize : vectorizeValues) {
+      queryLogHook.clearRecordedQueries();
+
+      final Map<String, Object> theQueryContext = new HashMap<>(queryContext);
+      theQueryContext.put("vectorize", vectorize);
+
+      if (!"false".equals(vectorize)) {
+        theQueryContext.put("vectorSize", 2); // Small vector size to ensure we use more than one.
+      }
+
+      final List<Query> theQueries = new ArrayList<>();
+      for (Query query : expectedQueries) {
+        theQueries.add(recursivelyOverrideContext(query, theQueryContext));
+      }
+
+      if (cannotVectorize && "force".equals(vectorize)) {
+        expectedException.expect(RuntimeException.class);
+        expectedException.expectMessage("Cannot vectorize");
+      }
+
+      final List<Object[]> plannerResults = getResults(plannerConfig, theQueryContext, sql, authenticationResult);
+      verifyResults(sql, theQueries, expectedResults, plannerResults);
+    }
   }
 
   public List<Object[]> getResults(
@@ -607,5 +655,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         );
       }
     }
+  }
+
+  protected void cannotVectorize()
+  {
+    cannotVectorize = true;
+  }
+
+  protected void skipVectorize()
+  {
+    skipVectorize = true;
   }
 }

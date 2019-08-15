@@ -129,8 +129,7 @@ public class SelectQueryRunnerTest
 
   private static final SelectQueryQueryToolChest toolChest = new SelectQueryQueryToolChest(
       new DefaultObjectMapper(),
-      QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
-      configSupplier
+      QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
   );
 
   @Parameterized.Parameters(name = "{0}:descending={1}")
@@ -175,8 +174,7 @@ public class SelectQueryRunnerTest
         .intervals(I_0112_0114_SPEC)
         .build();
 
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
 
     PagingOffset offset = query.getPagingOffset(segmentIdString);
     List<Result<SelectResultValue>> expectedResults = toExpected(
@@ -218,7 +216,7 @@ public class SelectQueryRunnerTest
 
     SelectQuery query = newTestQuery().intervals(I_0112_0114_SPEC).build();
     for (int offset : expected) {
-      List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
+      List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
 
       Assert.assertEquals(1, results.size());
 
@@ -232,7 +230,7 @@ public class SelectQueryRunnerTest
 
     query = newTestQuery().intervals(I_0112_0114_SPEC).build();
     for (int offset : expected) {
-      List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
+      List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
 
       Assert.assertEquals(1, results.size());
 
@@ -273,8 +271,7 @@ public class SelectQueryRunnerTest
         )
         .build();
 
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
 
     String segmentIdInThisQuery = QueryRunnerTestHelper.segmentId.toString();
 
@@ -386,8 +383,7 @@ public class SelectQueryRunnerTest
         .metrics(Collections.singletonList(QueryRunnerTestHelper.indexMetric))
         .build();
 
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
 
     PagingOffset offset = query.getPagingOffset(segmentIdString);
     List<Result<SelectResultValue>> expectedResults = toExpected(
@@ -424,7 +420,7 @@ public class SelectQueryRunnerTest
         .pagingSpec(new PagingSpec(toPagingIdentifier(3, descending), 3))
         .build();
 
-    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
 
     PagingOffset offset = query.getPagingOffset(segmentIdString);
     List<Result<SelectResultValue>> expectedResults = toExpected(
@@ -459,8 +455,7 @@ public class SelectQueryRunnerTest
           .pagingSpec(new PagingSpec(toPagingIdentifier(param[0], descending), param[1]))
           .build();
 
-      HashMap<String, Object> context = new HashMap<String, Object>();
-      Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
+      Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
 
       final List<List<Map<String, Object>>> events = toEvents(
           new String[]{
@@ -532,8 +527,7 @@ public class SelectQueryRunnerTest
         )
         .build();
 
-    HashMap<String, Object> context = new HashMap<>();
-    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
         new String[]{
@@ -580,10 +574,10 @@ public class SelectQueryRunnerTest
         .metrics(Collections.singletonList(QueryRunnerTestHelper.indexMetric))
         .build();
 
-    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     Iterable<Result<SelectResultValue>> resultsOptimize = toolChest
         .postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)))
-        .run(QueryPlus.wrap(query), new HashMap<>())
+        .run(QueryPlus.wrap(query))
         .toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
@@ -635,7 +629,7 @@ public class SelectQueryRunnerTest
         )
         .build();
 
-    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
 
     List<Result<SelectResultValue>> expectedResults = Collections.singletonList(
         new Result<SelectResultValue>(
@@ -680,7 +674,7 @@ public class SelectQueryRunnerTest
         .metrics(Collections.singletonList("foo2"))
         .build();
 
-    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
         new String[]{
@@ -717,8 +711,7 @@ public class SelectQueryRunnerTest
         .intervals(I_0112_0114_SPEC)
         .build();
 
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
 
     List<Result<SelectResultValue>> expectedResultsAsc = Collections.singletonList(
         new Result<SelectResultValue>(
@@ -832,8 +825,7 @@ public class SelectQueryRunnerTest
         .intervals(I_0112_0114_SPEC)
         .build();
 
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
 
     List<Result<SelectResultValue>> expectedResultsAsc = Collections.singletonList(
         new Result<SelectResultValue>(

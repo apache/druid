@@ -253,7 +253,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       final DataSourceCompactionConfig config
   )
   {
-    final boolean keepSegmentGranularity = config.isKeepSegmentGranularity();
     final long inputSegmentSize = config.getInputSegmentSizeBytes();
     final int maxNumSegmentsToCompact = config.getMaxNumSegmentsToCompact();
     final SegmentsToCompact segmentsToCompact = new SegmentsToCompact();
@@ -292,7 +291,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       if (isCompactibleSize
           && isCompactibleNum
           && isSameOrAbuttingInterval
-          && (!keepSegmentGranularity || segmentsToCompact.isEmpty())) {
+          && segmentsToCompact.isEmpty()) {
         chunks.forEach(chunk -> segmentsToCompact.add(chunk.getObject()));
       } else {
         if (segmentsToCompact.getNumSegments() > 1) {

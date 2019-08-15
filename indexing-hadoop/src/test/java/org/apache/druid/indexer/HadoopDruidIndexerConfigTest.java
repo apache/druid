@@ -86,6 +86,7 @@ public class HadoopDruidIndexerConfigTest
             null,
             null,
             null,
+            null,
             false,
             false,
             false,
@@ -98,6 +99,7 @@ public class HadoopDruidIndexerConfigTest
             null,
             false,
             false,
+            null,
             null,
             null,
             null
@@ -163,6 +165,7 @@ public class HadoopDruidIndexerConfigTest
             null,
             null,
             null,
+            null,
             false,
             false,
             false,
@@ -175,6 +178,7 @@ public class HadoopDruidIndexerConfigTest
             null,
             false,
             false,
+            null,
             null,
             null,
             null

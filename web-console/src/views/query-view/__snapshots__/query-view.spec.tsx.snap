@@ -1,0 +1,64 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`sql view matches snapshot 1`] = `
+<div
+  className="query-view app-view"
+>
+  <ColumnTree
+    addAggregateColumn={[Function]}
+    addFunctionToGroupBy={[Function]}
+    addToGroupBy={[Function]}
+    clear={[Function]}
+    columnMetadataLoading={true}
+    defaultSchema="druid"
+    filterByRow={[Function]}
+    hasGroupBy={[Function]}
+    onQueryStringChange={[Function]}
+    queryAst={[Function]}
+  />
+  <t
+    customClassName=""
+    onDragEnd={null}
+    onDragStart={null}
+    onSecondaryPaneSizeChange={[Function]}
+    percentage={true}
+    primaryIndex={0}
+    primaryMinSize={30}
+    secondaryInitialSize={60}
+    secondaryMinSize={30}
+    vertical={true}
+  >
+    <div
+      className="control-pane"
+    >
+      <QueryInput
+        onQueryStringChange={[Function]}
+        queryString="test"
+        runeMode={false}
+      />
+      <div
+        className="control-bar"
+      >
+        <HotkeysTarget(RunButton)
+          autoRun={true}
+          onEditContext={[Function]}
+          onExplain={[Function]}
+          onHistory={[Function]}
+          onQueryContextChange={[Function]}
+          onRun={[Function]}
+          queryContext={Object {}}
+          runeMode={false}
+          setAutoRun={[Function]}
+        />
+      </div>
+    </div>
+    <QueryOutput
+      loading={false}
+      runeMode={false}
+      sqlExcludeColumn={[Function]}
+      sqlFilterRow={[Function]}
+      sqlOrderBy={[Function]}
+    />
+  </t>
+</div>
+`;

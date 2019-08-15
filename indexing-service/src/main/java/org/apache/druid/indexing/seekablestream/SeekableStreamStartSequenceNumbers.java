@@ -123,8 +123,8 @@ public class SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetT
     if (this.getClass() != other.getClass()) {
       throw new IAE(
           "Expected instance of %s, got %s",
-          this.getClass().getCanonicalName(),
-          other.getClass().getCanonicalName()
+          this.getClass().getName(),
+          other.getClass().getName()
       );
     }
 
@@ -169,8 +169,8 @@ public class SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetT
     if (this.getClass() != other.getClass()) {
       throw new IAE(
           "Expected instance of %s, got %s",
-          this.getClass().getCanonicalName(),
-          other.getClass().getCanonicalName()
+          this.getClass().getName(),
+          other.getClass().getName()
       );
     }
 

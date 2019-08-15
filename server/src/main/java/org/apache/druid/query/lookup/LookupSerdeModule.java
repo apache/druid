@@ -24,17 +24,19 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.dimension.LookupDimensionSpec;
+import org.apache.druid.query.expression.LookupExprMacro;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
 /**
  * Variant of {@link LookupModule} that only supports serde of {@link org.apache.druid.query.Query} objects, to allow
- * a service to examine queries that might contain for example a {@link RegisteredLookupExtractionFn}, but without
- * requiring the service to load the actual lookups.
+ * a service to examine queries that might contain for example a {@link RegisteredLookupExtractionFn} or a
+ * {@link LookupExprMacro}, but without requiring the service to load the actual lookups.
  */
 public class LookupSerdeModule implements DruidModule
 {
@@ -55,6 +57,7 @@ public class LookupSerdeModule implements DruidModule
   {
     JsonConfigProvider.bind(binder, LookupModule.PROPERTY_BASE, LookupConfig.class);
     binder.bind(LookupExtractorFactoryContainerProvider.class).to(NoopLookupExtractorFactoryContainerProvider.class);
+    ExpressionModule.addExprMacro(binder, LookupExprMacro.class);
   }
 
   /**

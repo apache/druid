@@ -59,6 +59,7 @@ JVM Flags:
 Please note that above flags are general guidelines only. Be cautious and feel free to change them if necessary for the specific deployment.
 
 Additionally, for large jvm heaps, here are a few Garbage Collection efficiency guidelines that have been known to help in some cases.
+
 - Mount /tmp on tmpfs ( See http://www.evanjones.ca/jvm-mmap-pause.html )
 - On Disk-IO intensive processes (e.g. Historical and MiddleManager), GC and Druid logs should be written to a different disk than where data is written.
 - Disable Transparent Huge Pages ( See https://blogs.oracle.com/linux/performance-issues-with-transparent-huge-pages-thp )
@@ -84,10 +85,8 @@ Timeseries and TopN queries are much more optimized and significantly faster tha
 Segments should generally be between 300MB-700MB in size. Too many small segments results in inefficient CPU utilizations and 
 too many large segments impacts query performance, most notably with TopN queries.
 
-# Read FAQs
+# FAQs and Guides
 
-You should read common problems people have here:
+1) The [Ingestion FAQ](../ingestion/faq.html) provides help with common ingestion problems.
 
-1) [Ingestion-FAQ](../ingestion/faq.html)
-
-2) [Performance-FAQ](../operations/performance-faq.html)
+2) The [Basic Cluster Tuning Guide](../operations/basic-cluster-tuning.html) offers introductory guidelines for tuning your Druid cluster.

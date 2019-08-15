@@ -23,7 +23,6 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * @author Alessandro Colantonio
  * @version $Id: IntSet.java 135 2011-01-04 15:54:48Z cocciasik $
  */
 public interface IntSet extends Cloneable, Comparable<IntSet>

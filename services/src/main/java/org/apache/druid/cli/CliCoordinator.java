@@ -47,7 +47,9 @@ import org.apache.druid.guice.annotations.CoordinatorIndexingServiceHelper;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.http.JettyHttpClientModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ExecutorServices;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.metadata.MetadataRuleManager;
@@ -58,6 +60,7 @@ import org.apache.druid.metadata.MetadataSegmentManagerConfig;
 import org.apache.druid.metadata.MetadataSegmentManagerProvider;
 import org.apache.druid.metadata.MetadataStorage;
 import org.apache.druid.metadata.MetadataStorageProvider;
+import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.server.audit.AuditManagerProvider;
 import org.apache.druid.server.coordinator.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.CachingCostBalancerStrategyConfig;
@@ -97,7 +100,7 @@ import java.util.concurrent.ExecutorService;
  */
 @Command(
     name = "coordinator",
-    description = "Runs the Coordinator, see http://druid.io/docs/latest/Coordinator.html for a description."
+    description = "Runs the Coordinator, see https://druid.apache.org/docs/latest/Coordinator.html for a description."
 )
 public class CliCoordinator extends ServerRunnable
 {
@@ -216,8 +219,8 @@ public class CliCoordinator extends ServerRunnable
               throw new UnsupportedOperationException(
                   "'druid.coordinator.merge.on' is not supported anymore. "
                   + "Please consider using Coordinator's automatic compaction instead. "
-                  + "See http://druid.io/docs/latest/operations/segment-optimization.html and "
-                  + "http://druid.io/docs/latest/operations/api-reference.html#compaction-configuration for more "
+                  + "See https://druid.apache.org/docs/latest/operations/segment-optimization.html and "
+                  + "https://druid.apache.org/docs/latest/operations/api-reference.html#compaction-configuration for more "
                   + "details about compaction."
               );
             }
@@ -247,7 +250,8 @@ public class CliCoordinator extends ServerRunnable
               ScheduledExecutorFactory factory,
               DruidCoordinatorConfig config,
               @EscalatedGlobal HttpClient httpClient,
-              ZkPathsConfig zkPaths
+              ZkPathsConfig zkPaths,
+              Lifecycle lifecycle
           )
           {
             boolean useHttpLoadQueuePeon = "http".equalsIgnoreCase(config.getLoadQueuePeonType());
@@ -255,9 +259,12 @@ public class CliCoordinator extends ServerRunnable
             if (useHttpLoadQueuePeon) {
               callBackExec = Execs.singleThreaded("LoadQueuePeon-callbackexec--%d");
             } else {
-              callBackExec = Execs.multiThreaded(config.getNumCuratorCallBackThreads(), "LoadQueuePeon"
-                                                                                        + "-callbackexec--%d");
+              callBackExec = Execs.multiThreaded(
+                  config.getNumCuratorCallBackThreads(),
+                  "LoadQueuePeon-callbackexec--%d"
+              );
             }
+            ExecutorServices.manageLifecycle(lifecycle, callBackExec);
             return new LoadQueueTaskMaster(
                 curator,
                 jsonMapper,
@@ -273,6 +280,10 @@ public class CliCoordinator extends ServerRunnable
 
     if (beOverlord) {
       modules.addAll(new CliOverlord().getModules(false));
+    } else {
+      // Only add LookupSerdeModule if !beOverlord, since CliOverlord includes it, and having two copies causes
+      // the injector to get confused due to having multiple bindings for the same classes.
+      modules.add(new LookupSerdeModule());
     }
 
     return modules;

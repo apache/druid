@@ -22,6 +22,10 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
+import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig.UserCompactTuningConfig;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -44,7 +48,6 @@ public class DataSourceCompactionConfigTest
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
         "dataSource",
         null,
-        null,
         500L,
         100L,
         null,
@@ -57,7 +60,6 @@ public class DataSourceCompactionConfigTest
     final DataSourceCompactionConfig fromJson = objectMapper.readValue(json, DataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
-    Assert.assertTrue(fromJson.isKeepSegmentGranularity());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
     Assert.assertEquals(config.getTargetCompactionSizeBytes(), fromJson.getTargetCompactionSizeBytes());
@@ -74,7 +76,6 @@ public class DataSourceCompactionConfigTest
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
         "dataSource",
         null,
-        null,
         500L,
         null,
         30,
@@ -87,7 +88,6 @@ public class DataSourceCompactionConfigTest
     final DataSourceCompactionConfig fromJson = objectMapper.readValue(json, DataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
-    Assert.assertTrue(fromJson.isKeepSegmentGranularity());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
     Assert.assertNull(fromJson.getTargetCompactionSizeBytes());
@@ -101,7 +101,7 @@ public class DataSourceCompactionConfigTest
   @Test
   public void testSerdeUserCompactTuningConfig() throws IOException
   {
-    final UserCompactTuningConfig config = new UserCompactTuningConfig(null, null, null, null, null);
+    final UserCompactTuningConfig config = new UserCompactTuningConfig(null, null, null, null, null, null);
     final String json = objectMapper.writeValueAsString(config);
     // Check maxRowsPerSegment doesn't exist in the JSON string
     Assert.assertFalse(json.contains("maxRowsPerSegment"));
@@ -115,7 +115,6 @@ public class DataSourceCompactionConfigTest
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
         "dataSource",
         null,
-        null,
         500L,
         null,
         null,
@@ -123,7 +122,8 @@ public class DataSourceCompactionConfigTest
         new Period(3600),
         new UserCompactTuningConfig(
             null,
-            10000,
+            null,
+            10000L,
             null,
             null,
             null
@@ -134,7 +134,6 @@ public class DataSourceCompactionConfigTest
     final DataSourceCompactionConfig fromJson = objectMapper.readValue(json, DataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
-    Assert.assertTrue(fromJson.isKeepSegmentGranularity());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
     Assert.assertNull(fromJson.getTargetCompactionSizeBytes());
@@ -146,7 +145,7 @@ public class DataSourceCompactionConfigTest
   }
 
   @Test
-  public void testTargetCompactionSizeBytesWithMaxRowsPerSegment()
+  public void testSerdeTargetCompactionSizeBytesWithMaxRowsPerSegment()
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage(
@@ -154,7 +153,6 @@ public class DataSourceCompactionConfigTest
     );
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
         "dataSource",
-        null,
         null,
         500L,
         10000L,
@@ -167,7 +165,7 @@ public class DataSourceCompactionConfigTest
   }
 
   @Test
-  public void testTargetCompactionSizeBytesWithMaxTotalRows()
+  public void testSerdeTargetCompactionSizeBytesWithMaxTotalRows()
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage(
@@ -176,7 +174,6 @@ public class DataSourceCompactionConfigTest
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
         "dataSource",
         null,
-        null,
         500L,
         10000L,
         null,
@@ -184,7 +181,8 @@ public class DataSourceCompactionConfigTest
         new Period(3600),
         new UserCompactTuningConfig(
             null,
-            10000,
+            null,
+            10000L,
             null,
             null,
             null
@@ -199,7 +197,6 @@ public class DataSourceCompactionConfigTest
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
         "dataSource",
         null,
-        null,
         500L,
         null,
         10000,
@@ -207,7 +204,8 @@ public class DataSourceCompactionConfigTest
         new Period(3600),
         new UserCompactTuningConfig(
             null,
-            10000,
+            null,
+            10000L,
             null,
             null,
             null
@@ -219,7 +217,6 @@ public class DataSourceCompactionConfigTest
     final DataSourceCompactionConfig fromJson = objectMapper.readValue(json, DataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
-    Assert.assertTrue(fromJson.isKeepSegmentGranularity());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
     Assert.assertNull(fromJson.getTargetCompactionSizeBytes());
@@ -228,5 +225,27 @@ public class DataSourceCompactionConfigTest
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
+  }
+
+  @Test
+  public void testSerdeUserCompactionTuningConfig() throws IOException
+  {
+    final UserCompactTuningConfig tuningConfig = new UserCompactTuningConfig(
+        1000,
+        10000L,
+        2000L,
+        new IndexSpec(
+            new RoaringBitmapSerdeFactory(false),
+            CompressionStrategy.LZF,
+            CompressionStrategy.UNCOMPRESSED,
+            LongEncodingStrategy.LONGS
+        ),
+        1,
+        3000L
+    );
+
+    final String json = objectMapper.writeValueAsString(tuningConfig);
+    final UserCompactTuningConfig fromJson = objectMapper.readValue(json, UserCompactTuningConfig.class);
+    Assert.assertEquals(tuningConfig, fromJson);
   }
 }

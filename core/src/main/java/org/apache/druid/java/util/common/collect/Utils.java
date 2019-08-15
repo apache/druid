@@ -70,4 +70,15 @@ public class Utils
     }
     return list;
   }
+
+  public static <T> boolean isPrefix(List<T> small, List<T> big)
+  {
+    for (int i = 0; i < small.size(); i++) {
+      if (!small.get(i).equals(big.get(i))) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 }

@@ -34,14 +34,13 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.Releaser;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.BaseSequence;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.AbstractPrioritizedCallable;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
@@ -51,17 +50,15 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.ResourceLimitExceededException;
-import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
-import java.io.Closeable;
 import java.io.File;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -69,13 +66,27 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
+/**
+ * Class that knows how to merge a collection of groupBy {@link QueryRunner} objects, called {@code queryables},
+ * using a buffer provided by {@code mergeBufferPool} and a parallel executor provided by {@code exec}. Outputs a
+ * fully aggregated stream of {@link ResultRow} objects. Does not apply post-aggregators.
+ *
+ * The input {@code queryables} are expected to come from a {@link GroupByQueryEngineV2}. This code runs on data
+ * servers, like Historicals.
+ *
+ * This class has some resemblance to {@link GroupByRowProcessor}. See the javadoc of that class for a discussion of
+ * similarities and differences.
+ *
+ * Used by
+ * {@link org.apache.druid.query.groupby.strategy.GroupByStrategyV2#mergeRunners(ListeningExecutorService, Iterable)}.
+ */
+public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
 {
   private static final Logger log = new Logger(GroupByMergingQueryRunnerV2.class);
   private static final String CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION = "mergeRunnersUsingChainedExecution";
 
   private final GroupByQueryConfig config;
-  private final Iterable<QueryRunner<Row>> queryables;
+  private final Iterable<QueryRunner<ResultRow>> queryables;
   private final ListeningExecutorService exec;
   private final QueryWatcher queryWatcher;
   private final int concurrencyHint;
@@ -88,7 +99,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
       GroupByQueryConfig config,
       ExecutorService exec,
       QueryWatcher queryWatcher,
-      Iterable<QueryRunner<Row>> queryables,
+      Iterable<QueryRunner<ResultRow>> queryables,
       int concurrencyHint,
       BlockingPool<ByteBuffer> mergeBufferPool,
       int mergeBufferSize,
@@ -108,7 +119,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
   }
 
   @Override
-  public Sequence<Row> run(final QueryPlus<Row> queryPlus, final Map<String, Object> responseContext)
+  public Sequence<ResultRow> run(final QueryPlus<ResultRow> queryPlus, final ResponseContext responseContext)
   {
     final GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
@@ -122,23 +133,18 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
         CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION,
         false
     );
-    final QueryPlus<Row> queryPlusForRunners = queryPlus
+    final QueryPlus<ResultRow> queryPlusForRunners = queryPlus
         .withQuery(
             query.withOverriddenContext(ImmutableMap.of(CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true))
         )
         .withoutThreadUnsafeState();
 
     if (QueryContexts.isBySegment(query) || forceChainedExecution) {
-      ChainedExecutionQueryRunner<Row> runner = new ChainedExecutionQueryRunner<>(exec, queryWatcher, queryables);
+      ChainedExecutionQueryRunner<ResultRow> runner = new ChainedExecutionQueryRunner<>(exec, queryWatcher, queryables);
       return runner.run(queryPlusForRunners, responseContext);
     }
 
     final boolean isSingleThreaded = querySpecificConfig.isSingleThreaded();
-
-    final AggregatorFactory[] combiningAggregatorFactories = new AggregatorFactory[query.getAggregatorSpecs().size()];
-    for (int i = 0; i < query.getAggregatorSpecs().size(); i++) {
-      combiningAggregatorFactories[i] = query.getAggregatorSpecs().get(i).getCombiningFactory();
-    }
 
     final File temporaryStorageDirectory = new File(
         processingTmpDir,
@@ -154,12 +160,12 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
     final long timeoutAt = System.currentTimeMillis() + queryTimeout;
 
     return new BaseSequence<>(
-        new BaseSequence.IteratorMaker<Row, CloseableGrouperIterator<RowBasedKey, Row>>()
+        new BaseSequence.IteratorMaker<ResultRow, CloseableGrouperIterator<RowBasedKey, ResultRow>>()
         {
           @Override
-          public CloseableGrouperIterator<RowBasedKey, Row> make()
+          public CloseableGrouperIterator<RowBasedKey, ResultRow> make()
           {
-            final List<ReferenceCountingResourceHolder> resources = new ArrayList<>();
+            final Closer resources = Closer.create();
 
             try {
               final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
@@ -168,7 +174,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
               );
               final ReferenceCountingResourceHolder<LimitedTemporaryStorage> temporaryStorageHolder =
                   ReferenceCountingResourceHolder.fromCloseable(temporaryStorage);
-              resources.add(temporaryStorageHolder);
+              resources.register(temporaryStorageHolder);
 
               // If parallelCombine is enabled, we need two merge buffers for parallel aggregating and parallel combining
               final int numMergeBuffers = querySpecificConfig.getNumParallelCombineThreads() > 1 ? 2 : 1;
@@ -178,17 +184,16 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                   hasTimeout,
                   timeoutAt
               );
-              resources.addAll(mergeBufferHolders);
+              resources.registerAll(mergeBufferHolders);
 
               final ReferenceCountingResourceHolder<ByteBuffer> mergeBufferHolder = mergeBufferHolders.get(0);
               final ReferenceCountingResourceHolder<ByteBuffer> combineBufferHolder = numMergeBuffers == 2 ?
                                                                                       mergeBufferHolders.get(1) :
                                                                                       null;
 
-              Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, Row>> pair =
+              Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, ResultRow>> pair =
                   RowBasedGrouperHelper.createGrouperAccumulatorPair(
                       query,
-                      false,
                       null,
                       config,
                       Suppliers.ofInstance(mergeBufferHolder.get()),
@@ -196,7 +201,6 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                       concurrencyHint,
                       temporaryStorage,
                       spillMapper,
-                      combiningAggregatorFactories,
                       exec,
                       priority,
                       hasTimeout,
@@ -204,26 +208,24 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                       mergeBufferSize
                   );
               final Grouper<RowBasedKey> grouper = pair.lhs;
-              final Accumulator<AggregateResult, Row> accumulator = pair.rhs;
+              final Accumulator<AggregateResult, ResultRow> accumulator = pair.rhs;
               grouper.init();
 
               final ReferenceCountingResourceHolder<Grouper<RowBasedKey>> grouperHolder =
                   ReferenceCountingResourceHolder.fromCloseable(grouper);
-              resources.add(grouperHolder);
+              resources.register(grouperHolder);
 
               ListenableFuture<List<AggregateResult>> futures = Futures.allAsList(
                   Lists.newArrayList(
                       Iterables.transform(
                           queryables,
-                          new Function<QueryRunner<Row>, ListenableFuture<AggregateResult>>()
+                          new Function<QueryRunner<ResultRow>, ListenableFuture<AggregateResult>>()
                           {
                             @Override
-                            public ListenableFuture<AggregateResult> apply(final QueryRunner<Row> input)
+                            public ListenableFuture<AggregateResult> apply(final QueryRunner<ResultRow> input)
                             {
                               if (input == null) {
-                                throw new ISE(
-                                    "Null queryRunner! Looks to be some segment unmapping action happening"
-                                );
+                                throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
                               }
 
                               ListenableFuture<AggregateResult> future = exec.submit(
@@ -239,14 +241,9 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                                           @SuppressWarnings("unused")
                                           Releaser grouperReleaser = grouperHolder.increment()
                                       ) {
-                                        final AggregateResult retVal = input.run(queryPlusForRunners, responseContext)
-                                                                            .accumulate(
-                                                                                AggregateResult.ok(),
-                                                                                accumulator
-                                                                            );
-
                                         // Return true if OK, false if resources were exhausted.
-                                        return retVal;
+                                        return input.run(queryPlusForRunners, responseContext)
+                                                    .accumulate(AggregateResult.ok(), accumulator);
                                       }
                                       catch (QueryInterruptedException e) {
                                         throw e;
@@ -282,29 +279,23 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
               return RowBasedGrouperHelper.makeGrouperIterator(
                   grouper,
                   query,
-                  new Closeable()
-                  {
-                    @Override
-                    public void close()
-                    {
-                      for (Closeable closeable : Lists.reverse(resources)) {
-                        CloseQuietly.close(closeable);
-                      }
-                    }
-                  }
+                  resources
               );
             }
-            catch (Throwable e) {
+            catch (Throwable t) {
               // Exception caught while setting up the iterator; release resources.
-              for (Closeable closeable : Lists.reverse(resources)) {
-                CloseQuietly.close(closeable);
+              try {
+                resources.close();
               }
-              throw e;
+              catch (Exception ex) {
+                t.addSuppressed(ex);
+              }
+              throw t;
             }
           }
 
           @Override
-          public void cleanup(CloseableGrouperIterator<RowBasedKey, Row> iterFromMake)
+          public void cleanup(CloseableGrouperIterator<RowBasedKey, ResultRow> iterFromMake)
           {
             iterFromMake.close();
           }

@@ -21,32 +21,41 @@ const path = require('path');
 const postcssPresetEnv = require('postcss-preset-env');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
+const ALWAYS_BABEL = false;
+
 const { version } = require('./package.json');
 
-module.exports = (env) => {
-  let druidUrl = ((env || {}).druid_host || process.env.druid_host || 'localhost');
+function friendlyErrorFormatter(e) {
+  return `${e.severity}: ${e.content} [TS${e.code}]\n    at (${e.file}:${e.line}:${e.character})`;
+}
+
+module.exports = env => {
+  let druidUrl = (env || {}).druid_host || process.env.druid_host || 'localhost';
   if (!druidUrl.startsWith('http')) druidUrl = 'http://' + druidUrl;
   if (!/:\d+$/.test(druidUrl)) druidUrl += ':8888';
 
   const proxyTarget = {
     target: druidUrl,
-    secure: false
+    secure: false,
   };
 
+  const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
+  console.log(`Webpack running in ${mode} mode`);
   return {
-    mode: process.env.NODE_ENV || 'development',
+    mode: mode,
+    devtool: 'hidden-source-map',
     entry: {
-      'web-console': './src/entry.ts'
+      'web-console': './src/entry.ts',
     },
     output: {
       path: path.resolve(__dirname, './public'),
       filename: `[name]-${version}.js`,
       chunkFilename: `[name]-${version}.js`,
-      publicPath: '/public'
+      publicPath: '/public',
     },
     target: 'web',
     resolve: {
-      extensions: ['.tsx', '.ts', '.html', '.js', '.json', '.scss', '.css']
+      extensions: ['.tsx', '.ts', '.html', '.js', '.json', '.scss', '.css'],
     },
     devServer: {
       publicPath: '/public',
@@ -55,8 +64,9 @@ module.exports = (env) => {
       port: 18081,
       proxy: {
         '/status': proxyTarget,
-        '/druid': proxyTarget
-      }
+        '/druid': proxyTarget,
+        '/proxy': proxyTarget,
+      },
     },
     module: {
       rules: [
@@ -69,39 +79,55 @@ module.exports = (env) => {
               options: {
                 configFile: 'tslint.json',
                 emitErrors: true,
-                fix: false // Set this to true to auto fix errors
-              }
-            }
-          ]
+                fix: false, // Set this to true to auto fix errors
+              },
+            },
+          ],
         },
         {
           test: /\.tsx?$/,
-          use: 'ts-loader',
-          exclude: /node_modules/
+          exclude: /node_modules/,
+          use: [
+            {
+              loader: 'ts-loader',
+              options: {
+                errorFormatter: friendlyErrorFormatter,
+              },
+            },
+          ],
+        },
+        {
+          test: (ALWAYS_BABEL || mode === 'production') ? /\.m?js$/ : /^xxx$/,
+          use: {
+            loader: 'babel-loader'
+          }
         },
         {
           test: /\.s?css$/,
           use: [
-            {loader: 'style-loader'}, // creates style nodes from JS strings
-            {loader: 'css-loader'}, // translates CSS into CommonJS
+            { loader: 'style-loader' }, // creates style nodes from JS strings
+            { loader: 'css-loader' }, // translates CSS into CommonJS
             {
               loader: 'postcss-loader',
               options: {
                 ident: 'postcss',
                 plugins: () => [
                   postcssPresetEnv({
-                    browsers: ['> 1%', 'last 3 versions', 'Firefox ESR', 'Opera 12.1']
-                  })
-                ]
-              }
+                    browsers: ['> 1%', 'last 3 versions', 'Firefox ESR', 'Opera 12.1'],
+                  }),
+                ],
+              },
             },
-            {loader: 'sass-loader'} // compiles Sass to CSS, using Node Sass by default
-          ]
-        }
-      ]
+            { loader: 'sass-loader' }, // compiles Sass to CSS, using Node Sass by default
+          ],
+        },
+      ],
+    },
+    performance: {
+      hints: false
     },
     plugins: [
       // new BundleAnalyzerPlugin()
-    ]
+    ],
   };
 };

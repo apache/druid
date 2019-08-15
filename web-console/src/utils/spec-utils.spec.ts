@@ -22,33 +22,27 @@ describe('spec-utils', () => {
   describe('computeFlattenExprsForData', () => {
     const data = [
       {
-        context: {'host': 'clarity', 'topic': 'moon', 'bonus': {'foo': 'bar'}},
+        context: { host: 'clarity', topic: 'moon', bonus: { foo: 'bar' } },
         tags: ['a', 'b', 'c'],
         messages: [
           { metric: 'request/time', value: 122 },
           { metric: 'request/time', value: 434 },
-          { metric: 'request/time', value: 565 }
+          { metric: 'request/time', value: 565 },
         ],
-        'value': 5
+        value: 5,
       },
       {
-        context: {'host': 'pivot', 'popic': 'sun'},
+        context: { host: 'pivot', popic: 'sun' },
         tags: ['a', 'd'],
-        messages: [
-          { metric: 'request/time', value: 44 },
-          { metric: 'request/time', value: 65 }
-        ],
-        'value': 4
+        messages: [{ metric: 'request/time', value: 44 }, { metric: 'request/time', value: 65 }],
+        value: 4,
       },
       {
-        context: {'host': 'imply', 'dopik': 'fun'},
+        context: { host: 'imply', dopik: 'fun' },
         tags: ['x', 'y'],
-        messages: [
-          { metric: 'request/time', value: 4 },
-          { metric: 'request/time', value: 5 }
-        ],
-        'value': 2
-      }
+        messages: [{ metric: 'request/time', value: 4 }, { metric: 'request/time', value: 5 }],
+        value: 2,
+      },
     ];
 
     it('works for path, ignore-arrays', () => {
@@ -57,7 +51,7 @@ describe('spec-utils', () => {
         '$.context.dopik',
         '$.context.host',
         '$.context.popic',
-        '$.context.topic'
+        '$.context.topic',
       ]);
     });
 
@@ -67,10 +61,8 @@ describe('spec-utils', () => {
         '.context.dopik',
         '.context.host',
         '.context.popic',
-        '.context.topic'
+        '.context.topic',
       ]);
     });
-
   });
-
 });

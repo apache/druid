@@ -25,13 +25,11 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
@@ -42,22 +40,25 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.ResultGranularTimestampComparator;
-import org.apache.druid.query.ResultMergeQueryRunner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.joda.time.DateTime;
 
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BinaryOperator;
 
 /**
+ *
  */
 public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultValue>, TopNQuery>
 {
@@ -109,36 +110,25 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   }
 
   @Override
-  public QueryRunner<Result<TopNResultValue>> mergeResults(
-      QueryRunner<Result<TopNResultValue>> runner
+  public BinaryOperator<Result<TopNResultValue>> createMergeFn(
+      Query<Result<TopNResultValue>> query
   )
   {
-    return new ResultMergeQueryRunner<Result<TopNResultValue>>(runner)
-    {
-      @Override
-      protected Ordering<Result<TopNResultValue>> makeOrdering(Query<Result<TopNResultValue>> query)
-      {
-        return ResultGranularTimestampComparator.create(
-            ((TopNQuery) query).getGranularity(), query.isDescending()
-        );
-      }
+    TopNQuery topNQuery = (TopNQuery) query;
+    return new TopNBinaryFn(
+        topNQuery.getGranularity(),
+        topNQuery.getDimensionSpec(),
+        topNQuery.getTopNMetricSpec(),
+        topNQuery.getThreshold(),
+        topNQuery.getAggregatorSpecs(),
+        topNQuery.getPostAggregatorSpecs()
+    );
+  }
 
-      @Override
-      protected BinaryFn<Result<TopNResultValue>, Result<TopNResultValue>, Result<TopNResultValue>> createMergeFn(
-          Query<Result<TopNResultValue>> input
-      )
-      {
-        TopNQuery query = (TopNQuery) input;
-        return new TopNBinaryFn(
-            query.getGranularity(),
-            query.getDimensionSpec(),
-            query.getTopNMetricSpec(),
-            query.getThreshold(),
-            query.getAggregatorSpecs(),
-            query.getPostAggregatorSpecs()
-        );
-      }
-    };
+  @Override
+  public Comparator<Result<TopNResultValue>> createResultComparator(Query<Result<TopNResultValue>> query)
+  {
+    return ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending());
   }
 
   @Override
@@ -294,8 +284,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       private final List<AggregatorFactory> aggs = Lists.newArrayList(query.getAggregatorSpecs());
       private final List<PostAggregator> postAggs = AggregatorUtil.pruneDependentPostAgg(
           query.getPostAggregatorSpecs(),
-          query.getTopNMetricSpec()
-               .getMetricName(query.getDimensionSpec())
+          query.getTopNMetricSpec().getMetricName(query.getDimensionSpec())
       );
 
       @Override
@@ -400,7 +389,6 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               List<Object> result = (List<Object>) inputIter.next();
               final Map<String, Object> vals = Maps.newLinkedHashMap();
 
-              Iterator<AggregatorFactory> aggIter = aggs.iterator();
               Iterator<Object> resultIter = result.iterator();
 
               // Must convert generic Jackson-deserialized type into the proper type.
@@ -410,22 +398,22 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               );
 
               CacheStrategy.fetchAggregatorsFromCache(
-                  aggIter,
+                  aggs,
                   resultIter,
                   isResultLevelCache,
-                  (aggName, aggValueObject) -> {
+                  (aggName, aggPos, aggValueObject) -> {
                     vals.put(aggName, aggValueObject);
-                    return null;
                   }
               );
 
-              for (PostAggregator postAgg : postAggs) {
-                vals.put(postAgg.getName(), postAgg.compute(vals));
-              }
               if (isResultLevelCache) {
                 Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
                 while (postItr.hasNext() && resultIter.hasNext()) {
                   vals.put(postItr.next().getName(), resultIter.next());
+                }
+              } else {
+                for (PostAggregator postAgg : postAggs) {
+                  vals.put(postAgg.getName(), postAgg.compute(vals));
                 }
               }
               retVal.add(vals);
@@ -447,7 +435,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
           @Override
           public Sequence<Result<TopNResultValue>> run(
               QueryPlus<Result<TopNResultValue>> queryPlus,
-              Map<String, Object> responseContext
+              ResponseContext responseContext
           )
           {
             TopNQuery topNQuery = (TopNQuery) queryPlus.getQuery();
@@ -487,7 +475,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
       @Override
       public Sequence<Result<TopNResultValue>> run(
-          final QueryPlus<Result<TopNResultValue>> queryPlus, final Map<String, Object> responseContext
+          final QueryPlus<Result<TopNResultValue>> queryPlus, final ResponseContext responseContext
       )
       {
         // thresholdRunner.run throws ISE if query is not TopNQuery
@@ -555,7 +543,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     @Override
     public Sequence<Result<TopNResultValue>> run(
         QueryPlus<Result<TopNResultValue>> queryPlus,
-        Map<String, Object> responseContext
+        ResponseContext responseContext
     )
     {
       Query<Result<TopNResultValue>> input = queryPlus.getQuery();
@@ -582,7 +570,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                 BySegmentResultValue<Result<TopNResultValue>> value = (BySegmentResultValue<Result<TopNResultValue>>) input
                     .getValue();
 
-                return new Result<TopNResultValue>(
+                return new Result<>(
                     input.getTimestamp(),
                     new BySegmentTopNResultValue(
                         Lists.transform(

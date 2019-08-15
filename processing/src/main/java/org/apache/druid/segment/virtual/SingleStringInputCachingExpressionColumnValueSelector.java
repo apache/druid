@@ -25,9 +25,9 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
 
@@ -55,17 +55,17 @@ public class SingleStringInputCachingExpressionColumnValueSelector implements Co
   )
   {
     // Verify expression has just one binding.
-    if (Parser.findRequiredBindings(expression).size() != 1) {
+    if (expression.analyzeInputs().getRequiredBindings().size() != 1) {
       throw new ISE("WTF?! Expected expression with just one binding");
     }
 
     this.selector = Preconditions.checkNotNull(selector, "selector");
     this.expression = Preconditions.checkNotNull(expression, "expression");
 
-    final Supplier<Object> inputSupplier = ExpressionSelectors.supplierFromDimensionSelector(selector);
+    final Supplier<Object> inputSupplier = ExpressionSelectors.supplierFromDimensionSelector(selector, false);
     this.bindings = name -> inputSupplier.get();
 
-    if (selector.getValueCardinality() == DimensionSelector.CARDINALITY_UNKNOWN) {
+    if (selector.getValueCardinality() == DimensionDictionarySelector.CARDINALITY_UNKNOWN) {
       throw new ISE("Selector must have a dictionary");
     } else if (selector.getValueCardinality() <= CACHE_SIZE) {
       arrayEvalCache = new ExprEval[selector.getValueCardinality()];

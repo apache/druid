@@ -39,5 +39,5 @@ WHEREAMI="$(cd "$WHEREAMI" && pwd)"
 
 cd "$WHEREAMI/.."
 exec java `cat "$CONFDIR"/"$WHATAMI"/jvm.config | xargs` \
-  -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$WHEREAMI/../lib/*" \
+  -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" \
   `cat "$CONFDIR"/$WHATAMI/main.config | xargs`

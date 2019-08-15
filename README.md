@@ -17,7 +17,11 @@
   ~ under the License.
   -->
 
-[![Build Status](https://travis-ci.org/apache/incubator-druid.svg?branch=master)](https://travis-ci.org/apache/incubator-druid) [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) [![Coverage Status](https://coveralls.io/repos/apache/incubator-druid/badge.svg?branch=master)](https://coveralls.io/r/apache/incubator-druid?branch=master) [![IRC#druid-dev](https://img.shields.io/badge/IRC-druid--dev-blue.svg)](https://webchat.freenode.net?channels=druid-dev)
+[![Slack](https://img.shields.io/badge/slack-%23druid-72eff8?logo=slack)](https://druid.apache.org/community/join-slack)
+[![Build Status](https://travis-ci.org/apache/incubator-druid.svg?branch=master)](https://travis-ci.org/apache/incubator-druid)
+<!--- Following badges are disabled until they can be fixed: -->
+<!--- [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) -->
+<!-- [![Coverage Status](https://coveralls.io/repos/apache/incubator-druid/badge.svg?branch=master)](https://coveralls.io/r/apache/incubator-druid?branch=master) -->
 
 ## Apache Druid (incubating)
 
@@ -31,28 +35,25 @@ Apache Druid (incubating) is a high performance analytics data store for event-d
 
 ### More Information
 
-More information about Druid can be found on <http://www.druid.io>.
+More information about Druid can be found on <https://druid.apache.org>.
 
 ### Documentation
 
-You can find the [documentation for the latest Druid release](http://druid.io/docs/latest/) on
-the [project website](http://druid.io/docs/latest/).
+You can find the [documentation for the latest Druid release](https://druid.apache.org/docs/latest/) on
+the [project website](https://druid.apache.org/docs/latest/).
 
 If you would like to contribute documentation, please do so under
 `/docs/content` in this repository and submit a pull request.
 
 ### Getting Started
 
-You can get started with Druid with our [quickstart](http://druid.io/docs/latest/tutorials/quickstart.html).
+You can get started with Druid with our [quickstart](https://druid.apache.org/docs/latest/tutorials/quickstart.html).
 
 ### Reporting Issues
 
 If you find any bugs, please file a [GitHub issue](https://github.com/apache/incubator-druid/issues).
 
 ### Community
-
-The Druid community is in the process of migrating to Apache by way of the Apache Incubator. Eventually, as we proceed
-along this path, our site will move from http://druid.io/ to https://druid.apache.org/.
 
 Community support is available on the
 [druid-user mailing list](https://groups.google.com/forum/#!forum/druid-user)(druid-user@googlegroups.com), which
@@ -61,8 +62,7 @@ is hosted at Google Groups.
 Development discussions occur on [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org), which
 you can subscribe to by emailing [dev-subscribe@druid.apache.org](mailto:dev-subscribe@druid.apache.org).
 
-We also have a couple people hanging out on IRC in `#druid-dev` on
-`irc.freenode.net`.
+Some committers and users are present in the channel `#druid` on the Apache Slack team. Please use our [invitation link to join](https://druid.apache.org/community/join-slack), and once you join, add the `#druid` channel.
 
 ### Building From Source
 
@@ -72,5 +72,5 @@ For instructions on building Druid from source, see [docs/content/development/bu
 
 ### Contributing
 
-Please follow the guidelines listed [here](http://druid.io/community/).
+Please follow the guidelines listed [here](https://druid.apache.org/community/).
 

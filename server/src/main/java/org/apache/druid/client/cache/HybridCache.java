@@ -23,9 +23,9 @@ import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -156,9 +156,7 @@ public class HybridCache implements Cache
   @LifecycleStop
   public void close() throws IOException
   {
-    try (Closeable closeable1 = level1; Closeable closeable2 = level2) {
-      // Just for closing
-    }
+    CloseableUtils.closeBoth(level1, level2);
   }
 
   @Override

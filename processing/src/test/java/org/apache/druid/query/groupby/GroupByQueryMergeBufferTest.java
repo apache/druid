@@ -28,7 +28,6 @@ import com.google.common.collect.Lists;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -42,6 +41,7 @@ import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -54,8 +54,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-
 @RunWith(Parameterized.class)
 public class GroupByQueryMergeBufferTest
 {
@@ -65,7 +63,7 @@ public class GroupByQueryMergeBufferTest
   {
     private int minRemainBufferNum;
 
-    public TestBlockingPool(Supplier<ByteBuffer> generator, int limit)
+    TestBlockingPool(Supplier<ByteBuffer> generator, int limit)
     {
       super(generator, limit);
       minRemainBufferNum = limit;
@@ -93,18 +91,18 @@ public class GroupByQueryMergeBufferTest
       return holder;
     }
 
-    public void resetMinRemainBufferNum()
+    void resetMinRemainBufferNum()
     {
       minRemainBufferNum = PROCESSING_CONFIG.getNumMergeBuffers();
     }
 
-    public int getMinRemainBufferNum()
+    int getMinRemainBufferNum()
     {
       return minRemainBufferNum;
     }
   }
 
-  public static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
+  private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
   {
     @Override
     public String getFormatString()
@@ -164,25 +162,11 @@ public class GroupByQueryMergeBufferTest
 
   private static final CloseableStupidPool<ByteBuffer> bufferPool = new CloseableStupidPool<>(
       "GroupByQueryEngine-bufferPool",
-      new Supplier<ByteBuffer>()
-      {
-        @Override
-        public ByteBuffer get()
-        {
-          return ByteBuffer.allocateDirect(PROCESSING_CONFIG.intermediateComputeSizeBytes());
-        }
-      }
+      () -> ByteBuffer.allocateDirect(PROCESSING_CONFIG.intermediateComputeSizeBytes())
   );
 
   private static final TestBlockingPool mergeBufferPool = new TestBlockingPool(
-      new Supplier<ByteBuffer>()
-      {
-        @Override
-        public ByteBuffer get()
-        {
-          return ByteBuffer.allocateDirect(PROCESSING_CONFIG.intermediateComputeSizeBytes());
-        }
-      },
+      () -> ByteBuffer.allocateDirect(PROCESSING_CONFIG.intermediateComputeSizeBytes()),
       PROCESSING_CONFIG.getNumMergeBuffers()
   );
 
@@ -198,7 +182,7 @@ public class GroupByQueryMergeBufferTest
       }
   );
 
-  private QueryRunner<Row> runner;
+  private final QueryRunner<ResultRow> runner;
 
   @AfterClass
   public static void teardownClass()
@@ -211,13 +195,13 @@ public class GroupByQueryMergeBufferTest
   public static Collection<Object[]> constructorFeeder()
   {
     final List<Object[]> args = new ArrayList<>();
-    for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
+    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
       args.add(new Object[]{runner});
     }
     return args;
   }
 
-  public GroupByQueryMergeBufferTest(QueryRunner<Row> runner)
+  public GroupByQueryMergeBufferTest(QueryRunner<ResultRow> runner)
   {
     this.runner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
   }
@@ -242,8 +226,8 @@ public class GroupByQueryMergeBufferTest
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
 
-    assertEquals(2, mergeBufferPool.getMinRemainBufferNum());
-    assertEquals(3, mergeBufferPool.getPoolSize());
+    Assert.assertEquals(2, mergeBufferPool.getMinRemainBufferNum());
+    Assert.assertEquals(3, mergeBufferPool.getPoolSize());
   }
 
   @Test
@@ -270,8 +254,8 @@ public class GroupByQueryMergeBufferTest
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
 
-    assertEquals(1, mergeBufferPool.getMinRemainBufferNum());
-    assertEquals(3, mergeBufferPool.getPoolSize());
+    Assert.assertEquals(1, mergeBufferPool.getMinRemainBufferNum());
+    Assert.assertEquals(3, mergeBufferPool.getPoolSize());
   }
 
   @Test
@@ -310,8 +294,8 @@ public class GroupByQueryMergeBufferTest
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
 
     // This should be 0 because the broker needs 2 buffers and the queryable node needs one.
-    assertEquals(0, mergeBufferPool.getMinRemainBufferNum());
-    assertEquals(3, mergeBufferPool.getPoolSize());
+    Assert.assertEquals(0, mergeBufferPool.getMinRemainBufferNum());
+    Assert.assertEquals(3, mergeBufferPool.getPoolSize());
   }
 
   @Test
@@ -363,7 +347,7 @@ public class GroupByQueryMergeBufferTest
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
 
     // This should be 0 because the broker needs 2 buffers and the queryable node needs one.
-    assertEquals(0, mergeBufferPool.getMinRemainBufferNum());
-    assertEquals(3, mergeBufferPool.getPoolSize());
+    Assert.assertEquals(0, mergeBufferPool.getMinRemainBufferNum());
+    Assert.assertEquals(3, mergeBufferPool.getPoolSize());
   }
 }

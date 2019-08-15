@@ -59,9 +59,9 @@ public class NoopSupervisorSpec implements SupervisorSpec
 
   @JsonCreator
   public NoopSupervisorSpec(
-      @Nullable @JsonProperty("id") String id,
-      @Nullable @JsonProperty("dataSources") List<String> datasources,
-      @Nullable @JsonProperty("suspended") Boolean suspended
+      @JsonProperty("id") @Nullable String id,
+      @JsonProperty("dataSources") @Nullable List<String> datasources,
+      @JsonProperty("suspended") @Nullable Boolean suspended
   )
   {
     this.id = id;
@@ -111,6 +111,12 @@ public class NoopSupervisorSpec implements SupervisorSpec
       public SupervisorReport getStatus()
       {
         return null;
+      }
+
+      @Override
+      public SupervisorStateManager.State getState()
+      {
+        return SupervisorStateManager.BasicState.RUNNING;
       }
 
       @Override

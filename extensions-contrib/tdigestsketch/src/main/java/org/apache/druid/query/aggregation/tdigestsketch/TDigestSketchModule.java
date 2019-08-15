@@ -27,7 +27,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.tdunning.math.stats.MergingDigest;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.query.aggregation.tdigestsketch.sql.TDigestGenerateSketchSqlAggregator;
+import org.apache.druid.query.aggregation.tdigestsketch.sql.TDigestSketchQuantileSqlAggregator;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.sql.guice.SqlBindings;
 
 import java.util.List;
 
@@ -44,16 +47,16 @@ public class TDigestSketchModule implements DruidModule
             getClass().getSimpleName()
         ).registerSubtypes(
             new NamedType(
-                TDigestBuildSketchAggregatorFactory.class,
-                TDigestBuildSketchAggregatorFactory.TYPE_NAME
-            ),
-            new NamedType(
-                TDigestMergeSketchAggregatorFactory.class,
-                TDigestMergeSketchAggregatorFactory.TYPE_NAME
+                TDigestSketchAggregatorFactory.class,
+                TDigestSketchAggregatorFactory.TYPE_NAME
             ),
             new NamedType(
                 TDigestSketchToQuantilesPostAggregator.class,
                 TDigestSketchToQuantilesPostAggregator.TYPE_NAME
+            ),
+            new NamedType(
+                TDigestSketchToQuantilePostAggregator.class,
+                TDigestSketchToQuantilePostAggregator.TYPE_NAME
             )
         ).addSerializer(MergingDigest.class, new TDigestSketchJsonSerializer())
     );
@@ -63,14 +66,14 @@ public class TDigestSketchModule implements DruidModule
   public void configure(Binder binder)
   {
     registerSerde();
+    SqlBindings.addAggregator(binder, TDigestSketchQuantileSqlAggregator.class);
+    SqlBindings.addAggregator(binder, TDigestGenerateSketchSqlAggregator.class);
   }
 
   @VisibleForTesting
-  static void registerSerde()
+  public static void registerSerde()
   {
-    if (ComplexMetrics.getSerdeForType(TDigestBuildSketchAggregatorFactory.TYPE_NAME) == null) {
-      ComplexMetrics.registerSerde(TDigestBuildSketchAggregatorFactory.TYPE_NAME, new TDigestSketchComplexMetricSerde());
-    }
+    ComplexMetrics.registerSerde(TDigestSketchAggregatorFactory.TYPE_NAME, new TDigestSketchComplexMetricSerde());
+    ComplexMetrics.registerSerde("TDIGEST_GENERATE_SKETCH", new TDigestSketchComplexMetricSerde());
   }
-
 }

@@ -56,7 +56,7 @@ import java.util.stream.Collectors;
  * {@link SegmentId} of the segment.
  */
 @PublicApi
-public class DataSegment implements Comparable<DataSegment>
+public class DataSegment implements Comparable<DataSegment>, Overshadowable<DataSegment>
 {
   /*
    * The difference between this class and org.apache.druid.segment.Segment is that this class contains the segment
@@ -92,6 +92,29 @@ public class DataSegment implements Comparable<DataSegment>
   private final List<String> metrics;
   private final ShardSpec shardSpec;
   private final long size;
+
+  public DataSegment(
+      SegmentId segmentId,
+      Map<String, Object> loadSpec,
+      List<String> dimensions,
+      List<String> metrics,
+      ShardSpec shardSpec,
+      Integer binaryVersion,
+      long size
+  )
+  {
+    this(
+        segmentId.getDataSource(),
+        segmentId.getInterval(),
+        segmentId.getVersion(),
+        loadSpec,
+        dimensions,
+        metrics,
+        shardSpec,
+        binaryVersion,
+        size
+    );
+  }
 
   public DataSegment(
       String dataSource,
@@ -206,7 +229,8 @@ public class DataSegment implements Comparable<DataSegment>
     return loadSpec;
   }
 
-  @JsonProperty
+  @JsonProperty("version")
+  @Override
   public String getVersion()
   {
     return id.getVersion();
@@ -251,9 +275,53 @@ public class DataSegment implements Comparable<DataSegment>
     return id;
   }
 
+  @Override
+  public boolean overshadows(DataSegment other)
+  {
+    if (id.getDataSource().equals(other.id.getDataSource()) && id.getInterval().overlaps(other.id.getInterval())) {
+      final int majorVersionCompare = id.getVersion().compareTo(other.id.getVersion());
+      if (majorVersionCompare > 0) {
+        return true;
+      } else if (majorVersionCompare == 0) {
+        return includeRootPartitions(other) && getMinorVersion() > other.getMinorVersion();
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public int getStartRootPartitionId()
+  {
+    return shardSpec.getStartRootPartitionId();
+  }
+
+  @Override
+  public int getEndRootPartitionId()
+  {
+    return shardSpec.getEndRootPartitionId();
+  }
+
+  @Override
+  public short getMinorVersion()
+  {
+    return shardSpec.getMinorVersion();
+  }
+
+  @Override
+  public short getAtomicUpdateGroupSize()
+  {
+    return shardSpec.getAtomicUpdateGroupSize();
+  }
+
+  private boolean includeRootPartitions(DataSegment other)
+  {
+    return shardSpec.getStartRootPartitionId() <= other.shardSpec.getStartRootPartitionId()
+           && shardSpec.getEndRootPartitionId() >= other.shardSpec.getEndRootPartitionId();
+  }
+
   public SegmentDescriptor toDescriptor()
   {
-    return new SegmentDescriptor(getInterval(), getVersion(), shardSpec.getPartitionNum());
+    return id.toDescriptor();
   }
 
   public DataSegment withLoadSpec(Map<String, Object> loadSpec)
@@ -269,6 +337,11 @@ public class DataSegment implements Comparable<DataSegment>
   public DataSegment withMetrics(List<String> metrics)
   {
     return builder(this).metrics(metrics).build();
+  }
+
+  public DataSegment withShardSpec(ShardSpec newSpec)
+  {
+    return builder(this).shardSpec(newSpec).build();
   }
 
   public DataSegment withSize(long size)
@@ -311,15 +384,13 @@ public class DataSegment implements Comparable<DataSegment>
   public String toString()
   {
     return "DataSegment{" +
-           "size=" + size +
-           ", shardSpec=" + shardSpec +
-           ", metrics=" + metrics +
-           ", dimensions=" + dimensions +
-           ", version='" + getVersion() + '\'' +
+           "binaryVersion=" + binaryVersion +
+           ", id=" + id +
            ", loadSpec=" + loadSpec +
-           ", interval=" + getInterval() +
-           ", dataSource='" + getDataSource() + '\'' +
-           ", binaryVersion='" + binaryVersion + '\'' +
+           ", dimensions=" + dimensions +
+           ", metrics=" + metrics +
+           ", shardSpec=" + shardSpec +
+           ", size=" + size +
            '}';
   }
 

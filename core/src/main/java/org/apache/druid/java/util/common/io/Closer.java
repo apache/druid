@@ -85,7 +85,6 @@ import java.util.Deque;
  * careful to ensure that Closer is not used in code that might be executed by Hadoop indexing service. We copy Closer
  * to Druid codebase in order to remove this headache.
  *
- * @author Colin Decker
  * @since Guava 14.0
  */
 // Coffee's for {@link Closer closers} only.
@@ -109,12 +108,11 @@ public final class Closer implements Closeable
   }
 
   /**
-   * Registers the given {@code closeable} to be closed when this {@code Closer} is
+   * Registers the given {@code Closeable} to be closed when this {@code Closer} is
    * {@linkplain #close closed}.
    *
-   * @return the given {@code closeable}
+   * @return the given {@code Closeable}
    */
-  // close. this word no longer has any meaning to me.
   public <C extends Closeable> C register(@Nullable C closeable)
   {
     if (closeable != null) {
@@ -122,6 +120,18 @@ public final class Closer implements Closeable
     }
 
     return closeable;
+  }
+
+  /**
+   * Registers a list of {@code Closeable} to be closed when this {@code Closer} is
+   * {@linkplain #close closed}.
+   *
+   * @return the supplied list of {@code Closeable}
+   */
+  public <C extends Closeable> Iterable<C> registerAll(Iterable<C> closeables)
+  {
+    closeables.forEach(this::register);
+    return closeables;
   }
 
   /**

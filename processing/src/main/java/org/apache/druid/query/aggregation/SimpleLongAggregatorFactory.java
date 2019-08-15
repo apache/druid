@@ -22,6 +22,9 @@ package org.apache.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
@@ -41,6 +44,7 @@ public abstract class SimpleLongAggregatorFactory extends NullableAggregatorFact
   @Nullable
   protected final String expression;
   protected final ExprMacroTable macroTable;
+  protected final Supplier<Expr> fieldExpression;
 
   public SimpleLongAggregatorFactory(
       ExprMacroTable macroTable,
@@ -53,6 +57,7 @@ public abstract class SimpleLongAggregatorFactory extends NullableAggregatorFact
     this.name = name;
     this.fieldName = fieldName;
     this.expression = expression;
+    this.fieldExpression = Suppliers.memoize(() -> expression == null ? null : Parser.parse(expression, macroTable));
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkArgument(
         fieldName == null ^ expression == null,
@@ -64,9 +69,8 @@ public abstract class SimpleLongAggregatorFactory extends NullableAggregatorFact
   {
     return AggregatorUtil.makeColumnValueSelectorWithLongDefault(
         metricFactory,
-        macroTable,
         fieldName,
-        expression,
+        fieldExpression.get(),
         nullValue
     );
   }
@@ -107,7 +111,7 @@ public abstract class SimpleLongAggregatorFactory extends NullableAggregatorFact
   {
     return fieldName != null
            ? Collections.singletonList(fieldName)
-           : Parser.findRequiredBindings(Parser.parse(expression, macroTable));
+           : fieldExpression.get().analyzeInputs().getRequiredBindingsList();
   }
 
   @Override

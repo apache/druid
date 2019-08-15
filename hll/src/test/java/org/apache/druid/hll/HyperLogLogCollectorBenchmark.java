@@ -53,7 +53,7 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
   boolean alignSource;
   boolean alignTarget;
 
-  int CACHE_LINE = 64;
+  int cacheLine = 64;
 
   ByteBuffer chunk;
   final int count = 100_000;
@@ -83,8 +83,8 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
 
     int val = 0;
     chunk = ByteBuffers.allocateAlignedByteBuffer(
-        (HyperLogLogCollector.getLatestNumBytesForDenseStorage() + CACHE_LINE
-         + CACHE_LINE) * count, CACHE_LINE
+        (HyperLogLogCollector.getLatestNumBytesForDenseStorage() + cacheLine
+         + cacheLine) * count, cacheLine
     );
 
     int pos = 0;
@@ -100,8 +100,8 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
 
       final int offset = random ? (int) (rand.nextDouble() * 64) : defaultOffset;
 
-      if (alignSource && (pos % CACHE_LINE) != offset) {
-        pos += (pos % CACHE_LINE) < offset ? offset - (pos % CACHE_LINE) : (CACHE_LINE + offset - pos % CACHE_LINE);
+      if (alignSource && (pos % cacheLine) != offset) {
+        pos += (pos % cacheLine) < offset ? offset - (pos % cacheLine) : (cacheLine + offset - pos % cacheLine);
       }
 
       positions[i] = pos;
@@ -123,11 +123,11 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
   private ByteBuffer allocateEmptyHLLBuffer(boolean direct, boolean aligned, int offset)
   {
     final int size = HyperLogLogCollector.getLatestNumBytesForDenseStorage();
-    final byte[] EMPTY_BYTES = HyperLogLogCollector.makeEmptyVersionedByteArray();
+    final byte[] emptyBytes = HyperLogLogCollector.makeEmptyVersionedByteArray();
     final ByteBuffer buf;
     if (direct) {
       if (aligned) {
-        buf = ByteBuffers.allocateAlignedByteBuffer(size + offset, CACHE_LINE);
+        buf = ByteBuffers.allocateAlignedByteBuffer(size + offset, cacheLine);
         buf.position(offset);
         buf.mark();
         buf.limit(size + offset);
@@ -137,12 +137,12 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
         buf.limit(size);
       }
 
-      buf.put(EMPTY_BYTES);
+      buf.put(emptyBytes);
       buf.reset();
     } else {
       buf = ByteBuffer.allocate(size);
       buf.limit(size);
-      buf.put(EMPTY_BYTES);
+      buf.put(emptyBytes);
       buf.rewind();
     }
     return buf;
@@ -154,7 +154,7 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
     final ByteBuffer buf = allocateEmptyHLLBuffer(targetIsDirect, alignTarget, 0);
 
     for (int k = 0; k < reps; ++k) {
-      for (int i = 0; i < count; ++i) {
+      for (int i = 0; i < count; ++i) { //-V6017: The 'k' counter is not used the nested loop because it's just reps.
         final int pos = positions[i];
         final int size = sizes[i];
 

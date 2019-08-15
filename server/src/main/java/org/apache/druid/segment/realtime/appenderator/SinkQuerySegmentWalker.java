@@ -38,6 +38,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.CPUTimeMetricQueryRunner;
+import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
@@ -74,6 +75,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private static final String CONTEXT_SKIP_INCREMENTAL_SEGMENT = "skipIncrementalSegment";
 
   private final String dataSource;
+
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline;
   private final ObjectMapper objectMapper;
   private final ServiceEmitter emitter;
@@ -175,7 +177,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     final boolean skipIncrementalSegment = query.getContextValue(CONTEXT_SKIP_INCREMENTAL_SEGMENT, false);
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
-    return CPUTimeMetricQueryRunner.safeBuild(
+    final QueryRunner<T> mergedRunner =
         toolChest.mergeResults(
             factory.mergeRunners(
                 queryExecutorService,
@@ -267,7 +269,10 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                         }
                     )
             )
-        ),
+        );
+
+    return CPUTimeMetricQueryRunner.safeBuild(
+        new FinalizeResultsQueryRunner<>(mergedRunner, toolChest),
         toolChest,
         emitter,
         cpuTimeAccumulator,
@@ -310,6 +315,11 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         cpuTimeAccumulator,
         false
     );
+  }
+
+  public VersionedIntervalTimeline<String, Sink> getSinkTimeline()
+  {
+    return sinkTimeline;
   }
 
   public static String makeHydrantCacheIdentifier(FireHydrant input)

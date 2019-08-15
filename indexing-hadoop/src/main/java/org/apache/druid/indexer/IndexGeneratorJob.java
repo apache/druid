@@ -212,21 +212,31 @@ public class IndexGeneratorJob implements Jobby
         JobHelper.writeJobIdToFile(config.getHadoopJobIdFileName(), job.getJobID().toString());
       }
 
-      boolean success = job.waitForCompletion(true);
+      try {
+        boolean success = job.waitForCompletion(true);
 
-      Counters counters = job.getCounters();
-      if (counters == null) {
-        log.info("No counters found for job [%s]", job.getJobName());
-      } else {
-        Counter invalidRowCount = counters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER);
-        if (invalidRowCount != null) {
-          jobStats.setInvalidRowCount(invalidRowCount.getValue());
+        Counters counters = job.getCounters();
+        if (counters == null) {
+          log.info("No counters found for job [%s]", job.getJobName());
         } else {
-          log.info("No invalid row counter found for job [%s]", job.getJobName());
+          Counter invalidRowCount = counters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER);
+          if (invalidRowCount != null) {
+            jobStats.setInvalidRowCount(invalidRowCount.getValue());
+          } else {
+            log.info("No invalid row counter found for job [%s]", job.getJobName());
+          }
+        }
+
+        return success;
+      }
+      catch (IOException ioe) {
+        if (!Utils.checkAppSuccessForJobIOException(ioe, job, config.isUseYarnRMJobStatusFallback())) {
+          throw ioe;
+        } else {
+          return true;
         }
       }
 
-      return success;
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -595,7 +605,7 @@ public class IndexGeneratorJob implements Jobby
     ) throws IOException
     {
       return HadoopDruidIndexerConfig.INDEX_MERGER_V9
-          .persist(index, interval, file, config.getIndexSpec(), progressIndicator, null);
+          .persist(index, interval, file, config.getIndexSpecForIntermediatePersists(), progressIndicator, null);
     }
 
     protected File mergeQueryableIndex(
@@ -813,6 +823,7 @@ public class IndexGeneratorJob implements Jobby
             -1,
             -1
         );
+
         final DataSegment segment = JobHelper.serializeOutIndex(
             segmentTemplate,
             context.getConfiguration(),
