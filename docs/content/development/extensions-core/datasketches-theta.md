@@ -78,6 +78,18 @@ druid.extensions.loadList=["druid-datasketches"]
 }
 ```
 
+#### Sketch Summary
+
+This returns a summary of the sketch that can be used for debugging. This is the result of calling toString() method.
+
+```json
+{
+  "type"  : "thetaSketchToString",
+  "name": <output name>,
+  "field"  : <post aggregator that refers to a Theta sketch (fieldAccess or another post aggregator)>
+}
+```
+
 ### Examples
 
 Assuming, you have a dataset containing (timestamp, product, user_id). You want to answer questions like

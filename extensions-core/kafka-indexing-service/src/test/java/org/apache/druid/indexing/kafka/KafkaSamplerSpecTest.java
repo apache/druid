@@ -160,6 +160,7 @@ public class KafkaSamplerSpecTest
         null,
         null,
         null,
+        null,
         null
     );
 

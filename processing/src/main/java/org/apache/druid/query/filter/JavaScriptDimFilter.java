@@ -21,11 +21,13 @@ package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -36,14 +38,19 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 
 public class JavaScriptDimFilter implements DimFilter
 {
   private final String dimension;
   private final String function;
+  @Nullable
   private final ExtractionFn extractionFn;
+  @Nullable
+  private final FilterTuning filterTuning;
   private final JavaScriptConfig config;
 
   /**
@@ -61,7 +68,8 @@ public class JavaScriptDimFilter implements DimFilter
   public JavaScriptDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("function") String function,
-      @JsonProperty("extractionFn") ExtractionFn extractionFn,
+      @JsonProperty("extractionFn") @Nullable ExtractionFn extractionFn,
+      @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning,
       @JacksonInject JavaScriptConfig config
   )
   {
@@ -70,7 +78,19 @@ public class JavaScriptDimFilter implements DimFilter
     this.dimension = dimension;
     this.function = function;
     this.extractionFn = extractionFn;
+    this.filterTuning = filterTuning;
     this.config = config;
+  }
+
+  @VisibleForTesting
+  public JavaScriptDimFilter(
+      String dimension,
+      String function,
+      @Nullable ExtractionFn extractionFn,
+      JavaScriptConfig config
+  )
+  {
+    this(dimension, function, extractionFn, null, config);
   }
 
   @JsonProperty
@@ -85,10 +105,19 @@ public class JavaScriptDimFilter implements DimFilter
     return function;
   }
 
+  @Nullable
   @JsonProperty
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
+  }
+
+  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonProperty
+  public FilterTuning getFilterTuning()
+  {
+    return filterTuning;
   }
 
   @Override
@@ -118,7 +147,7 @@ public class JavaScriptDimFilter implements DimFilter
   public Filter toFilter()
   {
     JavaScriptPredicateFactory predicateFactory = getPredicateFactory();
-    return new JavaScriptFilter(dimension, predicateFactory);
+    return new JavaScriptFilter(dimension, predicateFactory, filterTuning);
   }
 
   /**
@@ -152,19 +181,9 @@ public class JavaScriptDimFilter implements DimFilter
   }
 
   @Override
-  public HashSet<String> getRequiredColumns()
+  public Set<String> getRequiredColumns()
   {
-    return Sets.newHashSet(dimension);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "JavaScriptDimFilter{" +
-           "dimension='" + dimension + '\'' +
-           ", function='" + function + '\'' +
-           ", extractionFn='" + extractionFn + '\'' +
-           '}';
+    return ImmutableSet.of(dimension);
   }
 
   @Override
@@ -173,29 +192,31 @@ public class JavaScriptDimFilter implements DimFilter
     if (this == o) {
       return true;
     }
-    if (!(o instanceof JavaScriptDimFilter)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     JavaScriptDimFilter that = (JavaScriptDimFilter) o;
-
-    if (!dimension.equals(that.dimension)) {
-      return false;
-    }
-    if (!function.equals(that.function)) {
-      return false;
-    }
-    return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
-
+    return dimension.equals(that.dimension) &&
+           function.equals(that.function) &&
+           Objects.equals(extractionFn, that.extractionFn) &&
+           Objects.equals(filterTuning, that.filterTuning);
   }
 
   @Override
   public int hashCode()
   {
-    int result = dimension.hashCode();
-    result = 31 * result + function.hashCode();
-    result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
-    return result;
+    return Objects.hash(dimension, function, extractionFn, filterTuning);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "JavaScriptDimFilter{" +
+           "dimension='" + dimension + '\'' +
+           ", function='" + function + '\'' +
+           ", extractionFn=" + extractionFn +
+           ", filterTuning=" + filterTuning +
+           '}';
   }
 
   public static class JavaScriptPredicateFactory implements DruidPredicateFactory

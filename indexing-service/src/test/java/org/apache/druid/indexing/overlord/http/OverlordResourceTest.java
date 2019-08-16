@@ -31,6 +31,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -1277,6 +1278,11 @@ public class OverlordResourceTest
       public boolean isReady(TaskActionClient taskActionClient)
       {
         return false;
+      }
+
+      @Override
+      public void stopGracefully(TaskConfig taskConfig)
+      {
       }
 
       @Override

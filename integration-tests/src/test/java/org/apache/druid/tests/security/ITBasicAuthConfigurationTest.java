@@ -47,6 +47,7 @@ import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.RetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
+import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.Assert;
@@ -56,7 +57,6 @@ import org.testng.annotations.Test;
 
 import javax.ws.rs.core.MediaType;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -68,6 +68,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
+@Test(groups = TestNGGroup.SECURITY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITBasicAuthConfigurationTest
 {
@@ -114,7 +115,6 @@ public class ITBasicAuthConfigurationTest
   @Client
   HttpClient httpClient;
 
-  StatusResponseHandler responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
 
   @Inject
   private CoordinatorResourceTestClient coordinatorClient;
@@ -270,9 +270,7 @@ public class ITBasicAuthConfigurationTest
         datasourceOnlyUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
         adminSegments.stream()
-                     .filter((segmentEntry) -> {
-                       return "auth_test".equals(segmentEntry.get("datasource"));
-                     })
+                     .filter((segmentEntry) -> "auth_test".equals(segmentEntry.get("datasource")))
                      .collect(Collectors.toList())
     );
 
@@ -297,9 +295,7 @@ public class ITBasicAuthConfigurationTest
         datasourceOnlyUserClient,
         SYS_SCHEMA_TASKS_QUERY,
         adminTasks.stream()
-                     .filter((taskEntry) -> {
-                       return "auth_test".equals(taskEntry.get("datasource"));
-                     })
+                     .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
                      .collect(Collectors.toList())
     );
 
@@ -309,9 +305,7 @@ public class ITBasicAuthConfigurationTest
         datasourceWithStateUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
         adminSegments.stream()
-                     .filter((segmentEntry) -> {
-                       return "auth_test".equals(segmentEntry.get("datasource"));
-                     })
+                     .filter((segmentEntry) -> "auth_test".equals(segmentEntry.get("datasource")))
                      .collect(Collectors.toList())
     );
 
@@ -327,9 +321,7 @@ public class ITBasicAuthConfigurationTest
         datasourceWithStateUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
         adminServerSegments.stream()
-                           .filter((serverSegmentEntry) -> {
-                             return ((String) serverSegmentEntry.get("segment_id")).contains("auth_test");
-                           })
+                           .filter((serverSegmentEntry) -> ((String) serverSegmentEntry.get("segment_id")).contains("auth_test"))
                            .collect(Collectors.toList())
     );
 
@@ -338,9 +330,7 @@ public class ITBasicAuthConfigurationTest
         datasourceWithStateUserClient,
         SYS_SCHEMA_TASKS_QUERY,
         adminTasks.stream()
-                     .filter((taskEntry) -> {
-                       return "auth_test".equals(taskEntry.get("datasource"));
-                     })
+                     .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
                      .collect(Collectors.toList())
     );
 
@@ -504,8 +494,8 @@ public class ITBasicAuthConfigurationTest
     LOG.info("URL: " + url);
     try {
       Properties connectionProperties = new Properties();
-      connectionProperties.put("user", "admin");
-      connectionProperties.put("password", "priest");
+      connectionProperties.setProperty("user", "admin");
+      connectionProperties.setProperty("password", "priest");
       Connection connection = DriverManager.getConnection(url, connectionProperties);
       Statement statement = connection.createStatement();
       statement.setMaxRows(450);
@@ -525,8 +515,8 @@ public class ITBasicAuthConfigurationTest
     LOG.info("URL: " + url);
     try {
       Properties connectionProperties = new Properties();
-      connectionProperties.put("user", "admin");
-      connectionProperties.put("password", "wrongpassword");
+      connectionProperties.setProperty("user", "admin");
+      connectionProperties.setProperty("password", "wrongpassword");
       Connection connection = DriverManager.getConnection(url, connectionProperties);
       Statement statement = connection.createStatement();
       statement.setMaxRows(450);
@@ -620,7 +610,7 @@ public class ITBasicAuthConfigurationTest
       while (true) {
         response = httpClient.go(
             request,
-            responseHandler
+            StatusResponseHandler.getInstance()
         ).get();
 
         if (!response.getStatus().equals(expectedStatus)) {
@@ -795,8 +785,7 @@ public class ITBasicAuthConfigurationTest
     return Lists.transform(
         servers,
         (server) -> {
-          Map<String, Object> newServer = new HashMap<>();
-          newServer.putAll(server);
+          Map<String, Object> newServer = new HashMap<>(server);
           newServer.put("curr_size", 0);
           return newServer;
         }

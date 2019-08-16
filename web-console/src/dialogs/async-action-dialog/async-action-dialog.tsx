@@ -18,21 +18,26 @@
 
 import {
   Button,
-  ButtonGroup,
   Classes,
   Dialog,
   FormGroup,
-  Icon, Intent, NumericInput, ProgressBar, TagInput
+  Icon,
+  IconName,
+  Intent,
+  ProgressBar,
 } from '@blueprintjs/core';
-import { IconName } from '@blueprintjs/icons';
+import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import * as React from 'react';
+import React from 'react';
 
 import { AppToaster } from '../../singletons/toaster';
 
-export interface AsyncAlertDialogProps extends React.Props<any> {
-  action: null | (() => Promise<void>);
-  onClose: (success: boolean) => void;
+import './async-action-dialog.scss';
+
+export interface AsyncActionDialogProps {
+  action: () => Promise<void>;
+  onClose: () => void;
+  onSuccess?: () => void;
   confirmButtonText: string;
   confirmButtonDisabled?: boolean;
   cancelButtonText?: string;
@@ -43,21 +48,33 @@ export interface AsyncAlertDialogProps extends React.Props<any> {
   failText: string;
 }
 
-export interface AsyncAlertDialogState {
+export interface AsyncActionDialogState {
   working: boolean;
 }
 
-export class AsyncActionDialog extends React.Component<AsyncAlertDialogProps, AsyncAlertDialogState> {
-  constructor(props: AsyncAlertDialogProps) {
+export class AsyncActionDialog extends React.PureComponent<
+  AsyncActionDialogProps,
+  AsyncActionDialogState
+> {
+  private mounted = false;
+
+  constructor(props: AsyncActionDialogProps) {
     super(props);
     this.state = {
-      working: false
+      working: false,
     };
   }
 
+  componentDidMount(): void {
+    this.mounted = true;
+  }
+
+  componentWillUnmount(): void {
+    this.mounted = false;
+  }
+
   private handleConfirm = async () => {
-    const { action, onClose, successText, failText } = this.props;
-    if (!action) throw new Error('should never get here');
+    const { action, onClose, onSuccess, successText, failText } = this.props;
 
     this.setState({ working: true });
     try {
@@ -65,45 +82,77 @@ export class AsyncActionDialog extends React.Component<AsyncAlertDialogProps, As
     } catch (e) {
       AppToaster.show({
         message: `${failText}: ${e.message}`,
-        intent: Intent.DANGER
+        intent: Intent.DANGER,
       });
-      this.setState({ working: false });
-      onClose(false);
+      if (this.mounted) {
+        this.setState({ working: false });
+        onClose();
+      }
       return;
     }
     AppToaster.show({
       message: successText,
-      intent: Intent.SUCCESS
+      intent: Intent.SUCCESS,
     });
-    this.setState({ working: false });
-    onClose(true);
-  }
+    if (this.mounted) {
+      this.setState({ working: false });
+    }
+    if (onSuccess) onSuccess();
+    onClose();
+  };
 
-  render() {
-    const { action, onClose, className, icon, intent, confirmButtonText, cancelButtonText, confirmButtonDisabled, children } = this.props;
+  private handleClose = () => {
+    const { onClose } = this.props;
+    onClose();
+  };
+
+  render(): JSX.Element {
+    const {
+      className,
+      icon,
+      intent,
+      confirmButtonText,
+      cancelButtonText,
+      confirmButtonDisabled,
+      children,
+    } = this.props;
     const { working } = this.state;
-    if (!action) return null;
 
-    const handleClose = () => onClose(false);
-
-    return <Dialog
-      isOpen
-      className={classNames(Classes.ALERT, 'async-alert-dialog', className)}
-      canEscapeKeyClose={!working}
-      onClose={handleClose}
-    >
-      <div className={Classes.ALERT_BODY}>
-        {icon && <Icon icon={icon} />}
-        {!working && <div className={Classes.ALERT_CONTENTS}>{children}</div>}
-      </div>
-      {
-        working ?
-          <ProgressBar/> :
-          <div className={Classes.ALERT_FOOTER}>
-            <Button intent={intent} text={confirmButtonText} onClick={this.handleConfirm} disabled={confirmButtonDisabled}/>
-            <Button text={cancelButtonText || 'Cancel'} onClick={handleClose}/>
-          </div>
-      }
-    </Dialog>;
+    return (
+      <Dialog
+        isOpen
+        className={classNames(Classes.ALERT, 'async-action-dialog', className)}
+        canEscapeKeyClose={!working}
+        onClose={this.handleClose}
+      >
+        <div className={Classes.ALERT_BODY}>
+          {working ? (
+            <FormGroup className="progress-group" label="Processing action...">
+              <ProgressBar intent={intent || Intent.PRIMARY} />
+            </FormGroup>
+          ) : (
+            <>
+              {icon && <Icon icon={icon} />}
+              <div className={Classes.ALERT_CONTENTS}>{children}</div>
+            </>
+          )}
+        </div>
+        <div className={Classes.ALERT_FOOTER}>
+          {working ? (
+            <Button icon={IconNames.EYE_OFF} text="Run in background" onClick={this.handleClose} />
+          ) : (
+            <>
+              <Button
+                intent={intent}
+                text={confirmButtonText}
+                onClick={this.handleConfirm}
+                disabled={confirmButtonDisabled}
+              />
+              <Button text={cancelButtonText || 'Cancel'} onClick={this.handleClose} />
+            </>
+          )}
+        </div>
+      </Dialog>
+    );
   }
 }

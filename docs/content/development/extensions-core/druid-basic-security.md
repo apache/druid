@@ -25,6 +25,7 @@ title: "Basic Security"
 # Druid Basic Security
 
 This Apache Druid (incubating) extension adds:
+
 - an Authenticator which supports [HTTP Basic authentication](https://en.wikipedia.org/wiki/Basic_access_authentication)
 - an Authorizer which implements basic role-based access control
 
@@ -173,6 +174,7 @@ Return a list of all user names.
 Return the name and role information of the user with name {userName}
 
 Example output:
+
 ```json
 {
   "name": "druid2",
@@ -183,9 +185,11 @@ Example output:
 ```
 
 This API supports the following flags:
+
 - `?full`: The response will also include the full information for each role currently assigned to the user.
 
 Example output:
+
 ```json
 {
   "name": "druid2",
@@ -268,6 +272,7 @@ Return a list of all role names.
 Return name and permissions for the role named {roleName}.
 
 Example output:
+
 ```json
 {
   "name": "druidRole2",
@@ -299,6 +304,7 @@ This API supports the following flags:
 - `?simplifyPermissions`: The permissions in the output will contain only a list of `resourceAction` objects, without the extraneous `resourceNamePattern` field. The `users` field will be null when `?full` is not specified.
 
 Example output:
+
 ```json
 {
   "name": "druidRole2",
@@ -337,6 +343,7 @@ Unassign role {roleName} from user {userName}
 Set the permissions of {roleName}. This replaces the previous set of permissions on the role.
 
 Content: List of JSON Resource-Action objects, e.g.:
+
 ```
 [
 {

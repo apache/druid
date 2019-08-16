@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe view control bar snapshot view control bar snapshot snapshot 1`] = `
+exports[`view control bar snapshot matches snapshot 1`] = `
 <div
   class="view-control-bar"
 >

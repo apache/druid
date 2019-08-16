@@ -16,24 +16,21 @@
  * limitations under the License.
  */
 
-
-import * as Enzyme from 'enzyme';
 import { shallow } from 'enzyme';
-import * as enzymeAdapterReact16 from 'enzyme-adapter-react-16';
-import * as React from 'react';
+import React from 'react';
 
-import {ServersView} from './servers-view';
+import { ServersView } from './servers-view';
 
-Enzyme.configure({ adapter: new enzymeAdapterReact16() });
-describe('describe servers view', () => {
+describe('servers view', () => {
   it('action servers view', () => {
     const serversView = shallow(
       <ServersView
         middleManager={'test'}
-        goToSql={(initSql: string) => {}}
-        goToTask={(taskId: string) => {}}
+        goToQuery={() => {}}
+        goToTask={() => {}}
         noSqlMode={false}
-      />);
+      />,
+    );
     expect(serversView).toMatchSnapshot();
   });
 });

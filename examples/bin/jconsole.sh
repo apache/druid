@@ -18,7 +18,7 @@
 # under the License.
 ############################
 # This script downloads the appropriate log4j2 jars and runs jconsole with them as plugins.
-# This script can be used as an example for how to connect to a druid.io instance to
+# This script can be used as an example for how to connect to a Druid instance to
 # change the logging parameters at runtime
 ############################
 

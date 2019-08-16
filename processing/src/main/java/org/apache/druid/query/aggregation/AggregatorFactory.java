@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -49,6 +50,23 @@ public abstract class AggregatorFactory implements Cacheable
   public abstract Aggregator factorize(ColumnSelectorFactory metricFactory);
 
   public abstract BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory);
+
+  /**
+   * Create a VectorAggregator based on the provided column selector factory. Will throw an exception if
+   * this aggregation class does not support vectorization: check "canVectorize" first.
+   */
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+  {
+    throw new UOE("Aggregator[%s] cannot vectorize", getClass().getName());
+  }
+
+  /**
+   * Returns whether or not this aggregation class supports vectorization. The default implementation returns false.
+   */
+  public boolean canVectorize()
+  {
+    return false;
+  }
 
   public abstract Comparator getComparator();
 

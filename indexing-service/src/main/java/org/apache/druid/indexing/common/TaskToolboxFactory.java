@@ -29,11 +29,13 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.Processing;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.worker.IntermediaryDataManager;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -57,6 +59,7 @@ import java.util.concurrent.ExecutorService;
 public class TaskToolboxFactory
 {
   private final TaskConfig config;
+  private final DruidNode taskExecutorNode;
   private final TaskActionClientFactory taskActionClientFactory;
   private final ServiceEmitter emitter;
   private final DataSegmentPusher segmentPusher;
@@ -81,10 +84,12 @@ public class TaskToolboxFactory
   private final LookupNodeService lookupNodeService;
   private final DataNodeService dataNodeService;
   private final TaskReportFileWriter taskReportFileWriter;
+  private final IntermediaryDataManager intermediaryDataManager;
 
   @Inject
   public TaskToolboxFactory(
       TaskConfig config,
+      @Parent DruidNode taskExecutorNode,
       TaskActionClientFactory taskActionClientFactory,
       ServiceEmitter emitter,
       DataSegmentPusher segmentPusher,
@@ -108,10 +113,12 @@ public class TaskToolboxFactory
       @RemoteChatHandler DruidNode druidNode,
       LookupNodeService lookupNodeService,
       DataNodeService dataNodeService,
-      TaskReportFileWriter taskReportFileWriter
+      TaskReportFileWriter taskReportFileWriter,
+      IntermediaryDataManager intermediaryDataManager
   )
   {
     this.config = config;
+    this.taskExecutorNode = taskExecutorNode;
     this.taskActionClientFactory = taskActionClientFactory;
     this.emitter = emitter;
     this.segmentPusher = segmentPusher;
@@ -136,6 +143,7 @@ public class TaskToolboxFactory
     this.lookupNodeService = lookupNodeService;
     this.dataNodeService = dataNodeService;
     this.taskReportFileWriter = taskReportFileWriter;
+    this.intermediaryDataManager = intermediaryDataManager;
   }
 
   public TaskToolbox build(Task task)
@@ -143,6 +151,7 @@ public class TaskToolboxFactory
     final File taskWorkDir = config.getTaskWorkDir(task.getId());
     return new TaskToolbox(
         config,
+        taskExecutorNode,
         taskActionClientFactory.create(task),
         emitter,
         segmentPusher,
@@ -167,7 +176,8 @@ public class TaskToolboxFactory
         druidNode,
         lookupNodeService,
         dataNodeService,
-        taskReportFileWriter
+        taskReportFileWriter,
+        intermediaryDataManager
     );
   }
 }

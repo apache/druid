@@ -32,6 +32,7 @@ import org.apache.avro.io.DecoderFactory;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.nio.ByteBuffer;
+import java.util.Objects;
 
 public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
 {
@@ -83,7 +84,7 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
 
     SchemaRegistryBasedAvroBytesDecoder that = (SchemaRegistryBasedAvroBytesDecoder) o;
 
-    return registry != null ? registry.equals(that.registry) : that.registry == null;
+    return Objects.equals(registry, that.registry);
   }
 
   @Override

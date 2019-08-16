@@ -85,11 +85,11 @@ public class VarianceTopNQueryTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -140,10 +140,7 @@ public class VarianceTopNQueryTest
         QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
     final QueryRunner<Result<TopNResultValue>> mergeRunner = chest.mergeResults(runner);
-    final Sequence<Result<TopNResultValue>> retval = mergeRunner.run(
-        QueryPlus.wrap(query),
-        ImmutableMap.of()
-    );
+    final Sequence<Result<TopNResultValue>> retval = mergeRunner.run(QueryPlus.wrap(query));
     TestHelper.assertExpectedResults(expectedResults, retval);
     return retval;
   }

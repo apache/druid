@@ -16,19 +16,15 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
-import { render } from 'react-testing-library';
+import { render } from '@testing-library/react';
+import React from 'react';
 
-import { Loader} from './loader';
+import { Loader } from './loader';
 
-describe('describe loader', () => {
-  it('loader snapshot', () => {
-    const loader =
-    <Loader
-      loading={true}
-      loadingText={'test'}
-    />;
-    const { container, getByText } = render(loader);
+describe('loader', () => {
+  it('matches snapshot', () => {
+    const loader = <Loader loading loadingText={'test'} />;
+    const { container } = render(loader);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

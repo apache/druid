@@ -22,12 +22,12 @@ title: "SQL"
   ~ under the License.
   -->
 
-  <!-- 
-    The format of the tables that describe the functions and operators 
-    should not be changed without updating the script create-sql-function-doc 
-    in web-console/script/create-sql-function-doc, because the script detects
-    patterns in this markdown file and parse it to TypeScript file for web console
-   -->
+<!--
+  The format of the tables that describe the functions and operators
+  should not be changed without updating the script create-sql-function-doc
+  in web-console/script/create-sql-function-doc, because the script detects
+  patterns in this markdown file and parse it to TypeScript file for web console
+-->
 
 # SQL
 
@@ -42,8 +42,60 @@ queries on the query Broker (the first process you query), which are then passed
 queries. Other than the (slight) overhead of translating SQL on the Broker, there isn't an additional performance
 penalty versus native queries.
 
-To enable Druid SQL, make sure you have set `druid.sql.enable = true` either in your common.runtime.properties or your
-Broker's runtime.properties.
+## Data types and casts
+
+Druid natively supports five basic column types: "long" (64 bit signed int), "float" (32 bit float), "double" (64 bit
+float) "string" (UTF-8 encoded strings and string arrays), and "complex" (catch-all for more exotic data types like
+hyperUnique and approxHistogram columns).
+
+Timestamps (including the `__time` column) are treated by Druid as longs, with the value being the number of
+milliseconds since 1970-01-01 00:00:00 UTC, not counting leap seconds. Therefore, timestamps in Druid do not carry any
+timezone information, but only carry information about the exact moment in time they represent. See the
+[Time functions](#time-functions) section for more information about timestamp handling.
+
+Druid generally treats NULLs and empty strings interchangeably, rather than according to the SQL standard. As such,
+Druid SQL only has partial support for NULLs. For example, the expressions `col IS NULL` and `col = ''` are equivalent,
+and both will evaluate to true if `col` contains an empty string. Similarly, the expression `COALESCE(col1, col2)` will
+return `col2` if `col1` is an empty string. While the `COUNT(*)` aggregator counts all rows, the `COUNT(expr)`
+aggregator will count the number of rows where expr is neither null nor the empty string. String columns in Druid are
+NULLable. Numeric columns are NOT NULL; if you query a numeric column that is not present in all segments of your Druid
+datasource, then it will be treated as zero for rows from those segments.
+
+For mathematical operations, Druid SQL will use integer math if all operands involved in an expression are integers.
+Otherwise, Druid will switch to floating point math. You can force this to happen by casting one of your operands
+to FLOAT. At runtime, Druid may widen 32-bit floats to 64-bit for certain operators, like SUM aggregators.
+
+Druid [multi-value string dimensions](multi-value-dimensions.html) will appear in the table schema as `VARCHAR` typed,
+and may be interacted with in expressions as such. Additionally, they can be treated as `ARRAY` 'like', via a handful of
+special multi-value operators. Expressions against multi-value string dimensions will apply the expression to all values
+of the row, however the caveat is that aggregations on these multi-value string columns will observe the native Druid
+multi-value aggregation behavior, which is equivalent to the `UNNEST` function available in many dialects.
+Refer to the documentation on [multi-value string dimensions](multi-value-dimensions.html) and
+[Druid expressions documentation](../misc/math-expr.html) for additional details. 
+
+The following table describes how SQL types map onto Druid types during query runtime. Casts between two SQL types
+that have the same Druid runtime type will have no effect, other than exceptions noted in the table. Casts between two
+SQL types that have different Druid runtime types will generate a runtime cast in Druid. If a value cannot be properly
+cast to another value, as in `CAST('foo' AS BIGINT)`, the runtime will substitute a default value. NULL values cast
+to non-nullable types will also be substituted with a default value (for example, nulls cast to numbers will be
+converted to zeroes).
+
+|SQL type|Druid runtime type|Default value|Notes|
+|--------|------------------|-------------|-----|
+|CHAR|STRING|`''`||
+|VARCHAR|STRING|`''`|Druid STRING columns are reported as VARCHAR|
+|DECIMAL|DOUBLE|`0.0`|DECIMAL uses floating point, not fixed point math|
+|FLOAT|FLOAT|`0.0`|Druid FLOAT columns are reported as FLOAT|
+|REAL|DOUBLE|`0.0`||
+|DOUBLE|DOUBLE|`0.0`|Druid DOUBLE columns are reported as DOUBLE|
+|BOOLEAN|LONG|`false`||
+|TINYINT|LONG|`0`||
+|SMALLINT|LONG|`0`||
+|INTEGER|LONG|`0`||
+|BIGINT|LONG|`0`|Druid LONG columns (except `__time`) are reported as BIGINT|
+|TIMESTAMP|LONG|`0`, meaning 1970-01-01 00:00:00 UTC|Druid's `__time` column is reported as TIMESTAMP. Casts between string and timestamp types assume standard SQL formatting, e.g. `2000-01-02 03:04:05`, _not_ ISO8601 formatting. For handling other formats, use one of the [time functions](#time-functions)|
+|DATE|LONG|`0`, meaning 1970-01-01|Casting TIMESTAMP to DATE rounds down the timestamp to the nearest day. Casts between string and date types assume standard SQL formatting, e.g. `2000-01-02`. For handling other formats, use one of the [time functions](#time-functions)|
+|OTHER|COMPLEX|none|May represent various Druid column types such as hyperUnique, approxHistogram, etc|
 
 ## Query syntax
 
@@ -131,7 +183,16 @@ Only the COUNT aggregation can accept DISTINCT.
 |`APPROX_QUANTILE(expr, probability, [resolution])`|Computes approximate quantiles on numeric or [approxHistogram](../development/extensions-core/approximate-histograms.html#approximate-histogram-aggregator) exprs. The "probability" should be between 0 and 1 (exclusive). The "resolution" is the number of centroids to use for the computation. Higher resolutions will give more precise results but also have higher overhead. If not provided, the default resolution is 50. The [approximate histogram extension](../development/extensions-core/approximate-histograms.html) must be loaded to use this function.|
 |`APPROX_QUANTILE_DS(expr, probability, [k])`|Computes approximate quantiles on numeric or [Quantiles sketch](../development/extensions-core/datasketches-quantiles.html) exprs. The "probability" should be between 0 and 1 (exclusive). The `k` parameter is described in the Quantiles sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
 |`APPROX_QUANTILE_FIXED_BUCKETS(expr, probability, numBuckets, lowerLimit, upperLimit, [outlierHandlingMode])`|Computes approximate quantiles on numeric or [fixed buckets histogram](../development/extensions-core/approximate-histograms.html#fixed-buckets-histogram) exprs. The "probability" should be between 0 and 1 (exclusive). The `numBuckets`, `lowerLimit`, `upperLimit`, and `outlierHandlingMode` parameters are described in the fixed buckets histogram documentation. The [approximate histogram extension](../development/extensions-core/approximate-histograms.html) must be loaded to use this function.|
-|`BLOOM_FILTER(expr, numEntries)`|Computes a bloom filter from values produced by `expr`, with `numEntries` maximum number of distinct values before false positve rate increases. See [bloom filter extension](../development/extensions-core/bloom-filter.html) documentation for additional details.|
+|`BLOOM_FILTER(expr, numEntries)`|Computes a bloom filter from values produced by `expr`, with `numEntries` maximum number of distinct values before false positive rate increases. See [bloom filter extension](../development/extensions-core/bloom-filter.html) documentation for additional details.|
+|`TDIGEST_QUANTILE(expr, quantileFraction, [compression])`|Builds a T-Digest sketch on values produced by `expr` and returns the value for the quantile. Compression parameter (default value 100) determines the accuracy and size of the sketch. Higher compression means higher accuracy but more space to store sketches. See [t-digest extension](../development/extensions-contrib/tdigestsketch-quantiles.html) documentation for additional details.|
+|`TDIGEST_GENERATE_SKETCH(expr, [compression])`|Builds a T-Digest sketch on values produced by `expr`. Compression parameter (default value 100) determines the accuracy and size of the sketch Higher compression means higher accuracy but more space to store sketches. See [t-digest extension](../development/extensions-contrib/tdigestsketch-quantiles.html) documentation for additional details.|
+|`VAR_POP(expr)`|Computes variance population of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
+|`VAR_SAMP(expr)`|Computes variance sample of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
+|`VARIANCE(expr)`|Computes variance sample of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
+|`STDDEV_POP(expr)`|Computes standard deviation population of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
+|`STDDEV_SAMP(expr)`|Computes standard deviation sample of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
+|`STDDEV(expr)`|Computes standard deviation sample of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
+
 
 For advice on choosing approximate aggregation functions, check out our [approximate aggregations documentation](aggregations.html#approx).
 
@@ -174,7 +235,7 @@ String functions accept strings, and return a type appropriate to the function.
 
 |Function|Notes|
 |--------|-----|
-|`<code>x &#124;&#124; y</code>`|Concat strings x and y.|
+|<code>x &#124;&#124; y</code>|Concat strings x and y.|
 |`CONCAT(expr, expr...)`|Concats a list of expressions.|
 |`TEXTCAT(expr, expr)`|Two argument version of CONCAT.|
 |`STRING_FORMAT(pattern[, args...])`|Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
@@ -193,7 +254,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`RIGHT(expr, [length])`|Returns the rightmost length characters from expr.|
 |`LEFT(expr, [length])`|Returns the leftmost length characters from expr.|
 |`SUBSTR(expr, index, [length])`|Synonym for SUBSTRING.|
-|`TRIM([BOTH &#124; LEADING &#124; TRAILING] [<chars> FROM] expr)`|Returns expr with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
+|<code>TRIM([BOTH &#124; LEADING &#124; TRAILING] [<chars> FROM] expr)</code>|Returns expr with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
 |`BTRIM(expr[, chars])`|Alternate form of `TRIM(BOTH <chars> FROM <expr>`).|
 |`LTRIM(expr[, chars])`|Alternate form of `TRIM(LEADING <chars> FROM <expr>`).|
 |`RTRIM(expr[, chars])`|Alternate form of `TRIM(TRAILING <chars> FROM <expr>`).|
@@ -222,7 +283,8 @@ simplest way to write literal timestamps in other time zones is to use TIME_PARS
 |--------|-----|
 |`CURRENT_TIMESTAMP`|Current timestamp in the connection's time zone.|
 |`CURRENT_DATE`|Current date in the connection's time zone.|
-|`DATE_TRUNC(<unit>, <timestamp_expr>)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be 'milliseconds', 'second', 'minute', 'hour', 'day', 'week', 'month', 'quarter', 'year', 'decade', 'century', or 'millenium'.|
+|`DATE_TRUNC(<unit>, <timestamp_expr>)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be 'milliseconds', 'second', 'minute', 'hour', 'day', 'week', 'month', 'quarter', 'year', 'decade', 'century', or 'millennium'.|
+|`TIME_CEIL(<timestamp_expr>, <period>, [<origin>, [<timezone>]])`|Rounds up a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `CEIL` but is more flexible.|
 |`TIME_FLOOR(<timestamp_expr>, <period>, [<origin>, [<timezone>]])`|Rounds down a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `FLOOR` but is more flexible.|
 |`TIME_SHIFT(<timestamp_expr>, <period>, <step>, [<timezone>])`|Shifts a timestamp by a period (step times), returning it as a new timestamp. Period can be any ISO8601 period. Step may be negative. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
 |`TIME_EXTRACT(<timestamp_expr>, [<unit>, [<timezone>]])`|Extracts a time part from expr, returning it as a number. Unit can be EPOCH, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), DOY (day of year), WEEK (week of [week year](https://en.wikipedia.org/wiki/ISO_week_date)), MONTH (1 through 12), QUARTER (1 through 4), or YEAR. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `EXTRACT` but is more flexible. Unit and time zone must be literals, and must be provided quoted, like `TIME_EXTRACT(__time, 'HOUR')` or `TIME_EXTRACT(__time, 'HOUR', 'America/Los_Angeles')`.|
@@ -230,12 +292,27 @@ simplest way to write literal timestamps in other time zones is to use TIME_PARS
 |`TIME_FORMAT(<timestamp_expr>, [<pattern>, [<timezone>]])`|Formats a timestamp as a string with a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO8601 (e.g. `2000-01-02T03:04:05Z`) if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". Pattern and time zone must be literals.|
 |`MILLIS_TO_TIMESTAMP(millis_expr)`|Converts a number of milliseconds since the epoch into a timestamp.|
 |`TIMESTAMP_TO_MILLIS(timestamp_expr)`|Converts a timestamp into a number of milliseconds since the epoch.|
-|`EXTRACT(<unit> FROM timestamp_expr)`|Extracts a time part from expr, returning it as a number. Unit can be EPOCH, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), DOY (day of year), WEEK (week of year), MONTH, QUARTER, or YEAR. Units must be provided unquoted, like `EXTRACT(HOUR FROM __time)`.|
+|`EXTRACT(<unit> FROM timestamp_expr)`|Extracts a time part from expr, returning it as a number. Unit can be EPOCH, MICROSECOND, MILLISECOND, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), ISODOW (ISO day of week), DOY (day of year), WEEK (week of year), MONTH, QUARTER, YEAR, ISOYEAR, DECADE, CENTURY or MILLENNIUM. Units must be provided unquoted, like `EXTRACT(HOUR FROM __time)`.|
 |`FLOOR(timestamp_expr TO <unit>)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
 |`CEIL(timestamp_expr TO <unit>)`|Rounds up a timestamp, returning it as a new timestamp. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
 |`TIMESTAMPADD(<unit>, <count>, <timestamp>)`|Equivalent to `timestamp + count * INTERVAL '1' UNIT`.|
 |`TIMESTAMPDIFF(<unit>, <timestamp1>, <timestamp2>)`|Returns the (signed) number of `unit` between `timestamp1` and `timestamp2`. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
-|`timestamp_expr { + &#124; - } <interval_expr>`|Add or subtract an amount of time from a timestamp. interval_expr can include interval literals like `INTERVAL '2' HOUR`, and may include interval arithmetic as well. This operator treats days as uniformly 86400 seconds long, and does not take into account daylight savings time. To account for daylight savings time, use TIME_SHIFT instead.|
+|<code>timestamp_expr { + &#124; - } <interval_expr><code>|Add or subtract an amount of time from a timestamp. interval_expr can include interval literals like `INTERVAL '2' HOUR`, and may include interval arithmetic as well. This operator treats days as uniformly 86400 seconds long, and does not take into account daylight savings time. To account for daylight savings time, use TIME_SHIFT instead.|
+
+
+### IP address functions
+
+For the IPv4 address functions, the `address` argument can either be an IPv4 dotted-decimal string
+(e.g., '192.168.0.1') or an IP address represented as an integer (e.g., 3232235521). The `subnet`
+argument should be a string formatted as an IPv4 address subnet in CIDR notation (e.g.,
+'192.168.0.0/16').
+
+|Function|Notes|
+|---|---|
+|`IPV4_MATCH(address, subnet)`|Returns true if the `address` belongs to the `subnet` literal, else false. If `address` is not a valid IPv4 address, then false is returned. This function is more efficient if `address` is an integer instead of a string.|
+|`IPV4_PARSE(address)`|Parses `address` into an IPv4 address stored as an integer . If `address` is an integer that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address.|
+|`IPV4_STRINGIFY(address)`|Converts `address` into an IPv4 address dotted-decimal string. If `address` is a string that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address.|
+
 
 ### Comparison operators
 
@@ -265,6 +342,27 @@ simplest way to write literal timestamps in other time zones is to use TIME_PARS
 |`x OR y`|Boolean OR.|
 |`NOT x`|Boolean NOT.|
 
+### Multi-value string functions
+All 'array' references in the multi-value string function documentation can refer to multi-value string columns or
+`ARRAY` literals.
+
+|Function|Notes|
+|--------|-----|
+| `ARRAY(expr1,expr ...)` | constructs an SQL ARRAY literal from the expression arguments, using the type of the first argument as the output array type |
+| `MV_LENGTH(arr)` | returns length of array expression |
+| `MV_OFFSET(arr,long)` | returns the array element at the 0 based index supplied, or null for an out of range index|
+| `MV_ORDINAL(arr,long)` | returns the array element at the 1 based index supplied, or null for an out of range index |
+| `MV_CONTAINS(arr,expr)` | returns 1 if the array contains the element specified by expr, or contains all elements specified by expr if expr is an array, else 0 |
+| `MV_OVERLAP(arr1,arr2)` | returns 1 if arr1 and arr2 have any elements in common, else 0 |
+| `MV_OFFSET_OF(arr,expr)` | returns the 0 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array. |
+| `MV_ORDINAL_OF(arr,expr)` | returns the 1 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array. |
+| `MV_PREPEND(expr,arr)` | adds expr to arr at the beginning, the resulting array type determined by the type of the array |
+| `MV_APPEND(arr1,expr)` | appends expr to arr, the resulting array type determined by the type of the first array |
+| `MV_CONCAT(arr1,arr2)` | concatenates 2 arrays, the resulting array type determined by the type of the first array |
+| `MV_SLICE(arr,start,end)` | return the subarray of arr from the 0 based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or less than end|
+| `MV_TO_STRING(arr,str)` | joins all elements of arr by the delimiter specified by str |
+| `STRING_TO_MV(str1,str2)` | splits str1 into an array on the delimiter specified by str2 |
+
 ### Other functions
 
 |Function|Notes|
@@ -274,7 +372,9 @@ simplest way to write literal timestamps in other time zones is to use TIME_PARS
 |`CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`|Searched CASE.|
 |`NULLIF(value1, value2)`|Returns NULL if value1 and value2 match, else returns value1.|
 |`COALESCE(value1, value2, ...)`|Returns the first value that is neither NULL nor empty string.|
-|`BLOOM_FILTER_TEST(<expr>, <serialized-filter>)`|Returns true if the value is contained in the base64 serialized bloom filter. See [bloom filter extension](../development/extensions-core/bloom-filter.html) documentation for additional details.
+|`NVL(expr,expr-for-null)`|Returns 'expr-for-null' if 'expr' is null (or empty string for string type).|
+|`BLOOM_FILTER_TEST(<expr>, <serialized-filter>)`|Returns true if the value is contained in the base64 serialized bloom filter. See [bloom filter extension](../development/extensions-core/bloom-filter.html) documentation for additional details.|
+
 ### Unsupported features
 
 Druid does not support all SQL features, including:
@@ -286,57 +386,10 @@ Druid does not support all SQL features, including:
 
 Additionally, some Druid features are not supported by the SQL language. Some unsupported Druid features include:
 
-- [Multi-value dimensions](multi-value-dimensions.html).
-- [DataSketches aggregators](../development/extensions-core/datasketches-extension.html).
+- [Set operations on DataSketches aggregators](../development/extensions-core/datasketches-extension.html).
 - [Spatial filters](../development/geo.html).
 - [Query cancellation](querying.html#query-cancellation).
 
-## Data types and casts
-
-Druid natively supports five basic column types: "long" (64 bit signed int), "float" (32 bit float), "double" (64 bit
-float) "string" (UTF-8 encoded strings), and "complex" (catch-all for more exotic data types like hyperUnique and
-approxHistogram columns).
-
-Timestamps (including the `__time` column) are treated by Druid as longs, with the value being the number of
-milliseconds since 1970-01-01 00:00:00 UTC, not counting leap seconds. Therefore, timestamps in Druid do not carry any
-timezone information, but only carry information about the exact moment in time they represent. See the
-[Time functions](#time-functions) section for more information about timestamp handling.
-
-Druid generally treats NULLs and empty strings interchangeably, rather than according to the SQL standard. As such,
-Druid SQL only has partial support for NULLs. For example, the expressions `col IS NULL` and `col = ''` are equivalent,
-and both will evaluate to true if `col` contains an empty string. Similarly, the expression `COALESCE(col1, col2)` will
-return `col2` if `col1` is an empty string. While the `COUNT(*)` aggregator counts all rows, the `COUNT(expr)`
-aggregator will count the number of rows where expr is neither null nor the empty string. String columns in Druid are
-NULLable. Numeric columns are NOT NULL; if you query a numeric column that is not present in all segments of your Druid
-datasource, then it will be treated as zero for rows from those segments.
-
-For mathematical operations, Druid SQL will use integer math if all operands involved in an expression are integers.
-Otherwise, Druid will switch to floating point math. You can force this to happen by casting one of your operands
-to FLOAT. At runtime, Druid may widen 32-bit floats to 64-bit for certain operators, like SUM aggregators.
-
-The following table describes how SQL types map onto Druid types during query runtime. Casts between two SQL types
-that have the same Druid runtime type will have no effect, other than exceptions noted in the table. Casts between two
-SQL types that have different Druid runtime types will generate a runtime cast in Druid. If a value cannot be properly
-cast to another value, as in `CAST('foo' AS BIGINT)`, the runtime will substitute a default value. NULL values cast
-to non-nullable types will also be substitued with a default value (for example, nulls cast to numbers will be
-converted to zeroes).
-
-|SQL type|Druid runtime type|Default value|Notes|
-|--------|------------------|-------------|-----|
-|CHAR|STRING|`''`||
-|VARCHAR|STRING|`''`|Druid STRING columns are reported as VARCHAR|
-|DECIMAL|DOUBLE|`0.0`|DECIMAL uses floating point, not fixed point math|
-|FLOAT|FLOAT|`0.0`|Druid FLOAT columns are reported as FLOAT|
-|REAL|DOUBLE|`0.0`||
-|DOUBLE|DOUBLE|`0.0`|Druid DOUBLE columns are reported as DOUBLE|
-|BOOLEAN|LONG|`false`||
-|TINYINT|LONG|`0`||
-|SMALLINT|LONG|`0`||
-|INTEGER|LONG|`0`||
-|BIGINT|LONG|`0`|Druid LONG columns (except `__time`) are reported as BIGINT|
-|TIMESTAMP|LONG|`0`, meaning 1970-01-01 00:00:00 UTC|Druid's `__time` column is reported as TIMESTAMP. Casts between string and timestamp types assume standard SQL formatting, e.g. `2000-01-02 03:04:05`, _not_ ISO8601 formatting. For handling other formats, use one of the [time functions](#time-functions)|
-|DATE|LONG|`0`, meaning 1970-01-01|Casting TIMESTAMP to DATE rounds down the timestamp to the nearest day. Casts between string and date types assume standard SQL formatting, e.g. `2000-01-02`. For handling other formats, use one of the [time functions](#time-functions)|
-|OTHER|COMPLEX|none|May represent various Druid column types such as hyperUnique, approxHistogram, etc|
 
 ## Query execution
 
@@ -530,12 +583,12 @@ Connection context can be specified as JDBC connection properties or as a "conte
 |---------|-----------|-------------|
 |`sqlQueryId`|Unique identifier given to this SQL query. For HTTP client, it will be returned in `X-Druid-SQL-Query-Id` header.|auto-generated|
 |`sqlTimeZone`|Sets the time zone for this connection, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|druid.sql.planner.sqlTimeZone on the Broker (default: UTC)|
-|`useApproximateCountDistinct`|Whether to use an approximate cardinalty algorithm for `COUNT(DISTINCT foo)`.|druid.sql.planner.useApproximateCountDistinct on the Broker (default: true)|
+|`useApproximateCountDistinct`|Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.|druid.sql.planner.useApproximateCountDistinct on the Broker (default: true)|
 |`useApproximateTopN`|Whether to use approximate [TopN queries](topnquery.html) when a SQL query could be expressed as such. If false, exact [GroupBy queries](groupbyquery.html) will be used instead.|druid.sql.planner.useApproximateTopN on the Broker (default: true)|
 
 ### Retrieving metadata
 
-Druid Brokers infer table and column metadata for each dataSource from segments loaded in the cluster, and use this to
+Druid Brokers infer table and column metadata for each datasource from segments loaded in the cluster, and use this to
 plan SQL queries. This metadata is cached on Broker startup and also updated periodically in the background through
 [SegmentMetadata queries](segmentmetadataquery.html). Background metadata refreshing is triggered by
 segments entering and exiting the cluster, and can also be throttled through configuration.
@@ -604,7 +657,7 @@ The "sys" schema provides visibility into Druid segments, servers and tasks.
 Segments table provides details on all Druid segments, whether they are published yet or not.
 
 #### CAVEAT
-Note that a segment can be served by more than one stream ingestion tasks or Historical processes, in that case it would have multiple replicas. These replicas are weakly consistent with each other when served by multiple ingestion tasks, until a segment is eventually served by a Historical, at that point the segment is immutable. Broker prefers to query a segment from Historical over an ingestion task. But if a segment has multiple realtime replicas, for eg. kafka index tasks, and one task is slower than other, then the sys.segments query results can vary for the duration of the tasks because only one of the ingestion tasks is queried by the Broker and it is not gauranteed that the same task gets picked everytime. The `num_rows` column of segments table can have inconsistent values during this period. There is an open [issue](https://github.com/apache/incubator-druid/issues/5915) about this inconsistency with stream ingestion tasks.
+Note that a segment can be served by more than one stream ingestion tasks or Historical processes, in that case it would have multiple replicas. These replicas are weakly consistent with each other when served by multiple ingestion tasks, until a segment is eventually served by a Historical, at that point the segment is immutable. Broker prefers to query a segment from Historical over an ingestion task. But if a segment has multiple realtime replicas, for eg. kafka index tasks, and one task is slower than other, then the sys.segments query results can vary for the duration of the tasks because only one of the ingestion tasks is queried by the Broker and it is not guaranteed that the same task gets picked every time. The `num_rows` column of segments table can have inconsistent values during this period. There is an open [issue](https://github.com/apache/incubator-druid/issues/5915) about this inconsistency with stream ingestion tasks.
 
 |Column|Type|Notes|
 |------|-----|-----|
@@ -616,10 +669,10 @@ Note that a segment can be served by more than one stream ingestion tasks or His
 |version|STRING|Version string (generally an ISO8601 timestamp corresponding to when the segment set was first started). Higher version means the more recently created segment. Version comparing is based on string comparison.|
 |partition_num|LONG|Partition number (an integer, unique within a datasource+interval+version; may not necessarily be contiguous)|
 |num_replicas|LONG|Number of replicas of this segment currently being served|
-|num_rows|LONG|Number of rows in current segment, this value could be null if unkown to Broker at query time|
+|num_rows|LONG|Number of rows in current segment, this value could be null if unknown to Broker at query time|
 |is_published|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 represents this segment has been published to the metadata store with `used=1`|
 |is_available|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is currently being served by any process(Historical or realtime)|
-|is_realtime|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is being served on any type of realtime tasks|
+|is_realtime|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is _only_ served by realtime tasks, and 0 if any historical process is serving this segment|
 |is_overshadowed|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is published and is _fully_ overshadowed by some other published segments. Currently, is_overshadowed is always false for unpublished segments, although this may change in the future. You can filter for segments that "should be published" by filtering for `is_published = 1 AND is_overshadowed = 0`. Segments can briefly be both published and overshadowed if they were recently replaced, but have not been unpublished yet.
 |payload|STRING|JSON-serialized data segment payload|
 
@@ -672,22 +725,22 @@ SERVER_SEGMENTS is used to join servers with segments table
 |server|STRING|Server name in format host:port (Primary key of [servers table](#SERVERS-table))|
 |segment_id|STRING|Segment identifier (Primary key of [segments table](#SEGMENTS-table))|
 
-JOIN between "servers" and "segments" can be used to query the number of segments for a specific datasource, 
+JOIN between "servers" and "segments" can be used to query the number of segments for a specific datasource,
 grouped by server, example query:
 
 ```sql
-SELECT count(segments.segment_id) as num_segments from sys.segments as segments 
-INNER JOIN sys.server_segments as server_segments 
-ON segments.segment_id  = server_segments.segment_id 
-INNER JOIN sys.servers as servers 
+SELECT count(segments.segment_id) as num_segments from sys.segments as segments
+INNER JOIN sys.server_segments as server_segments
+ON segments.segment_id  = server_segments.segment_id
+INNER JOIN sys.servers as servers
 ON servers.server = server_segments.server
-WHERE segments.datasource = 'wikipedia' 
+WHERE segments.datasource = 'wikipedia'
 GROUP BY servers.server;
 ```
 
 ### TASKS table
 
-The tasks table provides information about active and recently-completed indexing tasks. For more information 
+The tasks table provides information about active and recently-completed indexing tasks. For more information
 check out [ingestion tasks](#../ingestion/tasks.html)
 
 |Column|Type|Notes|
@@ -720,7 +773,7 @@ The Druid SQL server is configured through the following properties on the Broke
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.sql.enable`|Whether to enable SQL at all, including background metadata fetching. If false, this overrides all other SQL-related properties and disables SQL metadata, serving, and planning completely.|false|
+|`druid.sql.enable`|Whether to enable SQL at all, including background metadata fetching. If false, this overrides all other SQL-related properties and disables SQL metadata, serving, and planning completely.|true|
 |`druid.sql.avatica.enable`|Whether to enable JDBC querying at `/druid/v2/sql/avatica/`.|true|
 |`druid.sql.avatica.maxConnections`|Maximum number of open connections for the Avatica server. These are not HTTP connections, but are logical client connections that may span multiple HTTP connections.|25|
 |`druid.sql.avatica.maxRowsPerFrame`|Maximum number of rows to return in a single JDBC frame. Setting this property to -1 indicates that no row limit should be applied. Clients can optionally specify a row limit in their requests; if a client specifies a row limit, the lesser value of the client-provided limit and `maxRowsPerFrame` will be used.|5,000|
@@ -733,9 +786,9 @@ The Druid SQL server is configured through the following properties on the Broke
 |`druid.sql.planner.metadataRefreshPeriod`|Throttle for metadata refreshes.|PT1M|
 |`druid.sql.planner.useApproximateCountDistinct`|Whether to use an approximate cardinalty algorithm for `COUNT(DISTINCT foo)`.|true|
 |`druid.sql.planner.useApproximateTopN`|Whether to use approximate [TopN queries](../querying/topnquery.html) when a SQL query could be expressed as such. If false, exact [GroupBy queries](../querying/groupbyquery.html) will be used instead.|true|
-|`druid.sql.planner.requireTimeCondition`|Whether to require SQL to have filter conditions on __time column so that all generated native queries will have user specified intervals. If true, all queries wihout filter condition on __time column will fail|false|
+|`druid.sql.planner.requireTimeCondition`|Whether to require SQL to have filter conditions on __time column so that all generated native queries will have user specified intervals. If true, all queries without filter condition on __time column will fail|false|
 |`druid.sql.planner.sqlTimeZone`|Sets the default time zone for the server, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|UTC|
-|`druid.sql.planner.metadataSegmentCacheEnable`|Whether to keep a cache of published segments in broker. If true, broker polls coordinator in background to get segments from metadata store and maintains a local cache. If false, coordinator's REST api will be invoked when broker needs published segments info.|false|
+|`druid.sql.planner.metadataSegmentCacheEnable`|Whether to keep a cache of published segments in broker. If true, broker polls coordinator in background to get segments from metadata store and maintains a local cache. If false, coordinator's REST API will be invoked when broker needs published segments info.|false|
 |`druid.sql.planner.metadataSegmentPollPeriod`|How often to poll coordinator for published segments list if `druid.sql.planner.metadataSegmentCacheEnable` is set to true. Poll period is in milliseconds. |60000|
 
 ## SQL Metrics

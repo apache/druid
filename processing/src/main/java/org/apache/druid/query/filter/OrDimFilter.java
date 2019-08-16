@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -107,7 +108,7 @@ public class OrDimFilter implements DimFilter
   }
 
   @Override
-  public HashSet<String> getRequiredColumns()
+  public Set<String> getRequiredColumns()
   {
     HashSet<String> requiredColumns = new HashSet<>();
     fields.forEach(field -> requiredColumns.addAll(field.getRequiredColumns()));

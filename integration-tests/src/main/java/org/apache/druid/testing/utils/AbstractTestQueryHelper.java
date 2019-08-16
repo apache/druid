@@ -38,7 +38,7 @@ import java.util.Map;
 public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQueryWithResults>
 {
 
-  public static Logger LOG = new Logger(TestQueryHelper.class);
+  public static final Logger LOG = new Logger(TestQueryHelper.class);
   private final AbstractQueryResourceTestClient queryClient;
   private final ObjectMapper jsonMapper;
   protected final String broker;

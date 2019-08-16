@@ -57,8 +57,14 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
     final Pattern pattern = Pattern.compile(String.valueOf(patternExpr.getLiteralValue()));
 
     final int index = indexExpr == null ? 0 : ((Number) indexExpr.getLiteralValue()).intValue();
-    class RegexpExtractExpr implements Expr
+
+    class RegexpExtractExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
+      private RegexpExtractExpr(Expr arg)
+      {
+        super(arg);
+      }
+
       @Nonnull
       @Override
       public ExprEval eval(final ObjectBinding bindings)
@@ -70,12 +76,12 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
       }
 
       @Override
-      public void visit(final Visitor visitor)
+      public Expr visit(Shuttle shuttle)
       {
-        arg.visit(visitor);
-        visitor.visit(this);
+        Expr newArg = arg.visit(shuttle);
+        return shuttle.visit(new RegexpExtractExpr(newArg));
       }
     }
-    return new RegexpExtractExpr();
+    return new RegexpExtractExpr(arg);
   }
 }

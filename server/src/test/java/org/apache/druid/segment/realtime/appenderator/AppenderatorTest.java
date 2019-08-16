@@ -37,6 +37,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
@@ -51,7 +52,6 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -508,7 +508,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results1 =
-          QueryPlus.wrap(query1).run(appenderator, ImmutableMap.of()).toList();
+          QueryPlus.wrap(query1).run(appenderator, ResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           "query1",
           ImmutableList.of(
@@ -534,7 +534,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results2 =
-          QueryPlus.wrap(query2).run(appenderator, ImmutableMap.of()).toList();
+          QueryPlus.wrap(query2).run(appenderator, ResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           "query2",
           ImmutableList.of(
@@ -564,7 +564,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results3 =
-          QueryPlus.wrap(query3).run(appenderator, ImmutableMap.of()).toList();
+          QueryPlus.wrap(query3).run(appenderator, ResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           ImmutableList.of(
               new Result<>(
@@ -598,7 +598,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results4 =
-          QueryPlus.wrap(query4).run(appenderator, ImmutableMap.of()).toList();
+          QueryPlus.wrap(query4).run(appenderator, ResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           ImmutableList.of(
               new Result<>(
@@ -654,7 +654,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results1 =
-          QueryPlus.wrap(query1).run(appenderator, ImmutableMap.of()).toList();
+          QueryPlus.wrap(query1).run(appenderator, ResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           "query1",
           ImmutableList.of(
@@ -690,7 +690,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results2 =
-          QueryPlus.wrap(query2).run(appenderator, ImmutableMap.of()).toList();
+          QueryPlus.wrap(query2).run(appenderator, ResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           "query2",
           ImmutableList.of(
@@ -731,7 +731,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results3 =
-          QueryPlus.wrap(query3).run(appenderator, ImmutableMap.of()).toList();
+          QueryPlus.wrap(query3).run(appenderator, ResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           "query3",
           ImmutableList.of(
@@ -766,7 +766,7 @@ public class AppenderatorTest
                                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                      .build();
       final List<ScanResultValue> results4 =
-          QueryPlus.wrap(query4).run(appenderator, new HashMap<>()).toList();
+          QueryPlus.wrap(query4).run(appenderator, ResponseContext.createEmpty()).toList();
       Assert.assertEquals(2, results4.size()); // 2 segments, 1 row per segment
       Assert.assertArrayEquals(new String[]{"__time", "dim", "count", "met"}, results4.get(0).getColumns().toArray());
       Assert.assertArrayEquals(

@@ -344,8 +344,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 
       PartialDruidQuery newPartialQuery = PartialDruidQuery.create(leftPartialQuery.getScan())
                                                            .withWhereFilter(newWhereFilter)
-                                                           .withSelectProject(leftPartialQuery.getSelectProject())
-                                                           .withSelectSort(leftPartialQuery.getSelectSort());
+                                                           .withSelectProject(leftPartialQuery.getSelectProject());
 
       if (leftPartialQuery.getAggregate() != null) {
         newPartialQuery = newPartialQuery.withAggregate(leftPartialQuery.getAggregate());

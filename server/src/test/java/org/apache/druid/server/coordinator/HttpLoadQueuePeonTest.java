@@ -82,10 +82,7 @@ public class HttpLoadQueuePeonTest
       null,
       10,
       null,
-      false,
-      false,
-      Duration.ZERO,
-      Duration.millis(10)
+      Duration.ZERO
   )
   {
     @Override

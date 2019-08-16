@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import "../../variables";
+@import '../../variables';
 
 .servers-view {
   height: 100%;
@@ -26,7 +26,7 @@
     margin-bottom: $standard-padding;
   }
 
-  .ReactTable{
+  .ReactTable {
     position: absolute;
     top: $view-control-bar-height + $standard-padding;
     bottom: 0;
@@ -48,7 +48,7 @@
       height: 100%;
       background-color: #85cc00;
       border-radius: 2px;
-      transition: all .2s ease-out;
+      transition: all 0.2s ease-out;
     }
 
     .label {

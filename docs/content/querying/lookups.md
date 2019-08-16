@@ -132,6 +132,8 @@ The configuration is propagated to the query serving processes (Broker / Router 
 The query serving processes have an internal API for managing lookups on the process and those are used by the Coordinator.
 The Coordinator periodically checks if any of the processes need to load/drop lookups and updates them appropriately.
 
+Please note that only 2 simultaneous lookup configuration propagation requests can be concurrently handled by a single query serving process. This limit is applied to prevent lookup handling from consuming too many server HTTP connections.
+
 # API for configuring lookups
 
 ## Bulk update
@@ -292,7 +294,10 @@ Using the prior example, a `GET` to `/druid/coordinator/v1/lookups/config/realti
 ```
 
 ## Delete Lookup
-A `DELETE` to `/druid/coordinator/v1/lookups/config/{tier}/{id}` will remove that lookup from the cluster.
+A `DELETE` to `/druid/coordinator/v1/lookups/config/{tier}/{id}` will remove that lookup from the cluster. If it was last lookup in the tier, then tier is deleted as well.
+
+## Delete Tier
+A `DELETE` to `/druid/coordinator/v1/lookups/config/{tier}` will remove that tier from the cluster.
 
 ## List tier names
 A `GET` to `/druid/coordinator/v1/lookups/config` will return a list of known tier names in the dynamic configuration.

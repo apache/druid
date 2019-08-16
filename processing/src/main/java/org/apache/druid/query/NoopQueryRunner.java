@@ -21,15 +21,14 @@ package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-
-import java.util.Map;
+import org.apache.druid.query.context.ResponseContext;
 
 /**
 */
 public class NoopQueryRunner<T> implements QueryRunner<T>
 {
   @Override
-  public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+  public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
     return Sequences.empty();
   }

@@ -20,18 +20,21 @@
 package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import com.google.common.hash.HashCode;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
 
-import java.util.HashSet;
+import javax.annotation.Nullable;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  */
@@ -41,13 +44,17 @@ public class BloomDimFilter implements DimFilter
   private final String dimension;
   private final BloomKFilter bloomKFilter;
   private final HashCode hash;
+  @Nullable
   private final ExtractionFn extractionFn;
+  @Nullable
+  private final FilterTuning filterTuning;
 
   @JsonCreator
   public BloomDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("bloomKFilter") BloomKFilterHolder bloomKFilterHolder,
-      @JsonProperty("extractionFn") ExtractionFn extractionFn
+      @JsonProperty("extractionFn") @Nullable ExtractionFn extractionFn,
+      @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
@@ -56,6 +63,13 @@ public class BloomDimFilter implements DimFilter
     this.bloomKFilter = bloomKFilterHolder.getFilter();
     this.hash = bloomKFilterHolder.getFilterHash();
     this.extractionFn = extractionFn;
+    this.filterTuning = filterTuning;
+  }
+
+  @VisibleForTesting
+  public BloomDimFilter(String dimension, BloomKFilterHolder bloomKFilterHolder, @Nullable ExtractionFn extractionFn)
+  {
+    this(dimension, bloomKFilterHolder, extractionFn, null);
   }
 
   @Override
@@ -152,7 +166,8 @@ public class BloomDimFilter implements DimFilter
             };
           }
         },
-        extractionFn
+        extractionFn,
+        filterTuning
     );
   }
 
@@ -168,20 +183,40 @@ public class BloomDimFilter implements DimFilter
     return bloomKFilter;
   }
 
+  @Nullable
   @JsonProperty
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
   }
 
+  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonProperty
+  public FilterTuning getFilterTuning()
+  {
+    return filterTuning;
+  }
+
+  @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
+  {
+    return null;
+  }
+
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return ImmutableSet.of(dimension);
+  }
+
   @Override
   public String toString()
   {
-    if (extractionFn != null) {
-      return StringUtils.format("%s(%s) = %s", extractionFn, dimension, hash.toString());
-    } else {
-      return StringUtils.format("%s = %s", dimension, hash.toString());
-    }
+    return new DimFilterToStringBuilder().appendDimension(dimension, extractionFn)
+                                         .appendEquals(hash.toString())
+                                         .appendFilterTuning(filterTuning)
+                                         .build();
   }
 
   @Override
@@ -193,36 +228,16 @@ public class BloomDimFilter implements DimFilter
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     BloomDimFilter that = (BloomDimFilter) o;
-
-    if (!dimension.equals(that.dimension)) {
-      return false;
-    }
-    if (hash != null ? !hash.equals(that.hash) : that.hash != null) {
-      return false;
-    }
-    return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
-  }
-
-  @Override
-  public RangeSet<String> getDimensionRangeSet(String dimension)
-  {
-    return null;
-  }
-
-  @Override
-  public HashSet<String> getRequiredColumns()
-  {
-    return Sets.newHashSet(dimension);
+    return dimension.equals(that.dimension) &&
+           hash.equals(that.hash) &&
+           Objects.equals(extractionFn, that.extractionFn) &&
+           Objects.equals(filterTuning, that.filterTuning);
   }
 
   @Override
   public int hashCode()
   {
-    int result = dimension.hashCode();
-    result = 31 * result + (hash != null ? hash.hashCode() : 0);
-    result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
-    return result;
+    return Objects.hash(dimension, hash, extractionFn, filterTuning);
   }
 }

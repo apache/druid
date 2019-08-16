@@ -1,23 +1,22 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe lookups view lookups view snapshot 1`] = `
+exports[`lookups view matches snapshot 1`] = `
 <div
   className="lookups-view app-view"
 >
   <ViewControlBar
     label="Lookups"
   >
-    <Blueprint3.Button
-      icon="refresh"
-      onClick={[Function]}
-      text="Refresh"
+    <RefreshButton
+      localStorageKey="lookups-refresh-rate"
+      onRefresh={[Function]}
     />
     <Blueprint3.Button
       icon="plus"
       onClick={[Function]}
-      text="Add"
+      text="Add lookup"
     />
-    <TableColumnSelection
+    <TableColumnSelector
       columns={
         Array [
           "Lookup name",
@@ -64,6 +63,7 @@ exports[`describe lookups view lookups view snapshot 1`] = `
         "Header": undefined,
         "Pivot": undefined,
         "PivotValue": undefined,
+        "Placeholder": undefined,
         "aggregate": undefined,
         "className": "",
         "filterAll": false,
@@ -76,6 +76,7 @@ exports[`describe lookups view lookups view snapshot 1`] = `
         "getProps": [Function],
         "headerClassName": "",
         "headerStyle": Object {},
+        "minResizeWidth": 11,
         "minWidth": 100,
         "resizable": undefined,
         "show": true,
@@ -88,28 +89,28 @@ exports[`describe lookups view lookups view snapshot 1`] = `
       Array [
         Object {
           "Header": "Lookup name",
-          "accessor": [Function],
+          "accessor": "id",
           "filterable": true,
           "id": "lookup_name",
           "show": true,
         },
         Object {
           "Header": "Tier",
-          "accessor": [Function],
+          "accessor": "tier",
           "filterable": true,
           "id": "tier",
           "show": true,
         },
         Object {
           "Header": "Type",
-          "accessor": [Function],
+          "accessor": "spec.type",
           "filterable": true,
           "id": "type",
           "show": true,
         },
         Object {
           "Header": "Version",
-          "accessor": [Function],
+          "accessor": "version",
           "filterable": true,
           "id": "version",
           "show": true,
@@ -129,6 +130,7 @@ exports[`describe lookups view lookups view snapshot 1`] = `
     defaultExpanded={Object {}}
     defaultFilterMethod={[Function]}
     defaultFiltered={Array []}
+    defaultPage={0}
     defaultPageSize={50}
     defaultResized={Array []}
     defaultSortDesc={false}
@@ -177,6 +179,7 @@ exports[`describe lookups view lookups view snapshot 1`] = `
     ofText="of"
     onFetchData={[Function]}
     originalKey="_original"
+    pageJumpText="jump to page"
     pageSizeOptions={
       Array [
         5,
@@ -194,6 +197,7 @@ exports[`describe lookups view lookups view snapshot 1`] = `
     previousText="Previous"
     resizable={true}
     resolveData={[Function]}
+    rowsSelectorText="rows per page"
     rowsText="rows"
     showPageJump={true}
     showPageSizeOptions={true}
@@ -216,17 +220,5 @@ exports[`describe lookups view lookups view snapshot 1`] = `
     onClose={[Function]}
     onSubmit={[Function]}
   />
-  <AsyncActionDialog
-    action={null}
-    confirmButtonText="Delete lookup"
-    failText="Could not delete lookup"
-    intent="danger"
-    onClose={[Function]}
-    successText="Lookup was deleted"
-  >
-    <p>
-      Are you sure you want to delete the lookup 'null'?
-    </p>
-  </AsyncActionDialog>
 </div>
 `;

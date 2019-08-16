@@ -35,6 +35,7 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
@@ -77,6 +78,7 @@ public class MaterializedViewSupervisor implements Supervisor
   private final TaskMaster taskMaster;
   private final TaskStorage taskStorage;
   private final MaterializedViewTaskConfig config;
+  private final SupervisorStateManager stateManager;
   private final String dataSource;
   private final String supervisorId;
   private final int maxTaskCount;
@@ -93,7 +95,7 @@ public class MaterializedViewSupervisor implements Supervisor
   // In the missing intervals, baseDataSource has data but derivedDataSource does not, which means
   // data in these intervals of derivedDataSource needs to be rebuilt.
   private Set<Interval> missInterval = new HashSet<>();
-  
+
   public MaterializedViewSupervisor(
       TaskMaster taskMaster,
       TaskStorage taskStorage,
@@ -111,6 +113,7 @@ public class MaterializedViewSupervisor implements Supervisor
     this.metadataSupervisorManager = metadataSupervisorManager;
     this.config = config;
     this.spec = spec;
+    this.stateManager = new SupervisorStateManager(spec.getSupervisorStateManagerConfig(), spec.isSuspended());
     this.dataSource = spec.getDataSourceName();
     this.supervisorId = StringUtils.format("MaterializedViewSupervisor-%s", dataSource);
     this.maxTaskCount = spec.getContext().containsKey("maxTaskCount")
@@ -120,17 +123,17 @@ public class MaterializedViewSupervisor implements Supervisor
         ? Long.parseLong(String.valueOf(spec.getContext().get("minDataLagMs")))
         : DEFAULT_MIN_DATA_LAG_MS;
   }
-  
+
   @Override
-  public void start() 
+  public void start()
   {
     synchronized (stateLock) {
       Preconditions.checkState(!started, "already started");
-      
+
       DataSourceMetadata metadata = metadataStorageCoordinator.getDataSourceMetadata(dataSource);
       if (null == metadata) {
         metadataStorageCoordinator.insertDataSourceMetadata(
-            dataSource, 
+            dataSource,
             new DerivativeDataSourceMetadata(spec.getBaseDataSource(), spec.getDimensions(), spec.getMetrics())
         );
       }
@@ -175,15 +178,22 @@ public class MaterializedViewSupervisor implements Supervisor
       }
     }
     catch (Exception e) {
+      stateManager.recordThrowableEvent(e);
       log.makeAlert(e, StringUtils.format("uncaught exception in %s.", supervisorId)).emit();
+    }
+    finally {
+      stateManager.markRunFinished();
     }
   }
 
   @Override
-  public void stop(boolean stopGracefully) 
+  public void stop(boolean stopGracefully)
   {
     synchronized (stateLock) {
       Preconditions.checkState(started, "not started");
+
+      stateManager.maybeSetState(SupervisorStateManager.BasicState.STOPPING);
+
       // stop all schedulers and threads
       if (stopGracefully) {
         synchronized (taskLock) {
@@ -214,7 +224,7 @@ public class MaterializedViewSupervisor implements Supervisor
   }
 
   @Override
-  public SupervisorReport getStatus() 
+  public SupervisorReport getStatus()
   {
     return new MaterializedViewSupervisorReport(
         dataSource,
@@ -223,8 +233,23 @@ public class MaterializedViewSupervisor implements Supervisor
         spec.getBaseDataSource(),
         spec.getDimensions(),
         spec.getMetrics(),
-        JodaUtils.condenseIntervals(missInterval)
+        JodaUtils.condenseIntervals(missInterval),
+        stateManager.isHealthy(),
+        stateManager.getSupervisorState().getBasicState(),
+        stateManager.getExceptionEvents()
     );
+  }
+
+  @Override
+  public SupervisorStateManager.State getState()
+  {
+    return stateManager.getSupervisorState();
+  }
+
+  @Override
+  public Boolean isHealthy()
+  {
+    return stateManager.isHealthy();
   }
 
   @Override
@@ -293,7 +318,7 @@ public class MaterializedViewSupervisor implements Supervisor
       submitTasks(sortedToBuildVersion, baseSegments);
     }
   }
-  
+
   @VisibleForTesting
   Pair<Map<Interval, HadoopIndexTask>, Map<Interval, String>> getRunningTasks()
   {
@@ -311,7 +336,7 @@ public class MaterializedViewSupervisor implements Supervisor
    *
    * @return the left part of Pair: interval -> version, and the right part: interval -> DataSegment list.
    *          Version and DataSegment list can be used to create HadoopIndexTask.
-   *          Derived datasource data in all these intervals need to be rebuilt. 
+   *          Derived datasource data in all these intervals need to be rebuilt.
    */
   @VisibleForTesting
   Pair<SortedMap<Interval, String>, Map<Interval, List<DataSegment>>> checkSegments()
@@ -346,16 +371,12 @@ public class MaterializedViewSupervisor implements Supervisor
     Map<Interval, String> toDropInterval = new HashMap<>(difference.entriesOnlyOnRight());
     // if some intervals are in running tasks and the versions are the same, remove it from toBuildInterval
     // if some intervals are in running tasks, but the versions are different, stop the task. 
-    for (Interval interval : runningVersion.keySet()) {
-      if (toBuildInterval.containsKey(interval) 
-          && toBuildInterval.get(interval).equals(runningVersion.get(interval))
-          ) {
+    for (Map.Entry<Interval, String> version : runningVersion.entrySet()) {
+      final Interval interval = version.getKey();
+      final String host = version.getValue();
+      if (toBuildInterval.containsKey(interval) && toBuildInterval.get(interval).equals(host)) {
         toBuildInterval.remove(interval);
-
-      } else if (
-          toBuildInterval.containsKey(interval) 
-          && !toBuildInterval.get(interval).equals(runningVersion.get(interval))
-      ) {
+      } else if (toBuildInterval.containsKey(interval) && !toBuildInterval.get(interval).equals(host)) {
         if (taskMaster.getTaskQueue().isPresent()) {
           taskMaster.getTaskQueue().get().shutdown(runningTasks.get(interval).getId(), "version mismatch");
           runningTasks.remove(interval);
@@ -365,7 +386,7 @@ public class MaterializedViewSupervisor implements Supervisor
     // drop derivative segments which interval equals the interval in toDeleteBaseSegments 
     for (Interval interval : toDropInterval.keySet()) {
       for (DataSegment segment : derivativeSegments.get(interval)) {
-        segmentManager.removeSegment(segment.getId());
+        segmentManager.markSegmentAsUnused(segment.getId().toString());
       }
     }
     // data of the latest interval will be built firstly.
@@ -374,7 +395,7 @@ public class MaterializedViewSupervisor implements Supervisor
   }
 
   private void submitTasks(
-      SortedMap<Interval, String> sortedToBuildVersion, 
+      SortedMap<Interval, String> sortedToBuildVersion,
       Map<Interval, List<DataSegment>> baseSegments
   )
   {
@@ -397,7 +418,7 @@ public class MaterializedViewSupervisor implements Supervisor
       }
     }
   }
-  
+
   private Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> getVersionAndBaseSegments(
       List<DataSegment> snapshot
   )
@@ -412,7 +433,7 @@ public class MaterializedViewSupervisor implements Supervisor
     }
     return new Pair<>(versions, segments);
   }
-  
+
   private Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> getMaxCreateDateAndBaseSegments(
       List<Pair<DataSegment, String>> snapshot
   )
@@ -432,9 +453,9 @@ public class MaterializedViewSupervisor implements Supervisor
         continue;
       }
       maxCreatedDate.put(
-          interval, 
+          interval,
           DateTimes.max(
-              DateTimes.of(createDate), 
+              DateTimes.of(createDate),
               DateTimes.of(maxCreatedDate.getOrDefault(interval, DateTimes.MIN.toString()))
           ).toString()
       );
@@ -457,8 +478,8 @@ public class MaterializedViewSupervisor implements Supervisor
   {
     return minDataLagMs <= (maxInterval.getStartMillis() - target.getStartMillis());
   }
-  
-  private void clearTasks() 
+
+  private void clearTasks()
   {
     for (HadoopIndexTask task : runningTasks.values()) {
       if (taskMaster.getTaskQueue().isPresent()) {
@@ -468,15 +489,15 @@ public class MaterializedViewSupervisor implements Supervisor
     runningTasks.clear();
     runningVersion.clear();
   }
-  
+
   private void clearSegments()
   {
     log.info("Clear all metadata of dataSource %s", dataSource);
     metadataStorageCoordinator.deletePendingSegments(dataSource, ALL_INTERVAL);
-    segmentManager.removeDataSource(dataSource);
+    segmentManager.markAsUnusedAllSegmentsInDataSource(dataSource);
     metadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
   }
-  
+
   private void commitDataSourceMetadata(DataSourceMetadata dataSourceMetadata)
   {
     if (!metadataStorageCoordinator.insertDataSourceMetadata(dataSource, dataSourceMetadata)) {
@@ -485,7 +506,7 @@ public class MaterializedViewSupervisor implements Supervisor
             dataSource,
             dataSourceMetadata
         );
-      } 
+      }
       catch (IOException e) {
         throw new RuntimeException(e);
       }

@@ -21,6 +21,7 @@ package org.apache.druid.timeline;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
 /**
  * DataSegment object plus the overshadowed status for the segment. An immutable object.
@@ -31,6 +32,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOvershadowedStatus>
 {
   private final boolean overshadowed;
+  /**
+   * dataSegment is serialized "unwrapped", i.e. it's properties are included as properties of
+   * enclosing class. If in future, if {@Code SegmentWithOvershadowedStatus} were to extend {@link DataSegment},
+   * there will be no change in the serialized format.
+   */
+  @JsonUnwrapped
   private final DataSegment dataSegment;
 
   @JsonCreator

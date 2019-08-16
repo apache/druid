@@ -25,6 +25,8 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 
+import javax.annotation.Nullable;
+
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -139,6 +141,7 @@ public class GenericAvroJsonProvider implements JsonProvider
     }
   }
 
+  @Nullable
   @Override
   public Object getMapValue(final Object o, final String s)
   {

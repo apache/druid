@@ -22,17 +22,25 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 public class FunctionTest
 {
-  private final Expr.ObjectBinding bindings = Parser.withMap(
-      ImmutableMap.of(
-          "x", "foo",
-          "y", 2,
-          "z", 3.1
-      )
-  );
+  private Expr.ObjectBinding bindings;
+
+  @Before
+  public void setup()
+  {
+    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+    builder.put("x", "foo");
+    builder.put("y", 2);
+    builder.put("z", 3.1);
+    builder.put("a", new String[] {"foo", "bar", "baz", "foobar"});
+    builder.put("b", new Long[] {1L, 2L, 3L, 4L, 5L});
+    builder.put("c", new Double[] {3.1, 4.2, 5.3});
+    bindings = Parser.withMap(builder.build());
+  }
 
   @Test
   public void testCaseSimple()
@@ -115,12 +123,6 @@ public class FunctionTest
     assertExpr("upper(x)", "FOO");
   }
 
-  private void assertExpr(final String expression, final Object expectedResult)
-  {
-    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
-    Assert.assertEquals(expression, expectedResult, expr.eval(bindings).value());
-  }
-
   @Test
   public void testIsNull()
   {
@@ -155,5 +157,147 @@ public class FunctionTest
     assertExpr("rpad(x, 0, 'ab')", null);
     assertExpr("rpad(x, 5, null)", null);
     assertExpr("rpad(null, 5, x)", null);
+  }
+
+  @Test
+  public void testArrayConstructor()
+  {
+    assertExpr("array(1, 2, 3, 4)", new Long[]{1L, 2L, 3L, 4L});
+    assertExpr("array(1, 2, 3, 'bar')", new Long[]{1L, 2L, 3L, null});
+    assertExpr("array(1.0)", new Double[]{1.0});
+    assertExpr("array('foo', 'bar')", new String[]{"foo", "bar"});
+  }
+
+  @Test
+  public void testArrayLength()
+  {
+    assertExpr("array_length([1,2,3])", 3L);
+    assertExpr("array_length(a)", 4);
+  }
+
+  @Test
+  public void testArrayOffset()
+  {
+    assertExpr("array_offset([1, 2, 3], 2)", 3L);
+    assertExpr("array_offset([1, 2, 3], 3)", null);
+    assertExpr("array_offset(a, 2)", "baz");
+  }
+
+  @Test
+  public void testArrayOrdinal()
+  {
+    assertExpr("array_ordinal([1, 2, 3], 3)", 3L);
+    assertExpr("array_ordinal([1, 2, 3], 4)", null);
+    assertExpr("array_ordinal(a, 3)", "baz");
+  }
+
+  @Test
+  public void testArrayOffsetOf()
+  {
+    assertExpr("array_offset_of([1, 2, 3], 3)", 2L);
+    assertExpr("array_offset_of([1, 2, 3], 4)", NullHandling.replaceWithDefault() ? -1L : null);
+    assertExpr("array_offset_of(a, 'baz')", 2);
+  }
+
+  @Test
+  public void testArrayOrdinalOf()
+  {
+    assertExpr("array_ordinal_of([1, 2, 3], 3)", 3L);
+    assertExpr("array_ordinal_of([1, 2, 3], 4)", NullHandling.replaceWithDefault() ? -1L : null);
+    assertExpr("array_ordinal_of(a, 'baz')", 3);
+  }
+
+  @Test
+  public void testArrayContains()
+  {
+    assertExpr("array_contains([1, 2, 3], 2)", 1L);
+    assertExpr("array_contains([1, 2, 3], 4)", 0L);
+    assertExpr("array_contains([1, 2, 3], [2, 3])", 1L);
+    assertExpr("array_contains([1, 2, 3], [3, 4])", 0L);
+    assertExpr("array_contains(b, [3, 4])", 1L);
+  }
+
+  @Test
+  public void testArrayOverlap()
+  {
+    assertExpr("array_overlap([1, 2, 3], [2, 4, 6])", 1L);
+    assertExpr("array_overlap([1, 2, 3], [4, 5, 6])", 0L);
+  }
+
+  @Test
+  public void testArrayAppend()
+  {
+    assertExpr("array_append([1, 2, 3], 4)", new Long[]{1L, 2L, 3L, 4L});
+    assertExpr("array_append([1, 2, 3], 'bar')", new Long[]{1L, 2L, 3L, null});
+    assertExpr("array_append([], 1)", new String[]{"1"});
+    assertExpr("array_append(cast([], 'LONG_ARRAY'), 1)", new Long[]{1L});
+  }
+
+  @Test
+  public void testArrayConcat()
+  {
+    assertExpr("array_concat([1, 2, 3], [2, 4, 6])", new Long[]{1L, 2L, 3L, 2L, 4L, 6L});
+    assertExpr("array_concat([1, 2, 3], 4)", new Long[]{1L, 2L, 3L, 4L});
+    assertExpr("array_concat(0, [1, 2, 3])", new Long[]{0L, 1L, 2L, 3L});
+    assertExpr("array_concat(map(y -> y * 3, b), [1, 2, 3])", new Long[]{3L, 6L, 9L, 12L, 15L, 1L, 2L, 3L});
+    assertExpr("array_concat(0, 1)", new Long[]{0L, 1L});
+  }
+
+  @Test
+  public void testArrayToString()
+  {
+    assertExpr("array_to_string([1, 2, 3], ',')", "1,2,3");
+    assertExpr("array_to_string([1], '|')", "1");
+    assertExpr("array_to_string(a, '|')", "foo|bar|baz|foobar");
+  }
+
+  @Test
+  public void testStringToArray()
+  {
+    assertExpr("string_to_array('1,2,3', ',')", new String[]{"1", "2", "3"});
+    assertExpr("string_to_array('1', ',')", new String[]{"1"});
+    assertExpr("string_to_array(array_to_string(a, ','), ',')", new String[]{"foo", "bar", "baz", "foobar"});
+  }
+
+  @Test
+  public void testArrayCast()
+  {
+    assertExpr("cast([1, 2, 3], 'STRING_ARRAY')", new String[]{"1", "2", "3"});
+    assertExpr("cast([1, 2, 3], 'DOUBLE_ARRAY')", new Double[]{1.0, 2.0, 3.0});
+    assertExpr("cast(c, 'LONG_ARRAY')", new Long[]{3L, 4L, 5L});
+    assertExpr("cast(string_to_array(array_to_string(b, ','), ','), 'LONG_ARRAY')", new Long[]{1L, 2L, 3L, 4L, 5L});
+    assertExpr("cast(['1.0', '2.0', '3.0'], 'LONG_ARRAY')", new Long[]{1L, 2L, 3L});
+  }
+
+  @Test
+  public void testArraySlice()
+  {
+    assertExpr("array_slice([1, 2, 3, 4], 1, 3)", new Long[] {2L, 3L});
+    assertExpr("array_slice([1.0, 2.1, 3.2, 4.3], 2)", new Double[] {3.2, 4.3});
+    assertExpr("array_slice(['a', 'b', 'c', 'd'], 4, 6)", new String[] {null, null});
+    assertExpr("array_slice([1, 2, 3, 4], 2, 2)", new Long[] {});
+    assertExpr("array_slice([1, 2, 3, 4], 5, 7)", null);
+    assertExpr("array_slice([1, 2, 3, 4], 2, 1)", null);
+  }
+
+  @Test
+  public void testArrayPrepend()
+  {
+    assertExpr("array_prepend(4, [1, 2, 3])", new Long[]{4L, 1L, 2L, 3L});
+    assertExpr("array_prepend('bar', [1, 2, 3])", new Long[]{null, 1L, 2L, 3L});
+    assertExpr("array_prepend(1, [])", new String[]{"1"});
+    assertExpr("array_prepend(1, cast([], 'LONG_ARRAY'))", new Long[]{1L});
+  }
+
+  private void assertExpr(final String expression, final Object expectedResult)
+  {
+    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
+    Assert.assertEquals(expression, expectedResult, expr.eval(bindings).value());
+  }
+
+  private void assertExpr(final String expression, final Object[] expectedResult)
+  {
+    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
+    Assert.assertArrayEquals(expression, expectedResult, expr.eval(bindings).asArray());
   }
 }

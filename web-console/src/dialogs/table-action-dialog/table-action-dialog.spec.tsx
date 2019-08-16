@@ -16,22 +16,21 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
+import React from 'react';
 
-import * as React from 'react';
-import { render } from 'react-testing-library';
+import { TableActionDialog } from './table-action-dialog';
 
-import {TableActionDialog} from './table-action-dialog';
-
-
-describe('describe table action dialog', () => {
-  it('table action dialog snapshot', () => {
-    const tableActionDialog =
+describe('table action dialog', () => {
+  it('matches snapshot', () => {
+    const tableActionDialog = (
       <TableActionDialog
-        sideButtonMetadata={[{icon: 'badge', text: 'test' }]}
-        onClose={() => null}
-        isOpen={true}
-      />;
-    const { container, getByText } = render(tableActionDialog, { container: document.body });
-    expect(container.firstChild).toMatchSnapshot();
+        sideButtonMetadata={[{ icon: 'badge', text: 'test' }]}
+        onClose={() => {}}
+        isOpen
+      />
+    );
+    render(tableActionDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

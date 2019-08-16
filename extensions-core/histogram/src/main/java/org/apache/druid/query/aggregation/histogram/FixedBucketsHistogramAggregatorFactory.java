@@ -29,11 +29,11 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -53,14 +53,17 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
 
   private FixedBucketsHistogram.OutlierHandlingMode outlierHandlingMode;
 
+  private boolean finalizeAsBase64Binary;
+
   @JsonCreator
   public FixedBucketsHistogramAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
-      @Nullable @JsonProperty("numBuckets") Integer numBuckets,
+      @JsonProperty("numBuckets") @Nullable Integer numBuckets,
       @JsonProperty("lowerLimit") double lowerLimit,
       @JsonProperty("upperLimit") double upperLimit,
-      @JsonProperty("outlierHandlingMode") FixedBucketsHistogram.OutlierHandlingMode outlierHandlingMode
+      @JsonProperty("outlierHandlingMode") FixedBucketsHistogram.OutlierHandlingMode outlierHandlingMode,
+      @JsonProperty("finalizeAsBase64Binary") @Nullable Boolean finalizeAsBase64Binary
   )
   {
     this.name = name;
@@ -69,6 +72,7 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
     this.lowerLimit = lowerLimit;
     this.upperLimit = upperLimit;
     this.outlierHandlingMode = outlierHandlingMode;
+    this.finalizeAsBase64Binary = finalizeAsBase64Binary == null ? false : finalizeAsBase64Binary;
   }
 
   @Override
@@ -166,7 +170,8 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
         numBuckets,
         lowerLimit,
         upperLimit,
-        outlierHandlingMode
+        outlierHandlingMode,
+        finalizeAsBase64Binary
     );
   }
 
@@ -179,7 +184,8 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
         numBuckets,
         lowerLimit,
         upperLimit,
-        outlierHandlingMode
+        outlierHandlingMode,
+        finalizeAsBase64Binary
     );
   }
 
@@ -193,7 +199,8 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
             numBuckets,
             lowerLimit,
             upperLimit,
-            outlierHandlingMode
+            outlierHandlingMode,
+            finalizeAsBase64Binary
         )
     );
   }
@@ -214,7 +221,15 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public Object finalizeComputation(@Nullable Object object)
   {
-    return object;
+    if (object == null) {
+      return null;
+    }
+
+    if (finalizeAsBase64Binary) {
+      return object;
+    } else {
+      return object.toString();
+    }
   }
 
   @JsonProperty
@@ -245,14 +260,15 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
-    return ByteBuffer.allocate(1 + fieldNameBytes.length + Integer.BYTES * 2 + Double.BYTES * 2)
-                     .put(AggregatorUtil.FIXED_BUCKET_HIST_CACHE_TYPE_ID)
-                     .put(fieldNameBytes)
-                     .putInt(outlierHandlingMode.ordinal())
-                     .putInt(numBuckets)
-                     .putDouble(lowerLimit)
-                     .putDouble(upperLimit).array();
+    final CacheKeyBuilder builder = new CacheKeyBuilder(AggregatorUtil.FIXED_BUCKET_HIST_CACHE_TYPE_ID)
+        .appendString(fieldName)
+        .appendInt(outlierHandlingMode.ordinal())
+        .appendInt(numBuckets)
+        .appendDouble(lowerLimit)
+        .appendDouble(upperLimit)
+        .appendBoolean(finalizeAsBase64Binary);
+
+    return builder.build();
   }
 
   @JsonProperty
@@ -285,6 +301,12 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
     return outlierHandlingMode;
   }
 
+  @JsonProperty
+  public boolean isFinalizeAsBase64Binary()
+  {
+    return finalizeAsBase64Binary;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -300,7 +322,8 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
            getNumBuckets() == that.getNumBuckets() &&
            Objects.equals(getName(), that.getName()) &&
            Objects.equals(getFieldName(), that.getFieldName()) &&
-           getOutlierHandlingMode() == that.getOutlierHandlingMode();
+           getOutlierHandlingMode() == that.getOutlierHandlingMode() &&
+           isFinalizeAsBase64Binary() == that.isFinalizeAsBase64Binary();
   }
 
   @Override
@@ -312,7 +335,8 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
         getLowerLimit(),
         getUpperLimit(),
         getNumBuckets(),
-        getOutlierHandlingMode()
+        getOutlierHandlingMode(),
+        isFinalizeAsBase64Binary()
     );
   }
 
@@ -326,6 +350,7 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
            ", upperLimit=" + upperLimit +
            ", numBuckets=" + numBuckets +
            ", outlierHandlingMode=" + outlierHandlingMode +
+           ", finalizeAsBase64Binary=" + finalizeAsBase64Binary +
            '}';
   }
 }

@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Assert;
 import org.junit.Before;
@@ -43,9 +44,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
-
-import static org.easymock.EasyMock.expectLastCall;
-import static org.junit.Assert.assertEquals;
 
 public class AzureDataSegmentPusherTest extends EasyMockSupport
 {
@@ -134,7 +132,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     final String storageDir = pusher.getStorageDir(dataSegment, false);
     final String azurePath = pusher.getAzurePath(dataSegment, false);
 
-    assertEquals(
+    Assert.assertEquals(
         StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME),
         azurePath
     );
@@ -149,7 +147,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     final String azurePath = pusher.getAzurePath(dataSegment, false);
 
     azureStorage.uploadBlob(compressedSegmentData, containerName, azurePath);
-    expectLastCall();
+    EasyMock.expectLastCall();
 
     replayAll();
 
@@ -161,11 +159,11 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
         azurePath
     );
 
-    assertEquals(compressedSegmentData.length(), pushedDataSegment.getSize());
-    assertEquals(binaryVersion, (int) pushedDataSegment.getBinaryVersion());
+    Assert.assertEquals(compressedSegmentData.length(), pushedDataSegment.getSize());
+    Assert.assertEquals(binaryVersion, (int) pushedDataSegment.getBinaryVersion());
     Map<String, Object> loadSpec = pushedDataSegment.getLoadSpec();
-    assertEquals(AzureStorageDruidModule.SCHEME, MapUtils.getString(loadSpec, "type"));
-    assertEquals(azurePath, MapUtils.getString(loadSpec, "blobPath"));
+    Assert.assertEquals(AzureStorageDruidModule.SCHEME, MapUtils.getString(loadSpec, "type"));
+    Assert.assertEquals(azurePath, MapUtils.getString(loadSpec, "blobPath"));
 
     verifyAll();
   }

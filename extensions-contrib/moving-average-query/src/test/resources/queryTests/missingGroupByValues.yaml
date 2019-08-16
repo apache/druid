@@ -55,24 +55,6 @@ expectedOutput:
     someSum: 0.0
 intermediateResults:
   groupBy:
-  - version: v1
-    timestamp: 2017-01-01T00:00Z
-    event:
-      gender: m
-      timespent_secs: 120
-      timeSpent: 2.0
-      someSum: 5.0
-  - version: v1
-    timestamp: 2017-01-01T00:00Z
-    event:
-      gender: f
-      timespent_secs: 120
-      timeSpent: 2.0
-      someSum: 2.0
-  - version: v1
-    timestamp: 2017-01-02T00:00Z
-    event:
-      gender: m
-      timespent_secs: 240
-      timeSpent: 4.0
-      someSum: 3.0
+  - [1483228800000, m, 120, 5.0, 2.0]
+  - [1483228800000, f, 120, 2.0, 2.0]
+  - [1483315200000, m, 240, 3.0, 4.0]

@@ -35,10 +35,10 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.timeline.LogicalSegment;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -82,7 +82,7 @@ public class DataSourceQueryQueryToolChest
       protected Sequence<Result<DataSourceMetadataResultValue>> doRun(
           QueryRunner<Result<DataSourceMetadataResultValue>> baseRunner,
           QueryPlus<Result<DataSourceMetadataResultValue>> input,
-          Map<String, Object> context
+          ResponseContext context
       )
       {
         DataSourceMetadataQuery query = (DataSourceMetadataQuery) input.getQuery();

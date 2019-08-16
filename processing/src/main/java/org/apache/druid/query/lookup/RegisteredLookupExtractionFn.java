@@ -47,8 +47,8 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
       @JacksonInject LookupExtractorFactoryContainerProvider manager,
       @JsonProperty("lookup") String lookup,
       @JsonProperty("retainMissingValue") final boolean retainMissingValue,
-      @Nullable @JsonProperty("replaceMissingValueWith") final String replaceMissingValueWith,
-      @JsonProperty("injective") final Boolean injective,
+      @JsonProperty("replaceMissingValueWith") @Nullable final String replaceMissingValueWith,
+      @JsonProperty("injective") @Nullable final Boolean injective,
       @JsonProperty("optimize") Boolean optimize
   )
   {
@@ -73,12 +73,14 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
     return retainMissingValue;
   }
 
+  @Nullable
   @JsonProperty("replaceMissingValueWith")
   public String getReplaceMissingValueWith()
   {
     return replaceMissingValueWith;
   }
 
+  @Nullable
   @JsonProperty("injective")
   public Boolean isInjective()
   {
@@ -94,7 +96,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   @Override
   public byte[] getCacheKey()
   {
-    final byte[] keyPrefix = StringUtils.toUtf8(getClass().getCanonicalName());
+    final byte[] keyPrefix = StringUtils.toUtf8(getClass().getName());
     final byte[] lookupName = StringUtils.toUtf8(getLookup());
     final byte[] delegateKey = ensureDelegate().getCacheKey();
     return ByteBuffer
@@ -151,10 +153,10 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
 
           delegate = new LookupExtractionFn(
               factory,
-              isRetainMissingValue(),
-              getReplaceMissingValueWith(),
-              injective == null ? factory.isOneToOne() : injective,
-              isOptimize()
+              retainMissingValue,
+              replaceMissingValueWith,
+              injective,
+              optimize
           );
         }
       }

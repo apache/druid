@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe table action dialog table action dialog snapshot 1`] = `
+exports[`table action dialog matches snapshot 1`] = `
 <div
   class="bp3-portal"
 >
@@ -61,9 +61,6 @@ exports[`describe table action dialog table action dialog snapshot 1`] = `
         <div
           class="bp3-dialog-footer"
         >
-          <div
-            class="footer-actions-left"
-          />
           <div
             class="bp3-dialog-footer-actions"
           >

@@ -21,10 +21,12 @@ package org.apache.druid.server.coordination;
 
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public interface DataSegmentChangeHandler
 {
-  void addSegment(DataSegment segment, DataSegmentChangeCallback callback);
-  void removeSegment(DataSegment segment, DataSegmentChangeCallback callback);
+  void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback);
+  void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback);
 }
