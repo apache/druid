@@ -49,6 +49,8 @@ exports[`sql view matches snapshot 1`] = `
           queryContext={Object {}}
           runeMode={false}
           setAutoRun={[Function]}
+          setWrapQuery={[Function]}
+          wrapQuery={true}
         />
       </div>
     </div>
