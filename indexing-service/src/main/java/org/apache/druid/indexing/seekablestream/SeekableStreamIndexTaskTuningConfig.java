@@ -267,6 +267,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     return skipSequenceNumberAvailabilityCheck;
   }
 
+  @Override
   public abstract SeekableStreamIndexTaskTuningConfig withBasePersistDirectory(File dir);
 
   @Override

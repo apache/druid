@@ -22,23 +22,29 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.druid.data.input.FirehoseFactory;
-import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
+import com.google.common.base.Preconditions;
+import org.apache.druid.segment.indexing.IOConfig;
 
-import javax.annotation.Nullable;
+import java.util.List;
 
-/**
- * Same with {@link IndexIOConfig} except its JSON type name.
- */
-@JsonTypeName("index_parallel")
-public class ParallelIndexIOConfig extends IndexIOConfig
+@JsonTypeName(PartialSegmentMergeTask.TYPE)
+public class PartialSegmentMergeIOConfig implements IOConfig
 {
+  private final List<PartitionLocation> partitionLocations;
+
   @JsonCreator
-  public ParallelIndexIOConfig(
-      @JsonProperty("firehose") FirehoseFactory firehoseFactory,
-      @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
-  )
+  public PartialSegmentMergeIOConfig(@JsonProperty("partitionLocations") List<PartitionLocation> partitionLocations)
   {
-    super(firehoseFactory, appendToExisting);
+    Preconditions.checkState(
+        partitionLocations != null && !partitionLocations.isEmpty(),
+        "Empty partition locations"
+    );
+    this.partitionLocations = partitionLocations;
+  }
+
+  @JsonProperty
+  public List<PartitionLocation> getPartitionLocations()
+  {
+    return partitionLocations;
   }
 }

@@ -21,35 +21,30 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import org.apache.druid.timeline.DataSegment;
 
+import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 /**
- * In the last phase of native parallel batch indexing, each sub task generates and pushes segments
- * and sends a report to the supervisorTask. Once the supervisorTask collects all reports,
- * it publishes all the pushed segments at once.
+ * Report containing the {@link PartitionStat}s created by a {@link PartialSegmentGenerateTask}.
+ * This report is collected by {@link ParallelIndexSupervisorTask} and
+ * used to generate {@link PartialSegmentMergeIOConfig}.
  */
-public class PushedSegmentsReport implements SubTaskReport
+public class GeneratedPartitionsReport implements SubTaskReport
 {
-  public static final String TYPE = "pushed_segments";
+  public static final String TYPE = "generated_partitions";
 
   private final String taskId;
-  private final Set<DataSegment> oldSegments;
-  private final Set<DataSegment> newSegments;
+  private final List<PartitionStat> partitionStats;
 
   @JsonCreator
-  public PushedSegmentsReport(
+  public GeneratedPartitionsReport(
       @JsonProperty("taskId") String taskId,
-      @JsonProperty("oldSegments") Set<DataSegment> oldSegments,
-      @JsonProperty("segments") Set<DataSegment> newSegments
+      @JsonProperty("partitionStats") List<PartitionStat> partitionStats
   )
   {
-    this.taskId = Preconditions.checkNotNull(taskId, "taskId");
-    this.oldSegments = Preconditions.checkNotNull(oldSegments, "oldSegments");
-    this.newSegments = Preconditions.checkNotNull(newSegments, "newSegments");
+    this.taskId = taskId;
+    this.partitionStats = partitionStats;
   }
 
   @Override
@@ -60,15 +55,9 @@ public class PushedSegmentsReport implements SubTaskReport
   }
 
   @JsonProperty
-  public Set<DataSegment> getOldSegments()
+  public List<PartitionStat> getPartitionStats()
   {
-    return oldSegments;
-  }
-
-  @JsonProperty("segments")
-  public Set<DataSegment> getNewSegments()
-  {
-    return newSegments;
+    return partitionStats;
   }
 
   @Override
@@ -80,15 +69,14 @@ public class PushedSegmentsReport implements SubTaskReport
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    PushedSegmentsReport that = (PushedSegmentsReport) o;
+    GeneratedPartitionsReport that = (GeneratedPartitionsReport) o;
     return Objects.equals(taskId, that.taskId) &&
-           Objects.equals(oldSegments, that.oldSegments) &&
-           Objects.equals(newSegments, that.newSegments);
+           Objects.equals(partitionStats, that.partitionStats);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(taskId, oldSegments, newSegments);
+    return Objects.hash(taskId, partitionStats);
   }
 }

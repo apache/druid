@@ -71,6 +71,8 @@ public interface AppenderatorConfig
 
   File getBasePersistDirectory();
 
+  AppenderatorConfig withBasePersistDirectory(File basePersistDirectory);
+
   @Nullable
   SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory();
 }

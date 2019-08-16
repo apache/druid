@@ -21,24 +21,19 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.druid.data.input.FirehoseFactory;
-import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
+import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.IngestionSpec;
 
-import javax.annotation.Nullable;
-
-/**
- * Same with {@link IndexIOConfig} except its JSON type name.
- */
-@JsonTypeName("index_parallel")
-public class ParallelIndexIOConfig extends IndexIOConfig
+public class PartialSegmentMergeIngestionSpec
+    extends IngestionSpec<PartialSegmentMergeIOConfig, ParallelIndexTuningConfig>
 {
   @JsonCreator
-  public ParallelIndexIOConfig(
-      @JsonProperty("firehose") FirehoseFactory firehoseFactory,
-      @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
+  public PartialSegmentMergeIngestionSpec(
+      @JsonProperty("dataSchema") DataSchema dataSchema,
+      @JsonProperty("ioConfig") PartialSegmentMergeIOConfig ioConfig,
+      @JsonProperty("tuningConfig") ParallelIndexTuningConfig tuningConfig
   )
   {
-    super(firehoseFactory, appendToExisting);
+    super(dataSchema, ioConfig, tuningConfig);
   }
 }
