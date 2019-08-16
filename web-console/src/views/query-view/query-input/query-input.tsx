@@ -45,6 +45,7 @@ export interface QueryInputState {
   // For reasons (https://github.com/securingsincity/react-ace/issues/415) react ace editor needs an explicit height
   // Since this component will grown and shrink dynamically we will measure its height and then set it.
   editorHeight: number;
+  completions: any[];
   prevColumnMetadata?: ColumnMetadata[];
   prevCurrentTable?: string;
   prevCurrentSchema?: string;
@@ -133,9 +134,6 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
         currentSchema !== state.prevCurrentSchema ||
         currentTable !== state.prevCurrentTable)
     ) {
-      QueryInput.replaceDefaultAutoCompleter();
-      QueryInput.addFunctionAutoCompleter();
-
       const completions = ([] as any[]).concat(
         uniq(columnMetadata.map(d => d.TABLE_SCHEMA)).map(v => ({
           value: v,
@@ -166,13 +164,8 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
         })),
       );
 
-      langTools.addCompleter({
-        getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
-          callback(null, completions);
-        },
-      });
-
       return {
+        completions,
         prevColumnMetadata: columnMetadata,
         prevCurrentSchema: currentSchema,
         prevCurrentTable: currentTable,
@@ -185,7 +178,19 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     super(props, context);
     this.state = {
       editorHeight: 200,
+      completions: [],
     };
+  }
+
+  componentDidMount(): void {
+    QueryInput.replaceDefaultAutoCompleter();
+    QueryInput.addFunctionAutoCompleter();
+
+    langTools.addCompleter({
+      getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
+        callback(null, this.state.completions);
+      },
+    });
   }
 
   private handleAceContainerResize = (entries: IResizeEntry[]) => {
