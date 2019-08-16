@@ -45,7 +45,7 @@ import './column-tree.scss';
 function handleTableClick(
   tableSchema: string,
   nodeData: ITreeNode,
-  onQueryStringChange: (queryString: string) => void,
+  onQueryStringChange: (queryString: string, run: boolean) => void,
 ): void {
   let columns: string[];
   if (nodeData.childNodes) {
@@ -54,12 +54,18 @@ function handleTableClick(
     columns = ['*'];
   }
   if (tableSchema === 'druid') {
-    onQueryStringChange(`SELECT ${columns.join(', ')}
+    onQueryStringChange(
+      `SELECT ${columns.join(', ')}
 FROM ${escapeSqlIdentifier(String(nodeData.label))}
-WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
+WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`,
+      true,
+    );
   } else {
-    onQueryStringChange(`SELECT ${columns.join(', ')}
-FROM ${tableSchema}.${nodeData.label}`);
+    onQueryStringChange(
+      `SELECT ${columns.join(', ')}
+FROM ${tableSchema}.${nodeData.label}`,
+      true,
+    );
   }
 }
 
@@ -67,40 +73,49 @@ function handleColumnClick(
   columnSchema: string,
   columnTable: string,
   nodeData: ITreeNode,
-  onQueryStringChange: (queryString: string) => void,
+  onQueryStringChange: (queryString: string, run: boolean) => void,
 ): void {
   if (columnSchema === 'druid') {
     if (nodeData.icon === IconNames.TIME) {
-      onQueryStringChange(`SELECT
+      onQueryStringChange(
+        `SELECT
   TIME_FLOOR(${escapeSqlIdentifier(String(nodeData.label))}, 'PT1H') AS "Time",
   COUNT(*) AS "Count"
 FROM ${escapeSqlIdentifier(columnTable)}
 WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
 GROUP BY 1
-ORDER BY "Time" ASC`);
+ORDER BY "Time" ASC`,
+        true,
+      );
     } else {
-      onQueryStringChange(`SELECT
+      onQueryStringChange(
+        `SELECT
   "${nodeData.label}",
   COUNT(*) AS "Count"
 FROM ${escapeSqlIdentifier(columnTable)}
 WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
 GROUP BY 1
-ORDER BY "Count" DESC`);
+ORDER BY "Count" DESC`,
+        true,
+      );
     }
   } else {
-    onQueryStringChange(`SELECT
+    onQueryStringChange(
+      `SELECT
   ${escapeSqlIdentifier(String(nodeData.label))},
   COUNT(*) AS "Count"
 FROM ${columnSchema}.${columnTable}
 GROUP BY 1
-ORDER BY "Count" DESC`);
+ORDER BY "Count" DESC`,
+      true,
+    );
   }
 }
 
 export interface ColumnTreeProps {
   columnMetadataLoading: boolean;
   columnMetadata?: ColumnMetadata[];
-  onQueryStringChange: (queryString: string) => void;
+  onQueryStringChange: (queryString: string, run: boolean) => void;
   defaultSchema?: string;
   defaultTable?: string;
   addFunctionToGroupBy: (

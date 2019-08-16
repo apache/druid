@@ -395,10 +395,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
               "firehoseFactory[%s] is not splittable. Running sequentially.",
               baseFirehoseFactory.getClass().getSimpleName()
           );
-        } else if (ingestionSchema.getTuningConfig().getMaxNumSubTasks() == 1) {
+        } else if (ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() == 1) {
           LOG.warn(
-              "maxNumSubTasks is 1. Running sequentially. "
-              + "Please set maxNumSubTasks to something higher than 1 if you want to run in parallel ingestion mode."
+              "maxNumConcurrentSubTasks is 1. Running sequentially. "
+              + "Please set maxNumConcurrentSubTasks to something higher than 1 if you want to run in parallel ingestion mode."
           );
         } else {
           throw new ISE("Unknown reason for sequentail mode. Failing this task.");
@@ -430,7 +430,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private boolean isParallelMode()
   {
-    return baseFirehoseFactory.isSplittable() && ingestionSchema.getTuningConfig().getMaxNumSubTasks() > 1;
+    return baseFirehoseFactory.isSplittable() && ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() > 1;
   }
 
   /**

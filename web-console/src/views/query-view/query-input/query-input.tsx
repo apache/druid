@@ -185,12 +185,13 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
   componentDidMount(): void {
     QueryInput.replaceDefaultAutoCompleter();
     QueryInput.addFunctionAutoCompleter();
-
-    langTools.addCompleter({
-      getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
-        callback(null, this.state.completions);
-      },
-    });
+    if (langTools) {
+      langTools.addCompleter({
+        getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
+          callback(null, this.state.completions);
+        },
+      });
+    }
   }
 
   private handleAceContainerResize = (entries: IResizeEntry[]) => {
@@ -198,8 +199,14 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     this.setState({ editorHeight: entries[0].contentRect.height });
   };
 
+  private handleChange = (value: string) => {
+    // This gets the event as a second arg
+    const { onQueryStringChange } = this.props;
+    onQueryStringChange(value);
+  };
+
   render(): JSX.Element {
-    const { queryString, runeMode, onQueryStringChange } = this.props;
+    const { queryString, runeMode } = this.props;
     const { editorHeight } = this.state;
 
     // Set the key in the AceEditor to force a rebind and prevent an error that happens otherwise
@@ -211,7 +218,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
               mode={runeMode ? 'hjson' : 'dsql'}
               theme="solarized_dark"
               name="ace-editor"
-              onChange={onQueryStringChange}
+              onChange={this.handleChange}
               focus
               fontSize={14}
               width="100%"

@@ -64,7 +64,7 @@
         },
         "tuningConfig": {
             "type": "index_parallel",
-            "maxNumSubTasks": 10
+            "maxNumConcurrentSubTasks": 10
         }
     }
 }
