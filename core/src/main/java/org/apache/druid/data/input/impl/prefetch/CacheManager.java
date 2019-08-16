@@ -29,7 +29,7 @@ import java.util.List;
 /**
  * A class managing cached files used by {@link PrefetchableTextFilesFirehoseFactory}.
  */
-class CacheManager<T>
+public class CacheManager<T>
 {
   private static final Logger LOG = new Logger(CacheManager.class);
 
@@ -44,17 +44,17 @@ class CacheManager<T>
 
   private long totalCachedBytes;
 
-  CacheManager(long maxCacheCapacityBytes)
+  public CacheManager(long maxCacheCapacityBytes)
   {
     this.maxCacheCapacityBytes = maxCacheCapacityBytes;
   }
 
-  boolean isEnabled()
+  public boolean isEnabled()
   {
     return maxCacheCapacityBytes > 0;
   }
 
-  boolean cacheable()
+  public boolean cacheable()
   {
     // maxCacheCapacityBytes is a rough limit, so if totalCachedBytes is larger than it, no more caching is
     // allowed.
@@ -90,7 +90,7 @@ class CacheManager<T>
     return totalCachedBytes;
   }
 
-  long getMaxCacheCapacityBytes()
+  public long getMaxCacheCapacityBytes()
   {
     return maxCacheCapacityBytes;
   }

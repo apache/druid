@@ -69,7 +69,6 @@ import java.util.concurrent.atomic.AtomicReference;
 public class KafkaLookupExtractorFactory implements LookupExtractorFactory
 {
   private static final Logger LOG = new Logger(KafkaLookupExtractorFactory.class);
-
   private final ListeningExecutorService executorService;
   private final AtomicLong doubleEventCount = new AtomicLong(0L);
   private final NamespaceExtractionCacheManager cacheManager;
@@ -155,13 +154,16 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     synchronized (started) {
       if (started.get()) {
         LOG.warn("Already started, not starting again");
-        return started.get();
+        return true;
       }
       if (executorService.isShutdown()) {
         LOG.warn("Already shut down, not starting again");
         return false;
       }
+      verifyKafkaProperties();
 
+      final String topic = getKafkaTopic();
+      LOG.debug("About to listen to topic [%s] with group.id [%s]", topic, factoryId);
       cacheHandler = cacheManager.createCache();
       final ConcurrentMap<String, String> map = cacheHandler.getCache();
       mapRef.set(map);
@@ -196,6 +198,9 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
               map.putAll(mapData);
               doubleEventCount.incrementAndGet();
               LOG.trace("Placed map[%s] val[%s]", mapData, message);
+            }
+            catch (Exception e) {
+              LOG.error(e, "Error reading stream for topic [%s]", topic);
             }
           }
           catch (Exception e) {
@@ -254,7 +259,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       return true;
     }
   }
-
+  
   private Map<String, String> getParseMap(String key, String message)
   {
     if (key == null && message == null) {

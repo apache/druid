@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -41,6 +42,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
 
   private static final Duration DEFAULT_CHAT_HANDLER_TIMEOUT = new Period("PT10S").toStandardDuration();
   private static final int DEFAULT_CHAT_HANDLER_NUM_RETRIES = 5;
+  private static final int DEFAULT_MAX_NUM_SEGMENTS_TO_MERGE = 100;
+  private static final int DEFAULT_TOTAL_NUM_MERGE_TASKS = 10;
 
   private final int maxNumSubTasks;
   private final int maxRetry;
@@ -49,9 +52,26 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   private final Duration chatHandlerTimeout;
   private final int chatHandlerNumRetries;
 
-  public static ParallelIndexTuningConfig defaultConfig()
+  /**
+   * Max number of segments to merge at the same time.
+   * Used only by {@link PartialSegmentMergeTask}.
+   * This configuration was temporarily added to avoid using too much memory while merging segments,
+   * and will be removed once {@link org.apache.druid.segment.IndexMerger} is improved to not use much memory.
+   */
+  private final int maxNumSegmentsToMerge;
+
+  /**
+   * Total number of tasks for partial segment merge (that is, number of {@link PartialSegmentMergeTask}s).
+   * Used only when this task runs with shuffle.
+   */
+  private final int totalNumMergeTasks;
+
+  static ParallelIndexTuningConfig defaultConfig()
   {
     return new ParallelIndexTuningConfig(
+        null,
+        null,
+        null,
         null,
         null,
         null,
@@ -79,11 +99,12 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   @JsonCreator
   public ParallelIndexTuningConfig(
       @JsonProperty("targetPartitionSize") @Deprecated @Nullable Integer targetPartitionSize,
-      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
+      @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
-      @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
+      @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
       @JsonProperty("numShards") @Nullable Integer numShards,
+      @JsonProperty("partitionsSpec") @Nullable PartitionsSpec partitionsSpec,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
       @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
@@ -96,6 +117,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       @JsonProperty("taskStatusCheckPeriodMs") @Nullable Integer taskStatusCheckPeriodMs,
       @JsonProperty("chatHandlerTimeout") @Nullable Duration chatHandlerTimeout,
       @JsonProperty("chatHandlerNumRetries") @Nullable Integer chatHandlerNumRetries,
+      @JsonProperty("maxNumSegmentsToMerge") @Nullable Integer maxNumSegmentsToMerge,
+      @JsonProperty("totalNumMergeTasks") @Nullable Integer totalNumMergeTasks,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
@@ -110,10 +133,10 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         null,
         numShards,
         null,
+        partitionsSpec,
         indexSpec,
         indexSpecForIntermediatePersists,
         maxPendingPersists,
-        null,
         forceGuaranteedRollup,
         reportParseExceptions,
         null,
@@ -135,7 +158,17 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
                                  ? DEFAULT_CHAT_HANDLER_NUM_RETRIES
                                  : chatHandlerNumRetries;
 
+    this.maxNumSegmentsToMerge = maxNumSegmentsToMerge == null
+                                 ? DEFAULT_MAX_NUM_SEGMENTS_TO_MERGE
+                                 : maxNumSegmentsToMerge;
+
+    this.totalNumMergeTasks = totalNumMergeTasks == null
+                            ? DEFAULT_TOTAL_NUM_MERGE_TASKS
+                            : totalNumMergeTasks;
+
     Preconditions.checkArgument(this.maxNumSubTasks > 0, "maxNumSubTasks must be positive");
+    Preconditions.checkArgument(this.maxNumSegmentsToMerge > 0, "maxNumSegmentsToMerge must be positive");
+    Preconditions.checkArgument(this.totalNumMergeTasks > 0, "totalNumMergeTasks must be positive");
   }
 
   @JsonProperty
@@ -168,6 +201,18 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
     return chatHandlerNumRetries;
   }
 
+  @JsonProperty
+  public int getMaxNumSegmentsToMerge()
+  {
+    return maxNumSegmentsToMerge;
+  }
+
+  @JsonProperty
+  public int getTotalNumMergeTasks()
+  {
+    return totalNumMergeTasks;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -185,6 +230,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
            maxRetry == that.maxRetry &&
            taskStatusCheckPeriodMs == that.taskStatusCheckPeriodMs &&
            chatHandlerNumRetries == that.chatHandlerNumRetries &&
+           maxNumSegmentsToMerge == that.maxNumSegmentsToMerge &&
+           totalNumMergeTasks == that.totalNumMergeTasks &&
            Objects.equals(chatHandlerTimeout, that.chatHandlerTimeout);
   }
 
@@ -197,7 +244,9 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         maxRetry,
         taskStatusCheckPeriodMs,
         chatHandlerTimeout,
-        chatHandlerNumRetries
+        chatHandlerNumRetries,
+        maxNumSegmentsToMerge,
+        totalNumMergeTasks
     );
   }
 }

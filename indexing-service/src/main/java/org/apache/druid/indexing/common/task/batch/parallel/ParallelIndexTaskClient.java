@@ -27,13 +27,11 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.FullResponseHolder;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import java.io.IOException;
-import java.util.List;
 
 public class ParallelIndexTaskClient extends IndexTaskClient
 {
@@ -84,7 +82,7 @@ public class ParallelIndexTaskClient extends IndexTaskClient
     }
   }
 
-  public void report(String supervisorTaskId, List<DataSegment> pushedSegments)
+  public void report(String supervisorTaskId, SubTaskReport report)
   {
     try {
       final FullResponseHolder response = submitSmileRequest(
@@ -92,7 +90,7 @@ public class ParallelIndexTaskClient extends IndexTaskClient
           HttpMethod.POST,
           "report",
           null,
-          serialize(new PushedSegmentsReport(subtaskId, pushedSegments)),
+          serialize(report),
           true
       );
       if (!isSuccess(response)) {

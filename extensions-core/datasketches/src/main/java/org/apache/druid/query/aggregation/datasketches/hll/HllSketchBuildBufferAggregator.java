@@ -23,6 +23,7 @@ import com.google.common.util.concurrent.Striped;
 import com.yahoo.memory.WritableMemory;
 import com.yahoo.sketches.hll.HllSketch;
 import com.yahoo.sketches.hll.TgtHllType;
+import com.yahoo.sketches.hll.Union;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.druid.query.aggregation.BufferAggregator;
@@ -42,7 +43,9 @@ import java.util.concurrent.locks.ReadWriteLock;
 public class HllSketchBuildBufferAggregator implements BufferAggregator
 {
 
-  /** for locking per buffer position (power of 2 to make index computation faster) */
+  /**
+   * for locking per buffer position (power of 2 to make index computation faster)
+   */
   private static final int NUM_STRIPES = 64;
 
   private final ColumnValueSelector<Object> selector;
@@ -52,6 +55,13 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<HllSketch>> sketchCache = new IdentityHashMap<>();
   private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
+
+  /**
+   * Used by {@link #init(ByteBuffer, int)}. We initialize by copying a prebuilt empty HllSketch image.
+   * {@link HllSketchMergeBufferAggregator} does something similar, but different enough that we don't share code. The
+   * "build" flavor uses {@link HllSketch} objects and the "merge" flavor uses {@link Union} objects.
+   */
+  private final byte[] emptySketch;
 
   public HllSketchBuildBufferAggregator(
       final ColumnValueSelector<Object> selector,
@@ -64,13 +74,29 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     this.lgK = lgK;
     this.tgtHllType = tgtHllType;
     this.size = size;
+    this.emptySketch = new byte[size];
+
+    //noinspection ResultOfObjectAllocationIgnored (HllSketch writes to "emptySketch" as a side effect of construction)
+    new HllSketch(lgK, tgtHllType, WritableMemory.wrap(emptySketch));
   }
 
   @Override
   public void init(final ByteBuffer buf, final int position)
   {
+    // Copy prebuilt empty sketch object.
+
+    final int oldPosition = buf.position();
+    try {
+      buf.position(position);
+      buf.put(emptySketch);
+    }
+    finally {
+      buf.position(oldPosition);
+    }
+
+    // Add an HllSketch for this chunk to our sketchCache.
     final WritableMemory mem = getMemory(buf).writableRegion(position, size);
-    putSketchIntoCache(buf, position, new HllSketch(lgK, tgtHllType, mem));
+    putSketchIntoCache(buf, position, HllSketch.writableWrap(mem));
   }
 
   /**
@@ -162,7 +188,9 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
 
   /**
    * compute lock index to avoid boxing in Striped.get() call
+   *
    * @param position
+   *
    * @return index
    */
   static int lockIndex(final int position)
@@ -172,7 +200,9 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
 
   /**
    * see https://github.com/google/guava/blob/master/guava/src/com/google/common/util/concurrent/Striped.java#L536-L548
+   *
    * @param hashCode
+   *
    * @return smeared hashCode
    */
   private static int smear(int hashCode)

@@ -117,7 +117,8 @@ layout: toc
     * Data server
       * [Historical](/docs/VERSION/design/historical.html)
       * [MiddleManager](/docs/VERSION/design/middlemanager.html)
-        * [Peons](/docs/VERSION/design/peons.html)    
+        * [Peons](/docs/VERSION/design/peons.html)
+      * [Indexer](/docs/VERSION/development/indexer.html) (optional; experimental)
   * Dependencies
     * [Deep Storage](/docs/VERSION/dependencies/deep-storage.html)
     * [Metadata Storage](/docs/VERSION/dependencies/metadata-storage.html)

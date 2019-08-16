@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**
@@ -42,7 +44,7 @@ public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
   }
 
   @Override
-  public void go(DataSegmentChangeHandler handler, DataSegmentChangeCallback callback)
+  public void go(DataSegmentChangeHandler handler, @Nullable DataSegmentChangeCallback callback)
   {
     handler.addSegment(segment, callback);
   }

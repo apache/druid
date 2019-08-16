@@ -21,14 +21,18 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.timeline.LogicalSegment;
 
 import javax.annotation.Nullable;
+import java.util.Comparator;
 import java.util.List;
+import java.util.function.BinaryOperator;
 
 /**
  * The broker-side (also used by server in some cases) API for a specific Query type.
@@ -73,15 +77,55 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   }
 
   /**
+   * Perform any per-query decoration of an {@link ObjectMapper} that enables it to read and write objects of the
+   * query's {@link ResultType}. It is used by QueryResource on the write side, and DirectDruidClient on the read side.
+   *
+   * For most queries, this is a no-op, but it can be useful for query types that support more than one result
+   * serialization format. Queries that implement this method must not modify the provided ObjectMapper, but instead
+   * must return a copy.
+   */
+  public ObjectMapper decorateObjectMapper(final ObjectMapper objectMapper, final QueryType query)
+  {
+    return objectMapper;
+  }
+
+  /**
    * This method wraps a QueryRunner.  The input QueryRunner, by contract, will provide a series of
    * ResultType objects in time order (ascending or descending).  This method should return a new QueryRunner that
    * potentially merges the stream of ordered ResultType objects.
+   *
+   * A default implementation constructs a {@link ResultMergeQueryRunner} which creates a
+   * {@link org.apache.druid.common.guava.CombiningSequence} using the supplied {@link QueryRunner} with
+   * {@link QueryToolChest#createResultComparator(Query)} and {@link QueryToolChest#createMergeFn(Query)}} supplied by this
+   * toolchest.
    *
    * @param runner A QueryRunner that provides a series of ResultType objects in time order (ascending or descending)
    *
    * @return a QueryRunner that potentially merges the stream of ordered ResultType objects
    */
-  public abstract QueryRunner<ResultType> mergeResults(QueryRunner<ResultType> runner);
+  public QueryRunner<ResultType> mergeResults(QueryRunner<ResultType> runner)
+  {
+    return new ResultMergeQueryRunner<>(runner, this::createResultComparator, this::createMergeFn);
+  }
+
+  /**
+   * Creates a merge function that is used to merge intermediate aggregates from historicals in broker. This merge
+   * function is used in the default {@link ResultMergeQueryRunner} provided by
+   * {@link QueryToolChest#mergeResults(QueryRunner)} and can be used in additional future merge implementations
+   */
+  public BinaryOperator<ResultType> createMergeFn(Query<ResultType> query)
+  {
+    throw new UOE("%s doesn't provide a merge function", query.getClass().getName());
+  }
+
+  /**
+   * Creates an ordering comparator that is used to order results. This comparator is used in the default
+   * {@link ResultMergeQueryRunner} provided by {@link QueryToolChest#mergeResults(QueryRunner)}
+   */
+  public Comparator<ResultType> createResultComparator(Query<ResultType> query)
+  {
+    throw new UOE("%s doesn't provide a result comparator", query.getClass().getName());
+  }
 
   /**
    * Creates a {@link QueryMetrics} object that is used to generate metrics for this specific query type.  This exists

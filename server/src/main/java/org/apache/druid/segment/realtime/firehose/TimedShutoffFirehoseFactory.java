@@ -107,20 +107,20 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
     }
 
     @Override
-    public boolean hasMore()
+    public boolean hasMore() throws IOException
     {
       return firehose.hasMore();
     }
 
     @Nullable
     @Override
-    public InputRow nextRow()
+    public InputRow nextRow() throws IOException
     {
       return firehose.nextRow();
     }
 
     @Override
-    public InputRowPlusRaw nextRowWithRaw()
+    public InputRowPlusRaw nextRowWithRaw() throws IOException
     {
       return firehose.nextRowWithRaw();
     }

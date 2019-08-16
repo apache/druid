@@ -101,10 +101,10 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
   @JsonCreator
   public IngestSegmentFirehoseFactory(
       @JsonProperty("dataSource") final String dataSource,
-      @Nullable @JsonProperty("interval") Interval interval,
+      @JsonProperty("interval") @Nullable Interval interval,
       // Specifying "segments" is intended only for when this FirehoseFactory has split itself,
       // not for direct end user use.
-      @Nullable @JsonProperty("segments") List<WindowedSegmentId> segmentIds,
+      @JsonProperty("segments") @Nullable List<WindowedSegmentId> segmentIds,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("dimensions") List<String> dimensions,
       @JsonProperty("metrics") List<String> metrics,
@@ -159,12 +159,14 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
   }
 
   @JsonProperty
+  @Nullable
   public Interval getInterval()
   {
     return interval;
   }
 
   @JsonProperty
+  @Nullable
   public List<WindowedSegmentId> getSegments()
   {
     return segmentIds;

@@ -23,17 +23,18 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -68,6 +69,7 @@ public class NoopTask extends AbstractTask
   @JsonCreator
   public NoopTask(
       @JsonProperty("id") String id,
+      @JsonProperty("groupId") String groupId,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("runTime") long runTime,
       @JsonProperty("isReadyTime") long isReadyTime,
@@ -78,6 +80,8 @@ public class NoopTask extends AbstractTask
   {
     super(
         id == null ? StringUtils.format("noop_%s_%s", DateTimes.nowUtc(), UUID.randomUUID().toString()) : id,
+        groupId,
+        null,
         dataSource == null ? "none" : dataSource,
         context
     );
@@ -136,6 +140,11 @@ public class NoopTask extends AbstractTask
   }
 
   @Override
+  public void stopGracefully(TaskConfig taskConfig)
+  {
+  }
+
+  @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     if (firehoseFactory != null) {
@@ -159,24 +168,33 @@ public class NoopTask extends AbstractTask
 
   public static NoopTask create()
   {
-    return new NoopTask(null, null, 0, 0, null, null, null);
+    return new NoopTask(null, null, null, 0, 0, null, null, null);
+  }
+
+  public static NoopTask withGroupId(String groupId)
+  {
+    return new NoopTask(null, groupId, null, 0, 0, null, null, null);
   }
 
   @VisibleForTesting
   public static NoopTask create(String dataSource)
   {
-    return new NoopTask(null, dataSource, 0, 0, null, null, null);
+    return new NoopTask(null, null, dataSource, 0, 0, null, null, null);
   }
 
   @VisibleForTesting
   public static NoopTask create(int priority)
   {
-    return new NoopTask(null, null, 0, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, priority));
+    final Map<String, Object> context = new HashMap<>();
+    context.put(Tasks.PRIORITY_KEY, priority);
+    return new NoopTask(null, null, null, 0, 0, null, null, context);
   }
 
   @VisibleForTesting
   public static NoopTask create(String id, int priority)
   {
-    return new NoopTask(id, null, 0, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, priority));
+    final Map<String, Object> context = new HashMap<>();
+    context.put(Tasks.PRIORITY_KEY, priority);
+    return new NoopTask(id, null, null, 0, 0, null, null, context);
   }
 }

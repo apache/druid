@@ -24,6 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Interval;
 
 /**
+ * Client representation of org.apache.druid.indexing.common.task.KillTask. JSON searialization
+ * fields of this class must correspond to those of
+ * org.apache.druid.indexing.common.task.KillTask, except for "id" and "context" fields.
  */
 public class ClientKillQuery implements ClientQuery
 {

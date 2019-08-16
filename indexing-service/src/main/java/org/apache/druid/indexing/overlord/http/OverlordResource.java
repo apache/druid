@@ -293,7 +293,7 @@ public class OverlordResource
                 taskInfo.getStatus().getStatusCode(),
                 RunnerTaskState.WAITING,
                 taskInfo.getStatus().getDuration(),
-                TaskLocation.unknown(),
+                taskInfo.getStatus().getLocation() == null ? TaskLocation.unknown() : taskInfo.getStatus().getLocation(),
                 taskInfo.getDataSource(),
                 taskInfo.getStatus().getErrorMsg()
             )
@@ -372,9 +372,7 @@ public class OverlordResource
   @Path("/taskStatus")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
-  public Response getMultipleTaskStatuses(
-      Set<String> taskIds
-  )
+  public Response getMultipleTaskStatuses(Set<String> taskIds)
   {
     if (taskIds == null || taskIds.size() == 0) {
       return Response.status(Response.Status.BAD_REQUEST).entity("No TaskIds provided.").build();
@@ -600,7 +598,7 @@ public class OverlordResource
         taskInfo.getStatus().getStatusCode(),
         RunnerTaskState.NONE,
         taskInfo.getStatus().getDuration(),
-        TaskLocation.unknown(),
+        taskInfo.getStatus().getLocation() == null ? TaskLocation.unknown() : taskInfo.getStatus().getLocation(),
         taskInfo.getDataSource(),
         taskInfo.getStatus().getErrorMsg()
     );

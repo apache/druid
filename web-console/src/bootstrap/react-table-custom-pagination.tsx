@@ -83,7 +83,7 @@ export class ReactTableCustomPagination extends React.PureComponent<
     this.changePage(page === '' ? this.props.page : page);
   };
 
-  render() {
+  render(): JSX.Element {
     const {
       pages,
       page,

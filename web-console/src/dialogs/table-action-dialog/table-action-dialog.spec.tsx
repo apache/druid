@@ -26,7 +26,7 @@ describe('table action dialog', () => {
     const tableActionDialog = (
       <TableActionDialog
         sideButtonMetadata={[{ icon: 'badge', text: 'test' }]}
-        onClose={() => null}
+        onClose={() => {}}
         isOpen
       />
     );

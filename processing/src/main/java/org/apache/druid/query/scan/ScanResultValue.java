@@ -48,7 +48,7 @@ public class ScanResultValue implements Comparable<ScanResultValue>
 
   @JsonCreator
   public ScanResultValue(
-      @Nullable @JsonProperty("segmentId") String segmentId,
+      @JsonProperty("segmentId") @Nullable String segmentId,
       @JsonProperty("columns") List<String> columns,
       @JsonProperty("events") Object events
   )

@@ -16,57 +16,287 @@
  * limitations under the License.
  */
 
-import { HTMLSelect, IconName, ITreeNode, Tree } from '@blueprintjs/core';
+import {
+  HTMLSelect,
+  IconName,
+  ITreeNode,
+  Menu,
+  MenuItem,
+  Popover,
+  Position,
+  Tree,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Alias, FilterClause, RefExpression, SqlQuery, StringType } from 'druid-query-toolkit';
 import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
-import { groupBy } from '../../../utils';
+import { Deferred } from '../../../components/deferred/deferred';
+import { copyAndAlert, escapeSqlIdentifier, groupBy } from '../../../utils';
 import { ColumnMetadata } from '../../../utils/column-metadata';
+import { RowFilter } from '../query-view';
+
+import { NumberMenuItems } from './column-tree-menu/number-menu-items/number-menu-items';
+import { StringMenuItems } from './column-tree-menu/string-menu-items/string-menu-items';
+import { TimeMenuItems } from './column-tree-menu/time-menu-items/time-menu-items';
 
 import './column-tree.scss';
 
+function handleTableClick(
+  tableSchema: string,
+  nodeData: ITreeNode,
+  onQueryStringChange: (queryString: string) => void,
+): void {
+  let columns: string[];
+  if (nodeData.childNodes) {
+    columns = nodeData.childNodes.map(child => escapeSqlIdentifier(String(child.label)));
+  } else {
+    columns = ['*'];
+  }
+  if (tableSchema === 'druid') {
+    onQueryStringChange(`SELECT ${columns.join(', ')}
+FROM ${escapeSqlIdentifier(String(nodeData.label))}
+WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
+  } else {
+    onQueryStringChange(`SELECT ${columns.join(', ')}
+FROM ${tableSchema}.${nodeData.label}`);
+  }
+}
+
+function handleColumnClick(
+  columnSchema: string,
+  columnTable: string,
+  nodeData: ITreeNode,
+  onQueryStringChange: (queryString: string) => void,
+): void {
+  if (columnSchema === 'druid') {
+    if (nodeData.icon === IconNames.TIME) {
+      onQueryStringChange(`SELECT
+  TIME_FLOOR(${escapeSqlIdentifier(String(nodeData.label))}, 'PT1H') AS "Time",
+  COUNT(*) AS "Count"
+FROM ${escapeSqlIdentifier(columnTable)}
+WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
+GROUP BY 1
+ORDER BY "Time" ASC`);
+    } else {
+      onQueryStringChange(`SELECT
+  "${nodeData.label}",
+  COUNT(*) AS "Count"
+FROM ${escapeSqlIdentifier(columnTable)}
+WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
+GROUP BY 1
+ORDER BY "Count" DESC`);
+    }
+  } else {
+    onQueryStringChange(`SELECT
+  ${escapeSqlIdentifier(String(nodeData.label))},
+  COUNT(*) AS "Count"
+FROM ${columnSchema}.${columnTable}
+GROUP BY 1
+ORDER BY "Count" DESC`);
+  }
+}
+
 export interface ColumnTreeProps {
   columnMetadataLoading: boolean;
-  columnMetadata: ColumnMetadata[] | null;
+  columnMetadata?: ColumnMetadata[];
   onQueryStringChange: (queryString: string) => void;
+  defaultSchema?: string;
+  defaultTable?: string;
+  addFunctionToGroupBy: (
+    functionName: string,
+    spacing: string[],
+    argumentsArray: (StringType | number)[],
+    run: boolean,
+    alias: Alias,
+  ) => void;
+  addToGroupBy: (columnName: string, run: boolean) => void;
+  addAggregateColumn: (
+    columnName: string | RefExpression,
+    functionName: string,
+    run: boolean,
+    alias?: Alias,
+    distinct?: boolean,
+    filter?: FilterClause,
+  ) => void;
+  filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
+  hasGroupBy: () => boolean;
+  queryAst: () => SqlQuery | undefined;
+  clear: () => void;
 }
 
 export interface ColumnTreeState {
-  prevColumnMetadata: ColumnMetadata[] | null;
-  columnTree: ITreeNode[] | null;
+  prevColumnMetadata?: ColumnMetadata[];
+  prevGroupByStatus?: boolean;
+  columnTree?: ITreeNode[];
   selectedTreeIndex: number;
+  expandedNode: number;
 }
 
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
-    const { columnMetadata } = props;
-
+    const { columnMetadata, defaultSchema, defaultTable } = props;
     if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
+      const columnTree = groupBy(
+        columnMetadata,
+        r => r.TABLE_SCHEMA,
+        (metadata, schema): ITreeNode => ({
+          id: schema,
+          label: schema,
+          childNodes: groupBy(
+            metadata,
+            r => r.TABLE_NAME,
+            (metadata, table) => ({
+              id: table,
+              icon: IconNames.TH,
+              label: (
+                <Popover
+                  boundary={'window'}
+                  position={Position.RIGHT}
+                  content={
+                    <Menu>
+                      <MenuItem
+                        icon={IconNames.FULLSCREEN}
+                        text={`Select ... from ${table}`}
+                        onClick={() => {
+                          handleTableClick(
+                            schema,
+                            {
+                              id: table,
+                              icon: IconNames.TH,
+                              label: table,
+                              childNodes: metadata.map(columnData => ({
+                                id: columnData.COLUMN_NAME,
+                                icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
+                                label: columnData.COLUMN_NAME,
+                              })),
+                            },
+                            props.onQueryStringChange,
+                          );
+                        }}
+                      />
+                      <MenuItem
+                        icon={IconNames.CLIPBOARD}
+                        text={`Copy: ${table}`}
+                        onClick={() => {
+                          copyAndAlert(table, `${table} query copied to clipboard`);
+                        }}
+                      />
+                    </Menu>
+                  }
+                >
+                  <div>{table}</div>
+                </Popover>
+              ),
+              childNodes: metadata.map(columnData => ({
+                id: columnData.COLUMN_NAME,
+                icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
+                label: (
+                  <Popover
+                    boundary={'window'}
+                    position={Position.RIGHT}
+                    autoFocus={false}
+                    targetClassName={'bp3-popover-open'}
+                    content={
+                      <Deferred
+                        content={() => (
+                          <Menu>
+                            <MenuItem
+                              icon={IconNames.FULLSCREEN}
+                              text={`Show: ${columnData.COLUMN_NAME}`}
+                              onClick={() => {
+                                handleColumnClick(
+                                  schema,
+                                  table,
+                                  {
+                                    id: columnData.COLUMN_NAME,
+                                    icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
+                                    label: columnData.COLUMN_NAME,
+                                  },
+                                  props.onQueryStringChange,
+                                );
+                              }}
+                            />
+                            {columnData.DATA_TYPE === 'BIGINT' && (
+                              <NumberMenuItems
+                                addFunctionToGroupBy={props.addFunctionToGroupBy}
+                                addToGroupBy={props.addToGroupBy}
+                                addAggregateColumn={props.addAggregateColumn}
+                                filterByRow={props.filterByRow}
+                                columnName={columnData.COLUMN_NAME}
+                                queryAst={props.queryAst()}
+                              />
+                            )}
+                            {columnData.DATA_TYPE === 'VARCHAR' && (
+                              <StringMenuItems
+                                addFunctionToGroupBy={props.addFunctionToGroupBy}
+                                addToGroupBy={props.addToGroupBy}
+                                addAggregateColumn={props.addAggregateColumn}
+                                filterByRow={props.filterByRow}
+                                columnName={columnData.COLUMN_NAME}
+                                queryAst={props.queryAst()}
+                              />
+                            )}
+                            {columnData.DATA_TYPE === 'TIMESTAMP' && (
+                              <TimeMenuItems
+                                clear={props.clear}
+                                addFunctionToGroupBy={props.addFunctionToGroupBy}
+                                addToGroupBy={props.addToGroupBy}
+                                addAggregateColumn={props.addAggregateColumn}
+                                filterByRow={props.filterByRow}
+                                columnName={columnData.COLUMN_NAME}
+                                queryAst={props.queryAst()}
+                              />
+                            )}
+                            <MenuItem
+                              icon={IconNames.CLIPBOARD}
+                              text={`Copy: ${columnData.COLUMN_NAME}`}
+                              onClick={() => {
+                                copyAndAlert(
+                                  columnData.COLUMN_NAME,
+                                  `${columnData.COLUMN_NAME} query copied to clipboard`,
+                                );
+                              }}
+                            />
+                          </Menu>
+                        )}
+                      />
+                    }
+                  >
+                    <div>{columnData.COLUMN_NAME}</div>
+                  </Popover>
+                ),
+              })),
+            }),
+          ),
+        }),
+      );
+
+      let selectedTreeIndex = -1;
+      let expandedNode = -1;
+      if (defaultSchema && columnTree) {
+        selectedTreeIndex = columnTree.findIndex(x => {
+          return x.id === defaultSchema;
+        });
+      }
+
+      if (selectedTreeIndex > -1) {
+        const treeNodes = columnTree[selectedTreeIndex].childNodes;
+        if (treeNodes) {
+          if (defaultTable) {
+            expandedNode = treeNodes.findIndex(node => {
+              return node.id === defaultTable;
+            });
+          }
+        }
+      }
+
       return {
         prevColumnMetadata: columnMetadata,
-        columnTree: groupBy(
-          columnMetadata,
-          r => r.TABLE_SCHEMA,
-          (metadata, schema): ITreeNode => ({
-            id: schema,
-            label: schema,
-            childNodes: groupBy(
-              metadata,
-              r => r.TABLE_NAME,
-              (metadata, table) => ({
-                id: table,
-                icon: IconNames.TH,
-                label: table,
-                childNodes: metadata.map(columnData => ({
-                  id: columnData.COLUMN_NAME,
-                  icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
-                  label: columnData.COLUMN_NAME,
-                })),
-              }),
-            ),
-          }),
-        ),
+        columnTree,
+        selectedTreeIndex,
+        expandedNode,
+        prevGroupByStatus: props.hasGroupBy,
       };
     }
     return null;
@@ -88,9 +318,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   constructor(props: ColumnTreeProps, context: any) {
     super(props, context);
     this.state = {
-      prevColumnMetadata: null,
-      columnTree: null,
-      selectedTreeIndex: 0,
+      selectedTreeIndex: -1,
+      expandedNode: -1,
     };
   }
 
@@ -101,7 +330,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     return (
       <HTMLSelect
         className="schema-selector"
-        value={selectedTreeIndex}
+        value={selectedTreeIndex > -1 ? selectedTreeIndex : undefined}
         onChange={this.handleSchemaSelectorChange}
         fill
         minimal
@@ -117,10 +346,10 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   }
 
   private handleSchemaSelectorChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    this.setState({ selectedTreeIndex: Number(e.target.value) });
+    this.setState({ selectedTreeIndex: Number(e.target.value), expandedNode: -1 });
   };
 
-  render() {
+  render(): JSX.Element | null {
     const { columnMetadataLoading } = this.props;
     if (columnMetadataLoading) {
       return (
@@ -130,18 +359,22 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       );
     }
 
-    const { columnTree, selectedTreeIndex } = this.state;
+    const { columnTree, selectedTreeIndex, expandedNode } = this.state;
     if (!columnTree) return null;
-    const currentSchemaSubtree = columnTree[selectedTreeIndex].childNodes;
+    const currentSchemaSubtree =
+      columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
     if (!currentSchemaSubtree) return null;
 
+    if (expandedNode > -1) {
+      currentSchemaSubtree[expandedNode].isExpanded = true;
+    }
     return (
       <div className="column-tree">
         {this.renderSchemaSelector()}
         <div className="tree-container">
           <Tree
             contents={currentSchemaSubtree}
-            onNodeClick={this.handleNodeClick}
+            onNodeClick={() => this.setState({ expandedNode: -1 })}
             onNodeCollapse={this.handleNodeCollapse}
             onNodeExpand={this.handleNodeExpand}
           />
@@ -150,53 +383,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     );
   }
 
-  private handleNodeClick = (nodeData: ITreeNode, nodePath: number[]) => {
-    const { onQueryStringChange } = this.props;
-    const { columnTree, selectedTreeIndex } = this.state;
-    if (!columnTree) return;
-
-    switch (nodePath.length) {
-      case 1: // Datasource
-        const tableSchema = columnTree[selectedTreeIndex].label;
-        if (tableSchema === 'druid') {
-          onQueryStringChange(`SELECT *
-FROM "${nodeData.label}"
-WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
-        } else {
-          onQueryStringChange(`SELECT *
-FROM ${tableSchema}.${nodeData.label}`);
-        }
-        break;
-
-      case 2: // Column
-        const schemaNode = columnTree[selectedTreeIndex];
-        const columnSchema = schemaNode.label;
-        const columnTable = schemaNode.childNodes ? schemaNode.childNodes[nodePath[0]].label : '?';
-        if (columnSchema === 'druid') {
-          if (nodeData.icon === IconNames.TIME) {
-            onQueryStringChange(`SELECT TIME_FLOOR("${nodeData.label}", 'PT1H') AS "Time", COUNT(*) AS "Count"
-FROM "${columnTable}"
-WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
-GROUP BY 1
-ORDER BY "Time" ASC`);
-          } else {
-            onQueryStringChange(`SELECT "${nodeData.label}", COUNT(*) AS "Count"
-FROM "${columnTable}"
-WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
-GROUP BY 1
-ORDER BY "Count" DESC`);
-          }
-        } else {
-          onQueryStringChange(`SELECT "${nodeData.label}", COUNT(*) AS "Count"
-FROM ${columnSchema}.${columnTable}
-GROUP BY 1
-ORDER BY "Count" DESC`);
-        }
-        break;
-    }
-  };
-
   private handleNodeCollapse = (nodeData: ITreeNode) => {
+    this.setState({ expandedNode: -1 });
     nodeData.isExpanded = false;
     this.bounceState();
   };

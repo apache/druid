@@ -16,14 +16,16 @@
  * limitations under the License.
  */
 
-import { Button, HTMLSelect, InputGroup } from '@blueprintjs/core';
+import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import copy from 'copy-to-clipboard';
 import FileSaver from 'file-saver';
 import hasOwnProp from 'has-own-prop';
 import numeral from 'numeral';
 import React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
+import { AppToaster } from '../singletons/toaster';
 export function wait(ms: number): Promise<void> {
   return new Promise(resolve => {
     setTimeout(resolve, ms);
@@ -31,7 +33,10 @@ export function wait(ms: number): Promise<void> {
 }
 
 export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
-  value = `"${value}"`;
+  return addFilterRaw(filters, id, `"${value}"`);
+}
+
+export function addFilterRaw(filters: Filter[], id: string, value: string): Filter[] {
   const currentFilter = filters.find(f => f.id === id);
   if (currentFilter) {
     filters = filters.filter(f => f.id !== id);
@@ -101,10 +106,7 @@ function getNeedleAndMode(input: string): NeedleAndMode {
 }
 
 export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
-  if (value === undefined) {
-    return true;
-  }
-  if (value === null) return false;
+  if (value == null) return false;
   const haystack = String(value).toLowerCase();
   const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value.toLowerCase());
   const needle = needleAndMode.needle;
@@ -276,8 +278,16 @@ export function parseStringToJSON(s: string): JSON | null {
   }
 }
 
-export function filterMap<T, Q>(xs: T[], f: (x: T, i?: number) => Q | null | undefined): Q[] {
-  return (xs.map(f) as any).filter(Boolean);
+export function filterMap<T, Q>(xs: T[], f: (x: T, i: number) => Q | undefined): Q[] {
+  return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
+}
+
+export function compact<T>(xs: (T | undefined | false | null | '')[]): T[] {
+  return xs.filter(Boolean) as T[];
+}
+
+export function assemble<T>(...xs: (T | undefined | false | null | '')[]): T[] {
+  return xs.filter(Boolean) as T[];
 }
 
 export function alphanumericCompare(a: string, b: string): number {
@@ -315,4 +325,16 @@ export function downloadFile(text: string, type: string, filename: string): void
     type: blobType,
   });
   FileSaver.saveAs(blob, filename);
+}
+
+export function escapeSqlIdentifier(identifier: string): string {
+  return `"${identifier.replace(/"/g, '""')}"`;
+}
+
+export function copyAndAlert(copyString: string, alertMessage: string): void {
+  copy(copyString, { format: 'text/plain' });
+  AppToaster.show({
+    message: alertMessage,
+    intent: Intent.SUCCESS,
+  });
 }

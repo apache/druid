@@ -100,11 +100,6 @@ public class AppenderatorDriverAddResult
     return isPersistRequired;
   }
 
-  public boolean isPushRequired(AppenderatorConfig tuningConfig)
-  {
-    return isPushRequired(tuningConfig.getMaxRowsPerSegment(), tuningConfig.getMaxTotalRows());
-  }
-
   public boolean isPushRequired(@Nullable Integer maxRowsPerSegment, @Nullable Long maxTotalRows)
   {
     boolean overThreshold = false;

@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.indexer.RunnerTaskState;
+import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
@@ -107,6 +108,11 @@ public interface TaskRunner
   default RunnerTaskState getRunnerTaskState(String taskId)
   {
     return null;
+  }
+
+  default TaskLocation getTaskLocation(String taskId)
+  {
+    return TaskLocation.unknown();
   }
 
   /**

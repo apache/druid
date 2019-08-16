@@ -19,7 +19,7 @@
 import axios from 'axios';
 
 import { getDruidErrorMessage } from './druid-query';
-import { alphanumericCompare, filterMap, sortWithPrefixSuffix } from './general';
+import { alphanumericCompare, sortWithPrefixSuffix } from './general';
 import {
   DimensionsSpec,
   getEmptyTimestampSpec,
@@ -98,11 +98,7 @@ export function headerFromSampleResponse(
   columnOrder?: string[],
 ): string[] {
   let columns = sortWithPrefixSuffix(
-    dedupe(
-      [].concat(
-        ...(filterMap(sampleResponse.data, s => (s.parsed ? Object.keys(s.parsed) : null)) as any),
-      ),
-    ).sort(),
+    dedupe(sampleResponse.data.flatMap(s => (s.parsed ? Object.keys(s.parsed) : []))).sort(),
     columnOrder || ['__time'],
     [],
     alphanumericCompare,

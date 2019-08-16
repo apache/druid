@@ -25,9 +25,10 @@ describe('query plan dialog', () => {
   it('matches snapshot', () => {
     const queryPlanDialog = (
       <QueryPlanDialog
+        setQueryString={() => null}
         explainResult={'test'}
-        explainError={{ name: 'test', message: 'test' }}
-        onClose={() => null}
+        explainError={undefined}
+        onClose={() => {}}
       />
     );
     render(queryPlanDialog);

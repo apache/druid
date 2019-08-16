@@ -45,15 +45,15 @@ export interface SchemaTableProps {
   selectedDimensionSpecIndex: number;
   selectedMetricSpecIndex: number;
   onDimensionOrMetricSelect: (
-    selectedDimensionSpec: DimensionSpec | null,
+    selectedDimensionSpec: DimensionSpec | undefined,
     selectedDimensionSpecIndex: number,
-    selectedMetricSpec: MetricSpec | null,
+    selectedMetricSpec: MetricSpec | undefined,
     selectedMetricSpecIndex: number,
   ) => void;
 }
 
 export class SchemaTable extends React.PureComponent<SchemaTableProps> {
-  render() {
+  render(): JSX.Element {
     const {
       sampleBundle,
       columnFilter,
@@ -75,7 +75,7 @@ export class SchemaTable extends React.PureComponent<SchemaTableProps> {
         className="schema-table -striped -highlight"
         data={headerAndRows.rows}
         columns={filterMap(dimensionMetricSortedHeader, (columnName, i) => {
-          if (!caseInsensitiveContains(columnName, columnFilter)) return null;
+          if (!caseInsensitiveContains(columnName, columnFilter)) return;
 
           const metricSpecIndex = metricsSpec.findIndex(m => getMetricSpecName(m) === columnName);
           const metricSpec = metricsSpec[metricSpecIndex];
@@ -88,7 +88,9 @@ export class SchemaTable extends React.PureComponent<SchemaTableProps> {
               Header: (
                 <div
                   className="clickable"
-                  onClick={() => onDimensionOrMetricSelect(null, -1, metricSpec, metricSpecIndex)}
+                  onClick={() =>
+                    onDimensionOrMetricSelect(undefined, -1, metricSpec, metricSpecIndex)
+                  }
                 >
                   <div className="column-name">{columnName}</div>
                   <div className="column-detail">{metricSpec.type}&nbsp;</div>
@@ -123,7 +125,7 @@ export class SchemaTable extends React.PureComponent<SchemaTableProps> {
                   className="clickable"
                   onClick={() => {
                     if (timestamp) {
-                      onDimensionOrMetricSelect(null, -1, null, -1);
+                      onDimensionOrMetricSelect(undefined, -1, undefined, -1);
                       return;
                     }
 
@@ -131,7 +133,7 @@ export class SchemaTable extends React.PureComponent<SchemaTableProps> {
                     onDimensionOrMetricSelect(
                       inflateDimensionSpec(dimensionSpec),
                       dimensionSpecIndex,
-                      null,
+                      undefined,
                       -1,
                     );
                   }}

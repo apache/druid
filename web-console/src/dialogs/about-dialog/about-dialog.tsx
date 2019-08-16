@@ -40,7 +40,7 @@ export class AboutDialog extends React.PureComponent<AboutDialogProps, AboutDial
     this.state = {};
   }
 
-  render() {
+  render(): JSX.Element {
     const { onClose } = this.props;
 
     return (
