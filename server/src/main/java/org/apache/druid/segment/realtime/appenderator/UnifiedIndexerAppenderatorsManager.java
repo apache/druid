@@ -421,6 +421,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       return baseConfig.getBasePersistDirectory();
     }
 
+    @Override
+    public AppenderatorConfig withBasePersistDirectory(File basePersistDirectory)
+    {
+      return this;
+    }
+
     @Nullable
     @Override
     public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()

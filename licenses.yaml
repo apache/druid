@@ -336,7 +336,7 @@ name: Apache Commons IO
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.5
+version: 2.6
 libraries:
   - commons-io: commons-io
 
@@ -2238,20 +2238,10 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 0.8.2.1
+version: 2.1.0
 libraries:
-  - org.apache.kafka: kafka_2.10
+  - org.apache.kafka: kafka_2.12
   - org.apache.kafka: kafka-clients
-
----
-
-name: ZooKeeper Client
-license_category: binary
-module: extensions/kafka-extraction-namespace
-license_name: Apache License version 2.0
-version: 0.3
-libraries:
-  - com.101tec: zkclient
 
 ---
 
@@ -2280,10 +2270,9 @@ libraries:
 name: Scala Library
 license_category: binary
 module: extensions/kafka-extraction-namespace
-license_name: BSD-3-Clause License
-copyright: EPFL, Lightbend Inc.
-version: 2.10.4
-license_file_path: licenses/bin/scala-lang.BSD3
+license_name: Apache License version 2.0
+copyright: LAMP/EPFL and Lightbend, Inc.
+version: 2.12.7
 libraries:
   - org.scala-lang: scala-library
 

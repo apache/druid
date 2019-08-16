@@ -1000,7 +1000,8 @@ public class RealtimeIndexTaskTest
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
-        new NoopTestTaskReportFileWriter()
+        new NoopTestTaskReportFileWriter(),
+        null
     );
 
     return toolboxFactory.build(task);

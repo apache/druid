@@ -101,7 +101,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     Assert.assertTrue(task.isReady(actionClient));
 
     final Future<TaskState> future = service.submit(() -> task.run(toolbox).getStatusCode());
-    while (task.getRunner() == null) {
+    while (task.getCurrentRunner() == null) {
       Thread.sleep(100);
     }
     task.stopGracefully(null);
@@ -109,7 +109,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     expectedException.expectCause(CoreMatchers.instanceOf(InterruptedException.class));
     future.get();
 
-    final TestParallelIndexTaskRunner runner = (TestParallelIndexTaskRunner) task.getRunner();
+    final TestSinglePhaseParallelIndexTaskRunner runner = (TestSinglePhaseParallelIndexTaskRunner) task.getCurrentRunner();
     Assert.assertTrue(runner.getRunningTaskIds().isEmpty());
     // completeSubTaskSpecs should be empty because no task has reported its status to TaskMonitor
     Assert.assertTrue(runner.getCompleteSubTaskSpecs().isEmpty());
@@ -139,11 +139,11 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     final TaskState state = task.run(toolbox).getStatusCode();
     Assert.assertEquals(TaskState.FAILED, state);
 
-    final TestParallelIndexTaskRunner runner = (TestParallelIndexTaskRunner) task.getRunner();
+    final TestSinglePhaseParallelIndexTaskRunner runner = (TestSinglePhaseParallelIndexTaskRunner) task.getCurrentRunner();
     Assert.assertTrue(runner.getRunningTaskIds().isEmpty());
-    final List<SubTaskSpec<ParallelIndexSubTask>> completeSubTaskSpecs = runner.getCompleteSubTaskSpecs();
+    final List<SubTaskSpec<SinglePhaseSubTask>> completeSubTaskSpecs = runner.getCompleteSubTaskSpecs();
     Assert.assertEquals(1, completeSubTaskSpecs.size());
-    final TaskHistory<ParallelIndexSubTask> history = runner.getCompleteSubTaskSpecAttemptHistory(
+    final TaskHistory<SinglePhaseSubTask> history = runner.getCompleteSubTaskSpecAttemptHistory(
         completeSubTaskSpecs.get(0).getId()
     );
     Assert.assertNotNull(history);
@@ -200,7 +200,10 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
             null,
             null,
             null,
+            null,
             numTotalSubTasks,
+            null,
+            null,
             null,
             null,
             null,
@@ -292,20 +295,17 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     }
 
     @Override
-    ParallelIndexTaskRunner createRunner(TaskToolbox toolbox)
+    SinglePhaseParallelIndexTaskRunner createSinglePhaseTaskRunner(TaskToolbox toolbox)
     {
-      setRunner(
-          new TestRunner(
-              toolbox,
-              this,
-              indexingServiceClient
-          )
+      return new TestRunner(
+          toolbox,
+          this,
+          indexingServiceClient
       );
-      return getRunner();
     }
   }
 
-  private static class TestRunner extends TestParallelIndexTaskRunner
+  private static class TestRunner extends TestSinglePhaseParallelIndexTaskRunner
   {
     private final ParallelIndexSupervisorTask supervisorTask;
 
@@ -327,12 +327,12 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     }
 
     @Override
-    ParallelIndexSubTaskSpec newTaskSpec(InputSplit split)
+    SinglePhaseSubTaskSpec newTaskSpec(InputSplit split)
     {
       final FiniteFirehoseFactory baseFirehoseFactory = (FiniteFirehoseFactory) getIngestionSchema()
           .getIOConfig()
           .getFirehoseFactory();
-      return new TestParallelIndexSubTaskSpec(
+      return new TestSinglePhaseSubTaskSpec(
           supervisorTask.getId() + "_" + getAndIncrementNextSpecId(),
           supervisorTask.getGroupId(),
           supervisorTask,
@@ -350,11 +350,11 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     }
   }
 
-  private static class TestParallelIndexSubTaskSpec extends ParallelIndexSubTaskSpec
+  private static class TestSinglePhaseSubTaskSpec extends SinglePhaseSubTaskSpec
   {
     private final ParallelIndexSupervisorTask supervisorTask;
 
-    private TestParallelIndexSubTaskSpec(
+    private TestSinglePhaseSubTaskSpec(
         String id,
         String groupId,
         ParallelIndexSupervisorTask supervisorTask,
@@ -368,9 +368,9 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     }
 
     @Override
-    public ParallelIndexSubTask newSubTask(int numAttempts)
+    public SinglePhaseSubTask newSubTask(int numAttempts)
     {
-      return new TestParallelIndexSubTask(
+      return new TestSinglePhaseSubTask(
           null,
           getGroupId(),
           null,
@@ -384,9 +384,9 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     }
   }
 
-  private static class TestParallelIndexSubTask extends ParallelIndexSubTask
+  private static class TestSinglePhaseSubTask extends SinglePhaseSubTask
   {
-    private TestParallelIndexSubTask(
+    private TestSinglePhaseSubTask(
         @Nullable String id,
         String groupId,
         TaskResource taskResource,

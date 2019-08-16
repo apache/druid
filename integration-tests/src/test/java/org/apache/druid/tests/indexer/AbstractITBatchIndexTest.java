@@ -21,6 +21,7 @@ package org.apache.druid.tests.indexer;
 
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -222,7 +223,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
   {
     return indexer.getCompleteTasksForDataSource(dataSource)
                   .stream()
-                  .filter(t -> t.getType().equals("index_sub"))
+                  .filter(t -> t.getType().equals(SinglePhaseSubTask.TYPE))
                   .count();
   }
 }

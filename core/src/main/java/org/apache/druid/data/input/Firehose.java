@@ -56,7 +56,7 @@ public interface Firehose extends Closeable
    *
    * @return true if and when there is another row available, false if the stream has dried up
    */
-  boolean hasMore();
+  boolean hasMore() throws IOException;
 
   /**
    * The next row available.  Should only be called if hasMore returns true.
@@ -65,7 +65,7 @@ public interface Firehose extends Closeable
    * @return The next row
    */
   @Nullable
-  InputRow nextRow();
+  InputRow nextRow() throws IOException;
 
   /**
    * Returns an InputRowPlusRaw object containing the InputRow plus the raw, unparsed data corresponding to the next row
@@ -75,7 +75,7 @@ public interface Firehose extends Closeable
    *
    * @return an InputRowPlusRaw which may contain any of: an InputRow, the raw data, or a ParseException
    */
-  default InputRowPlusRaw nextRowWithRaw()
+  default InputRowPlusRaw nextRowWithRaw() throws IOException
   {
     try {
       return InputRowPlusRaw.of(nextRow(), null);

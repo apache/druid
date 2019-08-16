@@ -19,6 +19,10 @@
 
 package org.apache.druid.java.util.common;
 
+import com.google.common.primitives.Doubles;
+
+import javax.annotation.Nullable;
+
 public final class Numbers
 {
   /**
@@ -89,6 +93,26 @@ public final class Numbers
       } else {
         throw new ISE("Unknown type [%s]", val.getClass());
       }
+    }
+  }
+
+  /**
+   * Try parsing the given Number or String object val as double.
+   * @param val
+   * @param nullValue value to return when input was string type but not parseable into double value
+   * @return parsed double value
+   */
+  public static double tryParseDouble(@Nullable Object val, double nullValue)
+  {
+    if (val == null) {
+      return nullValue;
+    } else if (val instanceof Number) {
+      return ((Number) val).doubleValue();
+    } else if (val instanceof String) {
+      Double d = Doubles.tryParse((String) val);
+      return d == null ? nullValue : d.doubleValue();
+    } else {
+      throw new IAE("Unknown object type [%s]", val.getClass().getName());
     }
   }
 
