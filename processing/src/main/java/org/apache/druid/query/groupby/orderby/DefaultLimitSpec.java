@@ -263,14 +263,16 @@ public class DefaultLimitSpec implements LimitSpec
     Ordering<ResultRow> ordering = null;
     for (OrderByColumnSpec columnSpec : columns) {
       String columnName = columnSpec.getDimension();
-      Ordering<Row> nextOrdering = null;
+      Ordering<ResultRow> nextOrdering = null;
+
+      final int columnIndex = rowOrderLookup.applyAsInt(columnName);
 
       if (postAggregatorsMap.containsKey(columnName)) {
-        nextOrdering = metricOrdering(columnName, postAggregatorsMap.get(columnName).getComparator());
+        nextOrdering = metricOrdering(columnIndex, postAggregatorsMap.get(columnName).getComparator());
       } else if (aggregatorsMap.containsKey(columnName)) {
-        nextOrdering = metricOrdering(columnName, aggregatorsMap.get(columnName).getComparatorForFinalOrdering(columnSpec));
+        nextOrdering = metricOrdering(columnIndex, aggregatorsMap.get(columnName).getComparatorForFinalOrdering(columnSpec));
       } else if (dimensionsMap.containsKey(columnName)) {
-        nextOrdering = dimensionOrdering(columnName, columnSpec.getDimensionComparator());
+        nextOrdering = dimensionOrdering(columnIndex, columnSpec.getDimensionComparator());
       }
 
       if (nextOrdering == null) {

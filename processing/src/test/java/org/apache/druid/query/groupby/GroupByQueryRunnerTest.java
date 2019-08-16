@@ -2575,9 +2575,10 @@ public class GroupByQueryRunnerTest
         ))
         .build();
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "market", "total_market", "first", "mezzanine", "last", "premium"),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "1970-01-01", "market", "total_market", "first", "mezzanine", "last", "premium"),
+        makeRow(
+            query,
             "1970-01-01",
             "market",
             "upfront",
@@ -2586,10 +2587,10 @@ public class GroupByQueryRunnerTest
             "last",
             "premium"
         ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "market", "spot", "first", "automotive", "last", "travel")
+        makeRow(query, "1970-01-01", "market", "spot", "first", "automotive", "last", "travel")
         );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "first-last-aggs");
   }
 
