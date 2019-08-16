@@ -32,11 +32,11 @@ ingestion method.
 
 |   |Hadoop-based ingestion|Native parallel ingestion|Native local ingestion|
 |---|----------------------|-------------------------|----------------------|
-| Parallel indexing | Always parallel | Parallel if firehose is splittable | Always sequential |
-| Supported indexing modes | Replacing mode | Both appending and replacing modes | Both appending and replacing modes |
+| Parallel indexing | Always parallel | Parallel if firehose is splittable <br/> & maxNumSubTasks > 1 in tuningConfig | Always sequential |
+| Supported indexing modes | Overwriting mode | Both appending and overwriting modes | Both appending and overwriting modes |
 | External dependency | Hadoop (it internally submits Hadoop jobs) | No dependency | No dependency |
-| Supported [rollup modes](http://druid.io/docs/latest/ingestion/index.html#roll-up-modes) | Perfect rollup | Best-effort rollup | Both perfect and best-effort rollup |
-| Supported partitioning methods | [Both Hash-based and range partitioning](http://druid.io/docs/latest/ingestion/hadoop.html#partitioning-specification) | N/A | Hash-based partitioning (when `forceGuaranteedRollup` = true) |
+| Supported [rollup modes](./index.html#roll-up-modes) | Perfect rollup | Both perfect and best-effort rollup | Both perfect and best-effort rollup |
+| Supported partitioning methods | [Both Hash-based and range partitioning](./hadoop.html#partitioning-specification) | Hash-based partitioning (when `forceGuaranteedRollup` = true) | Hash-based partitioning (when `forceGuaranteedRollup` = true) |
 | Supported input locations | All locations accessible via HDFS client or Druid dataSource | All implemented [firehoses](./firehose.html) | All implemented [firehoses](./firehose.html) |
 | Supported file formats | All implemented Hadoop InputFormats | Currently text file formats (CSV, TSV, JSON) by default. Additional formats can be added though a [custom extension](../development/modules.html) implementing [`FiniteFirehoseFactory`](https://github.com/apache/incubator-druid/blob/master/core/src/main/java/org/apache/druid/data/input/FiniteFirehoseFactory.java) | Currently text file formats (CSV, TSV, JSON) by default. Additional formats can be added though a [custom extension](../development/modules.html) implementing [`FiniteFirehoseFactory`](https://github.com/apache/incubator-druid/blob/master/core/src/main/java/org/apache/druid/data/input/FiniteFirehoseFactory.java) |
 | Saving parse exceptions in ingestion report | Currently not supported | Currently not supported | Supported |

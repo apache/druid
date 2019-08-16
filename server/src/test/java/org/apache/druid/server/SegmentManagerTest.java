@@ -36,6 +36,8 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
+import org.apache.druid.timeline.partition.PartitionIds;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -383,6 +385,34 @@ public class SegmentManagerTest
     Assert.assertNull(segmentManager.getTimeline("nonExisting"));
   }
 
+  @Test
+  public void testLoadAndDropNonRootGenerationSegment() throws SegmentLoadingException
+  {
+    final DataSegment segment = new DataSegment(
+        "small_source",
+        Intervals.of("0/1000"),
+        "0",
+        ImmutableMap.of("interval", Intervals.of("0/1000"), "version", 0),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        new NumberedOverwriteShardSpec(
+            PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + 10,
+            10,
+            20,
+            (short) 1,
+            (short) 1
+        ),
+        0,
+        10
+    );
+
+    segmentManager.loadSegment(segment);
+    assertResult(ImmutableList.of(segment));
+
+    segmentManager.dropSegment(segment);
+    assertResult(ImmutableList.of());
+  }
+
   @SuppressWarnings("RedundantThrows") // TODO remove when the bug in intelliJ is fixed.
   private void assertResult(List<DataSegment> expectedExistingSegments) throws SegmentLoadingException
   {
@@ -403,7 +433,9 @@ public class SegmentManagerTest
       expectedTimeline.add(
           segment.getInterval(),
           segment.getVersion(),
-          segment.getShardSpec().createChunk(new ReferenceCountingSegment(segmentLoader.getSegment(segment)))
+          segment.getShardSpec().createChunk(
+              ReferenceCountingSegment.wrapSegment(segmentLoader.getSegment(segment), segment.getShardSpec())
+          )
       );
     }
 

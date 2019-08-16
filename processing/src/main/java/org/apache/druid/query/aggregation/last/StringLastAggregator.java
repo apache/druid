@@ -65,7 +65,7 @@ public class StringLastAggregator implements Aggregator
         } else {
           throw new ISE(
               "Try to aggregate unsuported class type [%s].Supported class types: String or SerializablePairLongString",
-              value.getClass().getCanonicalName()
+              value.getClass().getName()
           );
         }
 

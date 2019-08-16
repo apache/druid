@@ -16,19 +16,20 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
-import { render } from 'react-testing-library';
+import { render } from '@testing-library/react';
+import React from 'react';
 
 import { CenterMessage } from './center-message';
 
 describe('decribe center-message', () => {
-  it('center-message snapshot', () => {
-    const centerMessage =
+  it('matches snapshot', () => {
+    const centerMessage = (
       <CenterMessage>
         <div>Hello World</div>
-      </CenterMessage>;
+      </CenterMessage>
+    );
 
-    const { container, getByText } = render(centerMessage);
+    const { container } = render(centerMessage);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

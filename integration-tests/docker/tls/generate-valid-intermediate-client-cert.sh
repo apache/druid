@@ -31,7 +31,7 @@ ST=DR
 L=Druid City
 O=Druid
 OU=IntegrationTests
-emailAddress=intermediate@druid.io
+emailAddress=intermediate@druid.apache.org
 CN = intermediate
 
 [ req_ext ]
@@ -62,7 +62,7 @@ ST=DR
 L=Druid City
 O=Druid
 OU=IntegrationTests
-emailAddress=intermediate-client@druid.io
+emailAddress=intermediate-client@druid.apache.org
 CN = localhost
 
 [ req_ext ]

@@ -31,4 +31,12 @@ public interface ColumnCapabilities
   boolean hasSpatialIndexes();
   boolean hasMultipleValues();
   boolean isFilterable();
+
+  /**
+   * This property indicates that this {@link ColumnCapabilities} is "complete" in that all properties can be expected
+   * to supply valid responses. Not all {@link ColumnCapabilities} are created equal. Some, such as those provided by
+   * {@link org.apache.druid.query.groupby.RowBasedColumnSelectorFactory} only have type information, if even that, and
+   * cannot supply information like {@link ColumnCapabilities#hasMultipleValues}, and will report as false.
+   */
+  boolean isComplete();
 }

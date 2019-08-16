@@ -20,10 +20,10 @@
 package org.apache.druid.query.groupby;
 
 import com.google.common.base.Predicate;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.data.input.Rows;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -31,6 +31,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseSingleValueDimensionSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
@@ -46,35 +47,64 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.function.ToLongFunction;
 
-public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
+public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
 {
-  private final Supplier<? extends Row> row;
+  public interface RowAdapter<T>
+  {
+    ToLongFunction<T> timestampFunction();
+
+    Function<T, Object> rawFunction(String columnName);
+  }
+
+  private final Supplier<T> supplier;
+  private final RowAdapter<T> adapter;
   private final Map<String, ValueType> rowSignature;
 
   private RowBasedColumnSelectorFactory(
-      final Supplier<? extends Row> row,
+      final Supplier<T> supplier,
+      final RowAdapter<T> adapter,
       @Nullable final Map<String, ValueType> rowSignature
   )
   {
-    this.row = row;
+    this.supplier = supplier;
+    this.adapter = adapter;
     this.rowSignature = rowSignature != null ? rowSignature : ImmutableMap.of();
   }
 
-  public static RowBasedColumnSelectorFactory create(
-      final Supplier<? extends Row> row,
-      @Nullable final Map<String, ValueType> rowSignature
+  public static <RowType extends Row> RowBasedColumnSelectorFactory create(
+      final Supplier<RowType> supplier,
+      @Nullable final Map<String, ValueType> signature
   )
   {
-    return new RowBasedColumnSelectorFactory(row, rowSignature);
+    final RowAdapter<RowType> adapter = new RowAdapter<RowType>()
+    {
+      @Override
+      public ToLongFunction<RowType> timestampFunction()
+      {
+        return Row::getTimestampFromEpoch;
+      }
+
+      @Override
+      public Function<RowType, Object> rawFunction(String columnName)
+      {
+        return r -> r.getRaw(columnName);
+      }
+    };
+
+    return new RowBasedColumnSelectorFactory<>(supplier, adapter, signature);
   }
 
-  public static RowBasedColumnSelectorFactory create(
-      final ThreadLocal<? extends Row> row,
-      @Nullable final Map<String, ValueType> rowSignature
+  public static <RowType> RowBasedColumnSelectorFactory create(
+      final RowAdapter<RowType> adapter,
+      final Supplier<RowType> supplier,
+      @Nullable final Map<String, ValueType> signature
   )
   {
-    return new RowBasedColumnSelectorFactory(row::get, rowSignature);
+    return new RowBasedColumnSelectorFactory<>(supplier, adapter, signature);
   }
 
   @Override
@@ -95,22 +125,26 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         throw new UnsupportedOperationException("time dimension must provide an extraction function");
       }
 
+      final ToLongFunction<T> timestampFunction = adapter.timestampFunction();
+
       return new BaseSingleValueDimensionSelector()
       {
         @Override
         protected String getValue()
         {
-          return extractionFn.apply(row.get().getTimestampFromEpoch());
+          return extractionFn.apply(timestampFunction.applyAsLong(supplier.get()));
         }
 
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
-          inspector.visit("row", row);
+          inspector.visit("row", supplier);
           inspector.visit("extractionFn", extractionFn);
         }
       };
     } else {
+      final Function<T, Object> dimFunction = adapter.rawFunction(dimension);
+
       return new DimensionSelector()
       {
         private final RangeIndexedInts indexedInts = new RangeIndexedInts();
@@ -118,7 +152,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public IndexedInts getRow()
         {
-          final List<String> dimensionValues = row.get().getDimension(dimension);
+          final List<String> dimensionValues = Rows.objectToStrings(dimFunction.apply(supplier.get()));
           indexedInts.setSize(dimensionValues != null ? dimensionValues.size() : 0);
           return indexedInts;
         }
@@ -132,7 +166,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
               @Override
               public boolean matches()
               {
-                final List<String> dimensionValues = row.get().getDimension(dimension);
+                final List<String> dimensionValues = Rows.objectToStrings(dimFunction.apply(supplier.get()));
                 if (dimensionValues == null || dimensionValues.isEmpty()) {
                   return value == null;
                 }
@@ -148,7 +182,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
               @Override
               public void inspectRuntimeShape(RuntimeShapeInspector inspector)
               {
-                inspector.visit("row", row);
+                inspector.visit("row", supplier);
               }
             };
           } else {
@@ -157,7 +191,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
               @Override
               public boolean matches()
               {
-                final List<String> dimensionValues = row.get().getDimension(dimension);
+                final List<String> dimensionValues = Rows.objectToStrings(dimFunction.apply(supplier.get()));
                 if (dimensionValues == null || dimensionValues.isEmpty()) {
                   return value == null;
                 }
@@ -173,7 +207,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
               @Override
               public void inspectRuntimeShape(RuntimeShapeInspector inspector)
               {
-                inspector.visit("row", row);
+                inspector.visit("row", supplier);
                 inspector.visit("extractionFn", extractionFn);
               }
             };
@@ -190,7 +224,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
               @Override
               public boolean matches()
               {
-                final List<String> dimensionValues = row.get().getDimension(dimension);
+                final List<String> dimensionValues = Rows.objectToStrings(dimFunction.apply(supplier.get()));
                 if (dimensionValues == null || dimensionValues.isEmpty()) {
                   return matchNull;
                 }
@@ -206,7 +240,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
               @Override
               public void inspectRuntimeShape(RuntimeShapeInspector inspector)
               {
-                inspector.visit("row", row);
+                inspector.visit("row", supplier);
                 inspector.visit("predicate", predicate);
               }
             };
@@ -216,7 +250,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
               @Override
               public boolean matches()
               {
-                final List<String> dimensionValues = row.get().getDimension(dimension);
+                final List<String> dimensionValues = Rows.objectToStrings(dimFunction.apply(supplier.get()));
                 if (dimensionValues == null || dimensionValues.isEmpty()) {
                   return matchNull;
                 }
@@ -232,7 +266,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
               @Override
               public void inspectRuntimeShape(RuntimeShapeInspector inspector)
               {
-                inspector.visit("row", row);
+                inspector.visit("row", supplier);
                 inspector.visit("predicate", predicate);
               }
             };
@@ -242,13 +276,15 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public int getValueCardinality()
         {
-          return DimensionSelector.CARDINALITY_UNKNOWN;
+          return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
         }
 
         @Override
         public String lookupName(int id)
         {
-          final String value = NullHandling.emptyToNullIfNeeded(row.get().getDimension(dimension).get(id));
+          final String value = NullHandling.emptyToNullIfNeeded(
+              Rows.objectToStrings(dimFunction.apply(supplier.get())).get(id)
+          );
           return extractionFn == null ? value : extractionFn.apply(value);
         }
 
@@ -269,7 +305,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public Object getObject()
         {
-          List<String> dimensionValues = row.get().getDimension(dimension);
+          List<String> dimensionValues = Rows.objectToStrings(dimFunction.apply(supplier.get()));
           if (dimensionValues == null) {
             return null;
           }
@@ -288,7 +324,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
-          inspector.visit("row", row);
+          inspector.visit("row", supplier);
           inspector.visit("extractionFn", extractionFn);
         }
       };
@@ -299,12 +335,14 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
   public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
   {
     if (columnName.equals(ColumnHolder.TIME_COLUMN_NAME)) {
+      final ToLongFunction<T> timestampFunction = adapter.timestampFunction();
+
       class TimeLongColumnSelector implements LongColumnSelector
       {
         @Override
         public long getLong()
         {
-          return row.get().getTimestampFromEpoch();
+          return timestampFunction.applyAsLong(supplier.get());
         }
 
         @Override
@@ -317,23 +355,25 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
-          inspector.visit("row", row);
+          inspector.visit("row", supplier);
         }
       }
       return new TimeLongColumnSelector();
     } else {
+      final Function<T, Object> rawFunction = adapter.rawFunction(columnName);
+
       return new ColumnValueSelector()
       {
         @Override
         public boolean isNull()
         {
-          return row.get().getRaw(columnName) == null;
+          return rawFunction.apply(supplier.get()) == null;
         }
 
         @Override
         public double getDouble()
         {
-          Number metric = row.get().getMetric(columnName);
+          Number metric = Rows.objectToNumber(columnName, rawFunction.apply(supplier.get()));
           assert NullHandling.replaceWithDefault() || metric != null;
           return DimensionHandlerUtils.nullToZero(metric).doubleValue();
         }
@@ -341,7 +381,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public float getFloat()
         {
-          Number metric = row.get().getMetric(columnName);
+          Number metric = Rows.objectToNumber(columnName, rawFunction.apply(supplier.get()));
           assert NullHandling.replaceWithDefault() || metric != null;
           return DimensionHandlerUtils.nullToZero(metric).floatValue();
         }
@@ -349,7 +389,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public long getLong()
         {
-          Number metric = row.get().getMetric(columnName);
+          Number metric = Rows.objectToNumber(columnName, rawFunction.apply(supplier.get()));
           assert NullHandling.replaceWithDefault() || metric != null;
           return DimensionHandlerUtils.nullToZero(metric).longValue();
         }
@@ -358,7 +398,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public Object getObject()
         {
-          return row.get().getRaw(columnName);
+          return rawFunction.apply(supplier.get());
         }
 
         @Override
@@ -370,7 +410,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
-          inspector.visit("row", row);
+          inspector.visit("row", supplier);
         }
       };
     }

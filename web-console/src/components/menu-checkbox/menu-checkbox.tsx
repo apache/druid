@@ -17,15 +17,16 @@
  */
 
 import { Checkbox, ICheckboxProps } from '@blueprintjs/core';
-import * as React from 'react';
+import React from 'react';
 
 import './menu-checkbox.scss';
 
-export class MenuCheckbox extends React.Component<ICheckboxProps, {}> {
-
-  render() {
-    return <li className="menu-checkbox">
-      <Checkbox {...this.props}/>
-    </li>;
+export class MenuCheckbox extends React.PureComponent<ICheckboxProps> {
+  render(): JSX.Element {
+    return (
+      <li className="menu-checkbox">
+        <Checkbox {...this.props} />
+      </li>
+    );
   }
 }

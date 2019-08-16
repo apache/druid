@@ -16,16 +16,15 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
-import { render } from 'react-testing-library';
+import { render } from '@testing-library/react';
+import React from 'react';
 
-import {MenuCheckbox} from './menu-checkbox';
+import { MenuCheckbox } from './menu-checkbox';
 
-describe('describe menuCheckBox ', () => {
-  it('menuCheckbox snapshot', () => {
-    const menuCheckbox =
-    <MenuCheckbox/>;
-    const { container, getByText } = render(menuCheckbox);
+describe('menu checkbox', () => {
+  it('matches snapshot', () => {
+    const menuCheckbox = <MenuCheckbox />;
+    const { container } = render(menuCheckbox);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

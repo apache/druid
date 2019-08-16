@@ -16,27 +16,29 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
-import { render } from 'react-testing-library';
+import { render } from '@testing-library/react';
+import React from 'react';
 
-import {AutoForm} from './auto-form';
+import { AutoForm } from './auto-form';
 
-
-describe('describe auto-form snapshot', () => {
-  it('auto-form snapshot', () => {
-    const autoForm =
+describe('auto-form snapshot', () => {
+  it('matches snapshot', () => {
+    const autoForm = (
       <AutoForm
-        fields={[{name: 'testOne', type: 'number'},
-          {name: 'testTwo', type: 'size-bytes'},
-          {name: 'testThree', type: 'string'},
-          {name: 'testFour', type: 'boolean'},
-          {name: 'testFive', type: 'string-array'},
-          {name: 'testSix', type: 'json'},
-          {name: 'testSeven', type: 'json'}]}
+        fields={[
+          { name: 'testOne', type: 'number' },
+          { name: 'testTwo', type: 'size-bytes' },
+          { name: 'testThree', type: 'string' },
+          { name: 'testFour', type: 'boolean' },
+          { name: 'testFive', type: 'string-array' },
+          { name: 'testSix', type: 'json' },
+          { name: 'testSeven', type: 'json' },
+        ]}
         model={String}
-        onChange={(newModel: Record<string, any>) => {}}
-      />;
-    const { container, getByText } = render(autoForm);
+        onChange={() => {}}
+      />
+    );
+    const { container } = render(autoForm);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

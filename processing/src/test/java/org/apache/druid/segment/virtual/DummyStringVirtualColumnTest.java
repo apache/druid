@@ -21,7 +21,6 @@ package org.apache.druid.segment.virtual;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -33,6 +32,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNResultValue;
@@ -256,18 +256,12 @@ public class DummyStringVirtualColumnTest
         .addOrderByColumn(VSTRING_DIM)
         .build();
 
-    List<Row> rows = groupByTestHelper.runQueryOnSegmentsObjs(segments, query).toList();
+    List<ResultRow> rows = groupByTestHelper.runQueryOnSegmentsObjs(segments, query).toList();
 
-    List<Row> expectedRows = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 1674L, VSTRING_DIM, "spot"),
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            "2000-01-01T00:00:00.000Z",
-            COUNT,
-            372L,
-            VSTRING_DIM,
-            "total_market"
-        ),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 372L, VSTRING_DIM, "upfront")
+    List<ResultRow> expectedRows = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "2000", COUNT, 1674L, VSTRING_DIM, "spot"),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "2000", COUNT, 372L, VSTRING_DIM, "total_market"),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "2000", COUNT, 372L, VSTRING_DIM, "upfront")
     );
 
     TestHelper.assertExpectedObjects(expectedRows, rows, "failed");
@@ -301,10 +295,10 @@ public class DummyStringVirtualColumnTest
         .setDimFilter(new SelectorDimFilter(VSTRING_DIM, "spot", null))
         .build();
 
-    List<Row> rows = groupByTestHelper.runQueryOnSegmentsObjs(segments, query).toList();
+    List<ResultRow> rows = groupByTestHelper.runQueryOnSegmentsObjs(segments, query).toList();
 
-    List<Row> expectedRows = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 1674L, VSTRING_DIM, "spot")
+    List<ResultRow> expectedRows = Collections.singletonList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "2000", COUNT, 1674L, VSTRING_DIM, "spot")
     );
 
     TestHelper.assertExpectedObjects(expectedRows, rows, "failed");
@@ -338,11 +332,11 @@ public class DummyStringVirtualColumnTest
         .setDimFilter(new RegexDimFilter(VSTRING_DIM, "(spot)|(upfront)", null))
         .build();
 
-    List<Row> rows = groupByTestHelper.runQueryOnSegmentsObjs(segments, query).toList();
+    List<ResultRow> rows = groupByTestHelper.runQueryOnSegmentsObjs(segments, query).toList();
 
-    List<Row> expectedRows = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 1674L, VSTRING_DIM, "spot"),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2000-01-01T00:00:00.000Z", COUNT, 372L, VSTRING_DIM, "upfront")
+    List<ResultRow> expectedRows = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "2000", COUNT, 1674L, VSTRING_DIM, "spot"),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "2000", COUNT, 372L, VSTRING_DIM, "upfront")
     );
 
     TestHelper.assertExpectedObjects(expectedRows, rows, "failed");
@@ -360,9 +354,7 @@ public class DummyStringVirtualColumnTest
         .dimension(VSTRING_DIM)
         .metric(COUNT)
         .threshold(1)
-        .aggregators(
-            Collections.singletonList(new CountAggregatorFactory(COUNT))
-        )
+        .aggregators(new CountAggregatorFactory(COUNT))
         .virtualColumns(new DummyStringVirtualColumn(
             QueryRunnerTestHelper.marketDimension,
             VSTRING_DIM,

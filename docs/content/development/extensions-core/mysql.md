@@ -87,7 +87,7 @@ Copy or symlink this file to `extensions/mysql-metadata-storage` under the distr
   druid.metadata.storage.type=mysql
   druid.metadata.storage.connector.connectURI=jdbc:mysql://<host>/druid
   druid.metadata.storage.connector.user=druid
-  druid.metadata.storage.connector.password=druid
+  druid.metadata.storage.connector.password=diurd
   ```
 
 ## Encrypting MySQL connections
@@ -107,3 +107,71 @@ Copy or symlink this file to `extensions/mysql-metadata-storage` under the distr
 |`druid.metadata.mysql.ssl.trustCertificateKeyStorePassword`|The [Password Provider](../../operations/password-provider.html) or String password for the trust store.|none|yes if `verifyServerCertificate` is set to true and password is not null|
 |`druid.metadata.mysql.ssl.enabledSSLCipherSuites`|Overrides the existing cipher suites with these cipher suites.|none|no|
 |`druid.metadata.mysql.ssl.enabledTLSProtocols`|Overrides the TLS protocols with these protocols.|none|no|
+
+
+### MySQL Firehose
+
+The MySQL extension provides an implementation of an [SqlFirehose](../../ingestion/firehose.html#SqlFirehose) which can be used to ingest data into Druid from a MySQL database.
+
+```json
+{
+  "type": "index",
+  "spec": {
+    "dataSchema": {
+      "dataSource": "some_datasource",
+      "parser": {
+        "parseSpec": {
+          "format": "timeAndDims",
+          "dimensionsSpec": {
+            "dimensionExclusions": [],
+            "dimensions": [
+              "dim1",
+              "dim2",
+              "dim3"
+            ]
+          },
+          "timestampSpec": {
+            "format": "auto",
+            "column": "ts"
+          }
+        }
+      },
+      "metricsSpec": [],
+      "granularitySpec": {
+        "type": "uniform",
+        "segmentGranularity": "DAY",
+        "queryGranularity": {
+          "type": "none"
+        },
+        "rollup": false,
+        "intervals": null
+      },
+      "transformSpec": {
+        "filter": null,
+        "transforms": []
+      }
+    },
+    "ioConfig": {
+      "type": "index",
+      "firehose": {
+        "type": "sql",
+        "database": {
+          "type": "mysql",
+          "connectorConfig": {
+            "connectURI": "jdbc:mysql://some-rds-host.us-west-1.rds.amazonaws.com:3306/druid",
+            "user": "admin",
+            "password": "secret"
+          }
+        },
+        "sqls": [
+          "SELECT * FROM some_table"
+        ]
+      }
+    },
+    "tuningconfig": {
+      "type": "index",
+      "maxNumSubTasks": 1
+    }
+  }
+}
+```

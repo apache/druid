@@ -16,16 +16,14 @@
  * limitations under the License.
  */
 
-
-
 .lookup-edit-dialog {
-  &.bp3-dialog{
+  &.bp3-dialog {
     top: 10vh;
 
     width: 600px;
   }
 
-  .ace_editor{
+  .ace_editor {
     margin: 0px 20px 10px;
   }
 
@@ -36,7 +34,7 @@
   }
 
   .ace_scroller {
-    background-color: #232C35;
+    background-color: #232c35;
   }
 
   .ace_gutter-layer {

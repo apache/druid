@@ -26,6 +26,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -40,7 +42,7 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   public FloatSumAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("expression") String expression,
+      @JsonProperty("expression") @Nullable String expression,
       @JacksonInject ExprMacroTable macroTable
   )
   {
@@ -62,9 +64,21 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   }
 
   @Override
+  protected VectorValueSelector vectorSelector(VectorColumnSelectorFactory columnSelectorFactory)
+  {
+    return columnSelectorFactory.makeValueSelector(fieldName);
+  }
+
+  @Override
   protected Aggregator factorize(ColumnSelectorFactory metricFactory, BaseFloatColumnValueSelector selector)
   {
     return new FloatSumAggregator(selector);
+  }
+
+  @Override
+  public boolean canVectorize()
+  {
+    return expression == null;
   }
 
   @Override
@@ -74,6 +88,15 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   )
   {
     return new FloatSumBufferAggregator(selector);
+  }
+
+  @Override
+  protected VectorAggregator factorizeVector(
+      VectorColumnSelectorFactory columnSelectorFactory,
+      VectorValueSelector selector
+  )
+  {
+    return new FloatSumVectorAggregator(selector);
   }
 
   @Override

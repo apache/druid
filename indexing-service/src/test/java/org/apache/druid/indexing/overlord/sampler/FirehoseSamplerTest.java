@@ -606,7 +606,7 @@ public class FirehoseSamplerTest
     GranularitySpec granularitySpec = new UniformGranularitySpec(Granularities.DAY, Granularities.HOUR, true, null);
     TransformSpec transformSpec = new TransformSpec(
         null,
-        ImmutableList.of(new ExpressionTransform("dim1PlusBar", "concat(dim1 + 'bar')", TestExprMacroTable.INSTANCE))
+        ImmutableList.of(new ExpressionTransform("dim1PlusBar", "concat(dim1, 'bar')", TestExprMacroTable.INSTANCE))
     );
 
     DataSchema dataSchema = new DataSchema(

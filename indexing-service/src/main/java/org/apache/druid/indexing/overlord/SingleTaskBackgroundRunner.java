@@ -302,6 +302,12 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
   }
 
   @Override
+  public TaskLocation getTaskLocation(String taskId)
+  {
+    return location;
+  }
+
+  @Override
   public Optional<ScalingStats> getScalingStats()
   {
     return Optional.absent();
@@ -330,13 +336,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
         final QueryRunner<T> taskQueryRunner = task.getQueryRunner(query);
 
         if (taskQueryRunner != null) {
-          if (queryRunner == null) {
-            queryRunner = taskQueryRunner;
-          } else {
-            log.makeAlert("Found too many query runners for datasource")
-               .addData("dataSource", queryDataSource)
-               .emit();
-          }
+          queryRunner = taskQueryRunner;
         }
       }
     }

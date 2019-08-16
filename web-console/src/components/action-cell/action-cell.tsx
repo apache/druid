@@ -16,20 +16,21 @@
  * limitations under the License.
  */
 
-import { Icon, Popover, Position } from '@blueprintjs/core';
+import { Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import * as React from 'react';
+import React from 'react';
 
 import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
+import { ActionIcon } from '../action-icon/action-icon';
 
 import './action-cell.scss';
 
-export interface ActionCellProps extends React.Props<any> {
+export interface ActionCellProps {
   onDetail?: () => void;
   actions?: BasicAction[];
 }
 
-export class ActionCell extends React.Component<ActionCellProps, {}> {
+export class ActionCell extends React.PureComponent<ActionCellProps> {
   static COLUMN_ID = 'actions';
   static COLUMN_LABEL = 'Actions';
   static COLUMN_WIDTH = 70;
@@ -38,24 +39,19 @@ export class ActionCell extends React.Component<ActionCellProps, {}> {
     super(props, context);
   }
 
-  render() {
+  render(): JSX.Element {
     const { onDetail, actions } = this.props;
     const actionsMenu = actions ? basicActionsToMenu(actions) : null;
 
-    return <div className="action-cell">
-      {
-        onDetail &&
-        <Icon
-          icon={IconNames.SEARCH_TEMPLATE}
-          onClick={() => onDetail()}
-        />
-      }
-      {
-        actionsMenu &&
-        <Popover content={actionsMenu} position={Position.BOTTOM_RIGHT}>
-          <Icon icon={IconNames.WRENCH}/>
-        </Popover>
-      }
-    </div>;
+    return (
+      <div className="action-cell">
+        {onDetail && <ActionIcon icon={IconNames.SEARCH_TEMPLATE} onClick={onDetail} />}
+        {actionsMenu && (
+          <Popover content={actionsMenu} position={Position.BOTTOM_RIGHT}>
+            <ActionIcon icon={IconNames.WRENCH} />
+          </Popover>
+        )}
+      </div>
+    );
   }
 }

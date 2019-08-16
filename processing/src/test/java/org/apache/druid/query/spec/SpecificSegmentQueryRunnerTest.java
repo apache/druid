@@ -38,6 +38,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.CountAggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultBuilder;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
@@ -48,9 +49,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class SpecificSegmentQueryRunnerTest
 {
@@ -68,7 +67,7 @@ public class SpecificSegmentQueryRunnerTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(QueryPlus queryPlus, Map responseContext)
+          public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
           {
             return new Sequence()
             {
@@ -93,7 +92,7 @@ public class SpecificSegmentQueryRunnerTest
     );
 
     // from accumulate
-    Map<String, Object> responseContext = new HashMap<>();
+    ResponseContext responseContext = ResponseContext.createEmpty();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("foo")
                                   .granularity(Granularities.ALL)
@@ -109,7 +108,7 @@ public class SpecificSegmentQueryRunnerTest
     validate(mapper, descriptor, responseContext);
 
     // from toYielder
-    responseContext = new HashMap<>();
+    responseContext = ResponseContext.createEmpty();
     results = queryRunner.run(QueryPlus.wrap(query), responseContext);
     results.toYielder(
         null,
@@ -144,14 +143,14 @@ public class SpecificSegmentQueryRunnerTest
     );
     CountAggregator rows = new CountAggregator();
     rows.aggregate();
-    builder.addMetric("rows", rows);
+    builder.addMetric("rows", rows.get());
     final Result<TimeseriesResultValue> value = builder.build();
 
     final SpecificSegmentQueryRunner queryRunner = new SpecificSegmentQueryRunner(
         new QueryRunner()
         {
           @Override
-          public Sequence run(QueryPlus queryPlus, Map responseContext)
+          public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
           {
             return Sequences.withEffect(
                 Sequences.simple(Collections.singletonList(value)),
@@ -172,7 +171,7 @@ public class SpecificSegmentQueryRunnerTest
         )
     );
 
-    final Map<String, Object> responseContext = new HashMap<>();
+    final ResponseContext responseContext = ResponseContext.createEmpty();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("foo")
                                   .granularity(Granularities.ALL)
@@ -195,10 +194,10 @@ public class SpecificSegmentQueryRunnerTest
     validate(mapper, descriptor, responseContext);
   }
 
-  private void validate(ObjectMapper mapper, SegmentDescriptor descriptor, Map<String, Object> responseContext)
+  private void validate(ObjectMapper mapper, SegmentDescriptor descriptor, ResponseContext responseContext)
       throws IOException
   {
-    Object missingSegments = responseContext.get(Result.MISSING_SEGMENTS_KEY);
+    Object missingSegments = responseContext.get(ResponseContext.Key.MISSING_SEGMENTS);
 
     Assert.assertTrue(missingSegments != null);
     Assert.assertTrue(missingSegments instanceof List);

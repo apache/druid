@@ -2,6 +2,7 @@
 name: Problem Report
 about: A template for Druid problem reports
 title: ""
+labels: Uncategorized problem report
 assignees: ''
 
 ---

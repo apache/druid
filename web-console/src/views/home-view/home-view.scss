@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import "../../variables";
+@import '../../variables';
 
 .home-view {
   display: grid;
@@ -26,9 +26,5 @@
   & > a {
     text-decoration: inherit;
     color: inherit;
-  }
-
-  .status-card {
-    height: 160px;
   }
 }

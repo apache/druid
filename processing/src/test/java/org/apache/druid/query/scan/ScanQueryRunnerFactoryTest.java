@@ -20,7 +20,6 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -31,6 +30,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
@@ -145,13 +145,13 @@ public class ScanQueryRunnerFactoryTest
                 DateTimes.of("2019-01-01").plusHours(1)
             ))
         ).toList();
-        if (query.getLimit() > Integer.MAX_VALUE) {
+        if (query.getScanRowsLimit() > Integer.MAX_VALUE) {
           Assert.fail("Unsupported exception should have been thrown due to high limit");
         }
         validateSortedOutput(output, expectedEventTimestamps);
       }
       catch (UOE e) {
-        if (query.getLimit() <= Integer.MAX_VALUE) {
+        if (query.getScanRowsLimit() <= Integer.MAX_VALUE) {
           Assert.fail("Unsupported operation exception should not have been thrown here");
         }
       }
@@ -229,7 +229,7 @@ public class ScanQueryRunnerFactoryTest
           factory.nWayMergeAndLimit(
               groupedRunners,
               QueryPlus.wrap(query),
-              ImmutableMap.of()
+              ResponseContext.createEmpty()
           ).toList();
 
       validateSortedOutput(output, expectedEventTimestamps);
@@ -247,7 +247,7 @@ public class ScanQueryRunnerFactoryTest
       }
 
       // check total # of rows <= limit
-      Assert.assertTrue(output.size() <= query.getLimit());
+      Assert.assertTrue(output.size() <= query.getScanRowsLimit());
 
       // check ordering is correct
       for (int i = 1; i < output.size(); i++) {
@@ -261,7 +261,7 @@ public class ScanQueryRunnerFactoryTest
       }
 
       // check the values are correct
-      for (int i = 0; i < query.getLimit() && i < output.size(); i++) {
+      for (int i = 0; i < query.getScanRowsLimit() && i < output.size(); i++) {
         Assert.assertEquals((long) expectedEventTimestamps.get(i), output.get(i).getFirstEventTimestamp(resultFormat));
       }
     }

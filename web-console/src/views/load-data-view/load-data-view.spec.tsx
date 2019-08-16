@@ -16,21 +16,14 @@
  * limitations under the License.
  */
 
-import * as Enzyme from 'enzyme';
 import { shallow } from 'enzyme';
-import * as enzymeAdapterReact16 from 'enzyme-adapter-react-16';
-import * as React from 'react';
+import React from 'react';
 
-import {LoadDataView} from './load-data-view';
+import { LoadDataView } from './load-data-view';
 
-Enzyme.configure({ adapter: new enzymeAdapterReact16() });
-
-describe('describe load data view', () => {
-  it('load data view snapshot', () => {
-    const loadDataView = shallow(
-      <LoadDataView
-        goToTask={(taskId: string | null) => {}}
-      />);
+describe('load data view', () => {
+  it('matches snapshot', () => {
+    const loadDataView = shallow(<LoadDataView goToTask={() => {}} />);
     expect(loadDataView).toMatchSnapshot();
   });
 });

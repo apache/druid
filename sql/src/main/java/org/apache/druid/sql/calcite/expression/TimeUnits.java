@@ -21,10 +21,9 @@ package org.apache.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.util.TimeUnitRange;
-import org.apache.druid.java.util.common.granularity.PeriodGranularity;
-import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 public class TimeUnits
@@ -44,17 +43,12 @@ public class TimeUnits
    * Returns the Druid QueryGranularity corresponding to a Calcite TimeUnitRange, or null if there is none.
    *
    * @param timeUnitRange time unit
-   * @param timeZone      session time zone
    *
    * @return queryGranularity, or null
    */
-  public static PeriodGranularity toQueryGranularity(final TimeUnitRange timeUnitRange, final DateTimeZone timeZone)
+  @Nullable
+  public static Period toPeriod(final TimeUnitRange timeUnitRange)
   {
-    final Period period = PERIOD_MAP.get(timeUnitRange);
-    if (period == null) {
-      return null;
-    }
-
-    return new PeriodGranularity(period, null, timeZone);
+    return PERIOD_MAP.get(timeUnitRange);
   }
 }

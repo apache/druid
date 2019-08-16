@@ -38,7 +38,6 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
@@ -59,6 +58,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.metadata.metadata.ListColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
@@ -91,7 +91,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -360,22 +359,22 @@ public class DumpSegment extends GuiceRunnable
                       jg.writeFieldName(columnName);
                       jg.writeStartObject();
                       for (int i = 0; i < bitmapIndex.getCardinality(); i++) {
-                        String val = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(i));
-                        if (val != null) {
-                          final ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
-                          if (decompressBitmaps) {
-                            jg.writeStartArray();
-                            final IntIterator iterator = bitmap.iterator();
-                            while (iterator.hasNext()) {
-                              final int rowNum = iterator.next();
-                              jg.writeNumber(rowNum);
-                            }
-                            jg.writeEndArray();
-                          } else {
-                            byte[] bytes = bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap);
-                            if (bytes != null) {
-                              jg.writeBinary(bytes);
-                            }
+                        String val = bitmapIndex.getValue(i);
+                        // respect nulls if they are present in the dictionary
+                        jg.writeFieldName(val == null ? "null" : val);
+                        final ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
+                        if (decompressBitmaps) {
+                          jg.writeStartArray();
+                          final IntIterator iterator = bitmap.iterator();
+                          while (iterator.hasNext()) {
+                            final int rowNum = iterator.next();
+                            jg.writeNumber(rowNum);
+                          }
+                          jg.writeEndArray();
+                        } else {
+                          byte[] bytes = bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap);
+                          if (bytes != null) {
+                            jg.writeBinary(bytes);
                           }
                         }
                       }
@@ -486,7 +485,7 @@ public class DumpSegment extends GuiceRunnable
     return factory
         .getToolchest()
         .mergeResults(factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner)))
-        .run(QueryPlus.wrap(query), new HashMap<>());
+        .run(QueryPlus.wrap(query), ResponseContext.createEmpty());
   }
 
   private static <T> void evaluateSequenceForSideEffects(final Sequence<T> sequence)

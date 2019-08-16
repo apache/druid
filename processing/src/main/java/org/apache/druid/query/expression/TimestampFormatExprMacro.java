@@ -68,8 +68,13 @@ public class TimestampFormatExprMacro implements ExprMacroTable.ExprMacro
                                         ? ISODateTimeFormat.dateTime()
                                         : DateTimeFormat.forPattern(formatString).withZone(timeZone);
 
-    class TimestampFormatExpr implements Expr
+    class TimestampFormatExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
+      private TimestampFormatExpr(Expr arg)
+      {
+        super(arg);
+      }
+
       @Nonnull
       @Override
       public ExprEval eval(final ObjectBinding bindings)
@@ -83,13 +88,13 @@ public class TimestampFormatExprMacro implements ExprMacroTable.ExprMacro
       }
 
       @Override
-      public void visit(final Visitor visitor)
+      public Expr visit(Shuttle shuttle)
       {
-        arg.visit(visitor);
-        visitor.visit(this);
+        Expr newArg = arg.visit(shuttle);
+        return shuttle.visit(new TimestampFormatExpr(newArg));
       }
     }
 
-    return new TimestampFormatExpr();
+    return new TimestampFormatExpr(arg);
   }
 }

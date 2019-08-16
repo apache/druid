@@ -50,9 +50,8 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
     // Group by dataSource
     final Map<String, Set<SegmentIdWithShardSpec>> identifiersByDataSource = new TreeMap<>();
     for (SegmentIdWithShardSpec identifier : identifiers) {
-      if (!identifiersByDataSource.containsKey(identifier.getDataSource())) {
-        identifiersByDataSource.put(identifier.getDataSource(), new HashSet<>());
-      }
+      identifiersByDataSource.computeIfAbsent(identifier.getDataSource(), k -> new HashSet<>());
+
       identifiersByDataSource.get(identifier.getDataSource()).add(identifier);
     }
 

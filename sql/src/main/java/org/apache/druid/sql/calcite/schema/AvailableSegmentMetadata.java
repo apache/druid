@@ -19,8 +19,9 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.sql.calcite.table.RowSignature;
-import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.util.Set;
@@ -32,20 +33,20 @@ import java.util.Set;
 public class AvailableSegmentMetadata
 {
   public static Builder builder(
-      SegmentId segmentId,
+      DataSegment segment,
       long isRealtime,
-      Set<String> segmentServers,
+      Set<DruidServerMetadata> segmentServers,
       RowSignature rowSignature,
       long numRows
   )
   {
-    return new Builder(segmentId, isRealtime, segmentServers, rowSignature, numRows);
+    return new Builder(segment, isRealtime, segmentServers, rowSignature, numRows);
   }
 
   public static Builder from(AvailableSegmentMetadata h)
   {
     return new Builder(
-        h.getSegmentId(),
+        h.getSegment(),
         h.isRealtime(),
         h.getReplicas(),
         h.getRowSignature(),
@@ -53,12 +54,12 @@ public class AvailableSegmentMetadata
     );
   }
 
-  private final SegmentId segmentId;
+  private final DataSegment segment;
   // Booleans represented as long type, where 1 = true and 0 = false
   // to make it easy to count number of segments which are realtime
   private final long isRealtime;
   // set of servers that contain the segment
-  private final Set<String> segmentServers;
+  private final Set<DruidServerMetadata> segmentServers;
   private final long numRows;
   @Nullable
   private final RowSignature rowSignature;
@@ -69,7 +70,7 @@ public class AvailableSegmentMetadata
     this.isRealtime = builder.isRealtime;
     this.segmentServers = builder.segmentServers;
     this.numRows = builder.numRows;
-    this.segmentId = builder.segmentId;
+    this.segment = builder.segment;
   }
 
   public long isRealtime()
@@ -77,12 +78,12 @@ public class AvailableSegmentMetadata
     return isRealtime;
   }
 
-  public SegmentId getSegmentId()
+  public DataSegment getSegment()
   {
-    return segmentId;
+    return segment;
   }
 
-  public Set<String> getReplicas()
+  public Set<DruidServerMetadata> getReplicas()
   {
     return segmentServers;
   }
@@ -105,23 +106,23 @@ public class AvailableSegmentMetadata
 
   public static class Builder
   {
-    private final SegmentId segmentId;
-    private final long isRealtime;
+    private final DataSegment segment;
 
-    private Set<String> segmentServers;
+    private long isRealtime;
+    private Set<DruidServerMetadata> segmentServers;
     @Nullable
     private RowSignature rowSignature;
     private long numRows;
 
     private Builder(
-        SegmentId segmentId,
+        DataSegment segment,
         long isRealtime,
-        Set<String> servers,
-        RowSignature rowSignature,
+        Set<DruidServerMetadata> servers,
+        @Nullable RowSignature rowSignature,
         long numRows
     )
     {
-      this.segmentId = segmentId;
+      this.segment = segment;
       this.isRealtime = isRealtime;
       this.segmentServers = servers;
       this.rowSignature = rowSignature;
@@ -140,9 +141,15 @@ public class AvailableSegmentMetadata
       return this;
     }
 
-    public Builder withReplicas(Set<String> servers)
+    public Builder withReplicas(Set<DruidServerMetadata> servers)
     {
       this.segmentServers = servers;
+      return this;
+    }
+
+    public Builder withRealtime(long isRealtime)
+    {
+      this.isRealtime = isRealtime;
       return this;
     }
 

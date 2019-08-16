@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 public class Groupers
@@ -28,16 +29,21 @@ public class Groupers
     // No instantiation
   }
 
-  static final AggregateResult DICTIONARY_FULL = AggregateResult.failure(
+  private static final AggregateResult DICTIONARY_FULL_ZERO_COUNT = AggregateResult.partial(
+      0,
       "Not enough dictionary space to execute this query. Try increasing "
       + "druid.query.groupBy.maxMergingDictionarySize or enable disk spilling by setting "
       + "druid.query.groupBy.maxOnDiskStorage to a positive number."
   );
-  static final AggregateResult HASH_TABLE_FULL = AggregateResult.failure(
+
+  private static final AggregateResult HASH_TABLE_FULL_ZERO_COUNT = AggregateResult.partial(
+      0,
       "Not enough aggregation buffer space to execute this query. Try increasing "
       + "druid.processing.buffer.sizeBytes or enable disk spilling by setting "
       + "druid.query.groupBy.maxOnDiskStorage to a positive number."
   );
+
+  private static final int USED_FLAG_MASK = 0x7fffffff;
 
   private static final int C1 = 0xcc9e2d51;
   private static final int C2 = 0x1b873593;
@@ -50,18 +56,46 @@ public class Groupers
    * MurmurHash3 was written by Austin Appleby, and is placed in the public domain. The author
    * hereby disclaims copyright to this source code.
    */
-  static int smear(int hashCode)
+  private static int smear(int hashCode)
   {
     return C2 * Integer.rotateLeft(hashCode * C1, 15);
   }
 
-  public static int hash(final Object obj)
+  public static AggregateResult dictionaryFull(final int count)
+  {
+    if (count == 0) {
+      return DICTIONARY_FULL_ZERO_COUNT;
+    } else {
+      return AggregateResult.partial(count, DICTIONARY_FULL_ZERO_COUNT.getReason());
+    }
+  }
+
+  public static AggregateResult hashTableFull(final int count)
+  {
+    if (count == 0) {
+      return HASH_TABLE_FULL_ZERO_COUNT;
+    } else {
+      return AggregateResult.partial(count, HASH_TABLE_FULL_ZERO_COUNT.getReason());
+    }
+  }
+
+  public static int hashObject(final Object obj)
   {
     // Mask off the high bit so we can use that to determine if a bucket is used or not.
-    // Also apply the smear function, to improve distribution.
-    final int code = obj.hashCode();
-    return smear(code) & 0x7fffffff;
+    // Also apply the "smear" function, to improve distribution.
+    return smear(obj.hashCode()) & USED_FLAG_MASK;
+  }
 
+  public static int hashIntArray(final int[] ints, final int start, final int length)
+  {
+    // Similar to what Arrays.hashCode would do.
+    // Also apply the "smear" function, to improve distribution.
+    int hashCode = 1;
+    for (int i = 0; i < length; i++) {
+      hashCode = 31 * hashCode + ints[start + i];
+    }
+
+    return smear(hashCode) & USED_FLAG_MASK;
   }
 
   static int getUsedFlag(int keyHash)
@@ -75,5 +109,23 @@ public class Groupers
     slice.position(sliceSize * i);
     slice.limit(slice.position() + sliceSize);
     return slice.slice();
+  }
+
+  /**
+   * Write ints from "start" to "end" into "scratch", if start != 0. Otherwise, return null.
+   */
+  @Nullable
+  public static int[] writeAggregationRows(final int[] scratch, final int start, final int end)
+  {
+    if (start == 0) {
+      return null;
+    } else {
+      final int numRows = end - start;
+      for (int i = 0; i < numRows; i++) {
+        scratch[i] = start + i;
+      }
+
+      return scratch;
+    }
   }
 }

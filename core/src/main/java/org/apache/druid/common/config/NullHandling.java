@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
  */
 public class NullHandling
 {
-  public static String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
+  public static final String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
 
   /**
    * use these values to ensure that {@link NullHandling#defaultDoubleValue()},

@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -80,7 +81,7 @@ import java.util.stream.Stream;
 public abstract class BaseAppenderatorDriver implements Closeable
 {
   /**
-   * Segments allocated for an intervval.
+   * Segments allocated for an interval.
    * There should be at most a single active (appending) segment at any time.
    */
   static class SegmentsOfInterval
@@ -271,7 +272,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
    * @return currently persisted commit metadata
    */
   @Nullable
-  public abstract Object startJob();
+  public abstract Object startJob(AppenderatorDriverSegmentLockHelper lockHelper);
 
   /**
    * Find a segment in the {@link SegmentState#APPENDING} state for the given timestamp and sequenceName.
@@ -538,6 +539,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
    * @return a future for publishing segments
    */
   ListenableFuture<SegmentsAndMetadata> publishInBackground(
+      @Nullable Set<DataSegment> segmentsToBeOverwritten,
       SegmentsAndMetadata segmentsAndMetadata,
       TransactionalSegmentPublisher publisher
   )
@@ -557,6 +559,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
               final Object metadata = segmentsAndMetadata.getCommitMetadata();
               final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(segmentsAndMetadata.getSegments());
               final SegmentPublishResult publishResult = publisher.publishSegments(
+                  segmentsToBeOverwritten,
                   ourSegments,
                   metadata == null ? null : ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
               );
@@ -689,14 +692,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
                 )
             )
         ),
-        snapshot.entrySet()
-                .stream()
-                .collect(
-                    Collectors.toMap(
-                        Entry::getKey,
-                        e -> e.getValue().lastSegmentId
-                    )
-                ),
+        CollectionUtils.mapValues(snapshot, segmentsForSequence -> segmentsForSequence.lastSegmentId),
         committer.getMetadata()
     );
 

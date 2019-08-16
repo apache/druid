@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.15.0-incubating-SNAPSHOT</version>
+        <version>0.16.0-incubating-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -42,12 +42,12 @@
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-core</artifactId>
             <version>${project.parent.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.slf4j</groupId>
-                        <artifactId>slf4j-api</artifactId>
-                    </exclusion>
-                </exclusions>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>

@@ -16,51 +16,108 @@
  * limitations under the License.
  */
 
-import { Button, Intent } from '@blueprintjs/core';
-import { H5 } from '@blueprintjs/core';
+import {
+  Button,
+  ButtonGroup,
+  Intent,
+  Label,
+  Menu,
+  MenuItem,
+  Popover,
+  Position,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
+import React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { TableColumnSelection, ViewControlBar } from '../../components';
+import { ActionCell, RefreshButton, TableColumnSelector, ViewControlBar } from '../../components';
+import { AsyncActionDialog } from '../../dialogs';
+import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import {
   addFilter,
+  compact,
+  filterMap,
   formatBytes,
   formatNumber,
-  LocalStorageKeys, makeBooleanFilter,
-  parseList,
+  LocalStorageKeys,
+  makeBooleanFilter,
   queryDruidSql,
   QueryManager,
   sqlQueryCustomTableFilter,
-  TableColumnSelectionHandler
 } from '../../utils';
+import { BasicAction } from '../../utils/basic-action';
+import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
 import './segments-view.scss';
 
-const tableColumns: string[] = ['Segment ID', 'Datasource', 'Start', 'End', 'Version', 'Partition',
-  'Size', 'Num rows', 'Replicas', 'Is published', 'Is realtime', 'Is available', 'Is overshadowed'];
-const tableColumnsNoSql: string[] = ['Segment ID', 'Datasource', 'Start', 'End', 'Version', 'Partition', 'Size'];
+const tableColumns: string[] = [
+  'Segment ID',
+  'Datasource',
+  'Start',
+  'End',
+  'Version',
+  'Partition',
+  'Size',
+  'Num rows',
+  'Replicas',
+  'Is published',
+  'Is realtime',
+  'Is available',
+  'Is overshadowed',
+  ActionCell.COLUMN_LABEL,
+];
+const tableColumnsNoSql: string[] = [
+  'Segment ID',
+  'Datasource',
+  'Start',
+  'End',
+  'Version',
+  'Partition',
+  'Size',
+];
 
-export interface SegmentsViewProps extends React.Props<any> {
-  goToSql: (initSql: string) => void;
-  datasource: string | null;
-  onlyUnavailable: boolean | null;
+export interface SegmentsViewProps {
+  goToQuery: (initSql: string) => void;
+  datasource: string | undefined;
+  onlyUnavailable: boolean | undefined;
   noSqlMode: boolean;
 }
 
 export interface SegmentsViewState {
   segmentsLoading: boolean;
-  segments: SegmentQueryResultRow[] | null;
-  segmentsError: string | null;
+  segments?: SegmentQueryResultRow[];
+  segmentsError?: string;
   segmentFilter: Filter[];
-  allSegments?: SegmentQueryResultRow[] | null;
+  allSegments?: SegmentQueryResultRow[];
+  segmentTableActionDialogId?: string;
+  datasourceTableActionDialogId?: string;
+  actions: BasicAction[];
+  terminateSegmentId?: string;
+  terminateDatasourceId?: string;
+  hiddenColumns: LocalStorageBackedArray<string>;
+  loaded: boolean;
+  groupByInterval: boolean;
+
+  // table state
+  page: number | null;
+  pageSize: number | null;
+  filtered: number[] | null;
+  sorted: Sorted | null;
 }
 
-interface QueryAndSkip {
-  query: string;
-  skip: number;
+interface Sorted {
+  id: number;
+  desc: boolean;
+}
+
+interface SegmentsQuery {
+  page: number;
+  pageSize: number;
+  filtered: Filter[];
+  sorted: Sorted[];
+  groupByInterval: boolean;
 }
 
 interface SegmentQueryResultRow {
@@ -80,28 +137,109 @@ interface SegmentQueryResultRow {
   is_overshadowed: number;
 }
 
-export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsViewState> {
-  private segmentsSqlQueryManager: QueryManager<QueryAndSkip, SegmentQueryResultRow[]>;
-  private segmentsJsonQueryManager: QueryManager<any, SegmentQueryResultRow[]>;
-  private tableColumnSelectionHandler: TableColumnSelectionHandler;
+export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
+  static PAGE_SIZE = 25;
+
+  private segmentsSqlQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
+  private segmentsNoSqlQueryManager: QueryManager<null, SegmentQueryResultRow[]>;
 
   constructor(props: SegmentsViewProps, context: any) {
     super(props, context);
 
     const segmentFilter: Filter[] = [];
-    if (props.datasource) segmentFilter.push({ id: 'datasource', value: props.datasource });
+    if (props.datasource) segmentFilter.push({ id: 'datasource', value: `"${props.datasource}"` });
     if (props.onlyUnavailable) segmentFilter.push({ id: 'is_available', value: 'false' });
 
     this.state = {
+      actions: [],
       segmentsLoading: true,
-      segments: null,
-      segmentsError: null,
-      segmentFilter
+      segmentFilter,
+      hiddenColumns: new LocalStorageBackedArray<string>(
+        LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
+      ),
+      loaded: false,
+      groupByInterval: false,
+
+      // Table state
+      page: null,
+      pageSize: null,
+      sorted: null,
+      filtered: null,
     };
 
     this.segmentsSqlQueryManager = new QueryManager({
-      processQuery: async (query: QueryAndSkip) => {
-        const results: any[] = (await queryDruidSql({ query: query.query })).slice(query.skip);
+      processQuery: async (query: SegmentsQuery, setIntermediateQuery) => {
+        const totalQuerySize = (query.page + 1) * query.pageSize;
+
+        const whereParts = filterMap(query.filtered, (f: Filter) => {
+          if (f.id.startsWith('is_')) {
+            if (f.value === 'all') return;
+            return `${JSON.stringify(f.id)} = ${f.value === 'true' ? 1 : 0}`;
+          } else {
+            return sqlQueryCustomTableFilter(f);
+          }
+        });
+
+        let queryParts: string[];
+
+        let whereClause = '';
+        if (whereParts.length) {
+          whereClause = whereParts.join(' AND ');
+        }
+
+        if (query.groupByInterval) {
+          queryParts = compact([
+            `SELECT`,
+            `  ("start" || '/' || "end") AS "interval",`,
+            `  "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
+            `FROM sys.segments`,
+            `WHERE`,
+            `  ("start" || '/' || "end") IN (`,
+            `     SELECT "start" || '/' || "end"`,
+            `     FROM sys.segments`,
+            whereClause ? `     WHERE ${whereClause}` : '',
+            `     GROUP BY 1`,
+            `     LIMIT ${totalQuerySize}`,
+            `  )`,
+            whereClause ? `  AND ${whereClause}` : '',
+          ]);
+
+          if (query.sorted.length) {
+            queryParts.push(
+              'ORDER BY ' +
+                query.sorted
+                  .map((sort: any) => `${JSON.stringify(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
+                  .join(', '),
+            );
+          }
+
+          queryParts.push(`LIMIT ${totalQuerySize * 1000}`);
+        } else {
+          queryParts = [
+            `SELECT "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
+            `FROM sys.segments`,
+          ];
+
+          if (whereClause) {
+            queryParts.push(`WHERE ${whereClause}`);
+          }
+
+          if (query.sorted.length) {
+            queryParts.push(
+              'ORDER BY ' +
+                query.sorted
+                  .map((sort: any) => `${JSON.stringify(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
+                  .join(', '),
+            );
+          }
+
+          queryParts.push(`LIMIT ${totalQuerySize}`);
+        }
+        const sqlQuery = queryParts.join('\n');
+        setIntermediateQuery(sqlQuery);
+        const results: any[] = (await queryDruidSql({ query: sqlQuery })).slice(
+          query.page * query.pageSize,
+        );
         results.forEach(result => {
           try {
             result.payload = JSON.parse(result.payload);
@@ -115,298 +253,466 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
         this.setState({
           segments: result,
           segmentsLoading: loading,
-          segmentsError: error
+          segmentsError: error,
         });
-      }
+      },
     });
 
-    this.segmentsJsonQueryManager = new QueryManager({
-      processQuery: async (query: any) => {
+    this.segmentsNoSqlQueryManager = new QueryManager({
+      processQuery: async () => {
         const datasourceList = (await axios.get('/druid/coordinator/v1/metadata/datasources')).data;
-        const nestedResults: SegmentQueryResultRow[][] = await Promise.all(datasourceList.map(async (d: string) => {
-          const segments = (await axios.get(`/druid/coordinator/v1/datasources/${d}?full`)).data.segments;
-          return segments.map((segment: any) => {
-            return {
-              segment_id: segment.identifier,
-              datasource: segment.dataSource,
-              start: segment.interval.split('/')[0],
-              end: segment.interval.split('/')[1],
-              version: segment.version,
-              partition_num: segment.shardSpec.partitionNum ? 0 : segment.shardSpec.partitionNum,
-              size: segment.size,
-              payload: segment,
-              num_rows: -1,
-              num_replicas: -1,
-              is_available: -1,
-              is_published: -1,
-              is_realtime: -1,
-              is_overshadowed: -1
-            };
-          });
-        }));
-        const results: SegmentQueryResultRow[] = [].concat.apply([], nestedResults).sort((d1: any, d2: any) => {
+        const nestedResults: SegmentQueryResultRow[][] = await Promise.all(
+          datasourceList.map(async (d: string) => {
+            const segments = (await axios.get(`/druid/coordinator/v1/datasources/${d}?full`)).data
+              .segments;
+
+            return segments.map((segment: any) => {
+              return {
+                segment_id: segment.identifier,
+                datasource: segment.dataSource,
+                start: segment.interval.split('/')[0],
+                end: segment.interval.split('/')[1],
+                version: segment.version,
+                partition_num: segment.shardSpec.partitionNum ? 0 : segment.shardSpec.partitionNum,
+                size: segment.size,
+                payload: segment,
+                num_rows: -1,
+                num_replicas: -1,
+                is_available: -1,
+                is_published: -1,
+                is_realtime: -1,
+                is_overshadowed: -1,
+              };
+            });
+          }),
+        );
+
+        const results: SegmentQueryResultRow[] = nestedResults.flat().sort((d1: any, d2: any) => {
           return d2.start.localeCompare(d1.start);
         });
-        return results;
+
+        return results.slice(0, SegmentsView.PAGE_SIZE);
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
           allSegments: result,
-          segments: result ? result.slice(0, 50) : null,
+          segments: result,
           segmentsLoading: loading,
-          segmentsError: error
+          segmentsError: error,
         });
-      }
+      },
     });
-
-    this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
-      LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION, () => this.setState({})
-    );
   }
 
   componentDidMount(): void {
-    if (this.props.noSqlMode) {
-      this.segmentsJsonQueryManager.runQuery('init');
+    const { noSqlMode } = this.props;
+    if (noSqlMode) {
+      this.segmentsNoSqlQueryManager.runQuery(null);
     }
   }
 
   componentWillUnmount(): void {
     this.segmentsSqlQueryManager.terminate();
-    this.segmentsJsonQueryManager.terminate();
+    this.segmentsNoSqlQueryManager.terminate();
   }
 
-  private fetchData = (state: any, instance: any) => {
-    const { page, pageSize, filtered, sorted } = state;
-    const totalQuerySize = (page + 1) * pageSize;
-
-    const queryParts = [
-      `SELECT "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
-      `FROM sys.segments`
-    ];
-
-    const whereParts = filtered.map((f: Filter) => {
-      if (f.id.startsWith('is_')) {
-        if (f.value === 'all') return null;
-        return `${JSON.stringify(f.id)} = ${f.value === 'true' ? 1 : 0}`;
-      } else {
-        return sqlQueryCustomTableFilter(f);
-      }
-    }).filter(Boolean);
-
-    if (whereParts.length) {
-      queryParts.push('WHERE ' + whereParts.join(' AND '));
-    }
-
-    if (sorted.length) {
-      queryParts.push('ORDER BY ' + sorted.map((sort: any) => `${JSON.stringify(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`).join(', '));
-    }
-
-    queryParts.push(`LIMIT ${totalQuerySize}`);
-
-    const query = queryParts.join('\n');
+  private fetchData = (groupByInterval: boolean, state?: any) => {
+    const { page, pageSize, filtered, sorted } = state ? state : this.state;
     this.segmentsSqlQueryManager.runQuery({
-      query,
-      skip: totalQuerySize - pageSize
+      page,
+      pageSize,
+      filtered,
+      sorted,
+      groupByInterval: groupByInterval,
     });
-  }
+  };
 
-  private fecthClientSideData = (state: any, instance: any) => {
-    const { page, pageSize, filtered, sorted } = state;
+  private fetchClientSideData = (state?: any) => {
+    const { page, pageSize, filtered, sorted } = state ? state : state;
     const { allSegments } = this.state;
     if (allSegments == null) return;
     const startPage = page * pageSize;
     const endPage = (page + 1) * pageSize;
     const sortPivot = sorted[0].id;
     const sortDesc = sorted[0].desc;
-    const selectedSegments = allSegments.sort((d1: any, d2: any) => {
-      const v1 = d1[sortPivot];
-      const v2 = d2[sortPivot];
-      if (typeof (d1[sortPivot]) === 'string') {
-        return sortDesc ? v2.localeCompare(v1) : v1.localeCompare(v2);
-      } else {
-        return sortDesc ? v2 - v1 : v1 - v2;
-      }
-    }).filter((d: any) => {
-      return filtered.every((f: any) => {
-        return d[f.id].includes(f.value);
+    const selectedSegments = allSegments
+      .sort((d1: any, d2: any) => {
+        const v1 = d1[sortPivot];
+        const v2 = d2[sortPivot];
+        if (typeof d1[sortPivot] === 'string') {
+          return sortDesc ? v2.localeCompare(v1) : v1.localeCompare(v2);
+        } else {
+          return sortDesc ? v2 - v1 : v1 - v2;
+        }
+      })
+      .filter((d: any) => {
+        return filtered.every((f: any) => {
+          return d[f.id].includes(f.value);
+        });
       });
-    });
     const segments = selectedSegments.slice(startPage, endPage);
     this.setState({
-      segments
+      segments,
     });
+  };
+
+  private getSegmentActions(id: string, datasource: string): BasicAction[] {
+    const actions: BasicAction[] = [];
+    actions.push({
+      icon: IconNames.IMPORT,
+      title: 'Drop segment (disable)',
+      intent: Intent.DANGER,
+      onAction: () => this.setState({ terminateSegmentId: id, terminateDatasourceId: datasource }),
+    });
+    return actions;
   }
 
   renderSegmentsTable() {
-    const { segments, segmentsLoading, segmentsError, segmentFilter } = this.state;
+    const {
+      segments,
+      segmentsLoading,
+      segmentsError,
+      segmentFilter,
+      hiddenColumns,
+      groupByInterval,
+    } = this.state;
     const { noSqlMode } = this.props;
-    const { tableColumnSelectionHandler } = this;
 
-    return <ReactTable
-      data={segments || []}
-      pages={10000000} // Dummy, we are hiding the page selector
-      loading={segmentsLoading}
-      noDataText={!segmentsLoading && segments && !segments.length ? 'No segments' : (segmentsError || '')}
-      manual
-      filterable
-      filtered={segmentFilter}
-      defaultSorted={[{id: 'start', desc: true}]}
-      onFilteredChange={(filtered, column) => {
-        this.setState({ segmentFilter: filtered });
-      }}
-      onFetchData={noSqlMode ? this.fecthClientSideData : this.fetchData}
-      showPageJump={false}
-      ofText=""
-      columns={[
-        {
-          Header: 'Segment ID',
-          accessor: 'segment_id',
-          width: 300,
-          show: tableColumnSelectionHandler.showColumn('Segment ID')
-        },
-        {
-          Header: 'Datasource',
-          accessor: 'datasource',
-          Cell: row => {
-            const value = row.value;
-            return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'datasource', value)}); }}>{value}</a>;
-          },
-          show: tableColumnSelectionHandler.showColumn('Datasource')
-        },
-        {
-          Header: 'Start',
-          accessor: 'start',
-          width: 120,
-          defaultSortDesc: true,
-          Cell: row => {
-            const value = row.value;
-            return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'start', value) }); }}>{value}</a>;
-          },
-          show: tableColumnSelectionHandler.showColumn('Start')
-        },
-        {
-          Header: 'End',
-          accessor: 'end',
-          defaultSortDesc: true,
-          width: 120,
-          Cell: row => {
-            const value = row.value;
-            return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'end', value) }); }}>{value}</a>;
-          },
-          show: tableColumnSelectionHandler.showColumn('End')
-        },
-        {
-          Header: 'Version',
-          accessor: 'version',
-          defaultSortDesc: true,
-          width: 120,
-          show: tableColumnSelectionHandler.showColumn('Version')
-        },
-        {
-          Header: 'Partition',
-          accessor: 'partition_num',
-          width: 60,
-          filterable: false,
-          show: tableColumnSelectionHandler.showColumn('Partition')
-        },
-        {
-          Header: 'Size',
-          accessor: 'size',
-          filterable: false,
-          defaultSortDesc: true,
-          Cell: row => formatBytes(row.value),
-          show: tableColumnSelectionHandler.showColumn('Size')
-        },
-        {
-          Header: 'Num rows',
-          accessor: 'num_rows',
-          filterable: false,
-          defaultSortDesc: true,
-          Cell: row => formatNumber(row.value),
-          show: !noSqlMode && tableColumnSelectionHandler.showColumn('Num rows')
-        },
-        {
-          Header: 'Replicas',
-          accessor: 'num_replicas',
-          width: 60,
-          filterable: false,
-          defaultSortDesc: true,
-          show: !noSqlMode && tableColumnSelectionHandler.showColumn('Replicas')
-        },
-        {
-          Header: 'Is published',
-          id: 'is_published',
-          accessor: (row) => String(Boolean(row.is_published)),
-          Filter: makeBooleanFilter(),
-          show: !noSqlMode && tableColumnSelectionHandler.showColumn('Is published')
-        },
-        {
-          Header: 'Is realtime',
-          id: 'is_realtime',
-          accessor: (row) => String(Boolean(row.is_realtime)),
-          Filter: makeBooleanFilter(),
-          show: !noSqlMode && tableColumnSelectionHandler.showColumn('Is realtime')
-        },
-        {
-          Header: 'Is available',
-          id: 'is_available',
-          accessor: (row) => String(Boolean(row.is_available)),
-          Filter: makeBooleanFilter(),
-          show: !noSqlMode && tableColumnSelectionHandler.showColumn('Is available')
-        },
-        {
-          Header: 'Is overshadowed',
-          id: 'is_overshadowed',
-          accessor: (row) => String(Boolean(row.is_overshadowed)),
-          Filter: makeBooleanFilter(),
-          show: !noSqlMode && tableColumnSelectionHandler.showColumn('Is overshadowed')
+    return (
+      <ReactTable
+        data={segments || []}
+        pages={10000000} // Dummy, we are hiding the page selector
+        loading={segmentsLoading}
+        noDataText={
+          !segmentsLoading && segments && !segments.length ? 'No segments' : segmentsError || ''
         }
-      ]}
-      defaultPageSize={50}
-      SubComponent={rowInfo => {
-        const { original } = rowInfo;
-        const { payload } = rowInfo.original;
-        const dimensions = parseList(payload.dimensions);
-        const metrics = parseList(payload.metrics);
-        return <div className="segment-detail">
-          <H5>Segment ID</H5>
-          <p>{original.segment_id}</p>
-          <H5>{`Dimensions (${dimensions.length})`}</H5>
-          <p>{dimensions.join(', ') || 'No dimension'}</p>
-          <H5>{`Metrics (${metrics.length})`}</H5>
-          <p>{metrics.join(', ') || 'No metrics'}</p>
-        </div>;
-      }}
-    />;
+        manual
+        filterable
+        filtered={segmentFilter}
+        defaultSorted={[{ id: 'start', desc: true }]}
+        onFilteredChange={filtered => {
+          this.setState({ segmentFilter: filtered });
+        }}
+        onFetchData={
+          noSqlMode
+            ? this.fetchClientSideData
+            : state => {
+                this.setState({
+                  page: state.page,
+                  pageSize: state.pageSize,
+                  filtered: state.filtered,
+                  sorted: state.sorted,
+                });
+                if (this.segmentsSqlQueryManager.getLastQuery) {
+                  this.fetchData(groupByInterval, state);
+                }
+              }
+        }
+        showPageJump={false}
+        ofText=""
+        pivotBy={groupByInterval ? ['interval'] : []}
+        columns={[
+          {
+            Header: 'Segment ID',
+            accessor: 'segment_id',
+            width: 300,
+            show: hiddenColumns.exists('Segment ID'),
+          },
+          {
+            Header: 'Datasource',
+            accessor: 'datasource',
+            Cell: row => {
+              const value = row.value;
+              return (
+                <a
+                  onClick={() => {
+                    this.setState({ segmentFilter: addFilter(segmentFilter, 'datasource', value) });
+                  }}
+                >
+                  {value}
+                </a>
+              );
+            },
+            show: hiddenColumns.exists('Datasource'),
+          },
+          {
+            Header: 'Interval',
+            accessor: 'interval',
+            width: 120,
+            defaultSortDesc: true,
+            Cell: row => {
+              const value = row.value;
+              return (
+                <a
+                  onClick={() => {
+                    this.setState({ segmentFilter: addFilter(segmentFilter, 'interval', value) });
+                  }}
+                >
+                  {value}
+                </a>
+              );
+            },
+            show: hiddenColumns.exists('interval') && groupByInterval,
+          },
+          {
+            Header: 'Start',
+            accessor: 'start',
+            width: 120,
+            defaultSortDesc: true,
+            Cell: row => {
+              const value = row.value;
+              return (
+                <a
+                  onClick={() => {
+                    this.setState({ segmentFilter: addFilter(segmentFilter, 'start', value) });
+                  }}
+                >
+                  {value}
+                </a>
+              );
+            },
+            show: hiddenColumns.exists('Start'),
+          },
+          {
+            Header: 'End',
+            accessor: 'end',
+            defaultSortDesc: true,
+            width: 120,
+            Cell: row => {
+              const value = row.value;
+              return (
+                <a
+                  onClick={() => {
+                    this.setState({ segmentFilter: addFilter(segmentFilter, 'end', value) });
+                  }}
+                >
+                  {value}
+                </a>
+              );
+            },
+            show: hiddenColumns.exists('End'),
+          },
+          {
+            Header: 'Version',
+            accessor: 'version',
+            defaultSortDesc: true,
+            width: 120,
+            show: hiddenColumns.exists('Version'),
+          },
+          {
+            Header: 'Partition',
+            accessor: 'partition_num',
+            width: 60,
+            filterable: false,
+            show: hiddenColumns.exists('Partition'),
+          },
+          {
+            Header: 'Size',
+            accessor: 'size',
+            filterable: false,
+            defaultSortDesc: true,
+            Cell: row => formatBytes(row.value),
+            show: hiddenColumns.exists('Size'),
+          },
+          {
+            Header: 'Num rows',
+            accessor: 'num_rows',
+            filterable: false,
+            defaultSortDesc: true,
+            Cell: row => (row.original.is_available ? formatNumber(row.value) : <em>(unknown)</em>),
+            show: !noSqlMode && hiddenColumns.exists('Num rows'),
+          },
+          {
+            Header: 'Replicas',
+            accessor: 'num_replicas',
+            width: 60,
+            filterable: false,
+            defaultSortDesc: true,
+            show: !noSqlMode && hiddenColumns.exists('Replicas'),
+          },
+          {
+            Header: 'Is published',
+            id: 'is_published',
+            accessor: row => String(Boolean(row.is_published)),
+            Filter: makeBooleanFilter(),
+            show: !noSqlMode && hiddenColumns.exists('Is published'),
+          },
+          {
+            Header: 'Is realtime',
+            id: 'is_realtime',
+            accessor: row => String(Boolean(row.is_realtime)),
+            Filter: makeBooleanFilter(),
+            show: !noSqlMode && hiddenColumns.exists('Is realtime'),
+          },
+          {
+            Header: 'Is available',
+            id: 'is_available',
+            accessor: row => String(Boolean(row.is_available)),
+            Filter: makeBooleanFilter(),
+            show: !noSqlMode && hiddenColumns.exists('Is available'),
+          },
+          {
+            Header: 'Is overshadowed',
+            id: 'is_overshadowed',
+            accessor: row => String(Boolean(row.is_overshadowed)),
+            Filter: makeBooleanFilter(),
+            show: !noSqlMode && hiddenColumns.exists('Is overshadowed'),
+          },
+          {
+            Header: ActionCell.COLUMN_LABEL,
+            id: ActionCell.COLUMN_ID,
+            accessor: 'segment_id',
+            width: ActionCell.COLUMN_WIDTH,
+            filterable: false,
+            Cell: row => {
+              if (row.aggregated) return '';
+              const id = row.value;
+              const datasource = row.row.datasource;
+              return (
+                <ActionCell
+                  onDetail={() => {
+                    this.setState({
+                      segmentTableActionDialogId: id,
+                      datasourceTableActionDialogId: datasource,
+                      actions: this.getSegmentActions(id, datasource),
+                    });
+                  }}
+                  actions={this.getSegmentActions(id, datasource)}
+                />
+              );
+            },
+            Aggregated: () => '',
+            show: hiddenColumns.exists(ActionCell.COLUMN_LABEL),
+          },
+        ]}
+        defaultPageSize={SegmentsView.PAGE_SIZE}
+      />
+    );
   }
 
-  render() {
-    const { goToSql, noSqlMode } = this.props;
-    const { tableColumnSelectionHandler } = this;
+  renderTerminateSegmentAction() {
+    const { terminateSegmentId, terminateDatasourceId } = this.state;
+    if (!terminateDatasourceId || !terminateSegmentId) return;
 
-    return <div className="segments-view app-view">
-      <ViewControlBar label="Segments">
-        <Button
-          icon={IconNames.REFRESH}
-          text="Refresh"
-          onClick={() => noSqlMode ? this.segmentsJsonQueryManager.rerunLastQuery() : this.segmentsSqlQueryManager.rerunLastQuery()}
-        />
-        {
-          !noSqlMode &&
-          <Button
+    return (
+      <AsyncActionDialog
+        action={async () => {
+          const resp = await axios.delete(
+            `/druid/coordinator/v1/datasources/${terminateDatasourceId}/segments/${terminateSegmentId}`,
+            {},
+          );
+          return resp.data;
+        }}
+        confirmButtonText="Drop Segment"
+        successText="Segment drop request acknowledged, next time the coordinator runs segment will be dropped"
+        failText="Could not drop segment"
+        intent={Intent.DANGER}
+        onClose={() => {
+          this.setState({ terminateSegmentId: undefined });
+        }}
+        onSuccess={() => {
+          this.segmentsNoSqlQueryManager.rerunLastQuery();
+          this.segmentsSqlQueryManager.rerunLastQuery();
+        }}
+      >
+        <p>{`Are you sure you want to drop segment '${terminateSegmentId}'?`}</p>
+        <p>This action is not reversible.</p>
+      </AsyncActionDialog>
+    );
+  }
+
+  renderBulkSegmentsActions() {
+    const { goToQuery, noSqlMode } = this.props;
+    const lastSegmentsQuery = this.segmentsSqlQueryManager.getLastIntermediateQuery();
+
+    const bulkSegmentsActionsMenu = (
+      <Menu>
+        {!noSqlMode && (
+          <MenuItem
             icon={IconNames.APPLICATION}
-            text="Go to SQL"
-            hidden={noSqlMode}
-            onClick={() => goToSql(this.segmentsSqlQueryManager.getLastQuery().query)}
+            text="View SQL query for table"
+            disabled={!lastSegmentsQuery}
+            onClick={() => {
+              if (!lastSegmentsQuery) return;
+              goToQuery(lastSegmentsQuery);
+            }}
           />
-        }
-        <TableColumnSelection
-          columns={noSqlMode ? tableColumnsNoSql : tableColumns}
-          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
-          tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
-        />
-      </ViewControlBar>
-      {this.renderSegmentsTable()}
-    </div>;
+        )}
+      </Menu>
+    );
+
+    return (
+      <>
+        <Popover content={bulkSegmentsActionsMenu} position={Position.BOTTOM_LEFT}>
+          <Button icon={IconNames.MORE} />
+        </Popover>
+      </>
+    );
+  }
+
+  render(): JSX.Element {
+    const {
+      segmentTableActionDialogId,
+      datasourceTableActionDialogId,
+      actions,
+      hiddenColumns,
+    } = this.state;
+    const { noSqlMode } = this.props;
+    const { groupByInterval } = this.state;
+
+    return (
+      <>
+        <div className="segments-view app-view">
+          <ViewControlBar label="Segments">
+            <RefreshButton
+              onRefresh={auto =>
+                noSqlMode
+                  ? this.segmentsNoSqlQueryManager.rerunLastQuery(auto)
+                  : this.segmentsSqlQueryManager.rerunLastQuery(auto)
+              }
+              localStorageKey={LocalStorageKeys.SEGMENTS_REFRESH_RATE}
+            />
+            <Label>Group by</Label>
+            <ButtonGroup>
+              <Button
+                active={!groupByInterval}
+                onClick={() => {
+                  this.setState({ groupByInterval: false });
+                  noSqlMode ? this.fetchClientSideData() : this.fetchData(false);
+                }}
+              >
+                None
+              </Button>
+              <Button
+                active={groupByInterval}
+                onClick={() => {
+                  this.setState({ groupByInterval: true });
+                  this.fetchData(true);
+                }}
+              >
+                Interval
+              </Button>
+            </ButtonGroup>
+            {this.renderBulkSegmentsActions()}
+            <TableColumnSelector
+              columns={noSqlMode ? tableColumnsNoSql : tableColumns}
+              onChange={column => this.setState({ hiddenColumns: hiddenColumns.toggle(column) })}
+              tableColumnsHidden={hiddenColumns.storedArray}
+            />
+          </ViewControlBar>
+          {this.renderSegmentsTable()}
+        </div>
+        {this.renderTerminateSegmentAction()}
+        {segmentTableActionDialogId && (
+          <SegmentTableActionDialog
+            segmentId={segmentTableActionDialogId}
+            datasourceId={datasourceTableActionDialogId}
+            actions={actions}
+            onClose={() => this.setState({ segmentTableActionDialogId: undefined })}
+            isOpen
+          />
+        )}
+      </>
+    );
   }
 }

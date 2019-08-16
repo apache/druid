@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`describe tasks view tasks view snapshot 1`] = `
+exports[`tasks view matches snapshot 1`] = `
 <Fragment>
   <t
     customClassName="tasks-view app-view"
@@ -20,17 +20,114 @@ exports[`describe tasks view tasks view snapshot 1`] = `
       <ViewControlBar
         label="Supervisors"
       >
-        <Blueprint3.Button
-          icon="refresh"
-          onClick={[Function]}
-          text="Refresh"
+        <RefreshButton
+          localStorageKey="supervisors-refresh-rate"
+          onRefresh={[Function]}
         />
-        <Blueprint3.Button
-          icon="plus"
-          onClick={[Function]}
-          text="Submit supervisor"
-        />
-        <TableColumnSelection
+        <Blueprint3.Popover
+          boundary="scrollParent"
+          captureDismiss={false}
+          content={
+            <Blueprint3.Menu>
+              <Blueprint3.MenuItem
+                disabled={false}
+                icon="cloud-upload"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={Object {}}
+                shouldDismissPopover={true}
+                text="Go to data loader"
+              />
+              <Blueprint3.MenuItem
+                disabled={false}
+                icon="manually-entered-data"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={Object {}}
+                shouldDismissPopover={true}
+                text="Submit JSON supervisor"
+              />
+            </Blueprint3.Menu>
+          }
+          defaultIsOpen={false}
+          disabled={false}
+          fill={false}
+          hasBackdrop={false}
+          hoverCloseDelay={300}
+          hoverOpenDelay={150}
+          inheritDarkTheme={true}
+          interactionKind="click"
+          minimal={false}
+          modifiers={Object {}}
+          openOnTargetFocus={true}
+          position="bottom-left"
+          targetTagName="span"
+          transitionDuration={300}
+          usePortal={true}
+          wrapperTagName="span"
+        >
+          <Blueprint3.Button
+            icon="plus"
+            text="Submit supervisor"
+          />
+        </Blueprint3.Popover>
+        <Blueprint3.Popover
+          boundary="scrollParent"
+          captureDismiss={false}
+          content={
+            <Blueprint3.Menu>
+              <Blueprint3.MenuItem
+                disabled={false}
+                icon="play"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={Object {}}
+                shouldDismissPopover={true}
+                text="Resume all supervisors"
+              />
+              <Blueprint3.MenuItem
+                disabled={false}
+                icon="pause"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={Object {}}
+                shouldDismissPopover={true}
+                text="Suspend all supervisors"
+              />
+              <Blueprint3.MenuItem
+                disabled={false}
+                icon="cross"
+                intent="danger"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={Object {}}
+                shouldDismissPopover={true}
+                text="Terminate all supervisors"
+              />
+            </Blueprint3.Menu>
+          }
+          defaultIsOpen={false}
+          disabled={false}
+          fill={false}
+          hasBackdrop={false}
+          hoverCloseDelay={300}
+          hoverOpenDelay={150}
+          inheritDarkTheme={true}
+          interactionKind="click"
+          minimal={false}
+          modifiers={Object {}}
+          openOnTargetFocus={true}
+          position="bottom-left"
+          targetTagName="span"
+          transitionDuration={300}
+          usePortal={true}
+          wrapperTagName="span"
+        >
+          <Blueprint3.Button
+            icon="more"
+          />
+        </Blueprint3.Popover>
+        <TableColumnSelector
           columns={
             Array [
               "Datasource",
@@ -77,6 +174,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
             "Header": undefined,
             "Pivot": undefined,
             "PivotValue": undefined,
+            "Placeholder": undefined,
             "aggregate": undefined,
             "className": "",
             "filterAll": false,
@@ -89,6 +187,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
             "getProps": [Function],
             "headerClassName": "",
             "headerStyle": Object {},
+            "minResizeWidth": 11,
             "minWidth": 100,
             "resizable": undefined,
             "show": true,
@@ -124,6 +223,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
               "accessor": [Function],
               "id": "status",
               "show": true,
+              "width": 300,
             },
             Object {
               "Cell": [Function],
@@ -140,6 +240,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         defaultExpanded={Object {}}
         defaultFilterMethod={[Function]}
         defaultFiltered={Array []}
+        defaultPage={0}
         defaultPageSize={20}
         defaultResized={Array []}
         defaultSortDesc={false}
@@ -154,6 +255,14 @@ exports[`describe tasks view tasks view snapshot 1`] = `
           }
         }
         filterable={true}
+        filtered={
+          Array [
+            Object {
+              "id": "datasource",
+              "value": "datasource",
+            },
+          ]
+        }
         freezeWhenExpanded={false}
         getLoadingProps={[Function]}
         getNoDataProps={[Function]}
@@ -187,7 +296,9 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         noDataText=""
         ofText="of"
         onFetchData={[Function]}
+        onFilteredChange={[Function]}
         originalKey="_original"
+        pageJumpText="jump to page"
         pageSizeOptions={
           Array [
             5,
@@ -205,6 +316,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         previousText="Previous"
         resizable={true}
         resolveData={[Function]}
+        rowsSelectorText="rows per page"
         rowsText="rows"
         showPageJump={true}
         showPageSizeOptions={true}
@@ -215,57 +327,6 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         style={Object {}}
         subRowsKey="_subRows"
       />
-      <AsyncActionDialog
-        action={null}
-        confirmButtonText="Resume supervisor"
-        failText="Could not resume supervisor"
-        intent="primary"
-        onClose={[Function]}
-        successText="Supervisor has been resumed"
-      >
-        <p>
-          Are you sure you want to resume supervisor 'null'?
-        </p>
-      </AsyncActionDialog>
-      <AsyncActionDialog
-        action={null}
-        confirmButtonText="Suspend supervisor"
-        failText="Could not suspend supervisor"
-        intent="danger"
-        onClose={[Function]}
-        successText="Supervisor has been suspended"
-      >
-        <p>
-          Are you sure you want to suspend supervisor 'null'?
-        </p>
-      </AsyncActionDialog>
-      <AsyncActionDialog
-        action={null}
-        confirmButtonText="Reset supervisor"
-        failText="Could not reset supervisor"
-        intent="danger"
-        onClose={[Function]}
-        successText="Supervisor has been reset"
-      >
-        <p>
-          Are you sure you want to reset supervisor 'null'?
-        </p>
-      </AsyncActionDialog>
-      <AsyncActionDialog
-        action={null}
-        confirmButtonText="Terminate supervisor"
-        failText="Could not terminate supervisor"
-        intent="danger"
-        onClose={[Function]}
-        successText="Supervisor has been terminated"
-      >
-        <p>
-          Are you sure you want to terminate supervisor 'null'?
-        </p>
-        <p>
-          This action is not reversible.
-        </p>
-      </AsyncActionDialog>
     </div>
     <div
       className="bottom-pane"
@@ -302,15 +363,9 @@ exports[`describe tasks view tasks view snapshot 1`] = `
             Status
           </Blueprint3.Button>
         </Blueprint3.ButtonGroup>
-        <Blueprint3.Button
-          icon="refresh"
-          onClick={[Function]}
-          text="Refresh"
-        />
-        <Blueprint3.Button
-          icon="application"
-          onClick={[Function]}
-          text="Go to SQL"
+        <RefreshButton
+          localStorageKey="task-refresh-rate"
+          onRefresh={[Function]}
         />
         <Blueprint3.Popover
           boundary="scrollParent"
@@ -319,24 +374,27 @@ exports[`describe tasks view tasks view snapshot 1`] = `
             <Blueprint3.Menu>
               <Blueprint3.MenuItem
                 disabled={false}
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                shouldDismissPopover={true}
-                text="Raw JSON task"
-              />
-              <Blueprint3.MenuItem
-                disabled={false}
+                icon="cloud-upload"
                 multiline={false}
                 onClick={[Function]}
                 popoverProps={Object {}}
                 shouldDismissPopover={true}
                 text="Go to data loader"
               />
+              <Blueprint3.MenuItem
+                disabled={false}
+                icon="manually-entered-data"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={Object {}}
+                shouldDismissPopover={true}
+                text="Submit JSON task"
+              />
             </Blueprint3.Menu>
           }
           defaultIsOpen={false}
           disabled={false}
+          fill={false}
           hasBackdrop={false}
           hoverCloseDelay={300}
           hoverOpenDelay={150}
@@ -356,7 +414,44 @@ exports[`describe tasks view tasks view snapshot 1`] = `
             text="Submit task"
           />
         </Blueprint3.Popover>
-        <TableColumnSelection
+        <Blueprint3.Popover
+          boundary="scrollParent"
+          captureDismiss={false}
+          content={
+            <Blueprint3.Menu>
+              <Blueprint3.MenuItem
+                disabled={false}
+                icon="application"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={Object {}}
+                shouldDismissPopover={true}
+                text="View SQL query for table"
+              />
+            </Blueprint3.Menu>
+          }
+          defaultIsOpen={false}
+          disabled={false}
+          fill={false}
+          hasBackdrop={false}
+          hoverCloseDelay={300}
+          hoverOpenDelay={150}
+          inheritDarkTheme={true}
+          interactionKind="click"
+          minimal={false}
+          modifiers={Object {}}
+          openOnTargetFocus={true}
+          position="bottom-left"
+          targetTagName="span"
+          transitionDuration={300}
+          usePortal={true}
+          wrapperTagName="span"
+        >
+          <Blueprint3.Button
+            icon="more"
+          />
+        </Blueprint3.Popover>
+        <TableColumnSelector
           columns={
             Array [
               "Task ID",
@@ -406,6 +501,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
             "Header": undefined,
             "Pivot": undefined,
             "PivotValue": undefined,
+            "Placeholder": undefined,
             "aggregate": undefined,
             "className": "",
             "filterAll": false,
@@ -418,6 +514,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
             "getProps": [Function],
             "headerClassName": "",
             "headerStyle": Object {},
+            "minResizeWidth": 11,
             "minWidth": 100,
             "resizable": undefined,
             "show": true,
@@ -495,6 +592,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         defaultExpanded={Object {}}
         defaultFilterMethod={[Function]}
         defaultFiltered={Array []}
+        defaultPage={0}
         defaultPageSize={20}
         defaultResized={Array []}
         defaultSortDesc={false}
@@ -521,6 +619,10 @@ exports[`describe tasks view tasks view snapshot 1`] = `
             Object {
               "id": "task_id",
               "value": "test",
+            },
+            Object {
+              "id": "datasource",
+              "value": "datasource",
             },
           ]
         }
@@ -559,6 +661,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         onFetchData={[Function]}
         onFilteredChange={[Function]}
         originalKey="_original"
+        pageJumpText="jump to page"
         pageSizeOptions={
           Array [
             5,
@@ -577,6 +680,7 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         previousText="Previous"
         resizable={true}
         resolveData={[Function]}
+        rowsSelectorText="rows per page"
         rowsText="rows"
         showPageJump={true}
         showPageSizeOptions={true}
@@ -587,18 +691,6 @@ exports[`describe tasks view tasks view snapshot 1`] = `
         style={Object {}}
         subRowsKey="_subRows"
       />
-      <AsyncActionDialog
-        action={null}
-        confirmButtonText="Kill task"
-        failText="Could not kill task"
-        intent="danger"
-        onClose={[Function]}
-        successText="Task was killed"
-      >
-        <p>
-          Are you sure you want to kill task 'null'?
-        </p>
-      </AsyncActionDialog>
     </div>
   </t>
   <Blueprint3.Alert

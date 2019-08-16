@@ -16,20 +16,15 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
-import { render } from 'react-testing-library';
+import { render } from '@testing-library/react';
+import React from 'react';
 
-import {ShowJson} from './show-json';
+import { ShowJson } from './show-json';
 
-
-describe('describe rule editor', () => {
-  it('rule editor snapshot', () => {
-    const showJson =
-      <ShowJson
-        endpoint={'test'}
-        downloadFilename={'test'}
-      />;
-    const { container, getByText } = render(showJson);
+describe('rule editor', () => {
+  it('matches snapshot', () => {
+    const showJson = <ShowJson endpoint={'test'} downloadFilename={'test'} />;
+    const { container } = render(showJson);
     expect(container.firstChild).toMatchSnapshot();
   });
 });
