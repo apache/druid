@@ -107,6 +107,18 @@ import java.util.stream.StreamSupport;
 
 public class CompactionTask extends AbstractBatchIndexTask
 {
+  /**
+   * The CompactionTask creates and runs multiple IndexTask instances. When the {@link AppenderatorsManager}
+   * is asked to clean up, it does so on a per-task basis keyed by task ID. However, the subtask IDs of the
+   * CompactionTask are not externally visible. This context flag is used to ensure that all the appenderators
+   * created for the CompactionTasks's subtasks are tracked under the ID of the parent CompactionTask.
+   * The CompactionTask may change in the future and no longer require this behavior (e.g., reusing the same
+   * Appenderator across subtasks, or allowing the subtasks to use the same ID). The CompactionTask is also the only
+   * task type that currently creates multiple appenderators. Thus, a context flag is used to handle this case
+   * instead of a more general approach such as new methods on the Task interface.
+   */
+  public static final String CTX_KEY_APPENDERATOR_TRACKING_TASK_ID = "appenderatorTrackingTaskId";
+
   private static final Logger log = new Logger(CompactionTask.class);
   private static final String TYPE = "compact";
 
@@ -219,6 +231,8 @@ public class CompactionTask extends AbstractBatchIndexTask
     this.segmentLoaderFactory = segmentLoaderFactory;
     this.retryPolicyFactory = retryPolicyFactory;
     this.appenderatorsManager = appenderatorsManager;
+
+    addToContext(CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, getId());
   }
 
   @JsonProperty
@@ -326,7 +340,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       indexTaskSpecs = IntStream
           .range(0, ingestionSpecs.size())
           .mapToObj(i -> new IndexTask(
-              getId(),
+              createIndexTaskSpecId(i),
               getGroupId(),
               getTaskResource(),
               getDataSource(),
@@ -386,6 +400,11 @@ public class CompactionTask extends AbstractBatchIndexTask
       log.info("Run [%d] specs, [%d] succeeded, [%d] failed", totalNumSpecs, totalNumSpecs - failCnt, failCnt);
       return failCnt == 0 ? TaskStatus.success(getId()) : TaskStatus.failure(getId());
     }
+  }
+
+  private String createIndexTaskSpecId(int i)
+  {
+    return StringUtils.format("%s_%d", getId(), i);
   }
 
   /**

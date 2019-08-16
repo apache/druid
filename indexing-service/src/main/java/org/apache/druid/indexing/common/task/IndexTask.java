@@ -1055,8 +1055,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       IndexTuningConfig tuningConfig
   )
   {
+    String effectiveId = getContextValue(CompactionTask.CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, null);
+    if (effectiveId == null) {
+      effectiveId = getId();
+    }
+
     return appenderatorsManager.createOfflineAppenderatorForTask(
-        getId(),
+        effectiveId,
         dataSchema,
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
         metrics,
