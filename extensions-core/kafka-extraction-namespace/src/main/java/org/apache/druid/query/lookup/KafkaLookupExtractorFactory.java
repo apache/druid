@@ -103,7 +103,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       @JsonProperty("connectTimeout") @Min(0) long connectTimeout,
       @JsonProperty("injective") boolean injective,
       @JsonProperty(value = "namespaceParseSpec", required = false)
-              KafkaLookupDataParser namespaceParseSpec
+          KafkaLookupDataParser namespaceParseSpec
   )
   {
     this.kafkaTopic = Preconditions.checkNotNull(kafkaTopic, "kafkaTopic required");
@@ -171,17 +171,10 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
 
       final CountDownLatch startingReads = new CountDownLatch(1);
 
-      final String topic = getKafkaTopic();
-      LOG.debug("About to listen to topic [%s] with group.id [%s]", topic, factoryId);
-
       final ListenableFuture<?> future = executorService.submit(() -> {
         consumer = getConsumer();
-
-        while (!executorService.isShutdown()) {
-          try {
-            if (executorService.isShutdown()) {
-              break;
-            }
+        try {
+          while (!executorService.isShutdown()) {
             final ConsumerRecords<String, String> records = consumer.poll(1000);
             startingReads.countDown();
 
@@ -199,13 +192,13 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
               doubleEventCount.incrementAndGet();
               LOG.trace("Placed map[%s] val[%s]", mapData, message);
             }
-            catch (Exception e) {
-              LOG.error(e, "Error reading stream for topic [%s]", topic);
-            }
           }
-          catch (Exception e) {
-            LOG.error(e, "Error reading stream for topic [%s]", topic);
-          }
+        }
+        catch (Exception e) {
+          LOG.error(e, "Error reading stream for topic [%s]", topic);
+        }
+        finally {
+          consumer.close();
         }
       });
 
@@ -296,7 +289,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       executorService.shutdown();
 
       if (consumer != null) {
-        consumer.close();
+        consumer.wakeup();
       }
 
       final ListenableFuture<?> future = this.future;
