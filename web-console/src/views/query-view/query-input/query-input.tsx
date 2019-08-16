@@ -32,6 +32,75 @@ import './query-input.scss';
 
 const langTools = ace.acequire('ace/ext/language_tools');
 
+function addFunctionAutoCompleter(): void {
+  if (!langTools) return;
+
+  const functionList: any[] = SQL_FUNCTIONS.map((entry: SyntaxDescription) => {
+    const funcName: string = entry.syntax.replace(/\(.*\)/, '()');
+    return {
+      value: funcName,
+      score: 80,
+      meta: 'function',
+      syntax: entry.syntax,
+      description: entry.description,
+      completer: {
+        insertMatch: (editor: any, data: any) => {
+          editor.completer.insertMatch({ value: data.caption });
+          const pos = editor.getCursorPosition();
+          editor.gotoLine(pos.row + 1, pos.column - 1);
+        },
+      },
+    };
+  });
+
+  langTools.addCompleter({
+    getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
+      callback(null, functionList);
+    },
+    getDocTooltip: (item: any) => {
+      if (item.meta === 'function') {
+        const functionName = item.caption.slice(0, -2);
+        item.docHTML = `
+<div class="function-doc">
+  <div class="function-doc-name">
+    <b>${escape(functionName)}</b>
+  </div>
+  <hr />
+  <div>
+    <b>Syntax:</b>
+  </div>
+  <div>${escape(item.syntax)}</div>
+  <br />
+  <div>
+    <b>Description:</b>
+  </div>
+  <div>${escape(item.description)}</div>
+</div>`;
+      }
+    },
+  });
+}
+
+function replaceDefaultAutoCompleter(): void {
+  if (!langTools) return;
+
+  const keywordList = ([] as any[]).concat(
+    SQL_KEYWORDS.map(v => ({ name: v, value: v, score: 0, meta: 'keyword' })),
+    SQL_EXPRESSION_PARTS.map(v => ({ name: v, value: v, score: 0, meta: 'keyword' })),
+    SQL_CONSTANTS.map(v => ({ name: v, value: v, score: 0, meta: 'constant' })),
+    SQL_DYNAMICS.map(v => ({ name: v, value: v, score: 0, meta: 'dynamic' })),
+    SQL_DATE_TYPES.map(v => ({ name: v.syntax, value: v.syntax, score: 0, meta: 'keyword' })),
+  );
+
+  const keywordCompleter = {
+    getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
+      return callback(null, keywordList);
+    },
+  };
+
+  langTools.setCompleters([langTools.snippetCompleter, langTools.textCompleter, keywordCompleter]);
+}
+
 export interface QueryInputProps {
   queryString: string;
   onQueryStringChange: (newQueryString: string) => void;
@@ -60,7 +129,8 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
         currentSchema !== state.prevCurrentSchema ||
         currentTable !== state.prevCurrentTable)
     ) {
-      langTools.setCompleters([]);
+      replaceDefaultAutoCompleter();
+      addFunctionAutoCompleter();
 
       const completions = ([] as any[]).concat(
         uniq(columnMetadata.map(d => d.TABLE_SCHEMA)).map(v => ({
@@ -112,84 +182,6 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     this.state = {
       editorHeight: 200,
     };
-  }
-
-  private replaceDefaultAutoCompleter = () => {
-    if (!langTools) return;
-
-    const keywordList = ([] as any[]).concat(
-      SQL_KEYWORDS.map(v => ({ name: v, value: v, score: 0, meta: 'keyword' })),
-      SQL_EXPRESSION_PARTS.map(v => ({ name: v, value: v, score: 0, meta: 'keyword' })),
-      SQL_CONSTANTS.map(v => ({ name: v, value: v, score: 0, meta: 'constant' })),
-      SQL_DYNAMICS.map(v => ({ name: v, value: v, score: 0, meta: 'dynamic' })),
-      SQL_DATE_TYPES.map(v => ({ name: v.syntax, value: v.syntax, score: 0, meta: 'keyword' })),
-    );
-
-    const keywordCompleter = {
-      getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
-        return callback(null, keywordList);
-      },
-    };
-
-    langTools.setCompleters([
-      langTools.snippetCompleter,
-      langTools.textCompleter,
-      keywordCompleter,
-    ]);
-  };
-
-  private addFunctionAutoCompleter = (): void => {
-    if (!langTools) return;
-
-    const functionList: any[] = SQL_FUNCTIONS.map((entry: SyntaxDescription) => {
-      const funcName: string = entry.syntax.replace(/\(.*\)/, '()');
-      return {
-        value: funcName,
-        score: 80,
-        meta: 'function',
-        syntax: entry.syntax,
-        description: entry.description,
-        completer: {
-          insertMatch: (editor: any, data: any) => {
-            editor.completer.insertMatch({ value: data.caption });
-            const pos = editor.getCursorPosition();
-            editor.gotoLine(pos.row + 1, pos.column - 1);
-          },
-        },
-      };
-    });
-
-    langTools.addCompleter({
-      getCompletions: (_editor: any, _session: any, _pos: any, _prefix: any, callback: any) => {
-        callback(null, functionList);
-      },
-      getDocTooltip: (item: any) => {
-        if (item.meta === 'function') {
-          const functionName = item.caption.slice(0, -2);
-          item.docHTML = `
-<div class="function-doc">
-  <div class="function-doc-name">
-    <b>${escape(functionName)}</b>
-  </div>
-  <hr />
-  <div>
-    <b>Syntax:</b>
-  </div>
-  <div>${escape(item.syntax)}</div>
-  <br />
-  <div>
-    <b>Description:</b>
-  </div>
-  <div>${escape(item.description)}</div>
-</div>`;
-        }
-      },
-    });
-  };
-
-  componentDidMount(): void {
-    this.replaceDefaultAutoCompleter();
-    this.addFunctionAutoCompleter();
   }
 
   private handleAceContainerResize = (entries: IResizeEntry[]) => {
