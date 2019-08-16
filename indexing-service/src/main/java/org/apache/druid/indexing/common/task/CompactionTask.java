@@ -326,7 +326,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       indexTaskSpecs = IntStream
           .range(0, ingestionSpecs.size())
           .mapToObj(i -> new IndexTask(
-              createIndexTaskSpecId(i),
+              getId(),
               getGroupId(),
               getTaskResource(),
               getDataSource(),
@@ -386,11 +386,6 @@ public class CompactionTask extends AbstractBatchIndexTask
       log.info("Run [%d] specs, [%d] succeeded, [%d] failed", totalNumSpecs, totalNumSpecs - failCnt, failCnt);
       return failCnt == 0 ? TaskStatus.success(getId()) : TaskStatus.failure(getId());
     }
-  }
-
-  private String createIndexTaskSpecId(int i)
-  {
-    return StringUtils.format("%s_%d", getId(), i);
   }
 
   /**

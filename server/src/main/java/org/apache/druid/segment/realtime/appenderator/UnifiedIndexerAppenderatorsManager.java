@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -157,9 +158,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     synchronized (this) {
       DatasourceBundle datasourceBundle = datasourceBundles.computeIfAbsent(
           schema.getDataSource(),
-          (datasource) -> {
-            return new DatasourceBundle(datasource);
-          }
+          DatasourceBundle::new
       );
 
       Appenderator appenderator = new AppenderatorImpl(
@@ -283,13 +282,20 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     }
   }
 
+  @VisibleForTesting
+  public Map<String, DatasourceBundle> getDatasourceBundles()
+  {
+    return datasourceBundles;
+  }
+
   private AppenderatorConfig rewriteAppenderatorConfigMemoryLimits(AppenderatorConfig baseConfig)
   {
     long perWorkerLimit = workerConfig.getGlobalIngestionHeapLimitBytes() / workerConfig.getCapacity();
     return new MemoryParameterOverridingAppenderatorConfig(baseConfig, perWorkerLimit);
   }
 
-  private class DatasourceBundle
+  @VisibleForTesting
+  public class DatasourceBundle
   {
     private final SinkQuerySegmentWalker walker;
     private final Map<String, List<Appenderator>> taskAppenderatorMap;
@@ -328,8 +334,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           (myTaskId) -> {
             return new ArrayList<>();
           }
-      );
-      taskAppenderatorMap.get(taskId).add(appenderator);
+      ).add(appenderator);
     }
   }
 
