@@ -115,13 +115,14 @@ public class IntermediaryDataManagerAutoCleanupTest
   public void testCleanup() throws IOException, InterruptedException
   {
     final String supervisorTaskId = "supervisorTaskId";
+    final String subTaskId = "subTaskId";
     final Interval interval = Intervals.of("2018/2019");
     final File segmentFile = generateSegmentDir("test");
     final DataSegment segment = newSegment(interval, 0);
-    intermediaryDataManager.addSegment(supervisorTaskId, "subTaskId", segment, segmentFile);
+    intermediaryDataManager.addSegment(supervisorTaskId, subTaskId, segment, segmentFile);
 
     Thread.sleep(3000);
-    Assert.assertTrue(intermediaryDataManager.findPartitionFiles(supervisorTaskId, interval, 0).isEmpty());
+    Assert.assertNull(intermediaryDataManager.findPartitionFile(supervisorTaskId, subTaskId, interval, 0));
   }
 
   private File generateSegmentDir(String fileName) throws IOException

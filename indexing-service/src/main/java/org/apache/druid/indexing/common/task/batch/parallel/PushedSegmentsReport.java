@@ -24,15 +24,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.Objects;
 import java.util.Set;
 
 /**
- * This class is used in native parallel batch indexing, currently only in {@link SinglePhaseParallelIndexTaskRunner}.
- * In native parallel batch indexing, each subTask generates and pushes segments and sends a report to the
- * supervisorTask. Once the supervisorTask collects all reports, it publishes all the pushed segments at once.
+ * In the last phase of native parallel batch indexing, each sub task generates and pushes segments
+ * and sends a report to the supervisorTask. Once the supervisorTask collects all reports,
+ * it publishes all the pushed segments at once.
  */
-public class PushedSegmentsReport
+public class PushedSegmentsReport implements SubTaskReport
 {
+  public static final String TYPE = "pushed_segments";
+
   private final String taskId;
   private final Set<DataSegment> oldSegments;
   private final Set<DataSegment> newSegments;
@@ -49,6 +52,7 @@ public class PushedSegmentsReport
     this.newSegments = Preconditions.checkNotNull(newSegments, "newSegments");
   }
 
+  @Override
   @JsonProperty
   public String getTaskId()
   {
@@ -65,5 +69,26 @@ public class PushedSegmentsReport
   public Set<DataSegment> getNewSegments()
   {
     return newSegments;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    PushedSegmentsReport that = (PushedSegmentsReport) o;
+    return Objects.equals(taskId, that.taskId) &&
+           Objects.equals(oldSegments, that.oldSegments) &&
+           Objects.equals(newSegments, that.newSegments);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(taskId, oldSegments, newSegments);
   }
 }

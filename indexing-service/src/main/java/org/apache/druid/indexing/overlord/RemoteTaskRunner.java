@@ -475,6 +475,22 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
+  public TaskLocation getTaskLocation(String taskId)
+  {
+    if (pendingTasks.containsKey(taskId)) {
+      return pendingTasks.get(taskId).getLocation();
+    }
+    if (runningTasks.containsKey(taskId)) {
+      return runningTasks.get(taskId).getLocation();
+    }
+    if (completeTasks.containsKey(taskId)) {
+      return completeTasks.get(taskId).getLocation();
+    }
+
+    return TaskLocation.unknown();
+  }
+
+  @Override
   public Optional<ScalingStats> getScalingStats()
   {
     return Optional.fromNullable(provisioningService.getStats());
