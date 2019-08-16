@@ -218,10 +218,6 @@
           <artifactId>xmlenc</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>commons-configuration</groupId>
-          <artifactId>commons-configuration</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>com.nimbusds</groupId>
           <artifactId>nimbus-jose-jwt</artifactId>
         </exclusion>
