@@ -123,7 +123,7 @@
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <executable>${project.parent.basedir}/docs/_bin/build-textfile-readme.sh</executable>
+                                    <executable>${project.parent.basedir}/distribution/bin/build-textfile-readme.sh</executable>
                                     <arguments>
                                         <argument>${project.basedir}/../</argument>
                                         <argument>${project.parent.version}</argument>
@@ -137,7 +137,7 @@
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <executable>${project.parent.basedir}/docs/_bin/generate-license.py</executable>
+                                    <executable>${project.parent.basedir}/distribution/bin/generate-license.py</executable>
                                     <arguments>
                                         <argument>${project.basedir}/../licenses/APACHE2</argument>
                                         <argument>${project.basedir}/../licenses.yaml</argument>
@@ -152,7 +152,7 @@
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <executable>${project.parent.basedir}/docs/_bin/generate-notice-binary.py</executable>
+                                    <executable>${project.parent.basedir}/distribution/bin/generate-notice-binary.py</executable>
                                     <arguments>
                                         <argument>${project.basedir}/../NOTICE</argument>
                                         <argument>${project.basedir}/../licenses.yaml</argument>
