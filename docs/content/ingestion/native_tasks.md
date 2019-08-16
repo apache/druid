@@ -55,7 +55,7 @@ where the first phase tasks ran. In the second phase, each sub task fetches
 partitioned data from middleManagers or indexers and merges them to create the final segments.
 As in the single phase execution, the created segments are reported to the supervisor task to publish at once.
 
-To use this task, the `firehose` in `ioConfig` should be _splittable_ and `maxNumSubTasks` should be set something larger than 1 in `tuningConfig`.
+To use this task, the `firehose` in `ioConfig` should be _splittable_ and `maxNumConcurrentSubTasks` should be set something larger than 1 in `tuningConfig`.
 Otherwise, this task runs sequentially. Here is the list of currently splittable fireshoses.
 
 - [`LocalFirehose`](./firehose.html#localfirehose)
@@ -73,8 +73,8 @@ if one of them fails.
 
 You may want to consider the below things:
 
-- The number of concurrent tasks run in parallel ingestion is determined by `maxNumSubTasks` in the `tuningConfig`.
-  The supervisor task checks the number of current running sub tasks and creates more if it's smaller than `maxNumSubTasks` no matter how many task slots are currently available.
+- The number of concurrent tasks run in parallel ingestion is determined by `maxNumConcurrentSubTasks` in the `tuningConfig`.
+  The supervisor task checks the number of current running sub tasks and creates more if it's smaller than `maxNumConcurrentSubTasks` no matter how many task slots are currently available.
   This may affect to other ingestion performance. See the below [Capacity Planning](#capacity-planning) section for more details.
 - By default, batch ingestion replaces all data in any segment that it writes to. If you'd like to add to the segment
   instead, set the `appendToExisting` flag in `ioConfig`. Note that it only replaces data in segments where it actively adds
@@ -151,7 +151,7 @@ An example ingestion spec is:
     },
     "tuningconfig": {
         "type": "index_parallel",
-        "maxNumSubTasks": 2
+        "maxNumConcurrentSubTasks": 2
     }
   }
 }
@@ -205,7 +205,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |reportParseExceptions|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|false|no|
 |pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
 |segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](#segmentWriteOutMediumFactory).|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used|no|
-|maxNumSubTasks|Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to `maxNumSubTasks` regardless of the current available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion. Check [Capacity Planning](#capacity-planning) for more details.|1|no|
+|maxNumConcurrentSubTasks|Maximum number of tasks which can be run in parallel at the same time. The supervisor task would spawn worker tasks up to `maxNumConcurrentSubTasks` regardless of the current available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion. Check [Capacity Planning](#capacity-planning) for more details.|1|no|
 |maxRetry|Maximum number of retries on task failures.|3|no|
 |maxNumSegmentsToMerge|Max limit for the number of segments that a single task can merge at the same time in the second phase. Used only `forceGuaranteedRollup` is set.|100|no|
 |totalNumMergeTasks|Total number of tasks to merge segments in the second phase when `forceGuaranteedRollup` is set.|10|no|
@@ -430,7 +430,7 @@ An example of the result is
         "reportParseExceptions": false,
         "pushTimeout": 0,
         "segmentWriteOutMediumFactory": null,
-        "maxNumSubTasks": 4,
+        "maxNumConcurrentSubTasks": 4,
         "maxRetry": 3,
         "taskStatusCheckPeriodMs": 1000,
         "chatHandlerTimeout": "PT10S",
@@ -468,22 +468,22 @@ Returns the task attempt history of the worker task spec of the given id, or HTT
 
 ### Capacity Planning
 
-The supervisor task can create up to `maxNumSubTasks` worker tasks no matter how many task slots are currently available.
-As a result, total number of tasks which can be run at the same time is `(maxNumSubTasks + 1)` (including the supervisor task).
+The supervisor task can create up to `maxNumConcurrentSubTasks` worker tasks no matter how many task slots are currently available.
+As a result, total number of tasks which can be run at the same time is `(maxNumConcurrentSubTasks + 1)` (including the supervisor task).
 Please note that this can be even larger than total number of task slots (sum of the capacity of all workers).
-If `maxNumSubTasks` is larger than `n (available task slots)`, then
-`maxNumSubTasks` tasks are created by the supervisor task, but only `n` tasks would be started.
+If `maxNumConcurrentSubTasks` is larger than `n (available task slots)`, then
+`maxNumConcurrentSubTasks` tasks are created by the supervisor task, but only `n` tasks would be started.
 Others will wait in the pending state until any running task is finished.
 
 If you are using the Parallel Index Task with stream ingestion together,
 we would recommend to limit the max capacity for batch ingestion to prevent
 stream ingestion from being blocked by batch ingestion. Suppose you have
 `t` Parallel Index Tasks to run at the same time, but want to limit
-the max number of tasks for batch ingestion to `b`. Then, (sum of `maxNumSubTasks`
+the max number of tasks for batch ingestion to `b`. Then, (sum of `maxNumConcurrentSubTasks`
 of all Parallel Index Tasks + `t` (for supervisor tasks)) must be smaller than `b`.
 
 If you have some tasks of a higher priority than others, you may set their
-`maxNumSubTasks` to a higher value than lower priority tasks.
+`maxNumConcurrentSubTasks` to a higher value than lower priority tasks.
 This may help the higher priority tasks to finish earlier than lower priority tasks
 by assigning more task slots to them.
 
