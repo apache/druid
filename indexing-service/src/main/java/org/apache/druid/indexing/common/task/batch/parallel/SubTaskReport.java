@@ -19,26 +19,20 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.druid.data.input.FirehoseFactory;
-import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
-
-import javax.annotation.Nullable;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 
 /**
- * Same with {@link IndexIOConfig} except its JSON type name.
+ * Each sub task of {@link ParallelIndexSupervisorTask} reports the result of indexing using this class.
  */
-@JsonTypeName("index_parallel")
-public class ParallelIndexIOConfig extends IndexIOConfig
+@JsonTypeInfo(use = Id.NAME, property = "type", defaultImpl = PushedSegmentsReport.class)
+@JsonSubTypes(value = {
+    @Type(name = PushedSegmentsReport.TYPE, value = PushedSegmentsReport.class),
+    @Type(name = GeneratedPartitionsReport.TYPE, value = GeneratedPartitionsReport.class)
+})
+public interface SubTaskReport
 {
-  @JsonCreator
-  public ParallelIndexIOConfig(
-      @JsonProperty("firehose") FirehoseFactory firehoseFactory,
-      @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
-  )
-  {
-    super(firehoseFactory, appendToExisting);
-  }
+  String getTaskId();
 }

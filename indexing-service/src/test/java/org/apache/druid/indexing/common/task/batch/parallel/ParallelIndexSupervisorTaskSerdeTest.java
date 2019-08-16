@@ -148,6 +148,8 @@ public class ParallelIndexSupervisorTaskSerdeTest
             null,
             null,
             null,
+            null,
+            null,
             null
         )
     );

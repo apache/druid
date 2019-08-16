@@ -84,6 +84,8 @@ public class ParallelIndexTuningConfigTest
         20,
         new Duration(3600),
         128,
+        null,
+        null,
         false,
         null,
         null
