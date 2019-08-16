@@ -455,6 +455,22 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       columnMetadata,
       autoRun,
     } = this.state;
+
+    let currentSchema;
+    let currentTable;
+
+    if (result && result.parsedQuery instanceof SqlQuery) {
+      currentSchema = result.parsedQuery.getSchema();
+      currentTable = result.parsedQuery.getTableName();
+    } else if (localStorageGet(LocalStorageKeys.QUERY_KEY)) {
+      const defaultQueryString = localStorageGet(LocalStorageKeys.QUERY_KEY);
+      const tempAst = defaultQueryString ? parser(defaultQueryString) : undefined;
+      if (tempAst) {
+        currentSchema = tempAst.getSchema();
+        currentTable = tempAst.getTableName();
+      }
+    }
+
     const runeMode = QueryView.isJsonLike(queryString);
     return (
       <SplitterLayout
@@ -469,6 +485,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       >
         <div className="control-pane">
           <QueryInput
+            currentSchema={currentSchema ? currentSchema : 'druid'}
+            currentTable={currentTable}
             queryString={queryString}
             onQueryStringChange={this.handleQueryStringChange}
             runeMode={runeMode}

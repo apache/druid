@@ -25,7 +25,6 @@ import AceEditor from 'react-ace';
 import { SQL_DATE_TYPES, SQL_FUNCTIONS, SyntaxDescription } from '../../../../lib/sql-function-doc';
 import { uniq } from '../../../utils';
 import { ColumnMetadata } from '../../../utils/column-metadata';
-import { ColumnTreeProps, ColumnTreeState } from '../column-tree/column-tree';
 
 import { SQL_CONSTANTS, SQL_DYNAMICS, SQL_EXPRESSION_PARTS, SQL_KEYWORDS } from './keywords';
 
@@ -38,6 +37,8 @@ export interface QueryInputProps {
   onQueryStringChange: (newQueryString: string) => void;
   runeMode: boolean;
   columnMetadata?: ColumnMetadata[];
+  currentSchema?: string;
+  currentTable?: string;
 }
 
 export interface QueryInputState {
@@ -45,25 +46,46 @@ export interface QueryInputState {
   // Since this component will grown and shrink dynamically we will measure its height and then set it.
   editorHeight: number;
   prevColumnMetadata?: ColumnMetadata[];
+  prevCurrentTable?: string;
+  prevCurrentSchema?: string;
 }
 
 export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputState> {
-  static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
-    const { columnMetadata } = props;
+  static getDerivedStateFromProps(props: QueryInputProps, state: QueryInputState) {
+    const { columnMetadata, currentSchema, currentTable } = props;
 
-    if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
+    if (
+      columnMetadata &&
+      (columnMetadata !== state.prevColumnMetadata ||
+        currentSchema !== state.prevCurrentSchema ||
+        currentTable !== state.prevCurrentTable)
+    ) {
+      langTools.setCompleters([]);
+
       const completions = ([] as any[]).concat(
         uniq(columnMetadata.map(d => d.TABLE_SCHEMA)).map(v => ({
           value: v,
           score: 10,
           meta: 'schema',
         })),
-        uniq(columnMetadata.map(d => d.TABLE_NAME)).map(v => ({
+        uniq(
+          columnMetadata
+            .filter(d => (currentSchema ? d.TABLE_SCHEMA === currentSchema : true))
+            .map(d => d.TABLE_NAME),
+        ).map(v => ({
           value: v,
           score: 49,
           meta: 'datasource',
         })),
-        uniq(columnMetadata.map(d => d.COLUMN_NAME)).map(v => ({
+        uniq(
+          columnMetadata
+            .filter(d =>
+              currentTable && currentSchema
+                ? d.TABLE_NAME === currentTable && d.TABLE_SCHEMA === currentSchema
+                : true,
+            )
+            .map(d => d.COLUMN_NAME),
+        ).map(v => ({
           value: v,
           score: 50,
           meta: 'column',
@@ -78,6 +100,8 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
 
       return {
         prevColumnMetadata: columnMetadata,
+        prevCurrentSchema: currentSchema,
+        prevCurrentTable: currentTable,
       };
     }
     return null;
