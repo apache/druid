@@ -41,8 +41,6 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Comparator;
-import java.util.List;
 
 public class IntermediaryDataManagerManualAddAndDeleteTest
 {
@@ -107,11 +105,14 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
       final DataSegment segment = newSegment(interval, partitionId);
       intermediaryDataManager.addSegment(supervisorTaskId, "subTaskId_" + i, segment, segmentFile);
     }
-    final List<File> files = intermediaryDataManager.findPartitionFiles(supervisorTaskId, interval, partitionId);
-    Assert.assertEquals(4, files.size());
-    files.sort(Comparator.comparing(File::getName));
     for (int i = 0; i < 4; i++) {
-      Assert.assertEquals("subTaskId_" + i, files.get(i).getName());
+      final File file = intermediaryDataManager.findPartitionFile(
+          supervisorTaskId,
+          "subTaskId_" + i,
+          interval,
+          partitionId
+      );
+      Assert.assertNotNull(file);
     }
   }
 
@@ -131,7 +132,11 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
     intermediaryDataManager.deletePartitions(supervisorTaskId);
 
     for (int partitionId = 0; partitionId < 2; partitionId++) {
-      Assert.assertTrue(intermediaryDataManager.findPartitionFiles(supervisorTaskId, interval, partitionId).isEmpty());
+      for (int subTaskId = 0; subTaskId < 2; subTaskId++) {
+        Assert.assertNull(
+            intermediaryDataManager.findPartitionFile(supervisorTaskId, "subTaskId_" + subTaskId, interval, partitionId)
+        );
+      }
     }
   }
 

@@ -20,17 +20,13 @@
 package org.apache.druid.data.input.impl.prefetch;
 
 import com.google.common.base.Predicate;
-import org.apache.commons.io.IOUtils;
-import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
@@ -39,7 +35,6 @@ import java.util.concurrent.ExecutorService;
  * See the javadoc of {@link PrefetchableTextFilesFirehoseFactory} for more details.
  */
 public class FileFetcher<T> extends Fetcher<T>
-
 {
   private static final int BUFFER_SIZE = 1024 * 4;
   private final ObjectOpenFunction<T> openObjectFunction;
@@ -48,7 +43,7 @@ public class FileFetcher<T> extends Fetcher<T>
   // maximum retry for fetching an object from the remote site
   private final int maxFetchRetry;
 
-  public int getMaxFetchRetry()
+  private int getMaxFetchRetry()
   {
     return maxFetchRetry;
   }
@@ -61,7 +56,7 @@ public class FileFetcher<T> extends Fetcher<T>
       PrefetchConfig prefetchConfig,
       ObjectOpenFunction<T> openObjectFunction,
       Predicate<Throwable> retryCondition,
-      Integer maxFetchRetries
+      int maxFetchRetries
   )
   {
 
@@ -91,23 +86,15 @@ public class FileFetcher<T> extends Fetcher<T>
   @Override
   protected long download(T object, File outFile) throws IOException
   {
-    try {
-      return RetryUtils.retry(
-          () -> {
-            try (final InputStream is = openObjectFunction.open(object);
-                 final OutputStream os = new FileOutputStream(outFile)) {
-              return IOUtils.copyLarge(is, os, buffer);
-            }
-          },
-          retryCondition,
-          outFile::delete,
-          maxFetchRetry + 1,
-          StringUtils.format("Failed to download object[%s]", object)
-      );
-    }
-    catch (Exception e) {
-      throw new IOException(e);
-    }
+    return FileUtils.copyLarge(
+        object,
+        openObjectFunction,
+        outFile,
+        buffer,
+        retryCondition,
+        maxFetchRetry + 1,
+        StringUtils.format("Failed to download object[%s]", object)
+    );
   }
 
   /**

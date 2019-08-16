@@ -100,7 +100,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
@@ -109,12 +108,6 @@ public class CompactionTask extends AbstractBatchIndexTask
 {
   private static final Logger log = new Logger(CompactionTask.class);
   private static final String TYPE = "compact";
-
-  /**
-   * A flag to indicate this task is already stopped and its child indexTasks shouldn't be created.
-   * See {@link #currentRunningTaskSpec} for more details.
-   */
-  private static final Object SPECIAL_VALUE_STOPPED = new Object();
 
   private final Interval interval;
   private final List<DataSegment> segments;
@@ -156,19 +149,15 @@ public class CompactionTask extends AbstractBatchIndexTask
   private final AppenderatorsManager appenderatorsManager;
 
   @JsonIgnore
-  private List<IndexTask> indexTaskSpecs;
+  private final CurrentSubTaskHolder currentSubTaskHolder = new CurrentSubTaskHolder(
+      (taskObject, config) -> {
+        final IndexTask indexTask = (IndexTask) taskObject;
+        indexTask.stopGracefully(config);
+      }
+  );
 
-  /**
-   * Reference to the sub-task that is currently running.
-   *
-   * When {@link #stopGracefully} is called, the compaction task gets the reference to the current running task,
-   * and calls {@link #stopGracefully} for that task. This reference will be updated to {@link #SPECIAL_VALUE_STOPPED}.
-   *
-   * Note that {@link #stopGracefully} can be called at any time during {@link #run}. Calling {@link #stopGracefully}
-   * on the current running task and setting this reference to {@link #SPECIAL_VALUE_STOPPED} should be done atomically.
-   */
-  @Nullable
-  private final AtomicReference<Object> currentRunningTaskSpec = new AtomicReference<>();
+  @JsonIgnore
+  private List<IndexTask> indexTaskSpecs;
 
   @JsonCreator
   public CompactionTask(
@@ -345,25 +334,17 @@ public class CompactionTask extends AbstractBatchIndexTask
       log.warn("Interval[%s] has no segments, nothing to do.", interval);
       return TaskStatus.failure(getId());
     } else {
+      registerResourceCloserOnAbnormalExit(currentSubTaskHolder);
       final int totalNumSpecs = indexTaskSpecs.size();
       log.info("Generated [%d] compaction task specs", totalNumSpecs);
 
       int failCnt = 0;
-      registerResourceCloserOnAbnormalExit(config -> {
-        Object currentRunningTask = currentRunningTaskSpec.getAndSet(SPECIAL_VALUE_STOPPED);
-        if (currentRunningTask != null) {
-          ((IndexTask) currentRunningTask).stopGracefully(config);
-        }
-      });
       for (IndexTask eachSpec : indexTaskSpecs) {
-        Object prevSpec = currentRunningTaskSpec.get();
-        //noinspection ObjectEquality
-        if (prevSpec == SPECIAL_VALUE_STOPPED || !currentRunningTaskSpec.compareAndSet(prevSpec, eachSpec)) {
+        final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
+        if (!currentSubTaskHolder.setTask(eachSpec)) {
           log.info("Task is asked to stop. Finish as failed.");
           return TaskStatus.failure(getId());
         }
-        final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
-
         try {
           if (eachSpec.isReady(toolbox.getTaskActionClient())) {
             log.info("Running indexSpec: " + json);
