@@ -276,7 +276,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   }
 
   @Test
-  public void testWith1MaxNumSubTasks() throws Exception
+  public void testWith1MaxNumConcurrentSubTasks() throws Exception
   {
     final ParallelIndexSupervisorTask task = newTask(
         Intervals.of("2017/2018"),
@@ -286,6 +286,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
             false
         ),
         new ParallelIndexTuningConfig(
+            null,
             null,
             null,
             null,
@@ -357,6 +358,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         segmentGranularity,
         ioConfig,
         new ParallelIndexTuningConfig(
+            null,
             null,
             null,
             null,

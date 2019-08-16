@@ -32,7 +32,7 @@ ingestion method.
 
 |   |Hadoop-based ingestion|Native parallel ingestion|Native local ingestion|
 |---|----------------------|-------------------------|----------------------|
-| Parallel indexing | Always parallel | Parallel if firehose is splittable <br/> & maxNumSubTasks > 1 in tuningConfig | Always sequential |
+| Parallel indexing | Always parallel | Parallel if firehose is splittable <br/> & maxNumConcurrentSubTasks > 1 in tuningConfig | Always sequential |
 | Supported indexing modes | Overwriting mode | Both appending and overwriting modes | Both appending and overwriting modes |
 | External dependency | Hadoop (it internally submits Hadoop jobs) | No dependency | No dependency |
 | Supported [rollup modes](./index.html#roll-up-modes) | Perfect rollup | Both perfect and best-effort rollup | Both perfect and best-effort rollup |

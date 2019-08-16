@@ -97,7 +97,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     this.groupId = groupId;
     this.tuningConfig = tuningConfig;
     this.context = context;
-    this.maxNumConcurrentSubTasks = tuningConfig.getMaxNumSubTasks();
+    this.maxNumConcurrentSubTasks = tuningConfig.getMaxNumConcurrentSubTasks();
     this.indexingServiceClient = Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient");
   }
 
