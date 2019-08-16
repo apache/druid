@@ -163,7 +163,7 @@ public class StringFirstAggregatorFactory extends NullableAggregatorFactory<Base
   }
 
   @Override
-  public Comparator makeComparatorWithOrderByColumnSpec(OrderByColumnSpec columnSpec)
+  public Comparator getComparatorForFinalOrdering(OrderByColumnSpec columnSpec)
   {
     return makeComparator(columnSpec.getDimensionComparator());
   }

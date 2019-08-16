@@ -101,7 +101,7 @@ public class StringLastAggregatorFactory extends NullableAggregatorFactory<BaseO
   }
 
   @Override
-  public Comparator makeComparatorWithOrderByColumnSpec(OrderByColumnSpec columnSpec)
+  public Comparator getComparatorForFinalOrdering(OrderByColumnSpec columnSpec)
   {
     return StringFirstAggregatorFactory.makeComparator(columnSpec.getDimensionComparator());
   }

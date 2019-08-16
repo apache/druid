@@ -60,10 +60,12 @@ import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFacto
 import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
+import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -813,6 +815,117 @@ public class TopNQueryRunnerTest
                         .put("market", "upfront")
                         .put(QueryRunnerTestHelper.uniqueMetric, 2L)
                         .put(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric, 3L)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopNOverStringFirstLastAggregator()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.monthGran)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric("last")
+        .threshold(3)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .aggregators(
+            Arrays.asList(
+                new StringFirstAggregatorFactory("first", "qualityNumericString", null),
+                new StringLastAggregatorFactory("last", "qualityNumericString", null)
+            )
+        )
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            DateTimes.of("2011-01-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", "100000")
+                        .put("last", "180000")
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", "140000")
+                        .put("last", "160000")
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", "140000")
+                        .put("last", "160000")
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            DateTimes.of("2011-02-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", "100000")
+                        .put("last", "180000")
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", "140000")
+                        .put("last", "160000")
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", "140000")
+                        .put("last", "160000")
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            DateTimes.of("2011-03-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", "100000")
+                        .put("last", "180000")
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", "140000")
+                        .put("last", "160000")
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", "140000")
+                        .put("last", "160000")
+                        .build()
+                )
+            )
+        ),
+        new Result<>(
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", "100000")
+                        .put("last", "180000")
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", "140000")
+                        .put("last", "160000")
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", "140000")
+                        .put("last", "160000")
                         .build()
                 )
             )

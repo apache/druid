@@ -73,9 +73,11 @@ import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
+import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
@@ -2467,6 +2469,45 @@ public class GroupByQueryRunnerTest
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "cardinality");
+  }
+
+  @Test
+  public void testGroupByWithLimitAndOrderByOnStringFirstLast()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .setDimensions(new DefaultDimensionSpec("market", "market"))
+        .setAggregatorSpecs(
+            new StringFirstAggregatorFactory("first", "quality", null),
+            new StringLastAggregatorFactory("last", "quality", null)
+        )
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .setLimitSpec(new DefaultLimitSpec(
+            Collections.singletonList(
+                new OrderByColumnSpec("last", OrderByColumnSpec.Direction.ASCENDING)
+            ),
+            3
+        ))
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "market", "total_market", "first", "mezzanine", "last", "premium"),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01",
+            "market",
+            "upfront",
+            "first",
+            "mezzanine",
+            "last",
+            "premium"
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "market", "spot", "first", "automotive", "last", "travel")
+        );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "first-last-aggs");
   }
 
   @Test

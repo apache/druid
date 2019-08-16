@@ -243,7 +243,7 @@ public class DefaultLimitSpec implements LimitSpec
       if (postAggregatorsMap.containsKey(columnName)) {
         nextOrdering = metricOrdering(columnName, postAggregatorsMap.get(columnName).getComparator());
       } else if (aggregatorsMap.containsKey(columnName)) {
-        nextOrdering = metricOrdering(columnName, aggregatorsMap.get(columnName).makeComparatorWithOrderByColumnSpec(columnSpec));
+        nextOrdering = metricOrdering(columnName, aggregatorsMap.get(columnName).getComparatorForFinalOrdering(columnSpec));
       } else if (dimensionsMap.containsKey(columnName)) {
         nextOrdering = dimensionOrdering(columnName, columnSpec.getDimensionComparator());
       }

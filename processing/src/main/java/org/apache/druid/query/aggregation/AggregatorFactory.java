@@ -52,7 +52,7 @@ public abstract class AggregatorFactory implements Cacheable
 
   public abstract Comparator getComparator();
 
-  public Comparator makeComparatorWithOrderByColumnSpec(OrderByColumnSpec columnSpec)
+  public Comparator getComparatorForFinalOrdering(OrderByColumnSpec columnSpec)
   {
     return getComparator();
   }
