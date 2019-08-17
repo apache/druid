@@ -16,6 +16,7 @@
 # limitations under the License.
 
 import argparse
+import sys
 import yaml
 
 from collections import defaultdict
@@ -36,19 +37,19 @@ def print_notice(dependency):
     # 'notices' field
     if 'notice' in dependency:
         # single notice for dependency name, list out all 'libraries' if any, then print notice
-        print_outfile(f"{dependencyHeaderLine} {dependency['name']} {dependency['version']} {dependencyHeaderLine}")
+        print_outfile("{} {} {} {}".format(dependencyHeaderLine, dependency['name'], dependency['version'], dependencyHeaderLine))
         if 'libraries' in dependency:
             for library in dependency['libraries']:
                 for group_id, artifact_id in library.items():
                     print_outfile("{}.jar".format(artifact_id))
-            print_outfile(f"{dependencyHeaderLine}\n")
-        print_outfile(f"{dependency['notice']}\n\n\n\n")
+            print_outfile("{}\n".format(dependencyHeaderLine))
+        print_outfile("{}\n\n\n\n".format(dependency['notice']))
     elif 'notices' in dependency:
         # if 'notices' is set instead of 'notice', then it has jar specific notices to print
         for notice_entry in dependency['notices']:
             for jar, notice in notice_entry.items():
-                print_outfile(f"{dependencyHeaderLine} {name}-{version}.jar {dependencyHeaderLine}")
-                print_outfile(f"{notice}\n\n\n\n")
+                print_outfile("{} {}-{}.jar {}".format(dependencyHeaderLine, jar, dependency['version'], dependencyHeaderLine))
+                print_outfile("{}\n\n\n\n".format(notice))
 
 
 def generate_notice(source_notice, dependences_yaml):
@@ -57,11 +58,11 @@ def generate_notice(source_notice, dependences_yaml):
     # Print Apache license first.
     print_outfile(source_notice)
     with open(dependences_yaml) as registry_file:
-        dependencies_set = set(yaml.load_all(registry_file))
+        dependencies = list(yaml.load_all(registry_file))
 
     # Group dependencies by module
     modules_map = defaultdict(list)
-    for dependency in dependencies_set:
+    for dependency in dependencies:
         if 'notice' in dependency or 'notices' in dependency:
             modules_map[dependency['module']].append(dependency)
 
