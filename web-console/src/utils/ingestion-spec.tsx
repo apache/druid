@@ -1523,6 +1523,14 @@ export interface TuningConfig {
   fetchThreads?: number;
 }
 
+export function invalidTuningConfig(tuningConfig: TuningConfig): boolean {
+  return Boolean(
+    tuningConfig.type === 'index_parallel' &&
+      tuningConfig.forceGuaranteedRollup &&
+      !tuningConfig.numShards,
+  );
+}
+
 export function getPartitionRelatedTuningSpecFormFields(
   specType: IngestionType,
 ): Field<TuningConfig>[] {
@@ -1563,6 +1571,7 @@ export function getPartitionRelatedTuningSpecFormFields(
         {
           name: 'numShards', // This is mandatory if index_parallel and forceGuaranteedRollup
           type: 'number',
+          isDefined: (t: TuningConfig) => Boolean(t.forceGuaranteedRollup),
           info: (
             <>
               Directly specify the number of shards to create. If this is specified and 'intervals'
@@ -1584,27 +1593,6 @@ export function getPartitionRelatedTuningSpecFormFields(
           type: 'number',
           defaultValue: 20000000,
           info: <>Total number of rows in segments waiting for being pushed.</>,
-        },
-        {
-          name: 'maxNumMergeTasks',
-          type: 'number',
-          defaultValue: 10,
-          isDefined: (t: TuningConfig) =>
-            Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
-          info: <>Number of tasks to merge partial segments after shuffle.</>,
-        },
-        {
-          name: 'maxNumSegmentsToMerge',
-          type: 'number',
-          defaultValue: 100,
-          isDefined: (t: TuningConfig) =>
-            Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
-          info: (
-            <>
-              Max limit for the number of segments a single task can merge at the same time after
-              shuffle.
-            </>
-          ),
         },
       ];
 
@@ -1670,6 +1658,24 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     placeholder: 'Default: 1/6 of max JVM memory',
     info: <>Used in determining when intermediate persists to disk should occur.</>,
+  },
+  {
+    name: 'maxNumMergeTasks',
+    type: 'number',
+    defaultValue: 10,
+    isDefined: (t: TuningConfig) => Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
+    info: <>Number of tasks to merge partial segments after shuffle.</>,
+  },
+  {
+    name: 'maxNumSegmentsToMerge',
+    type: 'number',
+    defaultValue: 100,
+    isDefined: (t: TuningConfig) => Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
+    info: (
+      <>
+        Max limit for the number of segments a single task can merge at the same time after shuffle.
+      </>
+    ),
   },
   {
     name: 'indexSpec.bitmap.type',
@@ -2017,6 +2023,11 @@ function parseSpecFromFormat(format: string, hasHeaderRow: boolean | null = null
     timestampSpec: {},
     dimensionsSpec: {},
   };
+
+  if (format === 'regex') {
+    parseSpec.pattern = '(.*)';
+    parseSpec.columns = ['column1'];
+  }
 
   if (typeof hasHeaderRow === 'boolean') {
     parseSpec.hasHeaderRow = hasHeaderRow;

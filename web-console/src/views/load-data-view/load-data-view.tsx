@@ -97,6 +97,7 @@ import {
   hasParallelAbility,
   IngestionComboTypeWithExtra,
   IngestionSpec,
+  invalidTuningConfig,
   IoConfig,
   isColumnTimestampSpec,
   isEmptyIngestionSpec,
@@ -2489,7 +2490,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           </Callout>
           {this.renderParallelPickerIfNeeded()}
         </div>
-        {this.renderNextBar({})}
+        {this.renderNextBar({
+          disabled: invalidTuningConfig(tuningConfig),
+        })}
       </>
     );
   }
@@ -2591,6 +2594,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   renderPublishStep() {
     const { spec } = this.state;
+    const parallel = isParallel(spec);
 
     return (
       <>
@@ -2628,6 +2632,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'tuningConfig.logParseExceptions',
                 label: 'Log parse exceptions',
                 type: 'boolean',
+                disabled: parallel,
                 defaultValue: false,
                 info: (
                   <>
@@ -2640,6 +2645,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'tuningConfig.maxParseExceptions',
                 label: 'Max parse exceptions',
                 type: 'number',
+                disabled: parallel,
                 placeholder: '(unlimited)',
                 info: (
                   <>
@@ -2652,6 +2658,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'tuningConfig.maxSavedParseExceptions',
                 label: 'Max saved parse exceptions',
                 type: 'number',
+                disabled: parallel,
                 defaultValue: 0,
                 info: (
                   <>
@@ -2675,6 +2682,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <Callout className="intro">
             <p>Configure behavior of indexed data once it reaches Druid.</p>
           </Callout>
+          {this.renderParallelPickerIfNeeded()}
         </div>
         {this.renderNextBar({})}
       </>
