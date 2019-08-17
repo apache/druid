@@ -666,7 +666,7 @@ libraries:
   - io.netty: netty
 notices:
   - netty: |
-      ''
+      ==
                                   The Netty Project
                                   =================
 
@@ -815,7 +815,7 @@ libraries:
   - io.netty: netty-transport-native-epoll
   - io.netty: netty-transport-native-unix-common
 notice: |
-  ''
+  ==
                               The Netty Project
                               =================
 
@@ -2616,7 +2616,8 @@ libraries:
   - io.netty: netty
 notices:
   - netty: |
-      The Netty Project
+      ==
+                                  The Netty Project
                                   =================
 
       Please visit the Netty web site for more information:

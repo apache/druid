@@ -42,7 +42,7 @@ def print_notice(dependency):
             for library in dependency['libraries']:
                 for group_id, artifact_id in library.items():
                     print_outfile("{}.jar".format(artifact_id))
-            print_outfile("{}\n".format(dependencyHeaderLine))
+            print_outfile("{}".format(dependencyHeaderLine))
         print_outfile("{}\n\n\n\n".format(dependency['notice']))
     elif 'notices' in dependency:
         # if 'notices' is set instead of 'notice', then it has jar specific notices to print
