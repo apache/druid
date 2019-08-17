@@ -3073,6 +3073,29 @@ libraries:
 
 ---
 
+name: Jackson
+license_category: binary
+module: extensions/druid-hdfs-storage
+license_name: Apache License version 2.0
+version: 1.9.2
+libraries:
+  - org.codehaus.jackson: jackson-jaxrs
+  - org.codehaus.jackson: jackson-xc
+
+---
+
+name: xmlenc
+license_category: binary
+module: extensions/druid-hdfs-storage
+license_name: BSD-3-Clause License
+version: 0.52
+copyright: Ernst de Haan
+license_file_path: licenses/bin/xmlenc.BSD3
+libraries:
+  - xmlenc: xmlenc
+
+---
+
 name: Apache Kafka
 version: 2.1.0
 license_category: binary
