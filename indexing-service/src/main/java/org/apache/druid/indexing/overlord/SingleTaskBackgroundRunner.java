@@ -302,6 +302,12 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
   }
 
   @Override
+  public TaskLocation getTaskLocation(String taskId)
+  {
+    return location;
+  }
+
+  @Override
   public Optional<ScalingStats> getScalingStats()
   {
     return Optional.absent();

@@ -1631,17 +1631,17 @@ export function getPartitionRelatedTuningSpecFormFields(
 
 const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
   {
-    name: 'maxNumSubTasks',
+    name: 'maxNumConcurrentSubTasks',
     type: 'number',
     defaultValue: 1,
     isDefined: (t: TuningConfig) => t.type === 'index_parallel',
     info: (
       <>
         Maximum number of tasks which can be run at the same time. The supervisor task would spawn
-        worker tasks up to maxNumSubTasks regardless of the available task slots. If this value is
-        set to 1, the supervisor task processes data ingestion on its own instead of spawning worker
-        tasks. If this value is set to too large, too many worker tasks can be created which might
-        block other ingestion.
+        worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this
+        value is set to 1, the supervisor task processes data ingestion on its own instead of
+        spawning worker tasks. If this value is set to too large, too many worker tasks can be
+        created which might block other ingestion.
       </>
     ),
   },

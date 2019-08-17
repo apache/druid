@@ -45,19 +45,20 @@ import { DRUID_DOCS_RUNE, DRUID_DOCS_SQL } from '../../../variables';
 
 export interface RunButtonProps {
   runeMode: boolean;
+  autoRun: boolean;
+  setAutoRun: (autoRun: boolean) => void;
+  wrapQuery: boolean;
+  setWrapQuery: (wrapQuery: boolean) => void;
   queryContext: QueryContext;
   onQueryContextChange: (newQueryContext: QueryContext) => void;
-  onRun: (wrapQuery: boolean) => void;
+  onRun: () => void;
   onExplain: () => void;
   onEditContext: () => void;
-}
-
-interface RunButtonState {
-  wrapQuery: boolean;
+  onHistory: () => void;
 }
 
 @HotkeysTarget
-export class RunButton extends React.PureComponent<RunButtonProps, RunButtonState> {
+export class RunButton extends React.PureComponent<RunButtonProps> {
   constructor(props: RunButtonProps, context: any) {
     super(props, context);
     this.state = {
@@ -82,12 +83,22 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
   private handleRun = () => {
     const { onRun } = this.props;
     if (!onRun) return;
-    onRun(this.state.wrapQuery);
+    onRun();
   };
 
   renderExtraMenu() {
-    const { runeMode, onExplain, queryContext, onQueryContextChange, onEditContext } = this.props;
-    const { wrapQuery } = this.state;
+    const {
+      runeMode,
+      onExplain,
+      queryContext,
+      onQueryContextChange,
+      onEditContext,
+      onHistory,
+      autoRun,
+      setAutoRun,
+      wrapQuery,
+      setWrapQuery,
+    } = this.props;
 
     const useCache = getUseCache(queryContext);
     const useApproximateCountDistinct = getUseApproximateCountDistinct(queryContext);
@@ -104,10 +115,16 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
         {!runeMode && (
           <>
             <MenuItem icon={IconNames.CLEAN} text="Explain" onClick={onExplain} />
+            <MenuItem icon={IconNames.HISTORY} text="History" onClick={onHistory} />
             <MenuCheckbox
               checked={wrapQuery}
               label="Wrap query with limit"
-              onChange={() => this.setState({ wrapQuery: !wrapQuery })}
+              onChange={() => setWrapQuery(!wrapQuery)}
+            />
+            <MenuCheckbox
+              checked={autoRun}
+              label="Auto run queries"
+              onChange={() => setAutoRun(!autoRun)}
             />
             <MenuCheckbox
               checked={useApproximateCountDistinct}
@@ -142,8 +159,7 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
   }
 
   render(): JSX.Element {
-    const { runeMode, onRun } = this.props;
-    const { wrapQuery } = this.state;
+    const { runeMode, onRun, wrapQuery } = this.props;
 
     return (
       <ButtonGroup className="run-button">

@@ -93,13 +93,13 @@ public class ShuffleDataSegmentPusherTest
     Assert.assertEquals(9, pushed.getBinaryVersion().intValue());
     Assert.assertEquals(14, pushed.getSize()); // 10 bytes data + 4 bytes version
 
-    final List<File> files = intermediaryDataManager.findPartitionFiles(
+    final File zippedSegment = intermediaryDataManager.findPartitionFile(
         "supervisorTaskId",
+        "subTaskId",
         segment.getInterval(),
         segment.getShardSpec().getPartitionNum()
     );
-    Assert.assertEquals(1, files.size());
-    final File zippedSegment = files.get(0);
+    Assert.assertNotNull(zippedSegment);
     final File tempDir = temporaryFolder.newFolder();
     final FileCopyResult result = CompressionUtils.unzip(zippedSegment, tempDir);
     final List<File> unzippedFiles = new ArrayList<>(result.getFiles());
