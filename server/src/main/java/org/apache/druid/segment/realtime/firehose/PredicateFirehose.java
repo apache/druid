@@ -50,7 +50,7 @@ public class PredicateFirehose implements Firehose
   }
 
   @Override
-  public boolean hasMore()
+  public boolean hasMore() throws IOException
   {
     if (savedInputRow != null) {
       return true;

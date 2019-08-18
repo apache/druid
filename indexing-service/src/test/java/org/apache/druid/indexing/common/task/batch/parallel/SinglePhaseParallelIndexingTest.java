@@ -65,7 +65,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
-public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSupervisorTaskTest
+public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSupervisorTaskTest
 {
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -79,7 +79,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
   private final LockGranularity lockGranularity;
   private File inputDir;
 
-  public ParallelIndexSupervisorTaskTest(LockGranularity lockGranularity)
+  public SinglePhaseParallelIndexingTest(LockGranularity lockGranularity)
   {
     this.lockGranularity = lockGranularity;
   }
@@ -131,12 +131,12 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     prepareTaskForLocking(task);
     Assert.assertTrue(task.isReady(actionClient));
 
-    final SinglePhaseParallelIndexTaskRunner runner = (SinglePhaseParallelIndexTaskRunner) task.createRunner(toolbox);
-    final Iterator<ParallelIndexSubTaskSpec> subTaskSpecIterator = runner.subTaskSpecIterator().iterator();
+    final SinglePhaseParallelIndexTaskRunner runner = task.createSinglePhaseTaskRunner(toolbox);
+    final Iterator<SubTaskSpec<SinglePhaseSubTask>> subTaskSpecIterator = runner.subTaskSpecIterator();
 
     while (subTaskSpecIterator.hasNext()) {
-      final ParallelIndexSubTaskSpec spec = subTaskSpecIterator.next();
-      final ParallelIndexSubTask subTask = new ParallelIndexSubTask(
+      final SinglePhaseSubTaskSpec spec = (SinglePhaseSubTaskSpec) subTaskSpecIterator.next();
+      final SinglePhaseSubTask subTask = new SinglePhaseSubTask(
           null,
           spec.getGroupId(),
           null,
@@ -276,7 +276,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
   }
 
   @Test
-  public void testWith1MaxNumSubTasks() throws Exception
+  public void testWith1MaxNumConcurrentSubTasks() throws Exception
   {
     final ParallelIndexSupervisorTask task = newTask(
         Intervals.of("2017/2018"),
@@ -300,7 +300,10 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
             null,
             null,
             null,
+            null,
             1,
+            null,
+            null,
             null,
             null,
             null,
@@ -317,7 +320,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     Assert.assertTrue(task.isReady(actionClient));
     Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
-    Assert.assertNull("Runner must be null if the task was in the sequential mode", task.getRunner());
+    Assert.assertNull("Runner must be null if the task was in the sequential mode", task.getCurrentRunner());
   }
 
   @Test
@@ -369,7 +372,10 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
             null,
             null,
             null,
+            null,
             2,
+            null,
+            null,
             null,
             null,
             null,
@@ -427,8 +433,6 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
 
   private static class TestSupervisorTask extends TestParallelIndexSupervisorTask
   {
-    private final IndexingServiceClient indexingServiceClient;
-
     TestSupervisorTask(
         String id,
         TaskResource taskResource,
@@ -437,36 +441,21 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
         IndexingServiceClient indexingServiceClient
     )
     {
-      super(
-          id,
-          taskResource,
-          ingestionSchema,
-          context,
-          indexingServiceClient
-      );
-      this.indexingServiceClient = indexingServiceClient;
+      super(id, taskResource, ingestionSchema, context, indexingServiceClient);
     }
 
     @Override
-    ParallelIndexTaskRunner createRunner(TaskToolbox toolbox)
+    SinglePhaseParallelIndexTaskRunner createSinglePhaseTaskRunner(TaskToolbox toolbox)
     {
-      setToolbox(toolbox);
-      setRunner(
-          new TestRunner(
-              toolbox,
-              this,
-              indexingServiceClient
-          )
-      );
-      return getRunner();
+      return new TestSinglePhaseRunner(toolbox, this, getIndexingServiceClient());
     }
   }
 
-  private static class TestRunner extends TestParallelIndexTaskRunner
+  private static class TestSinglePhaseRunner extends TestSinglePhaseParallelIndexTaskRunner
   {
     private final ParallelIndexSupervisorTask supervisorTask;
 
-    TestRunner(
+    TestSinglePhaseRunner(
         TaskToolbox toolbox,
         ParallelIndexSupervisorTask supervisorTask,
         @Nullable IndexingServiceClient indexingServiceClient
@@ -484,12 +473,12 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     }
 
     @Override
-    ParallelIndexSubTaskSpec newTaskSpec(InputSplit split)
+    SinglePhaseSubTaskSpec newTaskSpec(InputSplit split)
     {
       final FiniteFirehoseFactory baseFirehoseFactory = (FiniteFirehoseFactory) getIngestionSchema()
           .getIOConfig()
           .getFirehoseFactory();
-      return new TestParallelIndexSubTaskSpec(
+      return new TestSinglePhaseSubTaskSpec(
           supervisorTask.getId() + "_" + getAndIncrementNextSpecId(),
           supervisorTask.getGroupId(),
           supervisorTask,
@@ -507,11 +496,11 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     }
   }
 
-  private static class TestParallelIndexSubTaskSpec extends ParallelIndexSubTaskSpec
+  private static class TestSinglePhaseSubTaskSpec extends SinglePhaseSubTaskSpec
   {
     private final ParallelIndexSupervisorTask supervisorTask;
 
-    TestParallelIndexSubTaskSpec(
+    TestSinglePhaseSubTaskSpec(
         String id,
         String groupId,
         ParallelIndexSupervisorTask supervisorTask,
@@ -525,9 +514,9 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     }
 
     @Override
-    public ParallelIndexSubTask newSubTask(int numAttempts)
+    public SinglePhaseSubTask newSubTask(int numAttempts)
     {
-      return new ParallelIndexSubTask(
+      return new SinglePhaseSubTask(
           null,
           getGroupId(),
           null,

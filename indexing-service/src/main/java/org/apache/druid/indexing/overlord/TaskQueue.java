@@ -30,6 +30,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -421,6 +422,8 @@ public class TaskQueue
   {
     giant.lock();
 
+    TaskLocation taskLocation = TaskLocation.unknown();
+
     try {
       Preconditions.checkNotNull(task, "task");
       Preconditions.checkNotNull(taskStatus, "status");
@@ -433,6 +436,7 @@ public class TaskQueue
       );
       // Inform taskRunner that this task can be shut down
       try {
+        taskLocation = taskRunner.getTaskLocation(task.getId());
         taskRunner.shutdown(task.getId(), reasonFormat, args);
       }
       catch (Exception e) {
@@ -461,7 +465,7 @@ public class TaskQueue
           if (!previousStatus.isPresent() || !previousStatus.get().isRunnable()) {
             log.makeAlert("Ignoring notification for already-complete task").addData("task", task.getId()).emit();
           } else {
-            taskStorage.setStatus(taskStatus);
+            taskStorage.setStatus(taskStatus.withLocation(taskLocation));
             log.info("Task done: %s", task);
             managementMayBeNecessary.signalAll();
           }
