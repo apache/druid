@@ -460,7 +460,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
     return (
       <EditContextDialog
-        onSubmit={(queryContext: QueryContext) =>
+        onQueryContextChange={(queryContext: QueryContext) =>
           this.setState({ queryContext, editContextDialogOpen: false })
         }
         onClose={() => this.setState({ editContextDialogOpen: false })}
