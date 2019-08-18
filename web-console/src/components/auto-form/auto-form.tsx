@@ -101,6 +101,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
       typeof newValue === 'undefined'
         ? deepDelete(model, field.name)
         : deepSet(model, field.name, newValue);
+
     this.modelChange(newModel);
   };
 
@@ -110,11 +111,6 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     for (const someField of fields) {
       if (!AutoForm.evaluateFunctor(someField.defined, newModel, true)) {
         newModel = deepDelete(newModel, someField.name);
-      } else if (
-        typeof someField.defaultValue !== 'undefined' &&
-        typeof deepGet(newModel, someField.name) === 'undefined'
-      ) {
-        newModel = deepSet(newModel, someField.name, someField.defaultValue);
       }
     }
 

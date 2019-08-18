@@ -2019,7 +2019,7 @@ function guessParseSpec(sampleData: string[]): ParseSpec | undefined {
   return parseSpecFromFormat('regex');
 }
 
-function parseSpecFromFormat(format: string, hasHeaderRow: boolean | null = null): ParseSpec {
+function parseSpecFromFormat(format: string, hasHeaderRow?: boolean): ParseSpec {
   const parseSpec: ParseSpec = {
     format,
     timestampSpec: {},
