@@ -280,24 +280,24 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
   {
     name: 'pattern',
     type: 'string',
-    isDefined: (p: ParseSpec) => p.format === 'regex',
+    defined: (p: ParseSpec) => p.format === 'regex',
   },
   {
     name: 'function',
     type: 'string',
-    isDefined: (p: ParseSpec) => p.format === 'javascript',
+    defined: (p: ParseSpec) => p.format === 'javascript',
   },
   {
     name: 'hasHeaderRow',
     type: 'boolean',
     defaultValue: true,
-    isDefined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
+    defined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
   },
   {
     name: 'skipHeaderRows',
     type: 'number',
     defaultValue: 0,
-    isDefined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
+    defined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
     min: 0,
     info: (
       <>
@@ -310,14 +310,14 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
   {
     name: 'columns',
     type: 'string-array',
-    isDefined: (p: ParseSpec) =>
+    defined: (p: ParseSpec) =>
       ((p.format === 'csv' || p.format === 'tsv') && !p.hasHeaderRow) || p.format === 'regex',
   },
   {
     name: 'listDelimiter',
     type: 'string',
     defaultValue: '|',
-    isDefined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
+    defined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
   },
 ];
 
@@ -400,7 +400,7 @@ const TIMESTAMP_SPEC_FORM_FIELDS: Field<TimestampSpec>[] = [
         suggestions: OTHER_TIME_FORMATS,
       },
     ],
-    isDefined: (timestampSpec: TimestampSpec) => isColumnTimestampSpec(timestampSpec),
+    defined: (timestampSpec: TimestampSpec) => isColumnTimestampSpec(timestampSpec),
     info: (
       <p>
         Please specify your timestamp format by using the suggestions menu or typing in a{' '}
@@ -470,7 +470,7 @@ const DIMENSION_SPEC_FORM_FIELDS: Field<DimensionSpec>[] = [
     name: 'createBitmapIndex',
     type: 'boolean',
     defaultValue: true,
-    isDefined: (dimensionSpec: DimensionSpec) => dimensionSpec.type === 'string',
+    defined: (dimensionSpec: DimensionSpec) => dimensionSpec.type === 'string',
   },
 ];
 
@@ -518,7 +518,7 @@ const FLATTEN_FIELD_FORM_FIELDS: Field<FlattenField>[] = [
     name: 'expr',
     type: 'string',
     placeholder: '$.thing',
-    isDefined: (flattenField: FlattenField) =>
+    defined: (flattenField: FlattenField) =>
       flattenField.type === 'path' || flattenField.type === 'jq',
     info: (
       <>
@@ -642,7 +642,7 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'fieldName',
     type: 'string',
-    isDefined: m => {
+    defined: m => {
       return [
         'longSum',
         'doubleSum',
@@ -670,7 +670,7 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
     name: 'maxStringBytes',
     type: 'number',
     defaultValue: 1024,
-    isDefined: m => {
+    defined: m => {
       return ['stringFirst', 'stringLast'].includes(m.type);
     },
   },
@@ -678,21 +678,21 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
     name: 'filterNullValues',
     type: 'boolean',
     defaultValue: false,
-    isDefined: m => {
+    defined: m => {
       return ['stringFirst', 'stringLast'].includes(m.type);
     },
   },
   {
     name: 'filter',
     type: 'json',
-    isDefined: m => {
+    defined: m => {
       return m.type === 'filtered';
     },
   },
   {
     name: 'aggregator',
     type: 'json',
-    isDefined: m => {
+    defined: m => {
       return m.type === 'filtered';
     },
   },
@@ -906,7 +906,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'S3 URIs',
           type: 'string-array',
           placeholder: 's3://your-bucket/some-file1.ext, s3://your-bucket/some-file2.ext',
-          isDefined: ioConfig => !deepGet(ioConfig, 'firehose.prefixes'),
+          defined: ioConfig => !deepGet(ioConfig, 'firehose.prefixes'),
           info: (
             <>
               <p>
@@ -922,7 +922,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'S3 prefixes',
           type: 'string-array',
           placeholder: 's3://your-bucket/some-path1, s3://your-bucket/some-path2',
-          isDefined: ioConfig => !deepGet(ioConfig, 'firehose.uris'),
+          defined: ioConfig => !deepGet(ioConfig, 'firehose.uris'),
           info: (
             <>
               <p>A list of paths (with bucket) where your files are stored.</p>
@@ -974,7 +974,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         {
           name: 'topic',
           type: 'string',
-          isDefined: (i: IoConfig) => i.type === 'kafka',
+          defined: (i: IoConfig) => i.type === 'kafka',
         },
         {
           name: 'consumerProperties',
@@ -1223,7 +1223,7 @@ export function getIoConfigTuningFormFields(
           name: 'useEarliestOffset',
           type: 'boolean',
           defaultValue: false,
-          isDefined: (i: IoConfig) => i.type === 'kafka',
+          defined: (i: IoConfig) => i.type === 'kafka',
           info: (
             <>
               <p>
@@ -1239,7 +1239,7 @@ export function getIoConfigTuningFormFields(
           name: 'skipOffsetGaps',
           type: 'boolean',
           defaultValue: false,
-          isDefined: (i: IoConfig) => i.type === 'kafka',
+          defined: (i: IoConfig) => i.type === 'kafka',
           info: (
             <>
               <p>
@@ -1255,7 +1255,7 @@ export function getIoConfigTuningFormFields(
           name: 'pollTimeout',
           type: 'number',
           defaultValue: 100,
-          isDefined: (i: IoConfig) => i.type === 'kafka',
+          defined: (i: IoConfig) => i.type === 'kafka',
           info: (
             <>
               <p>
@@ -1269,7 +1269,7 @@ export function getIoConfigTuningFormFields(
           name: 'useEarliestSequenceNumber',
           type: 'boolean',
           defaultValue: false,
-          isDefined: (i: IoConfig) => i.type === 'kinesis',
+          defined: (i: IoConfig) => i.type === 'kinesis',
           info: (
             <>
               If a supervisor is managing a dataSource for the first time, it will obtain a set of
@@ -1284,20 +1284,20 @@ export function getIoConfigTuningFormFields(
           name: 'recordsPerFetch',
           type: 'number',
           defaultValue: 2000,
-          isDefined: (i: IoConfig) => i.type === 'kinesis',
+          defined: (i: IoConfig) => i.type === 'kinesis',
           info: <>The number of records to request per GetRecords call to Kinesis.</>,
         },
         {
           name: 'fetchDelayMillis',
           type: 'number',
           defaultValue: 1000,
-          isDefined: (i: IoConfig) => i.type === 'kinesis',
+          defined: (i: IoConfig) => i.type === 'kinesis',
           info: <>Time in milliseconds to wait between subsequent GetRecords calls to Kinesis.</>,
         },
         {
           name: 'deaggregate',
           type: 'boolean',
-          isDefined: (i: IoConfig) => i.type === 'kinesis',
+          defined: (i: IoConfig) => i.type === 'kinesis',
           info: <>Whether to use the de-aggregate function of the KCL.</>,
         },
 
@@ -1557,7 +1557,7 @@ export function getPartitionRelatedTuningSpecFormFields(
         {
           name: 'partitionDimensions',
           type: 'string-array',
-          isDefined: (t: TuningConfig) => Boolean(t.forceGuaranteedRollup),
+          defined: (t: TuningConfig) => Boolean(t.forceGuaranteedRollup),
           info: (
             <>
               <p>Does not currently work with parallel ingestion</p>
@@ -1571,7 +1571,9 @@ export function getPartitionRelatedTuningSpecFormFields(
         {
           name: 'numShards', // This is mandatory if index_parallel and forceGuaranteedRollup
           type: 'number',
-          isDefined: (t: TuningConfig) => Boolean(t.forceGuaranteedRollup),
+          defined: (t: TuningConfig) => Boolean(t.forceGuaranteedRollup),
+          required: (t: TuningConfig) =>
+            Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
           info: (
             <>
               Directly specify the number of shards to create. If this is specified and 'intervals'
@@ -1585,7 +1587,7 @@ export function getPartitionRelatedTuningSpecFormFields(
           name: 'maxRowsPerSegment',
           type: 'number',
           defaultValue: 5000000,
-          isDefined: (t: TuningConfig) => t.numShards == null, // Can not be set if numShards is specified
+          defined: (t: TuningConfig) => t.numShards == null, // Can not be set if numShards is specified
           info: <>Determines how many rows are in each segment.</>,
         },
         {
@@ -1622,7 +1624,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'maxNumConcurrentSubTasks',
     type: 'number',
     defaultValue: 1,
-    isDefined: (t: TuningConfig) => t.type === 'index_parallel',
+    defined: (t: TuningConfig) => t.type === 'index_parallel',
     info: (
       <>
         Maximum number of tasks which can be run at the same time. The supervisor task would spawn
@@ -1637,14 +1639,14 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'maxRetry',
     type: 'number',
     defaultValue: 3,
-    isDefined: (t: TuningConfig) => t.type === 'index_parallel',
+    defined: (t: TuningConfig) => t.type === 'index_parallel',
     info: <>Maximum number of retries on task failures.</>,
   },
   {
     name: 'taskStatusCheckPeriodMs',
     type: 'number',
     defaultValue: 1000,
-    isDefined: (t: TuningConfig) => t.type === 'index_parallel',
+    defined: (t: TuningConfig) => t.type === 'index_parallel',
     info: <>Polling period in milliseconds to check running task statuses.</>,
   },
   {
@@ -1663,14 +1665,14 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'maxNumMergeTasks',
     type: 'number',
     defaultValue: 10,
-    isDefined: (t: TuningConfig) => Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
+    defined: (t: TuningConfig) => Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
     info: <>Number of tasks to merge partial segments after shuffle.</>,
   },
   {
     name: 'maxNumSegmentsToMerge',
     type: 'number',
     defaultValue: 100,
-    isDefined: (t: TuningConfig) => Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
+    defined: (t: TuningConfig) => Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
     info: (
       <>
         Max limit for the number of segments a single task can merge at the same time after shuffle.
@@ -1720,14 +1722,14 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'intermediatePersistPeriod',
     type: 'duration',
     defaultValue: 'PT10M',
-    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
     info: <>The period that determines the rate at which intermediate persists occur.</>,
   },
   {
     name: 'intermediateHandoffPeriod',
     type: 'duration',
     defaultValue: 'P2147483647D',
-    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
     info: (
       <>
         How often the tasks should hand off segments. Handoff will happen either if
@@ -1761,28 +1763,28 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'chatHandlerTimeout',
     type: 'duration',
     defaultValue: 'PT10S',
-    isDefined: (t: TuningConfig) => t.type === 'index_parallel',
+    defined: (t: TuningConfig) => t.type === 'index_parallel',
     info: <>Timeout for reporting the pushed segments in worker tasks.</>,
   },
   {
     name: 'chatHandlerNumRetries',
     type: 'number',
     defaultValue: 5,
-    isDefined: (t: TuningConfig) => t.type === 'index_parallel',
+    defined: (t: TuningConfig) => t.type === 'index_parallel',
     info: <>Retries for reporting the pushed segments in worker tasks.</>,
   },
   {
     name: 'handoffConditionTimeout',
     type: 'number',
     defaultValue: 0,
-    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
     info: <>Milliseconds to wait for segment handoff. 0 means to wait forever.</>,
   },
   {
     name: 'resetOffsetAutomatically',
     type: 'boolean',
     defaultValue: false,
-    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
     info: (
       <>
         Whether to reset the consumer offset if the next offset that it is trying to fetch is less
@@ -1794,7 +1796,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'workerThreads',
     type: 'number',
     placeholder: 'min(10, taskCount)',
-    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
     info: (
       <>The number of threads that will be used by the supervisor for asynchronous operations.</>
     ),
@@ -1803,14 +1805,14 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'chatThreads',
     type: 'number',
     placeholder: 'min(10, taskCount * replicas)',
-    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
     info: <>The number of threads that will be used for communicating with indexing tasks.</>,
   },
   {
     name: 'chatRetries',
     type: 'number',
     defaultValue: 8,
-    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
     info: (
       <>
         The number of times HTTP requests to indexing tasks will be retried before considering tasks
@@ -1822,14 +1824,14 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'httpTimeout',
     type: 'duration',
     defaultValue: 'PT10S',
-    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
     info: <>How long to wait for a HTTP response from an indexing task.</>,
   },
   {
     name: 'shutdownTimeout',
     type: 'duration',
     defaultValue: 'PT80S',
-    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
     info: (
       <>
         How long to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.
@@ -1840,7 +1842,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'offsetFetchPeriod',
     type: 'duration',
     defaultValue: 'PT30S',
-    isDefined: (t: TuningConfig) => t.type === 'kafka',
+    defined: (t: TuningConfig) => t.type === 'kafka',
     info: (
       <>
         How often the supervisor queries Kafka and the indexing tasks to fetch current offsets and
@@ -1852,7 +1854,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'recordBufferSize',
     type: 'number',
     defaultValue: 10000,
-    isDefined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kinesis',
     info: (
       <>
         Size of the buffer (number of events) used between the Kinesis fetch threads and the main
@@ -1864,7 +1866,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'recordBufferOfferTimeout',
     type: 'number',
     defaultValue: 5000,
-    isDefined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kinesis',
     info: (
       <>
         Length of time in milliseconds to wait for space to become available in the buffer before
@@ -1876,7 +1878,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'recordBufferFullWait',
     type: 'number',
     defaultValue: 5000,
-    isDefined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kinesis',
     info: (
       <>
         Length of time in milliseconds to wait for the buffer to drain before attempting to fetch
@@ -1888,7 +1890,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'fetchSequenceNumberTimeout',
     type: 'number',
     defaultValue: 60000,
-    isDefined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kinesis',
     info: (
       <>
         Length of time in milliseconds to wait for Kinesis to return the earliest or latest sequence
@@ -1902,7 +1904,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'fetchThreads',
     type: 'number',
     placeholder: 'max(1, {numProcessors} - 1)',
-    isDefined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kinesis',
     info: (
       <>
         Size of the pool of threads fetching data from Kinesis. There is no benefit in having more
@@ -1914,7 +1916,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'maxRecordsPerPoll',
     type: 'number',
     defaultValue: 100,
-    isDefined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kinesis',
     info: (
       <>
         The maximum number of records/events to be fetched from buffer per poll. The actual maximum
@@ -2089,12 +2091,12 @@ const FILTER_FORM_FIELDS: Field<DruidFilter>[] = [
   {
     name: 'value',
     type: 'string',
-    isDefined: (druidFilter: DruidFilter) => druidFilter.type === 'selector',
+    defined: (druidFilter: DruidFilter) => druidFilter.type === 'selector',
   },
   {
     name: 'values',
     type: 'string-array',
-    isDefined: (druidFilter: DruidFilter) => druidFilter.type === 'in',
+    defined: (druidFilter: DruidFilter) => druidFilter.type === 'in',
   },
 ];
 

@@ -386,6 +386,30 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     this.setState({ overlordModules });
   }
 
+  isStepEnabled(step: Step): boolean {
+    const { spec } = this.state;
+    const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
+    const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
+
+    switch (step) {
+      case 'connect':
+        return Boolean(spec.type);
+
+      case 'parser':
+      case 'timestamp':
+      case 'transform':
+      case 'filter':
+      case 'schema':
+      case 'partition':
+      case 'tuning':
+      case 'publish':
+        return Boolean(spec.type && !issueWithIoConfig(ioConfig) && !issueWithParser(parser));
+
+      default:
+        return true;
+    }
+  }
+
   private updateStep = (newStep: Step) => {
     this.doQueryForStep(newStep);
     this.setState({ step: newStep });
@@ -486,6 +510,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   onClick={() => this.updateStep(s)}
                   icon={s === 'spec' && IconNames.MANUALLY_ENTERED_DATA}
                   text={VIEW_TITLE[s]}
+                  disabled={!this.isStepEnabled(s)}
                 />
               ))}
             </ButtonGroup>
@@ -2460,7 +2485,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'segmentGranularity',
                 type: 'string',
                 suggestions: ['HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR'],
-                isDefined: (g: GranularitySpec) => g.type === 'uniform',
+                defined: (g: GranularitySpec) => g.type === 'uniform',
                 info: (
                   <>
                     The granularity to create time chunks at. Multiple segments can be created per

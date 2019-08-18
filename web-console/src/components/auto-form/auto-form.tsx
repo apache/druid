@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { FormGroup, HTMLSelect, Icon, NumericInput, Popover } from '@blueprintjs/core';
+import { FormGroup, HTMLSelect, Icon, Intent, NumericInput, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
@@ -33,11 +33,12 @@ export interface Field<T> {
   info?: React.ReactNode;
   type: 'number' | 'size-bytes' | 'string' | 'duration' | 'boolean' | 'string-array' | 'json';
   defaultValue?: any;
-  isDefined?: (model: T) => boolean;
-  disabled?: boolean;
   suggestions?: (string | SuggestionGroup)[];
   placeholder?: string;
   min?: number;
+  disabled?: boolean | ((model: T) => boolean);
+  defined?: boolean | ((model: T) => boolean);
+  required?: boolean | ((model: T) => boolean);
 }
 
 export interface AutoFormProps<T> {
@@ -67,6 +68,24 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     return newLabel;
   }
 
+  static evaluateFunctor<T>(
+    functor: undefined | boolean | ((model: T) => boolean),
+    model: T | undefined,
+    defaultValue = false,
+  ): boolean {
+    if (!model || functor == null) return defaultValue;
+    switch (typeof functor) {
+      case 'boolean':
+        return functor;
+
+      case 'function':
+        return functor(model);
+
+      default:
+        throw new TypeError(`invalid functor`);
+    }
+  }
+
   constructor(props: AutoFormProps<T>) {
     super(props);
     this.state = {
@@ -77,6 +96,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   private fieldChange = (field: Field<T>, newValue: any) => {
     const { model } = this.props;
     if (!model) return;
+
     const newModel =
       typeof newValue === 'undefined'
         ? deepDelete(model, field.name)
@@ -88,7 +108,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     const { fields, onChange } = this.props;
 
     for (const someField of fields) {
-      if (someField.isDefined && !someField.isDefined(newModel)) {
+      if (!AutoForm.evaluateFunctor(someField.defined, newModel, true)) {
         newModel = deepDelete(newModel, someField.name);
       } else if (
         typeof someField.defaultValue !== 'undefined' &&
@@ -103,9 +123,11 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
   private renderNumberInput(field: Field<T>): JSX.Element {
     const { model, large } = this.props;
+
+    const modelValue = deepGet(model as any, field.name) || field.defaultValue;
     return (
       <NumericInput
-        value={deepGet(model as any, field.name) || field.defaultValue}
+        value={modelValue}
         onValueChange={(valueAsNumber: number, valueAsString: string) => {
           if (valueAsString === '') {
             this.fieldChange(field, undefined);
@@ -117,8 +139,13 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         min={field.min || 0}
         fill
         large={large}
-        disabled={field.disabled}
+        disabled={AutoForm.evaluateFunctor(field.disabled, model)}
         placeholder={field.placeholder}
+        intent={
+          AutoForm.evaluateFunctor(field.required, model) && modelValue == null
+            ? Intent.PRIMARY
+            : undefined
+        }
       />
     );
   }
@@ -136,7 +163,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         stepSize={1000}
         majorStepSize={1000000}
         large={large}
-        disabled={field.disabled}
+        disabled={AutoForm.evaluateFunctor(field.disabled, model)}
       />
     );
   }
@@ -158,7 +185,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         placeholder={field.placeholder}
         suggestions={field.suggestions}
         large={large}
-        disabled={field.disabled}
+        disabled={AutoForm.evaluateFunctor(field.disabled, model)}
       />
     );
   }
@@ -175,7 +202,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
           this.fieldChange(field, v);
         }}
         large={large}
-        disabled={field.disabled}
+        disabled={AutoForm.evaluateFunctor(field.disabled, model)}
       >
         <option value="True">True</option>
         <option value="False">False</option>
@@ -220,7 +247,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         }}
         placeholder={field.placeholder}
         large={large}
-        disabled={field.disabled}
+        disabled={AutoForm.evaluateFunctor(field.disabled, model)}
       />
     );
   }
@@ -250,8 +277,8 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
   private renderField = (field: Field<T>) => {
     const { model } = this.props;
-    if (!model) return null;
-    if (field.isDefined && !field.isDefined(model)) return null;
+    if (!model) return;
+    if (!AutoForm.evaluateFunctor(field.defined, model, true)) return;
 
     const label = field.label || AutoForm.makeLabelName(field.name);
     return (
