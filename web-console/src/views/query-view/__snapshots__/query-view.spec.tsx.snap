@@ -5,8 +5,16 @@ exports[`sql view matches snapshot 1`] = `
   className="query-view app-view"
 >
   <ColumnTree
+    addAggregateColumn={[Function]}
+    addFunctionToGroupBy={[Function]}
+    addToGroupBy={[Function]}
+    clear={[Function]}
     columnMetadataLoading={true}
+    defaultSchema="druid"
+    filterByRow={[Function]}
+    hasGroupBy={[Function]}
     onQueryStringChange={[Function]}
+    queryAst={[Function]}
   />
   <t
     customClassName=""
@@ -24,6 +32,7 @@ exports[`sql view matches snapshot 1`] = `
       className="control-pane"
     >
       <QueryInput
+        currentSchema="druid"
         onQueryStringChange={[Function]}
         queryString="test"
         runeMode={false}
@@ -32,17 +41,21 @@ exports[`sql view matches snapshot 1`] = `
         className="control-bar"
       >
         <HotkeysTarget(RunButton)
+          autoRun={true}
           onEditContext={[Function]}
           onExplain={[Function]}
+          onHistory={[Function]}
           onQueryContextChange={[Function]}
           onRun={[Function]}
           queryContext={Object {}}
           runeMode={false}
+          setAutoRun={[Function]}
+          setWrapQuery={[Function]}
+          wrapQuery={true}
         />
       </div>
     </div>
     <QueryOutput
-      disabled={true}
       loading={false}
       runeMode={false}
       sqlExcludeColumn={[Function]}
