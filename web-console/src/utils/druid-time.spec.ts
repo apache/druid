@@ -16,15 +16,15 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+import { timeFormatMatches } from './druid-time';
 
-import { ShowHistory } from './show-history';
+describe('timeFormatMatches', () => {
+  it('works for auto', () => {
+    expect(timeFormatMatches('auto', '2019-05-22 22:42:51+0000')).toBeTruthy();
+  });
 
-describe('show history', () => {
-  it('matches snapshot', () => {
-    const showJson = <ShowHistory endpoint={'test'} downloadFilename={'test'} />;
-    const { container } = render(showJson);
-    expect(container.firstChild).toMatchSnapshot();
+  it('works for iso', () => {
+    expect(timeFormatMatches('iso', '2019-05-22T22:42:51+0000')).toBeTruthy();
+    expect(timeFormatMatches('iso', '2019-05-22 22:42:51+0000')).toBeFalsy();
   });
 });

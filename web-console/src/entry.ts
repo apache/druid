@@ -43,6 +43,7 @@ interface ConsoleConfig {
   customHeaderName?: string;
   customHeaderValue?: string;
   customHeaders?: Record<string, string>;
+  exampleManifestsUrl?: string;
 }
 
 const consoleConfig: ConsoleConfig = (window as any).consoleConfig;
@@ -64,6 +65,7 @@ if (consoleConfig.customHeaders) {
 ReactDOM.render(
   React.createElement(ConsoleApplication, {
     hideLegacy: Boolean(consoleConfig.hideLegacy),
+    exampleManifestsUrl: consoleConfig.exampleManifestsUrl,
   }) as any,
   container,
 );

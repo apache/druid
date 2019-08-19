@@ -110,7 +110,7 @@ export class TaskTableActionDialog extends React.PureComponent<
           <ShowLog
             status={status}
             endpoint={`/druid/indexer/v1/task/${taskId}/log`}
-            downloadFilename={`task-log-${taskId}.json`}
+            downloadFilename={`task-log-${taskId}.log`}
             tailOffset={16000}
           />
         )}

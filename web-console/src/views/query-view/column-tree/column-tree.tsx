@@ -114,7 +114,7 @@ ORDER BY "Count" DESC`,
 
 export interface ColumnTreeProps {
   columnMetadataLoading: boolean;
-  columnMetadata?: ColumnMetadata[];
+  columnMetadata?: readonly ColumnMetadata[];
   onQueryStringChange: (queryString: string, run: boolean) => void;
   defaultSchema?: string;
   defaultTable?: string;
@@ -141,7 +141,7 @@ export interface ColumnTreeProps {
 }
 
 export interface ColumnTreeState {
-  prevColumnMetadata?: ColumnMetadata[];
+  prevColumnMetadata?: readonly ColumnMetadata[];
   prevGroupByStatus?: boolean;
   columnTree?: ITreeNode[];
   selectedTreeIndex: number;

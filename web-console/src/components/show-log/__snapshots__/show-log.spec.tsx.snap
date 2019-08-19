@@ -22,16 +22,19 @@ exports[`show log describe show log 1`] = `
     <div
       class="bp3-button-group right-buttons"
     >
-      <button
+      <a
         class="bp3-button bp3-minimal"
-        type="button"
+        download="test"
+        href="test"
+        role="button"
+        tabindex="0"
       >
         <span
           class="bp3-button-text"
         >
           Save
         </span>
-      </button>
+      </a>
       <button
         class="bp3-button bp3-minimal"
         type="button"
