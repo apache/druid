@@ -200,6 +200,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
             null,
             null,
             null,
+            null,
             numTotalSubTasks,
             null,
             null,

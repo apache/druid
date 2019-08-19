@@ -141,6 +141,7 @@ public class ParallelIndexSupervisorTaskSerdeTest
             null,
             null,
             null,
+            null,
             2,
             null,
             null,
