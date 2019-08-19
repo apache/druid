@@ -7,15 +7,14 @@ RUN apt-get update \
       && apt-add-repository -y ppa:webupd8team/java \
       && apt-get purge --auto-remove -y software-properties-common \
       && apt-get update \
-      && echo oracle-java-8-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections \
-      && apt-get install -y oracle-java8-installer oracle-java8-set-default \
+      && apt-get install -y openjdk-8-jdk \
                             postgresql-client \
                             supervisor \
                             git \
                             netcat \
                             curl \
+                            wget \
       && apt-get clean \
-      && rm -rf /var/cache/oracle-jdk8-installer \
       && rm -rf /var/lib/apt/lists/*
 
 RUN wget -q -O - http://archive.apache.org/dist/maven/maven-3/3.2.5/binaries/apache-maven-3.2.5-bin.tar.gz | tar -xzf - -C /usr/local \
