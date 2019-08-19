@@ -118,11 +118,13 @@ import {
 } from '../../utils/ingestion-spec';
 import { deepDelete, deepGet, deepSet } from '../../utils/object-change';
 import {
+  ExampleManifest,
   getOverlordModules,
   HeaderAndRows,
   headerAndRowsFromSampleResponse,
   SampleEntry,
   sampleForConnect,
+  sampleForExampleManifests,
   sampleForFilter,
   sampleForParser,
   sampleForSchema,
@@ -232,6 +234,7 @@ const VIEW_TITLE: Record<Step, string> = {
 export interface LoadDataViewProps {
   initSupervisorId?: string;
   initTaskId?: string;
+  exampleManifestsUrl?: string;
   goToTask: (taskId: string | undefined, supervisor?: string) => void;
 }
 
@@ -249,6 +252,7 @@ export interface LoadDataViewState {
   // welcome
   overlordModules?: string[];
   selectedComboType?: IngestionComboTypeWithExtra;
+  exampleManifests?: ExampleManifest[];
 
   // general
   sampleStrategy: SampleStrategy;
@@ -417,16 +421,24 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   doQueryForStep(step: Step): any {
     switch (step) {
+      case 'welcome':
+        return this.queryForWelcome();
+
       case 'connect':
         return this.queryForConnect(true);
+
       case 'parser':
         return this.queryForParser(true);
+
       case 'timestamp':
         return this.queryForTimestamp(true);
+
       case 'transform':
         return this.queryForTransform(true);
+
       case 'filter':
         return this.queryForFilter(true);
+
       case 'schema':
         return this.queryForSchema(true);
     }
@@ -556,11 +568,30 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   // ==================================================================
 
-  renderIngestionCard(comboType: IngestionComboTypeWithExtra) {
+  async queryForWelcome() {
+    const { exampleManifestsUrl } = this.props;
+    if (!exampleManifestsUrl) return;
+
+    let exampleManifests: ExampleManifest[] | undefined;
+    try {
+      exampleManifests = await sampleForExampleManifests(exampleManifestsUrl);
+    } catch (e) {
+      this.setState({
+        exampleManifests: undefined,
+      });
+      return;
+    }
+
+    this.setState({
+      exampleManifests,
+    });
+  }
+
+  renderIngestionCard(comboType: IngestionComboTypeWithExtra, disabled?: boolean) {
     const { overlordModules, selectedComboType } = this.state;
     if (!overlordModules) return null;
     const requiredModule = getRequiredModule(comboType);
-    const goodToGo = !requiredModule || overlordModules.includes(requiredModule);
+    const goodToGo = !disabled && (!requiredModule || overlordModules.includes(requiredModule));
 
     return (
       <Card
@@ -579,7 +610,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderWelcomeStep() {
-    const { spec } = this.state;
+    const { exampleManifestsUrl } = this.props;
+    const { spec, exampleManifests } = this.state;
+    const noExamples = Boolean(!exampleManifests || !exampleManifests.length);
 
     return (
       <>
@@ -593,7 +626,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderIngestionCard('index:http')}
           {this.renderIngestionCard('index:local')}
           {this.renderIngestionCard('index:inline')}
-          {/* this.renderIngestionCard('example') */}
+          {exampleManifestsUrl && this.renderIngestionCard('example', noExamples)}
           {this.renderIngestionCard('other')}
         </div>
         <div className="control">
@@ -616,7 +649,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderWelcomeStepMessage() {
-    const { selectedComboType } = this.state;
+    const { selectedComboType, exampleManifests } = this.state;
 
     if (!selectedComboType) {
       return <p>Please specify where your raw data is located</p>;
@@ -702,7 +735,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         );
 
       case 'example':
-        return <p>Pick one of these examples to get you started.</p>;
+        if (exampleManifests && exampleManifests.length) {
+          return <p>Pick one of these examples to get you started.</p>;
+        } else {
+          return <p>Could not load example.</p>;
+        }
 
       case 'other':
         return (
@@ -722,7 +759,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   renderWelcomeStepControls() {
     const { goToTask } = this.props;
-    const { spec, selectedComboType } = this.state;
+    const { spec, selectedComboType, exampleManifests } = this.state;
 
     const issue = this.selectedIngestionTypeIssue();
     if (issue) return null;
@@ -741,13 +778,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <Button
               text="Connect data"
               rightIcon={IconNames.ARROW_RIGHT}
+              intent={Intent.PRIMARY}
               onClick={() => {
                 this.updateSpec(updateIngestionType(spec, selectedComboType as any));
                 setTimeout(() => {
                   this.updateStep('connect');
                 }, 10);
               }}
-              intent={Intent.PRIMARY}
             />
           </FormGroup>
         );
@@ -758,14 +795,35 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <Button
               text="Submit task"
               rightIcon={IconNames.ARROW_RIGHT}
-              onClick={() => goToTask(undefined, 'task')}
               intent={Intent.PRIMARY}
+              onClick={() => goToTask(undefined, 'task')}
             />
           </FormGroup>
         );
 
       case 'example':
-        return null;
+        return (
+          <>
+            {exampleManifests &&
+              exampleManifests.map((exampleManifest, i) => (
+                <FormGroup key={i}>
+                  <Button
+                    text={exampleManifest.name}
+                    rightIcon={IconNames.ARROW_RIGHT}
+                    intent={Intent.PRIMARY}
+                    title={exampleManifest.description}
+                    fill
+                    onClick={() => {
+                      this.updateSpec(exampleManifest.spec);
+                      setTimeout(() => {
+                        this.updateStep('connect');
+                      }, 10);
+                    }}
+                  />
+                </FormGroup>
+              ))}
+          </>
+        );
 
       case 'other':
         return (
@@ -774,16 +832,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <Button
                 text="Submit supervisor"
                 rightIcon={IconNames.ARROW_RIGHT}
-                onClick={() => goToTask(undefined, 'supervisor')}
                 intent={Intent.PRIMARY}
+                onClick={() => goToTask(undefined, 'supervisor')}
               />
             </FormGroup>
             <FormGroup>
               <Button
                 text="Submit task"
                 rightIcon={IconNames.ARROW_RIGHT}
-                onClick={() => goToTask(undefined, 'task')}
                 intent={Intent.PRIMARY}
+                onClick={() => goToTask(undefined, 'task')}
               />
             </FormGroup>
           </>
