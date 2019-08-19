@@ -71,14 +71,13 @@ This table compares the major available options:
 ### Batch
 
 When doing batch loads from files, you should use one-time [tasks](tasks.md), and you have three options: `index`
-(native batch; single-task), `index_parallel` (native batch; parallel), or `index_hadoop` (Hadoop-based). The following
-table compares and contrasts the three batch ingestion options.
+(native batch; single-task), `index_parallel` (native batch; parallel), or `index_hadoop` (Hadoop-based).
 
 In general, we recommend native batch whenever it meets your needs, since the setup is simpler (it does not depend on
 an external Hadoop cluster). However, there are still scenarios where Hadoop-based batch ingestion is the right choice,
 especially due to its support for custom partitioning options and reading binary data formats.
 
-This table compares the major available options:
+This table compares the three available options:
 
 | **Method** | [Native batch (simple)](native-batch.html#simple-task) | [Native batch (parallel)](native-batch.html#parallel-task) | [Hadoop-based](hadoop.html) |
 |---|-----|--------------|------------|
@@ -204,8 +203,8 @@ be multiple segments holding rows with the same timestamp and dimension values.
 In general, ingestion methods that offer best-effort rollup do this because they are either parallelizing ingestion
 without a shuffling step (which would be required for perfect rollup), or because they are finalizing and publishing
 segments before all data for a time chunk has been received, which we call _incremental publishing_. In both of these
-cases, records may end up in different segments that are received by different, non-shuffling tasks cannot be rolled
-up together. All types of streaming ingestion run in this mode.
+cases, records that could theoretically be rolled up may end up in different segments. All types of streaming ingestion
+run in this mode.
 
 Ingestion methods that guarantee perfect rollup do it with an additional preprocessing step to determine intervals
 and partitioning before the actual data ingestion stage. This preprocessing step scans the entire input dataset, which
