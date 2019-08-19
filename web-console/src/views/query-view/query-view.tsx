@@ -603,12 +603,12 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     this.handleQueryStringChange(modifiedAst.toString(), preferablyRun);
   };
 
-  private sqlClearWhere = (): void => {
+  private sqlClearWhere = (column: string, preferablyRun: boolean): void => {
     const { queryAst } = this.state;
 
     if (!queryAst) return;
     if (queryAst.whereClause) {
-      queryAst.whereClause = undefined;
+      this.handleQueryStringChange(queryAst.removeFilter(column).toString(), preferablyRun);
     }
   };
 
@@ -689,6 +689,11 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     return queryAst;
   };
 
+  private getCurrentFilters = () => {
+    const { queryAst } = this.state;
+    return queryAst.getCurrentFilters();
+  };
+
   render(): JSX.Element {
     const { columnMetadata, columnMetadataLoading, columnMetadataError, queryAst } = this.state;
 
@@ -717,6 +722,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             onQueryStringChange={this.handleQueryStringChange}
             defaultSchema={defaultSchema ? defaultSchema : 'druid'}
             defaultTable={defaultTable}
+            currentFilters={this.getCurrentFilters}
           />
         )}
         {this.renderMainArea()}

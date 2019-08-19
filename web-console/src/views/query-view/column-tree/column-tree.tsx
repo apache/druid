@@ -118,6 +118,7 @@ export interface ColumnTreeProps {
   onQueryStringChange: (queryString: string, run: boolean) => void;
   defaultSchema?: string;
   defaultTable?: string;
+  currentFilters: () => string[];
   addFunctionToGroupBy: (
     functionName: string,
     spacing: string[],
@@ -137,7 +138,7 @@ export interface ColumnTreeProps {
   filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
   hasGroupBy: () => boolean;
   queryAst: () => SqlQuery | undefined;
-  clear: () => void;
+  clear: (column: string, preferablyRun: boolean) => void;
 }
 
 export interface ColumnTreeState {
@@ -263,6 +264,16 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 queryAst={props.queryAst()}
                               />
                             )}
+                            {props.currentFilters() &&
+                              props.currentFilters().includes(columnData.COLUMN_NAME) && (
+                                <MenuItem
+                                  icon={IconNames.FILTER_REMOVE}
+                                  text={`Remove filter`}
+                                  onClick={() => {
+                                    props.clear(columnData.COLUMN_NAME, false);
+                                  }}
+                                />
+                              )}
                             <MenuItem
                               icon={IconNames.CLIPBOARD}
                               text={`Copy: ${columnData.COLUMN_NAME}`}
