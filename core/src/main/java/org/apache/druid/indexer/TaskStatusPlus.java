@@ -241,7 +241,7 @@ public class TaskStatusPlus
   {
     return "TaskStatusPlus{" +
            "id='" + id + '\'' +
-           "groupId='" + groupId + '\'' +
+           ", groupId='" + groupId + '\'' +
            ", type='" + type + '\'' +
            ", createdTime=" + createdTime +
            ", queueInsertionTime=" + queueInsertionTime +
