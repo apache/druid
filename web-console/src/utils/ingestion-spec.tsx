@@ -385,7 +385,6 @@ const TIMESTAMP_SPEC_FORM_FIELDS: Field<TimestampSpec>[] = [
     type: 'string',
     defaultValue: 'auto',
     suggestions: [
-      'auto',
       ...BASIC_TIME_FORMATS,
       {
         group: 'Date and time formats',

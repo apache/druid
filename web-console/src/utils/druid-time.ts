@@ -19,7 +19,7 @@
 import { jodaFormatToRegExp } from './joda-to-regexp';
 
 export const NUMERIC_TIME_FORMATS: string[] = ['posix', 'millis', 'micro', 'nano'];
-export const BASIC_TIME_FORMATS: string[] = ['iso'].concat(NUMERIC_TIME_FORMATS);
+export const BASIC_TIME_FORMATS: string[] = ['auto', 'iso'].concat(NUMERIC_TIME_FORMATS);
 
 export const DATE_ONLY_TIME_FORMATS: string[] = [
   'dd/MM/yyyy',
@@ -52,13 +52,18 @@ const MIN_MICRO = MIN_MILLIS * 1000;
 const MIN_NANO = MIN_MICRO * 1000;
 const MAX_NANO = MIN_NANO * 1000;
 
-// copied from http://goo.gl/0ejHHW with small tweak to make dddd not pass on its own
+// tslint:disable-next-line:max-line-length
+export const AUTO_MATCHER = /^([\+-]?\d{4}(?!\d{2}\b))((-?)((0[1-9]|1[0-2])(\3([12]\d|0[1-9]|3[01]))?|W([0-4]\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\d|[12]\d{2}|3([0-5]\d|6[1-6])))( ((([01]\d|2[0-3])((:?)[0-5]\d)?|24:?00)([\.,]\d+(?!:))?)?(\17[0-5]\d([\.,]\d+)?)?([zZ]|([\+-])([01]\d|2[0-3]):?([0-5]\d)?)?)?)$/;
+
 // tslint:disable-next-line:max-line-length
 export const ISO_MATCHER = /^([\+-]?\d{4}(?!\d{2}\b))((-?)((0[1-9]|1[0-2])(\3([12]\d|0[1-9]|3[01]))?|W([0-4]\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\d|[12]\d{2}|3([0-5]\d|6[1-6])))(T((([01]\d|2[0-3])((:?)[0-5]\d)?|24:?00)([\.,]\d+(?!:))?)?(\17[0-5]\d([\.,]\d+)?)?([zZ]|([\+-])([01]\d|2[0-3]):?([0-5]\d)?)?)?)$/;
 
 export function timeFormatMatches(format: string, value: string | number): boolean {
   const absValue = Math.abs(Number(value));
   switch (format) {
+    case 'auto':
+      return AUTO_MATCHER.test(String(value));
+
     case 'iso':
       return ISO_MATCHER.test(String(value));
 
