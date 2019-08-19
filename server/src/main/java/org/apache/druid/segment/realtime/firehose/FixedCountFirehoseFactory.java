@@ -67,17 +67,17 @@ public class FixedCountFirehoseFactory implements FirehoseFactory
     return new Firehose()
     {
       private int i = 0;
-      private Firehose delegateFirehose = delegate.connect(parser, temporaryDirectory);
+      private final Firehose delegateFirehose = delegate.connect(parser, temporaryDirectory);
 
       @Override
-      public boolean hasMore()
+      public boolean hasMore() throws IOException
       {
         return i < count && delegateFirehose.hasMore();
       }
 
       @Nullable
       @Override
-      public InputRow nextRow()
+      public InputRow nextRow() throws IOException
       {
         Preconditions.checkArgument(i++ < count, "Max events limit reached.");
         return delegateFirehose.nextRow();

@@ -29,7 +29,6 @@ describe('query output', () => {
         sqlOrderBy={() => null}
         sqlFilterRow={() => null}
         sqlExcludeColumn={() => null}
-        disabled={false}
         loading={false}
         error="lol"
       />

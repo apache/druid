@@ -25,6 +25,11 @@ describe('run button', () => {
   it('matches snapshot', () => {
     const runButton = (
       <RunButton
+        autoRun
+        setAutoRun={() => {}}
+        wrapQuery
+        setWrapQuery={() => {}}
+        onHistory={() => null}
         onEditContext={() => null}
         runeMode={false}
         queryContext={{}}

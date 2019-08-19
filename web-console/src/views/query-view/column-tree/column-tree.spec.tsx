@@ -27,6 +27,13 @@ describe('column tree', () => {
   it('matches snapshot', () => {
     const columnTree = (
       <ColumnTree
+        queryAst={() => undefined}
+        hasGroupBy={() => false}
+        clear={() => null}
+        addFunctionToGroupBy={() => null}
+        filterByRow={() => null}
+        addAggregateColumn={() => null}
+        addToGroupBy={() => null}
         columnMetadataLoading={false}
         columnMetadata={
           [
