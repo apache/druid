@@ -56,13 +56,25 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
   @Override
   public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
+    ChannelBufferInputStream channelStream = null;
     try {
-      queue.put(new ChannelBufferInputStream(response.getContent()));
+      channelStream = new ChannelBufferInputStream(response.getContent());
+      queue.put(channelStream);
     }
     catch (InterruptedException e) {
       log.error(e, "Queue appending interrupted");
       Thread.currentThread().interrupt();
       throw new RuntimeException(e);
+    }
+    finally {
+      if (channelStream != null) {
+        try {
+          channelStream.close();
+        }
+        catch (IOException e) {
+          log.error(e, "Unable to close the channel buffer");
+        }
+      }
     }
     byteCount.addAndGet(response.getContent().readableBytes());
     return ClientResponse.finished(
@@ -106,8 +118,10 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
     final ChannelBuffer channelBuffer = chunk.getContent();
     final int bytes = channelBuffer.readableBytes();
     if (bytes > 0) {
+      ChannelBufferInputStream channelStream = null;
       try {
-        queue.put(new ChannelBufferInputStream(channelBuffer));
+        channelStream = new ChannelBufferInputStream(channelBuffer);
+        queue.put(channelStream);
         // Queue.size() can be expensive in some implementations, but LinkedBlockingQueue.size is just an AtomicLong
         log.debug("Added stream. Queue length %d", queue.size());
       }
@@ -115,6 +129,16 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
         log.warn(e, "Thread interrupted while adding to queue");
         Thread.currentThread().interrupt();
         throw new RuntimeException(e);
+      }
+      finally {
+        if (channelStream != null) {
+          try {
+            channelStream.close();
+          }
+          catch (IOException e) {
+            log.error(e, "Unable to close the channel buffer");
+          }
+        }
       }
       byteCount.addAndGet(bytes);
     } else {

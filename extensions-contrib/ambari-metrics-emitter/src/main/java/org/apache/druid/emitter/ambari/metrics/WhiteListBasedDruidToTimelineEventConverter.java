@@ -214,7 +214,9 @@ public class WhiteListBasedDruidToTimelineEventConverter implements DruidToTimel
         actualPath = this.getClass().getClassLoader().getResource("defaultWhiteListMap.json").getFile();
         LOGGER.info("using default whiteList map located at [%s]", actualPath);
         InputStream byteContent = this.getClass().getClassLoader().getResourceAsStream("defaultWhiteListMap.json");
-        fileContent = CharStreams.toString(new InputStreamReader(byteContent, StandardCharsets.UTF_8));
+        try (final InputStreamReader in = new InputStreamReader(byteContent, StandardCharsets.UTF_8)) {
+          fileContent = CharStreams.toString(in);
+        }
       } else {
         fileContent = Files.asCharSource(new File(mapPath), StandardCharsets.UTF_8).read();
       }

@@ -215,8 +215,10 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 
     for (File dictFile : dictionaryFiles) {
       try (
+          final FileInputStream fileStream = new FileInputStream(dictFile);
+          final LZ4BlockInputStream blockStream = new LZ4BlockInputStream(fileStream);
           final MappingIterator<String> dictIterator = spillMapper.readValues(
-              spillMapper.getFactory().createParser(new LZ4BlockInputStream(new FileInputStream(dictFile))),
+              spillMapper.getFactory().createParser(blockStream),
               spillMapper.getTypeFactory().constructType(String.class)
           )
       ) {

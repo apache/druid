@@ -183,10 +183,12 @@ public class TLSUtils
       KeyStore trustStore = KeyStore.getInstance(trustStoreType == null
                                                ? KeyStore.getDefaultType()
                                                : trustStoreType);
-      trustStore.load(
-          new FileInputStream(trustStorePath),
-          trustStorePasswordProvider == null ? null : trustStorePasswordProvider.getPassword().toCharArray()
-      );
+      try (final FileInputStream trustStoreFileStream = new FileInputStream(trustStorePath)) {
+        trustStore.load(
+            trustStoreFileStream,
+            trustStorePasswordProvider == null ? null : trustStorePasswordProvider.getPassword().toCharArray()
+        );
+      }
       TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(trustStoreAlgorithm == null
                                                                                 ? TrustManagerFactory.getDefaultAlgorithm()
                                                                                 : trustStoreAlgorithm);
@@ -197,20 +199,24 @@ public class TLSUtils
         KeyStore keyStore = KeyStore.getInstance(keyStoreType == null
                                                  ? KeyStore.getDefaultType()
                                                  : keyStoreType);
-        keyStore.load(
-            new FileInputStream(keyStorePath),
-            keyStorePasswordProvider == null ? null : keyStorePasswordProvider.getPassword().toCharArray()
-        );
+        try (final FileInputStream keyStoreFileStream = new FileInputStream(keyStorePath)) {
+          keyStore.load(
+              keyStoreFileStream,
+              keyStorePasswordProvider == null ? null : keyStorePasswordProvider.getPassword().toCharArray()
+          );
 
-        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(
-            keyStoreAlgorithm == null ?
-            KeyManagerFactory.getDefaultAlgorithm() : keyStoreAlgorithm
-        );
-        keyManagerFactory.init(
-            keyStore,
-            keyManagerFactoryPasswordProvider == null ? null : keyManagerFactoryPasswordProvider.getPassword().toCharArray()
-        );
-        keyManagers = createAliasedKeyManagers(keyManagerFactory.getKeyManagers(), certAlias);
+          KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(
+              keyStoreAlgorithm == null ?
+              KeyManagerFactory.getDefaultAlgorithm() : keyStoreAlgorithm
+          );
+          keyManagerFactory.init(
+              keyStore,
+              keyManagerFactoryPasswordProvider == null
+              ? null
+              : keyManagerFactoryPasswordProvider.getPassword().toCharArray()
+          );
+          keyManagers = createAliasedKeyManagers(keyManagerFactory.getKeyManagers(), certAlias);
+        }
       } else {
         keyManagers = null;
       }

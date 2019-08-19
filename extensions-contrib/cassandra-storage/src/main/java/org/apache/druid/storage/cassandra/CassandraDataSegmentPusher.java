@@ -88,9 +88,9 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
 
     int version = SegmentUtils.getVersionFromDir(indexFilesDir);
 
-    try {
+    try (final FileInputStream fileStream = new FileInputStream(compressedIndexFile)) {
       long start = System.currentTimeMillis();
-      ChunkedStorage.newWriter(indexStorage, key, new FileInputStream(compressedIndexFile))
+      ChunkedStorage.newWriter(indexStorage, key, fileStream)
                     .withConcurrencyLevel(CONCURRENCY).call();
       byte[] json = jsonMapper.writeValueAsBytes(segment);
       MutationBatch mutation = this.keyspace.prepareMutationBatch();
