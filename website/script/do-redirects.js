@@ -48,11 +48,25 @@ const validRedirects = redirects.filter((redirect, i) => {
     valid = false;
   }
 
-  const cleanTarget = redirect.target.replace(/#.+$/, '');
+  const targetParts = redirect.target.split('#');
+  const cleanTarget = targetParts[0];
+  const targetAnchor = targetParts[1];
   let resolvedTarget = resolveTarget(source, cleanTarget);
-  if (!redirect.target.startsWith('/') && !fs.pathExistsSync(dst + resolvedTarget)) {
-    issues.push(`On line ${lineNumber} target ${resolvedTarget} does not exist`);
-    valid = false;
+  if (!redirect.target.startsWith('/')) {
+    let targetHtml;
+    try {
+      targetHtml = fs.readFileSync(dst + resolvedTarget, 'utf-8');
+    } catch {
+      issues.push(`On line ${lineNumber} target ${resolvedTarget} does not exist`);
+      valid = false;
+    }
+
+    if (targetHtml && targetAnchor) {
+      if (!targetHtml.includes(`name="${targetAnchor}"`) && !targetHtml.includes(`id="${targetAnchor}"`)) {
+        issues.push(`On line ${lineNumber} could not find anchor '${targetAnchor}' in '${resolvedTarget}'`)
+        valid = false;
+      }
+    }
   }
 
   return valid
