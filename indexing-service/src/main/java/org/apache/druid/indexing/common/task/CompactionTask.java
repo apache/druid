@@ -220,8 +220,6 @@ public class CompactionTask extends AbstractBatchIndexTask
     this.segmentLoaderFactory = segmentLoaderFactory;
     this.retryPolicyFactory = retryPolicyFactory;
     this.appenderatorsManager = appenderatorsManager;
-
-    addToContext(CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, getId());
   }
 
   @JsonProperty
@@ -334,7 +332,7 @@ public class CompactionTask extends AbstractBatchIndexTask
               getTaskResource(),
               getDataSource(),
               ingestionSpecs.get(i),
-              getContext(),
+              createContextForSubtask(),
               authorizerMapper,
               chatHandlerProvider,
               rowIngestionMetersFactory,
@@ -381,6 +379,13 @@ public class CompactionTask extends AbstractBatchIndexTask
       log.info("Run [%d] specs, [%d] succeeded, [%d] failed", totalNumSpecs, totalNumSpecs - failCnt, failCnt);
       return failCnt == 0 ? TaskStatus.success(getId()) : TaskStatus.failure(getId());
     }
+  }
+
+  private Map<String, Object> createContextForSubtask()
+  {
+    final Map<String, Object> newContext = new HashMap<>(getContext());
+    newContext.put(CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, getId());
+    return newContext;
   }
 
   private String createIndexTaskSpecId(int i)
