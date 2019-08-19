@@ -17,11 +17,14 @@
  */
 
 import { render } from '@testing-library/react';
+import { sqlParserFactory } from 'druid-query-toolkit';
 import React from 'react';
 
 import { TimeMenuItems } from './time-menu-items';
 
 describe('time menu', () => {
+  const parser = sqlParserFactory(['COUNT']);
+
   it('matches snapshot', () => {
     const timeMenu = (
       <TimeMenuItems
@@ -30,7 +33,8 @@ describe('time menu', () => {
         addToGroupBy={() => null}
         addAggregateColumn={() => null}
         filterByRow={() => null}
-        columnName={'text'}
+        columnName={'__time'}
+        queryAst={parser(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
       />
     );
 

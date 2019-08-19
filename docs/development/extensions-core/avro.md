@@ -143,7 +143,9 @@ This Avro bytes decoder first extract `subject` and `id` from input message byte
 | subjectAndIdConverter | JSON Object | Specifies the how to extract subject and id from message bytes. | yes |
 | schemaRepository | JSON Object | Specifies the how to lookup Avro schema from subject and id. | yes |
 
-##### Avro-1124 Subject And Id Converter
+###### Avro-1124 Subject And Id Converter
+
+This section describes the format of the `subjectAndIdConverter` object for the `schema_repo` Avro bytes decoder.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
@@ -151,14 +153,16 @@ This Avro bytes decoder first extract `subject` and `id` from input message byte
 | topic | String | Specifies the topic of your kafka stream. | yes |
 
 
-##### Avro-1124 Schema Repository
+###### Avro-1124 Schema Repository
+
+This section describes the format of the `schemaRepository` object for the `schema_repo` Avro bytes decoder.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | This should say `avro_1124_rest_client`. | no |
 | url | String | Specifies the endpoint url of your Avro-1124 schema repository. | yes |
 
-##### Confluent's Schema Registry
+##### Confluent Schema Registry-based Avro Bytes Decoder
 
 This Avro bytes decoder first extract unique `id` from input message bytes, then use them it lookup in the Schema Registry for the related schema, with which to decode Avro record from bytes.
 Details can be found in Schema Registry [documentation](http://docs.confluent.io/current/schema-registry/docs/) and [repository](https://github.com/confluentinc/schema-registry).
@@ -169,6 +173,14 @@ Details can be found in Schema Registry [documentation](http://docs.confluent.io
 | url | String | Specifies the url endpoint of the Schema Registry. | yes |
 | capacity | Integer | Specifies the max size of the cache (default == Integer.MAX_VALUE). | no |
 
+```json
+...
+"avroBytesDecoder" : {
+   "type" : "schema_registry",
+   "url" : <schema-registry-url>
+}
+...
+```
 
 ### Avro Hadoop Parser
 
