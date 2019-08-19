@@ -166,8 +166,7 @@ The MySQL extension provides an implementation of an [SqlFirehose](../../ingesti
       }
     },
     "tuningconfig": {
-      "type": "index",
-      "maxNumSubTasks": 1
+      "type": "index"
     }
   }
 }

@@ -190,7 +190,7 @@ are used to determine the overshadow relation between segments as seen below.
 
 A segment `s1` overshadows another `s2` if
 
-- `s1` has a higher major version than `s2`.
+- `s1` has a higher major version than `s2`, or
 - `s1` has the same major version and a higher minor version than `s2`.
 
 Here are some examples.
@@ -220,6 +220,8 @@ if they are reading different segments.
 For example, a Kafka indexing task and a compaction task can always write segments into the same time chunk of the same data source simultaneously.
 The reason for this is because a Kafka indexing task always appends new segments, while a compaction task always overwrites existing segments.
 The segments created with the segment locking have the _same_ major version and a _higher_ minor version.
+
+> The segment locking is still experimental. It could have unknown bugs which potentially lead to incorrect query results.
 
 To enable segment locking, you may need to set `forceTimeChunkLock` to `false` in the [task context](#task-context).
 Once `forceTimeChunkLock` is unset, the task will choose a proper lock type to use automatically.
@@ -280,7 +282,7 @@ The task context is used for various individual task configuration. The followin
 |property|default|description|
 |--------|-------|-----------|
 |taskLockTimeout|300000|task lock timeout in millisecond. For more details, see [Locking](#locking).|
-|forceTimeChunkLock|true|Force to always use time chunk lock. If not set, each task automatically chooses a lock type to use. If this set, it will overwrite the `druid.indexer.tasklock.forceTimeChunkLock` [configuration for the overlord](../configuration/index.html#overlord-operations). See [Locking](#locking) for more details.|
+|forceTimeChunkLock|true|_Setting this to false is still experimental_<br/> Force to always use time chunk lock. If not set, each task automatically chooses a lock type to use. If this set, it will overwrite the `druid.indexer.tasklock.forceTimeChunkLock` [configuration for the overlord](../configuration/index.html#overlord-operations). See [Locking](#locking) for more details.|
 |priority|Different based on task types. See [Priority](#priority).|Task priority|
 
 > When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result.

@@ -23,13 +23,17 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
+import org.apache.commons.io.IOUtils;
+import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.Channels;
@@ -256,6 +260,50 @@ public class FileUtils
         // Do nothing.
       }
     };
+  }
+
+  /**
+   * Copies data from the InputStream opened with objectOpenFunction to the given file.
+   * This method is supposed to be used for copying large files.
+   * The output file is deleted automatically if copy fails.
+   *
+   * @param object              object to open
+   * @param objectOpenFunction  function to open the given object
+   * @param outFile             file to write data
+   * @param fetchBuffer         a buffer to copy data from the input stream to the file
+   * @param retryCondition      condition which should be satisfied for retry
+   * @param numRetries          max number of retries
+   * @param messageOnRetry      log message on retry
+   *
+   * @return the number of bytes copied
+   */
+  public static <T> long copyLarge(
+      T object,
+      ObjectOpenFunction<T> objectOpenFunction,
+      File outFile,
+      byte[] fetchBuffer,
+      Predicate<Throwable> retryCondition,
+      int numRetries,
+      String messageOnRetry
+  ) throws IOException
+  {
+    try {
+      return RetryUtils.retry(
+          () -> {
+            try (InputStream inputStream = objectOpenFunction.open(object);
+                 OutputStream out = new FileOutputStream(outFile)) {
+              return IOUtils.copyLarge(inputStream, out, fetchBuffer);
+            }
+          },
+          retryCondition,
+          outFile::delete,
+          numRetries,
+          messageOnRetry
+      );
+    }
+    catch (Exception e) {
+      throw new IOException(e);
+    }
   }
 
   public interface OutputStreamConsumer<T>

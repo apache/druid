@@ -145,8 +145,7 @@ The PostgreSQL extension provides an implementation of an [SqlFirehose](../../in
       }
     },
     "tuningconfig": {
-      "type": "index",
-      "maxNumSubTasks": 1
+      "type": "index"
     }
   }
 }

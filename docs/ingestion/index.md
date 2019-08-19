@@ -83,7 +83,7 @@ This table compares the major available options:
 | **Method** | [Native batch (simple)](native-batch.html#simple-task) | [Native batch (parallel)](native-batch.html#parallel-task) | [Hadoop-based](hadoop.html) |
 |---|-----|--------------|------------|
 | **Task type** | `index` | `index_parallel` | `index_hadoop` |
-| **Automatically parallel?** | No. Each task is single-threaded. | Yes, if firehose is splittable. See [firehose documentation](native-batch.md#firehoses) for details. | Yes, always. |
+| **Parallel?** | No. Each task is single-threaded. | Yes, if firehose is splittable and `maxNumConcurrentSubTasks` > 1 in tuningConfig. See [firehose documentation](native-batch.md#firehoses) for details. | Yes, always. |
 | **Can append or overwrite?** | Yes, both. | Yes, both. | Overwrite only. |
 | **External dependencies** | None. | None. | Hadoop cluster (Druid submits Map/Reduce jobs). |
 | **Input locations** | Any [firehose](native-batch.md#firehoses). | Any [firehose](native-batch.md#firehoses). | Any Hadoop FileSystem or Druid datasource. |
