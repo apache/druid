@@ -243,6 +243,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                                                         cacheConfig
                                                     );
                                                   }
+						  // Make it always use Closeable to decrement()
                                                   runner = QueryRunnerHelper.makeClosingQueryRunner(
                                                       runner,
                                                       segmentAndCloseable.rhs
