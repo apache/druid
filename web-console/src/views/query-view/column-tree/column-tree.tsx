@@ -143,10 +143,10 @@ export interface ColumnTreeProps {
 
 export interface ColumnTreeState {
   prevColumnMetadata?: readonly ColumnMetadata[];
-  prevGroupByStatus?: boolean;
   columnTree?: ITreeNode[];
   selectedTreeIndex: number;
   expandedNode: number;
+  currentSchemaSubtree?: ITreeNode[];
 }
 
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
@@ -322,7 +322,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         columnTree,
         selectedTreeIndex,
         expandedNode,
-        prevGroupByStatus: props.hasGroupBy,
       };
     }
     return null;
@@ -377,6 +376,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
 
   render(): JSX.Element | null {
     const { columnMetadataLoading } = this.props;
+    const { columnTree, selectedTreeIndex, expandedNode, currentSchemaSubtree } = this.state;
+
     if (columnMetadataLoading) {
       return (
         <div className="column-tree">
@@ -385,21 +386,22 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       );
     }
 
-    const { columnTree, selectedTreeIndex, expandedNode } = this.state;
     if (!columnTree) return null;
-    const currentSchemaSubtree =
+    const currentSchemaSubtreeExpanded =
       columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
-    if (!currentSchemaSubtree) return null;
+    if (!currentSchemaSubtreeExpanded) return null;
 
     if (expandedNode > -1) {
-      currentSchemaSubtree[expandedNode].isExpanded = true;
+      currentSchemaSubtreeExpanded[expandedNode].isExpanded = true;
     }
+    this.setState({ currentSchemaSubtree: currentSchemaSubtreeExpanded });
+
     return (
       <div className="column-tree">
         {this.renderSchemaSelector()}
         <div className="tree-container">
           <Tree
-            contents={currentSchemaSubtree}
+            contents={currentSchemaSubtree ? currentSchemaSubtree : columnTree}
             onNodeClick={() => this.setState({ expandedNode: -1 })}
             onNodeCollapse={this.handleNodeCollapse}
             onNodeExpand={this.handleNodeExpand}

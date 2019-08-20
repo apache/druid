@@ -617,10 +617,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     if (!queryAst) return;
 
     let modifiedAst: SqlQuery = queryAst;
-    if (queryAst) {
-      for (const filter of filters) {
-        modifiedAst = modifiedAst.filterRow(filter.header, filter.row, filter.operator);
-      }
+    for (const filter of filters) {
+      modifiedAst = modifiedAst.filterRow(filter.header, filter.row, filter.operator);
     }
     this.handleQueryStringChange(modifiedAst.toString(), preferablyRun);
   };

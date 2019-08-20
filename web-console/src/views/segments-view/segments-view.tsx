@@ -97,7 +97,6 @@ export interface SegmentsViewState {
   terminateSegmentId?: string;
   terminateDatasourceId?: string;
   hiddenColumns: LocalStorageBackedArray<string>;
-  loaded: boolean;
   groupByInterval: boolean;
 
   // table state
@@ -157,7 +156,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       hiddenColumns: new LocalStorageBackedArray<string>(
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
       ),
-      loaded: false,
       groupByInterval: false,
 
       // Table state

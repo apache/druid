@@ -61,9 +61,6 @@ export interface RunButtonProps {
 export class RunButton extends React.PureComponent<RunButtonProps> {
   constructor(props: RunButtonProps, context: any) {
     super(props, context);
-    this.state = {
-      wrapQuery: true,
-    };
   }
 
   public renderHotkeys() {
