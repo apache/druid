@@ -40,7 +40,9 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -215,7 +217,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 
     for (File dictFile : dictionaryFiles) {
       try (
-          final FileInputStream fileStream = new FileInputStream(dictFile);
+          final InputStream fileStream = Files.newInputStream(dictFile.toPath());
           final LZ4BlockInputStream blockStream = new LZ4BlockInputStream(fileStream);
           final MappingIterator<String> dictIterator = spillMapper.readValues(
               spillMapper.getFactory().createParser(blockStream),

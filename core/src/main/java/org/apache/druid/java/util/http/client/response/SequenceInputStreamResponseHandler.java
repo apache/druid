@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.http.client.response;
 
 import com.google.common.io.ByteSource;
+import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
@@ -67,14 +68,7 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
       throw new RuntimeException(e);
     }
     finally {
-      if (channelStream != null) {
-        try {
-          channelStream.close();
-        }
-        catch (IOException e) {
-          log.error(e, "Unable to close the channel buffer");
-        }
-      }
+      CloseQuietly.close(channelStream);
     }
     byteCount.addAndGet(response.getContent().readableBytes());
     return ClientResponse.finished(
@@ -131,14 +125,7 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
         throw new RuntimeException(e);
       }
       finally {
-        if (channelStream != null) {
-          try {
-            channelStream.close();
-          }
-          catch (IOException e) {
-            log.error(e, "Unable to close the channel buffer");
-          }
-        }
+        CloseQuietly.close(channelStream);
       }
       byteCount.addAndGet(bytes);
     } else {

@@ -32,8 +32,10 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509ExtendedTrustManager;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -183,7 +185,7 @@ public class TLSUtils
       KeyStore trustStore = KeyStore.getInstance(trustStoreType == null
                                                ? KeyStore.getDefaultType()
                                                : trustStoreType);
-      try (final FileInputStream trustStoreFileStream = new FileInputStream(trustStorePath)) {
+      try (final InputStream trustStoreFileStream = Files.newInputStream(Paths.get(trustStorePath))) {
         trustStore.load(
             trustStoreFileStream,
             trustStorePasswordProvider == null ? null : trustStorePasswordProvider.getPassword().toCharArray()
@@ -199,7 +201,7 @@ public class TLSUtils
         KeyStore keyStore = KeyStore.getInstance(keyStoreType == null
                                                  ? KeyStore.getDefaultType()
                                                  : keyStoreType);
-        try (final FileInputStream keyStoreFileStream = new FileInputStream(keyStorePath)) {
+        try (final InputStream keyStoreFileStream = Files.newInputStream(Paths.get(keyStorePath))) {
           keyStore.load(
               keyStoreFileStream,
               keyStorePasswordProvider == null ? null : keyStorePasswordProvider.getPassword().toCharArray()

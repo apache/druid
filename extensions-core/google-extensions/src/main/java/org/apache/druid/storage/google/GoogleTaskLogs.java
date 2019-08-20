@@ -30,9 +30,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.tasklogs.TaskLogs;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 
 public class GoogleTaskLogs implements TaskLogs
 {
@@ -66,7 +66,7 @@ public class GoogleTaskLogs implements TaskLogs
 
   private void pushTaskFile(final File logFile, final String taskKey) throws IOException
   {
-    try (final FileInputStream fileStream = new FileInputStream(logFile)) {
+    try (final InputStream fileStream = Files.newInputStream(logFile.toPath())) {
 
       InputStreamContent mediaContent = new InputStreamContent("text/plain", fileStream);
       mediaContent.setLength(logFile.length());
