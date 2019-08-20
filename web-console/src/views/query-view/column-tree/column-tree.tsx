@@ -352,6 +352,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     const { columnTree, selectedTreeIndex } = this.state;
     if (!columnTree) return null;
 
+    this.setExpanded();
+
     return (
       <HTMLSelect
         className="schema-selector"
@@ -391,8 +393,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   render(): JSX.Element | null {
     const { columnMetadataLoading } = this.props;
     const { columnTree, currentSchemaSubtree } = this.state;
-
-    this.setExpanded();
 
     if (columnMetadataLoading) {
       return (
