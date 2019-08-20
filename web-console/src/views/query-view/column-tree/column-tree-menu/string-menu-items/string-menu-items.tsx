@@ -72,7 +72,9 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
         />
         <MenuItem
           text={`"${columnName}" LIKE '%xxx%'`}
-          onClick={() => filterByRow([{ row: 'xxx', header: columnName, operator: 'LIKE' }], false)}
+          onClick={() =>
+            filterByRow([{ row: '%xxx%', header: columnName, operator: 'LIKE' }], false)
+          }
         />
       </MenuItem>
     );

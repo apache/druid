@@ -114,10 +114,11 @@ ORDER BY "Count" DESC`,
 
 export interface ColumnTreeProps {
   columnMetadataLoading: boolean;
-  columnMetadata?: ColumnMetadata[];
+  columnMetadata?: readonly ColumnMetadata[];
   onQueryStringChange: (queryString: string, run: boolean) => void;
   defaultSchema?: string;
   defaultTable?: string;
+  currentFilters: () => string[];
   addFunctionToGroupBy: (
     functionName: string,
     spacing: string[],
@@ -137,11 +138,11 @@ export interface ColumnTreeProps {
   filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
   hasGroupBy: () => boolean;
   queryAst: () => SqlQuery | undefined;
-  clear: () => void;
+  clear: (column: string, preferablyRun: boolean) => void;
 }
 
 export interface ColumnTreeState {
-  prevColumnMetadata?: ColumnMetadata[];
+  prevColumnMetadata?: readonly ColumnMetadata[];
   prevGroupByStatus?: boolean;
   columnTree?: ITreeNode[];
   selectedTreeIndex: number;
@@ -263,6 +264,16 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 queryAst={props.queryAst()}
                               />
                             )}
+                            {props.currentFilters() &&
+                              props.currentFilters().includes(columnData.COLUMN_NAME) && (
+                                <MenuItem
+                                  icon={IconNames.FILTER_REMOVE}
+                                  text={`Remove filter`}
+                                  onClick={() => {
+                                    props.clear(columnData.COLUMN_NAME, true);
+                                  }}
+                                />
+                              )}
                             <MenuItem
                               icon={IconNames.CLIPBOARD}
                               text={`Copy: ${columnData.COLUMN_NAME}`}
