@@ -165,8 +165,7 @@ matrix:
         - $MVN test -pl 'web-console'
 
     - name: "docs"
-      install: cd website && npm install
-      script: cd website && npm run lint
+      script: cd website && npm install && npm run lint
 
     - name: "batch index integration test"
       services: &integration_test_services
