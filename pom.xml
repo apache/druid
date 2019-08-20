@@ -701,7 +701,7 @@
             <dependency>
                 <groupId>com.opencsv</groupId>
                 <artifactId>opencsv</artifactId>
-                <version>4.2</version>
+                <version>4.6</version>
             </dependency>
             <dependency>
                 <groupId>com.jayway.jsonpath</groupId>
