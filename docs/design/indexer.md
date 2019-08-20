@@ -148,7 +148,7 @@ You can optionally configure caching to be enabled on the Indexer by setting cac
 |`druid.realtime.cache.unCacheable`|All druid query types|All query types to not cache.|`["groupBy", "select"]`|
 |`druid.realtime.cache.maxEntrySize`|Maximum cache entry size in bytes.|1_000_000|
 
-See [cache configuration](#cache-configuration) for how to configure cache settings.
+See [cache configuration](../configuration/index.html#cache-configuration) for how to configure cache settings.
 
 Note that only local caches such as the `local`-type cache and `caffeine` cache are supported. If a remote cache such as `memcached` is used, it will be ignored.
 

@@ -60,7 +60,7 @@ Be sure to add `(2 * total size of all loaded lookups)` to your heap size in add
 
 #### Processing Threads and Buffers
 
-Please see the [General Guidelines for Processing Threads and Buffers](#general-guidelines-for-processing-threads-and-buffers) section for an overview of processing thread/buffer configuration.
+Please see the [General Guidelines for Processing Threads and Buffers](#processing-threads-buffers) section for an overview of processing thread/buffer configuration.
 
 On Historicals:
 
@@ -80,9 +80,9 @@ A formula for estimating direct memory usage follows:
 
 The `+ 1` factor is a fuzzy estimate meant to account for the segment decompression buffers.
 
-#### Connection Pool Sizing
+#### Connection pool sizing
 
-Please see the [General Connection Pool Guidelines](#general-connection-pool-guidelines) section for an overview of connection pool configuration.
+Please see the [General Connection Pool Guidelines](#connection-pool) section for an overview of connection pool configuration.
 
 For Historicals, `druid.server.http.numThreads` should be set to a value slightly higher than the sum of `druid.broker.http.numConnections` across all the Brokers in the cluster.
 
@@ -150,7 +150,7 @@ Both `chunkPeriod` and GroupBy V1 are deprecated (use GroupBy V2 instead) and wi
 
 #### Connection pool sizing
 
-Please see the [General Connection Pool Guidelines](#general-connection-pool-guidelines) section for an overview of connection pool configuration.
+Please see the [General Connection Pool Guidelines](#connection-pool) section for an overview of connection pool configuration.
 
 On the Brokers, please ensure that the sum of `druid.broker.http.numConnections` across all the Brokers is slightly lower than the value of `druid.server.http.numThreads` on your Historicals and Tasks.
 
@@ -244,7 +244,7 @@ The `+ 1` factor is a fuzzy estimate meant to account for the segment decompress
 
 ##### Connection pool sizing
 
-Please see the [General Connection Pool Guidelines](#general-connection-pool-guidelines) section for an overview of connection pool configuration.
+Please see the [General Connection Pool Guidelines](#connection-pool) section for an overview of connection pool configuration.
 
 For Tasks, `druid.server.http.numThreads` should be set to a value slightly higher than the sum of `druid.broker.http.numConnections` across all the Brokers in the cluster.
 
@@ -300,6 +300,9 @@ The Router has light resource requirements, as it proxies requests to Brokers wi
 
 You can assign it 256MB heap as a starting point, growing it if needed.
 
+<a name="processing-threads-buffers"></a>
+
+# General Guidelines for Processing Threads and Buffers
 
 ## Processing Threads
 
@@ -327,6 +330,8 @@ The number of merge buffers determines the number of GroupBy V2 queries that can
 Each Druid process has a configuration property for the number of HTTP connection handling threads, `druid.server.http.numThreads`.
 
 The number of HTTP server threads limits how many concurrent HTTP API requests a given process can handle.
+
+<a name="connection-pool"></a>
 
 ## Sizing the connection pool for queries
 

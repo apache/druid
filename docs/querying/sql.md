@@ -70,7 +70,7 @@ FROM table
 [ UNION ALL <another query> ]
 ```
 
-The FROM clause refers to either a Druid datasource, like `druid.foo`, an [INFORMATION_SCHEMA table](#retrieving-metadata), a
+The FROM clause refers to either a Druid datasource, like `druid.foo`, an [INFORMATION_SCHEMA table](#metadata-tables), a
 subquery, or a common-table-expression provided in the WITH clause. If the FROM clause references a subquery or a
 common-table-expression, and both levels of queries are aggregations and they cannot be combined into a single level of
 aggregation, the overall query will be executed as a [nested GroupBy](groupbyquery.html#nested-groupbys).
@@ -335,8 +335,8 @@ argument should be a string formatted as an IPv4 address subnet in CIDR notation
 |`x IS NOT FALSE`|True if x is not false.|
 |`x IN (values)`|True if x is one of the listed values.|
 |`x NOT IN (values)`|True if x is not one of the listed values.|
-|`x IN (subquery)`|True if x is returned by the subquery. See [Syntax and execution](#syntax-and-execution) above for details about how Druid SQL handles `IN (subquery)`.|
-|`x NOT IN (subquery)`|True if x is not returned by the subquery. See [Syntax and execution](#syntax-and-execution) for details about how Druid SQL handles `IN (subquery)`.|
+|`x IN (subquery)`|True if x is returned by the subquery. See [Query execution](#query-execution) above for details about how Druid SQL handles `IN (subquery)`.|
+|`x NOT IN (subquery)`|True if x is not returned by the subquery. See [Query execution](#query-execution) for details about how Druid SQL handles `IN (subquery)`.|
 |`x AND y`|Boolean AND.|
 |`x OR y`|Boolean OR.|
 |`NOT x`|Boolean NOT.|
@@ -480,7 +480,7 @@ like:
 }
 ```
 
-Metadata is available over the HTTP API by querying [system tables](#retrieving-metadata).
+Metadata is available over the HTTP API by querying [system tables](#metadata-tables).
 
 #### Responses
 
@@ -557,7 +557,7 @@ try (Connection connection = DriverManager.getConnection(url, connectionProperti
 ```
 
 Table metadata is available over JDBC using `connection.getMetaData()` or by querying the
-["INFORMATION_SCHEMA" tables](#retrieving-metadata). Parameterized queries (using `?` or other placeholders) don't work properly,
+["INFORMATION_SCHEMA" tables](#metadata-tables). Parameterized queries (using `?` or other placeholders) don't work properly,
 so avoid those.
 
 #### Connection stickiness
@@ -711,9 +711,9 @@ Servers table lists all discovered servers in the cluster.
 |plaintext_port|LONG|Unsecured port of the server, or -1 if plaintext traffic is disabled|
 |tls_port|LONG|TLS port of the server, or -1 if TLS is disabled|
 |server_type|STRING|Type of Druid service. Possible values include: COORDINATOR, OVERLORD,  BROKER, ROUTER, HISTORICAL, MIDDLE_MANAGER or PEON.|
-|tier|STRING|Distribution tier see [druid.server.tier](#../configuration/index.html#Historical-General-Configuration). Only valid for HISTORICAL type, for other types it's null|
+|tier|STRING|Distribution tier see [druid.server.tier](../configuration/index.html#historical-general-configuration). Only valid for HISTORICAL type, for other types it's null|
 |current_size|LONG|Current size of segments in bytes on this server. Only valid for HISTORICAL type, for other types it's 0|
-|max_size|LONG|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](#../configuration/index.html#Historical-General-Configuration). Only valid for HISTORICAL type, for other types it's 0|
+|max_size|LONG|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](../configuration/index.html#historical-general-configuration). Only valid for HISTORICAL type, for other types it's 0|
 
 To retrieve information about all servers, use the query:
 

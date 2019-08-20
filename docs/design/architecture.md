@@ -113,11 +113,10 @@ queries:
     - Type-aware compression for all columns
 
 Periodically, segments are committed and published. At this point, they are written to [deep storage](#deep-storage),
-become immutable, and move from MiddleManagers to the Historical processes (see [Architecture](#architecture) above
-for details). An entry about the segment is also written to the [metadata store](#metadata-storage). This entry is a
-self-describing bit of metadata about the segment, including things like the schema of the segment, its size, and its
-location on deep storage. These entries are what the Coordinator uses to know what data *should* be available on the
-cluster.
+become immutable, and move from MiddleManagers to the Historical processes. An entry about the segment is also written
+to the [metadata store](#metadata-storage). This entry is a self-describing bit of metadata about the segment, including
+things like the schema of the segment, its size, and its location on deep storage. These entries are what the
+Coordinator uses to know what data *should* be available on the cluster.
 
 For details on the segment file format, please see [segment files](segments.html).
 

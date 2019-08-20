@@ -289,7 +289,7 @@ Ingestion specs consists of three main components:
    [primary timestamp](#timestampspec), [flattening of nested data](#flattenspec) (if needed),
    [dimensions](#dimensionsspec), [metrics](#metricsspec), and [transforms and filters](#transformspec) (if needed).
 - [`ioConfig`](#ioconfig), which tells Druid how to connect to the source system and . For more information, see the
-   documentation for each [ingestion method](#connect).
+   documentation for each [ingestion method](#ingestion-methods).
 - [`tuningConfig`](#tuningconfig), which controls various tuning parameters specific to each
   [ingestion method](#ingestion-methods).
 
@@ -352,7 +352,7 @@ Example ingestion spec for task type "index" (native batch):
 }
 ```
 
-The specific options supported by these sections will depend on the [ingestion method](#connect) you have chosen.
+The specific options supported by these sections will depend on the [ingestion method](#ingestion-methods) you have chosen.
 For more examples, refer to the documentation for each ingestion method.
 
 You can also load data visually, without the need to write an ingestion spec, using the "Load data" functionality
@@ -477,7 +477,7 @@ configuring the [primary timestamp](#primary-timestamp). An example `timestampSp
 
 > Conceptually, after input data records are read, Druid applies ingestion spec components in a particular order:
 > first [`flattenSpec`](#flattenspec), then [`timestampSpec`](#timestampspec), then [`transformSpec`](#transformspec),
-> and finally [`dimensionsSpec`](#dimensionsSpec) and [`metricsSpec`](#metricsSpec). Keep this in mind when writing
+> and finally [`dimensionsSpec`](#dimensionsspec) and [`metricsSpec`](#metricsspec). Keep this in mind when writing
 > your ingestion spec.
 
 A `timestampSpec` can have the following components:
@@ -507,7 +507,7 @@ configuring [dimensions](#dimensions). An example `dimensionsSpec` is:
 
 > Conceptually, after input data records are read, Druid applies ingestion spec components in a particular order:
 > first [`flattenSpec`](#flattenspec), then [`timestampSpec`](#timestampspec), then [`transformSpec`](#transformspec),
-> and finally [`dimensionsSpec`](#dimensionsSpec) and [`metricsSpec`](#metricsSpec). Keep this in mind when writing
+> and finally [`dimensionsSpec`](#dimensionsspec) and [`metricsSpec`](#metricsspec). Keep this in mind when writing
 > your ingestion spec.
 
 A `dimensionsSpec` can have the following components:
@@ -568,19 +568,18 @@ An example `flattenSpec` is:
 
 > Conceptually, after input data records are read, Druid applies ingestion spec components in a particular order:
 > first [`flattenSpec`](#flattenspec), then [`timestampSpec`](#timestampspec), then [`transformSpec`](#transformspec),
-> and finally [`dimensionsSpec`](#dimensionsSpec) and [`metricsSpec`](#metricsSpec). Keep this in mind when writing
+> and finally [`dimensionsSpec`](#dimensionsspec) and [`metricsSpec`](#metricsspec). Keep this in mind when writing
 > your ingestion spec.
 
 
-Flattening is only supported for [parseSpec](#parseSpec) types corresponding to [data formats](data-formats.md) that
-support nesting, including `avro`, `json`, `orc`, and `parquet`. Flattening is _not_ supported for the `timeAndDims`
-parseSpec type.
+Flattening is only supported for [data formats](data-formats.md) that support nesting, including `avro`, `json`, `orc`,
+and `parquet`. Flattening is _not_ supported for the `timeAndDims` parseSpec type.
 
 A `flattenSpec` can have the following components:
 
 | Field | Description | Default |
 |-------|-------------|---------|
-| useFieldDiscovery | If true, interpret all root-level fields as available fields for usage by [`timestampSpec`](#timestampspec), [`transformSpec`](#transformspec), [`dimensionsSpec`](#dimensionsSpec), and [`metricsSpec`](#metricsSpec).<br><br>If false, only explicitly specified fields (see `fields`) will be available for use. | `true` |
+| useFieldDiscovery | If true, interpret all root-level fields as available fields for usage by [`timestampSpec`](#timestampspec), [`transformSpec`](#transformspec), [`dimensionsSpec`](#dimensionsspec), and [`metricsSpec`](#metricsspec).<br><br>If false, only explicitly specified fields (see `fields`) will be available for use. | `true` |
 | fields | Specifies the fields of interest and how they are accessed. [See below for details.](#field-flattening-specifications) | `[]` |
 
 #### Field flattening specifications
@@ -590,7 +589,7 @@ Each entry in the `fields` list can have the following components:
 | Field | Description | Default |
 |-------|-------------|---------|
 | type | Options are as follows:<br><br><ul><li>`root`, referring to a field at the root level of the record. Only really useful if `useFieldDiscovery` is false.</li><li>`path`, referring to a field using [JsonPath](https://github.com/jayway/JsonPath) notation. Supported by most data formats that offer nesting, including `avro`, `json`, `orc`, and `parquet`.</li><li>`jq`, referring to a field using [jackson-jq](https://github.com/eiiches/jackson-jq) notation. Only supported for the `json` format.</li></ul> | none (required) |
-| name | Name of the field after flattening. This name can be referred to by the [`timestampSpec`](#timestampspec), [`transformSpec`](#transformspec), [`dimensionsSpec`](#dimensionsSpec), and [`metricsSpec`](#metricsSpec).| none (required) |
+| name | Name of the field after flattening. This name can be referred to by the [`timestampSpec`](#timestampspec), [`transformSpec`](#transformspec), [`dimensionsSpec`](#dimensionsspec), and [`metricsSpec`](#metricsspec).| none (required) |
 | expr | Expression for accessing the field while flattening. For type `path`, this should be [JsonPath](https://github.com/jayway/JsonPath). For type `jq`, this should be [jackson-jq](https://github.com/eiiches/jackson-jq) notation. For other types, this parameter is ignored. | none (required for types `path` and `jq`) |
 
 #### Notes on flattening
@@ -679,7 +678,7 @@ records during ingestion time. It is optional. An example `transformSpec` is:
 
 > Conceptually, after input data records are read, Druid applies ingestion spec components in a particular order:
 > first [`flattenSpec`](#flattenspec), then [`timestampSpec`](#timestampspec), then [`transformSpec`](#transformspec),
-> and finally [`dimensionsSpec`](#dimensionsSpec) and [`metricsSpec`](#metricsSpec). Keep this in mind when writing
+> and finally [`dimensionsSpec`](#dimensionsspec) and [`metricsSpec`](#metricsspec). Keep this in mind when writing
 > your ingestion spec.
 
 #### Transforms
@@ -694,7 +693,7 @@ Transforms do have some limitations. They can only refer to fields present in th
 they cannot refer to other transforms. And they cannot remove fields, only add them. However, they can shadow a field
 with another field containing all nulls, which will act similarly to removing the field.
 
-Transforms can refer to the [timestamp](#timestamp) of an input row by referring to `__time` as part of the expression.
+Transforms can refer to the [timestamp](#timestampspec) of an input row by referring to `__time` as part of the expression.
 They can also _replace_ the timestamp if you set their "name" to `__time`. In both cases, `__time` should be treated as
 a millisecond timestamp (number of milliseconds since Jan 1, 1970 at midnight UTC). Transforms are applied _after_ the
 `timestampSpec`.

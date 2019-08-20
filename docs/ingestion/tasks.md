@@ -223,7 +223,7 @@ The segments created with the segment locking have the _same_ major version and 
 
 > The segment locking is still experimental. It could have unknown bugs which potentially lead to incorrect query results.
 
-To enable segment locking, you may need to set `forceTimeChunkLock` to `false` in the [task context](#task-context).
+To enable segment locking, you may need to set `forceTimeChunkLock` to `false` in the [task context](#context).
 Once `forceTimeChunkLock` is unset, the task will choose a proper lock type to use automatically.
 Please note that segment lock is not always available. The most common use case where time chunk lock is enforced is
 when an overwriting task changes the segment granularity.
@@ -236,7 +236,7 @@ If you want to unset it for all tasks, you would want to set `druid.indexer.task
 Lock requests can conflict with each other if two or more tasks try to get locks for the overlapped time chunks of the same data source.
 Note that the lock conflict can happen between different locks types.
 
-The behavior on lock conflicts depends on the [task priority](#task-lock-priority).
+The behavior on lock conflicts depends on the [task priority](#lock-priority).
 If all tasks of conflicting lock requests have the same priority, then the task who requested first will get the lock.
 Other tasks will wait for the task to release the lock.
 

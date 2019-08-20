@@ -212,7 +212,8 @@ scenarios dealing with more than 1GB of data.
 
 ## Deleting data
 
-Druid supports permanent deletion of segments that are in an "unused" state (see the [Segment lifecycle](#segment-lifecycle) section above).
+Druid supports permanent deletion of segments that are in an "unused" state (see the
+[Segment lifecycle](../design/architecture.html#segment-lifecycle) section of the Architecture page).
 
 The Kill Task deletes unused segments within a specified interval from metadata storage and deep storage.
 
