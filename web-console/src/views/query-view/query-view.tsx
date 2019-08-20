@@ -607,9 +607,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     const { queryAst } = this.state;
 
     if (!queryAst) return;
-    if (queryAst.whereClause) {
-      this.handleQueryStringChange(queryAst.removeFilter(column).toString(), preferablyRun);
-    }
+    this.handleQueryStringChange(queryAst.removeFilter(column).toString(), preferablyRun);
   };
 
   private handleQueryStringChange = (queryString: string, preferablyRun?: boolean): void => {
