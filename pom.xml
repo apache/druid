@@ -980,8 +980,11 @@
                     <excludes>
                         <!-- Ignore generated code -->
                         <exclude>org/apache/druid/math/expr/antlr/Expr*</exclude>  <!-- core -->
-                        <exclude>org/apache/druid/**/generated/*Benchmark*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/data/input/influx/InfluxLineProtocol*</exclude>  <!-- extensions-contrib/influx-extensions -->
+
+                        <!-- Ignore non-production code -->
+                        <exclude>org/apache/druid/**/*Benchmark.*</exclude>  <!-- benchmarks -->
+                        <exclude>org/apache/druid/testing/**/*</exclude>  <!-- integration-tests -->
                     </excludes>
                 </configuration>
                 <executions>
