@@ -182,6 +182,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   }
 
   @Override
+  @Nullable
   public BitmapIndex getBitmapIndex(String dimension)
   {
     if (isVirtualColumn(dimension)) {
@@ -204,6 +205,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
         }
 
         @Override
+        @Nullable
         public String getValue(int index)
         {
           return null;
