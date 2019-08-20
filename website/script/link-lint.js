@@ -22,22 +22,34 @@ const fs = require('fs-extra');
 
 const entries = fg.sync(['./build/ApacheDruid/docs/**/*.html'])
 
+function hasAnchor(html, anchor) {
+  anchor = anchor.replace('#', '');
+  return html.includes(`name="${anchor}"`) || html.includes(`id="${anchor}"`);
+}
+
 const issues = [];
 entries.forEach((entry) => {
   const cnt = fs.readFileSync(entry, 'utf-8');
-  const links = cnt.match(/href="([./][^"]+|)#[^"]+"/g);
+  const links = cnt.match(/href="([./][^"#]+|)(#[^"]+)?"/g);
   if (!links) return;
 
   links.forEach(link => {
-    const match = link.match(/^href="([./][^"]+|)#([^"]+)"$/);
+    if (link === `href=""`) return;
+    const match = link.match(/^href="([./][^"#]+|)(#[^"]+)?"$/);
     if (!match) throw new Error(`something went wrong for: ${link}`);
 
     const url = match[1];
     const anchor = match[2];
 
     if (url) {
+      // Ignore external links
+      if (url.startsWith('/') && !url.startsWith('/docs/')) return;
+
+      // This one will get created externally
+      if (url === '/docs/latest') return;
+
       const target = url.startsWith('/')
-        ? './build/ApacheDruid/docs' + url
+        ? './build/ApacheDruid' + url
         : path.resolve(path.dirname(entry), url);
 
 
@@ -45,16 +57,20 @@ entries.forEach((entry) => {
       try {
         targetHtml = fs.readFileSync(target, 'utf-8');
       } catch {
-        //issues.push(`Could not find '${url}' linked from '${entry}'`);
+        issues.push(`Could not find '${url}' linked from '${entry}'`);
         return;
       }
 
-      if (!targetHtml.includes(`name="${anchor}"`) && !targetHtml.includes(`id="${anchor}"`)) {
+      if (anchor && !hasAnchor(targetHtml, anchor)) {
         issues.push(`Could not find anchor '${anchor}' in '${url}' linked from '${entry}'`)
       }
     } else {
-      if (!cnt.includes(`name="${anchor}"`) && !cnt.includes(`id="${anchor}"`)) {
-        issues.push(`Could not find self anchor '${anchor}' in '${entry}'`)
+      if (anchor) {
+        if (!hasAnchor(cnt, anchor)) {
+          issues.push(`Could not find self anchor '${anchor}' in '${entry}'`)
+        }
+      } else {
+        throw new Error(`should not get here with: ${link} in '${entry}'`);
       }
     }
   });

@@ -26,7 +26,7 @@ const fs = require('fs-extra');
 const path = require('path');
 
 const dst = process.argv[2];
-const strict = false;
+const strict = process.argv[3];
 
 function resolveTarget(source, target) {
   return path.resolve(path.dirname('/' + source), target).substr(1);
