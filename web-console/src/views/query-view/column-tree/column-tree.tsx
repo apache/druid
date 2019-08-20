@@ -270,7 +270,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                   icon={IconNames.FILTER_REMOVE}
                                   text={`Remove filter`}
                                   onClick={() => {
-                                    props.clear(columnData.COLUMN_NAME, false);
+                                    props.clear(columnData.COLUMN_NAME, true);
                                   }}
                                 />
                               )}
