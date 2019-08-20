@@ -32,6 +32,11 @@ public final class DefaultRequestLogEventBuilderFactory implements RequestLogEve
   private static final DefaultRequestLogEventBuilderFactory INSTANCE = new DefaultRequestLogEventBuilderFactory();
 
   @JsonCreator
+  public static DefaultRequestLogEventBuilderFactory instance(String ignored)
+  {
+    return INSTANCE;
+  }
+
   public static DefaultRequestLogEventBuilderFactory instance()
   {
     return INSTANCE;
