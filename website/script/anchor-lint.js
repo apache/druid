@@ -25,31 +25,37 @@ const entries = fg.sync(['./build/ApacheDruid/docs/**/*.html'])
 const issues = [];
 entries.forEach((entry) => {
   const cnt = fs.readFileSync(entry, 'utf-8');
-  const links = cnt.match(/href="[./][^"]+#[^"]+"/g);
+  const links = cnt.match(/href="([./][^"]+|)#[^"]+"/g);
   if (!links) return;
 
   links.forEach(link => {
-    const match = link.match(/^href="([./][^"]+)#([^"]+)"$/);
+    const match = link.match(/^href="([./][^"]+|)#([^"]+)"$/);
     if (!match) throw new Error(`something went wrong for: ${link}`);
 
     const url = match[1];
     const anchor = match[2];
 
-    const target = url.startsWith('/')
-      ? './build/ApacheDruid/docs' + url
-      : path.resolve(path.dirname(entry), url);
+    if (url) {
+      const target = url.startsWith('/')
+        ? './build/ApacheDruid/docs' + url
+        : path.resolve(path.dirname(entry), url);
 
 
-    let targetHtml;
-    try {
-      targetHtml = fs.readFileSync(target, 'utf-8');
-    } catch {
-      //issues.push(`Could not find '${url}' linked from '${entry}'`);
-      return;
-    }
+      let targetHtml;
+      try {
+        targetHtml = fs.readFileSync(target, 'utf-8');
+      } catch {
+        //issues.push(`Could not find '${url}' linked from '${entry}'`);
+        return;
+      }
 
-    if (!targetHtml.includes(`name="${anchor}"`) && !targetHtml.includes(`id="${anchor}"`)) {
-      issues.push(`Could not find anchor '${anchor}' in '${url}' linked from '${entry}'`)
+      if (!targetHtml.includes(`name="${anchor}"`) && !targetHtml.includes(`id="${anchor}"`)) {
+        issues.push(`Could not find anchor '${anchor}' in '${url}' linked from '${entry}'`)
+      }
+    } else {
+      if (!cnt.includes(`name="${anchor}"`) && !cnt.includes(`id="${anchor}"`)) {
+        issues.push(`Could not find self anchor '${anchor}' in '${entry}'`)
+      }
     }
   });
 });

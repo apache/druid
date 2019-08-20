@@ -8,7 +8,8 @@
     "write-translations": "docusaurus-write-translations",
     "version": "docusaurus-version",
     "rename-version": "docusaurus-rename-version",
-    "compile-scss": "node-sass scss/custom.scss > static/css/custom.css"
+    "compile-scss": "node-sass scss/custom.scss > static/css/custom.css",
+    "anchor-lint": "npm run build && node script/anchor-lint.js"
   },
   "devDependencies": {
     "docusaurus": "^1.12.0",

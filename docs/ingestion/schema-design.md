@@ -108,7 +108,7 @@ be able to compute percentiles or quantiles, use Druid's [approximate aggregator
 row in your Druid datasource. This can be useful if you want to store data at a different time granularity than it is
 naturally emitted. It is also useful if you want to combine timeseries and non-timeseries data in the same datasource.
 - If you don't know ahead of time what columns you'll want to ingest, use an empty dimensions list to trigger
-[automatic detection of dimension columns](#schemaless).
+[automatic detection of dimension columns](#schema-less-dimensions).
 
 ### Log aggregation model
 
@@ -123,15 +123,13 @@ nested data.
 Tips for modeling log data in Druid:
 
 - If you don't know ahead of time what columns you'll want to ingest, use an empty dimensions list to trigger
-[automatic detection of dimension columns](#schemaless).
+[automatic detection of dimension columns](#schema-less-dimensions).
 - If you have nested data, flatten it using [Druid flattenSpecs](flatten-json.html).
 - Consider enabling [rollup](#rollup) if you have mainly analytical use cases for your log data. This will
 mean you lose the ability to retrieve individual events from Druid, but you potentially gain substantial compression and
 query performance boosts.
 
 ## General tips and best practices
-
-
 
 ### Rollup
 
@@ -172,8 +170,6 @@ For details about the sketches available in Druid, see the
 
 If you prefer videos, take a look at [Not exactly!](https://www.youtube.com/watch?v=Hpd3f_MLdXo), a conference talk
 about sketches in Druid.
-
-
 
 ### String vs numeric dimensions
 

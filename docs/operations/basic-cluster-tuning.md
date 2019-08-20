@@ -132,7 +132,7 @@ The heap size will vary based on data size and usage patterns, but 4G to 8G is a
 
 If caching is enabled on the Broker, the cache is stored on heap, sized by `druid.cache.sizeInBytes`.
 
-#### Direct Memory Sizing
+#### Direct memory sizing
 
 On the Broker, the amount of direct memory needed depends on how many merge buffers (used for merging GroupBys) are configured. The Broker does not generally need processing threads or processing buffers, as query results are merged on-heap in the HTTP connection threads instead.
 
@@ -148,7 +148,7 @@ If the deprecated `chunkPeriod` property in the [query context](../querying/quer
 
 Both `chunkPeriod` and GroupBy V1 are deprecated (use GroupBy V2 instead) and will be removed in the future, we do not recommend using them. The presence of the deprecated `chunkPeriod` feature is why a minimum of 1 processing thread must be configured, even if it's unused.
 
-#### Connection Pool Sizing
+#### Connection pool sizing
 
 Please see the [General Connection Pool Guidelines](#general-connection-pool-guidelines) section for an overview of connection pool configuration.
 
@@ -158,7 +158,7 @@ On the Brokers, please ensure that the sum of `druid.broker.http.numConnections`
 
 Tuning the cluster so that each Historical can accept 50 queries and 10 non-queries, adjusting the Brokers accordingly, is a reasonable starting point.
 
-#### Broker Backpressure
+#### Broker backpressure
 
 When retrieving query results from Historical processes or Tasks, the Broker can optionally specify a maximum buffer size for queued, unread data, and exert backpressure on the channel to the Historical or Tasks when limit is reached (causing writes to the channel to block on the Historical/Task side until the Broker is able to drain some data from the channel).
 
@@ -171,13 +171,13 @@ You can generally set this to a value of approximately `2MB * number of Historic
 - If the buffer is too small, this can lead to inefficient queries due to the buffer filling up rapidly and stalling the channel
 - If the buffer is too large, this puts more memory pressure on the Broker due to more queued result data in the HTTP channels.
 
-#### Number of Brokers
+#### Number of brokers
 
 A 1:15 ratio of Brokers to Historicals is a reasonable starting point (this is not a hard rule).
 
 If you need Broker HA, you can deploy 2 initially and then use the 1:15 ratio guideline for additional Brokers.
 
-#### Total Memory Usage
+#### Total memory usage
 
 To estimate total memory usage of the Broker under these guidelines:
 
@@ -188,7 +188,7 @@ To estimate total memory usage of the Broker under these guidelines:
 
 The MiddleManager is a lightweight task controller/manager that launches Task processes, which perform ingestion work.
 
-#### MiddleManager Heap Sizing
+#### MiddleManager heap sizing
 
 The MiddleManager itself does not require much resources, you can set the heap to ~128MB generally.
 
@@ -250,7 +250,7 @@ For Tasks, `druid.server.http.numThreads` should be set to a value slightly high
 
 Tuning the cluster so that each Task can accept 50 queries and 10 non-queries is a reasonable starting point.
 
-#### Total Memory Usage
+#### Total memory usage
 
 To estimate total memory usage of a Task under these guidelines:
 
@@ -261,20 +261,20 @@ The total memory usage of the MiddleManager + Tasks:
 
 `MM heap size + druid.worker.capacity * (single task memory usage)`
 
-##### Configuration Guidelines for Specific Ingestion Types
+##### Configuration guidelines for specific ingestion types
 
-###### Kafka/Kinesis Ingestion
+###### Kafka/Kinesis ingestion
 
 If you use the [Kafka Indexing Service](../development/extensions-core/kafka-ingestion.md) or [Kinesis Indexing Service](../development/extensions-core/kinesis-ingestion.md), the number of tasks required will depend on the number of partitions and your taskCount/replica settings.
 
 On top of those requirements, allocating more task slots in your cluster is a good idea, so that you have free task
 slots available for other tasks, such as [compaction tasks](../ingestion/data-management.md#compact).
 
-###### Hadoop Ingestion
+###### Hadoop ingestion
 
 If you are only using [Hadoop-based batch ingestion](../ingestion/hadoop.md) with no other ingestion types, you can lower the amount of resources allocated per Task. Batch ingestion tasks do not need to answer queries, and the bulk of the ingestion workload will be executed on the Hadoop cluster, so the Tasks do not require much resources.
 
-###### Parallel Native Ingestion
+###### Parallel native ingestion
 
 If you are using [parallel native batch ingestion](../ingestion/native-batch.md#parallel-task), allocating more available task slots is a good idea and will allow greater ingestion concurrency.
 

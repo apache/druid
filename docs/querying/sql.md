@@ -727,8 +727,8 @@ SERVER_SEGMENTS is used to join servers with segments table
 
 |Column|Type|Notes|
 |------|-----|-----|
-|server|STRING|Server name in format host:port (Primary key of [servers table](#SERVERS-table))|
-|segment_id|STRING|Segment identifier (Primary key of [segments table](#SEGMENTS-table))|
+|server|STRING|Server name in format host:port (Primary key of [servers table](#servers-table))|
+|segment_id|STRING|Segment identifier (Primary key of [segments table](#segments-table))|
 
 JOIN between "servers" and "segments" can be used to query the number of segments for a specific datasource,
 grouped by server, example query:
