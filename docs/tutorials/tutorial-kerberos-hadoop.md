@@ -56,16 +56,23 @@ Edit common.runtime.properties at conf/druid/_common/common.runtime.properties t
 
 ### common_runtime_properties
 
-```properties
+# Deep storage
 #
+# For HDFS:
  druid.storage.type=hdfs
  druid.storage.storageDirectory=/druid/segments
+# OR
+# druid.storage.storageDirectory=/apps/druid/segments
 
 #
+# Indexing service logs
 #
 
+# For HDFS:
 druid.indexer.logs.type=hdfs
 druid.indexer.logs.directory=/druid/indexing-logs
+# OR
+# druid.storage.storageDirectory=/apps/druid/indexing-logs
 ```
 
 Note: Comment out Local storage and S3 Storage parameters in the file
@@ -74,12 +81,14 @@ Also include hdfs-storage core extension to conf/druid/_common/common.runtime.
 
 ```properties
 #
+# Extensions
 #
 
 druid.extensions.directory=dist/druid/extensions
 druid.extensions.hadoopDependenciesDir=dist/druid/hadoop-dependencies
 druid.extensions.loadList=["mysql-metadata-storage", "druid-hdfs-storage", "druid-kerberos"]
 ```
+
 ### Hadoop Jars
 
 Ensure that Druid has necessary jars to support the Hadoop version.

@@ -32,8 +32,7 @@ The Coordinator loads a set of rules from the metadata storage. Rules may be spe
 
 Note: It is recommended that the Coordinator console is used to configure rules. However, the Coordinator process does have HTTP endpoints to programmatically configure rules.
 
-Load Rules
-----------
+## Load rules
 
 Load rules indicate how many replicas of a segment should exist in a server tier. **Please note**: If a Load rule is used to retain only data from a certain interval or period, it must be accompanied by a Drop rule. If a Drop rule is not included, data not within the specified interval or period will be retained by the default rule (loadForever).
 
@@ -97,8 +96,7 @@ Period load rules are of the form:
 
 The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period *overlaps* the interval.
 
-Drop Rules
-----------
+## Drop Rules
 
 Drop rules indicate when segments should be dropped from the cluster.
 
@@ -167,8 +165,7 @@ Period drop before rules are of the form:
 
 The interval of a segment will be compared against the specified period. The period is from some time in the past to the current time. The rule matches if the interval before the period. If you just want to retain recent data, you can use this rule to drop the old data that before a specified period and add a `loadForever` rule to follow it. Notes, `dropBeforeByPeriod + loadForever` is equivalent to `loadByPeriod(includeFuture = true) + dropForever`.
 
-Broadcast Rules
----------------
+## Broadcast Rules
 
 Broadcast rules indicate how segments of different data sources should be co-located in Historical processes.
 Once a broadcast rule is configured for a data source, all segments of the data source are broadcasted to the servers holding _any segments_ of the co-located data sources.
@@ -226,10 +223,12 @@ The interval of a segment will be compared against the specified period. The per
 > broadcast rules don't guarantee that segments of the data sources are always co-located because segments for the colocated data sources are not loaded together atomically.
 > If you want to always co-locate the segments of some data sources together, it is recommended to leave colocatedDataSources empty.
 
+## Permanently deleting data
 
 Druid can fully drop data from the cluster, wipe the metadata store entry, and remove the data from deep storage for any segments that are
 marked as unused (segments dropped from the cluster via rules are always marked as unused). You can submit a [kill task](../ingestion/tasks.md) to the [Overlord](../design/overlord.md) to do this.
 
+## Reloading dropped data
 
 Data that has been dropped from a Druid cluster cannot be reloaded using only rules. To reload dropped data in Druid, you must first set your retention period (i.e. changing the retention period from 1 month to 2 months), and
 then enable the datasource in the Druid Coordinator console, or through the Druid Coordinator endpoints.

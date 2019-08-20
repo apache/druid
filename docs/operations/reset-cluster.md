@@ -44,10 +44,8 @@ java org.apache.druid.cli.Main tools reset-cluster --all
 Usage documentation can be printed by running following command.
 
 ```
-java org.apache.druid.cli.Main help tools reset-cluster
-```
+$ java org.apache.druid.cli.Main help tools reset-cluster
 
-```
 NAME
         druid tools reset-cluster - Cleanup all persisted state from metadata
         and deep storage.

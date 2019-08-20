@@ -22,7 +22,6 @@ title: "Apache Kafka Lookups"
   ~ under the License.
   -->
 
-
 > Lookups are an [experimental](../experimental.md) feature.
 
 To use this Apache Druid (incubating) extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-lookups-cached-global` and `druid-kafka-extraction-namespace` as an extension.
@@ -50,6 +49,7 @@ The consumer properties `group.id` and `auto.offset.reset` CANNOT be set in `kaf
 
 See [lookups](../../querying/lookups.md) for how to configure and use lookups.
 
+## Limitations
 
 Currently the Kafka lookup extractor feeds the entire kafka stream into a local cache. If you are using OnHeap caching, this can easily clobber your java heap if the kafka stream spews a lot of unique keys.
 OffHeap caching should alleviate these concerns, but there is still a limit to the quantity of data that can be stored.

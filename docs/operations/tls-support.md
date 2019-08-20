@@ -22,7 +22,7 @@ title: "TLS support"
   ~ under the License.
   -->
 
-
+## General configuration
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -32,6 +32,7 @@ title: "TLS support"
 Although not recommended but both HTTP and HTTPS connectors can be enabled at a time and respective ports are configurable using `druid.plaintextPort`
 and `druid.tlsPort` properties on each process. Please see `Configuration` section of individual processes to check the valid and default values for these ports.
 
+## Jetty server configuration
 
 Apache Druid (incubating) uses Jetty as an embedded web server. To get familiar with TLS/SSL in general and related concepts like Certificates etc.
 reading this [Jetty documentation](http://www.eclipse.org/jetty/documentation/9.4.x/configuring-ssl.html) might be helpful.
@@ -71,6 +72,7 @@ The following table contains non-mandatory advanced configuration options, use c
 |`druid.server.https.includeProtocols`|List of exact protocols names to include.|Jetty's default include protocol list|no|
 |`druid.server.https.excludeProtocols`|List of exact protocols names to exclude.|Jetty's default exclude protocol list|no|
 
+## Internal communication over TLS
 
 Whenever possible Druid processes will use HTTPS to talk to each other. To enable this communication Druid's HttpClient needs to
 be configured with a proper [SSLContext](http://docs.oracle.com/javase/8/docs/api/javax/net/ssl/SSLContext.html) that is able
@@ -86,6 +88,7 @@ to create your own extension.
 When Druid Coordinator/Overlord have both HTTP and HTTPS enabled and Client sends request to non-leader process, then Client is always redirected to the HTTPS endpoint on leader process.
 So, Clients should be first upgraded to be able to handle redirect to HTTPS. Then Druid Overlord/Coordinator should be upgraded and configured to run both HTTP and HTTPS ports. Then Client configuration should be changed to refer to Druid Coordinator/Overlord via the HTTPS endpoint and then HTTP port on Druid Coordinator/Overlord should be disabled.
 
+## Custom certificate checks
 
 Druid supports custom certificate check extensions. Please refer to the `org.apache.druid.server.security.TLSCertificateChecker` interface for details on the methods to be implemented.
 

@@ -83,6 +83,7 @@ The configuration examples in the rest of this document will use "MyBasicAuthent
 ### Creating an Escalator
 
 ```
+# Escalator
 druid.escalator.type=basic
 druid.escalator.internalClientUsername=druid_system
 druid.escalator.internalClientPassword=password2

@@ -33,6 +33,7 @@ Note that just adding these properties does not enable the cache. You still need
 
 A possible configuration would be to keep the properties below in your `common.runtime.properties` file (present on all processes) and then add `druid.<nodetype>.cache.useCache` and `druid.<nodetype>.cache.populateCache` in the `runtime.properties` file of the process types you want to enable caching on.
 
+## Configuration
 
 |`common.runtime.properties`|Description|Default|Required|
 |--------------------|-----------|-------|--------|
@@ -44,8 +45,11 @@ A possible configuration would be to keep the properties below in your `common.r
 |`druid.cache.maxIdleConnections`|Max idle connections to Redis|8|no|
 |`druid.cache.minIdleConnections`|Min idle connections to Redis|0|no|
 
+## Enabling
 
 To enable the redis cache, include this module on the loadList and set `druid.cache.type` to `redis` in your properties.
+
+## Metrics
 
 In addition to the normal cache metrics, the redis cache implementation also reports the following in both `total` and `delta`
 

@@ -22,8 +22,6 @@ title: "Indexer Process"
   ~ under the License.
   -->
 
-# Indexer Process
-
 > The Indexer is an optional and <a href="../development/experimental.html">experimental</a> feature.
 > Its memory management system is still under development and will be significantly enhanced in later releases. 
 

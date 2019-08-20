@@ -172,11 +172,11 @@ a `pollPeriod` at the end of which time they poll the remote resource of interes
 So if total number of entries in the `cachedNamespace` is in excess of the buffer's configured capacity, the extra will be kept in memory as page cache, and paged in and out by general OS tunings.
 It's highly recommended that `druid.lookup.namespace.numBufferedEntries` is set when using `offHeap`, the value should be chosen from the range between 10% and 50% of the number of entries in the lookup.
 
-
+## Supported lookups
 
 For additional lookups, please see our [extensions list](../extensions.md).
 
-## URI lookup
+### URI lookup
 
 The remapping values for each globally cached lookup can be specified by a json object as per the following examples:
 
@@ -221,7 +221,7 @@ The `namespaceParseSpec` can be one of a number of values. Each of the examples 
 
 Only ONE file which matches the search will be used. For most implementations, the discriminator for choosing the URIs is by whichever one reports the most recent timestamp for its modification time.
 
-### csv lookupParseSpec
+#### csv lookupParseSpec
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|
 |`columns`|The list of columns in the csv file|no if `hasHeaderRow` is set|`null`|
@@ -253,7 +253,7 @@ truck,something3,buck
 }
 ```
 
-### tsv lookupParseSpec
+#### tsv lookupParseSpec
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|
 |`columns`|The list of columns in the tsv file|yes|`null`|
@@ -288,7 +288,7 @@ truck|something,3|buck
 }
 ```
 
-### customJson lookupParseSpec
+#### customJson lookupParseSpec
 
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|
@@ -316,7 +316,7 @@ truck|something,3|buck
 With customJson parsing, if the value field for a particular row is missing or null then that line will be skipped, and
 will not be included in the lookup.
 
-### simpleJson lookupParseSpec
+#### simpleJson lookupParseSpec
 The `simpleJson` lookupParseSpec does not take any parameters. It is simply a line delimited json file where the field is the key, and the field's value is the value.
 
 *example input*
@@ -335,7 +335,7 @@ The `simpleJson` lookupParseSpec does not take any parameters. It is simply a li
 }
 ```
 
-## JDBC lookup
+### JDBC lookup
 
 The JDBC lookups will poll a database to populate its local cache. If the `tsColumn` is set it must be able to accept comparisons in the format `'2015-01-01 00:00:00'`. For example, the following must be valid sql for the table `SELECT * FROM some_lookup_table WHERE timestamp_column >  '2015-01-01 00:00:00'`. If `tsColumn` is set, the caching service will attempt to only poll values that were written *after* the last sync. If `tsColumn` is not set, the entire table is pulled every time.
 
@@ -368,5 +368,6 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 }
 ```
 
+## Introspection
 
 Globally cached lookups have introspection points at `/keys` and `/values` which return a complete set of the keys and values (respectively) in the lookup. Introspection to `/` returns the entire map. Introspection to `/version` returns the version indicator for the lookup.

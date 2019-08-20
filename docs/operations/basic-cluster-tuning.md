@@ -302,13 +302,13 @@ You can assign it 256MB heap as a starting point, growing it if needed.
 
 <a name="processing-threads-buffers"></a>
 
-# General Guidelines for Processing Threads and Buffers
+## Guidelines for processing threads and buffers
 
-## Processing Threads
+### Processing threads
 
 The `druid.processing.numThreads` configuration controls the size of the processing thread pool used for computing query results. The size of this pool limits how many queries can be concurrently processed.
 
-## Processing Buffers
+### Processing buffers
 
 `druid.processing.buffer.sizeBytes` is a closely related property that controls the size of the off-heap buffers allocated to the processing threads.
 
@@ -316,7 +316,7 @@ One buffer is allocated for each processing thread. A size between 500MB and 1GB
 
 The TopN and GroupBy queries use these buffers to store intermediate computed results. As the buffer size increases, more data can be processed in a single pass.
 
-## GroupBy Merging Buffers
+### GroupBy merging buffers
 
 If you plan to issue GroupBy V2 queries, `druid.processing.numMergeBuffers` is an important configuration property.
 
@@ -326,14 +326,15 @@ Non-nested GroupBy V2 queries require 1 merge buffer per query, while a nested G
 
 The number of merge buffers determines the number of GroupBy V2 queries that can be processed concurrently.
 
+<a name="connection-pool"></a>
+
+## Connection pool guidelines
 
 Each Druid process has a configuration property for the number of HTTP connection handling threads, `druid.server.http.numThreads`.
 
 The number of HTTP server threads limits how many concurrent HTTP API requests a given process can handle.
 
-<a name="connection-pool"></a>
-
-## Sizing the connection pool for queries
+### Sizing the connection pool for queries
 
 The Broker has a setting `druid.broker.http.numConnections` that controls how many outgoing connections it can make to a given Historical or Task process.
 
@@ -355,6 +356,7 @@ As a starting point, allowing for 50 concurrent queries (requests that read segm
 - If your cluster usage patterns are heavily biased towards a high number of small concurrent queries (where each query takes less than ~15ms), enlarging the connection pool can be a good idea.
 - The 50/10 general guideline here is a rough starting point, since different queries impose different amounts of load on the system. To size the connection pool more exactly for your cluster, you would need to know the execution times for your queries and ensure that the rate of incoming queries does not exceed your "drain" rate.
 
+## Garbage collection
 
 We recommend using the G1GC garbage collector:
 
@@ -364,14 +366,15 @@ Enabling process termination on out-of-memory errors is useful as well, since th
 
 `-XX:+ExitOnOutOfMemoryError`
 
+## Per-segment direct memory buffers
 
-## Segment Decompression
+### Segment decompression
 
 When opening a segment for reading during segment merging or query processing, Druid allocates a 64KB off-heap decompression buffer for each column being read.
 
 Thus, there is additional direct memory overhead of (64KB * number of columns read per segment * number of segments read) when reading segments.
 
-## Segment Merging
+### Segment merging
 
 In addition to the segment decompression overhead described above, when a set of segments are merged during ingestion, a direct buffer is allocated for every String typed column, for every segment in the set to be merged.
 

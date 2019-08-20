@@ -162,11 +162,14 @@ In your favorite text editor, open `conf/druid/single-server/micro-quickstart/_c
 
 ```
 #
+# Deep storage
 #
 
+# For local disk (only viable in a cluster if this is a network mount):
 #druid.storage.type=local
 #druid.storage.storageDirectory=var/druid/segments
 
+# For HDFS:
 druid.storage.type=hdfs
 druid.storage.storageDirectory=/druid/segments
 ```
@@ -176,11 +179,14 @@ druid.storage.storageDirectory=/druid/segments
 
 ```
 #
+# Indexing service logs
 #
 
+# For local disk (only viable in a cluster if this is a network mount):
 #druid.indexer.logs.type=file
 #druid.indexer.logs.directory=var/druid/indexing-logs
 
+# For HDFS:
 druid.indexer.logs.type=hdfs
 druid.indexer.logs.directory=/druid/indexing-logs
 
@@ -224,25 +230,30 @@ Example reverted config:
 
 ```
 #
+# Deep storage
 #
 
+# For local disk (only viable in a cluster if this is a network mount):
 druid.storage.type=local
 druid.storage.storageDirectory=var/druid/segments
 
+# For HDFS:
 #druid.storage.type=hdfs
 #druid.storage.storageDirectory=/druid/segments
 
 #
+# Indexing service logs
 #
 
+# For local disk (only viable in a cluster if this is a network mount):
 druid.indexer.logs.type=file
 druid.indexer.logs.directory=var/druid/indexing-logs
 
+# For HDFS:
 #druid.indexer.logs.type=hdfs
 #druid.indexer.logs.directory=/druid/indexing-logs
 
 ```
-
 
 ## Further reading
 

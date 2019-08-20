@@ -34,6 +34,8 @@ There are some limitations, when used with groupBy, the groupBy keys' numbers sh
 
 Example:
 
+## Timeseries query
+
 ```json
 {
   "queryType": "timeseries",
@@ -52,6 +54,7 @@ Example:
 }
 ```
 
+## TopN query
 
 ```json
 {
@@ -74,6 +77,7 @@ Example:
 }
 ```
 
+## GroupBy query
 
 ```json
 {

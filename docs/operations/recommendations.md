@@ -22,7 +22,7 @@ title: "Recommendations"
   ~ under the License.
   -->
 
-
+## Some general guidelines
 
 JVM Flags:
 
@@ -63,21 +63,28 @@ Additionally, for large jvm heaps, here are a few Garbage Collection efficiency 
 - Disable Transparent Huge Pages ( See https://blogs.oracle.com/linux/performance-issues-with-transparent-huge-pages-thp )
 - Try disabling biased locking by using `-XX:-UseBiasedLocking` jvm flag. ( See https://dzone.com/articles/logging-stop-world-pauses-jvm )
 
+## Use UTC timezone
 
 We recommend using UTC timezone for all your events and across your hosts, not just for Druid, but for all data infrastructure. This can greatly mitigate potential query problems with inconsistent timezones. To query in a non-UTC timezone see [query granularities](../querying/granularities.html#period-granularities)
 
+## SSDs
 
 SSDs are highly recommended for Historical and real-time processes if you are not running a cluster that is entirely in memory. SSDs can greatly mitigate the time required to page data in and out of memory.
 
+## JBOD vs RAID
+
 Historical processes store large number of segments on Disk and support specifying multiple paths for storing those. Typically, hosts have multiple disks configured with RAID which makes them look like a single disk to OS. RAID might have overheads specially if its not hardware controller based but software based. So, Historicals might get improved disk throughput with JBOD.
 
+## Use Timeseries and TopN queries instead of GroupBy where possible
 
 Timeseries and TopN queries are much more optimized and significantly faster than groupBy queries for their designed use cases. Issuing multiple topN or timeseries queries from your application can potentially be more efficient than a single groupBy query.
 
+## Segment sizes matter
 
 Segments should generally be between 300MB-700MB in size. Too many small segments results in inefficient CPU utilizations and
 too many large segments impacts query performance, most notably with TopN queries.
 
+## FAQs and Guides
 
 1) The [ingestion FAQ](../ingestion/faq.md) provides help with common ingestion problems.
 

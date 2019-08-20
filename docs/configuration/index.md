@@ -790,7 +790,7 @@ A description of the compaction config is:
 |`maxRowsPerSegment`|Max number of rows per segment after compaction. This configuration cannot be used together with `targetCompactionSizeBytes`.|no|
 |`maxNumSegmentsToCompact`|Maximum number of segments to compact together per compaction task. Since a time chunk must be processed in its entirety, if a time chunk has a total number of segments greater than this parameter, compaction will not run for that time chunk.|no (default = 150)|
 |`skipOffsetFromLatest`|The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources. |no (default = "P1D")|
-|`tuningConfig`|Tuning config for compaction tasks. See below [Compaction Task TuningConfig](#compact-task-tuningconfig).|no|
+|`tuningConfig`|Tuning config for compaction tasks. See below [Compaction Task TuningConfig](#compaction-tuningconfig).|no|
 |`taskContext`|[Task context](../ingestion/tasks.html#context) for compaction tasks.|no|
 
 An example of compaction config is:

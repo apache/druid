@@ -77,6 +77,7 @@ druid.auth.authenticator.anonymous.type=anonymous
 druid.auth.authenticator.anonymous.identity=defaultUser
 druid.auth.authenticator.anonymous.authorizerName=myBasicAuthorizer
 
+# ... usual configs for basic authentication would go here ...
 ```
 
 ## Escalator
