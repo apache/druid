@@ -79,6 +79,7 @@
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
         <avatica.version>1.12.0</avatica.version>
         <calcite.version>1.17.0</calcite.version>
+        <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
         <fastutil.version>8.2.3</fastutil.version>
         <guava.version>16.0.1</guava.version>
@@ -680,12 +681,12 @@
             <dependency>
                 <groupId>org.apache.derby</groupId>
                 <artifactId>derbynet</artifactId>
-                <version>10.11.1.1</version>
+                <version>${derby.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.derby</groupId>
                 <artifactId>derbyclient</artifactId>
-                <version>10.11.1.1</version>
+                <version>${derby.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
