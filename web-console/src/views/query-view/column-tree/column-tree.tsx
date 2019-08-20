@@ -374,9 +374,25 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     this.setState({ selectedTreeIndex: Number(e.target.value), expandedNode: -1 });
   };
 
+  setExpanded(): void {
+    const { columnTree, selectedTreeIndex, expandedNode } = this.state;
+    if (!columnTree) return;
+
+    const currentSchemaSubtreeExpanded =
+      columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
+    if (!currentSchemaSubtreeExpanded) return;
+
+    if (expandedNode > -1) {
+      currentSchemaSubtreeExpanded[expandedNode].isExpanded = true;
+    }
+    this.setState({ currentSchemaSubtree: currentSchemaSubtreeExpanded });
+  }
+
   render(): JSX.Element | null {
     const { columnMetadataLoading } = this.props;
-    const { columnTree, selectedTreeIndex, expandedNode, currentSchemaSubtree } = this.state;
+    const { columnTree, currentSchemaSubtree } = this.state;
+
+    this.setExpanded();
 
     if (columnMetadataLoading) {
       return (
@@ -387,14 +403,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     }
 
     if (!columnTree) return null;
-    const currentSchemaSubtreeExpanded =
-      columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
-    if (!currentSchemaSubtreeExpanded) return null;
-
-    if (expandedNode > -1) {
-      currentSchemaSubtreeExpanded[expandedNode].isExpanded = true;
-    }
-    this.setState({ currentSchemaSubtree: currentSchemaSubtreeExpanded });
 
     return (
       <div className="column-tree">
