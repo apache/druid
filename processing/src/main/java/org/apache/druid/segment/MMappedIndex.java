@@ -27,6 +27,8 @@ import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+
 import java.util.Map;
 
 /**
@@ -85,15 +87,10 @@ public class MMappedIndex
     return dataInterval;
   }
 
+  @Nullable
   public MetricHolder getMetricHolder(String metric)
   {
-    final MetricHolder retVal = metrics.get(metric);
-
-    if (retVal == null) {
-      return null;
-    }
-
-    return retVal;
+    return metrics.get(metric);
   }
 
   public GenericIndexed<String> getDimValueLookup(String dimension)

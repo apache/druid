@@ -345,7 +345,7 @@ name: OpenCSV
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2
+version: 4.6
 libraries:
   - com.opencsv: opencsv
 
@@ -518,7 +518,7 @@ name: Apache Commons Collections
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1
+version: 4.2
 libraries:
   - org.apache.commons: commons-collections4
 notices:
@@ -566,7 +566,7 @@ name: Apache Commons Lang
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.7
+version: 3.8.1
 libraries:
   - org.apache.commons: commons-lang3
 notices:
@@ -1148,7 +1148,7 @@ name: jackson-jq
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.0.7
+version: 0.0.10
 libraries:
   - net.thisptr: jackson-jq
 
@@ -1223,7 +1223,7 @@ name: Apache Derby
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 10.11.1.1
+version: 10.14.2.0
 libraries:
   - org.apache.derby: derby
   - org.apache.derby: derbyclient
@@ -3250,7 +3250,7 @@ name: JCodings
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 1.0.13
+version: 1.0.43
 copyright: JRuby Team
 license_file_path: licenses/bin/jcodings.MIT
 libraries:
@@ -3262,7 +3262,7 @@ name: Joni
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 2.1.11
+version: 2.1.27
 copyright: JRuby Team
 license_file_path: licenses/bin/joni.MIT
 libraries:
@@ -5165,4 +5165,3 @@ version: 1.2.2
 copyright: Jeremy Ashkenas, DocumentCloud
 license_file_path: licenses/src/underscore.MIT
 # Legacy console modules end
-

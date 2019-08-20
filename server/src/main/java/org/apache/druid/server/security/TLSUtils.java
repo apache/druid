@@ -32,8 +32,10 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509ExtendedTrustManager;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -183,10 +185,12 @@ public class TLSUtils
       KeyStore trustStore = KeyStore.getInstance(trustStoreType == null
                                                ? KeyStore.getDefaultType()
                                                : trustStoreType);
-      trustStore.load(
-          new FileInputStream(trustStorePath),
-          trustStorePasswordProvider == null ? null : trustStorePasswordProvider.getPassword().toCharArray()
-      );
+      try (final InputStream trustStoreFileStream = Files.newInputStream(Paths.get(trustStorePath))) {
+        trustStore.load(
+            trustStoreFileStream,
+            trustStorePasswordProvider == null ? null : trustStorePasswordProvider.getPassword().toCharArray()
+        );
+      }
       TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(trustStoreAlgorithm == null
                                                                                 ? TrustManagerFactory.getDefaultAlgorithm()
                                                                                 : trustStoreAlgorithm);
@@ -197,20 +201,24 @@ public class TLSUtils
         KeyStore keyStore = KeyStore.getInstance(keyStoreType == null
                                                  ? KeyStore.getDefaultType()
                                                  : keyStoreType);
-        keyStore.load(
-            new FileInputStream(keyStorePath),
-            keyStorePasswordProvider == null ? null : keyStorePasswordProvider.getPassword().toCharArray()
-        );
+        try (final InputStream keyStoreFileStream = Files.newInputStream(Paths.get(keyStorePath))) {
+          keyStore.load(
+              keyStoreFileStream,
+              keyStorePasswordProvider == null ? null : keyStorePasswordProvider.getPassword().toCharArray()
+          );
 
-        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(
-            keyStoreAlgorithm == null ?
-            KeyManagerFactory.getDefaultAlgorithm() : keyStoreAlgorithm
-        );
-        keyManagerFactory.init(
-            keyStore,
-            keyManagerFactoryPasswordProvider == null ? null : keyManagerFactoryPasswordProvider.getPassword().toCharArray()
-        );
-        keyManagers = createAliasedKeyManagers(keyManagerFactory.getKeyManagers(), certAlias);
+          KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(
+              keyStoreAlgorithm == null ?
+              KeyManagerFactory.getDefaultAlgorithm() : keyStoreAlgorithm
+          );
+          keyManagerFactory.init(
+              keyStore,
+              keyManagerFactoryPasswordProvider == null
+              ? null
+              : keyManagerFactoryPasswordProvider.getPassword().toCharArray()
+          );
+          keyManagers = createAliasedKeyManagers(keyManagerFactory.getKeyManagers(), certAlias);
+        }
       } else {
         keyManagers = null;
       }

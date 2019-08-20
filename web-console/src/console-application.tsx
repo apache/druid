@@ -44,6 +44,7 @@ type Capabilities = 'working-with-sql' | 'working-without-sql' | 'broken';
 
 export interface ConsoleApplicationProps {
   hideLegacy: boolean;
+  exampleManifestsUrl?: string;
 }
 
 export interface ConsoleApplicationState {
@@ -232,11 +233,14 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private wrappedLoadDataView = () => {
+    const { exampleManifestsUrl } = this.props;
+
     return this.wrapInViewContainer(
       'load-data',
       <LoadDataView
         initSupervisorId={this.supervisorId}
         initTaskId={this.taskId}
+        exampleManifestsUrl={exampleManifestsUrl}
         goToTask={this.goToTaskWithTaskId}
       />,
       'narrow-pad',

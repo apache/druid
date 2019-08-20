@@ -70,8 +70,8 @@ import { RunButton } from './run-button/run-button';
 import './query-view.scss';
 
 const parserRaw = sqlParserFactory(
-  SQL_FUNCTIONS.map((sql_function: SyntaxDescription) => {
-    return sql_function.syntax.substr(0, sql_function.syntax.indexOf('('));
+  SQL_FUNCTIONS.map((sqlFunction: SyntaxDescription) => {
+    return sqlFunction.syntax.substr(0, sqlFunction.syntax.indexOf('('));
   }),
 );
 
@@ -107,7 +107,7 @@ export interface QueryViewState {
   autoRun: boolean;
 
   columnMetadataLoading: boolean;
-  columnMetadata?: ColumnMetadata[];
+  columnMetadata?: readonly ColumnMetadata[];
   columnMetadataError?: string;
 
   loading: boolean;
@@ -124,7 +124,7 @@ export interface QueryViewState {
 
   editContextDialogOpen: boolean;
   historyDialogOpen: boolean;
-  queryHistory: QueryRecord[];
+  queryHistory: readonly QueryRecord[];
 }
 
 interface QueryResult {
@@ -137,6 +137,10 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   static trimSemicolon(query: string): string {
     // Trims out a trailing semicolon while preserving space (https://bit.ly/1n1yfkJ)
     return query.replace(/;+((?:\s*--[^\n]*)?\s*)$/, '$1');
+  }
+
+  static isEmptyQuery(query: string): boolean {
+    return query.trim() === '';
   }
 
   static isExplainQuery(query: string): boolean {
@@ -456,7 +460,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
     return (
       <EditContextDialog
-        onSubmit={(queryContext: QueryContext) =>
+        onQueryContextChange={(queryContext: QueryContext) =>
           this.setState({ queryContext, editContextDialogOpen: false })
         }
         onClose={() => this.setState({ editContextDialogOpen: false })}
@@ -476,6 +480,22 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       autoRun,
       wrapQuery,
     } = this.state;
+    const emptyQuery = QueryView.isEmptyQuery(queryString);
+
+    let currentSchema;
+    let currentTable;
+
+    if (result && result.parsedQuery instanceof SqlQuery) {
+      currentSchema = result.parsedQuery.getSchema();
+      currentTable = result.parsedQuery.getTableName();
+    } else if (localStorageGet(LocalStorageKeys.QUERY_KEY)) {
+      const defaultQueryString = localStorageGet(LocalStorageKeys.QUERY_KEY);
+      const tempAst = defaultQueryString ? parser(defaultQueryString) : undefined;
+      if (tempAst) {
+        currentSchema = tempAst.getSchema();
+        currentTable = tempAst.getTableName();
+      }
+    }
 
     const runeMode = QueryView.isJsonLike(queryString);
     return (
@@ -491,6 +511,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       >
         <div className="control-pane">
           <QueryInput
+            currentSchema={currentSchema ? currentSchema : 'druid'}
+            currentTable={currentTable}
             queryString={queryString}
             onQueryStringChange={this.handleQueryStringChange}
             runeMode={runeMode}
@@ -506,8 +528,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
               runeMode={runeMode}
               queryContext={queryContext}
               onQueryContextChange={this.handleQueryContextChange}
-              onRun={this.handleRun}
-              onExplain={this.handleExplain}
+              onRun={emptyQuery ? undefined : this.handleRun}
+              onExplain={emptyQuery ? undefined : this.handleExplain}
               onHistory={() => this.setState({ historyDialogOpen: true })}
             />
             {result && (
@@ -603,13 +625,11 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     this.handleQueryStringChange(modifiedAst.toString(), preferablyRun);
   };
 
-  private sqlClearWhere = (): void => {
+  private sqlClearWhere = (column: string, preferablyRun: boolean): void => {
     const { queryAst } = this.state;
 
     if (!queryAst) return;
-    if (queryAst.whereClause) {
-      queryAst.whereClause = undefined;
-    }
+    this.handleQueryStringChange(queryAst.removeFilter(column).toString(), preferablyRun);
   };
 
   private handleQueryStringChange = (queryString: string, preferablyRun?: boolean): void => {
@@ -634,25 +654,14 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
   private handleRun = () => {
     const { queryString, queryContext, wrapQuery, queryHistory } = this.state;
-
-    while (queryHistory.length > 9) {
-      queryHistory.pop();
-    }
-    queryHistory.unshift({
-      version: `${new Date().toISOString()}`,
-      queryString,
-    });
-    let queryHistoryString;
-    try {
-      queryHistoryString = JSON.stringify(queryHistory);
-    } catch {}
-    if (queryHistoryString) {
-      localStorageSet(LocalStorageKeys.QUERY_HISTORY, queryHistoryString);
-    }
-
     if (QueryView.isJsonLike(queryString) && !QueryView.validRune(queryString)) return;
 
+    const newQueryHistory = QueryHistoryDialog.addQueryToHistory(queryHistory, queryString);
+
+    localStorageSet(LocalStorageKeys.QUERY_HISTORY, JSON.stringify(newQueryHistory));
     localStorageSet(LocalStorageKeys.QUERY_KEY, queryString);
+
+    this.setState({ queryHistory: newQueryHistory });
     this.sqlQueryManager.runQuery({ queryString, queryContext, wrapQuery });
   };
 
@@ -689,6 +698,11 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     return queryAst;
   };
 
+  private getCurrentFilters = () => {
+    const { queryAst } = this.state;
+    return queryAst.getCurrentFilters();
+  };
+
   render(): JSX.Element {
     const { columnMetadata, columnMetadataLoading, columnMetadataError, queryAst } = this.state;
 
@@ -717,6 +731,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             onQueryStringChange={this.handleQueryStringChange}
             defaultSchema={defaultSchema ? defaultSchema : 'druid'}
             defaultTable={defaultTable}
+            currentFilters={this.getCurrentFilters}
           />
         )}
         {this.renderMainArea()}

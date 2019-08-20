@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Checkbox, Intent } from '@blueprintjs/core';
+import { AnchorButton, Button, ButtonGroup, Checkbox, Intent } from '@blueprintjs/core';
 import axios from 'axios';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
-import { downloadFile, QueryManager } from '../../utils';
+import { QueryManager } from '../../utils';
 
 import './show-log.scss';
 
@@ -123,11 +123,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
           )}
           <ButtonGroup className="right-buttons">
             {downloadFilename && (
-              <Button
-                text="Save"
-                minimal
-                onClick={() => downloadFile(logValue ? logValue : '', 'plain', downloadFilename)}
-              />
+              <AnchorButton text="Save" minimal download={downloadFilename} href={endpoint} />
             )}
             <Button
               text="Copy"
