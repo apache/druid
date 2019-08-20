@@ -57,5 +57,6 @@ public interface Segment extends Closeable
    * @param <T> desired interface
    * @return instance of clazz, or null if the interface is not supported by this segment
    */
+  @Nullable
   <T> T as(Class<T> clazz);
 }

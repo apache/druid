@@ -70,6 +70,7 @@ public abstract class ComplexMetricSerde
    *
    * @return A function that can compute the size of the complex object or null if you cannot/do not want to compute it
    */
+  @Nullable
   public Function<Object, Long> inputSizeFn()
   {
     return null;
