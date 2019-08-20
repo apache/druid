@@ -285,6 +285,8 @@ public class ResponseContextTest
     );
     Assert.assertEquals("string-value", ctx.get(ResponseContext.Key.ETAG));
     Assert.assertEquals(100, ctx.get(ResponseContext.Key.NUM_SCANNED_ROWS));
+    ctx.add(ResponseContext.Key.NUM_SCANNED_ROWS, 10L);
+    Assert.assertEquals(110L, ctx.get(ResponseContext.Key.NUM_SCANNED_ROWS));
   }
 
   @Test(expected = IllegalStateException.class)
