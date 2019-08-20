@@ -21,12 +21,12 @@ import axios from 'axios';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
+import { Loader } from '..';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
 import { QueryManager } from '../../utils';
 
 import './show-log.scss';
-import { Loader } from '..';
 
 function removeFirstPartialLine(log: string): string {
   const lines = log.split('\n');
