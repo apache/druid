@@ -90,6 +90,8 @@ This table compares the three available options:
 | **[Rollup modes](#rollup)** | Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig).| Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig). | Always perfect. |
 | **Partitioning options** | Hash-based partitioning is supported when `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig). | Hash-based partitioning (when `forceGuaranteedRollup` = true). | Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.html#partitioning-specification). |
 
+<a name="data-model"></a>
+
 ## Druid's data model
 
 ### Datasources

@@ -272,12 +272,6 @@ mapred-site.xml) on the classpath of your Druid processes. You can do this by co
 
 Please see the [HDFS extension](../development/extensions-core/hdfs.md) documentation for more info.
 
-## Configure Tranquility Server (optional)
-
-Data streams can be sent to Druid through a simple HTTP API powered by Tranquility
-Server. If you will be using this functionality, then at this point you should [configure
-Tranquility Server](../ingestion/stream-ingestion.html#server).
-
 <a name="hadoop"></a>
 
 ## Configure for connecting to Hadoop (optional)

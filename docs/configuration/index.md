@@ -812,12 +812,12 @@ If you see this problem, it's recommended to set `skipOffsetFromLatest` to some 
 
 |Property|Description|Required|
 |--------|-----------|--------|
-|`maxRowsInMemory`|See [tuningConfig for indexTask](../ingestion/native_tasks.html#tuningconfig)|no (default = 1000000)|
-|`maxBytesInMemory`|See [tuningConfig for indexTask](../ingestion/native_tasks.html#tuningconfig)|no (1/6 of max JVM memory)|
-|`maxTotalRows`|See [tuningConfig for indexTask](../ingestion/native_tasks.html#tuningconfig)|no (default = 20000000)|
-|`indexSpec`|See [IndexSpec](../ingestion/native_tasks.html#indexspec)|no|
-|`maxPendingPersists`|See [tuningConfig for indexTask](../ingestion/native_tasks.html#tuningconfig)|no (default = 0 (meaning one persist can be running concurrently with ingestion, and none can be queued up))|
-|`pushTimeout`|See [tuningConfig for indexTask](../ingestion/native_tasks.html#tuningconfig)|no (default = 0)|
+|`maxRowsInMemory`|See [tuningConfig for indexTask](../ingestion/native-batch.md#tuningconfig)|no (default = 1000000)|
+|`maxBytesInMemory`|See [tuningConfig for indexTask](../ingestion/native-batch.md#tuningconfig)|no (1/6 of max JVM memory)|
+|`maxTotalRows`|See [tuningConfig for indexTask](../ingestion/native-batch.md#tuningconfig)|no (default = 20000000)|
+|`indexSpec`|See [IndexSpec](../ingestion/index.md#indexspec)|no|
+|`maxPendingPersists`|See [tuningConfig for indexTask](../ingestion/native-batch.md#tuningconfig)|no (default = 0 (meaning one persist can be running concurrently with ingestion, and none can be queued up))|
+|`pushTimeout`|See [tuningConfig for indexTask](../ingestion/native-batch.md#tuningconfig)|no (default = 0)|
 
 ### Overlord
 
@@ -844,7 +844,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.indexer.runner.type`|Choices "local" or "remote". Indicates whether tasks should be run locally or in a distributed environment. Experimental task runner "httpRemote" is also available which is same as "remote" but uses HTTP to interact with Middle Manaters instead of Zookeeper.|local|
 |`druid.indexer.storage.type`|Choices are "local" or "metadata". Indicates whether incoming tasks should be stored locally (in heap) or in metadata storage. Storing incoming tasks in metadata storage allows for tasks to be resumed if the Overlord should fail.|local|
 |`druid.indexer.storage.recentlyFinishedThreshold`|A duration of time to store task results.|PT24H|
-|`druid.indexer.tasklock.forceTimeChunkLock`|_**Setting this to false is still experimental**_<br/> If set, all tasks are enforced to use time chunk lock. If not set, each task automatically chooses a lock type to use. This configuration can be overwritten by setting `forceTimeChunkLock` in the [task context](../ingestion/locking-and-priority.html#task-context). See [Task Locking & Priority](../ingestion/locking-and-priority.html) for more details about locking in tasks.|true|
+|`druid.indexer.tasklock.forceTimeChunkLock`|_**Setting this to false is still experimental**_<br/> If set, all tasks are enforced to use time chunk lock. If not set, each task automatically chooses a lock type to use. This configuration can be overwritten by setting `forceTimeChunkLock` in the [task context](../ingestion/tasks.md#context). See [Task Locking & Priority](../ingestion/tasks.md#context) for more details about locking in tasks.|true|
 |`druid.indexer.queue.maxSize`|Maximum number of active tasks at one time.|Integer.MAX_VALUE|
 |`druid.indexer.queue.startDelay`|Sleep this long before starting Overlord queue management. This can be useful to give a cluster time to re-orient itself after e.g. a widespread network issue.|PT1M|
 |`druid.indexer.queue.restartDelay`|Sleep this long when Overlord queue management throws an exception before trying again.|PT30S|

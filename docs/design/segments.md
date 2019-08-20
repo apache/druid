@@ -26,8 +26,8 @@ title: "Segments"
 Apache Druid (incubating) stores its index in *segment files*, which are partitioned by
 time. In a basic setup, one segment file is created for each time
 interval, where the time interval is configurable in the
-`segmentGranularity` parameter of the `granularitySpec`, which is
-documented [here](../ingestion/ingestion-spec.html#granularityspec).  For Druid to
+`segmentGranularity` parameter of the
+[`granularitySpec`](../ingestion/index.md#granularityspec).  For Druid to
 operate well under heavy query load, it is important for the segment
 file size to be within the recommended range of 300mb-700mb. If your
 segment files are larger than this range, then consider either

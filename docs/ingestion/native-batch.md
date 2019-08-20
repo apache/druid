@@ -55,7 +55,7 @@ each sub task creates segments individually and reports them to the supervisor t
 If `forceGuaranteedRollup` = true, it's executed in two phases with data shuffle which is similar to [MapReduce](https://en.wikipedia.org/wiki/MapReduce).
 In the first phase, each sub task partitions input data based on `segmentGranularity` (primary partition key) in `granularitySpec`
 and `partitionDimensions` (secondary partition key) in `partitionsSpec`. The partitioned data is served by
-the [middleManager](../design/middlemanager.html) or the [indexer](../development/indexer.html)
+the [middleManager](../design/middlemanager.md) or the [indexer](../design/indexer.md)
 where the first phase tasks ran. In the second phase, each sub task fetches
 partitioned data from middleManagers or indexers and merges them to create the final segments.
 As in the single phase execution, the created segments are reported to the supervisor task to publish at once.
@@ -63,13 +63,13 @@ As in the single phase execution, the created segments are reported to the super
 To use this task, the `firehose` in `ioConfig` should be _splittable_ and `maxNumConcurrentSubTasks` should be set something larger than 1 in `tuningConfig`.
 Otherwise, this task runs sequentially. Here is the list of currently splittable fireshoses.
 
-- [`LocalFirehose`](./firehose.html#localfirehose)
-- [`IngestSegmentFirehose`](./firehose.html#ingestsegmentfirehose)
-- [`HttpFirehose`](./firehose.html#httpfirehose)
-- [`StaticS3Firehose`](../development/extensions-core/s3.html#statics3firehose)
-- [`StaticAzureBlobStoreFirehose`](../development/extensions-contrib/azure.html#staticazureblobstorefirehose)
-- [`StaticGoogleBlobStoreFirehose`](../development/extensions-contrib/google.html#staticgoogleblobstorefirehose)
-- [`StaticCloudFilesFirehose`](../development/extensions-contrib/cloudfiles.html#staticcloudfilesfirehose)
+- [`LocalFirehose`](#local-firehose)
+- [`IngestSegmentFirehose`](#segment-firehose)
+- [`HttpFirehose`](#http-firehose)
+- [`StaticS3Firehose`](../development/extensions-core/s3.html#firehose)
+- [`StaticAzureBlobStoreFirehose`](../development/extensions-contrib/azure.html#firehose)
+- [`StaticGoogleBlobStoreFirehose`](../development/extensions-contrib/google.html#firehose)
+- [`StaticCloudFilesFirehose`](../development/extensions-contrib/cloudfiles.html#firehose)
 
 The splittable firehose is responsible for generating _splits_. The supervisor task generates _worker task specs_ containing a split
 and submits worker tasks using those specs. As a result, the number of worker tasks depends on
@@ -174,7 +174,7 @@ A sample task is shown below:
 
 This field is required.
 
-See [Ingestion Spec DataSchema](../ingestion/ingestion-spec.html#dataschema)
+See [Ingestion Spec DataSchema](../ingestion/index.md#dataschema)
 
 If you specify `intervals` explicitly in your dataSchema's granularitySpec, batch ingestion will lock the full intervals
 specified when it starts up, and you will learn quickly if the specified interval overlaps with locks held by other
@@ -576,7 +576,7 @@ A sample task is shown below:
 
 This field is required.
 
-See [Ingestion Spec DataSchema](../ingestion/ingestion-spec.html#dataschema)
+See the [`dataSchema`](../ingestion/index.md#dataschema) section of the ingestion docs for details.
 
 If you do not specify `intervals` explicitly in your dataSchema's granularitySpec, the Local Index Task will do an extra
 pass over the data to determine the range to lock when it starts up.  If you specify `intervals` explicitly, any rows
@@ -671,10 +671,12 @@ There are several firehoses readily available in Druid, some are meant for examp
 
 For additional firehoses, please see our [extensions list](../development/extensions.md).
 
+<a name="local-firehose"></a>
+
 ### LocalFirehose
 
 This Firehose can be used to read the data from files on local disk, and is mainly intended for proof-of-concept testing, and works with `string` typed parsers.
-This Firehose is _splittable_ and can be used by [native parallel index tasks](./native_tasks.html#parallel-index-task).
+This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md#parallel-task).
 Since each split represents a file in this Firehose, each worker task of `index_parallel` will read a file.
 A sample local Firehose spec is shown below:
 
@@ -692,10 +694,12 @@ A sample local Firehose spec is shown below:
 |filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) for more information.|yes|
 |baseDir|directory to search recursively for files to be ingested. |yes|
 
+<a name="http-firehose"></a>
+
 ### HttpFirehose
 
 This Firehose can be used to read the data from remote sites via HTTP, and works with `string` typed parsers.
-This Firehose is _splittable_ and can be used by [native parallel index tasks](./native_tasks.html#parallel-index-task).
+This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md#parallel-task).
 Since each split represents a file in this Firehose, each worker task of `index_parallel` will read a file.
 A sample HTTP Firehose spec is shown below:
 
@@ -749,10 +753,12 @@ The below configurations can optionally be used for tuning the Firehose performa
 |fetchTimeout|Timeout for fetching an HTTP object.|60000|
 |maxFetchRetry|Maximum retries for fetching an HTTP object.|3|
 
+<a name="segment-firehose"></a>
+
 ### IngestSegmentFirehose
 
 This Firehose can be used to read the data from existing druid segments, potentially using a new schema and changing the name, dimensions, metrics, rollup, etc. of the segment.
-This Firehose is _splittable_ and can be used by [native parallel index tasks](./native_tasks.html#parallel-index-task).
+This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md#parallel-task).
 This firehose will accept any type of parser, but will only utilize the list of dimensions and the timestamp specification.
  A sample ingest Firehose spec is shown below:
 
@@ -773,6 +779,8 @@ This firehose will accept any type of parser, but will only utilize the list of 
 |metrics|The list of metrics to select. If left empty, no metrics are returned. If left null or not defined, all metrics are selected.|no|
 |filter| See [Filters](../querying/filters.html)|no|
 |maxInputSegmentBytesPerTask|When used with the native parallel index task, the maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks). Defaults to 150MB.|no|
+
+<a name="sql-firehose"></a>
 
 ### SqlFirehose
 
@@ -819,6 +827,7 @@ Requires one of the following extensions:
 |type|The type of database to query. Valid values are `mysql` and `postgresql`_||Yes|
 |connectorConfig|Specify the database connection properties via `connectURI`, `user` and `password`||Yes|
 
+<a name="inline-firehose"></a>
 
 ### InlineFirehose
 
@@ -837,6 +846,8 @@ A sample inline Firehose spec is shown below:
 |--------|-----------|---------|
 |type|This should be "inline".|yes|
 |data|Inlined data to ingest.|yes|
+
+<a name="combining-firehose"></a>
 
 ### CombiningFirehose
 

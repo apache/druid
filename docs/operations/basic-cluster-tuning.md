@@ -108,7 +108,7 @@ Having a smaller number of big servers is generally better than having a large n
 
 We recommend using SSDs for storage on the Historicals, as they handle segment data stored on disk.
 
-#### Total Memory Usage
+#### Total memory usage
 
 To estimate total memory usage of the Historical under these guidelines:
 
@@ -119,11 +119,11 @@ The Historical will use any available free system memory (i.e., memory not used 
 
 ### Broker
 
-#### Heap Sizing
+#### Heap sizing
 
 The biggest contributions to heap usage on Brokers are:
 - Partial unmerged query results from Historicals and Tasks
-- The segment timeline: this consists of location information (which Historical/Task is serving a segment) for all currently [available](../design/architecture.md#segment-lifecyle) segments.
+- The segment timeline: this consists of location information (which Historical/Task is serving a segment) for all currently [available](../design/architecture.md#segment-lifecycle) segments.
 - Cached segment metadata: this consists of metadata, such as per-segment schemas, for all currently available segments.
 
 The Broker heap requirements scale based on the number of segments in the cluster, and the total data size of the segments.

@@ -125,9 +125,11 @@ A sample supervisor spec is shown below:
 |Field|Description|Required|
 |--------|-----------|---------|
 |`type`|The supervisor type, this should always be `kafka`.|yes|
-|`dataSchema`|The schema that will be used by the Kafka indexing task during ingestion, see [Ingestion Spec DataSchema](../../ingestion/ingestion-spec.html#dataschema).|yes|
+|`dataSchema`|The schema that will be used by the Kafka indexing task during ingestion, see [`dataSchema`](../../ingestion/index.md#dataschema) for details.|yes|
 |`ioConfig`|A KafkaSupervisorIOConfig to configure the supervisor and indexing tasks, see below.|yes|
 |`tuningConfig`|A KafkaSupervisorTuningConfig to configure the supervisor and indexing tasks, see below.|no|
+
+<a name="tuningconfig"></a>
 
 ### KafkaSupervisorTuningConfig
 
@@ -157,7 +159,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 | `intermediateHandoffPeriod`       | ISO8601 Period | How often the tasks should hand off segments. Handoff will happen either if `maxRowsPerSegment` or `maxTotalRows` is hit or every `intermediateHandoffPeriod`, whichever happens earlier.                                                                                                                                                                                                                                                                                                                                                                                                                                                           | no (default == P2147483647D)                                                                                 |
 | `logParseExceptions`              | Boolean        | If true, log an error message when a parsing exception occurs, containing information about the row where the error occurred.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | no, default == false                                                                                         |
 | `maxParseExceptions`              | Integer        | The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | no, unlimited default                                                                                        |
-| `maxSavedParseExceptions`         | Integer        | When a parse exception occurs, Druid can keep track of the most recent parse exceptions. "maxSavedParseExceptions" limits how many exception instances will be saved. These saved exceptions will be made available after the task finishes in the [task completion report](../../ingestion/reports.html). Overridden if `reportParseExceptions` is set.                                                                                                                                                                                                                                                                                            | no, default == 0                                                                                             |
+| `maxSavedParseExceptions`         | Integer        | When a parse exception occurs, Druid can keep track of the most recent parse exceptions. "maxSavedParseExceptions" limits how many exception instances will be saved. These saved exceptions will be made available after the task finishes in the [task completion report](../../ingestion/tasks.md#reports). Overridden if `reportParseExceptions` is set.                                                                                                                                                                                                                                                                                            | no, default == 0                                                                                             |
 
 #### IndexSpec
 
@@ -265,7 +267,7 @@ state until it is stopped, suspended, or hits a failure threshold and transition
 
 `GET /druid/indexer/v1/supervisor/<supervisorId>/stats` returns a snapshot of the current ingestion row counters for each task being managed by the supervisor, along with moving averages for the row counters.
 
-See [Task Reports: Row Stats](../../ingestion/reports.html#row-stats) for more information.
+See [Task Reports: Row Stats](../../ingestion/tasks.md#row-stats) for more information.
 
 ### Supervisor Health Check
 

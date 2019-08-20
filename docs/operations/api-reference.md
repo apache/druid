@@ -730,7 +730,7 @@ druid.query.segmentMetadata.defaultHistory
 Returns the dimensions of the datasource.
 
 > This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.md) instead
-> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql.md#retrieving-metadata)
+> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql.md#metadata-tables)
 > if you're using SQL.
 
 * `/druid/v2/datasources/{dataSourceName}/metrics`
@@ -738,7 +738,7 @@ Returns the dimensions of the datasource.
 Returns the metrics of the datasource.
 
 > This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.md) instead
-> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql.md#retrieving-metadata)
+> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql.md#metadata-tables)
 > if you're using SQL.
 
 * `/druid/v2/datasources/{dataSourceName}/candidates?intervals={comma-separated-intervals}&numCandidates={numCandidates}`

@@ -43,6 +43,8 @@ To use this Apache Druid (incubating) extension, make sure to [include](../../de
 
 ## Firehose
 
+<a name="firehose"></a>
+
 #### StaticCloudFilesFirehose
 
 This firehose ingests events, similar to the StaticAzureBlobStoreFirehose, but from Rackspace's Cloud Files.
@@ -53,7 +55,7 @@ The storage account is shared with the one used for Racksapce's Cloud Files deep
 
 As with the Azure blobstore, it is assumed to be gzipped if the extension ends in .gz
 
-This firehose is _splittable_ and can be used by [native parallel index tasks](../../ingestion/native_tasks.html#parallel-index-task).
+This firehose is _splittable_ and can be used by [native parallel index tasks](../../ingestion/native-batch.md#parallel-task).
 Since each split represents an object in this firehose, each worker task of `index_parallel` will read an object.
 
 Sample spec:

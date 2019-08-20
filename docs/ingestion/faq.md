@@ -85,7 +85,7 @@ You can use IngestSegmentFirehose with index task to ingest existing druid segme
 See [Firehose](../ingestion/native-batch.md#firehoses) for more details on IngestSegmentFirehose.
 Or, if you use hadoop based ingestion, then you can use "dataSource" input spec to do reindexing.
 
-See the [Update existing data](../ingestion/data-management.md#update-existing-data) section of the data management page for more details.
+See the [Update existing data](../ingestion/data-management.md#update) section of the data management page for more details.
 
 ## How can I change the granularity of existing data in Druid?
 
@@ -95,7 +95,7 @@ To do this use the IngestSegmentFirehose and run an indexer task. The IngestSegm
 Typically the above will be run as a batch job to say everyday feed in a chunk of data and aggregate it.
 Or, if you use hadoop based ingestion, then you can use "dataSource" input spec to do reindexing.
 
-See the [Update existing data](../ingestion/data-management.md#update-existing-data) section of the data management page for more details.
+See the [Update existing data](../ingestion/data-management.md#update) section of the data management page for more details.
 
 ## Real-time ingestion seems to be stuck
 

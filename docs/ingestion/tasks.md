@@ -228,7 +228,7 @@ Once `forceTimeChunkLock` is unset, the task will choose a proper lock type to u
 Please note that segment lock is not always available. The most common use case where time chunk lock is enforced is
 when an overwriting task changes the segment granularity.
 Also, the segment locking is supported by only native indexing tasks and Kafka/Kinesis indexing tasks.
-The Hadoop indexing tasks and realtime indexing tasks (with [Tranquility](./stream-push.html)) don't support it yet.
+The Hadoop indexing tasks and realtime indexing tasks (with [Tranquility](tranquility.md)) don't support it yet.
 
 `forceTimeChunkLock` in the task context is only applied to individual tasks.
 If you want to unset it for all tasks, you would want to set `druid.indexer.tasklock.forceTimeChunkLock` to false in the [overlord configuration](../configuration/index.html#overlord-operations).

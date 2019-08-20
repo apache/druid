@@ -24,7 +24,7 @@ title: "Schema design tips"
 
 ## Druid's data model
 
-For general information, check out the documentation on [Druid's data model](index.md#druid-s-data-model) on the main
+For general information, check out the documentation on [Druid's data model](index.md#data-model) on the main
 ingestion overview page. The rest of this page discusses tips for users coming from other kinds of systems, as well as
 general tips and common practices.
 
@@ -217,7 +217,7 @@ then before indexing it, you should transform it to:
 Druid is capable of flattening JSON, Avro, or Parquet input data.
 Please read about [`flattenSpec`](index.md#flattenspec) for more details.
 
-
+<a name="counting"></a>
 
 ### Counting the number of ingested events
 
