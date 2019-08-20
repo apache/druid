@@ -87,8 +87,8 @@ This table compares the three available options:
 | **External dependencies** | None. | None. | Hadoop cluster (Druid submits Map/Reduce jobs). |
 | **Input locations** | Any [firehose](native-batch.md#firehoses). | Any [firehose](native-batch.md#firehoses). | Any Hadoop FileSystem or Druid datasource. |
 | **File formats** | Text file formats (CSV, TSV, JSON). Support for binary formats is coming in a future release. | Text file formats (CSV, TSV, JSON). Support for binary formats is coming in a future release. | Any Hadoop InputFormat. |
-| **[Rollup modes](#rollup)** | Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig).| Only best-effort. Support for perfect rollup is coming in a future release. | Always perfect. |
-| **Partitioning options** | Hash-based partitioning is supported when `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig). | None. Support for partitioning is coming in a future release. | Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.html#partitioning-specification). |
+| **[Rollup modes](#rollup)** | Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig).| Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig). | Always perfect. |
+| **Partitioning options** | Hash-based partitioning is supported when `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig). | Hash-based partitioning (when `forceGuaranteedRollup` = true). | Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.html#partitioning-specification). |
 
 ## Druid's data model
 
@@ -182,7 +182,7 @@ Tips for maximizing rollup:
 
 - Generally, the fewer dimensions you have, and the lower the cardinality of your dimensions, the better rollup ratios
 you will achieve.
-- Use [sketches](#sketches) to avoid storing high cardinality dimensions, which harm rollup ratios.
+- Use [sketches](schema-design.html#sketches) to avoid storing high cardinality dimensions, which harm rollup ratios.
 - Adjusting `queryGranularity` at ingestion time (for example, using `PT5M` instead of `PT1M`) increases the
 likelihood of two rows in Druid having matching timestamps, and can improve your rollup ratios.
 - It can be beneficial to load the same data into more than one Druid datasource. Some users choose to create a "full"
@@ -262,8 +262,8 @@ The following table shows how each ingestion method handles partitioning:
 
 |Method|How it works|
 |------|------------|
-|[Native batch](native-batch.html)|`index` (non-parallel) tasks partition input files based on the `partitionDimensions` and `forceGuaranteedRollup` tuning configs. `index_parallel` tasks do not currently support user-defined partitioning.|
-|[Hadoop](hadoop.html)|Many options are available through the [partitionsSpec](hadoop.html#partitions-spec) setting.|
+|[Native batch](native-batch.html)|Configured using [`partitionsSpec`](native-batch.html#partitionsspec) inside the `tuningConfig`.|
+|[Hadoop](hadoop.html)|Configured using [`partitionsSpec`](hadoop.html#partitionsspec) inside the `tuningConfig`.|
 |[Kafka indexing service](../development/extensions-core/kafka-ingestion.md)|Partitioning in Druid is guided by how your Kafka topic is partitioned. You can also [reindex](data-management.html#compaction-and-reindexing) to repartition after initial ingestion.|
 |[Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md)|Partitioning in Druid is guided by how your Kinesis stream is sharded. You can also [reindex](data-management.html#compaction-and-reindexing) to repartition after initial ingestion.|
 
@@ -699,7 +699,7 @@ They can also _replace_ the timestamp if you set their "name" to `__time`. In bo
 a millisecond timestamp (number of milliseconds since Jan 1, 1970 at midnight UTC). Transforms are applied _after_ the
 `timestampSpec`.
 
-Druid currently includes one kind of builtin transform, the expression transform. It has the following syntax:
+Druid currently includes one kind of built-in transform, the expression transform. It has the following syntax:
 
 ```
 {

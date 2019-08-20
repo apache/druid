@@ -103,7 +103,7 @@ for reading from external data sources and publishing new Druid segments.
 
 ### Indexer process (optional)
 
-[**MiddleManager**](../design/indexer.md) processes are an alternative to MiddleManagers and Peons. Instead of
+[**Indexer**](../design/indexer.md) processes are an alternative to MiddleManagers and Peons. Instead of
 forking separate JVM processes per-task, the Indexer runs tasks as individual threads within a single JVM process.
 
 The Indexer is designed to be easier to configure and deploy compared to the MiddleManager + Peon system and to

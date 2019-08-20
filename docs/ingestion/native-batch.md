@@ -78,8 +78,6 @@ if one of them fails.
 
 You may want to consider the below things:
 
-- This task does not support [perfect rollup](index.md#best-effort-rollup) because it does not shuffle
-  intermediate data.
 - The number of concurrent tasks run in parallel ingestion is determined by `maxNumConcurrentSubTasks` in the `tuningConfig`.
   The supervisor task checks the number of current running sub tasks and creates more if it's smaller than `maxNumConcurrentSubTasks` no matter how many task slots are currently available.
   This may affect to other ingestion performance. See the below [Capacity Planning](#capacity-planning) section for more details.

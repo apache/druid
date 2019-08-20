@@ -25,7 +25,7 @@ title: "Apache Druid vs Elasticsearch"
 
 We are not experts on search systems, if anything is incorrect about our portrayal, please let us know on the mailing list or via some other means.
 
-Elasticsearch is a search systems based on Apache Lucene. It provides full text search for schema-free documents
+Elasticsearch is a search system based on Apache Lucene. It provides full text search for schema-free documents
 and provides access to raw event level data. Elasticsearch is increasingly adding more support for analytics and aggregations.
 [Some members of the community](https://groups.google.com/forum/#!msg/druid-development/nlpwTHNclj8/sOuWlKOzPpYJ) have pointed out
 the resource requirements for data ingestion and aggregation in Elasticsearch is much higher than those of Druid.

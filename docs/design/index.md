@@ -58,9 +58,9 @@ Druid servers fail, the system will automatically route around the damage until 
 is designed to run 24/7 with no need for planned downtimes for any reason, including configuration changes and software
 updates.
 6. **Cloud-native, fault-tolerant architecture that won't lose data.** Once Druid has ingested your data, a copy is
-stored safely in [deep storage](#deep-storage) (typically cloud storage, HDFS, or a shared filesystem). Your data can be
-recovered from deep storage even if every single Druid server fails. For more limited failures affecting just a few
-Druid servers, replication ensures that queries are still possible while the system recovers.
+stored safely in [deep storage](architecture.html#deep-storage) (typically cloud storage, HDFS, or a shared filesystem).
+Your data can be recovered from deep storage even if every single Druid server fails. For more limited failures affecting
+just a few Druid servers, replication ensures that queries are still possible while the system recovers.
 7. **Indexes for quick filtering.** Druid uses [CONCISE](https://arxiv.org/pdf/1004.0403) or
 [Roaring](https://roaringbitmap.org/) compressed bitmap indexes to create indexes that power fast filtering and
 searching across multiple columns.

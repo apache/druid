@@ -142,6 +142,7 @@ documentation.
 Optimally partitioning and sorting your data can have substantial impact on footprint and performance. For more details,
 see the [Partitioning](index.md#partitioning) section of the ingestion documentation.
 
+<a name="sketches"></a>
 
 ### Sketches for high cardinality columns
 
