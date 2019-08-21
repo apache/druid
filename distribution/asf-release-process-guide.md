@@ -146,7 +146,7 @@ If the dependency requires it, copy any licenses to the `licenses/src` or `licen
 | --- | --- |
 | [generate_license](bin/generate_license.py) | This script is run _automatically_ when building the distribution package to generate a `LICENSE.BINARY` file from `licenses.yaml` which is renamed to `LICENSE` in the binary package. It can also be used to  verify that all dependencies are present and match the versions in `licenses.yaml` (and is run by travis for all PRs so it _should_ be up to date). |
 | [generate-notice-binary](bin/generate-notice-binary.py) | This script is run _automatically_ when building the distribution package, and generates a `NOTICE.BINARY` file by appending the notice content of `licenses.yaml` to the source `NOTICE` file. This script does _not_ currently verify that all notices that need to be are present and correct, this must currently be done manually at release time if not done in the PR that changed a dependency. |
- | [web-console/licenses](web-console/scripts/licenses) | Updates `licenses.yaml` with all Druid of the licenses used by the Druid web-console 'binary'. |
+ | [web-console/licenses](../web-console/scripts/licenses) | Updates `licenses.yaml` with all Druid of the licenses used by the Druid web-console 'binary'. |
 
 ### Additional tools
 
