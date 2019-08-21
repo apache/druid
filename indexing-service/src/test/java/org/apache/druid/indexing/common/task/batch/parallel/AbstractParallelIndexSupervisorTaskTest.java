@@ -152,10 +152,12 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           if (subTask.isReady(toolbox.getTaskActionClient())) {
             return subTask.run(toolbox);
           } else {
+            getTaskStorage().setStatus(TaskStatus.failure(subTask.getId()));
             throw new ISE("task[%s] is not ready", subTask.getId());
           }
         }
         catch (Exception e) {
+          getTaskStorage().setStatus(TaskStatus.failure(subTask.getId(), e.getMessage()));
           throw new RuntimeException(e);
         }
       }));
@@ -167,7 +169,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     {
       final Future<TaskStatus> taskStatusFuture = tasks.get(taskId);
       final Optional<Task> task = getTaskStorage().getTask(taskId);
-      final String groupId = task.isPresent() ? task.orNull().getGroupId() : taskId;
+      final String groupId = task.isPresent() ? task.get().getGroupId() : null;
       if (taskStatusFuture != null) {
         try {
           if (taskStatusFuture.isDone()) {
