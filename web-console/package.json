@@ -37,7 +37,7 @@
     "pretest": "./script/build",
     "test": "npm run tslint && npm run sasslint && jest --silent 2>&1",
     "coverage": "jest --coverage",
-    "coveralls": "jest --coverage --coverageReporters=text-lcov | coveralls",
+    "coveralls": "jest --coverage --coverageReporters=text-lcov | coveralls ..",
     "update-snapshots": "jest -u",
     "tslint": "./node_modules/.bin/tslint -c tslint.json --project tsconfig.json --formatters-dir ./node_modules/awesome-code-style/formatter 'src/**/*.ts?(x)'",
     "tslint-fix": "npm run tslint -- --fix",
