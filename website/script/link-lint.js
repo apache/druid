@@ -30,12 +30,12 @@ function hasAnchor(html, anchor) {
 const issues = [];
 entries.forEach((entry) => {
   const cnt = fs.readFileSync(entry, 'utf-8');
-  const links = cnt.match(/href="([./][^"#]+|)(#[^"]+)?"/g);
+  const links = cnt.match(/href="([^"#]+)?(#[^"]+)?"/g);
   if (!links) return;
 
   links.forEach(link => {
     if (link === `href=""`) return;
-    const match = link.match(/^href="([./][^"#]+|)(#[^"]+)?"$/);
+    const match = link.match(/^href="([^"#]+)?(#[^"]+)?"$/);
     if (!match) throw new Error(`something went wrong for: ${link}`);
 
     const url = match[1];
@@ -43,6 +43,9 @@ entries.forEach((entry) => {
 
     if (url) {
       // Ignore external links
+      if (url.includes('://')) return;
+
+      // Ignore external doc links
       if (url.startsWith('/') && !url.startsWith('/docs/')) return;
 
       // This one will get created externally

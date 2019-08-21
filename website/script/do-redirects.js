@@ -89,7 +89,7 @@ validRedirects.forEach((redirect) => {
 <link rel="canonical" href="${target}">
 <meta http-equiv="refresh" content="0; url=${target}">
 <h1>Redirecting...</h1>
-<a href="{{ page.redirect_target }}">Click here if you are not redirected.</a>
+<a href="${target}">Click here if you are not redirected.</a>
 <script>location="${target}"</script>
 `
   );

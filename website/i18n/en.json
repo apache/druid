@@ -150,7 +150,7 @@
         "title": "Approximate Histogram aggregators"
       },
       "development/extensions-core/avro": {
-        "title": "Avro"
+        "title": "Apache Avro"
       },
       "development/extensions-core/bloom-filter": {
         "title": "Bloom Filter"
