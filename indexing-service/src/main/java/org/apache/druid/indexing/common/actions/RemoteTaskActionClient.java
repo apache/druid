@@ -27,7 +27,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
@@ -71,7 +71,7 @@ public class RemoteTaskActionClient implements TaskActionClient
     while (true) {
       try {
 
-        final FullResponseHolder fullResponseHolder;
+        final StringFullResponseHolder fullResponseHolder;
 
         log.info("Submitting action for task[%s] to overlord: [%s].", task.getId(), taskAction);
 
@@ -82,7 +82,7 @@ public class RemoteTaskActionClient implements TaskActionClient
 
         if (fullResponseHolder.getStatus().getCode() / 100 == 2) {
           final Map<String, Object> responseDict = jsonMapper.readValue(
-              fullResponseHolder.getContent(),
+              fullResponseHolder.getAccumulated(),
               JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
           );
           return jsonMapper.convertValue(responseDict.get("result"), taskAction.getReturnTypeReference());
@@ -91,7 +91,7 @@ public class RemoteTaskActionClient implements TaskActionClient
           throw new IOE(
               "Error with status[%s] and message[%s]. Check overlord logs for details.",
               fullResponseHolder.getStatus(),
-              fullResponseHolder.getContent()
+              fullResponseHolder.getAccumulated()
           );
         }
       }

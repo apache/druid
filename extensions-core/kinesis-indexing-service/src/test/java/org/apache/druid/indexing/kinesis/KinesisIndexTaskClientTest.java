@@ -37,8 +37,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.FullResponseHandler;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
@@ -87,7 +87,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
   private final int numThreads;
   private HttpClient httpClient;
   private TaskInfoProvider taskInfoProvider;
-  private FullResponseHolder responseHolder;
+  private StringFullResponseHolder responseHolder;
   private HttpResponse response;
   private HttpHeaders headers;
   private KinesisIndexTaskClient client;
@@ -108,7 +108,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
   {
     httpClient = createMock(HttpClient.class);
     taskInfoProvider = createMock(TaskInfoProvider.class);
-    responseHolder = createMock(FullResponseHolder.class);
+    responseHolder = createMock(StringFullResponseHolder.class);
     response = createMock(HttpResponse.class);
     headers = createMock(HttpHeaders.class);
 
@@ -186,11 +186,11 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     expectedException.expectMessage("org.apache.druid.java.util.common.IOE: Received status [500] and content []");
 
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.INTERNAL_SERVER_ERROR).times(2);
-    EasyMock.expect(responseHolder.getContent()).andReturn("");
+    EasyMock.expect(responseHolder.getAccumulated()).andReturn("");
     EasyMock.expect(
         httpClient.go(
             EasyMock.anyObject(Request.class),
-            EasyMock.anyObject(FullResponseHandler.class),
+            EasyMock.anyObject(StringFullResponseHandler.class),
             EasyMock.eq(TEST_HTTP_TIMEOUT)
         )
     ).andReturn(
@@ -209,11 +209,11 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     expectedException.expectMessage("Received 400 Bad Request with body:");
 
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.BAD_REQUEST).times(2);
-    EasyMock.expect(responseHolder.getContent()).andReturn("");
+    EasyMock.expect(responseHolder.getAccumulated()).andReturn("");
     EasyMock.expect(
         httpClient.go(
             EasyMock.anyObject(Request.class),
-            EasyMock.anyObject(FullResponseHandler.class),
+            EasyMock.anyObject(StringFullResponseHandler.class),
             EasyMock.eq(TEST_HTTP_TIMEOUT)
         )
     ).andReturn(
@@ -231,14 +231,14 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(3)
             .andReturn(HttpResponseStatus.OK);
     EasyMock.expect(responseHolder.getResponse()).andReturn(response);
-    EasyMock.expect(responseHolder.getContent()).andReturn("").times(2)
+    EasyMock.expect(responseHolder.getAccumulated()).andReturn("").times(2)
             .andReturn("{}");
     EasyMock.expect(response.headers()).andReturn(headers);
     EasyMock.expect(headers.get("X-Druid-Task-Id")).andReturn("a-different-task-id");
     EasyMock.expect(
         httpClient.go(
             EasyMock.anyObject(Request.class),
-            EasyMock.anyObject(FullResponseHandler.class),
+            EasyMock.anyObject(StringFullResponseHandler.class),
             EasyMock.eq(TEST_HTTP_TIMEOUT)
         )
     ).andReturn(
@@ -257,10 +257,10 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
   {
     Capture<Request> captured = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK);
-    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":1, \"1\":10}");
+    EasyMock.expect(responseHolder.getAccumulated()).andReturn("{\"0\":1, \"1\":10}");
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -291,7 +291,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(6)
             .andReturn(HttpResponseStatus.OK).times(1);
-    EasyMock.expect(responseHolder.getContent()).andReturn("").times(4)
+    EasyMock.expect(responseHolder.getAccumulated()).andReturn("").times(4)
             .andReturn("{\"0\":1, \"1\":10}");
     EasyMock.expect(responseHolder.getResponse()).andReturn(response).times(2);
     EasyMock.expect(response.headers()).andReturn(headers).times(2);
@@ -299,7 +299,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
 
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -334,7 +334,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     client = new TestableKinesisIndexTaskClient(httpClient, objectMapper, taskInfoProvider, 2);
 
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).anyTimes();
-    EasyMock.expect(responseHolder.getContent()).andReturn("").anyTimes();
+    EasyMock.expect(responseHolder.getAccumulated()).andReturn("").anyTimes();
     EasyMock.expect(responseHolder.getResponse()).andReturn(response).anyTimes();
     EasyMock.expect(response.headers()).andReturn(headers).anyTimes();
     EasyMock.expect(headers.get("X-Druid-Task-Id")).andReturn(TEST_ID).anyTimes();
@@ -342,7 +342,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(
         httpClient.go(
             EasyMock.anyObject(Request.class),
-            EasyMock.anyObject(FullResponseHandler.class),
+            EasyMock.anyObject(StringFullResponseHandler.class),
             EasyMock.eq(TEST_HTTP_TIMEOUT)
         )
     ).andReturn(Futures.immediateFuture(responseHolder)).anyTimes();
@@ -357,10 +357,10 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
   {
     Capture<Request> captured = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK);
-    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":1, \"1\":10}");
+    EasyMock.expect(responseHolder.getAccumulated()).andReturn("{\"0\":1, \"1\":10}");
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -395,10 +395,10 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getResponse()).andReturn(response);
     EasyMock.expect(response.headers()).andReturn(headers);
     EasyMock.expect(headers.get("X-Druid-Task-Id")).andReturn(null);
-    EasyMock.expect(responseHolder.getContent()).andReturn(String.valueOf(now.getMillis())).anyTimes();
+    EasyMock.expect(responseHolder.getAccumulated()).andReturn(String.valueOf(now.getMillis())).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -426,10 +426,10 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
 
     Capture<Request> captured = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK);
-    EasyMock.expect(responseHolder.getContent()).andReturn(StringUtils.format("\"%s\"", status.toString())).anyTimes();
+    EasyMock.expect(responseHolder.getAccumulated()).andReturn(StringUtils.format("\"%s\"", status.toString())).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -455,10 +455,10 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
   {
     Capture<Request> captured = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).times(2);
-    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":1, \"1\":10}").anyTimes();
+    EasyMock.expect(responseHolder.getAccumulated()).andReturn("{\"0\":1, \"1\":10}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -489,25 +489,25 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     Capture<Request> captured3 = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.ACCEPTED).times(2)
             .andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(responseHolder.getContent()).andReturn("\"PAUSED\"").times(2)
+    EasyMock.expect(responseHolder.getAccumulated()).andReturn("\"PAUSED\"").times(2)
             .andReturn("{\"0\":1, \"1\":10}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
     );
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured2),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
     );
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured3),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -552,7 +552,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -580,7 +580,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -609,7 +609,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -636,7 +636,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -662,7 +662,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -689,7 +689,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -725,7 +725,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -759,10 +759,10 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":\"1\"}").anyTimes();
+    EasyMock.expect(responseHolder.getAccumulated()).andReturn("{\"0\":\"1\"}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -796,10 +796,10 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(responseHolder.getContent()).andReturn("\"READING\"").anyTimes();
+    EasyMock.expect(responseHolder.getAccumulated()).andReturn("\"READING\"").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -834,10 +834,10 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(responseHolder.getContent()).andReturn(String.valueOf(now.getMillis())).anyTimes();
+    EasyMock.expect(responseHolder.getAccumulated()).andReturn(String.valueOf(now.getMillis())).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -871,10 +871,10 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":\"1\"}").anyTimes();
+    EasyMock.expect(responseHolder.getAccumulated()).andReturn("{\"0\":\"1\"}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -908,10 +908,10 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":\"1\"}").anyTimes();
+    EasyMock.expect(responseHolder.getAccumulated()).andReturn("{\"0\":\"1\"}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -948,7 +948,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)
@@ -991,7 +991,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.anyObject(StringFullResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
         Futures.immediateFuture(responseHolder)

@@ -103,6 +103,7 @@ class PartialSegmentMergeParallelIndexTaskRunner
             ingestionSpec,
             getContext(),
             null,
+            null,
             null
         );
       }

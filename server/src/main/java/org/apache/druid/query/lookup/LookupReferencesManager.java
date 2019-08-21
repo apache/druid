@@ -43,7 +43,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -419,7 +419,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   @Nullable
   private Map<String, LookupExtractorFactoryContainer> tryGetLookupListFromCoordinator(String tier) throws Exception
   {
-    final FullResponseHolder response = fetchLookupsForTier(tier);
+    final StringFullResponseHolder response = fetchLookupsForTier(tier);
     if (response.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
       LOG.warn("No lookups found for tier [%s], response [%s]", tier, response);
       return null;
@@ -427,14 +427,14 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
       throw new IOE(
           "Error while fetching lookup code from Coordinator with status[%s] and content[%s]",
           response.getStatus(),
-          response.getContent()
+          response.getAccumulated()
       );
     }
 
     // Older version of getSpecificTier returns a list of lookup names.
     // Lookup loading is performed via snapshot if older version is present.
     // This check is only for backward compatibility and should be removed in a future release
-    if (response.getContent().startsWith("[")) {
+    if (response.getAccumulated().startsWith("[")) {
       LOG.info(
           "Failed to retrieve lookup information from coordinator, " +
           "because coordinator appears to be running on older Druid version. " +
@@ -442,7 +442,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
       );
       return null;
     } else {
-      return jsonMapper.readValue(response.getContent(), LOOKUPS_ALL_REFERENCE);
+      return jsonMapper.readValue(response.getAccumulated(), LOOKUPS_ALL_REFERENCE);
     }
   }
 
@@ -564,7 +564,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     }
   }
 
-  private FullResponseHolder fetchLookupsForTier(String tier) throws InterruptedException, IOException
+  private StringFullResponseHolder fetchLookupsForTier(String tier) throws InterruptedException, IOException
   {
     return druidLeaderClient.go(
         druidLeaderClient.makeRequest(

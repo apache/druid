@@ -22,28 +22,34 @@ package org.apache.druid.java.util.http.client.response;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-public abstract class FullResponseHolder<T>
+import java.nio.charset.Charset;
+
+/**
+ */
+public class StringFullResponseHolder extends FullResponseHolder<String>
 {
-  private final HttpResponseStatus status;
-  private final HttpResponse response;
+  private final StringBuilder builder;
 
-  public FullResponseHolder(HttpResponseStatus status, HttpResponse response)
+  public StringFullResponseHolder(
+      HttpResponseStatus status,
+      HttpResponse response,
+      Charset charset
+  )
   {
-    this.status = status;
-    this.response = response;
+    super(status, response);
+    this.builder = new StringBuilder(response.getContent().toString(charset));
   }
 
-  public HttpResponseStatus getStatus()
+  @Override
+  public StringFullResponseHolder addChunk(String chunk)
   {
-    return status;
+    builder.append(chunk);
+    return this;
   }
 
-  public HttpResponse getResponse()
+  @Override
+  public String getAccumulated()
   {
-    return response;
+    return builder.toString();
   }
-
-  public abstract FullResponseHolder addChunk(T chunk);
-
-  public abstract T getAccumulated();
 }

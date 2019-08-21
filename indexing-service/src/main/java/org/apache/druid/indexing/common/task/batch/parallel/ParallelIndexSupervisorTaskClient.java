@@ -25,7 +25,7 @@ import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
@@ -33,11 +33,9 @@ import org.joda.time.Duration;
 
 import java.io.IOException;
 
-public class ParallelIndexTaskClient extends IndexTaskClient
+public class ParallelIndexSupervisorTaskClient extends IndexTaskClient
 {
-  private final String subtaskId;
-
-  ParallelIndexTaskClient(
+  ParallelIndexSupervisorTaskClient(
       HttpClient httpClient,
       ObjectMapper objectMapper,
       TaskInfoProvider taskInfoProvider,
@@ -47,17 +45,11 @@ public class ParallelIndexTaskClient extends IndexTaskClient
   )
   {
     super(httpClient, objectMapper, taskInfoProvider, httpTimeout, callerId, 1, numRetries);
-    this.subtaskId = callerId;
-  }
-
-  String getSubtaskId()
-  {
-    return subtaskId;
   }
 
   public SegmentIdWithShardSpec allocateSegment(String supervisorTaskId, DateTime timestamp) throws IOException
   {
-    final FullResponseHolder response = submitSmileRequest(
+    final StringFullResponseHolder response = submitSmileRequest(
         supervisorTaskId,
         HttpMethod.POST,
         "segment/allocate",
@@ -70,11 +62,11 @@ public class ParallelIndexTaskClient extends IndexTaskClient
           "task[%s] failed to allocate a new segment identifier with the HTTP code[%d] and content[%s]",
           supervisorTaskId,
           response.getStatus().getCode(),
-          response.getContent()
+          response.getAccumulated()
       );
     } else {
       return deserialize(
-          response.getContent(),
+          response.getAccumulated(),
           new TypeReference<SegmentIdWithShardSpec>()
           {
           }
@@ -85,7 +77,7 @@ public class ParallelIndexTaskClient extends IndexTaskClient
   public void report(String supervisorTaskId, SubTaskReport report)
   {
     try {
-      final FullResponseHolder response = submitSmileRequest(
+      final StringFullResponseHolder response = submitSmileRequest(
           supervisorTaskId,
           HttpMethod.POST,
           "report",

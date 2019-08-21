@@ -25,53 +25,49 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import java.nio.charset.Charset;
 
 /**
+ *
  */
-public class FullResponseHandler implements HttpResponseHandler<FullResponseHolder, FullResponseHolder>
+public class StringFullResponseHandler
+    implements HttpResponseHandler<StringFullResponseHolder, StringFullResponseHolder>
 {
   private final Charset charset;
 
-  public FullResponseHandler(Charset charset)
+  public StringFullResponseHandler(Charset charset)
   {
     this.charset = charset;
   }
 
   @Override
-  public ClientResponse<FullResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
+  public ClientResponse<StringFullResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
-    return ClientResponse.unfinished(
-        new FullResponseHolder(
-            response.getStatus(),
-            response,
-            new StringBuilder(response.getContent().toString(charset))
-        )
-    );
+    return ClientResponse.unfinished(new StringFullResponseHolder(response.getStatus(), response, charset));
   }
 
   @Override
-  public ClientResponse<FullResponseHolder> handleChunk(
-      ClientResponse<FullResponseHolder> response,
+  public ClientResponse<StringFullResponseHolder> handleChunk(
+      ClientResponse<StringFullResponseHolder> response,
       HttpChunk chunk,
       long chunkNum
   )
   {
-    final StringBuilder builder = response.getObj().getBuilder();
+    final StringFullResponseHolder holder = response.getObj();
 
-    if (builder == null) {
+    if (holder == null) {
       return ClientResponse.finished(null);
     }
 
-    builder.append(chunk.getContent().toString(charset));
+    holder.addChunk(chunk.getContent().toString(charset));
     return response;
   }
 
   @Override
-  public ClientResponse<FullResponseHolder> done(ClientResponse<FullResponseHolder> response)
+  public ClientResponse<StringFullResponseHolder> done(ClientResponse<StringFullResponseHolder> response)
   {
     return ClientResponse.finished(response.getObj());
   }
 
   @Override
-  public void exceptionCaught(ClientResponse<FullResponseHolder> clientResponse, Throwable e)
+  public void exceptionCaught(ClientResponse<StringFullResponseHolder> clientResponse, Throwable e)
   {
     // Its safe to Ignore as the ClientResponse returned in handleChunk were unfinished
   }

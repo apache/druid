@@ -130,7 +130,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
 
     Request request = druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/direct");
     request.setContent("hello".getBytes(StandardCharsets.UTF_8));
-    Assert.assertEquals("hello", druidLeaderClient.go(request).getContent());
+    Assert.assertEquals("hello", druidLeaderClient.go(request).getAccumulated());
   }
 
   @Test
@@ -182,7 +182,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
 
     Request request = druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/redirect");
     request.setContent("hello".getBytes(StandardCharsets.UTF_8));
-    Assert.assertEquals("hello", druidLeaderClient.go(request).getContent());
+    Assert.assertEquals("hello", druidLeaderClient.go(request).getAccumulated());
   }
 
   @Test
@@ -216,7 +216,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
 
     Request request = druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/redirect");
     request.setContent("hello".getBytes(StandardCharsets.UTF_8));
-    Assert.assertEquals("hello", druidLeaderClient.go(request).getContent());
+    Assert.assertEquals("hello", druidLeaderClient.go(request).getAccumulated());
   }
 
   @Test

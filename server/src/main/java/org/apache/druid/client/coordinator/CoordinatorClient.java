@@ -26,7 +26,7 @@ import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -60,7 +60,7 @@ public class CoordinatorClient
   public Boolean isHandOffComplete(String dataSource, SegmentDescriptor descriptor)
   {
     try {
-      FullResponseHolder response = druidLeaderClient.go(
+      StringFullResponseHolder response = druidLeaderClient.go(
           druidLeaderClient.makeRequest(
               HttpMethod.GET,
               StringUtils.format(
@@ -81,10 +81,10 @@ public class CoordinatorClient
         throw new ISE(
             "Error while fetching serverView status[%s] content[%s]",
             response.getStatus(),
-            response.getContent()
+            response.getAccumulated()
         );
       }
-      return jsonMapper.readValue(response.getContent(), new TypeReference<Boolean>()
+      return jsonMapper.readValue(response.getAccumulated(), new TypeReference<Boolean>()
       {
       });
     }
@@ -96,7 +96,7 @@ public class CoordinatorClient
   public List<ImmutableSegmentLoadInfo> fetchServerView(String dataSource, Interval interval, boolean incompleteOk)
   {
     try {
-      FullResponseHolder response = druidLeaderClient.go(
+      StringFullResponseHolder response = druidLeaderClient.go(
           druidLeaderClient.makeRequest(
               HttpMethod.GET,
               StringUtils.format(
@@ -112,11 +112,11 @@ public class CoordinatorClient
         throw new ISE(
             "Error while fetching serverView status[%s] content[%s]",
             response.getStatus(),
-            response.getContent()
+            response.getAccumulated()
         );
       }
       return jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<ImmutableSegmentLoadInfo>>()
+          response.getAccumulated(), new TypeReference<List<ImmutableSegmentLoadInfo>>()
           {
           }
       );
@@ -129,7 +129,7 @@ public class CoordinatorClient
   public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
   {
     try {
-      FullResponseHolder response = druidLeaderClient.go(
+      StringFullResponseHolder response = druidLeaderClient.go(
           druidLeaderClient.makeRequest(
               HttpMethod.POST,
               StringUtils.format(
@@ -143,11 +143,11 @@ public class CoordinatorClient
         throw new ISE(
             "Error while fetching database segment data source segments status[%s] content[%s]",
             response.getStatus(),
-            response.getContent()
+            response.getAccumulated()
         );
       }
       return jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<DataSegment>>()
+          response.getAccumulated(), new TypeReference<List<DataSegment>>()
           {
           }
       );
@@ -160,7 +160,7 @@ public class CoordinatorClient
   public DataSegment getDatabaseSegmentDataSourceSegment(String dataSource, String segmentId)
   {
     try {
-      FullResponseHolder response = druidLeaderClient.go(
+      StringFullResponseHolder response = druidLeaderClient.go(
           druidLeaderClient.makeRequest(
               HttpMethod.GET,
               StringUtils.format(
@@ -175,11 +175,11 @@ public class CoordinatorClient
         throw new ISE(
             "Error while fetching database segment data source segment status[%s] content[%s]",
             response.getStatus(),
-            response.getContent()
+            response.getAccumulated()
         );
       }
       return jsonMapper.readValue(
-          response.getContent(), new TypeReference<DataSegment>()
+          response.getAccumulated(), new TypeReference<DataSegment>()
           {
           }
       );

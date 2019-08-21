@@ -17,9 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.security.basic.authentication;
+package org.apache.druid.java.util.http.client.response;
 
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -27,26 +26,25 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BytesFullResponseHolder extends FullResponseHolder
+public class BytesFullResponseHolder extends FullResponseHolder<byte[]>
 {
   private final List<byte[]> chunks;
 
-  public BytesFullResponseHolder(
-      HttpResponseStatus status,
-      HttpResponse response,
-      StringBuilder builder
-  )
+  public BytesFullResponseHolder(HttpResponseStatus status, HttpResponse response)
   {
-    super(status, response, builder);
+    super(status, response);
     this.chunks = new ArrayList<>();
   }
 
-  public void addChunk(byte[] chunk)
+  @Override
+  public BytesFullResponseHolder addChunk(byte[] chunk)
   {
     chunks.add(chunk);
+    return this;
   }
 
-  public byte[] getBytes()
+  @Override
+  public byte[] getAccumulated()
   {
     int size = 0;
     for (byte[] chunk : chunks) {

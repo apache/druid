@@ -31,7 +31,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -44,6 +44,7 @@ import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -82,11 +83,11 @@ public class RemoteTaskActionClientTest
     ));
     responseBody.put("result", expectedLocks);
     String strResult = objectMapper.writeValueAsString(responseBody);
-    FullResponseHolder responseHolder = new FullResponseHolder(
+    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
         HttpResponseStatus.OK,
         EasyMock.createNiceMock(HttpResponse.class),
-        new StringBuilder().append(strResult)
-    );
+        StandardCharsets.UTF_8
+    ).addChunk(strResult);
 
     // set up mocks
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
@@ -114,11 +115,11 @@ public class RemoteTaskActionClientTest
             .andReturn(request);
 
     // return status code 200 and a list with size equals 1
-    FullResponseHolder responseHolder = new FullResponseHolder(
+    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
         HttpResponseStatus.BAD_REQUEST,
         EasyMock.createNiceMock(HttpResponse.class),
-        new StringBuilder().append("testSubmitWithIllegalStatusCode")
-    );
+        StandardCharsets.UTF_8
+    ).addChunk("testSubmitWithIllegalStatusCode");
 
     // set up mocks
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
