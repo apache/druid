@@ -56,7 +56,7 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   @Override
   protected long nullValue()
   {
-    return 0l;
+    return 0L;
   }
 
   @Override
