@@ -85,8 +85,8 @@ matrix:
         # Generate dependency reports and checks they are valid. When running on Travis CI, 2 cores are available
         # (https://docs.travis-ci.com/user/reference/overview/#virtualisation-environment-vs-operating-system).
         - mkdir -p target
-        - docs/_bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
-        - docs/_bin/generate-license.py licenses/APACHE2 licenses.yaml LICENSES.BINARY --dependency-reports target/license-reports
+        - distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
+        - distribution/bin/generate-license.py licenses/APACHE2 licenses.yaml LICENSES.BINARY --dependency-reports target/license-reports
 
     - name: "strict compilation"
       install: skip
