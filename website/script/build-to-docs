@@ -23,9 +23,9 @@ fi
 
 echo "Building to docs for '$1'..."
 
-yarn run compile-scss
+npm run compile-scss
 
-yarn run build | tee ./build-log.txt
+npm run build | tee ./build-log.txt
 
 if grep -q "unresolved links in file" ./build-log.txt; then
   echo "There are unresolved links, please fix";
@@ -48,5 +48,3 @@ cp ./build/ApacheDruid/css/* ../../incubator-druid-website-src/css
 
 mkdir -p ../../incubator-druid-website-src/js
 cp ./build/ApacheDruid/js/* ../../incubator-druid-website-src/js
-
-node script/do-redirects.js ../../incubator-druid-website-src/docs/$1/

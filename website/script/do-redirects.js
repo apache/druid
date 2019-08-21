@@ -16,17 +16,17 @@
  * limitations under the License.
  */
 
-if (process.argv.length !== 3) {
+if (process.argv.length !== 2) {
   console.error(`Incorrect number of arguments`);
-  console.error(`Run as: node do-redirects.js <path-of-docs>`);
+  console.error(`Run as: node do-redirects.js <strict?>`);
   process.exit(1);
 }
 
 const fs = require('fs-extra');
 const path = require('path');
 
-const dst = process.argv[2];
-const strict = process.argv[3];
+const dst = './build/ApacheDruid/docs/';
+const strict = process.argv[2];
 
 function resolveTarget(source, target) {
   return path.resolve(path.dirname('/' + source), target).substr(1);
@@ -83,10 +83,17 @@ validRedirects.forEach((redirect) => {
   let target = redirect.target;
 
   fs.ensureDirSync(path.dirname(dst + source));
-  fs.writeFileSync(dst + source, `---
-layout: redirect_page
-redirect_target: ${target}
----`);
+  fs.writeFileSync(dst + source, `<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Redirecting...</title>
+<link rel="canonical" href="${target}">
+<meta http-equiv="refresh" content="0; url=${target}">
+<h1>Redirecting...</h1>
+<a href="{{ page.redirect_target }}">Click here if you are not redirected.</a>
+<script>location="${target}"</script>
+`
+  );
 });
+
 console.log(`Written ${validRedirects.length} redirects`);
 
