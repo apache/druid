@@ -71,7 +71,7 @@ export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHisto
 
   render(): JSX.Element | null {
     const { downloadFilename, endpoint } = this.props;
-    const { data, loading } = this.state;
+    const { data, loading, error } = this.state;
     if (loading) return <Loader />;
     if (!data) return null;
 
@@ -82,7 +82,9 @@ export class ShowHistory extends React.PureComponent<ShowHistoryProps, ShowHisto
         title={pastSupervisor.version}
         panel={
           <ShowValue
-            jsonValue={JSON.stringify(pastSupervisor.spec, undefined, 2)}
+            jsonValue={
+              pastSupervisor.spec ? JSON.stringify(pastSupervisor.spec, undefined, 2) : error
+            }
             downloadFilename={`version-${pastSupervisor.version}-${downloadFilename}`}
             endpoint={endpoint}
           />

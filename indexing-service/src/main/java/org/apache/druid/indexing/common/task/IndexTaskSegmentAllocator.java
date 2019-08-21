@@ -26,7 +26,7 @@ import org.joda.time.Interval;
 /**
  * Segment allocator interface for {@link IndexTask}. It has 3 different modes for allocating segments.
  */
-interface IndexTaskSegmentAllocator extends SegmentAllocator
+public interface IndexTaskSegmentAllocator extends SegmentAllocator
 {
   /**
    * SequenceName is the key to create the segmentId. If previousSegmentId is given, {@link SegmentAllocator} allocates

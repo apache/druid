@@ -56,23 +56,12 @@ exports[`query plan dialog matches snapshot 1`] = `
           class="bp3-dialog-body"
         >
           <div
-            class="bp3-tabs bp3-vertical tab-area"
+            class="center-message bp3-input"
           >
             <div
-              class="bp3-tab-list"
-              role="tablist"
+              class="center-message-inner"
             >
-              <div
-                class="bp3-tab-indicator-wrapper"
-                style="display: none;"
-              >
-                <div
-                  class="bp3-tab-indicator"
-                />
-              </div>
-              <div
-                class="bp3-flex-expander"
-              />
+              The query history is empty.
             </div>
           </div>
         </div>
@@ -90,16 +79,6 @@ exports[`query plan dialog matches snapshot 1`] = `
                 class="bp3-button-text"
               >
                 Close
-              </span>
-            </button>
-            <button
-              class="bp3-button bp3-intent-primary"
-              type="button"
-            >
-              <span
-                class="bp3-button-text"
-              >
-                Open
               </span>
             </button>
           </div>

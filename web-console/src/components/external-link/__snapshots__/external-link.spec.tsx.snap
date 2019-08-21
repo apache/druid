@@ -3,6 +3,7 @@
 exports[`external link matches snapshot 1`] = `
 <a
   href="http://test/"
+  rel="noopener noreferrer"
   target="_blank"
 >
   <div>

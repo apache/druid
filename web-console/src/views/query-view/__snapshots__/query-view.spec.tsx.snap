@@ -10,6 +10,7 @@ exports[`sql view matches snapshot 1`] = `
     addToGroupBy={[Function]}
     clear={[Function]}
     columnMetadataLoading={true}
+    currentFilters={[Function]}
     defaultSchema="druid"
     filterByRow={[Function]}
     hasGroupBy={[Function]}
@@ -32,6 +33,7 @@ exports[`sql view matches snapshot 1`] = `
       className="control-pane"
     >
       <QueryInput
+        currentSchema="druid"
         onQueryStringChange={[Function]}
         queryString="test"
         runeMode={false}
@@ -49,6 +51,8 @@ exports[`sql view matches snapshot 1`] = `
           queryContext={Object {}}
           runeMode={false}
           setAutoRun={[Function]}
+          setWrapQuery={[Function]}
+          wrapQuery={true}
         />
       </div>
     </div>

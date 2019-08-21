@@ -20,7 +20,7 @@
 
 const fs = require('fs-extra');
 
-const readfile = '../docs/content/querying/sql.md';
+const readfile = '../docs/querying/sql.md';
 const writefile = 'lib/sql-function-doc.ts';
 
 const readDoc = async () => {
