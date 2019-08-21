@@ -1,0 +1,52 @@
+<!DOCTYPE HTML>
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
+<html>
+  <head>
+    <title>Druid Coordinator Console</title>
+    <link rel="shortcut icon" href="/favicon.png">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="Description" content="Druid Coordinator Console Page" />
+
+    <style type="text/css">@import "css/style.css";</style>
+    <style type="text/css">@import "css/demo_table.css";</style>
+
+    <script type="text/javascript" src="js/underscore-1.2.2.js"></script>
+    <script type="text/javascript" src="js/jquery-1.11.0.js"></script>
+    <script type="text/javascript" src="js/jquery.dataTables-1.8.2.js"></script>
+    <script type="text/javascript" src="js/druidTable-0.0.1.js"></script>
+    <script type="text/javascript" src="js/init-0.0.2.js"></script>
+  </head>
+
+  <body>
+    <div class="container">
+
+      <div class="heading">Cluster Servers</div>
+      <div id="avg_server_metric"></div>
+      <div class="loading">Loading server data... this may take a few minutes</div>
+      <table id="servers"></table>
+
+      <div class="heading">Cluster Segments</div>
+      <div id="coordinator"></div>
+      <div class="loading">Loading segment data... this may take a few minutes</div>
+      <table id="segments"></table>
+    </div>
+  </body>
+</html>

@@ -60,7 +60,7 @@
     "core-js": "^3.2.1",
     "d3": "^5.10.1",
     "d3-array": "^2.3.1",
-    "druid-console": "^0.0.3",
+    "druid-console": "0.0.2",
     "druid-query-toolkit": "^0.3.21",
     "file-saver": "^2.0.2",
     "has-own-prop": "^2.0.0",

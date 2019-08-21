@@ -1,0 +1,66 @@
+<!DOCTYPE HTML>
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
+<html>
+<head>
+  <title>Druid Coordinator Console</title>
+  <link rel="shortcut icon" href="/favicon.png">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta name="Description" content="Druid Coordinator Console Page"/>
+
+  <style type="text/css">@import "css/style.css";</style>
+  <style type="text/css">@import "css/demo_table.css";</style>
+  <style type="text/css">@import "css/index.css";</style>
+
+  <script type="text/javascript" src="js/underscore-1.2.2.js"></script>
+  <script type="text/javascript" src="js/jquery-1.11.0.js"></script>
+  <script type="text/javascript" src="js/jquery.dataTables-1.8.2.js"></script>
+  <script type="text/javascript" src="js/druidTable-0.0.1.js"></script>
+  <script type="text/javascript" src="js/tablehelper-0.0.2.js"></script>
+  <script type="text/javascript" src="js/handlers-0.0.2.js"></script>
+</head>
+
+<body>
+<div class="container">
+
+  <div class="heading">Select View</div>
+  <a href="cluster.html">Full Cluster View</a> or
+  <select id="select_type">
+    <option value="servers">Servers</option>
+    <option value="segments">Segments</option>
+    <option value="datasources">DataSources</option>
+  </select>
+
+  <select id="select_view">
+    <option value="table">Table</option>
+    <option value="list">List</option>
+    <option value="raw">Raw JSON</option>
+  </select>
+  <button type="button" id="view_button">Submit</button>
+
+  <div class="heading">Selected Data</div>
+  <div class="loading">Loading segment data... this may take a few minutes</div>
+  <div id="selected_data"></div>
+  <div id="table_wrapper">
+    <table id="result_table"></table>
+  </div>
+</div>
+</body>
+</html>
