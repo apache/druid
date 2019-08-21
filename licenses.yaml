@@ -395,7 +395,7 @@ libraries:
 notices:
   - commons-cli: |
       Apache Commons CLI
-      Copyright 2001-2009 The Apache Software Foundation
+      Copyright 2001-2015 The Apache Software Foundation
 
 ---
 
@@ -524,7 +524,7 @@ libraries:
 notices:
   - commons-collections4: |
       Apache Commons Collections
-      Copyright 2001-2015 The Apache Software Foundation
+      Copyright 2001-2018 The Apache Software Foundation
 
 ---
 
@@ -572,10 +572,7 @@ libraries:
 notices:
   - commons-lang3: |
       Apache Commons Lang
-      Copyright 2001-2017 The Apache Software Foundation
-
-      This product includes software from the Spring Framework,
-      under the Apache License 2.0 (see: StringUtils.containsWhitespace())
+      Copyright 2001-2018 The Apache Software Foundation
 
 ---
 
@@ -1239,7 +1236,10 @@ notice: |
   =========================================================================
 
   Apache Derby
-  Copyright 2004-2014 The Apache Software Foundation
+  Copyright 2004-2018 The Apache Software Foundation
+
+  This product includes software developed by
+  The Apache Software Foundation (http://www.apache.org/).
 
 
   =========================================================================
@@ -1261,15 +1261,13 @@ notice: |
   =========================================================================
 
 
-  The JDBC apis for small devices and JDBC3 (under java/stubs/jsr169 and
-  java/stubs/jdbc3) were produced by trimming sources supplied by the
-  Apache Harmony project. In addition, the Harmony SerialBlob and
-  SerialClob implementations are used. The following notice covers the Harmony sources:
+  The portion of the functionTests under 'nist' was originally
+  developed by the National Institute of Standards and Technology (NIST),
+  an agency of the United States Department of Commerce, and adapted by
+  International Business Machines Corporation in accordance with the NIST
+  Software Acknowledgment and Redistribution document at
+  http://www.itl.nist.gov/div897/ctg/sql_form.htm
 
-  Portions of Harmony were originally developed by
-  Intel Corporation and are licensed to the Apache Software
-  Foundation under the "Software Grant and Corporate Contribution
-  License Agreement", informally known as the "Intel Harmony CLA".
 
 
   =========================================================================
@@ -1308,6 +1306,7 @@ notice: |
     III. License Summary
     - Apache License 2.0
     - BSD License
+
 
 ---
 
