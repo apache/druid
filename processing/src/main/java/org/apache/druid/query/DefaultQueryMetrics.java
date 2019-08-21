@@ -19,7 +19,6 @@
 
 package org.apache.druid.query;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.bitmap.BitmapFactory;
@@ -64,7 +63,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     }
   }
 
-  protected void setDimension(String dimension, String value)
+  protected void setDimension(String dimension, Object value)
   {
     checkModifiedFromOwnerThread();
     builder.setDimension(dimension, value);
@@ -131,15 +130,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void context(QueryType query)
   {
-    try {
-      setDimension(
-          "context",
-          jsonMapper.writeValueAsString(query.getContext() == null ? ImmutableMap.of() : query.getContext())
-      );
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
+    setDimension("context", query.getContext() == null ? ImmutableMap.of() : query.getContext());
   }
 
   @Override
