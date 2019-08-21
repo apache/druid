@@ -615,7 +615,7 @@ Announce the release to all the lists, announce@apache.org, general@incubator.ap
 
 Additionally, announce it to the Druid official ASF Slack channel, https://druid.apache.org/community/join-slack.
 
-** Be sure to include the Apache incubation disclaimer. **
+**Be sure to include the Apache incubation disclaimer.**
 
 ##### subject
 
