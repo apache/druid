@@ -219,4 +219,7 @@ kafka-console-consumer --zookeeper localhost --topic metrics_pb
 ```
 
 It should print messages like this
-> millisecondsGETR"2017-04-06T03:23:56Z*2002/list:request/latencyBwww1.example.com
+
+```
+millisecondsGETR"2017-04-06T03:23:56Z*2002/list:request/latencyBwww1.example.com
+```
