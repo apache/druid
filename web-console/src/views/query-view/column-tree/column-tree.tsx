@@ -114,10 +114,11 @@ ORDER BY "Count" DESC`,
 
 export interface ColumnTreeProps {
   columnMetadataLoading: boolean;
-  columnMetadata?: ColumnMetadata[];
+  columnMetadata?: readonly ColumnMetadata[];
   onQueryStringChange: (queryString: string, run: boolean) => void;
   defaultSchema?: string;
   defaultTable?: string;
+  currentFilters: () => string[];
   addFunctionToGroupBy: (
     functionName: string,
     spacing: string[],
@@ -137,13 +138,13 @@ export interface ColumnTreeProps {
   filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
   hasGroupBy: () => boolean;
   queryAst: () => SqlQuery | undefined;
-  clear: () => void;
+  clear: (column: string, preferablyRun: boolean) => void;
 }
 
 export interface ColumnTreeState {
-  prevColumnMetadata?: ColumnMetadata[];
-  prevGroupByStatus?: boolean;
+  prevColumnMetadata?: readonly ColumnMetadata[];
   columnTree?: ITreeNode[];
+  currentSchemaSubtree?: ITreeNode[];
   selectedTreeIndex: number;
   expandedNode: number;
 }
@@ -263,6 +264,16 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 queryAst={props.queryAst()}
                               />
                             )}
+                            {props.currentFilters() &&
+                              props.currentFilters().includes(columnData.COLUMN_NAME) && (
+                                <MenuItem
+                                  icon={IconNames.FILTER_REMOVE}
+                                  text={`Remove filter`}
+                                  onClick={() => {
+                                    props.clear(columnData.COLUMN_NAME, true);
+                                  }}
+                                />
+                              )}
                             <MenuItem
                               icon={IconNames.CLIPBOARD}
                               text={`Copy: ${columnData.COLUMN_NAME}`}
@@ -306,12 +317,21 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         }
       }
 
+      if (!columnTree) return null;
+      const currentSchemaSubtree =
+        columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
+      if (!currentSchemaSubtree) return null;
+
+      if (expandedNode > -1) {
+        currentSchemaSubtree[expandedNode].isExpanded = true;
+      }
+
       return {
         prevColumnMetadata: columnMetadata,
         columnTree,
         selectedTreeIndex,
         expandedNode,
-        prevGroupByStatus: props.hasGroupBy,
+        currentSchemaSubtree,
       };
     }
     return null;
@@ -366,6 +386,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
 
   render(): JSX.Element | null {
     const { columnMetadataLoading } = this.props;
+    const { currentSchemaSubtree } = this.state;
+
     if (columnMetadataLoading) {
       return (
         <div className="column-tree">
@@ -374,15 +396,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       );
     }
 
-    const { columnTree, selectedTreeIndex, expandedNode } = this.state;
-    if (!columnTree) return null;
-    const currentSchemaSubtree =
-      columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
     if (!currentSchemaSubtree) return null;
 
-    if (expandedNode > -1) {
-      currentSchemaSubtree[expandedNode].isExpanded = true;
-    }
     return (
       <div className="column-tree">
         {this.renderSchemaSelector()}
@@ -412,6 +427,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   bounceState() {
     const { columnTree } = this.state;
     if (!columnTree) return;
-    this.setState({ columnTree: columnTree.slice() });
+    this.setState(prevState => ({
+      columnTree: prevState.columnTree ? prevState.columnTree.slice() : undefined,
+    }));
   }
 }

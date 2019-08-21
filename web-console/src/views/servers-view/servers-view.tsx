@@ -677,7 +677,11 @@ ORDER BY "rank" DESC, "server" DESC`;
           {this.renderBulkServersActions()}
           <TableColumnSelector
             columns={serverTableColumns}
-            onChange={column => this.setState({ hiddenColumns: hiddenColumns.toggle(column) })}
+            onChange={column =>
+              this.setState(prevState => ({
+                hiddenColumns: prevState.hiddenColumns.toggle(column),
+              }))
+            }
             tableColumnsHidden={hiddenColumns.storedArray}
           />
         </ViewControlBar>

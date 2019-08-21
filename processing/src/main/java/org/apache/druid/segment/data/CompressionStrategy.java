@@ -31,6 +31,7 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.CompressedPools;
 
 import java.io.IOException;
@@ -105,6 +106,8 @@ public enum CompressionStrategy
       throw new UnsupportedOperationException("NONE compression strategy shouldn't use any compressor");
     }
   };
+  private static final Logger LOG = new Logger(CompressionStrategy.class);
+
   public static final CompressionStrategy DEFAULT_COMPRESSION_STRATEGY = LZ4;
 
   final byte id;
@@ -309,6 +312,10 @@ public enum CompressionStrategy
     private static final LZ4Compressor defaultCompressor = new LZ4Compressor();
     private static final net.jpountz.lz4.LZ4Compressor lz4High = LZ4Factory.fastestInstance().highCompressor();
 
+    static {
+      logLZ4State();
+    }
+
     @Override
     ByteBuffer allocateInBuffer(int inputSize, Closer closer)
     {
@@ -334,6 +341,38 @@ public enum CompressionStrategy
       in.position(position);
       out.flip();
       return out;
+    }
+  }
+
+  /**
+   * Logs info relating to whether LZ4 is using native or pure Java implementations
+   */
+  private static void logLZ4State()
+  {
+    LOG.info("java.library.path: " + System.getProperty("java.library.path"));
+    LZ4Factory fastestInstance = LZ4Factory.fastestInstance();
+    try {
+      //noinspection ObjectEquality
+      if (fastestInstance == LZ4Factory.nativeInstance()) {
+        LOG.info("LZ4 compression is using native instance.");
+      }
+    }
+    catch (Throwable t) {
+      // getting an exception means we're not using the native instance
+    }
+    try {
+      //noinspection ObjectEquality
+      if (fastestInstance == LZ4Factory.unsafeInstance()) {
+        LOG.info("LZ4 compression is using unsafe instance.");
+      }
+    }
+    catch (Throwable t) {
+      // getting an exception means we're not using the unsafe instance
+    }
+
+    //noinspection ObjectEquality
+    if (fastestInstance == LZ4Factory.safeInstance()) {
+      LOG.info("LZ4 compression is using safe instance.");
     }
   }
 }

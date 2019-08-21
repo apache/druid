@@ -51,8 +51,8 @@ export interface RunButtonProps {
   setWrapQuery: (wrapQuery: boolean) => void;
   queryContext: QueryContext;
   onQueryContextChange: (newQueryContext: QueryContext) => void;
-  onRun: () => void;
-  onExplain: () => void;
+  onRun: (() => void) | undefined;
+  onExplain: (() => void) | undefined;
   onEditContext: () => void;
   onHistory: () => void;
 }
@@ -61,9 +61,6 @@ export interface RunButtonProps {
 export class RunButton extends React.PureComponent<RunButtonProps> {
   constructor(props: RunButtonProps, context: any) {
     super(props, context);
-    this.state = {
-      wrapQuery: true,
-    };
   }
 
   public renderHotkeys() {
@@ -114,7 +111,7 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
         />
         {!runeMode && (
           <>
-            <MenuItem icon={IconNames.CLEAN} text="Explain" onClick={onExplain} />
+            {onExplain && <MenuItem icon={IconNames.CLEAN} text="Explain" onClick={onExplain} />}
             <MenuItem icon={IconNames.HISTORY} text="History" onClick={onHistory} />
             <MenuCheckbox
               checked={wrapQuery}
@@ -160,17 +157,17 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
 
   render(): JSX.Element {
     const { runeMode, onRun, wrapQuery } = this.props;
+    const runButtonText = runeMode ? 'Rune' : wrapQuery ? 'Run with limit' : 'Run as is';
 
     return (
       <ButtonGroup className="run-button">
-        <Tooltip content="Control + Enter" hoverOpenDelay={900}>
-          <Button
-            icon={IconNames.CARET_RIGHT}
-            onClick={this.handleRun}
-            text={runeMode ? 'Rune' : wrapQuery ? 'Run with limit' : 'Run as is'}
-            disabled={!onRun}
-          />
-        </Tooltip>
+        {onRun ? (
+          <Tooltip content="Control + Enter" hoverOpenDelay={900}>
+            <Button icon={IconNames.CARET_RIGHT} onClick={this.handleRun} text={runButtonText} />
+          </Tooltip>
+        ) : (
+          <Button icon={IconNames.CARET_RIGHT} text={runButtonText} disabled />
+        )}
         <Popover position={Position.BOTTOM_LEFT} content={this.renderExtraMenu()}>
           <Button icon={IconNames.MORE} />
         </Popover>

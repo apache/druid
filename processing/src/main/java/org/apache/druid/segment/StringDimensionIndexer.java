@@ -101,6 +101,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       }
     }
 
+    @Nullable
     public String getValue(int id)
     {
       lock.readLock().lock();

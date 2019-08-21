@@ -2907,19 +2907,13 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
 
-    final Map<String, String> fakeCheckpoints = Collections.emptyMap();
     supervisor.moveTaskGroupToPendingCompletion(0);
     supervisor.checkpoint(
         0,
         id1.getIOConfig().getBaseSequenceName(),
         new KinesisDataSourceMetadata(
             new SeekableStreamStartSequenceNumbers<>(stream, checkpoints.get(0), checkpoints.get(0).keySet())
-        ),
-        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(
-            stream,
-            fakeCheckpoints,
-            ImmutableSet.of()
-        ))
+        )
     );
 
     while (supervisor.getNoticesQueueSize() > 0) {
@@ -3044,16 +3038,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.checkpoint(
         0,
         id1.getIOConfig().getBaseSequenceName(),
-        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(
-            stream,
-            Collections.emptyMap(),
-            ImmutableSet.of()
-        )),
-        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(
-            stream,
-            Collections.emptyMap(),
-            ImmutableSet.of()
-        ))
+        new KinesisDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(stream, Collections.emptyMap(), ImmutableSet.of())
+        )
     );
 
     while (supervisor.getNoticesQueueSize() > 0) {
@@ -3164,21 +3151,12 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisor.runInternal();
 
-    final TreeMap<Integer, Map<String, String>> newCheckpoints = new TreeMap<>();
-    newCheckpoints.put(0, ImmutableMap.of(shardId1, "10"));
     supervisor.checkpoint(
         null,
         id1.getIOConfig().getBaseSequenceName(),
-        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(
-            stream,
-            checkpoints.get(0),
-            ImmutableSet.of()
-        )),
-        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(
-            stream,
-            newCheckpoints.get(0),
-            ImmutableSet.of()
-        ))
+        new KinesisDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(stream, checkpoints.get(0), ImmutableSet.of())
+        )
     );
 
     while (supervisor.getNoticesQueueSize() > 0) {
