@@ -19,7 +19,6 @@
 const process = require('process');
 const path = require('path');
 const postcssPresetEnv = require('postcss-preset-env');
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 const ALWAYS_BABEL = false;
 
@@ -97,10 +96,10 @@ module.exports = env => {
           ],
         },
         {
-          test: (ALWAYS_BABEL || mode === 'production') ? /\.m?js$/ : /^xxx$/,
+          test: ALWAYS_BABEL || mode === 'production' ? /\.m?js$/ : /^xxx$/,
           use: {
-            loader: 'babel-loader'
-          }
+            loader: 'babel-loader',
+          },
         },
         {
           test: /\.s?css$/,
@@ -124,7 +123,7 @@ module.exports = env => {
       ],
     },
     performance: {
-      hints: false
+      hints: false,
     },
     plugins: [
       // new BundleAnalyzerPlugin()
