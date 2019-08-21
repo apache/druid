@@ -15,5 +15,7 @@ target
 *.DS_Store
 _site
 dependency-reduced-pom.xml
+LICENSE.BINARY
+NOTICE.BINARY
 README.BINARY
 README

@@ -724,17 +724,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 task.getDataSource(),
                 ioConfig.getTaskGroupId(),
                 task.getIOConfig().getBaseSequenceName(),
+                null,
                 createDataSourceMetadata(
                     new SeekableStreamStartSequenceNumbers<>(
                         stream,
                         sequenceToCheckpoint.getStartOffsets(),
                         sequenceToCheckpoint.getExclusiveStartPartitions()
-                    )
-                ),
-                createDataSourceMetadata(
-                    new SeekableStreamEndSequenceNumbers<>(
-                        stream,
-                        currOffsets
                     )
                 )
             );
@@ -1167,7 +1162,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     // Actually do the add.
     sequences.add(sequenceMetadata);
   }
-  
+
   private SequenceMetadata<PartitionIdType, SequenceOffsetType> getLastSequenceMetadata()
   {
     Preconditions.checkState(!sequences.isEmpty(), "Empty sequences");
