@@ -33,6 +33,8 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.easymock.EasyMock;
+import org.jboss.netty.buffer.BigEndianHeapChannelBuffer;
+import org.jboss.netty.buffer.EmptyChannelBuffer;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -83,9 +85,12 @@ public class RemoteTaskActionClientTest
     ));
     responseBody.put("result", expectedLocks);
     String strResult = objectMapper.writeValueAsString(responseBody);
+    final HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
+    EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.replay(response);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
         HttpResponseStatus.OK,
-        EasyMock.createNiceMock(HttpResponse.class),
+        response,
         StandardCharsets.UTF_8
     ).addChunk(strResult);
 
@@ -115,9 +120,12 @@ public class RemoteTaskActionClientTest
             .andReturn(request);
 
     // return status code 200 and a list with size equals 1
+    final HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
+    EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.replay(response);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
         HttpResponseStatus.BAD_REQUEST,
-        EasyMock.createNiceMock(HttpResponse.class),
+        response,
         StandardCharsets.UTF_8
     ).addChunk("testSubmitWithIllegalStatusCode");
 
