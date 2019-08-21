@@ -56,7 +56,7 @@ const validRedirects = redirects.filter((redirect, i) => {
     let targetHtml;
     try {
       targetHtml = fs.readFileSync(dst + resolvedTarget, 'utf-8');
-    } catch {
+    } catch (e) {
       issues.push(`On line ${lineNumber} target ${resolvedTarget} does not exist`);
       valid = false;
     }

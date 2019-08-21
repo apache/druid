@@ -56,7 +56,7 @@ entries.forEach((entry) => {
       let targetHtml;
       try {
         targetHtml = fs.readFileSync(target, 'utf-8');
-      } catch {
+      } catch (e) {
         issues.push(`Could not find '${url}' linked from '${entry}'`);
         return;
       }
