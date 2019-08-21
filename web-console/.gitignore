@@ -7,8 +7,10 @@ lib/*.css
 coverage/
 
 coordinator-console/
+old-console/
 pages/
 index.html
+console.html
 
 lib/sql-function-doc.ts
 
