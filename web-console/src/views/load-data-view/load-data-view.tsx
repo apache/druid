@@ -266,7 +266,6 @@ export interface LoadDataViewState {
   parserQueryState: QueryState<HeaderAndRows>;
 
   // for flatten
-  flattenQueryState: QueryState<HeaderAndRows>;
   selectedFlattenFieldIndex: number;
   selectedFlattenField?: FlattenField;
 
@@ -328,7 +327,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       parserQueryState: QueryState.INIT,
 
       // for flatten
-      flattenQueryState: QueryState.INIT,
       selectedFlattenFieldIndex: -1,
 
       // for timestamp

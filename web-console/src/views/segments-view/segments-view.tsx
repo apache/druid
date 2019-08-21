@@ -97,7 +97,6 @@ export interface SegmentsViewState {
   terminateSegmentId?: string;
   terminateDatasourceId?: string;
   hiddenColumns: LocalStorageBackedArray<string>;
-  loaded: boolean;
   groupByInterval: boolean;
 
   // table state
@@ -157,7 +156,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       hiddenColumns: new LocalStorageBackedArray<string>(
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
       ),
-      loaded: false,
       groupByInterval: false,
 
       // Table state
@@ -696,7 +694,11 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             {this.renderBulkSegmentsActions()}
             <TableColumnSelector
               columns={noSqlMode ? tableColumnsNoSql : tableColumns}
-              onChange={column => this.setState({ hiddenColumns: hiddenColumns.toggle(column) })}
+              onChange={column =>
+                this.setState(prevState => ({
+                  hiddenColumns: prevState.hiddenColumns.toggle(column),
+                }))
+              }
               tableColumnsHidden={hiddenColumns.storedArray}
             />
           </ViewControlBar>
