@@ -18,7 +18,7 @@
 
 set -e
 
-echo "Copying coordinator console in..."
+echo "Copying legacy consoles in..."
 cp -r ./node_modules/druid-console/coordinator-console .
 cp -r ./node_modules/druid-console/pages .
 cp ./node_modules/druid-console/index.html .

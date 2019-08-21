@@ -1554,20 +1554,6 @@ export function getPartitionRelatedTuningSpecFormFields(
           ),
         },
         {
-          name: 'partitionDimensions',
-          type: 'string-array',
-          defined: (t: TuningConfig) => Boolean(t.forceGuaranteedRollup),
-          info: (
-            <>
-              <p>Does not currently work with parallel ingestion</p>
-              <p>
-                The dimensions to partition on. Leave blank to select all dimensions. Only used with
-                forceGuaranteedRollup = true, will be ignored otherwise.
-              </p>
-            </>
-          ),
-        },
-        {
           name: 'numShards', // This is mandatory if index_parallel and forceGuaranteedRollup
           type: 'number',
           defined: (t: TuningConfig) => Boolean(t.forceGuaranteedRollup),
@@ -1583,16 +1569,31 @@ export function getPartitionRelatedTuningSpecFormFields(
           ),
         },
         {
+          name: 'partitionDimensions',
+          type: 'string-array',
+          defined: (t: TuningConfig) => Boolean(t.forceGuaranteedRollup),
+          info: (
+            <>
+              <p>Does not currently work with parallel ingestion</p>
+              <p>
+                The dimensions to partition on. Leave blank to select all dimensions. Only used with
+                forceGuaranteedRollup = true, will be ignored otherwise.
+              </p>
+            </>
+          ),
+        },
+        {
           name: 'maxRowsPerSegment',
           type: 'number',
           defaultValue: 5000000,
-          defined: (t: TuningConfig) => t.numShards == null, // Can not be set if numShards is specified
+          defined: (t: TuningConfig) => !t.forceGuaranteedRollup && t.numShards == null, // Can not be set if numShards is specified
           info: <>Determines how many rows are in each segment.</>,
         },
         {
           name: 'maxTotalRows',
           type: 'number',
           defaultValue: 20000000,
+          defined: (t: TuningConfig) => !t.forceGuaranteedRollup,
           info: <>Total number of rows in segments waiting for being pushed.</>,
         },
       ];
