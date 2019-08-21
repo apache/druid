@@ -42,6 +42,7 @@ This PR has:
    - [ ] using the [concurrency checklist](https://github.com/apache/incubator-druid/blob/master/dev/code-review/concurrency.md) (Remove this item if the PR doesn't have any relation to concurrency.)
 - [ ] added documentation for new or modified features or behaviors.
 - [ ] added Javadocs for most classes and all non-trivial methods. Linked related entities via Javadoc links.
+- [ ] added or updated version, license, or notice information in [licenses.yaml](https://github.com/apache/incubator-druid/blob/master/licenses.yaml)
 - [ ] added comments explaining the "why" and the intent of the code wherever would not be obvious for an unfamiliar reader.
 - [ ] added unit tests or modified existing tests to cover new code paths.
 - [ ] added integration tests.
