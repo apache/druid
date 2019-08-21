@@ -78,12 +78,20 @@ public abstract class GuiceRunnable implements Runnable
       final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
       final StartupLoggingConfig startupLoggingConfig = injector.getInstance(StartupLoggingConfig.class);
 
+      Long directSizeBytes = null;
+      try {
+        directSizeBytes = JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
+      }
+      catch (UnsupportedOperationException ignore) {
+        // querying direct memory is not supported
+      }
+
       log.info(
-          "Starting up with processors[%,d], memory[%,d], maxMemory[%,d], directMemory[%,d].",
+          "Starting up with processors[%,d], memory[%,d], maxMemory[%,d]%s.",
           JvmUtils.getRuntimeInfo().getAvailableProcessors(),
           JvmUtils.getRuntimeInfo().getTotalHeapSizeBytes(),
           JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(),
-          JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes()
+          directSizeBytes != null ? String.format(", directMemory[%,d]", directSizeBytes) : ""
       );
 
       if (startupLoggingConfig.isLogProperties()) {
