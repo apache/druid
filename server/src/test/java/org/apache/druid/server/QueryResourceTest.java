@@ -131,7 +131,7 @@ public class QueryResourceTest
         new QueryLifecycleFactory(
             warehouse,
             testSegmentWalker,
-            new DefaultGenericQueryMetricsFactory(jsonMapper),
+            new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
@@ -142,7 +142,7 @@ public class QueryResourceTest
         queryManager,
         new AuthConfig(),
         null,
-        new DefaultGenericQueryMetricsFactory(jsonMapper)
+        new DefaultGenericQueryMetricsFactory()
     );
   }
 
@@ -353,7 +353,7 @@ public class QueryResourceTest
         new QueryLifecycleFactory(
             warehouse,
             testSegmentWalker,
-            new DefaultGenericQueryMetricsFactory(jsonMapper),
+            new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
@@ -364,7 +364,7 @@ public class QueryResourceTest
         queryManager,
         new AuthConfig(),
         authMapper,
-        new DefaultGenericQueryMetricsFactory(jsonMapper)
+        new DefaultGenericQueryMetricsFactory()
     );
 
 
@@ -467,7 +467,7 @@ public class QueryResourceTest
         new QueryLifecycleFactory(
             warehouse,
             testSegmentWalker,
-            new DefaultGenericQueryMetricsFactory(jsonMapper),
+            new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
@@ -478,7 +478,7 @@ public class QueryResourceTest
         queryManager,
         new AuthConfig(),
         authMapper,
-        new DefaultGenericQueryMetricsFactory(jsonMapper)
+        new DefaultGenericQueryMetricsFactory()
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -589,7 +589,7 @@ public class QueryResourceTest
         new QueryLifecycleFactory(
             warehouse,
             testSegmentWalker,
-            new DefaultGenericQueryMetricsFactory(jsonMapper),
+            new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
@@ -600,7 +600,7 @@ public class QueryResourceTest
         queryManager,
         new AuthConfig(),
         authMapper,
-        new DefaultGenericQueryMetricsFactory(jsonMapper)
+        new DefaultGenericQueryMetricsFactory()
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","

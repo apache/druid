@@ -32,7 +32,6 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.lookup.LookupExtractionFn;
-import org.apache.druid.segment.TestHelper;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -53,7 +52,7 @@ public class DefaultGroupByQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultGroupByQueryMetrics queryMetrics = new DefaultGroupByQueryMetrics(TestHelper.makeJsonMapper());
+    DefaultGroupByQueryMetrics queryMetrics = new DefaultGroupByQueryMetrics();
     GroupByQuery.Builder builder = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
@@ -104,7 +103,7 @@ public class DefaultGroupByQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultGroupByQueryMetrics queryMetrics = new DefaultGroupByQueryMetrics(TestHelper.makeJsonMapper());
+    DefaultGroupByQueryMetrics queryMetrics = new DefaultGroupByQueryMetrics();
     DefaultQueryMetricsTest.testQueryMetricsDefaultMetricNamesAndUnits(cachingEmitter, serviceEmitter, queryMetrics);
   }
 }

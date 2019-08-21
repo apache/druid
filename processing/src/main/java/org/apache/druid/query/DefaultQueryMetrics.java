@@ -19,7 +19,6 @@
 
 package org.apache.druid.query;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.StringUtils;
@@ -40,17 +39,11 @@ import java.util.concurrent.TimeUnit;
  */
 public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMetrics<QueryType>
 {
-  protected final ObjectMapper jsonMapper;
   protected final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
   protected final Map<String, Number> metrics = new HashMap<>();
 
   /** Non final to give subclasses ability to reassign it. */
   protected Thread ownerThread = Thread.currentThread();
-
-  public DefaultQueryMetrics(ObjectMapper jsonMapper)
-  {
-    this.jsonMapper = jsonMapper;
-  }
 
   protected void checkModifiedFromOwnerThread()
   {
