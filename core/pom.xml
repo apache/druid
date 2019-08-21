@@ -344,12 +344,10 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <systemProperties>
-            <property>
-              <name>java.library.path</name>
-              <value>${project.build.directory}/hyperic-sigar-${sigar.base.version}/sigar-bin/lib/</value>
-            </property>
-          </systemProperties>
+          <argLine>
+            @{jacocoArgLine}
+            -Djava.library.path=${project.build.directory}/hyperic-sigar-${sigar.base.version}/sigar-bin/lib/
+          </argLine>
         </configuration>
       </plugin>
     </plugins>
