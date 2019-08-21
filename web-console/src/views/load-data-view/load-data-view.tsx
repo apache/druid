@@ -2693,6 +2693,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'ioConfig.appendToExisting',
                 label: 'Append to existing',
                 type: 'boolean',
+                defined: spec => !deepGet(spec, 'tuningConfig.forceGuaranteedRollup'),
                 info: (
                   <>
                     Creates segments as additional shards of the latest version, effectively
