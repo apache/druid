@@ -26,7 +26,7 @@ if (process.argv.length !== 3) {
 var version = process.argv[2];
 
 try {
-  const results = replace.sync({
+  replace.sync({
     files: './build/ApacheDruid/docs/**/*.html',
     from: /\/docs\//g,
     to: '/docs/' + version + '/',
