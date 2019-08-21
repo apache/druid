@@ -199,7 +199,6 @@ public class OverlordResourceTest
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
-                "groupId_1",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_1"),
                 "allow",
@@ -207,7 +206,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_2",
-                "groupId_2",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_2"),
                 "allow",
@@ -215,7 +213,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_3",
-                "groupId_3",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_3"),
                 "deny",
@@ -223,7 +220,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_4",
-                "groupId_4",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_4"),
                 "deny",
@@ -270,7 +266,6 @@ public class OverlordResourceTest
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
-                "groupId_1",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_1"),
                 "deny",
@@ -278,7 +273,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_2",
-                "groupId_2",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_2"),
                 "allow",
@@ -286,7 +280,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_3",
-                "groupId_3",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_3"),
                 "allow",
@@ -327,7 +320,6 @@ public class OverlordResourceTest
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
-                "groupId_1",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_1"),
                 "deny",
@@ -335,7 +327,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_2",
-                "groupId_2",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_2"),
                 "allow",
@@ -369,7 +360,6 @@ public class OverlordResourceTest
         ImmutableList.of(
             new TaskInfo(
                 "id_5",
-                "groupId_5",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_5"),
                 "deny",
@@ -377,7 +367,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_6",
-                "groupId_6",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_6"),
                 "allow",
@@ -385,7 +374,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_7",
-                "groupId_7",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_7"),
                 "allow",
@@ -398,7 +386,6 @@ public class OverlordResourceTest
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
-                "groupId_1",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_1"),
                 "allow",
@@ -406,7 +393,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_2",
-                "groupId_2",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_2"),
                 "allow",
@@ -414,7 +400,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_3",
-                "groupId_3",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_3"),
                 "deny",
@@ -422,7 +407,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_4",
-                "groupId_4",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_4"),
                 "deny",
@@ -474,7 +458,6 @@ public class OverlordResourceTest
             ImmutableList.of(
                 new TaskInfo(
                     "id_5",
-                    "groupId_5",
                     DateTime.now(ISOChronology.getInstanceUTC()),
                     TaskStatus.success("id_5"),
                     "allow",
@@ -482,7 +465,6 @@ public class OverlordResourceTest
                 ),
                 new TaskInfo(
                     "id_6",
-                    "groupId_6",
                     DateTime.now(ISOChronology.getInstanceUTC()),
                     TaskStatus.success("id_6"),
                     "allow",
@@ -490,7 +472,6 @@ public class OverlordResourceTest
                 ),
                 new TaskInfo(
                     "id_7",
-                    "groupId_7",
                     DateTime.now(ISOChronology.getInstanceUTC()),
                     TaskStatus.success("id_7"),
                     "allow",
@@ -503,7 +484,6 @@ public class OverlordResourceTest
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
-                "groupId_1",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_1"),
                 "allow",
@@ -511,7 +491,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_2",
-                "groupId_2",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_1"),
                 "allow",
@@ -519,7 +498,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_3",
-                "groupId_3",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_1"),
                 "allow",
@@ -527,7 +505,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_4",
-                "groupId_4",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_4"),
                 "allow",
@@ -578,7 +555,6 @@ public class OverlordResourceTest
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
-                "groupId_1",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_1"),
                 "allow",
@@ -586,7 +562,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_2",
-                "groupId_2",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_2"),
                 "allow",
@@ -594,7 +569,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_3",
-                "groupId_3",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_3"),
                 "deny",
@@ -602,7 +576,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_4",
-                "groupId_4",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_4"),
                 "deny",
@@ -647,7 +620,6 @@ public class OverlordResourceTest
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
-                "groupId_1",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_1"),
                 "allow",
@@ -655,7 +627,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_2",
-                "groupId_2",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_2"),
                 "allow",
@@ -663,7 +634,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_3",
-                "groupId_3",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_3"),
                 "allow",
@@ -671,7 +641,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_4",
-                "groupId_4",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_4"),
                 "deny",
@@ -724,7 +693,6 @@ public class OverlordResourceTest
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
-                "groupId_1",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_1"),
                 "deny",
@@ -732,7 +700,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_2",
-                "groupId_2",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_2"),
                 "allow",
@@ -740,7 +707,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_3",
-                "groupId_3",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_3"),
                 "allow",
@@ -748,7 +714,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_4",
-                "groupId_4",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_4"),
                 "deny",
@@ -785,7 +750,6 @@ public class OverlordResourceTest
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
-                "groupId_1",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_1"),
                 "allow",
@@ -793,7 +757,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_2",
-                "groupId_2",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_2"),
                 "deny",
@@ -801,7 +764,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_3",
-                "groupId_3",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_3"),
                 "allow",
@@ -836,7 +798,6 @@ public class OverlordResourceTest
             ImmutableList.of(
                 new TaskInfo(
                     "id_1",
-                    "groupId_1",
                     DateTime.now(ISOChronology.getInstanceUTC()),
                     TaskStatus.success("id_1"),
                     "deny",
@@ -844,7 +805,6 @@ public class OverlordResourceTest
                 ),
                 new TaskInfo(
                     "id_2",
-                    "groupId_2",
                     DateTime.now(ISOChronology.getInstanceUTC()),
                     TaskStatus.success("id_2"),
                     "allow",
@@ -852,7 +812,6 @@ public class OverlordResourceTest
                 ),
                 new TaskInfo(
                     "id_3",
-                    "groupId_3",
                     DateTime.now(ISOChronology.getInstanceUTC()),
                     TaskStatus.success("id_3"),
                     "allow",
@@ -886,7 +845,6 @@ public class OverlordResourceTest
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
-                "groupId_1",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_1"),
                 "allow",
@@ -894,7 +852,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_2",
-                "groupId_2",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_2"),
                 "deny",
@@ -902,7 +859,6 @@ public class OverlordResourceTest
             ),
             new TaskInfo(
                 "id_3",
-                "groupId_3",
                 DateTime.now(ISOChronology.getInstanceUTC()),
                 TaskStatus.success("id_3"),
                 "allow",
@@ -1047,7 +1003,6 @@ public class OverlordResourceTest
     EasyMock.expect(taskStorageQueryAdapter.getTaskInfo("mytask"))
             .andReturn(new TaskInfo(
                 task.getId(),
-                task.getGroupId(),
                 DateTimes.of("2018-01-01"),
                 status,
                 task.getDataSource(),
@@ -1154,7 +1109,6 @@ public class OverlordResourceTest
     EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("datasource")).andStubReturn(ImmutableList.of(
         new TaskInfo(
             "id_1",
-            "groupId_1",
             DateTime.now(ISOChronology.getInstanceUTC()),
             TaskStatus.success("id_1"),
             "datasource",
@@ -1162,7 +1116,6 @@ public class OverlordResourceTest
         ),
         new TaskInfo(
             "id_2",
-            "groupId_2",
             DateTime.now(ISOChronology.getInstanceUTC()),
             TaskStatus.success("id_2"),
             "datasource",

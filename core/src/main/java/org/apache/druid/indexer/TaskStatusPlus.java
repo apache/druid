@@ -78,7 +78,7 @@ public class TaskStatusPlus
   @JsonCreator
   public TaskStatusPlus(
       @JsonProperty("id") String id,
-      @JsonProperty("groupId") String groupId,
+      @JsonProperty("groupId") @Nullable String groupId,
       @JsonProperty("type") @Nullable String type, // nullable for backward compatibility
       @JsonProperty("createdTime") DateTime createdTime,
       @JsonProperty("queueInsertionTime") DateTime queueInsertionTime,

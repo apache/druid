@@ -264,7 +264,7 @@ public class OverlordResource
               workItem.getTaskId(),
               new TaskStatusPlus(
                   taskInfo.getId(),
-                  taskInfo.getGroupId(),
+                  taskInfo.getTask() == null ? null : taskInfo.getTask().getGroupId(),
                   taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
                   taskInfo.getCreatedTime(),
                   // Would be nice to include the real queue insertion time, but the
@@ -286,7 +286,7 @@ public class OverlordResource
             taskid,
             new TaskStatusPlus(
                 taskInfo.getId(),
-                taskInfo.getGroupId(),
+                taskInfo.getTask() == null ? null : taskInfo.getTask().getGroupId(),
                 taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
                 taskInfo.getCreatedTime(),
                 // Would be nice to include the real queue insertion time, but the
@@ -593,7 +593,7 @@ public class OverlordResource
 
     Function<TaskInfo<Task, TaskStatus>, TaskStatusPlus> completeTaskTransformFunc = taskInfo -> new TaskStatusPlus(
         taskInfo.getId(),
-        taskInfo.getGroupId(),
+        taskInfo.getTask() == null ? null : taskInfo.getTask().getGroupId(),
         taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
         taskInfo.getCreatedTime(),
         // Would be nice to include the real queue insertion time, but the
@@ -630,7 +630,7 @@ public class OverlordResource
         allActiveTasks.add(
             new AnyTask(
                 task.getId(),
-                task.getGroupId(),
+                task.getTask() == null ? null : task.getTask().getGroupId(),
                 task.getTask() == null ? null : task.getTask().getType(),
                 SettableFuture.create(),
                 task.getDataSource(),

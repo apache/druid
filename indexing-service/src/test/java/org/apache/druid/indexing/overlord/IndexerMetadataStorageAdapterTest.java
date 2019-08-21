@@ -63,7 +63,6 @@ public class IndexerMetadataStorageAdapterTest
     final List<TaskInfo<Task, TaskStatus>> taskInfos = ImmutableList.of(
         new TaskInfo<>(
             "id1",
-            "group_id1",
             DateTimes.of("2017-12-01"),
             TaskStatus.running("id1"),
             "dataSource",
@@ -71,7 +70,6 @@ public class IndexerMetadataStorageAdapterTest
         ),
         new TaskInfo<>(
             "id1",
-            "group_id1",
             DateTimes.of("2017-12-02"),
             TaskStatus.running("id2"),
             "dataSource",
@@ -97,7 +95,6 @@ public class IndexerMetadataStorageAdapterTest
     final ImmutableList<TaskInfo<Task, TaskStatus>> taskInfos = ImmutableList.of(
         new TaskInfo<>(
             "id1",
-            "group_id1",
             DateTimes.of("2017-11-01"),
             TaskStatus.running("id1"),
             "dataSource",
@@ -105,7 +102,6 @@ public class IndexerMetadataStorageAdapterTest
         ),
         new TaskInfo<>(
             "id1",
-            "group_id1",
             DateTimes.of("2017-12-02"),
             TaskStatus.running("id2"),
             "dataSource",

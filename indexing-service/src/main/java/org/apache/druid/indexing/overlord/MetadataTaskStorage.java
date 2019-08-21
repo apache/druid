@@ -183,15 +183,7 @@ public class MetadataTaskStorage implements TaskStorage
   @Override
   public TaskInfo<Task, TaskStatus> getTaskInfo(String taskId)
   {
-    final TaskInfo<Task, TaskStatus> taskInfo = handler.getTaskInfo(taskId);
-    return new TaskInfo<>(
-        taskInfo.getId(),
-        taskInfo.getTask() == null ? null : taskInfo.getTask().getGroupId(),
-        taskInfo.getCreatedTime(),
-        taskInfo.getStatus(),
-        taskInfo.getDataSource(),
-        taskInfo.getTask()
-    );
+    return handler.getTaskInfo(taskId);
   }
 
   @Override
@@ -209,19 +201,9 @@ public class MetadataTaskStorage implements TaskStorage
   @Override
   public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
   {
-    final List<TaskInfo<Task, TaskStatus>> taskInfoImmutableList = ImmutableList.copyOf(
+    return ImmutableList.copyOf(
         handler.getActiveTaskInfo(dataSource)
     );
-    return taskInfoImmutableList.stream()
-                                .map(t -> new TaskInfo<>(
-                                    t.getId(),
-                                    t.getTask() == null ? null : t.getTask().getGroupId(),
-                                    t.getCreatedTime(),
-                                    t.getStatus(),
-                                    t.getDataSource(),
-                                    t.getTask()
-                                ))
-                                .collect(Collectors.toList());
   }
 
   @Override
@@ -231,7 +213,7 @@ public class MetadataTaskStorage implements TaskStorage
       @Nullable String datasource
   )
   {
-    final List<TaskInfo<Task, TaskStatus>> taskInfoImmutableList = ImmutableList.copyOf(
+    return ImmutableList.copyOf(
         handler.getCompletedTaskInfo(
             DateTimes.nowUtc()
                      .minus(durationBeforeNow == null ? config.getRecentlyFinishedThreshold() : durationBeforeNow),
@@ -239,16 +221,6 @@ public class MetadataTaskStorage implements TaskStorage
             datasource
         )
     );
-    return taskInfoImmutableList.stream()
-                                .map(t -> new TaskInfo<>(
-                                    t.getId(),
-                                    t.getTask() == null ? null : t.getTask().getGroupId(),
-                                    t.getCreatedTime(),
-                                    t.getStatus(),
-                                    t.getDataSource(),
-                                    t.getTask()
-                                ))
-                                .collect(Collectors.toList());
   }
 
   @Override

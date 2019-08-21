@@ -35,12 +35,9 @@ public class TaskInfo<EntryType, StatusType>
   private final String dataSource;
   @Nullable
   private final EntryType task;
-  @Nullable
-  private final String groupId;
 
   public TaskInfo(
       String id,
-      String groupId,
       DateTime createdTime,
       StatusType status,
       String dataSource,
@@ -52,18 +49,11 @@ public class TaskInfo<EntryType, StatusType>
     this.status = Preconditions.checkNotNull(status, "status");
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.task = task;
-    this.groupId = groupId;
   }
 
   public String getId()
   {
     return id;
-  }
-
-  @Nullable
-  public String getGroupId()
-  {
-    return groupId;
   }
 
   public DateTime getCreatedTime()

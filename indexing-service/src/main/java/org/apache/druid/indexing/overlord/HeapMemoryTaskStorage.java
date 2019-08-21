@@ -161,7 +161,6 @@ public class HeapMemoryTaskStorage implements TaskStorage
       if (taskStuff != null) {
         return new TaskInfo<>(
             taskStuff.getTask().getId(),
-            taskStuff.getTask().getGroupId(),
             taskStuff.getCreatedDate(),
             taskStuff.getStatus(),
             taskStuff.getDataSource(),
@@ -206,7 +205,6 @@ public class HeapMemoryTaskStorage implements TaskStorage
         if (taskStuff.getStatus().isRunnable()) {
           TaskInfo t = new TaskInfo<>(
               taskStuff.getTask().getId(),
-              taskStuff.getTask().getGroupId(),
               taskStuff.getCreatedDate(),
               taskStuff.getStatus(),
               taskStuff.getDataSource(),
@@ -271,7 +269,6 @@ public class HeapMemoryTaskStorage implements TaskStorage
         String id = taskStuff.getTask().getId();
         TaskInfo t = new TaskInfo<>(
             id,
-            taskStuff.getTask().getGroupId(),
             taskStuff.getCreatedDate(),
             taskStuff.getStatus(),
             taskStuff.getDataSource(),
@@ -302,7 +299,6 @@ public class HeapMemoryTaskStorage implements TaskStorage
         String id = taskStuff.getTask().getId();
         TaskInfo t = new TaskInfo<>(
             id,
-            taskStuff.getTask().getGroupId(),
             taskStuff.getCreatedDate(),
             taskStuff.getStatus(),
             taskStuff.getDataSource(),

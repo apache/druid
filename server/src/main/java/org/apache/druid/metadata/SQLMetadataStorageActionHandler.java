@@ -372,7 +372,6 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       }
       taskInfo = new TaskInfo<>(
           resultSet.getString("id"),
-          null,
           DateTimes.of(resultSet.getString("created_date")),
           status,
           resultSet.getString("datasource"),
