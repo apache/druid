@@ -60,6 +60,7 @@ exports[`overload dynamic config matches snapshot 1`] = `
              
             <a
               href="https://druid.apache.org/docs/latest/configuration/index.html#overlord-dynamic-configuration"
+              rel="noopener noreferrer"
               target="_blank"
             >
               documentation

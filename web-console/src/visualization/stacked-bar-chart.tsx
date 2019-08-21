@@ -67,9 +67,10 @@ export class StackedBarChart extends React.Component<StackedBarChartProps, Stack
 
   componentWillReceiveProps(nextProps: StackedBarChartProps): void {
     if (nextProps !== this.props) {
+      const { margin } = this.props;
       this.setState({
-        width: nextProps.svgWidth - this.props.margin.left - this.props.margin.right,
-        height: nextProps.svgHeight - this.props.margin.bottom - this.props.margin.top,
+        width: nextProps.svgWidth - margin.left - margin.right,
+        height: nextProps.svgHeight - margin.bottom - margin.top,
       });
     }
   }

@@ -143,7 +143,6 @@ export interface ColumnTreeProps {
 
 export interface ColumnTreeState {
   prevColumnMetadata?: readonly ColumnMetadata[];
-  prevGroupByStatus?: boolean;
   columnTree?: ITreeNode[];
   currentSchemaSubtree?: ITreeNode[];
   selectedTreeIndex: number;
@@ -333,7 +332,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         selectedTreeIndex,
         expandedNode,
         currentSchemaSubtree,
-        prevGroupByStatus: props.hasGroupBy,
       };
     }
     return null;
@@ -430,6 +428,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   bounceState() {
     const { columnTree } = this.state;
     if (!columnTree) return;
-    this.setState({ columnTree: columnTree.slice() });
+    this.setState(prevState => ({
+      columnTree: prevState.columnTree ? prevState.columnTree.slice() : undefined,
+    }));
   }
 }
