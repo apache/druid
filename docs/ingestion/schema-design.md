@@ -124,7 +124,7 @@ Tips for modeling log data in Druid:
 
 - If you don't know ahead of time what columns you'll want to ingest, use an empty dimensions list to trigger
 [automatic detection of dimension columns](#schema-less-dimensions).
-- If you have nested data, flatten it using [Druid flattenSpecs](flatten-json.html).
+- If you have nested data, flatten it using a [`flattenSpec`](index.md#flattenspec).
 - Consider enabling [rollup](#rollup) if you have mainly analytical use cases for your log data. This will
 mean you lose the ability to retrieve individual events from Druid, but you potentially gain substantial compression and
 query performance boosts.
@@ -192,7 +192,7 @@ Druid is able to rapidly identify and retrieve data corresponding to time ranges
 
 If your data has more than one timestamp, you can ingest the others as secondary timestamps. The best way to do this
 is to ingest them as [long-typed dimensions](index.md#dimensionsspec) in milliseconds format.
-If necessary, you can get them into this format using [transform specs](transform-spec.html) and
+If necessary, you can get them into this format using a [`transformSpec`](index.md#transformspec) and
 [expressions](../misc/math-expr.md) like `timestamp_parse`, which returns millisecond timestamps.
 
 At query time, you can query secondary timestamps with [SQL time functions](../querying/sql.html#time-functions)

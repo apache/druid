@@ -88,7 +88,7 @@ This table compares the three available options:
 | **Input locations** | Any [firehose](native-batch.md#firehoses). | Any [firehose](native-batch.md#firehoses). | Any Hadoop FileSystem or Druid datasource. |
 | **File formats** | Text file formats (CSV, TSV, JSON). Support for binary formats is coming in a future release. | Text file formats (CSV, TSV, JSON). Support for binary formats is coming in a future release. | Any Hadoop InputFormat. |
 | **[Rollup modes](#rollup)** | Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig).| Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig). | Always perfect. |
-| **Partitioning options** | Hash-based partitioning is supported when `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig). | Hash-based partitioning (when `forceGuaranteedRollup` = true). | Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.html#partitioning-specification). |
+| **Partitioning options** | Hash-based partitioning is supported when `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig). | Hash-based partitioning (when `forceGuaranteedRollup` = true). | Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.md#partitionsspec). |
 
 <a name="data-model"></a>
 
@@ -282,8 +282,8 @@ The following table shows how each ingestion method handles partitioning:
 ## Ingestion specs
 
 No matter what ingestion method you use, data is loaded into Druid using either one-time [tasks](tasks.html) or
-ongoing [supervisors](supervisors.html). In any case, part of the task or supervisor definition is an
-_ingestion spec_.
+ongoing "supervisors" (which run and supervised a set of tasks over time). In any case, part of the task or supervisor
+definition is an _ingestion spec_.
 
 Ingestion specs consists of three main components:
 

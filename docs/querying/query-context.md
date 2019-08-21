@@ -58,7 +58,7 @@ In addition, some query types offer context parameters specific to that query ty
 
 ### GroupBy queries
 
-See [GroupBy query context](groupbyquery.html#query-context).
+See [GroupBy query context](groupbyquery.md#advanced-configurations).
 
 ### Vectorizable queries
 

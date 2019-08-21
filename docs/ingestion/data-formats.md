@@ -86,7 +86,7 @@ All forms of Druid ingestion require some form of schema object. The format of t
   }
 ```
 
-If you have nested JSON, [Druid can automatically flatten it for you](flatten-json.html).
+If you have nested JSON, [Druid can automatically flatten it for you](index.md#flattenspec).
 
 ### CSV
 
