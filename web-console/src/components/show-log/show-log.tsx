@@ -21,6 +21,7 @@ import axios from 'axios';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
+import { Loader } from '../../components';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
 import { QueryManager } from '../../utils';
@@ -109,7 +110,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
 
   render(): JSX.Element {
     const { endpoint, downloadFilename, status } = this.props;
-    const { logValue, error } = this.state;
+    const { logValue, error, loading } = this.state;
 
     return (
       <div className="show-log">
@@ -144,12 +145,16 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
           </ButtonGroup>
         </div>
         <div className="main-area">
-          <textarea
-            className="bp3-input"
-            readOnly
-            value={logValue ? logValue : error}
-            ref={this.log}
-          />
+          {loading ? (
+            <Loader loadingText="" loading />
+          ) : (
+            <textarea
+              className="bp3-input"
+              readOnly
+              value={logValue ? logValue : error}
+              ref={this.log}
+            />
+          )}
         </div>
       </div>
     );

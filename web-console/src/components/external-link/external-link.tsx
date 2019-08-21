@@ -27,7 +27,7 @@ export class ExternalLink extends React.PureComponent<ExternalLinkProps> {
     const { href, children } = this.props;
 
     return (
-      <a href={href} target="_blank">
+      <a href={href} target="_blank" rel="noopener noreferrer">
         {children}
       </a>
     );
