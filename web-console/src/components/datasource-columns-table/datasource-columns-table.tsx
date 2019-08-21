@@ -105,7 +105,7 @@ export class DatasourceColumnsTable extends React.PureComponent<
     return (
       <div className="datasource-columns-table">
         <div className="main-area">
-          {loading ? <Loader loadingText="" loading /> : !loading && this.renderTable()}
+          {loading ? <Loader loadingText="" loading /> : this.renderTable()}
         </div>
       </div>
     );

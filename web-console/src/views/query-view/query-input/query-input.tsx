@@ -36,7 +36,7 @@ export interface QueryInputProps {
   queryString: string;
   onQueryStringChange: (newQueryString: string) => void;
   runeMode: boolean;
-  columnMetadata?: ColumnMetadata[];
+  columnMetadata?: readonly ColumnMetadata[];
   currentSchema?: string;
   currentTable?: string;
 }
@@ -46,7 +46,7 @@ export interface QueryInputState {
   // Since this component will grown and shrink dynamically we will measure its height and then set it.
   editorHeight: number;
   completions: any[];
-  prevColumnMetadata?: ColumnMetadata[];
+  prevColumnMetadata?: readonly ColumnMetadata[];
   prevCurrentTable?: string;
   prevCurrentSchema?: string;
 }

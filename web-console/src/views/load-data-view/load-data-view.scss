@@ -150,6 +150,7 @@
     position: relative;
     margin: 0 5px;
 
+    .inline-data,
     .raw-lines {
       position: absolute;
       width: 100%;
@@ -266,5 +267,11 @@
         right: 0;
       }
     }
+  }
+
+  .center-message {
+    position: absolute;
+    width: 100%;
+    height: 100% !important;
   }
 }

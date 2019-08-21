@@ -10,6 +10,7 @@ exports[`sql view matches snapshot 1`] = `
     addToGroupBy={[Function]}
     clear={[Function]}
     columnMetadataLoading={true}
+    currentFilters={[Function]}
     defaultSchema="druid"
     filterByRow={[Function]}
     hasGroupBy={[Function]}

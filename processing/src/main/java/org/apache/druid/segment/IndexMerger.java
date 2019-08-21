@@ -88,6 +88,7 @@ public interface IndexMerger
     }
   }
 
+  @Nullable
   static List<String> getLongestSharedDimOrder(List<IndexableAdapter> indexes)
   {
     int maxSize = 0;

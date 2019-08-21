@@ -16,14 +16,15 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Checkbox, Intent } from '@blueprintjs/core';
+import { AnchorButton, Button, ButtonGroup, Checkbox, Intent } from '@blueprintjs/core';
 import axios from 'axios';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
+import { Loader } from '../../components';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
-import { downloadFile, QueryManager } from '../../utils';
+import { QueryManager } from '../../utils';
 
 import './show-log.scss';
 
@@ -109,7 +110,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
 
   render(): JSX.Element {
     const { endpoint, downloadFilename, status } = this.props;
-    const { logValue, error } = this.state;
+    const { logValue, error, loading } = this.state;
 
     return (
       <div className="show-log">
@@ -123,11 +124,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
           )}
           <ButtonGroup className="right-buttons">
             {downloadFilename && (
-              <Button
-                text="Save"
-                minimal
-                onClick={() => downloadFile(logValue ? logValue : '', 'plain', downloadFilename)}
-              />
+              <AnchorButton text="Save" minimal download={downloadFilename} href={endpoint} />
             )}
             <Button
               text="Copy"
@@ -148,12 +145,16 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
           </ButtonGroup>
         </div>
         <div className="main-area">
-          <textarea
-            className="bp3-input"
-            readOnly
-            value={logValue ? logValue : error}
-            ref={this.log}
-          />
+          {loading ? (
+            <Loader loadingText="" loading />
+          ) : (
+            <textarea
+              className="bp3-input"
+              readOnly
+              value={logValue ? logValue : error}
+              ref={this.log}
+            />
+          )}
         </div>
       </div>
     );
