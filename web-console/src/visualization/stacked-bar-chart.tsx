@@ -57,22 +57,16 @@ export interface HoveredBarInfo {
 }
 
 export class StackedBarChart extends React.Component<StackedBarChartProps, StackedBarChartState> {
-  constructor(props: StackedBarChartProps) {
-    super(props);
-    this.state = {
-      width: this.props.svgWidth - this.props.margin.left - this.props.margin.right,
-      height: this.props.svgHeight - this.props.margin.bottom - this.props.margin.top,
+  static getDerivedStateFromProps(props: StackedBarChartProps) {
+    const width = props.svgWidth - props.margin.left - props.margin.right;
+    const height = props.svgHeight - props.margin.bottom - props.margin.top;
+    return {
+      width,
+      height,
     };
   }
-
-  componentWillReceiveProps(nextProps: StackedBarChartProps): void {
-    if (nextProps !== this.props) {
-      const { margin } = this.props;
-      this.setState({
-        width: nextProps.svgWidth - margin.left - margin.right,
-        height: nextProps.svgHeight - margin.bottom - margin.top,
-      });
-    }
+  constructor(props: StackedBarChartProps) {
+    super(props);
   }
 
   renderBarChart() {

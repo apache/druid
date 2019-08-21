@@ -396,7 +396,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       );
     }
 
-    console.log(currentSchemaSubtree);
     if (!currentSchemaSubtree) return null;
 
     return (

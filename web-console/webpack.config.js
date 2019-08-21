@@ -19,6 +19,7 @@
 const process = require('process');
 const path = require('path');
 const postcssPresetEnv = require('postcss-preset-env');
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 const ALWAYS_BABEL = false;
 
@@ -125,8 +126,6 @@ module.exports = env => {
     performance: {
       hints: false,
     },
-    plugins: [
-      // new BundleAnalyzerPlugin()
-    ],
+    plugins: process.env.BUNDLE_ANALYZER_PLUGIN === 'TRUE' ? [new BundleAnalyzerPlugin()] : [],
   };
 };

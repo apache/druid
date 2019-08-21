@@ -21,7 +21,7 @@ import axios from 'axios';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
-import { Loader } from '..';
+import { Loader } from '../../components';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
 import { QueryManager } from '../../utils';
