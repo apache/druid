@@ -171,11 +171,13 @@ matrix:
       after_success: *upload_java_unit_test_coverage
 
     - name: "web console"
-      script:
-        - ${MVN} test -pl 'web-console'
+      install: skip
+      script: ${MVN} test -pl 'web-console'
+      after_success: (cd web-console && npm run coveralls)
 
     - name: "docs"
-      script: cd website && npm install && npm run lint
+      install: (cd website && npm install)
+      script: (cd website && npm run lint)
 
     - name: "batch index integration test"
       services: &integration_test_services
