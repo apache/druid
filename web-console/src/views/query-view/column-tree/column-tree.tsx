@@ -153,6 +153,7 @@ export interface ColumnTreeProps {
 export interface ColumnTreeState {
   prevColumnMetadata?: readonly ColumnMetadata[];
   columnTree?: ITreeNode[];
+  currentSchemaSubtree?: ITreeNode[];
   selectedTreeIndex: number;
   expandedNode: number;
 }
@@ -379,7 +380,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     };
   }
 
-  getCurrentSchemaSubtree(): ITreeNode[] | undefined {
+  getCurrentSchemaSubtree(): void {
     const { columnTree, selectedTreeIndex, expandedNode } = this.state;
     if (!columnTree) return;
     const currentSchemaSubtree =
@@ -389,7 +390,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     if (expandedNode > -1) {
       currentSchemaSubtree[expandedNode].isExpanded = true;
     }
-    return currentSchemaSubtree;
+    this.setState({ currentSchemaSubtree });
   }
 
   renderSchemaSelector() {
@@ -420,6 +421,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
 
   render(): JSX.Element | null {
     const { columnMetadataLoading } = this.props;
+    const { currentSchemaSubtree } = this.state;
 
     if (columnMetadataLoading) {
       return (
@@ -428,8 +430,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         </div>
       );
     }
-
-    const currentSchemaSubtree = this.getCurrentSchemaSubtree();
+    this.getCurrentSchemaSubtree();
     if (!currentSchemaSubtree) return null;
 
     return (
