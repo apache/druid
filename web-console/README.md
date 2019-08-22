@@ -42,7 +42,7 @@ As part of this repo:
 - `public/` - The compiled destination of the file powering this console
 - `assets/` - The images (and other assets) used within the console
 - `script/` - Some helper bash scripts for running this console
-- `src/` - This directory (together with `lib`) constitutes all the source code for this console 
+- `src/` - This directory (together with `lib`) constitutes all the source code for this console
 
 Generated/copied dynamically
 
