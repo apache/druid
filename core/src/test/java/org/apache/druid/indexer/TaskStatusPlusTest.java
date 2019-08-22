@@ -46,6 +46,7 @@ public class TaskStatusPlusTest
     );
     final TaskStatusPlus status = new TaskStatusPlus(
         "testId",
+        "testGroupId",
         "testType",
         DateTimes.nowUtc(),
         DateTimes.nowUtc(),
@@ -71,6 +72,7 @@ public class TaskStatusPlusTest
     );
     final String json = "{\n"
                         + "\"id\": \"testId\",\n"
+                        + "\"groupId\": \"testGroupId\",\n"
                         + "\"type\": \"testType\",\n"
                         + "\"createdTime\": \"2018-09-17T06:35:17.392Z\",\n"
                         + "\"queueInsertionTime\": \"2018-09-17T06:35:17.392Z\",\n"

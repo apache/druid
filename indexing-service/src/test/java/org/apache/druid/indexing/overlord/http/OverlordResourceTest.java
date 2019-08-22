@@ -1001,7 +1001,13 @@ public class OverlordResourceTest
     final TaskStatus status = TaskStatus.running("mytask");
 
     EasyMock.expect(taskStorageQueryAdapter.getTaskInfo("mytask"))
-            .andReturn(new TaskInfo<>(task.getId(), DateTimes.of("2018-01-01"), status, task.getDataSource(), task));
+            .andReturn(new TaskInfo(
+                task.getId(),
+                DateTimes.of("2018-01-01"),
+                status,
+                task.getDataSource(),
+                task
+            ));
 
     EasyMock.expect(taskStorageQueryAdapter.getTaskInfo("othertask"))
             .andReturn(null);
@@ -1029,6 +1035,7 @@ public class OverlordResourceTest
         new TaskStatusResponse(
             "mytask",
             new TaskStatusPlus(
+                "mytask",
                 "mytask",
                 "noop",
                 DateTimes.of("2018-01-01"),
