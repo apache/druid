@@ -344,21 +344,12 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         }
       }
 
-      if (!columnTree) return null;
-      const currentSchemaSubtree =
-        columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
-      if (!currentSchemaSubtree) return null;
-
-      if (expandedNode > -1) {
-        currentSchemaSubtree[expandedNode].isExpanded = true;
-      }
-
       return {
         prevColumnMetadata: columnMetadata,
         columnTree,
         selectedTreeIndex,
         expandedNode,
-        currentSchemaSubtree,
+        prevGroupByStatus: props.hasGroupBy,
       };
     }
     return null;
@@ -413,8 +404,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
 
   render(): JSX.Element | null {
     const { columnMetadataLoading } = this.props;
-    const { currentSchemaSubtree } = this.state;
-
     if (columnMetadataLoading) {
       return (
         <div className="column-tree">
@@ -423,8 +412,15 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       );
     }
 
+    const { columnTree, selectedTreeIndex, expandedNode } = this.state;
+    if (!columnTree) return null;
+    const currentSchemaSubtree =
+      columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
     if (!currentSchemaSubtree) return null;
 
+    if (expandedNode > -1) {
+      currentSchemaSubtree[expandedNode].isExpanded = true;
+    }
     return (
       <div className="column-tree">
         {this.renderSchemaSelector()}
@@ -454,8 +450,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   bounceState() {
     const { columnTree } = this.state;
     if (!columnTree) return;
-    this.setState(prevState => ({
-      columnTree: prevState.columnTree ? prevState.columnTree.slice() : undefined,
-    }));
+    this.setState({ columnTree: columnTree.slice() });
   }
 }
