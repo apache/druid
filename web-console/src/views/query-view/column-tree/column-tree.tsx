@@ -182,7 +182,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                     <Menu>
                       <MenuItem
                         icon={IconNames.FULLSCREEN}
-                        text={`Select ... from ${table}`}
+                        text={`SELECT ... FROM ${table}`}
                         onClick={() => {
                           handleTableClick(
                             schema,
@@ -213,7 +213,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                             {props.queryAst() && (
                               <MenuItem
                                 icon={IconNames.EXCHANGE}
-                                text={`Replace from value with: ${table}`}
+                                text={`Replace FROM with: ${table}`}
                                 onClick={() => {
                                   props.replaceFrom(
                                     refExpressionFactory(stringFactory(table, `"`)),
