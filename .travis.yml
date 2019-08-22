@@ -43,9 +43,6 @@ env:
       "
     - MAVEN_SKIP_TESTS="-DskipTests -Djacoco.skip=true"
 
-notifications:
-  webhooks: https://coveralls.io/webhook
-
 # Add various options to make 'mvn install' fast and skip javascript compile (-Ddruid.console.skip=true) since it is not
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
 # output.  To compensate, use travis_wait to extend the timeout.
@@ -121,6 +118,7 @@ matrix:
         - free -m
       after_success: &upload_java_unit_test_coverage
         - ${MVN} -pl ${MAVEN_PROJECTS} jacoco:report coveralls:report
+        - curl https://coveralls.io/webhook -d "payload[build_num]=$TRAVIS_BUILD_NUMBER&payload[status]=done" 
 
     - name: "processing module test (SQL Compatibility)"
       env: *processing_env
