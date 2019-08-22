@@ -28,6 +28,8 @@ describe('number menu', () => {
   it('matches snapshot', () => {
     const numberMenu = (
       <NumberMenuItems
+        hasFilter
+        clear={() => null}
         addFunctionToGroupBy={() => null}
         addToGroupBy={() => null}
         addAggregateColumn={() => null}

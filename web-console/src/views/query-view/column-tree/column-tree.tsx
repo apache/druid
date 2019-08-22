@@ -268,6 +268,11 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 filterByRow={props.filterByRow}
                                 columnName={columnData.COLUMN_NAME}
                                 queryAst={props.queryAst()}
+                                clear={props.clear}
+                                hasFilter={
+                                  props.currentFilters() &&
+                                  props.currentFilters().includes(columnData.COLUMN_NAME)
+                                }
                               />
                             )}
                             {columnData.DATA_TYPE === 'VARCHAR' && (
@@ -278,6 +283,11 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 filterByRow={props.filterByRow}
                                 columnName={columnData.COLUMN_NAME}
                                 queryAst={props.queryAst()}
+                                clear={props.clear}
+                                hasFilter={
+                                  props.currentFilters() &&
+                                  props.currentFilters().includes(columnData.COLUMN_NAME)
+                                }
                               />
                             )}
                             {columnData.DATA_TYPE === 'TIMESTAMP' && (
@@ -289,18 +299,12 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 filterByRow={props.filterByRow}
                                 columnName={columnData.COLUMN_NAME}
                                 queryAst={props.queryAst()}
+                                hasFilter={
+                                  props.currentFilters() &&
+                                  props.currentFilters().includes(columnData.COLUMN_NAME)
+                                }
                               />
                             )}
-                            {props.currentFilters() &&
-                              props.currentFilters().includes(columnData.COLUMN_NAME) && (
-                                <MenuItem
-                                  icon={IconNames.FILTER_REMOVE}
-                                  text={`Remove filter`}
-                                  onClick={() => {
-                                    props.clear(columnData.COLUMN_NAME, true);
-                                  }}
-                                />
-                              )}
                             <MenuItem
                               icon={IconNames.CLIPBOARD}
                               text={`Copy: ${columnData.COLUMN_NAME}`}
