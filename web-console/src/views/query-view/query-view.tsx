@@ -574,6 +574,13 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     this.handleQueryStringChange(modifiedAst.toString(), preferablyRun);
   };
 
+  private replaceFrom = (table: RefExpression, preferablyRun: boolean): void => {
+    const { queryAst } = this.state;
+    if (!queryAst) return;
+    const modifiedAst = queryAst.replaceFrom(table);
+    this.handleQueryStringChange(modifiedAst.toString(), preferablyRun);
+  };
+
   private addAggregateColumn = (
     columnName: string | RefExpression,
     functionName: string,
@@ -698,7 +705,10 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
   private getCurrentFilters = () => {
     const { queryAst } = this.state;
-    return queryAst.getCurrentFilters();
+    if (queryAst) {
+      return queryAst.getCurrentFilters();
+    }
+    return [];
   };
 
   render(): JSX.Element {
@@ -730,6 +740,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             defaultSchema={defaultSchema ? defaultSchema : 'druid'}
             defaultTable={defaultTable}
             currentFilters={this.getCurrentFilters}
+            replaceFrom={this.replaceFrom}
           />
         )}
         {this.renderMainArea()}

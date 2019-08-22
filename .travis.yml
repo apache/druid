@@ -27,6 +27,7 @@ cache:
 
 env:
   global:
+    - COVERALLS_PARALLEL=true
     - DOCKER_IP=127.0.0.1  # for integration tests
     - MVN="mvn -B"
     - > # Various options to make execution of maven goals faster (e.g., mvn install)
@@ -41,6 +42,9 @@ env:
       -Dspotbugs.skip=true
       "
     - MAVEN_SKIP_TESTS="-DskipTests -Djacoco.skip=true"
+
+notifications:
+  webhooks: https://coveralls.io/webhook
 
 # Add various options to make 'mvn install' fast and skip javascript compile (-Ddruid.console.skip=true) since it is not
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
