@@ -38,7 +38,7 @@ import memoizeOne from 'memoize-one';
 import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
 
-import { SQL_FUNCTIONS, SyntaxDescription } from '../../../lib/sql-function-doc';
+import { SQL_FUNCTIONS } from '../../../lib/sql-function-doc';
 import { QueryPlanDialog } from '../../dialogs';
 import { EditContextDialog } from '../../dialogs/edit-context-dialog/edit-context-dialog';
 import {
@@ -69,11 +69,7 @@ import { RunButton } from './run-button/run-button';
 
 import './query-view.scss';
 
-const parserRaw = sqlParserFactory(
-  SQL_FUNCTIONS.map((sqlFunction: SyntaxDescription) => {
-    return sqlFunction.syntax.substr(0, sqlFunction.syntax.indexOf('('));
-  }),
-);
+const parserRaw = sqlParserFactory(SQL_FUNCTIONS.map(sqlFunction => sqlFunction.name));
 
 const parser = memoizeOne((sql: string) => {
   try {

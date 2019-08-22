@@ -32,14 +32,14 @@ ace.define(
 
     var SqlHighlightRules = function() {
       var keywords =
-        'select|from|where|and|or|group|by|order|limit|offset|having|as|case|' +
-        'when|else|end|type|on|desc|asc|union|create|table|if|' +
-        'foreign|not|references|default|null|inner|cross|drop|grant';
+        'with|select|from|where|and|or|group|by|order|limit|having|as|case|' +
+        'when|else|end|type|on|desc|asc|union|create|table|if|distinct|' +
+        'not|default|null|inner|cross';
 
       var builtinConstants = 'true|false';
 
       var builtinFunctions =
-        'avg|count|first|last|max|min|sum|ucase|lcase|mid|len|round|rank|now|format|' +
+        'avg|count|first|last|max|min|sum|ucase|lcase|mid|len|round|now|format|' +
         'coalesce|ifnull|isnull|nvl';
 
       var dataTypes =

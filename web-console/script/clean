@@ -18,7 +18,7 @@
 
 rm -rf \
   lib/*.css \
-  lib/*.ts \
+  lib/*.js \
   node_modules \
   coordinator-console \
   pages \
