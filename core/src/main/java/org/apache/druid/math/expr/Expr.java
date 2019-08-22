@@ -190,7 +190,6 @@ public interface Expr
    * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeDimensionSelector
    * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeColumnValueSelector
    */
-  @SuppressWarnings("JavadocReference")
   class BindingDetails
   {
     private final ImmutableSet<IdentifierExpr> freeVariables;
@@ -229,9 +228,7 @@ public interface Expr
      */
     public List<String> getRequiredBindingsList()
     {
-      return new ArrayList<>(
-          freeVariables.stream().map(IdentifierExpr::getBindingIfIdentifier).collect(Collectors.toSet())
-      );
+      return new ArrayList<>(getRequiredBindings());
     }
 
     /**
@@ -239,15 +236,15 @@ public interface Expr
      */
     public Set<String> getRequiredBindings()
     {
-      return freeVariables.stream().map(IdentifierExpr::getBindingIfIdentifier).collect(Collectors.toSet());
+      return map(freeVariables, IdentifierExpr::getBindingIfIdentifier);
     }
 
     /**
      * Set of {@link IdentifierExpr#binding} which are used as scalar inputs to operators and functions.
      */
-    public Set<String> getScalarBindings()
+    Set<String> getScalarBindings()
     {
-      return scalarVariables.stream().map(IdentifierExpr::getBindingIfIdentifier).collect(Collectors.toSet());
+      return map(scalarVariables, IdentifierExpr::getBindingIfIdentifier);
     }
 
     /**
@@ -256,7 +253,7 @@ public interface Expr
      */
     public Set<String> getArrayBindings()
     {
-      return arrayVariables.stream().map(IdentifierExpr::getBindingIfIdentifier).collect(Collectors.toSet());
+      return map(arrayVariables, IdentifierExpr::getBindingIfIdentifier);
     }
 
     /**
@@ -270,18 +267,18 @@ public interface Expr
     /**
      * Set of {@link IdentifierExpr#identifier} which are used as scalar inputs to operators and functions.
      */
-    public Set<String> getScalarVariables()
+    Set<String> getScalarVariables()
     {
-      return scalarVariables.stream().map(IdentifierExpr::getIdentifier).collect(Collectors.toSet());
+      return map(scalarVariables, IdentifierExpr::getIdentifier);
     }
 
     /**
      * Set of {@link IdentifierExpr#identifier} which are used as array inputs to operators, functions, and apply
      * functions.
      */
-    public Set<String> getArrayVariables()
+    Set<String> getArrayVariables()
     {
-      return arrayVariables.stream().map(IdentifierExpr::getIdentifier).collect(Collectors.toSet());
+      return map(arrayVariables, IdentifierExpr::getIdentifier);
     }
 
     /**
@@ -338,8 +335,8 @@ public interface Expr
     {
       Set<IdentifierExpr> moreScalars = new HashSet<>();
       for (Expr expr : scalarArguments) {
-        final IdentifierExpr stringIdentifier = expr.getIdentifierExprIfIdentifierExpr();
-        if (stringIdentifier != null) {
+        final boolean isIdentiferExpr = expr.getIdentifierExprIfIdentifierExpr() != null;
+        if (isIdentiferExpr) {
           moreScalars.add((IdentifierExpr) expr);
         }
       }
@@ -356,12 +353,12 @@ public interface Expr
      * Add set of arguments as {@link BindingDetails#arrayVariables} that are *directly* {@link IdentifierExpr},
      * else they are ignored.
      */
-    public BindingDetails withArrayArguments(Set<Expr> arrayArguments)
+    BindingDetails withArrayArguments(Set<Expr> arrayArguments)
     {
       Set<IdentifierExpr> arrayIdentifiers = new HashSet<>();
       for (Expr expr : arrayArguments) {
-        final IdentifierExpr isIdentifier = expr.getIdentifierExprIfIdentifierExpr();
-        if (isIdentifier != null) {
+        final boolean isIdentifierExpr = expr.getIdentifierExprIfIdentifierExpr() != null;
+        if (isIdentifierExpr) {
           arrayIdentifiers.add((IdentifierExpr) expr);
         }
       }
@@ -369,7 +366,7 @@ public interface Expr
           ImmutableSet.copyOf(Sets.union(freeVariables, arrayIdentifiers)),
           scalarVariables,
           ImmutableSet.copyOf(Sets.union(arrayVariables, arrayIdentifiers)),
-          hasInputArrays || arrayArguments.size() > 0,
+          hasInputArrays || !arrayArguments.isEmpty(),
           isOutputArray
       );
     }
@@ -377,13 +374,13 @@ public interface Expr
     /**
      * Copy, setting if an expression has array inputs
      */
-    public BindingDetails withArrayInputs(boolean hasArrays)
+    BindingDetails withArrayInputs(boolean hasArrays)
     {
       return new BindingDetails(
           freeVariables,
           scalarVariables,
           arrayVariables,
-          hasArrays || arrayVariables.size() > 0,
+          hasArrays || !arrayVariables.isEmpty(),
           isOutputArray
       );
     }
@@ -391,7 +388,7 @@ public interface Expr
     /**
      * Copy, setting if an expression produces an array output
      */
-    public BindingDetails withArrayOutput(boolean isOutputArray)
+    BindingDetails withArrayOutput(boolean isOutputArray)
     {
       return new BindingDetails(
           freeVariables,
@@ -406,7 +403,7 @@ public interface Expr
      * Remove any {@link IdentifierExpr} that are from a {@link LambdaExpr}, since the {@link ApplyFunction} will
      * provide bindings for these variables.
      */
-    public BindingDetails removeLambdaArguments(Set<String> lambda)
+    BindingDetails removeLambdaArguments(Set<String> lambda)
     {
       return new BindingDetails(
           ImmutableSet.copyOf(freeVariables.stream().filter(x -> !lambda.contains(x.getIdentifier())).iterator()),
@@ -415,6 +412,19 @@ public interface Expr
           hasInputArrays,
           isOutputArray
       );
+    }
+
+    // Use this instead of streams for better performance
+    private static Set<String> map(
+        Set<IdentifierExpr> variables,
+        java.util.function.Function<IdentifierExpr, String> mapper
+    )
+    {
+      Set<String> results = new HashSet<>(variables.size());
+      for (IdentifierExpr variable : variables) {
+        results.add(mapper.apply(variable));
+      }
+      return results;
     }
   }
 }
@@ -549,6 +559,7 @@ class StringExpr extends ConstantExpr
     return value;
   }
 
+  @Nullable
   @Override
   public String toString()
   {
@@ -773,7 +784,7 @@ class LambdaExpr implements Expr
     return StringUtils.format("(%s -> %s)", args, expr);
   }
 
-  public int identifierCount()
+  int identifierCount()
   {
     return args.size();
   }
@@ -793,7 +804,7 @@ class LambdaExpr implements Expr
     return args.stream().map(IdentifierExpr::toString).collect(Collectors.toList());
   }
 
-  public ImmutableList<IdentifierExpr> getIdentifierExprs()
+  ImmutableList<IdentifierExpr> getIdentifierExprs()
   {
     return args;
   }
@@ -842,8 +853,8 @@ class LambdaExpr implements Expr
 class FunctionExpr implements Expr
 {
   final Function function;
-  final String name;
   final ImmutableList<Expr> args;
+  private final String name;
 
   FunctionExpr(Function function, String name, List<Expr> args)
   {
@@ -1001,6 +1012,7 @@ abstract class UnaryExpr implements Expr
   public Expr visit(Shuttle shuttle)
   {
     Expr newExpr = expr.visit(shuttle);
+    //noinspection ObjectEquality (checking for object equality here is intentional)
     if (newExpr != expr) {
       return shuttle.visit(copy(newExpr));
     }
@@ -1116,6 +1128,7 @@ abstract class BinaryOpExprBase implements Expr
   {
     Expr newLeft = left.visit(shuttle);
     Expr newRight = right.visit(shuttle);
+    //noinspection ObjectEquality (checking for object equality here is intentional)
     if (left != newLeft || right != newRight) {
       return shuttle.visit(copy(newLeft, newRight));
     }
@@ -1587,3 +1600,4 @@ class BinOrExpr extends BinaryOpExprBase
     return leftVal.asBoolean() ? leftVal : right.eval(bindings);
   }
 }
+
