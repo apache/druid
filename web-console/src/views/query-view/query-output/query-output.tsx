@@ -247,7 +247,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
         </Menu>
       );
     }
-    return actionsMenu ? actionsMenu : undefined;
+    return actionsMenu;
   }
 
   getHeaderClassName(h: string) {
