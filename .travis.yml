@@ -115,6 +115,9 @@ matrix:
           ${MAVEN_SKIP} -Dremoteresources.skip=true
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
+      after_success: &upload_java_unit_test_coverage
+        - ${MVN} -pl ${MAVEN_PROJECTS} jacoco:report
+        - travis_retry bash <(curl -s https://codecov.io/bash) -X gcov  # retry in case of network error
 
     - name: "processing module test (SQL Compatibility)"
       env: *processing_env
@@ -127,43 +130,52 @@ matrix:
           ${MAVEN_SKIP} -Dremoteresources.skip=true
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
+      after_success: *upload_java_unit_test_coverage
 
     - name: "indexing modules test"
       env: &indexing_env
       - MAVEN_PROJECTS='indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
       before_script: *setup_java_test
       script: *run_java_test
+      after_success: *upload_java_unit_test_coverage
 
     - name: "indexing modules test (SQL Compatibility)"
       env: *indexing_env
       before_script: *setup_java_test
       script: *run_java_sql_compat_test
+      after_success: *upload_java_unit_test_coverage
 
     - name: "server module test"
       env: &server_env
         - MAVEN_PROJECTS='server'
       before_script: *setup_java_test
       script: *run_java_test
+      after_success: *upload_java_unit_test_coverage
 
     - name: "server module test (SQL Compatibility)"
       env: *server_env
       before_script: *setup_java_test
       script: *run_java_sql_compat_test
+      after_success: *upload_java_unit_test_coverage
 
     - name: "other modules test"
       env: &other_env
         - MAVEN_PROJECTS='!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console'
       before_script: *setup_java_test
       script: *run_java_test
+      after_success: *upload_java_unit_test_coverage
 
     - name: "other modules test (SQL Compatibility)"
       env: *other_env
       before_script: *setup_java_test
       script: *run_java_sql_compat_test
+      after_success: *upload_java_unit_test_coverage
 
     - name: "web console"
       script:
         - ${MVN} test -pl 'web-console'
+      after_success:
+        - (cd web-console && travis_retry npm run codecov)
 
     - name: "docs"
       script: cd website && npm install && npm run lint
