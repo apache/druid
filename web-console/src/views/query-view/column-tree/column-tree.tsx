@@ -207,12 +207,23 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                           copyAndAlert(table, `${table} query copied to clipboard`);
                         }}
                       />
-                      <MenuItem
-                        icon={IconNames.EXCHANGE}
-                        text={`Replace from value with: ${table}`}
-                        onClick={() => {
-                          props.replaceFrom(refExpressionFactory(stringFactory(table, `"`)), true);
-                        }}
+                      <Deferred
+                        content={() => (
+                          <>
+                            {props.queryAst() && (
+                              <MenuItem
+                                icon={IconNames.EXCHANGE}
+                                text={`Replace from value with: ${table}`}
+                                onClick={() => {
+                                  props.replaceFrom(
+                                    refExpressionFactory(stringFactory(table, `"`)),
+                                    true,
+                                  );
+                                }}
+                              />
+                            )}
+                          </>
+                        )}
                       />
                     </Menu>
                   }
