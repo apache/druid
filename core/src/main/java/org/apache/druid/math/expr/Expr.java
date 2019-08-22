@@ -190,6 +190,7 @@ public interface Expr
    * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeDimensionSelector
    * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeColumnValueSelector
    */
+  @SuppressWarnings("JavadocReference")
   class BindingDetails
   {
     private final ImmutableSet<IdentifierExpr> freeVariables;
@@ -198,17 +199,17 @@ public interface Expr
     private final boolean hasInputArrays;
     private final boolean isOutputArray;
 
-    public BindingDetails()
+    BindingDetails()
     {
       this(ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of(), false, false);
     }
 
-    public BindingDetails(IdentifierExpr expr)
+    BindingDetails(IdentifierExpr expr)
     {
       this(ImmutableSet.of(expr), ImmutableSet.of(), ImmutableSet.of(), false, false);
     }
 
-    public BindingDetails(
+    private BindingDetails(
         ImmutableSet<IdentifierExpr> freeVariables,
         ImmutableSet<IdentifierExpr> scalarVariables,
         ImmutableSet<IdentifierExpr> arrayVariables,
@@ -559,7 +560,6 @@ class StringExpr extends ConstantExpr
     return value;
   }
 
-  @Nullable
   @Override
   public String toString()
   {
