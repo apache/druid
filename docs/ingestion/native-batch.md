@@ -229,7 +229,6 @@ For perfect rollup, you should use `hashed`.
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should always be `hashed`|none|yes|
-|maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
 |numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
 |partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions.|null|no|
 
