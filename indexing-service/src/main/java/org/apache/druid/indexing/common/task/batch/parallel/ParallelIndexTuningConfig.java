@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Duration;
@@ -36,7 +37,7 @@ import java.util.Objects;
 @JsonTypeName("index_parallel")
 public class ParallelIndexTuningConfig extends IndexTuningConfig
 {
-  private static final int DEFAULT_MAX_NUM_BATCH_TASKS = 1;
+  private static final int DEFAULT_MAX_NUM_CONCURRENT_SUB_TASKS = 1;
   private static final int DEFAULT_MAX_RETRY = 3;
   private static final long DEFAULT_TASK_STATUS_CHECK_PERIOD_MS = 1000;
 
@@ -45,7 +46,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   private static final int DEFAULT_MAX_NUM_SEGMENTS_TO_MERGE = 100;
   private static final int DEFAULT_TOTAL_NUM_MERGE_TASKS = 10;
 
-  private final int maxNumSubTasks;
+  private final int maxNumConcurrentSubTasks;
   private final int maxRetry;
   private final long taskStatusCheckPeriodMs;
 
@@ -92,6 +93,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -112,7 +114,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
       @JsonProperty("pushTimeout") @Nullable Long pushTimeout,
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-      @JsonProperty("maxNumSubTasks") @Nullable Integer maxNumSubTasks,
+      @JsonProperty("maxNumSubTasks") @Deprecated @Nullable Integer maxNumSubTasks,
+      @JsonProperty("maxNumConcurrentSubTasks") @Nullable Integer maxNumConcurrentSubTasks,
       @JsonProperty("maxRetry") @Nullable Integer maxRetry,
       @JsonProperty("taskStatusCheckPeriodMs") @Nullable Integer taskStatusCheckPeriodMs,
       @JsonProperty("chatHandlerTimeout") @Nullable Duration chatHandlerTimeout,
@@ -147,7 +150,15 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         maxSavedParseExceptions
     );
 
-    this.maxNumSubTasks = maxNumSubTasks == null ? DEFAULT_MAX_NUM_BATCH_TASKS : maxNumSubTasks;
+    if (maxNumSubTasks != null && maxNumConcurrentSubTasks != null) {
+      throw new IAE("Can't use both maxNumSubTasks and maxNumConcurrentSubTasks. Use maxNumConcurrentSubTasks instead");
+    }
+
+    if (maxNumConcurrentSubTasks == null) {
+      this.maxNumConcurrentSubTasks = maxNumSubTasks == null ? DEFAULT_MAX_NUM_CONCURRENT_SUB_TASKS : maxNumSubTasks;
+    } else {
+      this.maxNumConcurrentSubTasks = maxNumConcurrentSubTasks;
+    }
     this.maxRetry = maxRetry == null ? DEFAULT_MAX_RETRY : maxRetry;
     this.taskStatusCheckPeriodMs = taskStatusCheckPeriodMs == null ?
                                    DEFAULT_TASK_STATUS_CHECK_PERIOD_MS :
@@ -166,15 +177,15 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
                             ? DEFAULT_TOTAL_NUM_MERGE_TASKS
                             : totalNumMergeTasks;
 
-    Preconditions.checkArgument(this.maxNumSubTasks > 0, "maxNumSubTasks must be positive");
+    Preconditions.checkArgument(this.maxNumConcurrentSubTasks > 0, "maxNumConcurrentSubTasks must be positive");
     Preconditions.checkArgument(this.maxNumSegmentsToMerge > 0, "maxNumSegmentsToMerge must be positive");
     Preconditions.checkArgument(this.totalNumMergeTasks > 0, "totalNumMergeTasks must be positive");
   }
 
   @JsonProperty
-  public int getMaxNumSubTasks()
+  public int getMaxNumConcurrentSubTasks()
   {
-    return maxNumSubTasks;
+    return maxNumConcurrentSubTasks;
   }
 
   @JsonProperty
@@ -226,7 +237,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       return false;
     }
     ParallelIndexTuningConfig that = (ParallelIndexTuningConfig) o;
-    return maxNumSubTasks == that.maxNumSubTasks &&
+    return maxNumConcurrentSubTasks == that.maxNumConcurrentSubTasks &&
            maxRetry == that.maxRetry &&
            taskStatusCheckPeriodMs == that.taskStatusCheckPeriodMs &&
            chatHandlerNumRetries == that.chatHandlerNumRetries &&
@@ -240,7 +251,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   {
     return Objects.hash(
         super.hashCode(),
-        maxNumSubTasks,
+        maxNumConcurrentSubTasks,
         maxRetry,
         taskStatusCheckPeriodMs,
         chatHandlerTimeout,

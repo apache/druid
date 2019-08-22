@@ -21,7 +21,7 @@ import React from 'react';
 
 import { ShowHistory } from './show-history';
 
-describe('rule editor', () => {
+describe('show history', () => {
   it('matches snapshot', () => {
     const showJson = <ShowHistory endpoint={'test'} downloadFilename={'test'} />;
     const { container } = render(showJson);

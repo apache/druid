@@ -170,7 +170,7 @@ export class SupervisorStatisticsTable extends React.PureComponent<
           </ButtonGroup>
         </div>
         <div className="main-area">
-          {loading ? <Loader loadingText="" loading /> : !loading && this.renderTable(error)}
+          {loading ? <Loader loadingText="" loading /> : this.renderTable(error)}
         </div>
       </div>
     );

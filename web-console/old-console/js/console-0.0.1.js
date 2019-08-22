@@ -100,7 +100,7 @@ var shutdownSupervisor = function(supervisorId) {
 
 $(document).ready(function() {
   var augment = function(data, showKill) {
-    for (i = 0 ; i < data.length ; i++) {
+    for (var i = 0 ; i < data.length ; i++) {
       var taskId = encodeURIComponent(data[i].id)
       data[i].more =
         '<a href="/druid/indexer/v1/task/' + taskId + '">payload</a>' +
@@ -116,7 +116,7 @@ $(document).ready(function() {
   $.get('/druid/indexer/v1/supervisor?full', function(dataList) {
 
     var data = []
-    for (i = 0 ; i < dataList.length ; i++) {
+    for (var i = 0 ; i < dataList.length ; i++) {
       var supervisorId = encodeURIComponent(dataList[i].id)
       var supervisorSpec = dataList[i].spec;
       var statusText = supervisorSpec && supervisorSpec.suspended ?

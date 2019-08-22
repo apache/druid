@@ -58,7 +58,9 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
           data={queryResult ? queryResult.rows : []}
           loading={loading}
           noDataText={
-            !loading && queryResult && !queryResult.rows.length ? 'No queryResults' : error || ''
+            !loading && queryResult && !queryResult.rows.length
+              ? 'Query returned no data'
+              : error || ''
           }
           sortable={false}
           columns={(queryResult ? queryResult.header : []).map((h: any, i) => {

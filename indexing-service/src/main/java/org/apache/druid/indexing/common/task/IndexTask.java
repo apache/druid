@@ -832,8 +832,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         toolbox.getTaskActionClient()
                .submit(SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish));
 
+    String effectiveId = getContextValue(CompactionTask.CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, null);
+    if (effectiveId == null) {
+      effectiveId = getId();
+    }
+
     final Appenderator appenderator = BatchAppenderators.newAppenderator(
-        getId(),
+        effectiveId,
         appenderatorsManager,
         buildSegmentsFireDepartmentMetrics,
         toolbox,
