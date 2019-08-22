@@ -16,7 +16,6 @@
 # limitations under the License.
 
 import yaml
-import json
 import os
 import sys
 from html.parser import HTMLParser
