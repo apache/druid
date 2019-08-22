@@ -390,19 +390,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     };
   }
 
-  componentDidMount(): void {
-    const { columnTree, selectedTreeIndex, expandedNode } = this.state;
-    if (!columnTree) return;
-    const currentSchemaSubtree =
-      columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
-    if (!currentSchemaSubtree) return;
-
-    if (expandedNode > -1) {
-      currentSchemaSubtree[expandedNode].isExpanded = true;
-    }
-    this.setState({ currentSchemaSubtree: currentSchemaSubtree });
-  }
-
   renderSchemaSelector() {
     const { columnTree, selectedTreeIndex } = this.state;
     if (!columnTree) return null;
@@ -485,6 +472,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   bounceState() {
     const { columnTree } = this.state;
     if (!columnTree) return;
-    this.setState({ columnTree: columnTree.slice() });
+    this.setState(prevState => ({
+      columnTree: prevState.columnTree ? prevState.columnTree.slice() : undefined,
+    }));
   }
 }
