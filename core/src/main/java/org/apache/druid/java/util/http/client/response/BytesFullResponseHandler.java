@@ -23,6 +23,10 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
+/**
+ * {@link HttpResponseHandler} for stream data of byte array type.
+ * The stream data is appended to {@link BytesFullResponseHolder} whenever {@link #handleChunk} is called.
+ */
 public class BytesFullResponseHandler implements HttpResponseHandler<BytesFullResponseHolder, BytesFullResponseHolder>
 {
   @Override

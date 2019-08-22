@@ -24,8 +24,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.nio.charset.Charset;
 
-/**
- */
 public class StringFullResponseHolder extends FullResponseHolder<String>
 {
   private final StringBuilder builder;

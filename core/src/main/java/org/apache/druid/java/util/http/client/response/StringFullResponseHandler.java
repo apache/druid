@@ -25,7 +25,8 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import java.nio.charset.Charset;
 
 /**
- *
+ * {@link HttpResponseHandler} for stream data of string type.
+ * The stream data is appended to {@link StringFullResponseHolder} whenever {@link #handleChunk} is called.
  */
 public class StringFullResponseHandler
     implements HttpResponseHandler<StringFullResponseHolder, StringFullResponseHolder>
