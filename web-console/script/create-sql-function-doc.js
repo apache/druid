@@ -83,7 +83,7 @@ const readDoc = async () => {
 // This file is auto generated and should not be modified
 
 // prettier-ignore
-exports.SQL_DATE_TYPES = ${JSON.stringify(dataTypeDocs, null, 2)};
+exports.SQL_DATA_TYPES = ${JSON.stringify(dataTypeDocs, null, 2)};
 
 // prettier-ignore
 exports.SQL_FUNCTIONS = ${JSON.stringify(functionDocs, null, 2)};

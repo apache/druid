@@ -58,6 +58,20 @@ $nav-width: 250px;
         bottom: 0;
         width: 100%;
 
+        & > * {
+          vertical-align: bottom;
+          margin-right: 15px;
+        }
+
+        .wrap-query-limit-label {
+          display: inline-block;
+          margin-bottom: 8px;
+        }
+
+        .wrap-query-limit-selector {
+          display: inline-block;
+        }
+
         .query-extra-info {
           position: absolute;
           right: 0;

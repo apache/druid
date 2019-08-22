@@ -43,6 +43,7 @@ exports[`sql view matches snapshot 1`] = `
       >
         <HotkeysTarget(RunButton)
           autoRun={true}
+          onAutoRunChange={[Function]}
           onEditContext={[Function]}
           onExplain={[Function]}
           onHistory={[Function]}
@@ -50,10 +51,42 @@ exports[`sql view matches snapshot 1`] = `
           onRun={[Function]}
           queryContext={Object {}}
           runeMode={false}
-          setAutoRun={[Function]}
-          setWrapQuery={[Function]}
-          wrapQuery={true}
         />
+        <Blueprint3.Tooltip
+          content="Automatically wrap the query with a limit to protect against queries with very large result sets"
+          hoverCloseDelay={0}
+          hoverOpenDelay={900}
+          transitionDuration={100}
+        >
+          <Component
+            className="wrap-query-limit-label"
+          >
+            Query limit
+          </Component>
+        </Blueprint3.Tooltip>
+        <Blueprint3.ButtonGroup
+          className="wrap-query-limit-selector"
+        >
+          <Blueprint3.Button
+            active={false}
+            onClick={[Function]}
+          >
+            None
+          </Blueprint3.Button>
+          <Blueprint3.Button
+            active={true}
+            onClick={[Function]}
+          >
+            100
+          </Blueprint3.Button>
+          <Blueprint3.Button
+            active={false}
+            onClick={[Function]}
+          >
+            1000
+          </Blueprint3.Button>
+        </Blueprint3.ButtonGroup>
+         
       </div>
     </div>
     <QueryOutput

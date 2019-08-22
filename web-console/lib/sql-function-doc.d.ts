@@ -25,5 +25,5 @@ export interface FunctionSyntaxDescription extends SyntaxDescription {
   arguments: string;
 }
 
-export const SQL_DATE_TYPES: SyntaxDescription[];
+export const SQL_DATA_TYPES: SyntaxDescription[];
 export const SQL_FUNCTIONS: FunctionSyntaxDescription[];

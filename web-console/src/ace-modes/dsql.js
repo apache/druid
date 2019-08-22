@@ -21,6 +21,9 @@
 // Originally licensed under the MIT license (https://github.com/thlorenz/brace/blob/master/LICENSE)
 // This file was modified to make the list of keywords more closely adhere to what is found in DruidSQL
 
+var druidKeywords = require('../../lib/keywords');
+var druidFunctions = require('../../lib/sql-function-doc');
+
 ace.define(
   'ace/mode/dsql_highlight_rules',
   ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text_highlight_rules'],
@@ -31,20 +34,25 @@ ace.define(
     var TextHighlightRules = acequire('./text_highlight_rules').TextHighlightRules;
 
     var SqlHighlightRules = function() {
-      var keywords =
-        'with|select|from|where|and|or|group|by|order|limit|having|as|case|' +
-        'when|else|end|type|on|desc|asc|union|create|table|if|distinct|' +
-        'not|default|null|inner|cross';
+      // Stuff like: 'with|select|from|where|and|or|group|by|order|limit|having|as|case|'
+      var keywords = druidKeywords.SQL_KEYWORDS.concat(druidKeywords.SQL_EXPRESSION_PARTS)
+        .join('|')
+        .replace(/\s/g, '|');
 
-      var builtinConstants = 'true|false';
+      // Stuff like: 'true|false'
+      var builtinConstants = druidKeywords.SQL_CONSTANTS.join('|');
 
-      var builtinFunctions =
-        'avg|count|first|last|max|min|sum|ucase|lcase|mid|len|round|now|format|' +
-        'coalesce|ifnull|isnull|nvl';
+      // Stuff like: 'avg|count|first|last|max|min'
+      var builtinFunctions = druidKeywords.SQL_DYNAMICS.concat(
+        druidFunctions.SQL_FUNCTIONS.map(function(f) {
+          return f.name;
+        }),
+      ).join('|');
 
-      var dataTypes =
-        'int|numeric|decimal|date|varchar|char|bigint|float|double|bit|binary|text|set|timestamp|' +
-        'money|real|number|integer';
+      // Stuff like: 'int|numeric|decimal|date|varchar|char|bigint|float|double|bit|binary|text|set|timestamp'
+      var dataTypes = druidFunctions.SQL_DATA_TYPES.map(function(f) {
+        return f.name;
+      }).join('|');
 
       var keywordMapper = this.createKeywordMapper(
         {

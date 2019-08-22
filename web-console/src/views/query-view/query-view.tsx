@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Intent } from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, Label, Tooltip } from '@blueprintjs/core';
 import axios from 'axios';
 import classNames from 'classnames';
 import {
@@ -82,7 +82,7 @@ const parser = memoizeOne((sql: string) => {
 interface QueryWithContext {
   queryString: string;
   queryContext: QueryContext;
-  wrapQuery: boolean;
+  wrapQueryLimit: number | undefined;
 }
 
 export interface QueryViewProps {
@@ -99,7 +99,7 @@ export interface QueryViewState {
   queryString: string;
   queryAst: SqlQuery;
   queryContext: QueryContext;
-  wrapQuery: boolean;
+  wrapQueryLimit: number | undefined;
   autoRun: boolean;
 
   columnMetadataLoading: boolean;
@@ -143,8 +143,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     return /EXPLAIN\sPLAN\sFOR/i.test(query);
   }
 
-  static wrapInLimitIfNeeded(query: string, limit = 1000): string {
+  static wrapInLimitIfNeeded(query: string, limit: number | undefined): string {
     query = QueryView.trimSemicolon(query);
+    if (!limit) return query;
     if (QueryView.isExplainQuery(query)) return query;
     return `SELECT * FROM (${query}\n) LIMIT ${limit}`;
   }
@@ -226,7 +227,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       queryString: queryString ? queryString : '',
       queryAst,
       queryContext: {},
-      wrapQuery: true,
+      wrapQueryLimit: 100,
       autoRun,
 
       columnMetadataLoading: false,
@@ -264,10 +265,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
     this.sqlQueryManager = new QueryManager({
       processQuery: async (queryWithContext: QueryWithContext): Promise<QueryResult> => {
-        const { queryString, queryContext, wrapQuery } = queryWithContext;
+        const { queryString, queryContext, wrapQueryLimit } = queryWithContext;
 
         let ast: SqlQuery | undefined;
-        let wrappedLimit: number | undefined;
         let jsonQuery: any;
 
         try {
@@ -280,11 +280,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         if (QueryView.isJsonLike(queryString)) {
           jsonQuery = Hjson.parse(queryString);
         } else {
-          const actualQuery = wrapQuery
-            ? QueryView.wrapInLimitIfNeeded(queryString)
-            : QueryView.trimSemicolon(queryString);
-
-          if (wrapQuery) wrappedLimit = 1000;
+          const actualQuery = QueryView.wrapInLimitIfNeeded(queryString, wrapQueryLimit);
 
           jsonQuery = {
             query: actualQuery,
@@ -335,7 +331,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             startTime,
             endTime,
             numResults: queryResult.rows.length,
-            wrappedLimit,
+            wrapQueryLimit,
           },
           parsedQuery: ast,
         };
@@ -351,11 +347,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
     this.explainQueryManager = new QueryManager({
       processQuery: async (queryWithContext: QueryWithContext) => {
-        const { queryString, queryContext, wrapQuery } = queryWithContext;
+        const { queryString, queryContext, wrapQueryLimit } = queryWithContext;
 
-        const actualQuery = wrapQuery
-          ? QueryView.wrapInLimitIfNeeded(queryString)
-          : QueryView.trimSemicolon(queryString);
+        const actualQuery = QueryView.wrapInLimitIfNeeded(queryString, wrapQueryLimit);
 
         const explainPayload: Record<string, any> = {
           query: QueryView.wrapInExplainIfNeeded(actualQuery),
@@ -465,6 +459,41 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     );
   }
 
+  renderWrapQueryLimitSelector() {
+    const { wrapQueryLimit } = this.state;
+
+    return (
+      <>
+        <Tooltip
+          content="Automatically wrap the query with a limit to protect against queries with very large result sets"
+          hoverOpenDelay={900}
+        >
+          <Label className="wrap-query-limit-label">Query limit</Label>
+        </Tooltip>
+        <ButtonGroup className="wrap-query-limit-selector">
+          <Button
+            active={!wrapQueryLimit}
+            onClick={() => this.handleWrapQueryLimitChange(undefined)}
+          >
+            None
+          </Button>
+          <Button
+            active={wrapQueryLimit === 100}
+            onClick={() => this.handleWrapQueryLimitChange(100)}
+          >
+            100
+          </Button>
+          <Button
+            active={wrapQueryLimit === 1000}
+            onClick={() => this.handleWrapQueryLimitChange(1000)}
+          >
+            1000
+          </Button>
+        </ButtonGroup>{' '}
+      </>
+    );
+  }
+
   renderMainArea() {
     const {
       queryString,
@@ -474,7 +503,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       error,
       columnMetadata,
       autoRun,
-      wrapQuery,
     } = this.state;
     const emptyQuery = QueryView.isEmptyQuery(queryString);
 
@@ -517,9 +545,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           <div className="control-bar">
             <RunButton
               autoRun={autoRun}
-              setAutoRun={this.setAutoRun}
-              wrapQuery={wrapQuery}
-              setWrapQuery={this.setWrapQuery}
+              onAutoRunChange={this.handleAutoRunChange}
               onEditContext={() => this.setState({ editContextDialogOpen: true })}
               runeMode={runeMode}
               queryContext={queryContext}
@@ -528,6 +554,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
               onExplain={emptyQuery ? undefined : this.handleExplain}
               onHistory={() => this.setState({ historyDialogOpen: true })}
             />
+            {this.renderWrapQueryLimitSelector()}
             {result && (
               <QueryExtraInfo
                 queryExtraInfo={result.queryExtraInfo}
@@ -637,17 +664,17 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     this.setState({ queryContext });
   };
 
-  private setAutoRun = (autoRun: boolean) => {
+  private handleAutoRunChange = (autoRun: boolean) => {
     this.setState({ autoRun });
     localStorageSet(LocalStorageKeys.AUTO_RUN, String(autoRun));
   };
 
-  private setWrapQuery = (wrapQuery: boolean) => {
-    this.setState({ wrapQuery });
+  private handleWrapQueryLimitChange = (wrapQueryLimit: number | undefined) => {
+    this.setState({ wrapQueryLimit });
   };
 
   private handleRun = () => {
-    const { queryString, queryContext, wrapQuery, queryHistory } = this.state;
+    const { queryString, queryContext, wrapQueryLimit, queryHistory } = this.state;
     if (QueryView.isJsonLike(queryString) && !QueryView.validRune(queryString)) return;
 
     const newQueryHistory = QueryHistoryDialog.addQueryToHistory(queryHistory, queryString);
@@ -656,14 +683,14 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     localStorageSet(LocalStorageKeys.QUERY_KEY, queryString);
 
     this.setState({ queryHistory: newQueryHistory });
-    this.sqlQueryManager.runQuery({ queryString, queryContext, wrapQuery });
+    this.sqlQueryManager.runQuery({ queryString, queryContext, wrapQueryLimit });
   };
 
   private handleExplain = () => {
-    const { queryString, queryContext, wrapQuery } = this.state;
+    const { queryString, queryContext, wrapQueryLimit } = this.state;
 
     this.setState({ explainDialogOpen: true });
-    this.explainQueryManager.runQuery({ queryString, queryContext, wrapQuery });
+    this.explainQueryManager.runQuery({ queryString, queryContext, wrapQueryLimit });
   };
 
   private handleSecondaryPaneSizeChange = (secondaryPaneSize: number) => {
