@@ -1,10 +1,6 @@
 <component name="InspectionProjectProfileManager">
   <profile version="1.0">
     <option name="myName" value="Druid" />
-    <inspection_tool class="Annotator" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="AntDuplicateTargetsInspection" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="AntMissingPropertiesFileInspection" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="AntResolveInspection" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="ArrayEquality" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ArrayEquals" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ArrayHashCode" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -18,12 +14,9 @@
       <option name="m_ignoreCatchBlocksWithComments" value="false" />
     </inspection_tool>
     <inspection_tool class="CheckDtdRefs" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
-    <inspection_tool class="CheckValidXmlInScriptTagBody" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="CheckXmlFileWithXercesValidator" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
     <inspection_tool class="ClassGetClass" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="ClassNewInstance" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="CollectionAddedToSelf" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="ComparableImplementedButEqualsNotOverridden" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="ComparatorMethodParameterNotUsed" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ComparatorResultComparison" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="CompareToUsesNonFinalVariable" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -42,10 +35,8 @@
       <option name="commentsAreContent" value="true" />
     </inspection_tool>
     <inspection_tool class="EndlessStream" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="EqualsAndHashcode" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="EqualsBetweenInconvertibleTypes" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="EqualsOnSuspiciousObject" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="EqualsUsesNonFinalVariable" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="EqualsWhichDoesntCheckParameterClass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="EqualsWithItself" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="FieldAccessNotGuarded" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -59,7 +50,6 @@
       </option>
       <option name="IGNORE_FIELDS_USED_IN_MULTIPLE_METHODS" value="true" />
     </inspection_tool>
-    <inspection_tool class="FieldMayBeFinal" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="FlowJSError" enabled="false" level="Non-TeamCity Error" enabled_by_default="false" />
     <inspection_tool class="ForCanBeForeach" enabled="true" level="WARNING" enabled_by_default="true">
       <scope name="NonGeneratedFiles" level="ERROR" enabled="true">
@@ -70,18 +60,14 @@
       <option name="ignoreUntypedCollections" value="false" />
     </inspection_tool>
     <inspection_tool class="ForLoopThatDoesntUseLoopVariable" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="Guava" enabled="false" level="WARNING" enabled_by_default="false" />
-    <inspection_tool class="HashCodeUsesNonFinalVariable" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="ImplicitArrayToString" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="IndexOfReplaceableByContains" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="InfiniteRecursion" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="InjectedReferences" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="InnerClassReferencedViaSubclass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="InstanceofIncompatibleInterface" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="InstantiationOfUtilityClass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="InvalidComparatorMethodReference" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="IteratorHasNextCallsIteratorNext" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="IteratorNextDoesNotThrowNoSuchElementException" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="JSAnnotator" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
     <inspection_tool class="JSHint" enabled="false" level="Non-TeamCity Error" enabled_by_default="false" />
     <inspection_tool class="JSLint" enabled="false" level="Non-TeamCity Error" enabled_by_default="false" />
@@ -93,7 +79,6 @@
     </inspection_tool>
     <inspection_tool class="Jscs" enabled="false" level="Non-TeamCity Error" enabled_by_default="false" />
     <inspection_tool class="JsonDuplicatePropertyKeys" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="JsonStandardCompliance" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="LengthOneStringInIndexOf" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ListIndexOfReplaceableByContains" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="MalformedFormatString" enabled="true" level="ERROR" enabled_by_default="true">
@@ -104,7 +89,6 @@
     <inspection_tool class="MathRandomCastToInt" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="MavenDuplicateDependenciesInspection" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="MavenDuplicatePluginInspection" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="MavenModelInspection" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="MismatchedArrayReadWrite" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="MismatchedCollectionQueryUpdate" enabled="true" level="ERROR" enabled_by_default="true">
       <option name="queryNames">
@@ -145,7 +129,6 @@
     <inspection_tool class="RedundantThrows" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="RedundantTypeArguments" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ReflectionForUnavailableAnnotation" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="RemoveToStringInStringTemplate" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="ReplaceAllDot" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ResultOfObjectAllocationIgnored" enabled="true" level="WARNING" enabled_by_default="true">
       <scope name="Production" level="ERROR" enabled="true" />
@@ -351,12 +334,10 @@
     <inspection_tool class="StaticPseudoFunctionalStyleMethod" enabled="true" level="INFORMATION" enabled_by_default="true" />
     <inspection_tool class="StringConcatenationInFormatCall" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="StringConcatenationInMessageFormatCall" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="StringConcatenationMissingWhitespace" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="StringEquality" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="StringEqualsCharSequence" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="StringTokenizerDelimiter" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SubtractionInCompareTo" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="SuspiciousArrayCast" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="SuspiciousArrayMethodCall" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SuspiciousIndentAfterControlStatement" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SuspiciousListRemoveInLoop" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -399,10 +380,6 @@
       <option name="m_ignoreCatchBlocksWithComments" value="false" />
       <option name="m_ignoreTestCases" value="false" />
     </inspection_tool>
-    <inspection_tool class="UnusedImport" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="UnusedLibrary" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="UseOfPropertiesAsHashtable" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="VariableNotUsedInsideIf" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="XmlDuplicatedId" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
     <inspection_tool class="XmlHighlighting" enabled="true" level="Non-TeamCity Warning" enabled_by_default="true" />
     <inspection_tool class="XmlInvalidId" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
