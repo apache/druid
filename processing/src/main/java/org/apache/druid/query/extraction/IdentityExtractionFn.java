@@ -82,6 +82,12 @@ public class IdentityExtractionFn implements ExtractionFn
     return o != null && o instanceof IdentityExtractionFn;
   }
 
+  @Override
+  public int hashCode()
+  {
+    return super.hashCode();
+  }
+
   public static final IdentityExtractionFn getInstance()
   {
     return instance;

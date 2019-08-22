@@ -88,6 +88,12 @@ public class StringComparators
     }
 
     @Override
+    public int hashCode()
+    {
+      return super.hashCode();
+    }
+
+    @Override
     public String toString()
     {
       return StringComparators.LEXICOGRAPHIC_NAME;
@@ -270,6 +276,12 @@ public class StringComparators
     }
 
     @Override
+    public int hashCode()
+    {
+      return super.hashCode();
+    }
+
+    @Override
     public String toString()
     {
       return StringComparators.ALPHANUMERIC_NAME;
@@ -314,8 +326,13 @@ public class StringComparators
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-
       return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return super.hashCode();
     }
 
     @Override
@@ -410,8 +427,13 @@ public class StringComparators
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-
       return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return super.hashCode();
     }
 
     @Override
@@ -459,6 +481,12 @@ public class StringComparators
       }
 
       return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return super.hashCode();
     }
 
     @Override

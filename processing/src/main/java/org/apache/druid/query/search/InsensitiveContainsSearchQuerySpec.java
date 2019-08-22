@@ -53,4 +53,10 @@ public class InsensitiveContainsSearchQuerySpec extends ContainsSearchQuerySpec
     }
     return super.equals(o);
   }
+
+  @Override
+  public int hashCode()
+  {
+    return super.hashCode();
+  }
 }
