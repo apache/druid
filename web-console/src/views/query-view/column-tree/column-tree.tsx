@@ -155,7 +155,6 @@ export interface ColumnTreeState {
   columnTree?: ITreeNode[];
   currentSchemaSubtree?: ITreeNode[];
   selectedTreeIndex: number;
-  expandedNode: number;
 }
 
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
@@ -362,7 +361,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         columnTree,
         selectedTreeIndex,
         currentSchemaSubtree,
-        expandedNode,
         prevGroupByStatus: props.hasGroupBy,
       };
     }
@@ -386,7 +384,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     super(props, context);
     this.state = {
       selectedTreeIndex: -1,
-      expandedNode: -1,
     };
   }
 
@@ -424,7 +421,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
 
     this.setState({
       selectedTreeIndex: Number(e.target.value),
-      expandedNode: -1,
       currentSchemaSubtree: currentSchemaSubtree,
     });
   };
@@ -449,7 +445,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         <div className="tree-container">
           <Tree
             contents={currentSchemaSubtree}
-            onNodeClick={() => this.setState({ expandedNode: -1 })}
             onNodeCollapse={this.handleNodeCollapse}
             onNodeExpand={this.handleNodeExpand}
           />
@@ -459,7 +454,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   }
 
   private handleNodeCollapse = (nodeData: ITreeNode) => {
-    this.setState({ expandedNode: -1 });
     nodeData.isExpanded = false;
     this.bounceState();
   };
