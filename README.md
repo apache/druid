@@ -30,34 +30,22 @@ Apache Druid (incubating) is a high performance analytics data store for event-d
 
 *Disclaimer: Apache Druid is an effort undergoing incubation at The Apache Software Foundation (ASF), sponsored by the Apache Incubator. Incubation is required of all newly accepted projects until a further review indicates that the infrastructure, communications, and decision making process have stabilized in a manner consistent with other successful ASF projects. While incubation status is not necessarily a reflection of the completeness or stability of the code, it does indicate that the project has yet to be fully endorsed by the ASF.*
 
-### License
-
-[Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
-
-### More Information
-
-More information about Druid can be found on <https://druid.apache.org>.
-
-### Documentation
-
-You can find the [documentation for the latest Druid release](https://druid.apache.org/docs/latest/) on
-the [project website](https://druid.apache.org/docs/latest/).
-
-If you would like to contribute documentation, please do so under
-`/docs/content` in this repository and submit a pull request.
-
 ### Getting Started
 
 You can get started with Druid with our [quickstart](https://druid.apache.org/docs/latest/tutorials/quickstart.html).
 
-### Reporting Issues
+### Documentation
 
-If you find any bugs, please file a [GitHub issue](https://github.com/apache/incubator-druid/issues).
+You can find the [documentation for the latest Druid release](https://druid.apache.org/docs/latest/) on
+the [project website](https://druid.apache.org).
+
+If you would like to contribute documentation, please do so under
+`/docs` in this repository and submit a pull request.
 
 ### Community
 
 Community support is available on the
-[druid-user mailing list](https://groups.google.com/forum/#!forum/druid-user)(druid-user@googlegroups.com), which
+[druid-user mailing list](https://groups.google.com/forum/#!forum/druid-user), which
 is hosted at Google Groups.
 
 Development discussions occur on [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org), which
@@ -73,5 +61,9 @@ For instructions on building Druid from source, see [docs/content/development/bu
 
 ### Contributing
 
-Please follow the guidelines listed [here](https://druid.apache.org/community/).
+Please follow the [community guidelines](https://druid.apache.org/community/) for contributing.
+
+### License
+
+[Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
 
