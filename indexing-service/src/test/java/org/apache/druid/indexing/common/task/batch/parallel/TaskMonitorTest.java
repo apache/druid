@@ -196,7 +196,7 @@ public class TaskMonitorTest
           taskId,
           new TaskStatusPlus(
               taskId,
-              taskId,
+              "groupId",
               "testTask",
               DateTimes.EPOCH,
               DateTimes.EPOCH,
