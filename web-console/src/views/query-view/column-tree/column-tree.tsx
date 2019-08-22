@@ -27,7 +27,15 @@ import {
   Tree,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Alias, FilterClause, RefExpression, SqlQuery, StringType } from 'druid-query-toolkit';
+import {
+  Alias,
+  FilterClause,
+  RefExpression,
+  refExpressionFactory,
+  SqlQuery,
+  stringFactory,
+  StringType,
+} from 'druid-query-toolkit';
 import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
@@ -136,6 +144,7 @@ export interface ColumnTreeProps {
     filter?: FilterClause,
   ) => void;
   filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
+  replaceFrom: (table: RefExpression, preferablyRun: boolean) => void;
   hasGroupBy: () => boolean;
   queryAst: () => SqlQuery | undefined;
   clear: (column: string, preferablyRun: boolean) => void;
@@ -196,6 +205,13 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                         text={`Copy: ${table}`}
                         onClick={() => {
                           copyAndAlert(table, `${table} query copied to clipboard`);
+                        }}
+                      />
+                      <MenuItem
+                        icon={IconNames.EXCHANGE}
+                        text={`Replace from value with: ${table}`}
+                        onClick={() => {
+                          props.replaceFrom(refExpressionFactory(stringFactory(table, `"`)), true);
                         }}
                       />
                     </Menu>
