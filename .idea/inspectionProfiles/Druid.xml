@@ -10,9 +10,6 @@
     <inspection_tool class="CapturingCleaner" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="CastConflictsWithInstanceof" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="CastToIncompatibleInterface" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="CatchMayIgnoreException" enabled="true" level="WARNING" enabled_by_default="true">
-      <option name="m_ignoreCatchBlocksWithComments" value="false" />
-    </inspection_tool>
     <inspection_tool class="ClassGetClass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="CollectionAddedToSelf" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ComparatorMethodParameterNotUsed" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -28,34 +25,12 @@
     </inspection_tool>
     <inspection_tool class="DuplicateThrows" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="EmptyInitializer" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="EmptyStatementBody" enabled="true" level="WARNING" enabled_by_default="true">
-      <option name="m_reportEmptyBlocks" value="true" />
-      <option name="commentsAreContent" value="true" />
-    </inspection_tool>
     <inspection_tool class="EndlessStream" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="EqualsBetweenInconvertibleTypes" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="EqualsOnSuspiciousObject" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="EqualsWhichDoesntCheckParameterClass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="EqualsWithItself" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="FieldAccessNotGuarded" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="FieldCanBeLocal" enabled="true" level="WARNING" enabled_by_default="true">
-      <option name="EXCLUDE_ANNOS">
-        <value>
-          <list size="1">
-            <item index="0" class="java.lang.String" itemvalue="com.fasterxml.jackson.annotation.JsonProperty" />
-          </list>
-        </value>
-      </option>
-      <option name="IGNORE_FIELDS_USED_IN_MULTIPLE_METHODS" value="true" />
-    </inspection_tool>
-    <inspection_tool class="ForCanBeForeach" enabled="true" level="WARNING" enabled_by_default="true">
-      <scope name="NonGeneratedFiles" level="ERROR" enabled="true">
-        <option name="REPORT_INDEXED_LOOP" value="true" />
-        <option name="ignoreUntypedCollections" value="false" />
-      </scope>
-      <option name="REPORT_INDEXED_LOOP" value="true" />
-      <option name="ignoreUntypedCollections" value="false" />
-    </inspection_tool>
     <inspection_tool class="ForLoopThatDoesntUseLoopVariable" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ImplicitArrayToString" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="IndexOfReplaceableByContains" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -93,24 +68,11 @@
       </option>
     </inspection_tool>
     <inspection_tool class="MismatchedStringBuilderQueryUpdate" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="MissingOverrideAnnotation" enabled="true" level="WARNING" enabled_by_default="true">
-      <scope name="NonGeneratedFiles" level="ERROR" enabled="true">
-        <option name="ignoreObjectMethods" value="false" />
-        <option name="ignoreAnonymousClassMethods" value="false" />
-      </scope>
-      <option name="ignoreObjectMethods" value="false" />
-      <option name="ignoreAnonymousClassMethods" value="false" />
-    </inspection_tool>
     <inspection_tool class="MisspelledEquals" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="NewStringBufferWithCharArgument" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="NonShortCircuitBoolean" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="NullArgumentToVariableArgMethod" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="NumberEquality" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="ObjectEquality" enabled="true" level="WARNING" enabled_by_default="true">
-      <option name="m_ignoreEnums" value="true" />
-      <option name="m_ignoreClassObjects" value="true" />
-      <option name="m_ignorePrivateConstructors" value="false" />
-    </inspection_tool>
     <inspection_tool class="ObjectEqualsNull" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ObjectToString" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="OverwrittenKey" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -121,16 +83,7 @@
     <inspection_tool class="RedundantTypeArguments" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ReflectionForUnavailableAnnotation" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ReplaceAllDot" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="ResultOfObjectAllocationIgnored" enabled="true" level="WARNING" enabled_by_default="true">
-      <scope name="Production" level="ERROR" enabled="true" />
-    </inspection_tool>
     <inspection_tool class="ResultSetIndexZero" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="ReturnNull" enabled="true" level="WARNING" enabled_by_default="true">
-      <option name="m_reportObjectMethods" value="true" />
-      <option name="m_reportArrayMethods" value="true" />
-      <option name="m_reportCollectionMethods" value="true" />
-      <option name="m_ignorePrivateMethods" value="false" />
-    </inspection_tool>
     <inspection_tool class="SSBasedInspection" enabled="true" level="ERROR" enabled_by_default="true">
       <searchConfiguration name="Suboptimal IndexedInts iteration" text="$x$ &lt; $y$.size()" recursive="false" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
@@ -345,53 +298,14 @@
     <inspection_tool class="SuspiciousToArrayCall" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="TextLabelInSwitchStatement" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ThrowableNotThrown" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="ToArrayCallWithZeroLengthArrayArgument" enabled="true" level="WARNING" enabled_by_default="true">
-      <option name="myMode" value="BY_LEVEL" />
-    </inspection_tool>
     <inspection_tool class="UnnecessaryCallToStringValueOf" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="UnnecessaryEnumModifier" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="UnnecessaryFullyQualifiedName" enabled="true" level="WARNING" enabled_by_default="true">
-      <scope name="NonGeneratedFiles" level="ERROR" enabled="true">
-        <option name="m_ignoreJavadoc" value="true" />
-        <option name="ignoreInModuleStatements" value="true" />
-      </scope>
-      <option name="m_ignoreJavadoc" value="true" />
-      <option name="ignoreInModuleStatements" value="true" />
-    </inspection_tool>
     <inspection_tool class="UnnecessaryInterfaceModifier" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="UnnecessaryToStringCall" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="UnusedAssignment" enabled="true" level="ERROR" enabled_by_default="true">
       <option name="REPORT_PREFIX_EXPRESSIONS" value="true" />
       <option name="REPORT_POSTFIX_EXPRESSIONS" value="true" />
       <option name="REPORT_REDUNDANT_INITIALIZER" value="true" />
-    </inspection_tool>
-    <inspection_tool class="UnusedCatchParameter" enabled="true" level="WARNING" enabled_by_default="true">
-      <option name="m_ignoreCatchBlocksWithComments" value="false" />
-      <option name="m_ignoreTestCases" value="false" />
-    </inspection_tool>
-    <inspection_tool class="unused" enabled="true" level="WARNING" enabled_by_default="true">
-      <scope name="UnusedInspectionsScope" level="ERROR" enabled="true">
-        <option name="LOCAL_VARIABLE" value="true" />
-        <option name="FIELD" value="true" />
-        <option name="METHOD" value="true" />
-        <option name="CLASS" value="true" />
-        <option name="PARAMETER" value="true" />
-        <option name="REPORT_PARAMETER_FOR_PUBLIC_METHODS" value="true" />
-        <option name="ADD_MAINS_TO_ENTRIES" value="true" />
-        <option name="ADD_APPLET_TO_ENTRIES" value="true" />
-        <option name="ADD_SERVLET_TO_ENTRIES" value="true" />
-        <option name="ADD_NONJAVA_TO_ENTRIES" value="true" />
-      </scope>
-      <option name="LOCAL_VARIABLE" value="true" />
-      <option name="FIELD" value="true" />
-      <option name="METHOD" value="true" />
-      <option name="CLASS" value="true" />
-      <option name="PARAMETER" value="true" />
-      <option name="REPORT_PARAMETER_FOR_PUBLIC_METHODS" value="true" />
-      <option name="ADD_MAINS_TO_ENTRIES" value="true" />
-      <option name="ADD_APPLET_TO_ENTRIES" value="true" />
-      <option name="ADD_SERVLET_TO_ENTRIES" value="true" />
-      <option name="ADD_NONJAVA_TO_ENTRIES" value="true" />
     </inspection_tool>
   </profile>
 </component>
