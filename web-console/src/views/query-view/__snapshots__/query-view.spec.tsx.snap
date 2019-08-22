@@ -16,6 +16,7 @@ exports[`sql view matches snapshot 1`] = `
     hasGroupBy={[Function]}
     onQueryStringChange={[Function]}
     queryAst={[Function]}
+    replaceFrom={[Function]}
   />
   <t
     customClassName=""
