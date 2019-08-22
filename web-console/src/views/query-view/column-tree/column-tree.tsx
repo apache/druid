@@ -153,7 +153,6 @@ export interface ColumnTreeProps {
 export interface ColumnTreeState {
   prevColumnMetadata?: readonly ColumnMetadata[];
   columnTree?: ITreeNode[];
-  currentSchemaSubtree?: ITreeNode[];
   selectedTreeIndex: number;
   expandedNode: number;
 }
