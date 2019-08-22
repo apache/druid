@@ -17,7 +17,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from __future__ import division
 from __future__ import print_function
 
 import argparse
@@ -56,7 +55,7 @@ def do_query(url, sql, context, timeout, user, ignore_ssl_verification, ca_file,
     if timeout <= 0:
       timeout = None
       query_context = context
-    elif int(context.get('timeout', 0)) / 1000 < timeout:
+    elif int(context.get('timeout', 0)) / 1000. < timeout:
       query_context = context.copy()
       query_context['timeout'] = timeout * 1000
 
