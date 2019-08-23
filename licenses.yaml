@@ -466,6 +466,24 @@ notices:
 
 ---
 
+name: Apache Commons Lang
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.7
+libraries:
+  - org.apache.commons: commons-lang3
+notices:
+  - commons-lang: |
+      Apache Commons Lang
+      Copyright 2001-2019 The Apache Software Foundation
+
+      This product includes software developed at
+      The Apache Software Foundation (http://www.apache.org/).
+      Apache Commons Lang
+
+---
+
 name: Apache Commons Logging
 license_category: binary
 module: java-core
@@ -798,17 +816,11 @@ module: java-core
 license_name: Apache License version 2.0
 version: 4.1.29.Final
 libraries:
-  - io.netty: netty-buffer
-  - io.netty: netty-codec
   - io.netty: netty-codec-dns
-  - io.netty: netty-codec-http
   - io.netty: netty-codec-socks
-  - io.netty: netty-common
-  - io.netty: netty-handler
   - io.netty: netty-handler-proxy
   - io.netty: netty-resolver
   - io.netty: netty-resolver-dns
-  - io.netty: netty-transport
   - io.netty: netty-transport-native-epoll
   - io.netty: netty-transport-native-unix-common
 notice: |
@@ -1038,11 +1050,26 @@ notice: |
 
 ---
 
+name: Netty
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 4.1.30.Final
+libraries:
+  - io.netty: netty-buffer
+  - io.netty: netty-codec
+  - io.netty: netty-codec-http
+  - io.netty: netty-common
+  - io.netty: netty-handler
+  - io.netty: netty-transport
+
+---
+
 name: fastutil
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 8.1.0
+version: 8.2.3
 libraries:
   - it.unimi.dsi: fastutil
 
@@ -3185,34 +3212,6 @@ notices:
 
 ---
 
-name: snappy-java
-license_category: binary
-module: extensions/druid-parquet-extensions
-license_name: Apache License version 2.0
-version: 1.1.7.2
-libraries:
-  - org.xerial.snappy: snappy-java
-notices:
-  - snappy-java: |
-      This product includes software developed by Google
-       Snappy: http://code.google.com/p/snappy/ (New BSD License)
-
-      This product includes software developed by Apache
-       PureJavaCrc32C from apache-hadoop-common http://hadoop.apache.org/
-       (Apache 2.0 license)
-
-      This library containd statically linked libstdc++. This inclusion is allowed by
-      "GCC RUntime Library Exception"
-      http://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html
-
-      == Contributors ==
-        * Tatu Saloranta
-          * Providing benchmark suite
-        * Alec Wysoker
-          * Performance and memory usage improvement
-
----
-
 name: Protocol Buffers Dynamic Schema
 license_category: binary
 module: extensions/protobuf-extensions
@@ -3696,7 +3695,7 @@ name: Jersey
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: CDDL 1.1
-version: 1.15
+version: 1.19.3
 copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/jersey.CDDL11
 libraries:
