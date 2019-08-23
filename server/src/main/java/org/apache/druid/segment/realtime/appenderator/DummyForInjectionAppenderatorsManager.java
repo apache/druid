@@ -89,7 +89,7 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
   }
 
   @Override
-  public void removeAppenderatorForTask(String taskId)
+  public void removeAppenderatorsForTask(String taskId, String dataSource)
   {
     throw new UOE(ERROR_MSG);
   }

@@ -244,8 +244,8 @@ public class DataSourceCompactionConfigTest
         3000L
     );
 
-    final String json = objectMapper.writeValueAsString(tuningConfig);
-    final UserCompactTuningConfig fromJson = objectMapper.readValue(json, UserCompactTuningConfig.class);
+    final String json = OBJECT_MAPPER.writeValueAsString(tuningConfig);
+    final UserCompactTuningConfig fromJson = OBJECT_MAPPER.readValue(json, UserCompactTuningConfig.class);
     Assert.assertEquals(tuningConfig, fromJson);
   }
 }

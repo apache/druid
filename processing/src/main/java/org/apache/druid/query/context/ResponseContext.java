@@ -150,7 +150,7 @@ public abstract class ResponseContext
      */
     NUM_SCANNED_ROWS(
         "count",
-            (oldValue, newValue) -> (long) oldValue + (long) newValue
+            (oldValue, newValue) -> ((Number) oldValue).longValue() + ((Number) newValue).longValue()
     ),
     /**
      * The total CPU time for threads related to Sequence processing of the query.
@@ -159,7 +159,7 @@ public abstract class ResponseContext
      */
     CPU_CONSUMED_NANOS(
         "cpuConsumed",
-            (oldValue, newValue) -> (long) oldValue + (long) newValue
+            (oldValue, newValue) -> ((Number) oldValue).longValue() + ((Number) newValue).longValue()
     ),
     /**
      * Indicates if a {@link ResponseContext} was truncated during serialization.

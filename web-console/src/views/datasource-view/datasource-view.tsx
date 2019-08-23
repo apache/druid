@@ -306,13 +306,13 @@ GROUP BY 1`;
     this.datasourceQueryManager.rerunLastQuery(auto);
     // this looks ugly, but it forces the chart to re-render when refresh is clicked
     this.setState(
-      {
-        showChart: !this.state.showChart,
-      },
+      prevState => ({
+        showChart: !prevState.showChart,
+      }),
       () =>
-        this.setState({
-          showChart: !this.state.showChart,
-        }),
+        this.setState(prevState => ({
+          showChart: !prevState.showChart,
+        })),
     );
   };
 
@@ -859,7 +859,13 @@ GROUP BY 1`;
                 const { compaction } = row.original;
                 let text: string;
                 if (compaction) {
-                  text = `Target: ${formatBytes(compaction.targetCompactionSizeBytes)}`;
+                  if (compaction.targetCompactionSizeBytes == null) {
+                    text = `Target: Default (${formatBytes(
+                      CompactionDialog.DEFAULT_TARGET_COMPACTION_SIZE_BYTES,
+                    )})`;
+                  } else {
+                    text = `Target: ${formatBytes(compaction.targetCompactionSizeBytes)}`;
+                  }
                 } else {
                   text = 'None';
                 }
@@ -983,7 +989,11 @@ GROUP BY 1`;
           />
           <TableColumnSelector
             columns={noSqlMode ? tableColumnsNoSql : tableColumns}
-            onChange={column => this.setState({ hiddenColumns: hiddenColumns.toggle(column) })}
+            onChange={column =>
+              this.setState(prevState => ({
+                hiddenColumns: prevState.hiddenColumns.toggle(column),
+              }))
+            }
             tableColumnsHidden={hiddenColumns.storedArray}
           />
         </ViewControlBar>

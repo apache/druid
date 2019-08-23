@@ -16,21 +16,44 @@
  * limitations under the License.
  */
 
-import { HTMLSelect, IconName, ITreeNode, Menu, MenuItem, Position, Tree } from '@blueprintjs/core';
-import { Popover } from '@blueprintjs/core/lib/cjs';
+import {
+  HTMLSelect,
+  IconName,
+  ITreeNode,
+  Menu,
+  MenuItem,
+  Popover,
+  Position,
+  Tree,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import {
+  Alias,
+  FilterClause,
+  RefExpression,
+  refExpressionFactory,
+  SqlQuery,
+  stringFactory,
+  StringType,
+} from 'druid-query-toolkit';
 import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
+import { Deferred } from '../../../components/deferred/deferred';
 import { copyAndAlert, escapeSqlIdentifier, groupBy } from '../../../utils';
 import { ColumnMetadata } from '../../../utils/column-metadata';
+import { RowFilter } from '../query-view';
+
+import { NumberMenuItems } from './column-tree-menu/number-menu-items/number-menu-items';
+import { StringMenuItems } from './column-tree-menu/string-menu-items/string-menu-items';
+import { TimeMenuItems } from './column-tree-menu/time-menu-items/time-menu-items';
 
 import './column-tree.scss';
 
 function handleTableClick(
   tableSchema: string,
   nodeData: ITreeNode,
-  onQueryStringChange: (queryString: string) => void,
+  onQueryStringChange: (queryString: string, run: boolean) => void,
 ): void {
   let columns: string[];
   if (nodeData.childNodes) {
@@ -39,12 +62,18 @@ function handleTableClick(
     columns = ['*'];
   }
   if (tableSchema === 'druid') {
-    onQueryStringChange(`SELECT ${columns.join(', ')}
+    onQueryStringChange(
+      `SELECT ${columns.join(', ')}
 FROM ${escapeSqlIdentifier(String(nodeData.label))}
-WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
+WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`,
+      true,
+    );
   } else {
-    onQueryStringChange(`SELECT ${columns.join(', ')}
-FROM ${tableSchema}.${nodeData.label}`);
+    onQueryStringChange(
+      `SELECT ${columns.join(', ')}
+FROM ${tableSchema}.${nodeData.label}`,
+      true,
+    );
   }
 }
 
@@ -52,47 +81,79 @@ function handleColumnClick(
   columnSchema: string,
   columnTable: string,
   nodeData: ITreeNode,
-  onQueryStringChange: (queryString: string) => void,
+  onQueryStringChange: (queryString: string, run: boolean) => void,
 ): void {
   if (columnSchema === 'druid') {
     if (nodeData.icon === IconNames.TIME) {
-      onQueryStringChange(`SELECT
+      onQueryStringChange(
+        `SELECT
   TIME_FLOOR(${escapeSqlIdentifier(String(nodeData.label))}, 'PT1H') AS "Time",
   COUNT(*) AS "Count"
 FROM ${escapeSqlIdentifier(columnTable)}
 WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
 GROUP BY 1
-ORDER BY "Time" ASC`);
+ORDER BY "Time" ASC`,
+        true,
+      );
     } else {
-      onQueryStringChange(`SELECT
+      onQueryStringChange(
+        `SELECT
   "${nodeData.label}",
   COUNT(*) AS "Count"
 FROM ${escapeSqlIdentifier(columnTable)}
 WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
 GROUP BY 1
-ORDER BY "Count" DESC`);
+ORDER BY "Count" DESC`,
+        true,
+      );
     }
   } else {
-    onQueryStringChange(`SELECT
+    onQueryStringChange(
+      `SELECT
   ${escapeSqlIdentifier(String(nodeData.label))},
   COUNT(*) AS "Count"
 FROM ${columnSchema}.${columnTable}
 GROUP BY 1
-ORDER BY "Count" DESC`);
+ORDER BY "Count" DESC`,
+      true,
+    );
   }
 }
 
 export interface ColumnTreeProps {
   columnMetadataLoading: boolean;
-  columnMetadata?: ColumnMetadata[];
-  onQueryStringChange: (queryString: string) => void;
+  columnMetadata?: readonly ColumnMetadata[];
+  onQueryStringChange: (queryString: string, run: boolean) => void;
   defaultSchema?: string;
   defaultTable?: string;
+  currentFilters: () => string[];
+  addFunctionToGroupBy: (
+    functionName: string,
+    spacing: string[],
+    argumentsArray: (StringType | number)[],
+    run: boolean,
+    alias: Alias,
+  ) => void;
+  addToGroupBy: (columnName: string, run: boolean) => void;
+  addAggregateColumn: (
+    columnName: string | RefExpression,
+    functionName: string,
+    run: boolean,
+    alias?: Alias,
+    distinct?: boolean,
+    filter?: FilterClause,
+  ) => void;
+  filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
+  replaceFrom: (table: RefExpression, preferablyRun: boolean) => void;
+  hasGroupBy: () => boolean;
+  queryAst: () => SqlQuery | undefined;
+  clear: (column: string, preferablyRun: boolean) => void;
 }
 
 export interface ColumnTreeState {
-  prevColumnMetadata?: ColumnMetadata[];
+  prevColumnMetadata?: readonly ColumnMetadata[];
   columnTree?: ITreeNode[];
+  currentSchemaSubtree?: ITreeNode[];
   selectedTreeIndex: number;
   expandedNode: number;
 }
@@ -100,7 +161,6 @@ export interface ColumnTreeState {
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
     const { columnMetadata, defaultSchema, defaultTable } = props;
-
     if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
       const columnTree = groupBy(
         columnMetadata,
@@ -122,7 +182,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                     <Menu>
                       <MenuItem
                         icon={IconNames.FULLSCREEN}
-                        text={`Show: ${table}`}
+                        text={`SELECT ... FROM ${table}`}
                         onClick={() => {
                           handleTableClick(
                             schema,
@@ -147,6 +207,24 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                           copyAndAlert(table, `${table} query copied to clipboard`);
                         }}
                       />
+                      <Deferred
+                        content={() => (
+                          <>
+                            {props.queryAst() && (
+                              <MenuItem
+                                icon={IconNames.EXCHANGE}
+                                text={`Replace FROM with: ${table}`}
+                                onClick={() => {
+                                  props.replaceFrom(
+                                    refExpressionFactory(stringFactory(table, `"`)),
+                                    true,
+                                  );
+                                }}
+                              />
+                            )}
+                          </>
+                        )}
+                      />
                     </Menu>
                   }
                 >
@@ -160,35 +238,82 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                   <Popover
                     boundary={'window'}
                     position={Position.RIGHT}
+                    autoFocus={false}
+                    targetClassName={'bp3-popover-open'}
                     content={
-                      <Menu>
-                        <MenuItem
-                          icon={IconNames.FULLSCREEN}
-                          text={`Show: ${columnData.COLUMN_NAME}`}
-                          onClick={() => {
-                            handleColumnClick(
-                              schema,
-                              table,
-                              {
-                                id: columnData.COLUMN_NAME,
-                                icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
-                                label: columnData.COLUMN_NAME,
-                              },
-                              props.onQueryStringChange,
-                            );
-                          }}
-                        />
-                        <MenuItem
-                          icon={IconNames.CLIPBOARD}
-                          text={`Copy: ${columnData.COLUMN_NAME}`}
-                          onClick={() => {
-                            copyAndAlert(
-                              columnData.COLUMN_NAME,
-                              `${columnData.COLUMN_NAME} query copied to clipboard`,
-                            );
-                          }}
-                        />
-                      </Menu>
+                      <Deferred
+                        content={() => (
+                          <Menu>
+                            <MenuItem
+                              icon={IconNames.FULLSCREEN}
+                              text={`Show: ${columnData.COLUMN_NAME}`}
+                              onClick={() => {
+                                handleColumnClick(
+                                  schema,
+                                  table,
+                                  {
+                                    id: columnData.COLUMN_NAME,
+                                    icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
+                                    label: columnData.COLUMN_NAME,
+                                  },
+                                  props.onQueryStringChange,
+                                );
+                              }}
+                            />
+                            {columnData.DATA_TYPE === 'BIGINT' && (
+                              <NumberMenuItems
+                                addFunctionToGroupBy={props.addFunctionToGroupBy}
+                                addToGroupBy={props.addToGroupBy}
+                                addAggregateColumn={props.addAggregateColumn}
+                                filterByRow={props.filterByRow}
+                                columnName={columnData.COLUMN_NAME}
+                                queryAst={props.queryAst()}
+                              />
+                            )}
+                            {columnData.DATA_TYPE === 'VARCHAR' && (
+                              <StringMenuItems
+                                addFunctionToGroupBy={props.addFunctionToGroupBy}
+                                addToGroupBy={props.addToGroupBy}
+                                addAggregateColumn={props.addAggregateColumn}
+                                filterByRow={props.filterByRow}
+                                columnName={columnData.COLUMN_NAME}
+                                queryAst={props.queryAst()}
+                              />
+                            )}
+                            {columnData.DATA_TYPE === 'TIMESTAMP' && (
+                              <TimeMenuItems
+                                clear={props.clear}
+                                addFunctionToGroupBy={props.addFunctionToGroupBy}
+                                addToGroupBy={props.addToGroupBy}
+                                addAggregateColumn={props.addAggregateColumn}
+                                filterByRow={props.filterByRow}
+                                columnName={columnData.COLUMN_NAME}
+                                queryAst={props.queryAst()}
+                              />
+                            )}
+                            {props.currentFilters() &&
+                              props.currentFilters().includes(columnData.COLUMN_NAME) && (
+                                <MenuItem
+                                  icon={IconNames.FILTER_REMOVE}
+                                  text={`Remove filter`}
+                                  onClick={() => {
+                                    props.clear(columnData.COLUMN_NAME, true);
+                                  }}
+                                />
+                              )}
+                            <MenuItem
+                              icon={IconNames.CLIPBOARD}
+                              text={`Copy: ${columnData.COLUMN_NAME}`}
+                              onClick={() => {
+                                copyAndAlert(
+                                  columnData.COLUMN_NAME,
+                                  `${columnData.COLUMN_NAME} query copied to clipboard`,
+                                );
+                              }}
+                            />
+                          </Menu>
+                        )}
+                      />
                     }
                   >
                     <div>{columnData.COLUMN_NAME}</div>
@@ -203,29 +328,37 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       let selectedTreeIndex = -1;
       let expandedNode = -1;
       if (defaultSchema && columnTree) {
-        selectedTreeIndex = columnTree
-          .map(function(x) {
-            return x.id;
-          })
-          .indexOf(defaultSchema);
+        selectedTreeIndex = columnTree.findIndex(x => {
+          return x.id === defaultSchema;
+        });
       }
+
       if (selectedTreeIndex > -1) {
         const treeNodes = columnTree[selectedTreeIndex].childNodes;
         if (treeNodes) {
           if (defaultTable) {
-            expandedNode = treeNodes
-              .map(node => {
-                return node.id;
-              })
-              .indexOf(defaultTable);
+            expandedNode = treeNodes.findIndex(node => {
+              return node.id === defaultTable;
+            });
           }
         }
       }
+
+      if (!columnTree) return null;
+      const currentSchemaSubtree =
+        columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
+      if (!currentSchemaSubtree) return null;
+
+      if (expandedNode > -1) {
+        currentSchemaSubtree[expandedNode].isExpanded = true;
+      }
+
       return {
         prevColumnMetadata: columnMetadata,
         columnTree,
         selectedTreeIndex,
         expandedNode,
+        currentSchemaSubtree,
       };
     }
     return null;
@@ -280,6 +413,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
 
   render(): JSX.Element | null {
     const { columnMetadataLoading } = this.props;
+    const { currentSchemaSubtree } = this.state;
+
     if (columnMetadataLoading) {
       return (
         <div className="column-tree">
@@ -288,15 +423,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       );
     }
 
-    const { columnTree, selectedTreeIndex, expandedNode } = this.state;
-    if (!columnTree) return null;
-    const currentSchemaSubtree =
-      columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
     if (!currentSchemaSubtree) return null;
 
-    if (expandedNode > -1) {
-      currentSchemaSubtree[expandedNode].isExpanded = true;
-    }
     return (
       <div className="column-tree">
         {this.renderSchemaSelector()}
@@ -326,6 +454,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   bounceState() {
     const { columnTree } = this.state;
     if (!columnTree) return;
-    this.setState({ columnTree: columnTree.slice() });
+    this.setState(prevState => ({
+      columnTree: prevState.columnTree ? prevState.columnTree.slice() : undefined,
+    }));
   }
 }

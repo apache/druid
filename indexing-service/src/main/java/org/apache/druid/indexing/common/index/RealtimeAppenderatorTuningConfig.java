@@ -254,6 +254,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     return maxSavedParseExceptions;
   }
 
+  @Override
   public RealtimeAppenderatorTuningConfig withBasePersistDirectory(File dir)
   {
     return new RealtimeAppenderatorTuningConfig(

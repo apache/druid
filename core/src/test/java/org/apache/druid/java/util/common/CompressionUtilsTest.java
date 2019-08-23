@@ -68,10 +68,10 @@ public class CompressionUtilsTest
 
   static {
     final StringBuilder builder = new StringBuilder();
-    try (InputStream stream = CompressionUtilsTest.class.getClassLoader().getResourceAsStream("loremipsum.txt")) {
+    try (InputStream stream = CompressionUtilsTest.class.getClassLoader().getResourceAsStream("white-rabbit.txt")) {
       final Iterator<String> it = new Scanner(
           new InputStreamReader(stream, StandardCharsets.UTF_8)
-      ).useDelimiter(Pattern.quote("|"));
+      ).useDelimiter(Pattern.quote(System.lineSeparator()));
       while (it.hasNext()) {
         builder.append(it.next());
       }

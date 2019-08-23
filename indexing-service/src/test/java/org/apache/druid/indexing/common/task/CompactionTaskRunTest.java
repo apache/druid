@@ -722,7 +722,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         null,
         null,
         null,
-        new NoopTestTaskReportFileWriter()
+        new NoopTestTaskReportFileWriter(),
+        null
     );
 
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);

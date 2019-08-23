@@ -15,22 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Button, ButtonGroup, Callout, Classes, Dialog, Intent, TextArea } from '@blueprintjs/core';
+import { Button, Callout, Classes, Dialog, Intent, TextArea } from '@blueprintjs/core';
+import Hjson from 'hjson';
 import React from 'react';
 
-import { validJson } from '../../utils';
 import { QueryContext } from '../../utils/query-context';
 
 import './edit-context-dialog.scss';
 
 export interface EditContextDialogProps {
   queryContext: QueryContext;
-  onSubmit: (queryContext: {}) => void;
+  onQueryContextChange: (queryContext: QueryContext) => void;
   onClose: () => void;
 }
 
 export interface EditContextDialogState {
   queryContextString: string;
+  queryContext?: QueryContext;
   error?: string;
 }
 
@@ -44,75 +45,61 @@ export class EditContextDialog extends React.PureComponent<
       queryContextString: Object.keys(props.queryContext).length
         ? JSON.stringify(props.queryContext, undefined, 2)
         : '{\n\n}',
-      error: '',
     };
   }
 
-  private onTextChange = (e: any) => {
-    let { error } = this.state;
-    const queryContextText = (e.target as HTMLInputElement).value;
-    error = undefined;
-    let queryContextObject;
+  private handleTextChange = (e: any) => {
+    const queryContextString = (e.target as HTMLInputElement).value;
+
+    let error: string | undefined;
+    let queryContext: QueryContext | undefined;
     try {
-      queryContextObject = JSON.parse(queryContextText);
+      queryContext = Hjson.parse(queryContextString);
     } catch (e) {
       error = e.message;
     }
 
-    if (!(typeof queryContextObject === 'object')) {
+    if (!error && (!queryContext || typeof queryContext !== 'object')) {
       error = 'Input is not a valid object';
+      queryContext = undefined;
     }
 
     this.setState({
-      queryContextString: queryContextText,
+      queryContextString,
+      queryContext,
       error,
     });
   };
 
+  private handleSave = () => {
+    const { onQueryContextChange } = this.props;
+    const { queryContext } = this.state;
+    if (!queryContext) return;
+    onQueryContextChange(queryContext);
+  };
+
   render(): JSX.Element {
-    const { onClose, onSubmit } = this.props;
-    const { queryContextString } = this.state;
-    let { error } = this.state;
-
-    let queryContextObject: {} | undefined;
-    try {
-      queryContextObject = JSON.parse(queryContextString);
-    } catch (e) {
-      error = e.message;
-    }
-
-    if (!(typeof queryContextObject === 'object') && !error) {
-      error = 'Input is not a valid object';
-    }
+    const { onClose } = this.props;
+    const { queryContextString, error } = this.state;
 
     return (
-      <Dialog
-        className="edit-context-dialog"
-        isOpen
-        onClose={() => onClose()}
-        title={'Edit query context'}
-      >
-        <TextArea value={queryContextString} onChange={this.onTextChange} autoFocus />
+      <Dialog className="edit-context-dialog" isOpen onClose={onClose} title={'Edit query context'}>
+        <TextArea value={queryContextString} onChange={this.handleTextChange} autoFocus />
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
           {error && (
             <Callout intent={Intent.DANGER} className="edit-context-dialog-error">
               {error}
             </Callout>
           )}
-          <ButtonGroup className={'edit-context-dialog-buttons'}>
+          <div className={'edit-context-dialog-buttons'}>
+            <Button text={'Close'} onClick={onClose} />
             <Button
-              text={'Close'}
-              onClick={() => {
-                onClose();
-              }}
-            />
-            <Button
-              disabled={!validJson(queryContextString) || typeof queryContextObject !== 'object'}
-              text={'Submit'}
+              disabled={Boolean(error)}
+              text={'Save'}
               intent={Intent.PRIMARY}
-              onClick={() => (queryContextObject ? onSubmit(queryContextObject) : null)}
+              onClick={this.handleSave}
             />
-          </ButtonGroup>
+          </div>
         </div>
       </Dialog>
     );
