@@ -16,27 +16,14 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+export interface SyntaxDescription {
+  name: string;
+  description: string;
+}
 
-import { QueryExtraInfo } from './query-extra-info';
+export interface FunctionSyntaxDescription extends SyntaxDescription {
+  arguments: string;
+}
 
-describe('query extra info', () => {
-  it('matches snapshot', () => {
-    const queryExtraInfo = (
-      <QueryExtraInfo
-        queryExtraInfo={{
-          queryId: 'e3ee781b-c0b6-4385-9d99-a8a1994bebac',
-          startTime: new Date('1986-04-26T01:23:40+03:00'),
-          endTime: new Date('1986-04-26T01:23:48+03:00'),
-          numResults: 1000,
-          wrapQueryLimit: 1000,
-        }}
-        onDownload={() => {}}
-      />
-    );
-
-    const { container } = render(queryExtraInfo);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+export const SQL_DATA_TYPES: SyntaxDescription[];
+export const SQL_FUNCTIONS: FunctionSyntaxDescription[];

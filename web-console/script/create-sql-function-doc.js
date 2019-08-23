@@ -21,7 +21,7 @@
 const fs = require('fs-extra');
 
 const readfile = '../docs/querying/sql.md';
-const writefile = 'lib/sql-function-doc.ts';
+const writefile = 'lib/sql-function-doc.js';
 
 const readDoc = async () => {
   const data = await fs.readFile(readfile, 'utf-8');
@@ -30,18 +30,19 @@ const readDoc = async () => {
   const functionDocs = [];
   const dataTypeDocs = [];
   for (let line of lines) {
-    const functionMatch = line.match(/^\|`(.+\(.*\))`\|(.+)\|$/);
+    const functionMatch = line.match(/^\|`(\w+)(\(.*\))`\|(.+)\|$/);
     if (functionMatch) {
       functionDocs.push({
-        syntax: functionMatch[1],
-        description: functionMatch[2],
+        name: functionMatch[1],
+        arguments: functionMatch[2],
+        description: functionMatch[3],
       });
     }
 
     const dataTypeMatch = line.match(/^\|([A-Z]+)\|([A-Z]+)\|(.*)\|(.*)\|$/);
     if (dataTypeMatch) {
       dataTypeDocs.push({
-        syntax: dataTypeMatch[1],
+        name: dataTypeMatch[1],
         description: dataTypeMatch[4] || `Druid runtime type: ${dataTypeMatch[2]}`,
       });
     }
@@ -81,16 +82,11 @@ const readDoc = async () => {
 
 // This file is auto generated and should not be modified
 
-export interface SyntaxDescription {
-  syntax: string;
-  description: string;
-}
+// prettier-ignore
+exports.SQL_DATA_TYPES = ${JSON.stringify(dataTypeDocs, null, 2)};
 
 // prettier-ignore
-export const SQL_FUNCTIONS: SyntaxDescription[] = ${JSON.stringify(functionDocs, null, 2)};
-
-// prettier-ignore
-export const SQL_DATE_TYPES: SyntaxDescription[] = ${JSON.stringify(dataTypeDocs, null, 2)};
+exports.SQL_FUNCTIONS = ${JSON.stringify(functionDocs, null, 2)};
 `;
 
   await fs.writeFile(writefile, content, 'utf-8');

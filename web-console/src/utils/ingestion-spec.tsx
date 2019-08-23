@@ -30,6 +30,8 @@ import {
 } from './druid-time';
 import { deepGet, deepSet } from './object-change';
 
+export const MAX_INLINE_DATA_LENGTH = 65536;
+
 // These constants are used to make sure that they are not constantly recreated thrashing the pure components
 export const EMPTY_OBJECT: any = {};
 export const EMPTY_ARRAY: any[] = [];
@@ -290,7 +292,7 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
   {
     name: 'hasHeaderRow',
     type: 'boolean',
-    defaultValue: true,
+    defaultValue: false,
     defined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
   },
   {

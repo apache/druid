@@ -18,7 +18,7 @@
 
 // Hand picked from https://druid.apache.org/docs/latest/querying/sql.html
 
-export const SQL_KEYWORDS: string[] = [
+exports.SQL_KEYWORDS = [
   'EXPLAIN PLAN FOR',
   'WITH',
   'AS',
@@ -36,7 +36,7 @@ export const SQL_KEYWORDS: string[] = [
   'UNION ALL',
 ];
 
-export const SQL_EXPRESSION_PARTS: string[] = [
+exports.SQL_EXPRESSION_PARTS = [
   'FILTER',
   'END',
   'ELSE',
@@ -69,6 +69,6 @@ export const SQL_EXPRESSION_PARTS: string[] = [
   'INTERVAL',
 ];
 
-export const SQL_CONSTANTS: string[] = ['NULL', 'FALSE', 'TRUE'];
+exports.SQL_CONSTANTS = ['NULL', 'FALSE', 'TRUE'];
 
-export const SQL_DYNAMICS: string[] = ['CURRENT_TIMESTAMP', 'CURRENT_DATE'];
+exports.SQL_DYNAMICS = ['CURRENT_TIMESTAMP', 'CURRENT_DATE'];

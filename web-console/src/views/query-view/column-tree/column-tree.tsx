@@ -126,7 +126,6 @@ export interface ColumnTreeProps {
   onQueryStringChange: (queryString: string, run: boolean) => void;
   defaultSchema?: string;
   defaultTable?: string;
-  currentFilters: () => string[];
   addFunctionToGroupBy: (
     functionName: string,
     spacing: string[],
@@ -145,7 +144,6 @@ export interface ColumnTreeProps {
   ) => void;
   filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
   replaceFrom: (table: RefExpression, preferablyRun: boolean) => void;
-  hasGroupBy: () => boolean;
   queryAst: () => SqlQuery | undefined;
   clear: (column: string, preferablyRun: boolean) => void;
 }
@@ -160,6 +158,7 @@ export interface ColumnTreeState {
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
     const { columnMetadata, defaultSchema, defaultTable } = props;
+
     if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
       const columnTree = groupBy(
         columnMetadata,
@@ -241,81 +240,79 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                     targetClassName={'bp3-popover-open'}
                     content={
                       <Deferred
-                        content={() => (
-                          <Menu>
-                            <MenuItem
-                              icon={IconNames.FULLSCREEN}
-                              text={`Show: ${columnData.COLUMN_NAME}`}
-                              onClick={() => {
-                                handleColumnClick(
-                                  schema,
-                                  table,
-                                  {
-                                    id: columnData.COLUMN_NAME,
-                                    icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
-                                    label: columnData.COLUMN_NAME,
-                                  },
-                                  props.onQueryStringChange,
-                                );
-                              }}
-                            />
-                            {columnData.DATA_TYPE === 'BIGINT' && (
-                              <NumberMenuItems
-                                addFunctionToGroupBy={props.addFunctionToGroupBy}
-                                addToGroupBy={props.addToGroupBy}
-                                addAggregateColumn={props.addAggregateColumn}
-                                filterByRow={props.filterByRow}
-                                columnName={columnData.COLUMN_NAME}
-                                queryAst={props.queryAst()}
-                                clear={props.clear}
-                                hasFilter={
-                                  props.currentFilters() &&
-                                  props.currentFilters().includes(columnData.COLUMN_NAME)
-                                }
+                        content={() => {
+                          const queryAst = props.queryAst();
+                          const hasFilter = queryAst
+                            ? queryAst.getCurrentFilters().includes(columnData.COLUMN_NAME)
+                            : false;
+
+                          return (
+                            <Menu>
+                              <MenuItem
+                                icon={IconNames.FULLSCREEN}
+                                text={`Show: ${columnData.COLUMN_NAME}`}
+                                onClick={() => {
+                                  handleColumnClick(
+                                    schema,
+                                    table,
+                                    {
+                                      id: columnData.COLUMN_NAME,
+                                      icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
+                                      label: columnData.COLUMN_NAME,
+                                    },
+                                    props.onQueryStringChange,
+                                  );
+                                }}
                               />
-                            )}
-                            {columnData.DATA_TYPE === 'VARCHAR' && (
-                              <StringMenuItems
-                                addFunctionToGroupBy={props.addFunctionToGroupBy}
-                                addToGroupBy={props.addToGroupBy}
-                                addAggregateColumn={props.addAggregateColumn}
-                                filterByRow={props.filterByRow}
-                                columnName={columnData.COLUMN_NAME}
-                                queryAst={props.queryAst()}
-                                clear={props.clear}
-                                hasFilter={
-                                  props.currentFilters() &&
-                                  props.currentFilters().includes(columnData.COLUMN_NAME)
-                                }
+                              {columnData.DATA_TYPE === 'BIGINT' && (
+                                <NumberMenuItems
+                                  addFunctionToGroupBy={props.addFunctionToGroupBy}
+                                  addToGroupBy={props.addToGroupBy}
+                                  addAggregateColumn={props.addAggregateColumn}
+                                  filterByRow={props.filterByRow}
+                                  columnName={columnData.COLUMN_NAME}
+                                  queryAst={props.queryAst()}
+                                  clear={props.clear}
+                                  hasFilter={hasFilter}
+                                />
+                              )}
+                              {columnData.DATA_TYPE === 'VARCHAR' && (
+                                <StringMenuItems
+                                  addFunctionToGroupBy={props.addFunctionToGroupBy}
+                                  addToGroupBy={props.addToGroupBy}
+                                  addAggregateColumn={props.addAggregateColumn}
+                                  filterByRow={props.filterByRow}
+                                  columnName={columnData.COLUMN_NAME}
+                                  queryAst={props.queryAst()}
+                                  clear={props.clear}
+                                  hasFilter={hasFilter}
+                                />
+                              )}
+                              {columnData.DATA_TYPE === 'TIMESTAMP' && (
+                                <TimeMenuItems
+                                  clear={props.clear}
+                                  addFunctionToGroupBy={props.addFunctionToGroupBy}
+                                  addToGroupBy={props.addToGroupBy}
+                                  addAggregateColumn={props.addAggregateColumn}
+                                  filterByRow={props.filterByRow}
+                                  columnName={columnData.COLUMN_NAME}
+                                  queryAst={props.queryAst()}
+                                  hasFilter={hasFilter}
+                                />
+                              )}
+                              <MenuItem
+                                icon={IconNames.CLIPBOARD}
+                                text={`Copy: ${columnData.COLUMN_NAME}`}
+                                onClick={() => {
+                                  copyAndAlert(
+                                    columnData.COLUMN_NAME,
+                                    `${columnData.COLUMN_NAME} query copied to clipboard`,
+                                  );
+                                }}
                               />
-                            )}
-                            {columnData.DATA_TYPE === 'TIMESTAMP' && (
-                              <TimeMenuItems
-                                clear={props.clear}
-                                addFunctionToGroupBy={props.addFunctionToGroupBy}
-                                addToGroupBy={props.addToGroupBy}
-                                addAggregateColumn={props.addAggregateColumn}
-                                filterByRow={props.filterByRow}
-                                columnName={columnData.COLUMN_NAME}
-                                queryAst={props.queryAst()}
-                                hasFilter={
-                                  props.currentFilters() &&
-                                  props.currentFilters().includes(columnData.COLUMN_NAME)
-                                }
-                              />
-                            )}
-                            <MenuItem
-                              icon={IconNames.CLIPBOARD}
-                              text={`Copy: ${columnData.COLUMN_NAME}`}
-                              onClick={() => {
-                                copyAndAlert(
-                                  columnData.COLUMN_NAME,
-                                  `${columnData.COLUMN_NAME} query copied to clipboard`,
-                                );
-                              }}
-                            />
-                          </Menu>
-                        )}
+                            </Menu>
+                          );
+                        }}
                       />
                     }
                   >
@@ -361,7 +358,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         columnTree,
         selectedTreeIndex,
         currentSchemaSubtree,
-        prevGroupByStatus: props.hasGroupBy,
       };
     }
     return null;

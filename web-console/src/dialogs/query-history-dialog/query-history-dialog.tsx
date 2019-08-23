@@ -75,10 +75,11 @@ export class QueryHistoryDialog extends React.PureComponent<
   }
 
   private handleSelect = () => {
-    const { queryRecords, setQueryString } = this.props;
+    const { queryRecords, setQueryString, onClose } = this.props;
     const { activeTab } = this.state;
 
     setQueryString(queryRecords[activeTab].queryString);
+    onClose();
   };
 
   private handleTabChange = (tab: number) => {
