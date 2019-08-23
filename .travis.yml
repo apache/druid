@@ -27,7 +27,6 @@ cache:
 
 env:
   global:
-    - COVERALLS_PARALLEL=true
     - DOCKER_IP=127.0.0.1  # for integration tests
     - MVN="mvn -B"
     - > # Various options to make execution of maven goals faster (e.g., mvn install)
@@ -117,8 +116,8 @@ matrix:
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
       after_success: &upload_java_unit_test_coverage
-        - ${MVN} -pl ${MAVEN_PROJECTS} jacoco:report coveralls:report
-        - curl https://coveralls.io/webhook -d "payload[build_num]=$TRAVIS_BUILD_NUMBER&payload[status]=done" 
+        - ${MVN} -pl ${MAVEN_PROJECTS} jacoco:report
+        - bash <(curl -s https://codecov.io/bash)
 
     - name: "processing module test (SQL Compatibility)"
       env: *processing_env
