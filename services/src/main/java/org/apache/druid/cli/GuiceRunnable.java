@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.initialization.Initialization;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.log.StartupLoggingConfig;
@@ -91,7 +92,7 @@ public abstract class GuiceRunnable implements Runnable
           JvmUtils.getRuntimeInfo().getAvailableProcessors(),
           JvmUtils.getRuntimeInfo().getTotalHeapSizeBytes(),
           JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(),
-          directSizeBytes != null ? String.format(", directMemory[%,d]", directSizeBytes) : ""
+          directSizeBytes != null ? StringUtils.format(", directMemory[%,d]", directSizeBytes) : ""
       );
 
       if (startupLoggingConfig.isLogProperties()) {
