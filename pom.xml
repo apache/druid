@@ -84,7 +84,7 @@
         <fastutil.version>8.2.3</fastutil.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
-        <jetty.version>9.4.10.v20180503</jetty.version>
+        <jetty.version>9.4.20.v20190813</jetty.version>
         <jersey.version>1.19.3</jersey.version>
         <!-- jackson 2.7.x causes injection error and 2.8.x can't be used because avatica is using 2.6.3 -->
         <jackson.version>2.6.7</jackson.version>

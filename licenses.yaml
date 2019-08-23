@@ -1526,7 +1526,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.10.v20180503
+version: 9.4.20.v20190813
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -1541,7 +1541,7 @@ libraries:
 notice: |
   ==============================================================
    Jetty Web Container
-   Copyright 1995-2018 Mort Bay Consulting Pty Ltd.
+   Copyright 1995-2019 Mort Bay Consulting Pty Ltd.
   ==============================================================
 
   The Jetty Web Container is Copyright Mort Bay Consulting Pty Ltd
