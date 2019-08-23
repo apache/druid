@@ -126,9 +126,9 @@ public class ExportMetadata extends GuiceRunnable
 
   private static final Logger log = new Logger(ExportMetadata.class);
 
-  private static final CSVParser parser = new CSVParser();
+  private static final CSVParser PARSER = new CSVParser();
 
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   public ExportMetadata()
   {
@@ -189,9 +189,9 @@ public class ExportMetadata extends GuiceRunnable
   public void run()
   {
     InjectableValues.Std injectableValues = new InjectableValues.Std();
-    injectableValues.addValue(ObjectMapper.class, jsonMapper);
+    injectableValues.addValue(ObjectMapper.class, JSON_MAPPER);
     injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
-    jsonMapper.setInjectableValues(injectableValues);
+    JSON_MAPPER.setInjectableValues(injectableValues);
 
     if (hadoopStorageDirectory != null && newLocalPath != null) {
       throw new IllegalArgumentException(
@@ -269,7 +269,7 @@ public class ExportMetadata extends GuiceRunnable
     ) {
       String line;
       while ((line = reader.readLine()) != null) {
-        String[] parsed = parser.parseLine(line);
+        String[] parsed = PARSER.parseLine(line);
 
         StringBuilder newLineBuilder = new StringBuilder();
         newLineBuilder.append(parsed[0]).append(","); //dataSource
@@ -300,7 +300,7 @@ public class ExportMetadata extends GuiceRunnable
     ) {
       String line;
       while ((line = reader.readLine()) != null) {
-        String[] parsed = parser.parseLine(line);
+        String[] parsed = PARSER.parseLine(line);
 
         StringBuilder newLineBuilder = new StringBuilder();
         newLineBuilder.append(parsed[0]).append(","); //id
@@ -331,7 +331,7 @@ public class ExportMetadata extends GuiceRunnable
     ) {
       String line;
       while ((line = reader.readLine()) != null) {
-        String[] parsed = parser.parseLine(line);
+        String[] parsed = PARSER.parseLine(line);
 
         StringBuilder newLineBuilder = new StringBuilder();
         newLineBuilder.append(parsed[0]).append(","); //name
@@ -360,7 +360,7 @@ public class ExportMetadata extends GuiceRunnable
     ) {
       String line;
       while ((line = reader.readLine()) != null) {
-        String[] parsed = parser.parseLine(line);
+        String[] parsed = PARSER.parseLine(line);
 
         StringBuilder newLineBuilder = new StringBuilder();
         newLineBuilder.append(parsed[0]).append(","); //id
@@ -392,7 +392,7 @@ public class ExportMetadata extends GuiceRunnable
     ) {
       String line;
       while ((line = reader.readLine()) != null) {
-        String[] parsed = parser.parseLine(line);
+        String[] parsed = PARSER.parseLine(line);
         StringBuilder newLineBuilder = new StringBuilder();
         newLineBuilder.append(parsed[0]).append(","); //id
         newLineBuilder.append(parsed[1]).append(","); //dataSource
@@ -425,7 +425,7 @@ public class ExportMetadata extends GuiceRunnable
       String payload
   ) throws IOException
   {
-    DataSegment segment = jsonMapper.readValue(DatatypeConverter.parseHexBinary(payload), DataSegment.class);
+    DataSegment segment = JSON_MAPPER.readValue(DatatypeConverter.parseHexBinary(payload), DataSegment.class);
     String uniqueId = getUniqueIDFromLocalLoadSpec(segment.getLoadSpec());
     String segmentPath = DataSegmentPusher.getDefaultStorageDirWithExistingUniquePath(segment, uniqueId);
 
@@ -452,7 +452,7 @@ public class ExportMetadata extends GuiceRunnable
       );
     }
 
-    String serialized = jsonMapper.writeValueAsString(segment);
+    String serialized = JSON_MAPPER.writeValueAsString(segment);
     if (useHexBlobs) {
       return DatatypeConverter.printHexBinary(StringUtils.toUtf8(serialized));
     } else {

@@ -31,19 +31,19 @@ import java.nio.ByteBuffer;
  */
 public class ConciseBitmapSerdeFactory implements BitmapSerdeFactory
 {
-  private static final ObjectStrategy<ImmutableBitmap> objectStrategy = new ImmutableConciseSetObjectStrategy();
-  private static final BitmapFactory bitmapFactory = new ConciseBitmapFactory();
+  private static final ObjectStrategy<ImmutableBitmap> OBJECT_STRATEGY = new ImmutableConciseSetObjectStrategy();
+  private static final BitmapFactory BITMAP_FACTORY = new ConciseBitmapFactory();
 
   @Override
   public ObjectStrategy<ImmutableBitmap> getObjectStrategy()
   {
-    return objectStrategy;
+    return OBJECT_STRATEGY;
   }
 
   @Override
   public BitmapFactory getBitmapFactory()
   {
-    return bitmapFactory;
+    return BITMAP_FACTORY;
   }
 
   private static class ImmutableConciseSetObjectStrategy implements ObjectStrategy<ImmutableBitmap>

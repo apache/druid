@@ -40,7 +40,7 @@ public class VSizeColumnarMultiInts implements ColumnarMultiInts, WritableSuppli
 {
   private static final byte VERSION = 0x1;
 
-  private static final MetaSerdeHelper<VSizeColumnarMultiInts> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<VSizeColumnarMultiInts> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((VSizeColumnarMultiInts x) -> VERSION)
       .writeByte(x -> ByteUtils.checkedCast(x.numBytes))
       .writeInt(x -> Ints.checkedCast(x.theBuffer.remaining() + (long) Integer.BYTES))
@@ -153,13 +153,13 @@ public class VSizeColumnarMultiInts implements ColumnarMultiInts, WritableSuppli
   @Override
   public long getSerializedSize()
   {
-    return metaSerdeHelper.size(this) + (long) theBuffer.remaining();
+    return META_SERDE_HELPER.size(this) + (long) theBuffer.remaining();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     Channels.writeFully(channel, theBuffer.asReadOnlyBuffer());
   }
 

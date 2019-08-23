@@ -243,11 +243,11 @@ public class ArithmeticPostAggregator implements PostAggregator
       }
     };
 
-    private static final Map<String, Ops> lookupMap = new HashMap<>();
+    private static final Map<String, Ops> LOOKUP_MAP = new HashMap<>();
 
     static {
       for (Ops op : Ops.values()) {
-        lookupMap.put(op.getFn(), op);
+        LOOKUP_MAP.put(op.getFn(), op);
       }
     }
 
@@ -267,12 +267,12 @@ public class ArithmeticPostAggregator implements PostAggregator
 
     static Ops lookup(String fn)
     {
-      return lookupMap.get(fn);
+      return LOOKUP_MAP.get(fn);
     }
 
     static Set<String> getFns()
     {
-      return lookupMap.keySet();
+      return LOOKUP_MAP.keySet();
     }
   }
 

@@ -120,7 +120,7 @@ import java.util.concurrent.TimeoutException;
 public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 {
   private static final Logger log = new Logger(IndexTask.class);
-  private static final HashFunction hashFunction = Hashing.murmur3_128();
+  private static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
   private static final String TYPE = "index";
 
   private static String makeGroupId(IndexIngestionSpec ingestionSchema)
@@ -717,7 +717,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                 inputRow
             );
             hllCollectors.get(interval).get()
-                         .add(hashFunction.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asBytes());
+                         .add(HASH_FUNCTION.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asBytes());
           } else {
             // we don't need to determine partitions but we still need to determine intervals, so add an Optional.absent()
             // for the interval and don't instantiate a HLL collector

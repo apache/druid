@@ -33,7 +33,7 @@ import java.util.Arrays;
 public class TimeFormatExtractionFnTest
 {
 
-  private static final long[] timestamps = {
+  private static final long[] TIMESTAMPS = {
       DateTimes.of("2015-01-01T23:00:00Z").getMillis(),
       DateTimes.of("2015-01-02T23:00:00Z").getMillis(),
       DateTimes.of("2015-03-03T23:00:00Z").getMillis(),
@@ -46,12 +46,12 @@ public class TimeFormatExtractionFnTest
   public void testDayOfWeekExtraction() throws Exception
   {
     TimeFormatExtractionFn fn = new TimeFormatExtractionFn("EEEE", null, null, null, false);
-    Assert.assertEquals("Thursday", fn.apply(timestamps[0]));
-    Assert.assertEquals("Friday", fn.apply(timestamps[1]));
-    Assert.assertEquals("Tuesday", fn.apply(timestamps[2]));
-    Assert.assertEquals("Wednesday", fn.apply(timestamps[3]));
-    Assert.assertEquals("Saturday", fn.apply(timestamps[4]));
-    Assert.assertEquals("Monday", fn.apply(timestamps[5]));
+    Assert.assertEquals("Thursday", fn.apply(TIMESTAMPS[0]));
+    Assert.assertEquals("Friday", fn.apply(TIMESTAMPS[1]));
+    Assert.assertEquals("Tuesday", fn.apply(TIMESTAMPS[2]));
+    Assert.assertEquals("Wednesday", fn.apply(TIMESTAMPS[3]));
+    Assert.assertEquals("Saturday", fn.apply(TIMESTAMPS[4]));
+    Assert.assertEquals("Monday", fn.apply(TIMESTAMPS[5]));
 
     testSerde(fn, "EEEE", null, null, Granularities.NONE);
   }
@@ -60,12 +60,12 @@ public class TimeFormatExtractionFnTest
   public void testLocalizedExtraction() throws Exception
   {
     TimeFormatExtractionFn fn = new TimeFormatExtractionFn("EEEE", null, "is", null, false);
-    Assert.assertEquals("fimmtudagur", fn.apply(timestamps[0]));
-    Assert.assertEquals("föstudagur", fn.apply(timestamps[1]));
-    Assert.assertEquals("þriðjudagur", fn.apply(timestamps[2]));
-    Assert.assertEquals("miðvikudagur", fn.apply(timestamps[3]));
-    Assert.assertEquals("laugardagur", fn.apply(timestamps[4]));
-    Assert.assertEquals("mánudagur", fn.apply(timestamps[5]));
+    Assert.assertEquals("fimmtudagur", fn.apply(TIMESTAMPS[0]));
+    Assert.assertEquals("föstudagur", fn.apply(TIMESTAMPS[1]));
+    Assert.assertEquals("þriðjudagur", fn.apply(TIMESTAMPS[2]));
+    Assert.assertEquals("miðvikudagur", fn.apply(TIMESTAMPS[3]));
+    Assert.assertEquals("laugardagur", fn.apply(TIMESTAMPS[4]));
+    Assert.assertEquals("mánudagur", fn.apply(TIMESTAMPS[5]));
 
     testSerde(fn, "EEEE", null, "is", Granularities.NONE);
   }
@@ -74,12 +74,12 @@ public class TimeFormatExtractionFnTest
   public void testGranularExtractionWithNullPattern() throws Exception
   {
     TimeFormatExtractionFn fn = new TimeFormatExtractionFn(null, null, null, Granularities.DAY, false);
-    Assert.assertEquals("2015-01-01T00:00:00.000Z", fn.apply(timestamps[0]));
-    Assert.assertEquals("2015-01-02T00:00:00.000Z", fn.apply(timestamps[1]));
-    Assert.assertEquals("2015-03-03T00:00:00.000Z", fn.apply(timestamps[2]));
-    Assert.assertEquals("2015-03-04T00:00:00.000Z", fn.apply(timestamps[3]));
-    Assert.assertEquals("2015-05-02T00:00:00.000Z", fn.apply(timestamps[4]));
-    Assert.assertEquals("2015-12-21T00:00:00.000Z", fn.apply(timestamps[5]));
+    Assert.assertEquals("2015-01-01T00:00:00.000Z", fn.apply(TIMESTAMPS[0]));
+    Assert.assertEquals("2015-01-02T00:00:00.000Z", fn.apply(TIMESTAMPS[1]));
+    Assert.assertEquals("2015-03-03T00:00:00.000Z", fn.apply(TIMESTAMPS[2]));
+    Assert.assertEquals("2015-03-04T00:00:00.000Z", fn.apply(TIMESTAMPS[3]));
+    Assert.assertEquals("2015-05-02T00:00:00.000Z", fn.apply(TIMESTAMPS[4]));
+    Assert.assertEquals("2015-12-21T00:00:00.000Z", fn.apply(TIMESTAMPS[5]));
 
     testSerde(fn, null, null, null, Granularities.DAY);
   }
@@ -94,12 +94,12 @@ public class TimeFormatExtractionFnTest
         null,
         false
     );
-    Assert.assertEquals("In Berlin ist es schon Freitag", fn.apply(timestamps[0]));
-    Assert.assertEquals("In Berlin ist es schon Samstag", fn.apply(timestamps[1]));
-    Assert.assertEquals("In Berlin ist es schon Mittwoch", fn.apply(timestamps[2]));
-    Assert.assertEquals("In Berlin ist es schon Donnerstag", fn.apply(timestamps[3]));
-    Assert.assertEquals("In Berlin ist es schon Sonntag", fn.apply(timestamps[4]));
-    Assert.assertEquals("In Berlin ist es schon Dienstag", fn.apply(timestamps[5]));
+    Assert.assertEquals("In Berlin ist es schon Freitag", fn.apply(TIMESTAMPS[0]));
+    Assert.assertEquals("In Berlin ist es schon Samstag", fn.apply(TIMESTAMPS[1]));
+    Assert.assertEquals("In Berlin ist es schon Mittwoch", fn.apply(TIMESTAMPS[2]));
+    Assert.assertEquals("In Berlin ist es schon Donnerstag", fn.apply(TIMESTAMPS[3]));
+    Assert.assertEquals("In Berlin ist es schon Sonntag", fn.apply(TIMESTAMPS[4]));
+    Assert.assertEquals("In Berlin ist es schon Dienstag", fn.apply(TIMESTAMPS[5]));
 
     testSerde(fn, "'In Berlin ist es schon 'EEEE", DateTimes.inferTzFromString("Europe/Berlin"), "de", Granularities.NONE);
   }

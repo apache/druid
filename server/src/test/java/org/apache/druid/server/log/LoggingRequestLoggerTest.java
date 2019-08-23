@@ -63,8 +63,8 @@ import java.util.Map;
 // Mostly just test that it doesn't crash
 public class LoggingRequestLoggerTest
 {
-  private static final ObjectMapper mapper = new DefaultObjectMapper();
-  private static final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
+  private static final ByteArrayOutputStream BAOS = new ByteArrayOutputStream();
   private static Appender appender;
 
   final DateTime timestamp = DateTimes.of("2016-01-01T00:00:00Z");
@@ -157,7 +157,7 @@ public class LoggingRequestLoggerTest
     appender = OutputStreamAppender
         .newBuilder()
         .setName("test stream")
-        .setTarget(baos)
+        .setTarget(BAOS)
         .setLayout(JsonLayout.createLayout(false, true, false, true, true, StandardCharsets.UTF_8))
         .build();
     final Logger logger = (Logger)
@@ -169,7 +169,7 @@ public class LoggingRequestLoggerTest
   @After
   public void tearDown()
   {
-    baos.reset();
+    BAOS.reset();
   }
 
   @AfterClass
@@ -193,7 +193,7 @@ public class LoggingRequestLoggerTest
   {
     final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, false);
     requestLogger.logNativeQuery(logLine);
-    final Map<String, Object> map = readContextMap(baos.toByteArray());
+    final Map<String, Object> map = readContextMap(BAOS.toByteArray());
     Assert.assertEquals("datasource", map.get("dataSource"));
     Assert.assertEquals("PT86400S", map.get("duration"));
     Assert.assertEquals("false", map.get("hasFilters"));
@@ -209,7 +209,7 @@ public class LoggingRequestLoggerTest
   {
     final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, true);
     requestLogger.logNativeQuery(logLine);
-    final Map<String, Object> map = readContextMap(baos.toByteArray());
+    final Map<String, Object> map = readContextMap(BAOS.toByteArray());
     Assert.assertEquals("datasource", map.get("dataSource"));
     Assert.assertEquals("PT86400S", map.get("duration"));
     Assert.assertEquals("false", map.get("hasFilters"));
@@ -230,7 +230,7 @@ public class LoggingRequestLoggerTest
         remoteAddr,
         queryStats
     ));
-    final Map<String, Object> map = readContextMap(baos.toByteArray());
+    final Map<String, Object> map = readContextMap(BAOS.toByteArray());
     Assert.assertEquals("datasource", map.get("dataSource"));
     Assert.assertEquals("PT86400S", map.get("duration"));
     Assert.assertEquals("false", map.get("hasFilters"));
@@ -251,7 +251,7 @@ public class LoggingRequestLoggerTest
         remoteAddr,
         queryStats
     ));
-    final Map<String, Object> map = readContextMap(baos.toByteArray());
+    final Map<String, Object> map = readContextMap(BAOS.toByteArray());
     Assert.assertEquals("datasource", map.get("dataSource"));
     Assert.assertEquals("PT86400S", map.get("duration"));
     Assert.assertEquals("false", map.get("hasFilters"));
@@ -272,7 +272,7 @@ public class LoggingRequestLoggerTest
         remoteAddr,
         queryStats
     ));
-    final Map<String, Object> map = readContextMap(baos.toByteArray());
+    final Map<String, Object> map = readContextMap(BAOS.toByteArray());
     Assert.assertEquals("A,B", map.get("dataSource"));
     Assert.assertEquals("true", map.get("isNested"));
     Assert.assertEquals("PT86400S", map.get("duration"));
@@ -285,7 +285,7 @@ public class LoggingRequestLoggerTest
 
   private static Map<String, Object> readContextMap(byte[] bytes) throws Exception
   {
-    final Map<String, Object> rawMap = mapper.readValue(bytes, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
+    final Map<String, Object> rawMap = MAPPER.readValue(bytes, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
     final Object contextMap = rawMap.get("contextMap");
     if (contextMap == null) {
       return null;
