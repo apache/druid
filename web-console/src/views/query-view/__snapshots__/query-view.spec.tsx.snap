@@ -15,6 +15,7 @@ exports[`sql view matches snapshot 1`] = `
     hasGroupBy={[Function]}
     onQueryStringChange={[Function]}
     queryAst={[Function]}
+    replaceFrom={[Function]}
   />
   <t
     customClassName=""
@@ -58,9 +59,8 @@ exports[`sql view matches snapshot 1`] = `
           transitionDuration={100}
         >
           <Blueprint3.Switch
-            checked={false}
+            checked={true}
             className="smart-query-limit"
-            disabled={false}
             label="Smart query limit"
             onChange={[Function]}
           />

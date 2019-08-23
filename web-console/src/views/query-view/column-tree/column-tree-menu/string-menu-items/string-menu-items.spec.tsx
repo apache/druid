@@ -28,6 +28,8 @@ describe('string menu', () => {
   it('matches snapshot', () => {
     const stringMenu = (
       <StringMenuItems
+        hasFilter
+        clear={() => null}
         addFunctionToGroupBy={() => null}
         addToGroupBy={() => null}
         addAggregateColumn={() => null}

@@ -58,6 +58,7 @@ describe('column tree', () => {
           ] as ColumnMetadata[]
         }
         onQueryStringChange={() => {}}
+        replaceFrom={() => null}
       />
     );
 

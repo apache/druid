@@ -296,9 +296,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
     EasyMock.expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
-        new KinesisDataSourceMetadata(
-            null
-        )
+        new KinesisDataSourceMetadata(null)
     ).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(2);
     replayAll();
@@ -2460,6 +2458,59 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   @Test
+  public void testGetOffsetFromStorageForPartitionWithResetOffsetAutomatically() throws Exception
+  {
+    supervisor = getTestableSupervisor(1, 1, true, true, "PT1H", null, null, false);
+
+    supervisorRecordSupplier.assign(EasyMock.anyObject());
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getPartitionIds(stream))
+            .andReturn(ImmutableSet.of(shardId1, shardId0))
+            .anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getAssignment())
+            .andReturn(ImmutableSet.of(shard1Partition, shard0Partition))
+            .anyTimes();
+    supervisorRecordSupplier.seekToLatest(EasyMock.anyObject());
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn("0").anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("0").anyTimes();
+    supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
+    EasyMock.expectLastCall().anyTimes();
+
+    EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+
+    EasyMock.reset(indexerMetadataStorageCoordinator);
+    // unknown DataSourceMetadata in metadata store
+    EasyMock.expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE))
+            .andReturn(
+                new KinesisDataSourceMetadata(
+                    new SeekableStreamEndSequenceNumbers<>(stream, ImmutableMap.of("1", "100", "2", "200"))
+                )
+            ).times(4);
+    // getOffsetFromStorageForPartition() throws an exception when the offsets are automatically reset.
+    // Since getOffsetFromStorageForPartition() is called per partition, all partitions can't be reset at the same time.
+    // Instead, subsequent partitions will be reset in the following supervisor runs.
+    EasyMock.expect(
+        indexerMetadataStorageCoordinator.resetDataSourceMetadata(
+            DATASOURCE,
+            new KinesisDataSourceMetadata(
+                // Only one partition is reset in a single supervisor run.
+                new SeekableStreamEndSequenceNumbers<>(stream, ImmutableMap.of("2", "200"))
+            )
+        )
+    ).andReturn(true);
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+  }
+
+  @Test
   public void testResetRunningTasks() throws Exception
   {
     final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
@@ -3783,6 +3834,29 @@ public class KinesisSupervisorTest extends EasyMockSupport
       boolean suspended
   )
   {
+    return getTestableSupervisor(
+        replicas,
+        taskCount,
+        useEarliestOffset,
+        false,
+        duration,
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod,
+        suspended
+    );
+  }
+
+  private TestableKinesisSupervisor getTestableSupervisor(
+      int replicas,
+      int taskCount,
+      boolean useEarliestOffset,
+      boolean resetOffsetAutomatically,
+      String duration,
+      Period lateMessageRejectionPeriod,
+      Period earlyMessageRejectionPeriod,
+      boolean suspended
+  )
+  {
     KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
         stream,
         "awsEndpoint",
@@ -3823,6 +3897,39 @@ public class KinesisSupervisorTest extends EasyMockSupport
         return taskClient;
       }
     };
+
+    final KinesisSupervisorTuningConfig tuningConfig = new KinesisSupervisorTuningConfig(
+        1000,
+        null,
+        50000,
+        null,
+        new Period("P1Y"),
+        new File("/test"),
+        null,
+        null,
+        null,
+        true,
+        false,
+        null,
+        resetOffsetAutomatically,
+        null,
+        null,
+        numThreads,
+        TEST_CHAT_THREADS,
+        TEST_CHAT_RETRIES,
+        TEST_HTTP_TIMEOUT,
+        TEST_SHUTDOWN_TIMEOUT,
+        null,
+        null,
+        null,
+        5000,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
 
     return new TestableKinesisSupervisor(
         taskStorage,

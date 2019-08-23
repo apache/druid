@@ -416,10 +416,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       <QueryPlanDialog
         explainResult={explainResult}
         explainError={explainError}
+        setQueryString={this.handleQueryStringChange}
         onClose={() => this.setState({ explainDialogOpen: false })}
-        setQueryString={(queryString: string) =>
-          this.setState({ queryString, explainDialogOpen: false, queryAst: parser(queryString) })
-        }
       />
     );
   }
@@ -431,9 +429,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     return (
       <QueryHistoryDialog
         queryRecords={queryHistory}
-        setQueryString={queryString =>
-          this.setState({ queryString, queryAst: parser(queryString), historyDialogOpen: false })
-        }
+        setQueryString={this.handleQueryStringChange}
         onClose={() => this.setState({ historyDialogOpen: false })}
       />
     );
@@ -456,6 +452,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
   renderWrapQueryLimitSelector() {
     const { wrapQueryLimit, queryString } = this.state;
+    if (QueryView.isJsonLike(queryString)) return;
 
     return (
       <Tooltip
@@ -464,10 +461,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       >
         <Switch
           className="smart-query-limit"
-          checked={!wrapQueryLimit}
+          checked={Boolean(wrapQueryLimit)}
           label="Smart query limit"
           onChange={() => this.handleWrapQueryLimitChange(wrapQueryLimit ? undefined : 100)}
-          disabled={QueryView.isJsonLike(queryString)}
         />
       </Tooltip>
     );
@@ -565,6 +561,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   ): void => {
     const { queryAst } = this.state;
     if (!queryAst) return;
+
     const modifiedAst = queryAst.addFunctionToGroupBy(functionName, spacing, argumentsArray, alias);
     this.handleQueryStringChange(modifiedAst.toString(), preferablyRun);
   };
@@ -572,7 +569,16 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   private addToGroupBy = (columnName: string, preferablyRun: boolean): void => {
     const { queryAst } = this.state;
     if (!queryAst) return;
+
     const modifiedAst = queryAst.addToGroupBy(columnName);
+    this.handleQueryStringChange(modifiedAst.toString(), preferablyRun);
+  };
+
+  private replaceFrom = (table: RefExpression, preferablyRun: boolean): void => {
+    const { queryAst } = this.state;
+    if (!queryAst) return;
+
+    const modifiedAst = queryAst.replaceFrom(table);
     this.handleQueryStringChange(modifiedAst.toString(), preferablyRun);
   };
 
@@ -586,6 +592,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   ): void => {
     const { queryAst } = this.state;
     if (!queryAst) return;
+
     const modifiedAst = queryAst.addAggregateColumn(
       columnName,
       functionName,
@@ -603,6 +610,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   ): void => {
     const { queryAst } = this.state;
     if (!queryAst) return;
+
     const modifiedAst = queryAst.orderBy(header, direction);
     this.handleQueryStringChange(modifiedAst.toString(), preferablyRun);
   };
@@ -610,6 +618,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   private sqlExcludeColumn = (header: string, preferablyRun: boolean): void => {
     const { queryAst } = this.state;
     if (!queryAst) return;
+
     const modifiedAst = queryAst.excludeColumn(header);
     this.handleQueryStringChange(modifiedAst.toString(), preferablyRun);
   };
@@ -676,23 +685,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     localStorageSet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE, String(secondaryPaneSize));
   };
 
-  private getGroupBySetting = () => {
-    const { queryString, queryAst } = this.state;
-    const ast = queryAst;
-    let tempAst: SqlQuery | undefined;
-    if (!ast) {
-      tempAst = parser(queryString);
-    }
-
-    let hasGroupBy = false;
-    if (ast && ast instanceof SqlQuery) {
-      hasGroupBy = !!ast.groupByClause;
-    } else if (tempAst && tempAst instanceof SqlQuery) {
-      hasGroupBy = !!tempAst.groupByClause;
-    }
-    return hasGroupBy;
-  };
-
   private getQueryAst = () => {
     const { queryAst } = this.state;
     return queryAst;
@@ -719,13 +711,13 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             addFunctionToGroupBy={this.addFunctionToGroupBy}
             addAggregateColumn={this.addAggregateColumn}
             addToGroupBy={this.addToGroupBy}
-            hasGroupBy={this.getGroupBySetting}
             queryAst={this.getQueryAst}
             columnMetadataLoading={columnMetadataLoading}
             columnMetadata={columnMetadata}
             onQueryStringChange={this.handleQueryStringChange}
             defaultSchema={defaultSchema ? defaultSchema : 'druid'}
             defaultTable={defaultTable}
+            replaceFrom={this.replaceFrom}
           />
         )}
         {this.renderMainArea()}
