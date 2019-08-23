@@ -76,6 +76,6 @@ public class GoogleBlob
   @Override
   public int hashCode()
   {
-    return Objects.hash(getBucket(), getPath());
+    return Objects.hash(bucket, path);
   }
 }

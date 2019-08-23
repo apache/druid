@@ -90,7 +90,7 @@ public class StringComparators
     @Override
     public int hashCode()
     {
-      return super.hashCode();
+      return 0;
     }
 
     @Override
@@ -278,7 +278,7 @@ public class StringComparators
     @Override
     public int hashCode()
     {
-      return super.hashCode();
+      return 0;
     }
 
     @Override
@@ -332,7 +332,7 @@ public class StringComparators
     @Override
     public int hashCode()
     {
-      return super.hashCode();
+      return 0;
     }
 
     @Override
@@ -433,7 +433,7 @@ public class StringComparators
     @Override
     public int hashCode()
     {
-      return super.hashCode();
+      return 0;
     }
 
     @Override
@@ -486,7 +486,7 @@ public class StringComparators
     @Override
     public int hashCode()
     {
-      return super.hashCode();
+      return 0;
     }
 
     @Override
