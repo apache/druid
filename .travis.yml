@@ -117,7 +117,7 @@ matrix:
         - free -m
       after_success: &upload_java_unit_test_coverage
         - ${MVN} -pl ${MAVEN_PROJECTS} jacoco:report
-        - bash <(curl -s https://codecov.io/bash)
+        - travis_retry bash <(curl -s https://codecov.io/bash)
 
     - name: "processing module test (SQL Compatibility)"
       env: *processing_env
