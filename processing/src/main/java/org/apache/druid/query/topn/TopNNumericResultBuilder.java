@@ -150,13 +150,15 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     }
     for (int i = extra; i < metricVals.length; i += LOOP_UNROLL_COUNT) {
       metricValues.put(aggFactoryNames[i + 0], metricVals[i + 0]);
-      metricValues.put(aggFactoryNames[i + 1], metricVals[i + 1]); // lgtm[java/index-out-of-bounds]
-      metricValues.put(aggFactoryNames[i + 2], metricVals[i + 2]); // lgtm[java/index-out-of-bounds]
-      metricValues.put(aggFactoryNames[i + 3], metricVals[i + 3]); // lgtm[java/index-out-of-bounds]
-      metricValues.put(aggFactoryNames[i + 4], metricVals[i + 4]); // lgtm[java/index-out-of-bounds]
-      metricValues.put(aggFactoryNames[i + 5], metricVals[i + 5]); // lgtm[java/index-out-of-bounds]
-      metricValues.put(aggFactoryNames[i + 6], metricVals[i + 6]); // lgtm[java/index-out-of-bounds]
-      metricValues.put(aggFactoryNames[i + 7], metricVals[i + 7]); // lgtm[java/index-out-of-bounds]
+      // LGTM.com flags this, but it's safe
+      // because we know "metricVals.length - extra" is a multiple of LOOP_UNROLL_COUNT.
+      metricValues.put(aggFactoryNames[i + 1], metricVals[i + 1]); // lgtm [java/index-out-of-bounds]
+      metricValues.put(aggFactoryNames[i + 2], metricVals[i + 2]); // lgtm [java/index-out-of-bounds]
+      metricValues.put(aggFactoryNames[i + 3], metricVals[i + 3]); // lgtm [java/index-out-of-bounds]
+      metricValues.put(aggFactoryNames[i + 4], metricVals[i + 4]); // lgtm [java/index-out-of-bounds]
+      metricValues.put(aggFactoryNames[i + 5], metricVals[i + 5]); // lgtm [java/index-out-of-bounds]
+      metricValues.put(aggFactoryNames[i + 6], metricVals[i + 6]); // lgtm [java/index-out-of-bounds]
+      metricValues.put(aggFactoryNames[i + 7], metricVals[i + 7]); // lgtm [java/index-out-of-bounds]
     }
 
     // Order matters here, do not unroll
