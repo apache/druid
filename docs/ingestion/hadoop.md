@@ -273,7 +273,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |-----|----|-----------|--------|
 |workingPath|String|The working path to use for intermediate results (results between Hadoop jobs).|Only used by the [Command-line Hadoop indexer](#cli). The default is '/tmp/druid-indexing'. This field must be null otherwise.|
 |version|String|The version of created segments. Ignored for HadoopIndexTask unless useExplicitVersion is set to true|no (default == datetime that indexing starts at)|
-|partitionsSpec|Object|A specification of how to partition each time bucket into segments. Absence of this property means no partitioning will occur. See [`partitionsSpec`](#partitionsspec) below.|no (default == 'hadoop_hashed_partitions')|
+|partitionsSpec|Object|A specification of how to partition each time bucket into segments. Absence of this property means no partitioning will occur. See [`partitionsSpec`](#partitionsspec) below.|no (default == 'hashed')|
 |maxRowsInMemory|Integer|The number of rows to aggregate before persisting. Note that this is the number of post-aggregation rows which may not be equal to the number of input events due to roll-up. This is used to manage the required JVM heap size. Normally user does not need to set this, but depending on the nature of data, if rows are short in terms of bytes, user may not want to store a million rows in memory and this value should be set.|no (default == 1000000)|
 |maxBytesInMemory|Long|The number of bytes to aggregate in heap memory before persisting. Normally this is computed internally and user does not need to set it. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists).|no (default == One-sixth of max JVM memory)|
 |leaveIntermediate|Boolean|Leave behind intermediate files (for debugging) in the workingPath when a job completes, whether it passes or fails.|no (default == false)|
@@ -313,8 +313,8 @@ for more details.
 ## `partitionsSpec`
 
 Segments are always partitioned based on timestamp (according to the granularitySpec) and may be further partitioned in
-some other way depending on partition type. Druid supports two types of partitioning strategies: `hadoop_hashed_partitions` (based on the
-hash of all dimensions in each row), and `hadoop_single_dim_partitions` (based on ranges of a single dimension).
+some other way depending on partition type. Druid supports two types of partitioning strategies: `hashed` (based on the
+hash of all dimensions in each row), and `single_dim` (based on ranges of a single dimension).
 
 Hashed partitioning is recommended in most cases, as it will improve indexing performance and create more uniformly
 sized data segments relative to single-dimension partitioning.
@@ -323,7 +323,7 @@ sized data segments relative to single-dimension partitioning.
 
 ```json
   "partitionsSpec": {
-     "type": "hadoop_hashed_partitions",
+     "type": "hashed",
      "targetPartitionSize": 5000000
    }
 ```
@@ -336,21 +336,21 @@ The configuration options are:
 
 |Field|Description|Required|
 |--------|-----------|---------|
-|type|Type of partitionSpec to be used.|"hadoop_hashed_partitions"|
+|type|Type of partitionSpec to be used.|"hashed"|
 |targetPartitionSize|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|either this or numShards|
 |numShards|Specify the number of partitions directly, instead of a target partition size. Ingestion will run faster, since it can skip the step necessary to select a number of partitions automatically.|either this or targetPartitionSize|
 |partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions. Only used with numShards, will be ignored when targetPartitionSize is set|no|
 
-### Single-dimension partitioning
+### Single-dimension range partitioning
 
 ```json
   "partitionsSpec": {
-     "type": "hadoop_single_dim_partitions",
+     "type": "single_dim",
      "targetPartitionSize": 5000000
    }
 ```
 
-Single-dimension partitioning works by first selecting a dimension to partition on, and then separating that dimension
+Single-dimension range partitioning works by first selecting a dimension to partition on, and then separating that dimension
 into contiguous ranges. Each segment will contain all rows with values of that dimension in that range. For example,
 your segments may be partitioned on the dimension "host" using the ranges "a.example.com" to "f.example.com" and
 "f.example.com" to "z.example.com". By default, the dimension to use is determined automatically, although you can
@@ -360,7 +360,7 @@ The configuration options are:
 
 |Field|Description|Required|
 |--------|-----------|---------|
-|type|Type of partitionSpec to be used.|"hadoop_single_dim_partitions"|
+|type|Type of partitionSpec to be used.|"single_dim"|
 |targetPartitionSize|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|yes|
 |maxPartitionSize|Maximum number of rows to include in a partition. Defaults to 50% larger than the targetPartitionSize.|no|
 |partitionDimension|The dimension to partition on. Leave blank to select a dimension automatically.|no|
