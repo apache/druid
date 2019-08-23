@@ -155,7 +155,6 @@ export interface ColumnTreeState {
   columnTree?: ITreeNode[];
   currentSchemaSubtree?: ITreeNode[];
   selectedTreeIndex: number;
-  expandedNode: number;
 }
 
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
@@ -268,6 +267,11 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 filterByRow={props.filterByRow}
                                 columnName={columnData.COLUMN_NAME}
                                 queryAst={props.queryAst()}
+                                clear={props.clear}
+                                hasFilter={
+                                  props.currentFilters() &&
+                                  props.currentFilters().includes(columnData.COLUMN_NAME)
+                                }
                               />
                             )}
                             {columnData.DATA_TYPE === 'VARCHAR' && (
@@ -278,6 +282,11 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 filterByRow={props.filterByRow}
                                 columnName={columnData.COLUMN_NAME}
                                 queryAst={props.queryAst()}
+                                clear={props.clear}
+                                hasFilter={
+                                  props.currentFilters() &&
+                                  props.currentFilters().includes(columnData.COLUMN_NAME)
+                                }
                               />
                             )}
                             {columnData.DATA_TYPE === 'TIMESTAMP' && (
@@ -289,18 +298,12 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 filterByRow={props.filterByRow}
                                 columnName={columnData.COLUMN_NAME}
                                 queryAst={props.queryAst()}
+                                hasFilter={
+                                  props.currentFilters() &&
+                                  props.currentFilters().includes(columnData.COLUMN_NAME)
+                                }
                               />
                             )}
-                            {props.currentFilters() &&
-                              props.currentFilters().includes(columnData.COLUMN_NAME) && (
-                                <MenuItem
-                                  icon={IconNames.FILTER_REMOVE}
-                                  text={`Remove filter`}
-                                  onClick={() => {
-                                    props.clear(columnData.COLUMN_NAME, true);
-                                  }}
-                                />
-                              )}
                             <MenuItem
                               icon={IconNames.CLIPBOARD}
                               text={`Copy: ${columnData.COLUMN_NAME}`}
@@ -357,8 +360,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         prevColumnMetadata: columnMetadata,
         columnTree,
         selectedTreeIndex,
-        expandedNode,
         currentSchemaSubtree,
+        prevGroupByStatus: props.hasGroupBy,
       };
     }
     return null;
@@ -381,7 +384,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     super(props, context);
     this.state = {
       selectedTreeIndex: -1,
-      expandedNode: -1,
     };
   }
 
@@ -407,8 +409,20 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     );
   }
 
-  private handleSchemaSelectorChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    this.setState({ selectedTreeIndex: Number(e.target.value), expandedNode: -1 });
+  private handleSchemaSelectorChange = (e: ChangeEvent<HTMLSelectElement>): void => {
+    const { columnTree } = this.state;
+
+    const selectedTreeIndex = Number(e.target.value);
+
+    if (!columnTree) return;
+
+    const currentSchemaSubtree =
+      columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
+
+    this.setState({
+      selectedTreeIndex: Number(e.target.value),
+      currentSchemaSubtree: currentSchemaSubtree,
+    });
   };
 
   render(): JSX.Element | null {
@@ -431,7 +445,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         <div className="tree-container">
           <Tree
             contents={currentSchemaSubtree}
-            onNodeClick={() => this.setState({ expandedNode: -1 })}
             onNodeCollapse={this.handleNodeCollapse}
             onNodeExpand={this.handleNodeExpand}
           />
@@ -441,7 +454,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   }
 
   private handleNodeCollapse = (nodeData: ITreeNode) => {
-    this.setState({ expandedNode: -1 });
     nodeData.isExpanded = false;
     this.bounceState();
   };
