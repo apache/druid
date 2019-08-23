@@ -173,7 +173,6 @@ matrix:
     - name: "web console"
       install: skip
       script: ${MVN} test -pl 'web-console'
-      after_success: (cd web-console && npm run coveralls)
 
     - name: "docs"
       install: (cd website && npm install)
