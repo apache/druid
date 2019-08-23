@@ -292,7 +292,7 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
   {
     name: 'hasHeaderRow',
     type: 'boolean',
-    defaultValue: true,
+    defaultValue: false,
     defined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
   },
   {
