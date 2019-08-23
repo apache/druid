@@ -28,7 +28,6 @@ describe('column tree', () => {
     const columnTree = (
       <ColumnTree
         queryAst={() => undefined}
-        hasGroupBy={() => false}
         clear={() => null}
         addFunctionToGroupBy={() => null}
         filterByRow={() => null}

@@ -12,7 +12,6 @@ exports[`sql view matches snapshot 1`] = `
     columnMetadataLoading={true}
     defaultSchema="druid"
     filterByRow={[Function]}
-    hasGroupBy={[Function]}
     onQueryStringChange={[Function]}
     queryAst={[Function]}
     replaceFrom={[Function]}
