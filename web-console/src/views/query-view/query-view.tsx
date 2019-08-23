@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Label, Tooltip } from '@blueprintjs/core';
+import { Intent, Switch, Tooltip } from '@blueprintjs/core';
 import axios from 'axios';
 import classNames from 'classnames';
 import {
@@ -195,12 +195,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   constructor(props: QueryViewProps, context: any) {
     super(props, context);
 
-    let queryString: string | undefined;
-    if (props.initQuery) {
-      queryString = props.initQuery;
-    } else if (localStorageGet(LocalStorageKeys.QUERY_KEY)) {
-      queryString = localStorageGet(LocalStorageKeys.QUERY_KEY);
-    }
+    const queryString = props.initQuery || localStorageGet(LocalStorageKeys.QUERY_KEY) || '';
     const queryAst = queryString ? parser(queryString) : undefined;
 
     const localStorageQueryHistory = localStorageGet(LocalStorageKeys.QUERY_HISTORY);
@@ -224,7 +219,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     }
 
     this.state = {
-      queryString: queryString ? queryString : '',
+      queryString,
       queryAst,
       queryContext: {},
       wrapQueryLimit: 100,
@@ -267,15 +262,15 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       processQuery: async (queryWithContext: QueryWithContext): Promise<QueryResult> => {
         const { queryString, queryContext, wrapQueryLimit } = queryWithContext;
 
-        let ast: SqlQuery | undefined;
+        let parsedQuery: SqlQuery | undefined;
         let jsonQuery: any;
 
         try {
-          ast = parser(queryString);
+          parsedQuery = parser(queryString);
         } catch {}
 
-        if (!(ast instanceof SqlQuery)) {
-          ast = undefined;
+        if (!(parsedQuery instanceof SqlQuery)) {
+          parsedQuery = undefined;
         }
         if (QueryView.isJsonLike(queryString)) {
           jsonQuery = Hjson.parse(queryString);
@@ -333,7 +328,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             numResults: queryResult.rows.length,
             wrapQueryLimit,
           },
-          parsedQuery: ast,
+          parsedQuery,
         };
       },
       onStateChange: ({ result, loading, error }) => {
@@ -460,37 +455,21 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   }
 
   renderWrapQueryLimitSelector() {
-    const { wrapQueryLimit } = this.state;
+    const { wrapQueryLimit, queryString } = this.state;
 
     return (
-      <>
-        <Tooltip
-          content="Automatically wrap the query with a limit to protect against queries with very large result sets"
-          hoverOpenDelay={900}
-        >
-          <Label className="wrap-query-limit-label">Query limit</Label>
-        </Tooltip>
-        <ButtonGroup className="wrap-query-limit-selector">
-          <Button
-            active={!wrapQueryLimit}
-            onClick={() => this.handleWrapQueryLimitChange(undefined)}
-          >
-            None
-          </Button>
-          <Button
-            active={wrapQueryLimit === 100}
-            onClick={() => this.handleWrapQueryLimitChange(100)}
-          >
-            100
-          </Button>
-          <Button
-            active={wrapQueryLimit === 1000}
-            onClick={() => this.handleWrapQueryLimitChange(1000)}
-          >
-            1000
-          </Button>
-        </ButtonGroup>{' '}
-      </>
+      <Tooltip
+        content="Automatically wrap the query with a limit to protect against queries with very large result sets"
+        hoverOpenDelay={800}
+      >
+        <Switch
+          className="smart-query-limit"
+          checked={!wrapQueryLimit}
+          label="Smart query limit"
+          onChange={() => this.handleWrapQueryLimitChange(wrapQueryLimit ? undefined : 100)}
+          disabled={QueryView.isJsonLike(queryString)}
+        />
+      </Tooltip>
     );
   }
 
@@ -719,11 +698,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     return queryAst;
   };
 
-  private getCurrentFilters = () => {
-    const { queryAst } = this.state;
-    return queryAst.getCurrentFilters();
-  };
-
   render(): JSX.Element {
     const { columnMetadata, columnMetadataLoading, columnMetadataError, queryAst } = this.state;
 
@@ -752,7 +726,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             onQueryStringChange={this.handleQueryStringChange}
             defaultSchema={defaultSchema ? defaultSchema : 'druid'}
             defaultTable={defaultTable}
-            currentFilters={this.getCurrentFilters}
           />
         )}
         {this.renderMainArea()}

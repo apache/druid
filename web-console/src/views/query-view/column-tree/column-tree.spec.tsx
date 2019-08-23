@@ -27,7 +27,6 @@ describe('column tree', () => {
   it('matches snapshot', () => {
     const columnTree = (
       <ColumnTree
-        currentFilters={() => []}
         queryAst={() => undefined}
         hasGroupBy={() => false}
         clear={() => null}

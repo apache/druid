@@ -118,7 +118,6 @@ export interface ColumnTreeProps {
   onQueryStringChange: (queryString: string, run: boolean) => void;
   defaultSchema?: string;
   defaultTable?: string;
-  currentFilters: () => string[];
   addFunctionToGroupBy: (
     functionName: string,
     spacing: string[],
@@ -152,6 +151,7 @@ export interface ColumnTreeState {
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
     const { columnMetadata, defaultSchema, defaultTable } = props;
+
     if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
       const columnTree = groupBy(
         columnMetadata,
@@ -264,8 +264,11 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 queryAst={props.queryAst()}
                               />
                             )}
-                            {props.currentFilters() &&
-                              props.currentFilters().includes(columnData.COLUMN_NAME) && (
+                            {props.queryAst() &&
+                              props
+                                .queryAst()!
+                                .getCurrentFilters()
+                                .includes(columnData.COLUMN_NAME) && (
                                 <MenuItem
                                   icon={IconNames.FILTER_REMOVE}
                                   text={`Remove filter`}
