@@ -342,6 +342,9 @@
       <ignored>
         <option name="METHOD_MATCHER_CONFIG" value="java.io.PrintStream,println,java.io.PrintWriter,println,java.lang.System,identityHashCode,java.sql.PreparedStatement,set.*,java.sql.ResultSet,update.*,java.sql.SQLOutput,write.*,java.lang.Integer,compare.*,java.lang.Long,compare.*,java.lang.Short,compare,java.lang.Byte,compare,java.lang.Character,compare,java.lang.Boolean,compare,java.lang.Math,.*,java.lang.StrictMath,.*" />
       </ignored>
+      <searchConfiguration name="Prohibit Thread.getState() != TERMINATED antipattern" text="while (firehose.getDelayedCloseExecutor().getState() != Thread.State.TERMINATED) {&#10;    Thread.sleep(50);&#10;}" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" within="" contains="" />
+      </searchConfiguration>
     </inspection_tool>
     <inspection_tool class="SuspiciousSystemArraycopy" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SuspiciousToArrayCall" enabled="true" level="ERROR" enabled_by_default="true" />
