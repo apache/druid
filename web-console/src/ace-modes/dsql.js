@@ -22,7 +22,7 @@
 // This file was modified to make the list of keywords more closely adhere to what is found in DruidSQL
 
 var druidKeywords = require('../../lib/keywords');
-var druidFunctions = require('../../lib/sql-function-doc');
+var druidFunctions = require('../../lib/sql-docs');
 
 ace.define(
   'ace/mode/dsql_highlight_rules',

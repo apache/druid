@@ -21,7 +21,7 @@
 const fs = require('fs-extra');
 
 const readfile = '../docs/querying/sql.md';
-const writefile = 'lib/sql-function-doc.js';
+const writefile = 'lib/sql-docs.js';
 
 const readDoc = async () => {
   const data = await fs.readFile(readfile, 'utf-8');
