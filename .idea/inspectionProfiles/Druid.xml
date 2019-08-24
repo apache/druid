@@ -311,6 +311,11 @@
         <constraint name="k" within="" contains="" />
         <constraint name="v" within="" contains="" />
       </searchConfiguration>
+      <searchConfiguration name="Prohibit Thread.getState() != TERMINATED antipattern" text="while($k$.getDelayedCloseExecutor().getState()!=Thread.State.$k1$){Thread.sleep($k2$)}" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="k" within="" contains="" />
+        <constraint name="k1" within="" contains="" />
+        <constraint name="k2" within="" contains="" />
+      </searchConfiguration>
     </inspection_tool>
     <inspection_tool class="SimplifyStreamApiCallChains" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SpellCheckingInspection" enabled="false" level="TYPO" enabled_by_default="false">
@@ -342,9 +347,6 @@
       <ignored>
         <option name="METHOD_MATCHER_CONFIG" value="java.io.PrintStream,println,java.io.PrintWriter,println,java.lang.System,identityHashCode,java.sql.PreparedStatement,set.*,java.sql.ResultSet,update.*,java.sql.SQLOutput,write.*,java.lang.Integer,compare.*,java.lang.Long,compare.*,java.lang.Short,compare,java.lang.Byte,compare,java.lang.Character,compare,java.lang.Boolean,compare,java.lang.Math,.*,java.lang.StrictMath,.*" />
       </ignored>
-      <searchConfiguration name="Prohibit Thread.getState() != TERMINATED antipattern" text="while (firehose.getDelayedCloseExecutor().getState() != Thread.State.TERMINATED) {&#10;    Thread.sleep(50);&#10;}" recursive="true" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" within="" contains="" />
-      </searchConfiguration>
     </inspection_tool>
     <inspection_tool class="SuspiciousSystemArraycopy" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SuspiciousToArrayCall" enabled="true" level="ERROR" enabled_by_default="true" />
