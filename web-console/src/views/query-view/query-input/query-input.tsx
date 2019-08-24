@@ -28,7 +28,7 @@ import {
   SQL_EXPRESSION_PARTS,
   SQL_KEYWORDS,
 } from '../../../../lib/keywords';
-import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../../../lib/sql-function-doc';
+import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../../../lib/sql-docs';
 import { uniq } from '../../../utils';
 import { ColumnMetadata } from '../../../utils/column-metadata';
 

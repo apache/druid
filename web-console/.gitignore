@@ -10,7 +10,7 @@ coordinator-console/
 pages/
 /index.html
 
-lib/sql-function-doc.js
+lib/sql-docs.js
 
 .tscache
 tscommand-*.tmp.txt
