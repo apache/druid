@@ -27,26 +27,15 @@ import {
   Tree,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import {
-  Alias,
-  FilterClause,
-  RefExpression,
-  refExpressionFactory,
-  SqlQuery,
-  stringFactory,
-  StringType,
-} from 'druid-query-toolkit';
+import { refExpressionFactory, SqlQuery, stringFactory } from 'druid-query-toolkit';
 import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
 import { Deferred } from '../../../components/deferred/deferred';
 import { copyAndAlert, escapeSqlIdentifier, groupBy } from '../../../utils';
 import { ColumnMetadata } from '../../../utils/column-metadata';
-import { RowFilter } from '../query-view';
 
-import { NumberMenuItems } from './column-tree-menu/number-menu-items/number-menu-items';
-import { StringMenuItems } from './column-tree-menu/string-menu-items/string-menu-items';
-import { TimeMenuItems } from './column-tree-menu/time-menu-items/time-menu-items';
+import { NumberMenuItems, StringMenuItems, TimeMenuItems } from './column-tree-menu';
 
 import './column-tree.scss';
 
@@ -123,29 +112,10 @@ ORDER BY "Count" DESC`,
 export interface ColumnTreeProps {
   columnMetadataLoading: boolean;
   columnMetadata?: readonly ColumnMetadata[];
-  onQueryStringChange: (queryString: string, run: boolean) => void;
+  getParsedQuery: () => SqlQuery | undefined;
+  onQueryStringChange: (queryString: string | SqlQuery, run?: boolean) => void;
   defaultSchema?: string;
   defaultTable?: string;
-  addFunctionToGroupBy: (
-    functionName: string,
-    spacing: string[],
-    argumentsArray: (StringType | number)[],
-    run: boolean,
-    alias: Alias,
-  ) => void;
-  addToGroupBy: (columnName: string, run: boolean) => void;
-  addAggregateColumn: (
-    columnName: string | RefExpression,
-    functionName: string,
-    run: boolean,
-    alias?: Alias,
-    distinct?: boolean,
-    filter?: FilterClause,
-  ) => void;
-  filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
-  replaceFrom: (table: RefExpression, preferablyRun: boolean) => void;
-  queryAst: () => SqlQuery | undefined;
-  clear: (column: string, preferablyRun: boolean) => void;
 }
 
 export interface ColumnTreeState {
@@ -177,53 +147,56 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                   boundary={'window'}
                   position={Position.RIGHT}
                   content={
-                    <Menu>
-                      <MenuItem
-                        icon={IconNames.FULLSCREEN}
-                        text={`SELECT ... FROM ${table}`}
-                        onClick={() => {
-                          handleTableClick(
-                            schema,
-                            {
-                              id: table,
-                              icon: IconNames.TH,
-                              label: table,
-                              childNodes: metadata.map(columnData => ({
-                                id: columnData.COLUMN_NAME,
-                                icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
-                                label: columnData.COLUMN_NAME,
-                              })),
-                            },
-                            props.onQueryStringChange,
-                          );
-                        }}
-                      />
-                      <MenuItem
-                        icon={IconNames.CLIPBOARD}
-                        text={`Copy: ${table}`}
-                        onClick={() => {
-                          copyAndAlert(table, `${table} query copied to clipboard`);
-                        }}
-                      />
-                      <Deferred
-                        content={() => (
-                          <>
-                            {props.queryAst() && (
+                    <Deferred
+                      content={() => {
+                        const parsedQuery = props.getParsedQuery();
+                        return (
+                          <Menu>
+                            <MenuItem
+                              icon={IconNames.FULLSCREEN}
+                              text={`SELECT ... FROM ${table}`}
+                              onClick={() => {
+                                handleTableClick(
+                                  schema,
+                                  {
+                                    id: table,
+                                    icon: IconNames.TH,
+                                    label: table,
+                                    childNodes: metadata.map(columnData => ({
+                                      id: columnData.COLUMN_NAME,
+                                      icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
+                                      label: columnData.COLUMN_NAME,
+                                    })),
+                                  },
+                                  props.onQueryStringChange,
+                                );
+                              }}
+                            />
+                            <MenuItem
+                              icon={IconNames.CLIPBOARD}
+                              text={`Copy: ${table}`}
+                              onClick={() => {
+                                copyAndAlert(table, `${table} query copied to clipboard`);
+                              }}
+                            />
+                            {parsedQuery && (
                               <MenuItem
                                 icon={IconNames.EXCHANGE}
                                 text={`Replace FROM with: ${table}`}
                                 onClick={() => {
-                                  props.replaceFrom(
-                                    refExpressionFactory(stringFactory(table, `"`)),
+                                  props.onQueryStringChange(
+                                    parsedQuery.replaceFrom(
+                                      refExpressionFactory(stringFactory(table, `"`)),
+                                    ),
                                     true,
                                   );
                                 }}
                               />
                             )}
-                          </>
-                        )}
-                      />
-                    </Menu>
+                          </Menu>
+                        );
+                      }}
+                    />
                   }
                 >
                   <div>{table}</div>
@@ -241,11 +214,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                     content={
                       <Deferred
                         content={() => {
-                          const queryAst = props.queryAst();
-                          const hasFilter = queryAst
-                            ? queryAst.getCurrentFilters().includes(columnData.COLUMN_NAME)
-                            : false;
-
+                          const parsedQuery = props.getParsedQuery();
                           return (
                             <Menu>
                               <MenuItem
@@ -264,40 +233,25 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                   );
                                 }}
                               />
-                              {columnData.DATA_TYPE === 'BIGINT' && (
+                              {parsedQuery && columnData.DATA_TYPE === 'BIGINT' && (
                                 <NumberMenuItems
-                                  addFunctionToGroupBy={props.addFunctionToGroupBy}
-                                  addToGroupBy={props.addToGroupBy}
-                                  addAggregateColumn={props.addAggregateColumn}
-                                  filterByRow={props.filterByRow}
                                   columnName={columnData.COLUMN_NAME}
-                                  queryAst={props.queryAst()}
-                                  clear={props.clear}
-                                  hasFilter={hasFilter}
+                                  parsedQuery={parsedQuery}
+                                  onQueryChange={props.onQueryStringChange}
                                 />
                               )}
-                              {columnData.DATA_TYPE === 'VARCHAR' && (
+                              {parsedQuery && columnData.DATA_TYPE === 'VARCHAR' && (
                                 <StringMenuItems
-                                  addFunctionToGroupBy={props.addFunctionToGroupBy}
-                                  addToGroupBy={props.addToGroupBy}
-                                  addAggregateColumn={props.addAggregateColumn}
-                                  filterByRow={props.filterByRow}
                                   columnName={columnData.COLUMN_NAME}
-                                  queryAst={props.queryAst()}
-                                  clear={props.clear}
-                                  hasFilter={hasFilter}
+                                  parsedQuery={parsedQuery}
+                                  onQueryChange={props.onQueryStringChange}
                                 />
                               )}
-                              {columnData.DATA_TYPE === 'TIMESTAMP' && (
+                              {parsedQuery && columnData.DATA_TYPE === 'TIMESTAMP' && (
                                 <TimeMenuItems
-                                  clear={props.clear}
-                                  addFunctionToGroupBy={props.addFunctionToGroupBy}
-                                  addToGroupBy={props.addToGroupBy}
-                                  addAggregateColumn={props.addAggregateColumn}
-                                  filterByRow={props.filterByRow}
                                   columnName={columnData.COLUMN_NAME}
-                                  queryAst={props.queryAst()}
-                                  hasFilter={hasFilter}
+                                  parsedQuery={parsedQuery}
+                                  onQueryChange={props.onQueryStringChange}
                                 />
                               )}
                               <MenuItem

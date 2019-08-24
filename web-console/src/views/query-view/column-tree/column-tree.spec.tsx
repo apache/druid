@@ -17,6 +17,7 @@
  */
 
 import { render } from '@testing-library/react';
+import { sqlParserFactory } from 'druid-query-toolkit';
 import React from 'react';
 
 import { ColumnMetadata } from '../../../utils/column-metadata';
@@ -24,15 +25,14 @@ import { ColumnMetadata } from '../../../utils/column-metadata';
 import { ColumnTree } from './column-tree';
 
 describe('column tree', () => {
+  const parser = sqlParserFactory(['COUNT']);
+
   it('matches snapshot', () => {
     const columnTree = (
       <ColumnTree
-        queryAst={() => undefined}
-        clear={() => null}
-        addFunctionToGroupBy={() => null}
-        filterByRow={() => null}
-        addAggregateColumn={() => null}
-        addToGroupBy={() => null}
+        getParsedQuery={() => {
+          return parser(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`);
+        }}
         columnMetadataLoading={false}
         columnMetadata={
           [
@@ -57,7 +57,6 @@ describe('column tree', () => {
           ] as ColumnMetadata[]
         }
         onQueryStringChange={() => {}}
-        replaceFrom={() => null}
       />
     );
 

@@ -18,14 +18,7 @@
 
 import { MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import {
-  AdditiveExpression,
-  Alias,
-  FilterClause,
-  SqlQuery,
-  StringType,
-  timestampFactory,
-} from 'druid-query-toolkit';
+import { AdditiveExpression, SqlQuery, timestampFactory } from 'druid-query-toolkit';
 import {
   aliasFactory,
   intervalFactory,
@@ -34,30 +27,10 @@ import {
 } from 'druid-query-toolkit/build/ast/sql-query/helpers';
 import React from 'react';
 
-import { RowFilter } from '../../../query-view';
-
 export interface TimeMenuItemsProps {
-  addFunctionToGroupBy: (
-    functionName: string,
-    spacing: string[],
-    argumentsArray: (StringType | number)[],
-    run: boolean,
-    alias: Alias,
-  ) => void;
-  addToGroupBy: (columnName: string, run: boolean) => void;
-  addAggregateColumn: (
-    columnName: string,
-    functionName: string,
-    run: boolean,
-    alias?: Alias,
-    distinct?: boolean,
-    filter?: FilterClause,
-  ) => void;
-  filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
-  queryAst?: SqlQuery;
   columnName: string;
-  clear: (column: string, preferablyRun: boolean) => void;
-  hasFilter: boolean;
+  parsedQuery: SqlQuery;
+  onQueryChange: (queryString: SqlQuery, run?: boolean) => void;
 }
 
 export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
@@ -128,8 +101,9 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
     };
   }
 
-  renderFilterMenu(): JSX.Element {
-    const { columnName, filterByRow, clear } = this.props;
+  renderFilterMenu(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = this.props;
+
     const date = new Date();
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -147,8 +121,10 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('HOUR', '1')],
               spacing: [' ', ' '],
             });
-            clear(columnName, false);
-            filterByRow([{ row: additiveExpression, header: columnName, operator: '>=' }], true);
+            onQueryChange(
+              parsedQuery.removeFilter(columnName).filterRow(columnName, additiveExpression, '>='),
+              true,
+            );
           }}
         />
         <MenuItem
@@ -160,8 +136,10 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('DAY', '1')],
               spacing: [' ', ' '],
             });
-            clear(columnName, false);
-            filterByRow([{ row: additiveExpression, header: columnName, operator: '>=' }], true);
+            onQueryChange(
+              parsedQuery.removeFilter(columnName).filterRow(columnName, additiveExpression, '>='),
+              true,
+            );
           }}
         />
         <MenuItem
@@ -173,8 +151,10 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('DAY', '7')],
               spacing: [' ', ' '],
             });
-            clear(columnName, false);
-            filterByRow([{ row: additiveExpression, header: columnName, operator: '>=' }], true);
+            onQueryChange(
+              parsedQuery.removeFilter(columnName).filterRow(columnName, additiveExpression, '>='),
+              true,
+            );
           }}
         />
         <MenuItem
@@ -186,8 +166,10 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('MONTH', '1')],
               spacing: [' ', ' '],
             });
-            clear(columnName, false);
-            filterByRow([{ row: additiveExpression, header: columnName, operator: '>=' }], true);
+            onQueryChange(
+              parsedQuery.removeFilter(columnName).filterRow(columnName, additiveExpression, '>='),
+              true,
+            );
           }}
         />
         <MenuItem
@@ -199,8 +181,10 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('YEAR', '1')],
               spacing: [' ', ' '],
             });
-            clear(columnName, false);
-            filterByRow([{ row: additiveExpression, header: columnName, operator: '>=' }], true);
+            onQueryChange(
+              parsedQuery.removeFilter(columnName).filterRow(columnName, additiveExpression, '>='),
+              true,
+            );
           }}
         />
         <MenuDivider />
@@ -208,24 +192,19 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
           text={`Current hour`}
           onClick={() => {
             const next = this.getNextHour(hour, day, month, year);
-            clear(columnName, false);
-            filterByRow(
-              [
-                {
-                  row: stringFactory(columnName, `"`),
-                  header: timestampFactory(
-                    `${year}-${month}-${day} ${this.formatTime(hour)}:00:00`,
-                  ),
-                  operator: '<=',
-                },
-                {
-                  row: timestampFactory(
-                    `${next.year}-${next.month}-${next.day} ${next.hour}:00:00`,
-                  ),
-                  header: columnName,
-                  operator: '<',
-                },
-              ],
+            onQueryChange(
+              parsedQuery
+                .removeFilter(columnName)
+                .filterRow(
+                  timestampFactory(`${year}-${month}-${day} ${this.formatTime(hour)}:00:00`),
+                  stringFactory(columnName, `"`),
+                  '<=',
+                )
+                .filterRow(
+                  columnName,
+                  timestampFactory(`${next.year}-${next.month}-${next.day} ${next.hour}:00:00`),
+                  '<',
+                ),
               true,
             );
           }}
@@ -234,20 +213,19 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
           text={`Current day`}
           onClick={() => {
             const next = this.getNextDay(day, month, year);
-            clear(columnName, false);
-            filterByRow(
-              [
-                {
-                  row: stringFactory(columnName, `"`),
-                  header: timestampFactory(`${year}-${month}-${day} 00:00:00`),
-                  operator: '<=',
-                },
-                {
-                  row: timestampFactory(`${next.year}-${next.month}-${next.day} 00:00:00`),
-                  header: columnName,
-                  operator: '<',
-                },
-              ],
+            onQueryChange(
+              parsedQuery
+                .removeFilter(columnName)
+                .filterRow(
+                  timestampFactory(`${year}-${month}-${day} 00:00:00`),
+                  stringFactory(columnName, `"`),
+                  '<=',
+                )
+                .filterRow(
+                  columnName,
+                  timestampFactory(`${next.year}-${next.month}-${next.day} 00:00:00`),
+                  '<',
+                ),
               true,
             );
           }}
@@ -256,20 +234,19 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
           text={`Current month`}
           onClick={() => {
             const next = this.getNextMonth(month, year);
-            clear(columnName, false);
-            filterByRow(
-              [
-                {
-                  row: stringFactory(columnName, `"`),
-                  header: timestampFactory(`${year}-${month}-01 00:00:00`),
-                  operator: '<=',
-                },
-                {
-                  row: timestampFactory(`${next.year}-${next.month}-01 00:00:00`),
-                  header: columnName,
-                  operator: '<',
-                },
-              ],
+            onQueryChange(
+              parsedQuery
+                .removeFilter(columnName)
+                .filterRow(
+                  timestampFactory(`${year}-${month}-01 00:00:00`),
+                  stringFactory(columnName, `"`),
+                  '<=',
+                )
+                .filterRow(
+                  columnName,
+                  timestampFactory(`${next.year}-${next.month}-01 00:00:00`),
+                  '<',
+                ),
               true,
             );
           }}
@@ -277,20 +254,15 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
         <MenuItem
           text={`Current year`}
           onClick={() => {
-            clear(columnName, false);
-            filterByRow(
-              [
-                {
-                  row: stringFactory(columnName, `"`),
-                  header: timestampFactory(`${year}-01-01 00:00:00`),
-                  operator: '<=',
-                },
-                {
-                  row: timestampFactory(`${Number(year) + 1}-01-01 00:00:00`),
-                  header: columnName,
-                  operator: '<',
-                },
-              ],
+            onQueryChange(
+              parsedQuery
+                .removeFilter(columnName)
+                .filterRow(
+                  timestampFactory(`${year}-01-01 00:00:00`),
+                  stringFactory(columnName, `"`),
+                  '<=',
+                )
+                .filterRow(columnName, timestampFactory(`${Number(year) + 1}-01-01 00:00:00`), '<'),
               true,
             );
           }}
@@ -299,96 +271,108 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
     );
   }
 
-  renderRemoveFilter() {
-    const { columnName, clear } = this.props;
+  renderRemoveFilter(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = this.props;
+    if (!parsedQuery.hasFilterForColumn(columnName)) return;
+
     return (
       <MenuItem
         icon={IconNames.FILTER_REMOVE}
         text={`Remove filter`}
         onClick={() => {
-          clear(columnName, true);
+          onQueryChange(parsedQuery.removeFilter(columnName), true);
         }}
       />
     );
   }
 
-  renderGroupByMenu(): JSX.Element {
-    const { columnName, addFunctionToGroupBy } = this.props;
+  renderGroupByMenu(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = this.props;
+    if (!parsedQuery.hasGroupBy()) return;
 
     return (
       <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by`}>
         <MenuItem
           text={`TIME_FLOOR("${columnName}", 'PT1H') AS "${columnName}_time_floor"`}
-          onClick={() =>
-            addFunctionToGroupBy(
-              'TIME_FLOOR',
-              [' '],
-              [stringFactory(columnName, `"`), stringFactory('PT1H', `'`)],
+          onClick={() => {
+            onQueryChange(
+              parsedQuery.addFunctionToGroupBy(
+                'TIME_FLOOR',
+                [' '],
+                [stringFactory(columnName, `"`), stringFactory('PT1H', `'`)],
+                aliasFactory(`${columnName}_time_floor`),
+              ),
               true,
-              aliasFactory(`${columnName}_time_floor`),
-            )
-          }
+            );
+          }}
         />
         <MenuItem
           text={`TIME_FLOOR("${columnName}", 'P1D') AS "${columnName}_time_floor"`}
-          onClick={() =>
-            addFunctionToGroupBy(
-              'TIME_FLOOR',
-              [' '],
-              [stringFactory(columnName, `"`), stringFactory('P1D', `'`)],
+          onClick={() => {
+            onQueryChange(
+              parsedQuery.addFunctionToGroupBy(
+                'TIME_FLOOR',
+                [' '],
+                [stringFactory(columnName, `"`), stringFactory('P1D', `'`)],
+                aliasFactory(`${columnName}_time_floor`),
+              ),
               true,
-              aliasFactory(`${columnName}_time_floor`),
-            )
-          }
+            );
+          }}
         />
         <MenuItem
           text={`TIME_FLOOR("${columnName}", 'P7D') AS "${columnName}_time_floor"`}
-          onClick={() =>
-            addFunctionToGroupBy(
-              'TIME_FLOOR',
-              [' '],
-              [stringFactory(columnName, `"`), stringFactory('P7D', `'`)],
+          onClick={() => {
+            onQueryChange(
+              parsedQuery.addFunctionToGroupBy(
+                'TIME_FLOOR',
+                [' '],
+                [stringFactory(columnName, `"`), stringFactory('P7D', `'`)],
+                aliasFactory(`${columnName}_time_floor`),
+              ),
               true,
-              aliasFactory(`${columnName}_time_floor`),
-            )
-          }
+            );
+          }}
         />
       </MenuItem>
     );
   }
 
-  renderAggregateMenu(): JSX.Element {
-    const { columnName, addAggregateColumn } = this.props;
+  renderAggregateMenu(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = this.props;
+    if (!parsedQuery.hasGroupBy()) return;
+
     return (
       <MenuItem icon={IconNames.FUNCTION} text={`Aggregate`}>
         <MenuItem
           text={`MAX("${columnName}") AS "max_${columnName}"`}
-          onClick={() =>
-            addAggregateColumn(columnName, 'MAX', true, aliasFactory(`max_${columnName}`))
-          }
+          onClick={() => {
+            onQueryChange(
+              parsedQuery.addAggregateColumn(columnName, 'MAX', aliasFactory(`max_${columnName}`)),
+              true,
+            );
+          }}
         />
         <MenuItem
           text={`MIN("${columnName}") AS "min_${columnName}"`}
-          onClick={() =>
-            addAggregateColumn(columnName, 'MIN', true, aliasFactory(`min_${columnName}`))
-          }
+          onClick={() => {
+            onQueryChange(
+              parsedQuery.addAggregateColumn(columnName, 'MIN', aliasFactory(`min_${columnName}`)),
+              true,
+            );
+          }}
         />
       </MenuItem>
     );
   }
 
   render(): JSX.Element {
-    const { queryAst, hasFilter } = this.props;
-    let hasGroupBy;
-    if (queryAst) {
-      hasGroupBy = queryAst.groupByClause;
-    }
     return (
       <>
-        {queryAst && this.renderFilterMenu()}
-        {hasFilter && this.renderRemoveFilter()}
-        {hasGroupBy && this.renderGroupByMenu()}
-        {hasGroupBy && this.renderAggregateMenu()}
+        {this.renderFilterMenu()}
+        {this.renderRemoveFilter()}
+        {this.renderGroupByMenu()}
+        {this.renderAggregateMenu()}
       </>
     );
   }

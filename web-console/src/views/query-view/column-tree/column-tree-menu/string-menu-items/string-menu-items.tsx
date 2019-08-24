@@ -19,43 +19,20 @@
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import {
-  Alias,
   ComparisonExpression,
   ComparisonExpressionRhs,
   FilterClause,
-  RefExpression,
   refExpressionFactory,
   SqlQuery,
-  StringType,
   WhereClause,
 } from 'druid-query-toolkit';
 import { aliasFactory, stringFactory } from 'druid-query-toolkit/build/ast/sql-query/helpers';
 import React from 'react';
 
-import { RowFilter } from '../../../query-view';
-
 export interface StringMenuItemsProps {
-  addFunctionToGroupBy: (
-    functionName: string,
-    spacing: string[],
-    argumentsArray: (StringType | number)[],
-    run: boolean,
-    alias: Alias,
-  ) => void;
-  addToGroupBy: (columnName: string, run: boolean) => void;
-  addAggregateColumn: (
-    columnName: string | RefExpression,
-    functionName: string,
-    run: boolean,
-    alias?: Alias,
-    distinct?: boolean,
-    filter?: FilterClause,
-  ) => void;
-  filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
-  queryAst?: SqlQuery;
   columnName: string;
-  clear: (column: string, preferablyRun: boolean) => void;
-  hasFilter: boolean;
+  parsedQuery: SqlQuery;
+  onQueryChange: (queryString: SqlQuery, run?: boolean) => void;
 }
 
 export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
@@ -63,116 +40,134 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
     super(props, context);
   }
 
-  renderFilterMenu(): JSX.Element {
-    const { columnName, filterByRow } = this.props;
+  renderFilterMenu(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = this.props;
 
     return (
       <MenuItem icon={IconNames.FILTER} text={`Filter`}>
         <MenuItem
           text={`"${columnName}" = 'xxx'`}
-          onClick={() => filterByRow([{ row: 'xxx', header: columnName, operator: '=' }], false)}
+          onClick={() => {
+            onQueryChange(parsedQuery.filterRow(columnName, 'xxx', '='), false);
+          }}
         />
         <MenuItem
           text={`"${columnName}" LIKE '%xxx%'`}
-          onClick={() =>
-            filterByRow([{ row: '%xxx%', header: columnName, operator: 'LIKE' }], false)
-          }
+          onClick={() => {
+            onQueryChange(parsedQuery.filterRow(columnName, '%xxx%', 'LIKE'), false);
+          }}
         />
       </MenuItem>
     );
   }
 
-  renderRemoveFilter() {
-    const { columnName, clear } = this.props;
+  renderRemoveFilter(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = this.props;
+    if (!parsedQuery.hasFilterForColumn(columnName)) return;
+
     return (
       <MenuItem
         icon={IconNames.FILTER_REMOVE}
         text={`Remove filter`}
         onClick={() => {
-          clear(columnName, true);
+          onQueryChange(parsedQuery.removeFilter(columnName), true);
         }}
       />
     );
   }
 
-  renderGroupByMenu(): JSX.Element {
-    const { columnName, addFunctionToGroupBy, addToGroupBy } = this.props;
+  renderGroupByMenu(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = this.props;
+    if (!parsedQuery.hasGroupBy()) return;
 
     return (
       <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by`}>
-        <MenuItem text={`"${columnName}"`} onClick={() => addToGroupBy(columnName, true)} />
+        <MenuItem
+          text={`"${columnName}"`}
+          onClick={() => {
+            onQueryChange(parsedQuery.addToGroupBy(columnName), true);
+          }}
+        />
         <MenuItem
           text={`SUBSTRING("${columnName}", 1, 2) AS "${columnName}_substring"`}
-          onClick={() =>
-            addFunctionToGroupBy(
-              'SUBSTRING',
-              [' ', ' '],
-              [stringFactory(columnName, `"`), 1, 2],
+          onClick={() => {
+            onQueryChange(
+              parsedQuery.addFunctionToGroupBy(
+                'SUBSTRING',
+                [' ', ' '],
+                [stringFactory(columnName, `"`), 1, 2],
+
+                aliasFactory(`${columnName}_substring`),
+              ),
               true,
-              aliasFactory(`${columnName}_substring`),
-            )
-          }
+            );
+          }}
         />
       </MenuItem>
     );
   }
 
-  renderAggregateMenu(): JSX.Element {
-    const { columnName, addAggregateColumn } = this.props;
+  renderAggregateMenu(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = this.props;
+    if (!parsedQuery.hasGroupBy()) return;
+
     return (
       <MenuItem icon={IconNames.FUNCTION} text={`Aggregate`}>
         <MenuItem
           text={`COUNT(DISTINCT "${columnName}") AS "dist_${columnName}"`}
           onClick={() =>
-            addAggregateColumn(columnName, 'COUNT', true, aliasFactory(`dist_${columnName}`), true)
+            onQueryChange(
+              parsedQuery.addAggregateColumn(
+                columnName,
+                'COUNT',
+                aliasFactory(`dist_${columnName}`),
+              ),
+              true,
+            )
           }
         />
         <MenuItem
           text={`COUNT(*) FILTER (WHERE "${columnName}" = 'xxx') AS ${columnName}_filtered_count `}
-          onClick={() =>
-            addAggregateColumn(
-              refExpressionFactory('*'),
-              'COUNT',
-              false,
-              aliasFactory(`${columnName}_filtered_count`),
-              false,
-              new FilterClause({
-                keyword: 'FILTER',
-                spacing: [' '],
-                ex: new WhereClause({
-                  keyword: 'WHERE',
+          onClick={() => {
+            onQueryChange(
+              parsedQuery.addAggregateColumn(
+                refExpressionFactory('*'),
+                'COUNT',
+                aliasFactory(`${columnName}_filtered_count`),
+                false,
+                new FilterClause({
+                  keyword: 'FILTER',
                   spacing: [' '],
-                  filter: new ComparisonExpression({
-                    parens: [],
-                    ex: stringFactory(columnName, '"'),
-                    rhs: new ComparisonExpressionRhs({
+                  ex: new WhereClause({
+                    keyword: 'WHERE',
+                    spacing: [' '],
+                    filter: new ComparisonExpression({
                       parens: [],
-                      op: '=',
-                      rhs: stringFactory('xxx', `'`),
-                      spacing: [' ', ' '],
+                      ex: stringFactory(columnName, '"'),
+                      rhs: new ComparisonExpressionRhs({
+                        parens: [],
+                        op: '=',
+                        rhs: stringFactory('xxx', `'`),
+                        spacing: [' ', ' '],
+                      }),
                     }),
                   }),
                 }),
-              }),
-            )
-          }
+              ),
+            );
+          }}
         />
       </MenuItem>
     );
   }
 
   render(): JSX.Element {
-    const { queryAst, hasFilter } = this.props;
-    let hasGroupBy;
-    if (queryAst) {
-      hasGroupBy = queryAst.groupByClause;
-    }
     return (
       <>
-        {queryAst && this.renderFilterMenu()}
-        {hasFilter && this.renderRemoveFilter()}
-        {hasGroupBy && this.renderGroupByMenu()}
-        {hasGroupBy && this.renderAggregateMenu()}
+        {this.renderFilterMenu()}
+        {this.renderRemoveFilter()}
+        {this.renderGroupByMenu()}
+        {this.renderAggregateMenu()}
       </>
     );
   }

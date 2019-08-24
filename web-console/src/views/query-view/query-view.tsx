@@ -21,12 +21,9 @@ import axios from 'axios';
 import classNames from 'classnames';
 import {
   AdditiveExpression,
-  Alias,
-  FilterClause,
   HeaderRows,
   isFirstRowHeader,
   normalizeQueryResult,
-  RefExpression,
   shouldIncludeTimestamp,
   sqlParserFactory,
   SqlQuery,
@@ -552,57 +549,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     );
   }
 
-  private addFunctionToGroupBy = (
-    functionName: string,
-    spacing: string[],
-    argumentsArray: (StringType | number)[],
-    preferablyRun: boolean,
-    alias: Alias,
-  ): void => {
-    const { queryAst } = this.state;
-    if (!queryAst) return;
-
-    const modifiedAst = queryAst.addFunctionToGroupBy(functionName, spacing, argumentsArray, alias);
-    this.handleQueryStringChange(modifiedAst.toString(), preferablyRun);
-  };
-
-  private addToGroupBy = (columnName: string, preferablyRun: boolean): void => {
-    const { queryAst } = this.state;
-    if (!queryAst) return;
-
-    const modifiedAst = queryAst.addToGroupBy(columnName);
-    this.handleQueryStringChange(modifiedAst.toString(), preferablyRun);
-  };
-
-  private replaceFrom = (table: RefExpression, preferablyRun: boolean): void => {
-    const { queryAst } = this.state;
-    if (!queryAst) return;
-
-    const modifiedAst = queryAst.replaceFrom(table);
-    this.handleQueryStringChange(modifiedAst.toString(), preferablyRun);
-  };
-
-  private addAggregateColumn = (
-    columnName: string | RefExpression,
-    functionName: string,
-    preferablyRun: boolean,
-    alias?: Alias,
-    distinct?: boolean,
-    filter?: FilterClause,
-  ): void => {
-    const { queryAst } = this.state;
-    if (!queryAst) return;
-
-    const modifiedAst = queryAst.addAggregateColumn(
-      columnName,
-      functionName,
-      alias,
-      distinct,
-      filter,
-    );
-    this.handleQueryStringChange(modifiedAst.toString(), preferablyRun);
-  };
-
   private sqlOrderBy = (
     header: string,
     direction: 'ASC' | 'DESC',
@@ -634,14 +580,11 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     this.handleQueryStringChange(modifiedAst.toString(), preferablyRun);
   };
 
-  private sqlClearWhere = (column: string, preferablyRun: boolean): void => {
-    const { queryAst } = this.state;
-
-    if (!queryAst) return;
-    this.handleQueryStringChange(queryAst.removeFilter(column).toString(), preferablyRun);
-  };
-
-  private handleQueryStringChange = (queryString: string, preferablyRun?: boolean): void => {
+  private handleQueryStringChange = (
+    queryString: string | SqlQuery,
+    preferablyRun?: boolean,
+  ): void => {
+    if (queryString instanceof SqlQuery) queryString = queryString.toString();
     this.setState({ queryString, queryAst: parser(queryString) }, () => {
       const { autoRun } = this.state;
       if (preferablyRun && autoRun) this.handleRun();
@@ -685,7 +628,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     localStorageSet(LocalStorageKeys.QUERY_VIEW_PANE_SIZE, String(secondaryPaneSize));
   };
 
-  private getQueryAst = () => {
+  private getParsedQuery = () => {
     const { queryAst } = this.state;
     return queryAst;
   };
@@ -706,18 +649,12 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       >
         {!columnMetadataError && (
           <ColumnTree
-            clear={this.sqlClearWhere}
-            filterByRow={this.sqlFilterRow}
-            addFunctionToGroupBy={this.addFunctionToGroupBy}
-            addAggregateColumn={this.addAggregateColumn}
-            addToGroupBy={this.addToGroupBy}
-            queryAst={this.getQueryAst}
+            getParsedQuery={this.getParsedQuery}
             columnMetadataLoading={columnMetadataLoading}
             columnMetadata={columnMetadata}
             onQueryStringChange={this.handleQueryStringChange}
             defaultSchema={defaultSchema ? defaultSchema : 'druid'}
             defaultTable={defaultTable}
-            replaceFrom={this.replaceFrom}
           />
         )}
         {this.renderMainArea()}
