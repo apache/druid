@@ -29,12 +29,12 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -43,8 +43,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 
 public abstract class HadoopTask extends AbstractBatchIndexTask
@@ -150,7 +148,7 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
       );
     } else {
       // fallback to parsing system classpath
-      jobURLs = parseSystemClassPath();
+      jobURLs = JvmUtils.systemClassPath();
     }
 
     final List<URL> extensionURLs = new ArrayList<>();
@@ -199,23 +197,6 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
     System.setProperty("druid.hadoop.internal.classpath", hadoopContainerDruidClasspathJars);
 
     return classLoader;
-  }
-
-  static List<URL> parseSystemClassPath()
-  {
-    List<URL> jobURLs;
-    String[] paths = System.getProperty("java.class.path").split(File.pathSeparator);
-    jobURLs = Stream.of(paths).map(
-        s -> {
-          try {
-            return Paths.get(s).toUri().toURL();
-          }
-          catch (MalformedURLException e) {
-            throw new UnsupportedOperationException("Unable to create URL classpath entry", e);
-          }
-        }
-    ).collect(Collectors.toList());
-    return jobURLs;
   }
 
   /**

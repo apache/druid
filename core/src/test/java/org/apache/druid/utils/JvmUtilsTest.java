@@ -20,7 +20,13 @@
 package org.apache.druid.utils;
 
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
+
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.Arrays;
+import java.util.List;
 
 public class JvmUtilsTest
 {
@@ -37,5 +43,18 @@ public class JvmUtilsTest
     catch (RuntimeException expected) {
       Assert.assertTrue(true);
     }
+  }
+
+  @Test
+  public void testSystemClassPath()
+  {
+    ClassLoader testClassLoader = this.getClass().getClassLoader();
+    // ignore this test unless we can assume URLClassLoader (only applies to Java 8)
+    Assume.assumeTrue(testClassLoader instanceof URLClassLoader);
+
+    List<URL> parsedUrls = JvmUtils.systemClassPath();
+    List<URL> classLoaderUrls = Arrays.asList(((URLClassLoader) testClassLoader).getURLs());
+
+    Assert.assertEquals(classLoaderUrls, parsedUrls);
   }
 }

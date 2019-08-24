@@ -33,15 +33,12 @@ import org.apache.hadoop.yarn.util.ApplicationClassLoader;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
-import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -130,19 +127,6 @@ public class HadoopTaskTest
 
     final Class<?> druidHadoopConfigClazz = Class.forName("org.apache.druid.indexer.HadoopDruidIndexerConfig", false, classLoader);
     assertClassLoaderIsSingular(druidHadoopConfigClazz.getClassLoader());
-  }
-
-  @Test
-  public void testSystemClassPath()
-  {
-    ClassLoader testClassLoader = this.getClass().getClassLoader();
-    // ignore this test unless we can assume URLClassLoader (only applies to Java 8)
-    Assume.assumeTrue(testClassLoader instanceof URLClassLoader);
-
-    List<URL> parsedUrls = HadoopTask.parseSystemClassPath();
-    List<URL> classLoaderUrls = Arrays.asList(((URLClassLoader) testClassLoader).getURLs());
-
-    Assert.assertEquals(classLoaderUrls, parsedUrls);
   }
 
   public static void assertClassLoaderIsSingular(ClassLoader classLoader)

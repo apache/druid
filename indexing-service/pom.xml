@@ -105,14 +105,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <!-- use normal classpath instead of manifest jar for HadoopTaskTest.testSystemClassPath -->
-                    <useManifestOnlyJar>false</useManifestOnlyJar>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
 
