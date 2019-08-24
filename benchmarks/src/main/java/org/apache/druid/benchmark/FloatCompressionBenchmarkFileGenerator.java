@@ -46,7 +46,7 @@ public class FloatCompressionBenchmarkFileGenerator
 {
   private static final Logger log = new Logger(FloatCompressionBenchmarkFileGenerator.class);
   public static final int ROW_NUM = 5000000;
-  public static final List<CompressionStrategy> compressions =
+  public static final List<CompressionStrategy> COMPRESSIONS =
       ImmutableList.of(
           CompressionStrategy.LZ4,
           CompressionStrategy.NONE
@@ -138,7 +138,7 @@ public class FloatCompressionBenchmarkFileGenerator
 
     // create compressed files using all combinations of CompressionStrategy and FloatEncoding provided
     for (Map.Entry<String, BenchmarkColumnValueGenerator> entry : generators.entrySet()) {
-      for (CompressionStrategy compression : compressions) {
+      for (CompressionStrategy compression : COMPRESSIONS) {
         String name = entry.getKey() + "-" + compression;
         log.info("%s: ", name);
         File compFile = new File(dir, name);

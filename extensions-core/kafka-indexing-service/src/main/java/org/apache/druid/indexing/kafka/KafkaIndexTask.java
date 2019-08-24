@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
@@ -83,6 +84,10 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
     this.configMapper = configMapper;
     this.ioConfig = ioConfig;
 
+    Preconditions.checkArgument(
+        ioConfig.getStartSequenceNumbers().getExclusivePartitions().isEmpty(),
+        "All startSequenceNumbers must be inclusive"
+    );
   }
 
   long getPollRetryMs()

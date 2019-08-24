@@ -148,7 +148,10 @@ export class QueryPlanDialog extends React.PureComponent<
             <Button
               text="Open"
               intent={Intent.PRIMARY}
-              onClick={() => setQueryString(this.queryString)}
+              onClick={() => {
+                setQueryString(this.queryString);
+                onClose();
+              }}
             />
           </div>
         </div>

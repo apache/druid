@@ -22,6 +22,7 @@ import {
   Hotkey,
   Hotkeys,
   HotkeysTarget,
+  Intent,
   Menu,
   MenuItem,
   Popover,
@@ -46,13 +47,11 @@ import { DRUID_DOCS_RUNE, DRUID_DOCS_SQL } from '../../../variables';
 export interface RunButtonProps {
   runeMode: boolean;
   autoRun: boolean;
-  setAutoRun: (autoRun: boolean) => void;
-  wrapQuery: boolean;
-  setWrapQuery: (wrapQuery: boolean) => void;
+  onAutoRunChange: (autoRun: boolean) => void;
   queryContext: QueryContext;
   onQueryContextChange: (newQueryContext: QueryContext) => void;
-  onRun: () => void;
-  onExplain: () => void;
+  onRun: (() => void) | undefined;
+  onExplain: (() => void) | undefined;
   onEditContext: () => void;
   onHistory: () => void;
 }
@@ -61,9 +60,6 @@ export interface RunButtonProps {
 export class RunButton extends React.PureComponent<RunButtonProps> {
   constructor(props: RunButtonProps, context: any) {
     super(props, context);
-    this.state = {
-      wrapQuery: true,
-    };
   }
 
   public renderHotkeys() {
@@ -95,9 +91,7 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
       onEditContext,
       onHistory,
       autoRun,
-      setAutoRun,
-      wrapQuery,
-      setWrapQuery,
+      onAutoRunChange,
     } = this.props;
 
     const useCache = getUseCache(queryContext);
@@ -114,17 +108,12 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
         />
         {!runeMode && (
           <>
-            <MenuItem icon={IconNames.CLEAN} text="Explain" onClick={onExplain} />
+            {onExplain && <MenuItem icon={IconNames.CLEAN} text="Explain" onClick={onExplain} />}
             <MenuItem icon={IconNames.HISTORY} text="History" onClick={onHistory} />
-            <MenuCheckbox
-              checked={wrapQuery}
-              label="Wrap query with limit"
-              onChange={() => setWrapQuery(!wrapQuery)}
-            />
             <MenuCheckbox
               checked={autoRun}
               label="Auto run queries"
-              onChange={() => setAutoRun(!autoRun)}
+              onChange={() => onAutoRunChange(!autoRun)}
             />
             <MenuCheckbox
               checked={useApproximateCountDistinct}
@@ -159,20 +148,25 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
   }
 
   render(): JSX.Element {
-    const { runeMode, onRun, wrapQuery } = this.props;
+    const { runeMode, onRun } = this.props;
+    const runButtonText = 'Run' + (runeMode ? 'e' : '');
 
     return (
       <ButtonGroup className="run-button">
-        <Tooltip content="Control + Enter" hoverOpenDelay={900}>
-          <Button
-            icon={IconNames.CARET_RIGHT}
-            onClick={this.handleRun}
-            text={runeMode ? 'Rune' : wrapQuery ? 'Run with limit' : 'Run as is'}
-            disabled={!onRun}
-          />
-        </Tooltip>
+        {onRun ? (
+          <Tooltip content="Control + Enter" hoverOpenDelay={900}>
+            <Button
+              icon={IconNames.CARET_RIGHT}
+              onClick={this.handleRun}
+              text={runButtonText}
+              intent={Intent.PRIMARY}
+            />
+          </Tooltip>
+        ) : (
+          <Button icon={IconNames.CARET_RIGHT} text={runButtonText} disabled />
+        )}
         <Popover position={Position.BOTTOM_LEFT} content={this.renderExtraMenu()}>
-          <Button icon={IconNames.MORE} />
+          <Button icon={IconNames.MORE} intent={Intent.PRIMARY} />
         </Popover>
       </ButtonGroup>
     );

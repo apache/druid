@@ -19,6 +19,8 @@
 import { Button, Classes, Dialog, Intent, Tab, Tabs, TextArea } from '@blueprintjs/core';
 import React from 'react';
 
+import { CenterMessage } from '../../components';
+
 import './query-history-dialog.scss';
 
 export interface QueryRecord {
@@ -28,7 +30,7 @@ export interface QueryRecord {
 export interface QueryHistoryDialogProps {
   setQueryString: (queryString: string) => void;
   onClose: () => void;
-  queryRecords: QueryRecord[];
+  queryRecords: readonly QueryRecord[];
 }
 
 export interface QueryHistoryDialogState {
@@ -39,6 +41,32 @@ export class QueryHistoryDialog extends React.PureComponent<
   QueryHistoryDialogProps,
   QueryHistoryDialogState
 > {
+  static getHistoryVersion(): string {
+    return new Date()
+      .toISOString()
+      .split('.')[0]
+      .replace('T', ' ');
+  }
+
+  static addQueryToHistory(
+    queryHistory: readonly QueryRecord[],
+    queryString: string,
+  ): readonly QueryRecord[] {
+    // Do not add to history if already the same as the last element
+    if (queryHistory.length && queryHistory[0].queryString === queryString) {
+      return queryHistory;
+    }
+
+    return [
+      {
+        version: QueryHistoryDialog.getHistoryVersion(),
+        queryString,
+      },
+    ]
+      .concat(queryHistory)
+      .slice(0, 10);
+  }
+
   constructor(props: QueryHistoryDialogProps) {
     super(props);
     this.state = {
@@ -46,9 +74,25 @@ export class QueryHistoryDialog extends React.PureComponent<
     };
   }
 
-  render(): JSX.Element {
-    const { onClose, queryRecords, setQueryString } = this.props;
+  private handleSelect = () => {
+    const { queryRecords, setQueryString, onClose } = this.props;
     const { activeTab } = this.state;
+
+    setQueryString(queryRecords[activeTab].queryString);
+    onClose();
+  };
+
+  private handleTabChange = (tab: number) => {
+    this.setState({ activeTab: tab });
+  };
+
+  renderContent(): JSX.Element {
+    const { queryRecords } = this.props;
+    const { activeTab } = this.state;
+
+    if (!queryRecords.length) {
+      return <CenterMessage>The query history is empty.</CenterMessage>;
+    }
 
     const versions = queryRecords.map((record, index) => (
       <Tab
@@ -61,28 +105,32 @@ export class QueryHistoryDialog extends React.PureComponent<
     ));
 
     return (
+      <Tabs
+        animate
+        renderActiveTabPanelOnly
+        vertical
+        className={'tab-area'}
+        selectedTabId={activeTab}
+        onChange={this.handleTabChange}
+      >
+        {versions}
+        <Tabs.Expander />
+      </Tabs>
+    );
+  }
+
+  render(): JSX.Element {
+    const { onClose, queryRecords } = this.props;
+
+    return (
       <Dialog className="query-history-dialog" isOpen onClose={onClose} title="Query history">
-        <div className={Classes.DIALOG_BODY}>
-          <Tabs
-            animate
-            renderActiveTabPanelOnly
-            vertical
-            className={'tab-area'}
-            selectedTabId={activeTab}
-            onChange={(tab: number) => this.setState({ activeTab: tab })}
-          >
-            {versions}
-            <Tabs.Expander />
-          </Tabs>
-        </div>
+        <div className={Classes.DIALOG_BODY}>{this.renderContent()}</div>
         <div className={Classes.DIALOG_FOOTER}>
           <div className={Classes.DIALOG_FOOTER_ACTIONS}>
             <Button text="Close" onClick={onClose} />
-            <Button
-              text="Open"
-              intent={Intent.PRIMARY}
-              onClick={() => setQueryString(queryRecords[activeTab].queryString)}
-            />
+            {Boolean(queryRecords.length) && (
+              <Button text="Open" intent={Intent.PRIMARY} onClick={this.handleSelect} />
+            )}
           </div>
         </div>
       </Dialog>

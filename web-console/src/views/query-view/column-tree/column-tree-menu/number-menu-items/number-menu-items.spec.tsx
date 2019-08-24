@@ -17,19 +17,25 @@
  */
 
 import { render } from '@testing-library/react';
+import { sqlParserFactory } from 'druid-query-toolkit';
 import React from 'react';
 
 import { NumberMenuItems } from './number-menu-items';
 
 describe('number menu', () => {
+  const parser = sqlParserFactory(['COUNT']);
+
   it('matches snapshot', () => {
     const numberMenu = (
       <NumberMenuItems
+        hasFilter
+        clear={() => null}
         addFunctionToGroupBy={() => null}
         addToGroupBy={() => null}
         addAggregateColumn={() => null}
         filterByRow={() => null}
-        columnName={'text'}
+        columnName={'added'}
+        queryAst={parser(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
       />
     );
 

@@ -62,7 +62,7 @@ public class GenericIndexedBenchmark
 {
   public static final int ITERATIONS = 10000;
 
-  static final ObjectStrategy<byte[]> byteArrayStrategy = new ObjectStrategy<byte[]>()
+  static final ObjectStrategy<byte[]> BYTE_ARRAY_STRATEGY = new ObjectStrategy<byte[]>()
   {
     @Override
     public Class<byte[]> getClazz()
@@ -108,7 +108,7 @@ public class GenericIndexedBenchmark
     GenericIndexedWriter<byte[]> genericIndexedWriter = new GenericIndexedWriter<>(
         new OffHeapMemorySegmentWriteOutMedium(),
         "genericIndexedBenchmark",
-        byteArrayStrategy
+        BYTE_ARRAY_STRATEGY
     );
     genericIndexedWriter.open();
 
@@ -132,7 +132,7 @@ public class GenericIndexedBenchmark
 
     FileChannel fileChannel = FileChannel.open(file.toPath());
     MappedByteBuffer byteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, file.length());
-    genericIndexed = GenericIndexed.read(byteBuffer, byteArrayStrategy, SmooshedFileMapper.load(smooshDir));
+    genericIndexed = GenericIndexed.read(byteBuffer, BYTE_ARRAY_STRATEGY, SmooshedFileMapper.load(smooshDir));
   }
 
   @Setup(Level.Trial)

@@ -73,12 +73,12 @@ public class SigarUtil
    */
   private static class CurrentProcessIdHolder
   {
-    private static final long currentProcessId = new Sigar().getPid();
+    private static final long CURRENT_PROCESS_ID = new Sigar().getPid();
   }
 
   public static long getCurrentProcessId()
   {
-    return CurrentProcessIdHolder.currentProcessId;
+    return CurrentProcessIdHolder.CURRENT_PROCESS_ID;
   }
 
 }

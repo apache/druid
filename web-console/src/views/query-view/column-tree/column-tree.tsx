@@ -27,7 +27,15 @@ import {
   Tree,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Alias, FilterClause, RefExpression, SqlQuery, StringType } from 'druid-query-toolkit';
+import {
+  Alias,
+  FilterClause,
+  RefExpression,
+  refExpressionFactory,
+  SqlQuery,
+  stringFactory,
+  StringType,
+} from 'druid-query-toolkit';
 import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
@@ -114,7 +122,7 @@ ORDER BY "Count" DESC`,
 
 export interface ColumnTreeProps {
   columnMetadataLoading: boolean;
-  columnMetadata?: ColumnMetadata[];
+  columnMetadata?: readonly ColumnMetadata[];
   onQueryStringChange: (queryString: string, run: boolean) => void;
   defaultSchema?: string;
   defaultTable?: string;
@@ -135,22 +143,22 @@ export interface ColumnTreeProps {
     filter?: FilterClause,
   ) => void;
   filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
-  hasGroupBy: () => boolean;
+  replaceFrom: (table: RefExpression, preferablyRun: boolean) => void;
   queryAst: () => SqlQuery | undefined;
-  clear: () => void;
+  clear: (column: string, preferablyRun: boolean) => void;
 }
 
 export interface ColumnTreeState {
-  prevColumnMetadata?: ColumnMetadata[];
-  prevGroupByStatus?: boolean;
+  prevColumnMetadata?: readonly ColumnMetadata[];
   columnTree?: ITreeNode[];
+  currentSchemaSubtree?: ITreeNode[];
   selectedTreeIndex: number;
-  expandedNode: number;
 }
 
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
     const { columnMetadata, defaultSchema, defaultTable } = props;
+
     if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
       const columnTree = groupBy(
         columnMetadata,
@@ -172,7 +180,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                     <Menu>
                       <MenuItem
                         icon={IconNames.FULLSCREEN}
-                        text={`Select ... from ${table}`}
+                        text={`SELECT ... FROM ${table}`}
                         onClick={() => {
                           handleTableClick(
                             schema,
@@ -197,6 +205,24 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                           copyAndAlert(table, `${table} query copied to clipboard`);
                         }}
                       />
+                      <Deferred
+                        content={() => (
+                          <>
+                            {props.queryAst() && (
+                              <MenuItem
+                                icon={IconNames.EXCHANGE}
+                                text={`Replace FROM with: ${table}`}
+                                onClick={() => {
+                                  props.replaceFrom(
+                                    refExpressionFactory(stringFactory(table, `"`)),
+                                    true,
+                                  );
+                                }}
+                              />
+                            )}
+                          </>
+                        )}
+                      />
                     </Menu>
                   }
                 >
@@ -214,67 +240,79 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                     targetClassName={'bp3-popover-open'}
                     content={
                       <Deferred
-                        content={() => (
-                          <Menu>
-                            <MenuItem
-                              icon={IconNames.FULLSCREEN}
-                              text={`Show: ${columnData.COLUMN_NAME}`}
-                              onClick={() => {
-                                handleColumnClick(
-                                  schema,
-                                  table,
-                                  {
-                                    id: columnData.COLUMN_NAME,
-                                    icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
-                                    label: columnData.COLUMN_NAME,
-                                  },
-                                  props.onQueryStringChange,
-                                );
-                              }}
-                            />
-                            {columnData.DATA_TYPE === 'BIGINT' && (
-                              <NumberMenuItems
-                                addFunctionToGroupBy={props.addFunctionToGroupBy}
-                                addToGroupBy={props.addToGroupBy}
-                                addAggregateColumn={props.addAggregateColumn}
-                                filterByRow={props.filterByRow}
-                                columnName={columnData.COLUMN_NAME}
-                                queryAst={props.queryAst()}
+                        content={() => {
+                          const queryAst = props.queryAst();
+                          const hasFilter = queryAst
+                            ? queryAst.getCurrentFilters().includes(columnData.COLUMN_NAME)
+                            : false;
+
+                          return (
+                            <Menu>
+                              <MenuItem
+                                icon={IconNames.FULLSCREEN}
+                                text={`Show: ${columnData.COLUMN_NAME}`}
+                                onClick={() => {
+                                  handleColumnClick(
+                                    schema,
+                                    table,
+                                    {
+                                      id: columnData.COLUMN_NAME,
+                                      icon: ColumnTree.dataTypeToIcon(columnData.DATA_TYPE),
+                                      label: columnData.COLUMN_NAME,
+                                    },
+                                    props.onQueryStringChange,
+                                  );
+                                }}
                               />
-                            )}
-                            {columnData.DATA_TYPE === 'VARCHAR' && (
-                              <StringMenuItems
-                                addFunctionToGroupBy={props.addFunctionToGroupBy}
-                                addToGroupBy={props.addToGroupBy}
-                                addAggregateColumn={props.addAggregateColumn}
-                                filterByRow={props.filterByRow}
-                                columnName={columnData.COLUMN_NAME}
-                                queryAst={props.queryAst()}
+                              {columnData.DATA_TYPE === 'BIGINT' && (
+                                <NumberMenuItems
+                                  addFunctionToGroupBy={props.addFunctionToGroupBy}
+                                  addToGroupBy={props.addToGroupBy}
+                                  addAggregateColumn={props.addAggregateColumn}
+                                  filterByRow={props.filterByRow}
+                                  columnName={columnData.COLUMN_NAME}
+                                  queryAst={props.queryAst()}
+                                  clear={props.clear}
+                                  hasFilter={hasFilter}
+                                />
+                              )}
+                              {columnData.DATA_TYPE === 'VARCHAR' && (
+                                <StringMenuItems
+                                  addFunctionToGroupBy={props.addFunctionToGroupBy}
+                                  addToGroupBy={props.addToGroupBy}
+                                  addAggregateColumn={props.addAggregateColumn}
+                                  filterByRow={props.filterByRow}
+                                  columnName={columnData.COLUMN_NAME}
+                                  queryAst={props.queryAst()}
+                                  clear={props.clear}
+                                  hasFilter={hasFilter}
+                                />
+                              )}
+                              {columnData.DATA_TYPE === 'TIMESTAMP' && (
+                                <TimeMenuItems
+                                  clear={props.clear}
+                                  addFunctionToGroupBy={props.addFunctionToGroupBy}
+                                  addToGroupBy={props.addToGroupBy}
+                                  addAggregateColumn={props.addAggregateColumn}
+                                  filterByRow={props.filterByRow}
+                                  columnName={columnData.COLUMN_NAME}
+                                  queryAst={props.queryAst()}
+                                  hasFilter={hasFilter}
+                                />
+                              )}
+                              <MenuItem
+                                icon={IconNames.CLIPBOARD}
+                                text={`Copy: ${columnData.COLUMN_NAME}`}
+                                onClick={() => {
+                                  copyAndAlert(
+                                    columnData.COLUMN_NAME,
+                                    `${columnData.COLUMN_NAME} query copied to clipboard`,
+                                  );
+                                }}
                               />
-                            )}
-                            {columnData.DATA_TYPE === 'TIMESTAMP' && (
-                              <TimeMenuItems
-                                clear={props.clear}
-                                addFunctionToGroupBy={props.addFunctionToGroupBy}
-                                addToGroupBy={props.addToGroupBy}
-                                addAggregateColumn={props.addAggregateColumn}
-                                filterByRow={props.filterByRow}
-                                columnName={columnData.COLUMN_NAME}
-                                queryAst={props.queryAst()}
-                              />
-                            )}
-                            <MenuItem
-                              icon={IconNames.CLIPBOARD}
-                              text={`Copy: ${columnData.COLUMN_NAME}`}
-                              onClick={() => {
-                                copyAndAlert(
-                                  columnData.COLUMN_NAME,
-                                  `${columnData.COLUMN_NAME} query copied to clipboard`,
-                                );
-                              }}
-                            />
-                          </Menu>
-                        )}
+                            </Menu>
+                          );
+                        }}
                       />
                     }
                   >
@@ -306,12 +344,20 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         }
       }
 
+      if (!columnTree) return null;
+      const currentSchemaSubtree =
+        columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
+      if (!currentSchemaSubtree) return null;
+
+      if (expandedNode > -1) {
+        currentSchemaSubtree[expandedNode].isExpanded = true;
+      }
+
       return {
         prevColumnMetadata: columnMetadata,
         columnTree,
         selectedTreeIndex,
-        expandedNode,
-        prevGroupByStatus: props.hasGroupBy,
+        currentSchemaSubtree,
       };
     }
     return null;
@@ -334,7 +380,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     super(props, context);
     this.state = {
       selectedTreeIndex: -1,
-      expandedNode: -1,
     };
   }
 
@@ -360,12 +405,26 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     );
   }
 
-  private handleSchemaSelectorChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    this.setState({ selectedTreeIndex: Number(e.target.value), expandedNode: -1 });
+  private handleSchemaSelectorChange = (e: ChangeEvent<HTMLSelectElement>): void => {
+    const { columnTree } = this.state;
+
+    const selectedTreeIndex = Number(e.target.value);
+
+    if (!columnTree) return;
+
+    const currentSchemaSubtree =
+      columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
+
+    this.setState({
+      selectedTreeIndex: Number(e.target.value),
+      currentSchemaSubtree: currentSchemaSubtree,
+    });
   };
 
   render(): JSX.Element | null {
     const { columnMetadataLoading } = this.props;
+    const { currentSchemaSubtree } = this.state;
+
     if (columnMetadataLoading) {
       return (
         <div className="column-tree">
@@ -374,22 +433,14 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       );
     }
 
-    const { columnTree, selectedTreeIndex, expandedNode } = this.state;
-    if (!columnTree) return null;
-    const currentSchemaSubtree =
-      columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
     if (!currentSchemaSubtree) return null;
 
-    if (expandedNode > -1) {
-      currentSchemaSubtree[expandedNode].isExpanded = true;
-    }
     return (
       <div className="column-tree">
         {this.renderSchemaSelector()}
         <div className="tree-container">
           <Tree
             contents={currentSchemaSubtree}
-            onNodeClick={() => this.setState({ expandedNode: -1 })}
             onNodeCollapse={this.handleNodeCollapse}
             onNodeExpand={this.handleNodeExpand}
           />
@@ -399,7 +450,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   }
 
   private handleNodeCollapse = (nodeData: ITreeNode) => {
-    this.setState({ expandedNode: -1 });
     nodeData.isExpanded = false;
     this.bounceState();
   };
@@ -412,6 +462,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   bounceState() {
     const { columnTree } = this.state;
     if (!columnTree) return;
-    this.setState({ columnTree: columnTree.slice() });
+    this.setState(prevState => ({
+      columnTree: prevState.columnTree ? prevState.columnTree.slice() : undefined,
+    }));
   }
 }

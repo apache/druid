@@ -44,6 +44,8 @@ export interface NumberMenuItemsProps {
   filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
   queryAst?: SqlQuery;
   columnName: string;
+  clear: (column: string, preferablyRun: boolean) => void;
+  hasFilter: boolean;
 }
 
 export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
@@ -65,6 +67,19 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
           onClick={() => filterByRow([{ row: 100, header: columnName, operator: '<=' }], false)}
         />
       </MenuItem>
+    );
+  }
+
+  renderRemoveFilter() {
+    const { columnName, clear } = this.props;
+    return (
+      <MenuItem
+        icon={IconNames.FILTER_REMOVE}
+        text={`Remove filter`}
+        onClick={() => {
+          clear(columnName, true);
+        }}
+      />
     );
   }
 
@@ -124,7 +139,7 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
   }
 
   render(): JSX.Element {
-    const { queryAst } = this.props;
+    const { queryAst, hasFilter } = this.props;
     let hasGroupBy;
     if (queryAst) {
       hasGroupBy = queryAst.groupByClause;
@@ -133,6 +148,7 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
     return (
       <>
         {queryAst && this.renderFilterMenu()}
+        {hasFilter && this.renderRemoveFilter()}
         {hasGroupBy && this.renderGroupByMenu()}
         {hasGroupBy && this.renderAggregateMenu()}
       </>

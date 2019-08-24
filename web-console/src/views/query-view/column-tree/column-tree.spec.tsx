@@ -28,7 +28,6 @@ describe('column tree', () => {
     const columnTree = (
       <ColumnTree
         queryAst={() => undefined}
-        hasGroupBy={() => false}
         clear={() => null}
         addFunctionToGroupBy={() => null}
         filterByRow={() => null}
@@ -58,6 +57,7 @@ describe('column tree', () => {
           ] as ColumnMetadata[]
         }
         onQueryStringChange={() => {}}
+        replaceFrom={() => null}
       />
     );
 

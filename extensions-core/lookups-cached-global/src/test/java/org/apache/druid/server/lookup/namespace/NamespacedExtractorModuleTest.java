@@ -51,7 +51,7 @@ import java.util.Map;
  */
 public class NamespacedExtractorModuleTest
 {
-  private static final ObjectMapper mapper = UriExtractionNamespaceTest.registerTypes(new DefaultObjectMapper());
+  private static final ObjectMapper MAPPER = UriExtractionNamespaceTest.registerTypes(new DefaultObjectMapper());
   private CacheScheduler scheduler;
   private Lifecycle lifecycle;
 
@@ -93,7 +93,7 @@ public class NamespacedExtractorModuleTest
   {
     final File tmpFile = temporaryFolder.newFile();
     try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      out.write(mapper.writeValueAsString(ImmutableMap.of("foo", "bar")));
+      out.write(MAPPER.writeValueAsString(ImmutableMap.of("foo", "bar")));
     }
     final UriCacheGenerator factory = new UriCacheGenerator(
         ImmutableMap.of("file", new LocalFileTimestampVersionFinder())
@@ -119,7 +119,7 @@ public class NamespacedExtractorModuleTest
   {
     final File tmpFile = temporaryFolder.newFile();
     try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      out.write(mapper.writeValueAsString(ImmutableMap.of("foo", "bar")));
+      out.write(MAPPER.writeValueAsString(ImmutableMap.of("foo", "bar")));
     }
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
@@ -140,7 +140,7 @@ public class NamespacedExtractorModuleTest
   {
     final File tmpFile = temporaryFolder.newFile();
     try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      out.write(mapper.writeValueAsString(ImmutableMap.of("foo", "bar")));
+      out.write(MAPPER.writeValueAsString(ImmutableMap.of("foo", "bar")));
     }
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
@@ -161,7 +161,7 @@ public class NamespacedExtractorModuleTest
   {
     final File tmpFile = temporaryFolder.newFile();
     try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      out.write(mapper.writeValueAsString(ImmutableMap.of("foo", "bar")));
+      out.write(MAPPER.writeValueAsString(ImmutableMap.of("foo", "bar")));
     }
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),

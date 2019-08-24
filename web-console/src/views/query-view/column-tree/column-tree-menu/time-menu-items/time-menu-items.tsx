@@ -56,7 +56,8 @@ export interface TimeMenuItemsProps {
   filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
   queryAst?: SqlQuery;
   columnName: string;
-  clear: () => void;
+  clear: (column: string, preferablyRun: boolean) => void;
+  hasFilter: boolean;
 }
 
 export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
@@ -146,7 +147,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('HOUR', '1')],
               spacing: [' ', ' '],
             });
-            clear();
+            clear(columnName, false);
             filterByRow([{ row: additiveExpression, header: columnName, operator: '>=' }], true);
           }}
         />
@@ -159,7 +160,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('DAY', '1')],
               spacing: [' ', ' '],
             });
-            clear();
+            clear(columnName, false);
             filterByRow([{ row: additiveExpression, header: columnName, operator: '>=' }], true);
           }}
         />
@@ -172,7 +173,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('DAY', '7')],
               spacing: [' ', ' '],
             });
-            clear();
+            clear(columnName, false);
             filterByRow([{ row: additiveExpression, header: columnName, operator: '>=' }], true);
           }}
         />
@@ -185,7 +186,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('MONTH', '1')],
               spacing: [' ', ' '],
             });
-            clear();
+            clear(columnName, false);
             filterByRow([{ row: additiveExpression, header: columnName, operator: '>=' }], true);
           }}
         />
@@ -198,7 +199,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
               ex: [refExpressionFactory('CURRENT_TIMESTAMP'), intervalFactory('YEAR', '1')],
               spacing: [' ', ' '],
             });
-            clear();
+            clear(columnName, false);
             filterByRow([{ row: additiveExpression, header: columnName, operator: '>=' }], true);
           }}
         />
@@ -207,7 +208,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
           text={`Current hour`}
           onClick={() => {
             const next = this.getNextHour(hour, day, month, year);
-            clear();
+            clear(columnName, false);
             filterByRow(
               [
                 {
@@ -233,7 +234,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
           text={`Current day`}
           onClick={() => {
             const next = this.getNextDay(day, month, year);
-            clear();
+            clear(columnName, false);
             filterByRow(
               [
                 {
@@ -255,7 +256,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
           text={`Current month`}
           onClick={() => {
             const next = this.getNextMonth(month, year);
-            clear();
+            clear(columnName, false);
             filterByRow(
               [
                 {
@@ -276,7 +277,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
         <MenuItem
           text={`Current year`}
           onClick={() => {
-            clear();
+            clear(columnName, false);
             filterByRow(
               [
                 {
@@ -295,6 +296,19 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
           }}
         />
       </MenuItem>
+    );
+  }
+
+  renderRemoveFilter() {
+    const { columnName, clear } = this.props;
+    return (
+      <MenuItem
+        icon={IconNames.FILTER_REMOVE}
+        text={`Remove filter`}
+        onClick={() => {
+          clear(columnName, true);
+        }}
+      />
     );
   }
 
@@ -364,7 +378,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
   }
 
   render(): JSX.Element {
-    const { queryAst } = this.props;
+    const { queryAst, hasFilter } = this.props;
     let hasGroupBy;
     if (queryAst) {
       hasGroupBy = queryAst.groupByClause;
@@ -372,6 +386,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
     return (
       <>
         {queryAst && this.renderFilterMenu()}
+        {hasFilter && this.renderRemoveFilter()}
         {hasGroupBy && this.renderGroupByMenu()}
         {hasGroupBy && this.renderAggregateMenu()}
       </>

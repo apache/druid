@@ -44,7 +44,7 @@ import java.util.Map;
  */
 public class Request
 {
-  private static final ChannelBufferFactory factory = HeapChannelBufferFactory.getInstance();
+  private static final ChannelBufferFactory FACTORY = HeapChannelBufferFactory.getInstance();
 
   private final HttpMethod method;
   private final URL url;
@@ -147,7 +147,7 @@ public class Request
 
   public Request setContent(String contentType, byte[] bytes, int offset, int length)
   {
-    return setContent(contentType, factory.getBuffer(bytes, offset, length));
+    return setContent(contentType, FACTORY.getBuffer(bytes, offset, length));
   }
 
   public Request setContent(String contentType, ChannelBuffer content)

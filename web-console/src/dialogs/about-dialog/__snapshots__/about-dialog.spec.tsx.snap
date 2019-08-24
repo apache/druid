@@ -84,6 +84,7 @@ exports[`about dialog matches snapshot 1`] = `
              
             <a
               href="https://druid.apache.org/community/"
+              rel="noopener noreferrer"
               target="_blank"
             >
               community page
@@ -92,6 +93,7 @@ exports[`about dialog matches snapshot 1`] = `
              
             <a
               href="https://groups.google.com/forum/#!forum/druid-user"
+              rel="noopener noreferrer"
               target="_blank"
             >
               user groups
@@ -103,6 +105,7 @@ exports[`about dialog matches snapshot 1`] = `
              
             <a
               href="https://lists.apache.org/list.html?dev@druid.apache.org"
+              rel="noopener noreferrer"
               target="_blank"
             >
               developer group

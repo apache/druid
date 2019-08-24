@@ -54,6 +54,8 @@ export interface StringMenuItemsProps {
   filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
   queryAst?: SqlQuery;
   columnName: string;
+  clear: (column: string, preferablyRun: boolean) => void;
+  hasFilter: boolean;
 }
 
 export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
@@ -72,9 +74,24 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
         />
         <MenuItem
           text={`"${columnName}" LIKE '%xxx%'`}
-          onClick={() => filterByRow([{ row: 'xxx', header: columnName, operator: 'LIKE' }], false)}
+          onClick={() =>
+            filterByRow([{ row: '%xxx%', header: columnName, operator: 'LIKE' }], false)
+          }
         />
       </MenuItem>
+    );
+  }
+
+  renderRemoveFilter() {
+    const { columnName, clear } = this.props;
+    return (
+      <MenuItem
+        icon={IconNames.FILTER_REMOVE}
+        text={`Remove filter`}
+        onClick={() => {
+          clear(columnName, true);
+        }}
+      />
     );
   }
 
@@ -145,7 +162,7 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
   }
 
   render(): JSX.Element {
-    const { queryAst } = this.props;
+    const { queryAst, hasFilter } = this.props;
     let hasGroupBy;
     if (queryAst) {
       hasGroupBy = queryAst.groupByClause;
@@ -153,6 +170,7 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
     return (
       <>
         {queryAst && this.renderFilterMenu()}
+        {hasFilter && this.renderRemoveFilter()}
         {hasGroupBy && this.renderGroupByMenu()}
         {hasGroupBy && this.renderAggregateMenu()}
       </>

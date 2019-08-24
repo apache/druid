@@ -51,11 +51,11 @@ import java.util.UUID;
  */
 public class IndexerZkConfigTest
 {
-  private static final String indexerPropertyString = "test.druid.zk.paths.indexer";
-  private static final String zkServiceConfigString = "test.druid.zk.paths";
-  private static final Collection<String> clobberableProperties = new HashSet<>();
+  private static final String INDEXER_PROPERTY_STRING = "test.druid.zk.paths.indexer";
+  private static final String ZK_SERVICE_CONFIG_STRING = "test.druid.zk.paths";
+  private static final Collection<String> CLOBBERABLE_PROPERTIES = new HashSet<>();
 
-  private static final Module simpleZkConfigModule = new Module()
+  private static final Module SIMPLE_ZK_CONFIG_MODULE = new Module()
   {
     @Override
     public void configure(Binder binder)
@@ -64,8 +64,8 @@ public class IndexerZkConfigTest
       binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
       binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
       // See IndexingServiceModuleHelper
-      JsonConfigProvider.bind(binder, indexerPropertyString, IndexerZkConfig.class);
-      JsonConfigProvider.bind(binder, zkServiceConfigString, ZkPathsConfig.class);
+      JsonConfigProvider.bind(binder, INDEXER_PROPERTY_STRING, IndexerZkConfig.class);
+      JsonConfigProvider.bind(binder, ZK_SERVICE_CONFIG_STRING, ZkPathsConfig.class);
     }
   };
 
@@ -74,12 +74,12 @@ public class IndexerZkConfigTest
   {
     for (Field field : IndexerZkConfig.class.getDeclaredFields()) {
       if (null != field.getAnnotation(JsonProperty.class)) {
-        clobberableProperties.add(StringUtils.format("%s.%s", indexerPropertyString, field.getName()));
+        CLOBBERABLE_PROPERTIES.add(StringUtils.format("%s.%s", INDEXER_PROPERTY_STRING, field.getName()));
       }
     }
     for (Field field : ZkPathsConfig.class.getDeclaredFields()) {
       if (null != field.getAnnotation(JsonProperty.class)) {
-        clobberableProperties.add(StringUtils.format("%s.%s", zkServiceConfigString, field.getName()));
+        CLOBBERABLE_PROPERTIES.add(StringUtils.format("%s.%s", ZK_SERVICE_CONFIG_STRING, field.getName()));
       }
     }
   }
@@ -90,7 +90,7 @@ public class IndexerZkConfigTest
   @Before
   public void setupTest()
   {
-    for (String property : clobberableProperties) {
+    for (String property : CLOBBERABLE_PROPERTIES) {
       propertyValues.put(property, UUID.randomUUID().toString());
     }
     assertions = 0;
@@ -102,7 +102,7 @@ public class IndexerZkConfigTest
   {
     for (Field field : ZkPathsConfig.class.getDeclaredFields()) {
       if (null != field.getAnnotation(JsonProperty.class)) {
-        String property = StringUtils.format("%s.%s", zkServiceConfigString, field.getName());
+        String property = StringUtils.format("%s.%s", ZK_SERVICE_CONFIG_STRING, field.getName());
         String getter = StringUtils.format(
             "get%s%s",
             StringUtils.toUpperCase(field.getName().substring(0, 1)),
@@ -120,7 +120,7 @@ public class IndexerZkConfigTest
   {
     for (Field field : IndexerZkConfig.class.getDeclaredFields()) {
       if (null != field.getAnnotation(JsonProperty.class)) {
-        String property = StringUtils.format("%s.%s", indexerPropertyString, field.getName());
+        String property = StringUtils.format("%s.%s", INDEXER_PROPERTY_STRING, field.getName());
         String getter = StringUtils.format(
             "get%s%s",
             StringUtils.toUpperCase(field.getName().substring(0, 1)),
@@ -140,15 +140,15 @@ public class IndexerZkConfigTest
 
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.of(simpleZkConfigModule)
+        ImmutableList.of(SIMPLE_ZK_CONFIG_MODULE)
     );
     JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
 
-    JsonConfigProvider<ZkPathsConfig> zkPathsConfig = JsonConfigProvider.of(zkServiceConfigString, ZkPathsConfig.class);
+    JsonConfigProvider<ZkPathsConfig> zkPathsConfig = JsonConfigProvider.of(ZK_SERVICE_CONFIG_STRING, ZkPathsConfig.class);
     zkPathsConfig.inject(propertyValues, configurator);
 
     JsonConfigProvider<IndexerZkConfig> indexerZkConfig = JsonConfigProvider.of(
-        indexerPropertyString,
+        INDEXER_PROPERTY_STRING,
         IndexerZkConfig.class
     );
     indexerZkConfig.inject(propertyValues, configurator);
@@ -161,15 +161,15 @@ public class IndexerZkConfigTest
   {
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.of(simpleZkConfigModule)
+        ImmutableList.of(SIMPLE_ZK_CONFIG_MODULE)
     );
     JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
 
-    JsonConfigProvider<ZkPathsConfig> zkPathsConfig = JsonConfigProvider.of(zkServiceConfigString, ZkPathsConfig.class);
+    JsonConfigProvider<ZkPathsConfig> zkPathsConfig = JsonConfigProvider.of(ZK_SERVICE_CONFIG_STRING, ZkPathsConfig.class);
     zkPathsConfig.inject(propertyValues, configurator);
 
     JsonConfigProvider<IndexerZkConfig> indexerZkConfig = JsonConfigProvider.of(
-        indexerPropertyString,
+        INDEXER_PROPERTY_STRING,
         IndexerZkConfig.class
     );
     indexerZkConfig.inject(propertyValues, configurator);
@@ -180,7 +180,7 @@ public class IndexerZkConfigTest
 
     validateEntries(zkConfig);
     validateEntries(zkPathsConfig1);
-    Assert.assertEquals(clobberableProperties.size(), assertions);
+    Assert.assertEquals(CLOBBERABLE_PROPERTIES.size(), assertions);
   }
 
 
@@ -189,12 +189,12 @@ public class IndexerZkConfigTest
   public void testIndexerBaseOverride()
   {
     final String overrideValue = "/foo/bar/baz";
-    final String indexerPropertyKey = indexerPropertyString + ".base";
+    final String indexerPropertyKey = INDEXER_PROPERTY_STRING + ".base";
     final String priorValue = System.getProperty(indexerPropertyKey);
     System.setProperty(indexerPropertyKey, overrideValue); // Set it here so that the binding picks it up
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.of(simpleZkConfigModule)
+        ImmutableList.of(SIMPLE_ZK_CONFIG_MODULE)
     );
     propertyValues.clear();
     propertyValues.setProperty(indexerPropertyKey, overrideValue); // Have to set it here as well annoyingly enough
@@ -203,7 +203,7 @@ public class IndexerZkConfigTest
     JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
 
     JsonConfigProvider<IndexerZkConfig> indexerPathsConfig = JsonConfigProvider.of(
-        indexerPropertyString,
+        INDEXER_PROPERTY_STRING,
         IndexerZkConfig.class
     );
     indexerPathsConfig.inject(propertyValues, configurator);
@@ -226,15 +226,15 @@ public class IndexerZkConfigTest
   {
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.of(simpleZkConfigModule)
+        ImmutableList.of(SIMPLE_ZK_CONFIG_MODULE)
     );
-    propertyValues.setProperty(zkServiceConfigString + ".base", "/druid/metrics");
+    propertyValues.setProperty(ZK_SERVICE_CONFIG_STRING + ".base", "/druid/metrics");
 
 
     JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
 
     JsonConfigProvider<ZkPathsConfig> zkPathsConfig = JsonConfigProvider.of(
-        zkServiceConfigString,
+        ZK_SERVICE_CONFIG_STRING,
         ZkPathsConfig.class
     );
 

@@ -40,6 +40,8 @@ export class CompactionDialog extends React.PureComponent<
   CompactionDialogProps,
   CompactionDialogState
 > {
+  static DEFAULT_TARGET_COMPACTION_SIZE_BYTES = 419430400;
+
   constructor(props: CompactionDialogProps) {
     super(props);
     this.state = {
@@ -54,7 +56,7 @@ export class CompactionDialog extends React.PureComponent<
       inputSegmentSizeBytes: 419430400,
       maxNumSegmentsToCompact: 150,
       skipOffsetFromLatest: 'P1D',
-      targetCompactionSizeBytes: 419430400,
+      targetCompactionSizeBytes: CompactionDialog.DEFAULT_TARGET_COMPACTION_SIZE_BYTES,
       taskContext: null,
       taskPriority: 25,
       tuningConfig: null,

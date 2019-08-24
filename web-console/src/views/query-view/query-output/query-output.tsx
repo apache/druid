@@ -58,7 +58,9 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
           data={queryResult ? queryResult.rows : []}
           loading={loading}
           noDataText={
-            !loading && queryResult && !queryResult.rows.length ? 'No queryResults' : error || ''
+            !loading && queryResult && !queryResult.rows.length
+              ? 'Query returned no data'
+              : error || ''
           }
           sortable={false}
           columns={(queryResult ? queryResult.header : []).map((h: any, i) => {
@@ -178,18 +180,34 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
 
     let actionsMenu;
     if (parsedQuery) {
-      actionsMenu = basicActionsToMenu([
-        {
-          icon: IconNames.FILTER_KEEP,
-          title: `Filter by: ${header} = ${row}`,
-          onAction: () => sqlFilterRow([{ row, header, operator: '=' }], true),
-        },
-        {
-          icon: IconNames.FILTER_REMOVE,
-          title: `Filter by: ${header} != ${row}`,
-          onAction: () => sqlFilterRow([{ row, header, operator: '!=' }], true),
-        },
-      ]);
+      actionsMenu = (
+        <Menu>
+          <MenuItem
+            icon={IconNames.FILTER_KEEP}
+            text={`Filter by: ${header} = ${row}`}
+            onClick={() => sqlFilterRow([{ row, header, operator: '=' }], true)}
+          />
+          <MenuItem
+            icon={IconNames.FILTER_REMOVE}
+            text={`Filter by: ${header} != ${row}`}
+            onClick={() => sqlFilterRow([{ row, header, operator: '!=' }], true)}
+          />
+          {!isNaN(Number(row)) && (
+            <>
+              <MenuItem
+                icon={IconNames.FILTER_KEEP}
+                text={`Filter by: ${header} > ${row}`}
+                onClick={() => sqlFilterRow([{ row, header, operator: '>' }], true)}
+              />
+              <MenuItem
+                icon={IconNames.FILTER_KEEP}
+                text={`Filter by: ${header} <= ${row}`}
+                onClick={() => sqlFilterRow([{ row, header, operator: '<=' }], true)}
+              />
+            </>
+          )}
+        </Menu>
+      );
     } else {
       actionsMenu = (
         <Menu>
@@ -229,7 +247,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
         </Menu>
       );
     }
-    return actionsMenu ? actionsMenu : undefined;
+    return actionsMenu;
   }
 
   getHeaderClassName(h: string) {

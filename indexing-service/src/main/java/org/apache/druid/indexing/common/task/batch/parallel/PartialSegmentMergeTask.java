@@ -220,7 +220,7 @@ public class PartialSegmentMergeTask extends AbstractBatchIndexTask
     final Map<Interval, String> intervalToVersion = new HashMap<>(locks.size());
     locks.forEach(lock -> {
       if (lock.isRevoked()) {
-        throw new ISE("Lock[%s] is revoked");
+        throw new ISE("Lock[%s] is revoked", lock);
       }
       final String mustBeNull = intervalToVersion.put(lock.getInterval(), lock.getVersion());
       if (mustBeNull != null) {

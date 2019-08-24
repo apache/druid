@@ -30,8 +30,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.io.CharStreams;
 import com.google.common.io.Files;
+import com.google.common.io.Resources;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -39,8 +39,7 @@ import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
@@ -211,10 +210,10 @@ public class WhiteListBasedDruidToTimelineEventConverter implements DruidToTimel
     String actualPath = mapPath;
     try {
       if (Strings.isNullOrEmpty(mapPath)) {
-        actualPath = this.getClass().getClassLoader().getResource("defaultWhiteListMap.json").getFile();
+        URL defaultWhiteListMapUrl = this.getClass().getClassLoader().getResource("defaultWhiteListMap.json");
+        actualPath = defaultWhiteListMapUrl.getFile();
         LOGGER.info("using default whiteList map located at [%s]", actualPath);
-        InputStream byteContent = this.getClass().getClassLoader().getResourceAsStream("defaultWhiteListMap.json");
-        fileContent = CharStreams.toString(new InputStreamReader(byteContent, StandardCharsets.UTF_8));
+        fileContent = Resources.toString(defaultWhiteListMapUrl, StandardCharsets.UTF_8);
       } else {
         fileContent = Files.asCharSource(new File(mapPath), StandardCharsets.UTF_8).read();
       }
