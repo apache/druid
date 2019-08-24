@@ -19,11 +19,11 @@
 
 package org.apache.druid.segment.loading;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * A {@link StorageLocation} selector strategy that selects a segment cache location in a round-robin fashion each time
@@ -33,16 +33,23 @@ public class RoundRobinStorageLocationSelectorStrategy implements StorageLocatio
 {
   private Iterator<StorageLocation> cyclicIterator;
 
-  @Override
-  public void setStorageLocations(ImmutableList<StorageLocation> storageLocations)
+  public RoundRobinStorageLocationSelectorStrategy(List<StorageLocation> storageLocations)
   {
     // cyclicIterator remembers the marker internally
-    cyclicIterator = Iterators.cycle(storageLocations);
+    this.cyclicIterator = Iterators.cycle(storageLocations);
   }
 
   @Override
   public Iterator<StorageLocation> getLocations(DataSegment dataSegment, String storageDirStr)
   {
     return cyclicIterator;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "RoundRobinStorageLocationSelectorStrategy{" +
+           "cyclicIterator=" + cyclicIterator +
+           '}';
   }
 }

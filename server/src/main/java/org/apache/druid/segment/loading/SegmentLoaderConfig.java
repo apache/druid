@@ -54,8 +54,7 @@ public class SegmentLoaderConfig
   private Integer numBootstrapThreads = null;
 
   @JsonProperty("locationSelectorStrategy")
-  private StorageLocationSelectorStrategy locationSelectorStrategy =
-      new LeastBytesUsedStorageLocationSelectorStrategy(); // default strategy if no strategy is specified in the config
+  private StorageLocationSelectorStrategy locationSelectorStrategy;
 
   @JsonProperty
   private File infoDir = null;
@@ -93,22 +92,30 @@ public class SegmentLoaderConfig
     return numBootstrapThreads == null ? numLoadingThreads : numBootstrapThreads;
   }
 
-  public StorageLocationSelectorStrategy getStorageLocationSelectorStrategy()
+  public StorageLocationSelectorStrategy getStorageLocationSelectorStrategy(List<StorageLocation> storageLocations)
   {
+    if (locationSelectorStrategy == null) {
+      checkLocationConfigForNull();
+      // default strategy if no strategy is specified in the config
+      locationSelectorStrategy = new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations);
+    }
     return locationSelectorStrategy;
   }
 
   public File getInfoDir()
   {
     if (infoDir == null) {
-
-      if (locations == null || locations.size() == 0) {
-        throw new ISE("You have no segment cache locations defined. Please configure druid.segmentCache.locations to use one or more locations.");
-      }
+      checkLocationConfigForNull();
       infoDir = new File(locations.get(0).getPath(), "info_dir");
     }
-
     return infoDir;
+  }
+
+  private void checkLocationConfigForNull()
+  {
+    if (locations == null || locations.size() == 0) {
+      throw new ISE("You have no segment cache locations defined. Please configure druid.segmentCache.locations to use one or more locations.");
+    }
   }
 
   public int getStatusQueueMaxSize()
@@ -139,6 +146,7 @@ public class SegmentLoaderConfig
            "locations=" + locations +
            ", deleteOnRemove=" + deleteOnRemove +
            ", dropSegmentDelayMillis=" + dropSegmentDelayMillis +
+           ", locationSelectorStrategy=" + locationSelectorStrategy +
            ", infoDir=" + infoDir +
            '}';
   }

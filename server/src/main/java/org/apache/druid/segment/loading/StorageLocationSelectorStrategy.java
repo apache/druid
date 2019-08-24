@@ -21,14 +21,13 @@ package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Iterator;
 
 /**
  * This interface describes the storage location selection strategy which is responsible for ordering the
- * available multiple {@link StorageLocation}s for optimal segment distribution.
+ * available multiple {@link StorageLocation}s for segment distribution.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "tier", defaultImpl = LeastBytesUsedStorageLocationSelectorStrategy.class)
 @JsonSubTypes(value = {
@@ -38,19 +37,13 @@ import java.util.Iterator;
 public interface StorageLocationSelectorStrategy
 {
   /**
-   *  Finds the best ordering of the {@link StorageLocation}s to load the given {@link DataSegment} into according to
-   *  the location selector strategy. This method returns an iterator instead of a single best location. The
-   *  caller is responsible for iterating over the locations and calling {@link StorageLocation}'s reserve() method.
-   *  This is because a single location may be problematic like failed disk or might become unwritable for whatever
-   *  reasons.
+   * Finds the best ordering of the {@link StorageLocation}s to load the given {@link DataSegment} into according to
+   * the location selector strategy. This method returns an iterator instead of a single best location. The
+   * caller is responsible for iterating over the locations and calling {@link StorageLocation#reserve}
+   * method. This is because a single location may be problematic like failed disk or might become unwritable for
+   * whatever reasons.
    *
    * @return An iterator of {@link StorageLocation}s from which the callers can iterate and pick a location.
    */
   Iterator<StorageLocation> getLocations(DataSegment dataSegment, String storageDirStr);
-
-  /**
-   * Sets the storage locations list  with the supplied storage locations.
-   * @param storageLocations storage locations list to be used.
-   */
-  void setStorageLocations(ImmutableList<StorageLocation> storageLocations);
 }

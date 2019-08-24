@@ -21,7 +21,6 @@ package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.guice.annotations.Json;
@@ -101,8 +100,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
           )
       );
     }
-    this.strategy = config.getStorageLocationSelectorStrategy();
-    this.strategy.setStorageLocations(ImmutableList.copyOf(locations));
+    this.strategy = config.getStorageLocationSelectorStrategy(locations);
   }
 
   @Override
@@ -191,8 +189,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
       // indefinitely.
 
       File storageDir = loc.reserve(storageDirStr, segment);
-
-      if (null != storageDir) {
+      if (storageDir != null) {
         try {
           loadInLocationWithStartMarker(segment, storageDir);
           return loc;
@@ -200,9 +197,9 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
         catch (SegmentLoadingException e) {
           try {
             log.makeAlert(
-              e,
-              "Failed to load segment in current location %s, try next location if any",
-              loc.getPath().getAbsolutePath()
+                e,
+                "Failed to load segment in current location [%s], try next location if any",
+                loc.getPath().getAbsolutePath()
             ).addData("location", loc.getPath().getAbsolutePath()).emit();
           }
           finally {

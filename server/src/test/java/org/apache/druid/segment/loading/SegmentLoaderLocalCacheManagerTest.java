@@ -401,18 +401,29 @@ public class SegmentLoaderLocalCacheManagerTest
   @Test
   public void testSegmentDistributionUsingRoundRobinStrategy() throws Exception
   {
-    final List<StorageLocationConfig> locations = new ArrayList<>();
+    final List<StorageLocationConfig> locationConfigs = new ArrayList<>();
     final StorageLocationConfig locationConfig = createStorageLocationConfig("local_storage_folder", 10000000000L, true);
     final StorageLocationConfig locationConfig2 = createStorageLocationConfig("local_storage_folder2", 1000000000L, true);
     final StorageLocationConfig locationConfig3 = createStorageLocationConfig("local_storage_folder3", 1000000000L, true);
-    locations.add(locationConfig);
-    locations.add(locationConfig2);
-    locations.add(locationConfig3);
+    locationConfigs.add(locationConfig);
+    locationConfigs.add(locationConfig2);
+    locationConfigs.add(locationConfig3);
+
+    List<StorageLocation> locations = new ArrayList<>();
+    for (StorageLocationConfig locConfig : locationConfigs) {
+      locations.add(
+          new StorageLocation(
+          locConfig.getPath(),
+          locConfig.getMaxSize(),
+          locConfig.getFreeSpacePercent()
+        )
+      );
+    }
 
     manager = new SegmentLoaderLocalCacheManager(
       TestHelper.getTestIndexIO(),
-      new SegmentLoaderConfig().withLocations(locations).withStorageLocationSelectorStrategy(
-        new RoundRobinStorageLocationSelectorStrategy()
+      new SegmentLoaderConfig().withLocations(locationConfigs).withStorageLocationSelectorStrategy(
+        new RoundRobinStorageLocationSelectorStrategy(locations)
       ),
       jsonMapper
     );
