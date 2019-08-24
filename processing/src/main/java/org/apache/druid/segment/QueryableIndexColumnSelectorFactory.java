@@ -90,6 +90,9 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
       return spec.decorate(makeDimensionSelectorUndecorated(spec));
     };
 
+    // We cannot use dimensionSelectorCache.computeIfAbsent() here since the function being
+    // applied may modify the dimensionSelectorCache itself through virtual column references,
+    // triggering a ConcurrentModificationException in JDK 9 and above.
     DimensionSelector dimensionSelector = dimensionSelectorCache.get(dimensionSpec);
     if (dimensionSelector == null) {
       dimensionSelector = mappingFunction.apply(dimensionSpec);
@@ -149,6 +152,9 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
       }
     };
 
+    // We cannot use valueSelectorCache.computeIfAbsent() here since the function being
+    // applied may modify the valueSelectorCache itself through virtual column references,
+    // triggering a ConcurrentModificationException in JDK 9 and above.
     ColumnValueSelector<?> columnValueSelector = valueSelectorCache.get(columnName);
     if (columnValueSelector == null) {
       columnValueSelector = mappingFunction.apply(columnName);

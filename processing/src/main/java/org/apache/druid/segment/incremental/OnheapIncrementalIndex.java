@@ -418,6 +418,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       if (existing != null) {
         return existing;
       }
+
+      // We cannot use columnSelectorMap.computeIfAbsent(columnName, delegate::makeColumnValueSelector)
+      // here since makeColumnValueSelector may modify the columnSelectorMap itself through
+      // virtual column references, triggering a ConcurrentModificationException in JDK 9 and above.
       ColumnValueSelector<?> columnValueSelector = delegate.makeColumnValueSelector(columnName);
       existing = columnSelectorMap.putIfAbsent(columnName, columnValueSelector);
       return existing != null ? existing : columnValueSelector;
