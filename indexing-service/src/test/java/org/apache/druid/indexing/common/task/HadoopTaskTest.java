@@ -143,7 +143,6 @@ public class HadoopTaskTest
     List<URL> classLoaderUrls = Arrays.asList(((URLClassLoader) testClassLoader).getURLs());
 
     Assert.assertEquals(classLoaderUrls, parsedUrls);
-
   }
 
   public static void assertClassLoaderIsSingular(ClassLoader classLoader)
