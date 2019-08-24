@@ -5,16 +5,10 @@ exports[`sql view matches snapshot 1`] = `
   className="query-view app-view"
 >
   <ColumnTree
-    addAggregateColumn={[Function]}
-    addFunctionToGroupBy={[Function]}
-    addToGroupBy={[Function]}
-    clear={[Function]}
     columnMetadataLoading={true}
     defaultSchema="druid"
-    filterByRow={[Function]}
+    getParsedQuery={[Function]}
     onQueryStringChange={[Function]}
-    queryAst={[Function]}
-    replaceFrom={[Function]}
   />
   <t
     customClassName=""
@@ -68,10 +62,8 @@ exports[`sql view matches snapshot 1`] = `
     </div>
     <QueryOutput
       loading={false}
+      onQueryChange={[Function]}
       runeMode={false}
-      sqlExcludeColumn={[Function]}
-      sqlFilterRow={[Function]}
-      sqlOrderBy={[Function]}
     />
   </t>
 </div>

@@ -20,15 +20,12 @@ import { Intent, Switch, Tooltip } from '@blueprintjs/core';
 import axios from 'axios';
 import classNames from 'classnames';
 import {
-  AdditiveExpression,
   HeaderRows,
   isFirstRowHeader,
   normalizeQueryResult,
   shouldIncludeTimestamp,
   sqlParserFactory,
   SqlQuery,
-  StringType,
-  Timestamp,
 } from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import memoizeOne from 'memoize-one';
@@ -86,15 +83,9 @@ export interface QueryViewProps {
   initQuery: string | undefined;
 }
 
-export interface RowFilter {
-  row: string | number | AdditiveExpression | Timestamp | StringType;
-  header: string | Timestamp | StringType;
-  operator: '!=' | '=' | '>' | '<' | 'like' | '>=' | '<=' | 'LIKE';
-}
-
 export interface QueryViewState {
   queryString: string;
-  queryAst: SqlQuery;
+  parsedQuery: SqlQuery;
   queryContext: QueryContext;
   wrapQueryLimit: number | undefined;
   autoRun: boolean;
@@ -193,7 +184,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     super(props, context);
 
     const queryString = props.initQuery || localStorageGet(LocalStorageKeys.QUERY_KEY) || '';
-    const queryAst = queryString ? parser(queryString) : undefined;
+    const parsedQuery = queryString ? parser(queryString) : undefined;
 
     const localStorageQueryHistory = localStorageGet(LocalStorageKeys.QUERY_HISTORY);
     let queryHistory = [];
@@ -217,7 +208,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
     this.state = {
       queryString,
-      queryAst,
+      parsedQuery,
       queryContext: {},
       wrapQueryLimit: 100,
       autoRun,
@@ -536,56 +527,23 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           </div>
         </div>
         <QueryOutput
-          sqlExcludeColumn={this.sqlExcludeColumn}
-          sqlFilterRow={this.sqlFilterRow}
-          sqlOrderBy={this.sqlOrderBy}
           runeMode={runeMode}
           loading={loading}
+          error={error}
           queryResult={result ? result.queryResult : undefined}
           parsedQuery={result ? result.parsedQuery : undefined}
-          error={error}
+          onQueryChange={this.handleQueryStringChange}
         />
       </SplitterLayout>
     );
   }
-
-  private sqlOrderBy = (
-    header: string,
-    direction: 'ASC' | 'DESC',
-    preferablyRun: boolean,
-  ): void => {
-    const { queryAst } = this.state;
-    if (!queryAst) return;
-
-    const modifiedAst = queryAst.orderBy(header, direction);
-    this.handleQueryStringChange(modifiedAst.toString(), preferablyRun);
-  };
-
-  private sqlExcludeColumn = (header: string, preferablyRun: boolean): void => {
-    const { queryAst } = this.state;
-    if (!queryAst) return;
-
-    const modifiedAst = queryAst.excludeColumn(header);
-    this.handleQueryStringChange(modifiedAst.toString(), preferablyRun);
-  };
-
-  private sqlFilterRow = (filters: RowFilter[], preferablyRun: boolean): void => {
-    const { queryAst } = this.state;
-    if (!queryAst) return;
-
-    let modifiedAst: SqlQuery = queryAst;
-    for (const filter of filters) {
-      modifiedAst = modifiedAst.filterRow(filter.header, filter.row, filter.operator);
-    }
-    this.handleQueryStringChange(modifiedAst.toString(), preferablyRun);
-  };
 
   private handleQueryStringChange = (
     queryString: string | SqlQuery,
     preferablyRun?: boolean,
   ): void => {
     if (queryString instanceof SqlQuery) queryString = queryString.toString();
-    this.setState({ queryString, queryAst: parser(queryString) }, () => {
+    this.setState({ queryString, parsedQuery: parser(queryString) }, () => {
       const { autoRun } = this.state;
       if (preferablyRun && autoRun) this.handleRun();
     });
@@ -629,18 +587,18 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   };
 
   private getParsedQuery = () => {
-    const { queryAst } = this.state;
-    return queryAst;
+    const { parsedQuery } = this.state;
+    return parsedQuery;
   };
 
   render(): JSX.Element {
-    const { columnMetadata, columnMetadataLoading, columnMetadataError, queryAst } = this.state;
+    const { columnMetadata, columnMetadataLoading, columnMetadataError, parsedQuery } = this.state;
 
     let defaultSchema;
     let defaultTable;
-    if (queryAst instanceof SqlQuery) {
-      defaultSchema = queryAst.getSchema();
-      defaultTable = queryAst.getTableName();
+    if (parsedQuery instanceof SqlQuery) {
+      defaultSchema = parsedQuery.getSchema();
+      defaultTable = parsedQuery.getTableName();
     }
 
     return (
