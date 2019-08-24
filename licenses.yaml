@@ -1456,7 +1456,7 @@ libraries:
 notices:
   - zookeeper: |
       Apache ZooKeeper
-      Copyright 2009-2017 The Apache Software Foundation
+      Copyright 2009-2019 The Apache Software Foundation
 
 ---
 
@@ -2831,7 +2831,7 @@ libraries:
 notices:
   - zookeeper: |
       Apache ZooKeeper
-      Copyright 2009-2019 The Apache Software Foundation
+      Copyright 2009-2012 The Apache Software Foundation
 
 ---
 
