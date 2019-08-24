@@ -44,7 +44,6 @@ import org.junit.runners.Parameterized;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -135,9 +134,9 @@ public class SearchQueryRunnerWithCaseTest
   private Druids.SearchQueryBuilder testBuilder()
   {
     return Druids.newSearchQueryBuilder()
-                 .dataSource(QueryRunnerTestHelper.dataSource)
-                 .granularity(QueryRunnerTestHelper.allGran)
-                 .intervals(QueryRunnerTestHelper.fullOnIntervalSpec);
+                 .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                 .granularity(QueryRunnerTestHelper.ALL_GRAN)
+                 .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC);
   }
 
   @Test
@@ -148,15 +147,15 @@ public class SearchQueryRunnerWithCaseTest
     SearchQuery searchQuery;
 
     searchQuery = builder.query("SPOT").build();
-    expectedResults.put(QueryRunnerTestHelper.marketDimension, Sets.newHashSet("spot", "SPot"));
+    expectedResults.put(QueryRunnerTestHelper.MARKET_DIMENSION, Sets.newHashSet("spot", "SPot"));
     checkSearchQuery(searchQuery, expectedResults);
 
     searchQuery = builder.query("spot", true).build();
-    expectedResults.put(QueryRunnerTestHelper.marketDimension, Sets.newHashSet("spot"));
+    expectedResults.put(QueryRunnerTestHelper.MARKET_DIMENSION, Sets.newHashSet("spot"));
     checkSearchQuery(searchQuery, expectedResults);
 
     searchQuery = builder.query("SPot", true).build();
-    expectedResults.put(QueryRunnerTestHelper.marketDimension, Sets.newHashSet("SPot"));
+    expectedResults.put(QueryRunnerTestHelper.MARKET_DIMENSION, Sets.newHashSet("SPot"));
     checkSearchQuery(searchQuery, expectedResults);
   }
 
@@ -166,22 +165,22 @@ public class SearchQueryRunnerWithCaseTest
     SearchQuery searchQuery;
     Druids.SearchQueryBuilder builder = testBuilder()
         .dimensions(Arrays.asList(
-            QueryRunnerTestHelper.placementDimension,
-            QueryRunnerTestHelper.placementishDimension
+            QueryRunnerTestHelper.PLACEMENT_DIMENSION,
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION
         ));
     Map<String, Set<String>> expectedResults = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
     searchQuery = builder.query("PREFERRED").build();
     expectedResults.put(
-        QueryRunnerTestHelper.placementDimension,
+        QueryRunnerTestHelper.PLACEMENT_DIMENSION,
         Sets.newHashSet("PREFERRED", "preferred", "PREFERRed")
     );
-    expectedResults.put(QueryRunnerTestHelper.placementishDimension, Sets.newHashSet("preferred", "Preferred"));
+    expectedResults.put(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION, Sets.newHashSet("preferred", "Preferred"));
     checkSearchQuery(searchQuery, expectedResults);
 
     searchQuery = builder.query("preferred", true).build();
-    expectedResults.put(QueryRunnerTestHelper.placementDimension, Sets.newHashSet("preferred"));
-    expectedResults.put(QueryRunnerTestHelper.placementishDimension, Sets.newHashSet("preferred"));
+    expectedResults.put(QueryRunnerTestHelper.PLACEMENT_DIMENSION, Sets.newHashSet("preferred"));
+    expectedResults.put(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION, Sets.newHashSet("preferred"));
     checkSearchQuery(searchQuery, expectedResults);
   }
 
@@ -190,12 +189,12 @@ public class SearchQueryRunnerWithCaseTest
   {
     SearchQuery searchQuery;
     Druids.SearchQueryBuilder builder = testBuilder()
-        .dimensions(Collections.singletonList(QueryRunnerTestHelper.qualityDimension))
+        .dimensions(Collections.singletonList(QueryRunnerTestHelper.QUALITY_DIMENSION))
         .intervals("2011-01-12T00:00:00.000Z/2011-01-13T00:00:00.000Z");
     Map<String, Set<String>> expectedResults = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
     searchQuery = builder.query("otive").build();
-    expectedResults.put(QueryRunnerTestHelper.qualityDimension, Sets.newHashSet("AutoMotive"));
+    expectedResults.put(QueryRunnerTestHelper.QUALITY_DIMENSION, Sets.newHashSet("AutoMotive"));
     checkSearchQuery(searchQuery, expectedResults);
   }
 
@@ -204,12 +203,12 @@ public class SearchQueryRunnerWithCaseTest
   {
     SearchQuery searchQuery;
     Druids.SearchQueryBuilder builder = testBuilder()
-        .dimensions(Collections.singletonList(QueryRunnerTestHelper.qualityDimension))
+        .dimensions(Collections.singletonList(QueryRunnerTestHelper.QUALITY_DIMENSION))
         .intervals("2011-01-10T00:00:00.000Z/2011-01-11T00:00:00.000Z");
     Map<String, Set<String>> expectedResults = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
     searchQuery = builder.query("business").build();
-    expectedResults.put(QueryRunnerTestHelper.qualityDimension, new HashSet<>());
+    expectedResults.put(QueryRunnerTestHelper.QUALITY_DIMENSION, new HashSet<>());
     checkSearchQuery(searchQuery, expectedResults);
   }
 
@@ -221,11 +220,11 @@ public class SearchQueryRunnerWithCaseTest
     SearchQuery searchQuery;
 
     searchQuery = builder.fragments(Arrays.asList("auto", "ve")).build();
-    expectedResults.put(QueryRunnerTestHelper.qualityDimension, Sets.newHashSet("automotive", "AutoMotive"));
+    expectedResults.put(QueryRunnerTestHelper.QUALITY_DIMENSION, Sets.newHashSet("automotive", "AutoMotive"));
     checkSearchQuery(searchQuery, expectedResults);
 
     searchQuery = builder.fragments(Arrays.asList("auto", "ve"), true).build();
-    expectedResults.put(QueryRunnerTestHelper.qualityDimension, Sets.newHashSet("automotive"));
+    expectedResults.put(QueryRunnerTestHelper.QUALITY_DIMENSION, Sets.newHashSet("automotive"));
     checkSearchQuery(searchQuery, expectedResults);
   }
 
@@ -248,9 +247,7 @@ public class SearchQueryRunnerWithCaseTest
 
   private void checkSearchQuery(SearchQuery searchQuery, Map<String, Set<String>> expectedResults)
   {
-    HashMap<String, List> context = new HashMap<>();
-    Iterable<Result<SearchResultValue>> results =
-        runner.run(QueryPlus.<Result<SearchResultValue>>wrap(searchQuery), context).toList();
+    Iterable<Result<SearchResultValue>> results = runner.run(QueryPlus.wrap(searchQuery)).toList();
 
     for (Result<SearchResultValue> result : results) {
       Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), result.getTimestamp());

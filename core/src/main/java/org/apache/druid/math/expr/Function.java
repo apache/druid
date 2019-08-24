@@ -77,6 +77,23 @@ interface Function
   }
 
   /**
+   * Returns true if a function expects any array arguments
+   */
+  default boolean hasArrayInputs()
+  {
+    return false;
+  }
+
+  /**
+   * Returns true if function produces an array. All {@link Function} implementations are expected to
+   * exclusively produce either scalar or array values.
+   */
+  default boolean hasArrayOutput()
+  {
+    return false;
+  }
+
+  /**
    * Validate function arguments
    */
   void validateArguments(List<Expr> args);
@@ -236,6 +253,12 @@ interface Function
     }
 
     @Override
+    public boolean hasArrayInputs()
+    {
+      return true;
+    }
+
+    @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval arrayExpr = args.get(0).eval(bindings);
@@ -272,6 +295,12 @@ interface Function
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
       return ImmutableSet.copyOf(args);
+    }
+
+    @Override
+    public boolean hasArrayInputs()
+    {
+      return true;
     }
 
     @Override
@@ -1802,23 +1831,29 @@ interface Function
 
 
     @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+
+    @Override
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
       return Collections.emptySet();
     }
 
     @Override
-    public void validateArguments(List<Expr> args)
+    public boolean hasArrayOutput()
     {
-      if (!(args.size() > 0)) {
-        throw new IAE("Function[%s] needs at least 1 argument", name());
-      }
+      return true;
     }
 
     @Override
-    public Set<Expr> getScalarInputs(List<Expr> args)
+    public void validateArguments(List<Expr> args)
     {
-      return ImmutableSet.copyOf(args);
+      if (args.isEmpty()) {
+        throw new IAE("Function[%s] needs at least 1 argument", name());
+      }
     }
   }
 
@@ -1850,6 +1885,12 @@ interface Function
         throw new IAE("Function[%s] needs 1 argument", name());
       }
       return ImmutableSet.of(args.get(0));
+    }
+
+    @Override
+    public boolean hasArrayInputs()
+    {
+      return true;
     }
 
     @Override
@@ -1900,6 +1941,12 @@ interface Function
     public Set<Expr> getScalarInputs(List<Expr> args)
     {
       return ImmutableSet.copyOf(args);
+    }
+
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
     }
   }
 
@@ -2037,6 +2084,12 @@ interface Function
     }
 
     @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
+    }
+
+    @Override
     ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
       switch (arrayExpr.type()) {
@@ -2081,6 +2134,18 @@ interface Function
     }
 
     @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
+    }
+
+    @Override
     ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
     {
       final Object[] array1 = lhsExpr.asArray();
@@ -2119,12 +2184,6 @@ interface Function
       l.addAll(Arrays.asList(array2));
       return l.stream();
     }
-
-    @Override
-    public Set<Expr> getArrayInputs(List<Expr> args)
-    {
-      return ImmutableSet.copyOf(args);
-    }
   }
 
   class ArrayContainsFunction extends ArraysFunction
@@ -2133,6 +2192,12 @@ interface Function
     public String name()
     {
       return "array_contains";
+    }
+
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
     }
 
     @Override
@@ -2182,6 +2247,34 @@ interface Function
     }
 
     @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      if (args.size() == 3) {
+        return ImmutableSet.of(args.get(1), args.get(2));
+      } else {
+        return ImmutableSet.of(args.get(1));
+      }
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.of(args.get(0));
+    }
+
+    @Override
+    public boolean hasArrayInputs()
+    {
+      return true;
+    }
+
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
+    }
+
+    @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval expr = args.get(0).eval(bindings);
@@ -2214,22 +2307,6 @@ interface Function
       }
       throw new RE("Unable to slice to unknown type %s", expr.type());
     }
-
-    @Override
-    public Set<Expr> getScalarInputs(List<Expr> args)
-    {
-      if (args.size() == 3) {
-        return ImmutableSet.of(args.get(1), args.get(2));
-      } else {
-        return ImmutableSet.of(args.get(1));
-      }
-    }
-
-    @Override
-    public Set<Expr> getArrayInputs(List<Expr> args)
-    {
-      return ImmutableSet.of(args.get(0));
-    }
   }
 
   class ArrayPrependFunction implements Function
@@ -2246,6 +2323,30 @@ interface Function
       if (args.size() != 2) {
         throw new IAE("Function[%s] needs 2 arguments", name());
       }
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return ImmutableSet.of(args.get(0));
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.of(args.get(1));
+    }
+
+    @Override
+    public boolean hasArrayInputs()
+    {
+      return true;
+    }
+
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
     }
 
     @Override
@@ -2280,23 +2381,11 @@ interface Function
 
       throw new RE("Unable to prepend to unknown type %s", arrayExpr.type());
     }
-
     private <T> Stream<T> prepend(T val, T[] array)
     {
       List<T> l = new ArrayList<>(Arrays.asList(array));
       l.add(0, val);
       return l.stream();
-    }
-    @Override
-    public Set<Expr> getScalarInputs(List<Expr> args)
-    {
-      return ImmutableSet.of(args.get(0));
-    }
-
-    @Override
-    public Set<Expr> getArrayInputs(List<Expr> args)
-    {
-      return ImmutableSet.of(args.get(1));
     }
   }
 }

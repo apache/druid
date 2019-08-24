@@ -16,7 +16,15 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, FormGroup, InputGroup, TextArea } from '@blueprintjs/core';
+import {
+  Button,
+  Classes,
+  Dialog,
+  FormGroup,
+  InputGroup,
+  Intent,
+  TextArea,
+} from '@blueprintjs/core';
 import React from 'react';
 
 import { BasicQueryExplanation, SemiJoinQueryExplanation } from '../../utils';
@@ -24,9 +32,10 @@ import { BasicQueryExplanation, SemiJoinQueryExplanation } from '../../utils';
 import './query-plan-dialog.scss';
 
 export interface QueryPlanDialogProps {
-  explainResult: BasicQueryExplanation | SemiJoinQueryExplanation | string | null;
-  explainError: Error | null;
+  explainResult?: BasicQueryExplanation | SemiJoinQueryExplanation | string;
+  explainError?: string;
   onClose: () => void;
+  setQueryString: (queryString: string) => void;
 }
 
 export interface QueryPlanDialogState {}
@@ -40,17 +49,19 @@ export class QueryPlanDialog extends React.PureComponent<
     this.state = {};
   }
 
-  render() {
-    const { explainResult, explainError, onClose } = this.props;
+  private queryString: string = '';
+
+  render(): JSX.Element {
+    const { explainResult, explainError, onClose, setQueryString } = this.props;
 
     let content: JSX.Element;
 
     if (explainError) {
-      content = <div>{explainError.message}</div>;
-    } else if (explainResult == null) {
+      content = <div>{explainError}</div>;
+    } else if (!explainResult) {
       content = <div />;
     } else if ((explainResult as BasicQueryExplanation).query) {
-      let signature: JSX.Element | null = null;
+      let signature: JSX.Element | undefined;
       if ((explainResult as BasicQueryExplanation).signature) {
         const signatureContent = (explainResult as BasicQueryExplanation).signature || '';
         signature = (
@@ -60,17 +71,15 @@ export class QueryPlanDialog extends React.PureComponent<
         );
       }
 
+      this.queryString = JSON.stringify(
+        (explainResult as BasicQueryExplanation).query[0],
+        undefined,
+        2,
+      );
       content = (
         <div className="one-query">
           <FormGroup label="Query">
-            <TextArea
-              readOnly
-              value={JSON.stringify(
-                (explainResult as BasicQueryExplanation).query[0],
-                undefined,
-                2,
-              )}
-            />
+            <TextArea readOnly value={this.queryString} />
           </FormGroup>
           {signature}
         </div>
@@ -79,8 +88,8 @@ export class QueryPlanDialog extends React.PureComponent<
       (explainResult as SemiJoinQueryExplanation).mainQuery &&
       (explainResult as SemiJoinQueryExplanation).subQueryRight
     ) {
-      let mainSignature: JSX.Element | null = null;
-      let subSignature: JSX.Element | null = null;
+      let mainSignature: JSX.Element | undefined;
+      let subSignature: JSX.Element | undefined;
       if ((explainResult as SemiJoinQueryExplanation).mainQuery.signature) {
         const signatureContent =
           (explainResult as SemiJoinQueryExplanation).mainQuery.signature || '';
@@ -136,6 +145,14 @@ export class QueryPlanDialog extends React.PureComponent<
         <div className={Classes.DIALOG_FOOTER}>
           <div className={Classes.DIALOG_FOOTER_ACTIONS}>
             <Button text="Close" onClick={onClose} />
+            <Button
+              text="Open"
+              intent={Intent.PRIMARY}
+              onClick={() => {
+                setQueryString(this.queryString);
+                onClose();
+              }}
+            />
           </div>
         </div>
       </Dialog>

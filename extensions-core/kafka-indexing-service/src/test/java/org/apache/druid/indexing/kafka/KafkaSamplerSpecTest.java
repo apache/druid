@@ -62,11 +62,11 @@ import java.util.Map;
 
 public class KafkaSamplerSpecTest
 {
-  private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+  private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final String TOPIC = "sampling";
   private static final DataSchema DATA_SCHEMA = new DataSchema(
       "test_ds",
-      objectMapper.convertValue(
+      OBJECT_MAPPER.convertValue(
           new StringInputRowParser(
               new JSONParseSpec(
                   new TimestampSpec("timestamp", "iso", null),
@@ -94,7 +94,7 @@ public class KafkaSamplerSpecTest
       },
       new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
       null,
-      objectMapper
+      OBJECT_MAPPER
   );
 
   private static TestingCluster zkServer;
@@ -167,8 +167,8 @@ public class KafkaSamplerSpecTest
     KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
         supervisorSpec,
         new SamplerConfig(5, null, null, null),
-        new FirehoseSampler(objectMapper, new SamplerCache(MapCache.create(100000))),
-        objectMapper
+        new FirehoseSampler(OBJECT_MAPPER, new SamplerCache(MapCache.create(100000))),
+        OBJECT_MAPPER
     );
 
     SamplerResponse response = samplerSpec.sample();

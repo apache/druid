@@ -5,9 +5,16 @@ exports[`sql view matches snapshot 1`] = `
   className="query-view app-view"
 >
   <ColumnTree
-    columnMetadata={null}
+    addAggregateColumn={[Function]}
+    addFunctionToGroupBy={[Function]}
+    addToGroupBy={[Function]}
+    clear={[Function]}
     columnMetadataLoading={true}
+    defaultSchema="druid"
+    filterByRow={[Function]}
     onQueryStringChange={[Function]}
+    queryAst={[Function]}
+    replaceFrom={[Function]}
   />
   <t
     customClassName=""
@@ -25,7 +32,7 @@ exports[`sql view matches snapshot 1`] = `
       className="control-pane"
     >
       <QueryInput
-        columnMetadata={null}
+        currentSchema="druid"
         onQueryStringChange={[Function]}
         queryString="test"
         runeMode={false}
@@ -34,18 +41,37 @@ exports[`sql view matches snapshot 1`] = `
         className="control-bar"
       >
         <HotkeysTarget(RunButton)
+          autoRun={true}
+          onAutoRunChange={[Function]}
+          onEditContext={[Function]}
           onExplain={[Function]}
+          onHistory={[Function]}
           onQueryContextChange={[Function]}
           onRun={[Function]}
           queryContext={Object {}}
           runeMode={false}
         />
+        <Blueprint3.Tooltip
+          content="Automatically wrap the query with a limit to protect against queries with very large result sets"
+          hoverCloseDelay={0}
+          hoverOpenDelay={800}
+          transitionDuration={100}
+        >
+          <Blueprint3.Switch
+            checked={true}
+            className="smart-query-limit"
+            label="Smart query limit"
+            onChange={[Function]}
+          />
+        </Blueprint3.Tooltip>
       </div>
     </div>
     <QueryOutput
-      error={null}
       loading={false}
-      result={null}
+      runeMode={false}
+      sqlExcludeColumn={[Function]}
+      sqlFilterRow={[Function]}
+      sqlOrderBy={[Function]}
     />
   </t>
 </div>

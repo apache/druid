@@ -21,7 +21,9 @@ package org.apache.druid.server.coordinator.helper;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.indexing.ClientCompactQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
@@ -29,6 +31,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
+import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -48,7 +51,6 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -123,34 +125,19 @@ public class DruidCoordinatorSegmentCompactorTest
   @Before
   public void setup()
   {
-    dataSources = new HashMap<>();
+    List<DataSegment> segments = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       final String dataSource = DATA_SOURCE_PREFIX + i;
-
-      VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
-          String.CASE_INSENSITIVE_ORDER
-      );
-
-      for (int j = 0; j < 4; j++) {
+      for (int j : new int[] {0, 1, 2, 3, 7, 8}) {
         for (int k = 0; k < 2; k++) {
-          DataSegment segment = createSegment(dataSource, j, true, k);
-          timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
-          segment = createSegment(dataSource, j, false, k);
-          timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
+          segments.add(createSegment(dataSource, j, true, k));
+          segments.add(createSegment(dataSource, j, false, k));
         }
       }
-
-      for (int j = 7; j < 9; j++) {
-        for (int k = 0; k < 2; k++) {
-          DataSegment segment = createSegment(dataSource, j, true, k);
-          timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
-          segment = createSegment(dataSource, j, false, k);
-          timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
-        }
-      }
-
-      dataSources.put(dataSource, timeline);
     }
+    dataSources = DataSourcesSnapshot
+        .fromUsedSegments(segments, ImmutableMap.of())
+        .getUsedSegmentsTimelinesPerDataSource();
   }
 
   private static DataSegment createSegment(String dataSource, int startDay, boolean beforeNoon, int partition)
@@ -261,9 +248,9 @@ public class DruidCoordinatorSegmentCompactorTest
 
   private CoordinatorStats runCompactor(DruidCoordinatorSegmentCompactor compactor)
   {
-    DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
-        .withDataSources(dataSources)
+        .withUsedSegmentsTimelinesPerDataSourceInTest(dataSources)
         .withCompactionConfig(CoordinatorCompactionConfig.from(createCompactionConfigs()))
         .build();
     return compactor.run(params).getCoordinatorStats();
@@ -291,10 +278,7 @@ public class DruidCoordinatorSegmentCompactorTest
         long numDataSourceOfExpectedRemainingSegments = stats
             .getDataSources(DruidCoordinatorSegmentCompactor.SEGMENT_SIZE_WAIT_COMPACT)
             .stream()
-            .mapToLong(dataSource -> stats.getDataSourceStat(
-                DruidCoordinatorSegmentCompactor.SEGMENT_SIZE_WAIT_COMPACT,
-                dataSource)
-            )
+            .mapToLong(ds -> stats.getDataSourceStat(DruidCoordinatorSegmentCompactor.SEGMENT_SIZE_WAIT_COMPACT, ds))
             .filter(stat -> stat == expectedRemainingSegments)
             .count();
         Assert.assertEquals(i + 1, numDataSourceOfExpectedRemainingSegments);

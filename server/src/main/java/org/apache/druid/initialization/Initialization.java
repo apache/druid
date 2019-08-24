@@ -90,9 +90,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Initialization
 {
   private static final Logger log = new Logger(Initialization.class);
-  private static final ConcurrentHashMap<File, URLClassLoader> loadersMap = new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<File, URLClassLoader> LOADERS_MAP = new ConcurrentHashMap<>();
 
-  private static final ConcurrentHashMap<Class<?>, Collection<?>> extensionsMap = new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<Class<?>, Collection<?>> EXTENSIONS_MAP = new ConcurrentHashMap<>();
 
   /**
    * @param clazz service class
@@ -103,7 +103,7 @@ public class Initialization
   public static <T> Collection<T> getLoadedImplementations(Class<T> clazz)
   {
     @SuppressWarnings("unchecked")
-    Collection<T> retVal = (Collection<T>) extensionsMap.get(clazz);
+    Collection<T> retVal = (Collection<T>) EXTENSIONS_MAP.get(clazz);
     if (retVal == null) {
       return new HashSet<>();
     }
@@ -113,13 +113,13 @@ public class Initialization
   @VisibleForTesting
   static void clearLoadedImplementations()
   {
-    extensionsMap.clear();
+    EXTENSIONS_MAP.clear();
   }
 
   @VisibleForTesting
   static Map<File, URLClassLoader> getLoadersMap()
   {
-    return loadersMap;
+    return LOADERS_MAP;
   }
 
   /**
@@ -138,7 +138,7 @@ public class Initialization
   {
     // It's not clear whether we should recompute modules even if they have been computed already for the serviceClass,
     // but that's how it used to be an preserving the old behaviour here.
-    Collection<?> modules = extensionsMap.compute(
+    Collection<?> modules = EXTENSIONS_MAP.compute(
         serviceClass,
         (serviceC, ignored) -> new ServiceLoadingFromExtensions<>(config, serviceC).implsToLoad
     );
@@ -189,7 +189,7 @@ public class Initialization
 
     private void tryAdd(T serviceImpl, String extensionType)
     {
-      final String serviceImplName = serviceImpl.getClass().getCanonicalName();
+      final String serviceImplName = serviceImpl.getClass().getName();
       if (serviceImplName == null) {
         log.warn(
             "Implementation [%s] was ignored because it doesn't have a canonical name, "
@@ -292,7 +292,7 @@ public class Initialization
    */
   public static URLClassLoader getClassLoaderForExtension(File extension, boolean useExtensionClassloaderFirst)
   {
-    return loadersMap.computeIfAbsent(
+    return LOADERS_MAP.computeIfAbsent(
         extension,
         theExtension -> makeClassLoaderForExtension(theExtension, useExtensionClassloaderFirst)
     );
@@ -474,7 +474,7 @@ public class Initialization
 
     private boolean checkModuleClass(Class<?> moduleClass)
     {
-      String moduleClassName = moduleClass.getCanonicalName();
+      String moduleClassName = moduleClass.getName();
       if (moduleClassName != null && modulesConfig.getExcludeList().contains(moduleClassName)) {
         log.info("Not loading module [%s] because it is present in excludeList", moduleClassName);
         return false;

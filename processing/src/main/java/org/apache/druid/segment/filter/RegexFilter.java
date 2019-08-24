@@ -25,6 +25,7 @@ import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.FilterTuning;
 
 import java.util.regex.Pattern;
 
@@ -35,7 +36,8 @@ public class RegexFilter extends DimensionPredicateFilter
   public RegexFilter(
       final String dimension,
       final Pattern pattern,
-      final ExtractionFn extractionFn
+      final ExtractionFn extractionFn,
+      final FilterTuning filterTuning
   )
   {
     super(
@@ -74,7 +76,8 @@ public class RegexFilter extends DimensionPredicateFilter
                    '}';
           }
         },
-        extractionFn
+        extractionFn,
+        filterTuning
     );
   }
 }

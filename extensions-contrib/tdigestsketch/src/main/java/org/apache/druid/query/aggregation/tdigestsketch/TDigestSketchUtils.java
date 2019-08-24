@@ -23,6 +23,10 @@ import com.tdunning.math.stats.MergingDigest;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.sql.calcite.aggregation.Aggregation;
+import org.apache.druid.sql.calcite.expression.DruidExpression;
 
 import java.nio.ByteBuffer;
 
@@ -86,5 +90,34 @@ public class TDigestSketchUtils
                            selector.getObject().getClass()
                        );
     throw new IAE(msg);
+  }
+
+  public static boolean matchingAggregatorFactoryExists(
+      final DruidExpression input,
+      final Integer compression,
+      final Aggregation existing,
+      final TDigestSketchAggregatorFactory factory
+  )
+  {
+    // Check input for equivalence.
+    final boolean inputMatches;
+    final VirtualColumn virtualInput = existing.getVirtualColumns()
+                                               .stream()
+                                               .filter(
+                                                   virtualColumn ->
+                                                       virtualColumn.getOutputName()
+                                                                    .equals(factory.getFieldName())
+                                               )
+                                               .findFirst()
+                                               .orElse(null);
+
+    if (virtualInput == null) {
+      inputMatches = input.isDirectColumnAccess()
+                     && input.getDirectColumn().equals(factory.getFieldName());
+    } else {
+      inputMatches = ((ExpressionVirtualColumn) virtualInput).getExpression()
+                                                             .equals(input.getExpression());
+    }
+    return inputMatches && compression == factory.getCompression();
   }
 }

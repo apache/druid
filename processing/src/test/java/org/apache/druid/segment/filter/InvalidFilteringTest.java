@@ -64,20 +64,20 @@ public class InvalidFilteringTest extends BaseFilterTest
       )
   );
 
-  private static final InputRow row0 = PARSER.parseBatch(ImmutableMap.of("ts", 1L, "dim0", "1", "dim1", "", "dim2", ImmutableList.of("a", "b"))).get(0);
-  private static final InputRow row1 = PARSER.parseBatch(ImmutableMap.of("ts", 2L, "dim0", "2", "dim1", "10", "dim2", ImmutableList.of())).get(0);
-  private static final InputRow row2 = PARSER.parseBatch(ImmutableMap.of("ts", 3L, "dim0", "3", "dim1", "2", "dim2", ImmutableList.of(""))).get(0);
-  private static final InputRow row3 = PARSER.parseBatch(ImmutableMap.of("ts", 4L, "dim0", "4", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0);
-  private static final InputRow row4 = PARSER.parseBatch(ImmutableMap.of("ts", 5L, "dim0", "5", "dim1", "def", "dim2", ImmutableList.of("c"))).get(0);
-  private static final InputRow row5 = PARSER.parseBatch(ImmutableMap.of("ts", 6L, "dim0", "6", "dim1", "abc")).get(0);
+  private static final InputRow ROW0 = PARSER.parseBatch(ImmutableMap.of("ts", 1L, "dim0", "1", "dim1", "", "dim2", ImmutableList.of("a", "b"))).get(0);
+  private static final InputRow ROW1 = PARSER.parseBatch(ImmutableMap.of("ts", 2L, "dim0", "2", "dim1", "10", "dim2", ImmutableList.of())).get(0);
+  private static final InputRow ROW2 = PARSER.parseBatch(ImmutableMap.of("ts", 3L, "dim0", "3", "dim1", "2", "dim2", ImmutableList.of(""))).get(0);
+  private static final InputRow ROW3 = PARSER.parseBatch(ImmutableMap.of("ts", 4L, "dim0", "4", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0);
+  private static final InputRow ROW4 = PARSER.parseBatch(ImmutableMap.of("ts", 5L, "dim0", "5", "dim1", "def", "dim2", ImmutableList.of("c"))).get(0);
+  private static final InputRow ROW5 = PARSER.parseBatch(ImmutableMap.of("ts", 6L, "dim0", "6", "dim1", "abc")).get(0);
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      row0,
-      row1,
-      row2,
-      row3,
-      row4,
-      row5
+      ROW0,
+      ROW1,
+      ROW2,
+      ROW3,
+      ROW4,
+      ROW5
   );
 
   public InvalidFilteringTest(

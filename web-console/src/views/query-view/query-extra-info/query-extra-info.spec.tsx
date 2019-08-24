@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { QueryExtraInfo } from './query-extra-info';
 
@@ -27,13 +27,12 @@ describe('query extra info', () => {
       <QueryExtraInfo
         queryExtraInfo={{
           queryId: 'e3ee781b-c0b6-4385-9d99-a8a1994bebac',
-          sqlQueryId: null,
           startTime: new Date('1986-04-26T01:23:40+03:00'),
           endTime: new Date('1986-04-26T01:23:48+03:00'),
-          numResults: 2000,
-          wrappedLimit: 2000,
+          numResults: 1000,
+          wrapQueryLimit: 1000,
         }}
-        onDownload={() => null}
+        onDownload={() => {}}
       />
     );
 

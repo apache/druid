@@ -68,7 +68,8 @@ public class CommonCacheNotifier
       NodeType.HISTORICAL,
       NodeType.PEON,
       NodeType.ROUTER,
-      NodeType.MIDDLE_MANAGER
+      NodeType.MIDDLE_MANAGER,
+      NodeType.INDEXER
   );
 
   private final DruidNodeDiscoveryProvider discoveryProvider;

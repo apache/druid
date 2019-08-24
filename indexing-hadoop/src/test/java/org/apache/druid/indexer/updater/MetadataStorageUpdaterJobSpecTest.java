@@ -25,7 +25,7 @@ import org.junit.Test;
 
 public class MetadataStorageUpdaterJobSpecTest
 {
-  private static final ObjectMapper jsonMapper = new ObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
   @Test
   public void testMetadaStorageConnectionConfigSimplePassword() throws Exception
@@ -62,7 +62,7 @@ public class MetadataStorageUpdaterJobSpecTest
       String pwd
   ) throws Exception
   {
-    MetadataStorageUpdaterJobSpec spec = jsonMapper.readValue(
+    MetadataStorageUpdaterJobSpec spec = JSON_MAPPER.readValue(
         "{" +
         "\"type\": \"" + type + "\",\n" +
         "\"connectURI\": \"" + connectURI + "\",\n" +

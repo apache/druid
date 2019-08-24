@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { TransformTable } from './transform-table';
 
@@ -40,7 +40,7 @@ describe('transform table', () => {
         transformedColumnsOnly={false}
         transforms={[]}
         selectedTransformIndex={-1}
-        onTransformSelect={() => null}
+        onTransformSelect={() => {}}
       />
     );
 

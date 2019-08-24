@@ -25,6 +25,8 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -37,7 +39,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
 {
   private static final byte VERSION = CompressedVSizeColumnarIntsSupplier.VERSION;
 
-  private static final MetaSerdeHelper<CompressedVSizeColumnarIntsSerializer> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<CompressedVSizeColumnarIntsSerializer> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((CompressedVSizeColumnarIntsSerializer x) -> VERSION)
       .writeByte(x -> ByteUtils.checkedCast(x.numBytes))
       .writeInt(x -> x.numInserted)
@@ -67,9 +69,10 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
   private final CompressionStrategy compression;
   private final GenericIndexedWriter<ByteBuffer> flattener;
   private final ByteBuffer intBuffer;
-
-  private ByteBuffer endBuffer;
   private int numInserted;
+
+  @Nullable
+  private ByteBuffer endBuffer;
 
   CompressedVSizeColumnarIntsSerializer(
       final SegmentWriteOutMedium segmentWriteOutMedium,
@@ -152,14 +155,14 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
   public long getSerializedSize() throws IOException
   {
     writeEndBuffer();
-    return metaSerdeHelper.size(this) + flattener.getSerializedSize();
+    return META_SERDE_HELPER.size(this) + flattener.getSerializedSize();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     writeEndBuffer();
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     flattener.writeTo(channel, smoosher);
   }
 

@@ -67,7 +67,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -92,7 +91,7 @@ public class SchemalessTestSimpleTest
   }
 
   final String dataSource = "testing";
-  final Granularity allGran = Granularities.ALL;
+  final Granularity ALL_GRAN = Granularities.ALL;
   final String marketDimension = "market";
   final String qualityDimension = "quality";
   final String placementDimension = "placement";
@@ -129,7 +128,7 @@ public class SchemalessTestSimpleTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(dataSource)
-                                  .granularity(allGran)
+                                  .granularity(ALL_GRAN)
                                   .intervals(fullOnInterval)
                                   .aggregators(
                                       Lists.newArrayList(
@@ -161,8 +160,7 @@ public class SchemalessTestSimpleTest
         )
     );
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
 
@@ -174,7 +172,7 @@ public class SchemalessTestSimpleTest
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(dataSource)
-        .granularity(allGran)
+        .granularity(ALL_GRAN)
         .dimension(marketDimension)
         .metric(indexMetric)
         .threshold(3)
@@ -190,11 +188,11 @@ public class SchemalessTestSimpleTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(addRowsIndexConstant))
+        .postAggregators(addRowsIndexConstant)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.asList(
@@ -238,8 +236,7 @@ public class SchemalessTestSimpleTest
 
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment, pool);
-      HashMap<String, Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
   }
 
@@ -248,7 +245,7 @@ public class SchemalessTestSimpleTest
   {
     SearchQuery query = Druids.newSearchQueryBuilder()
                               .dataSource(dataSource)
-                              .granularity(allGran)
+                              .granularity(ALL_GRAN)
                               .intervals(fullOnInterval)
                               .query("a")
                               .build();
@@ -268,8 +265,7 @@ public class SchemalessTestSimpleTest
     );
 
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -294,7 +290,6 @@ public class SchemalessTestSimpleTest
     );
 
     QueryRunner runner = TestQueryRunners.makeTimeBoundaryQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 }

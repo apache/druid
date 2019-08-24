@@ -80,6 +80,10 @@
             <artifactId>commons-io</artifactId>
         </dependency>
         <dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.google.errorprone</groupId>
             <artifactId>error_prone_annotations</artifactId>
         </dependency>
@@ -204,6 +208,7 @@
                     <!-- locale settings must be set on the command line before startup -->
                     <!-- set default options -->
                     <argLine>
+                        @{jacocoArgLine}
                         -Xmx512m
                         -XX:MaxDirectMemorySize=2500m
                         -Duser.language=en

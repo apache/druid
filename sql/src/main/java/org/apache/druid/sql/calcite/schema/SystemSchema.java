@@ -165,6 +165,7 @@ public class SystemSchema extends AbstractSchema
   static final RowSignature TASKS_SIGNATURE = RowSignature
       .builder()
       .add("task_id", ValueType.STRING)
+      .add("group_id", ValueType.STRING)
       .add("type", ValueType.STRING)
       .add("datasource", ValueType.STRING)
       .add("created_time", ValueType.STRING)
@@ -555,7 +556,7 @@ public class SystemSchema extends AbstractSchema
       for (ImmutableDruidServer druidServer : druidServers) {
         final Iterable<DataSegment> authorizedServerSegments = AuthorizationUtils.filterAuthorizedResources(
             authenticationResult,
-            druidServer.getLazyAllSegments(),
+            druidServer.iterateAllSegments(),
             SEGMENT_RA_GENERATOR,
             authorizerMapper
         );
@@ -649,6 +650,7 @@ public class SystemSchema extends AbstractSchema
               }
               return new Object[]{
                   task.getId(),
+                  task.getGroupId(),
                   task.getType(),
                   task.getDataSource(),
                   toStringOrNull(task.getCreatedTime()),

@@ -22,6 +22,7 @@ import {
   Hotkey,
   Hotkeys,
   HotkeysTarget,
+  Intent,
   Menu,
   MenuItem,
   Popover,
@@ -45,23 +46,20 @@ import { DRUID_DOCS_RUNE, DRUID_DOCS_SQL } from '../../../variables';
 
 export interface RunButtonProps {
   runeMode: boolean;
+  autoRun: boolean;
+  onAutoRunChange: (autoRun: boolean) => void;
   queryContext: QueryContext;
   onQueryContextChange: (newQueryContext: QueryContext) => void;
-  onRun: ((wrapQuery: boolean) => void) | null;
-  onExplain: () => void;
-}
-
-interface RunButtonState {
-  wrapQuery: boolean;
+  onRun: (() => void) | undefined;
+  onExplain: (() => void) | undefined;
+  onEditContext: () => void;
+  onHistory: () => void;
 }
 
 @HotkeysTarget
-export class RunButton extends React.PureComponent<RunButtonProps, RunButtonState> {
+export class RunButton extends React.PureComponent<RunButtonProps> {
   constructor(props: RunButtonProps, context: any) {
     super(props, context);
-    this.state = {
-      wrapQuery: true,
-    };
   }
 
   public renderHotkeys() {
@@ -81,12 +79,20 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
   private handleRun = () => {
     const { onRun } = this.props;
     if (!onRun) return;
-    onRun(this.state.wrapQuery);
+    onRun();
   };
 
   renderExtraMenu() {
-    const { runeMode, onExplain, queryContext, onQueryContextChange } = this.props;
-    const { wrapQuery } = this.state;
+    const {
+      runeMode,
+      onExplain,
+      queryContext,
+      onQueryContextChange,
+      onEditContext,
+      onHistory,
+      autoRun,
+      onAutoRunChange,
+    } = this.props;
 
     const useCache = getUseCache(queryContext);
     const useApproximateCountDistinct = getUseApproximateCountDistinct(queryContext);
@@ -102,11 +108,12 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
         />
         {!runeMode && (
           <>
-            <MenuItem icon={IconNames.CLEAN} text="Explain" onClick={onExplain} />
+            {onExplain && <MenuItem icon={IconNames.CLEAN} text="Explain" onClick={onExplain} />}
+            <MenuItem icon={IconNames.HISTORY} text="History" onClick={onHistory} />
             <MenuCheckbox
-              checked={wrapQuery}
-              label="Wrap query with limit"
-              onChange={() => this.setState({ wrapQuery: !wrapQuery })}
+              checked={autoRun}
+              label="Auto run queries"
+              onChange={() => onAutoRunChange(!autoRun)}
             />
             <MenuCheckbox
               checked={useApproximateCountDistinct}
@@ -133,26 +140,33 @@ export class RunButton extends React.PureComponent<RunButtonProps, RunButtonStat
             onQueryContextChange(setUseCache(queryContext, !useCache));
           }}
         />
+        {!runeMode && (
+          <MenuItem icon={IconNames.PROPERTIES} text="Edit context" onClick={onEditContext} />
+        )}
       </Menu>
     );
   }
 
-  render() {
+  render(): JSX.Element {
     const { runeMode, onRun } = this.props;
-    const { wrapQuery } = this.state;
+    const runButtonText = 'Run' + (runeMode ? 'e' : '');
 
     return (
       <ButtonGroup className="run-button">
-        <Tooltip content="Control + Enter" hoverOpenDelay={900}>
-          <Button
-            icon={IconNames.CARET_RIGHT}
-            onClick={this.handleRun}
-            text={runeMode ? 'Rune' : wrapQuery ? 'Run with limit' : 'Run as is'}
-            disabled={!onRun}
-          />
-        </Tooltip>
+        {onRun ? (
+          <Tooltip content="Control + Enter" hoverOpenDelay={900}>
+            <Button
+              icon={IconNames.CARET_RIGHT}
+              onClick={this.handleRun}
+              text={runButtonText}
+              intent={Intent.PRIMARY}
+            />
+          </Tooltip>
+        ) : (
+          <Button icon={IconNames.CARET_RIGHT} text={runButtonText} disabled />
+        )}
         <Popover position={Position.BOTTOM_LEFT} content={this.renderExtraMenu()}>
-          <Button icon={IconNames.MORE} />
+          <Button icon={IconNames.MORE} intent={Intent.PRIMARY} />
         </Popover>
       </ButtonGroup>
     );

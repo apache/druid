@@ -20,27 +20,34 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.JavaScriptDimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.mozilla.javascript.Context;
 
+import java.util.Set;
+
 public class JavaScriptFilter implements Filter
 {
   private final String dimension;
   private final JavaScriptDimFilter.JavaScriptPredicateFactory predicateFactory;
+  private final FilterTuning filterTuning;
 
   public JavaScriptFilter(
       String dimension,
-      JavaScriptDimFilter.JavaScriptPredicateFactory predicate
+      JavaScriptDimFilter.JavaScriptPredicateFactory predicate,
+      FilterTuning filterTuning
   )
   {
     this.dimension = dimension;
     this.predicateFactory = predicate;
+    this.filterTuning = filterTuning;
   }
 
   @Override
@@ -93,8 +100,20 @@ public class JavaScriptFilter implements Filter
   }
 
   @Override
+  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+  {
+    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
+  }
+
+  @Override
   public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
   {
     return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
+  }
+
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return ImmutableSet.of(dimension);
   }
 }

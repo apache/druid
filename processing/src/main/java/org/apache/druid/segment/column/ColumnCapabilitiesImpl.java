@@ -23,11 +23,16 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.ISE;
 
+import javax.annotation.Nullable;
+
 /**
+ *
  */
 public class ColumnCapabilitiesImpl implements ColumnCapabilities
 {
+  @Nullable
   private ValueType type = null;
+
   private boolean dictionaryEncoded = false;
   private boolean runLengthEncoded = false;
   private boolean hasInvertedIndexes = false;
@@ -38,8 +43,18 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   @JsonIgnore
   private boolean filterable;
 
+
   @JsonIgnore
   private boolean complete = false;
+
+  public static ColumnCapabilitiesImpl copyOf(final ColumnCapabilities other)
+  {
+    final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
+    capabilities.merge(other);
+    capabilities.setFilterable(other.isFilterable());
+    capabilities.setIsComplete(other.isComplete());
+    return capabilities;
+  }
 
   @Override
   @JsonProperty

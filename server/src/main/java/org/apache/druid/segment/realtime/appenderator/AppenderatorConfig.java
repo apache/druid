@@ -67,7 +67,11 @@ public interface AppenderatorConfig
 
   IndexSpec getIndexSpec();
 
+  IndexSpec getIndexSpecForIntermediatePersists();
+
   File getBasePersistDirectory();
+
+  AppenderatorConfig withBasePersistDirectory(File basePersistDirectory);
 
   @Nullable
   SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory();

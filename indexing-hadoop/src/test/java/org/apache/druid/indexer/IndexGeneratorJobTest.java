@@ -84,12 +84,12 @@ import java.util.TreeMap;
 @RunWith(Parameterized.class)
 public class IndexGeneratorJobTest
 {
-  private static final AggregatorFactory[] aggs1 = {
+  private static final AggregatorFactory[] AGGS1 = {
       new LongSumAggregatorFactory("visited_num", "visited_num"),
       new HyperUniquesAggregatorFactory("unique_hosts", "host")
   };
 
-  private static final AggregatorFactory[] aggs2 = {
+  private static final AggregatorFactory[] AGGS2 = {
       new CountAggregatorFactory("count")
   };
 
@@ -156,7 +156,7 @@ public class IndexGeneratorJobTest
                 ),
                 null,
                 null,
-                aggs1,
+                AGGS1,
                 "website"
             },
             {
@@ -204,7 +204,7 @@ public class IndexGeneratorJobTest
                 ),
                 null,
                 null,
-                aggs1,
+                AGGS1,
                 "website"
             },
             {
@@ -253,7 +253,7 @@ public class IndexGeneratorJobTest
                 ),
                 null,
                 null,
-                aggs1,
+                AGGS1,
                 "website"
             },
             {
@@ -311,7 +311,7 @@ public class IndexGeneratorJobTest
                 ),
                 null,
                 null,
-                aggs1,
+                AGGS1,
                 "website"
             },
             {
@@ -344,7 +344,7 @@ public class IndexGeneratorJobTest
                 ),
                 1, // force 1 row max per index for easier testing
                 null,
-                aggs2,
+                AGGS2,
                 "inherit_dims"
             },
             {
@@ -377,7 +377,7 @@ public class IndexGeneratorJobTest
                 ),
                 1, // force 1 row max per index for easier testing
                 null,
-                aggs2,
+                AGGS2,
                 "inherit_dims2"
             }
         }
@@ -517,6 +517,7 @@ public class IndexGeneratorJobTest
             ),
             new HadoopTuningConfig(
                 tmpDir.getCanonicalPath(),
+                null,
                 null,
                 null,
                 null,

@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation.distinctcount;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
@@ -34,6 +33,7 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.segment.IncrementalIndexSegment;
@@ -113,37 +113,39 @@ public class DistinctCountGroupByQueryTest
     );
 
     GroupByQuery query = new GroupByQuery.Builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setGranularity(QueryRunnerTestHelper.allGran)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .setDimensions(new DefaultDimensionSpec(
             client_type,
             client_type
         ))
-        .setInterval(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(new OrderByColumnSpec(client_type, OrderByColumnSpec.Direction.DESCENDING)),
                 10
             )
         )
-        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new DistinctCountAggregatorFactory("UV", visitor_id, null))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new DistinctCountAggregatorFactory("UV", visitor_id, null))
         .build();
     final Segment incrementalIndexSegment = new IncrementalIndexSegment(index, null);
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(
         factory,
         factory.createRunner(incrementalIndexSegment),
         query
     );
 
-    List<Row> expectedResults = Arrays.asList(
+    List<ResultRow> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             client_type, "iphone",
             "UV", 2L,
             "rows", 2L
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
+            query,
             "1970-01-01T00:00:00.000Z",
             client_type, "android",
             "UV", 1L,

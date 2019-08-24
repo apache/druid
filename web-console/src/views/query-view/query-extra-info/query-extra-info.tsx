@@ -36,12 +36,12 @@ import { pluralIfNeeded } from '../../../utils';
 import './query-extra-info.scss';
 
 export interface QueryExtraInfoData {
-  queryId: string | null;
-  sqlQueryId: string | null;
+  queryId?: string;
+  sqlQueryId?: string;
   startTime: Date;
   endTime: Date;
   numResults: number;
-  wrappedLimit?: number;
+  wrapQueryLimit: number | undefined;
 }
 
 export interface QueryExtraInfoProps {
@@ -50,7 +50,7 @@ export interface QueryExtraInfoProps {
 }
 
 export class QueryExtraInfo extends React.PureComponent<QueryExtraInfoProps> {
-  render() {
+  render(): JSX.Element {
     const { queryExtraInfo } = this.props;
 
     const downloadMenu = (
@@ -63,7 +63,10 @@ export class QueryExtraInfo extends React.PureComponent<QueryExtraInfoProps> {
     );
 
     let resultCount: string;
-    if (queryExtraInfo.wrappedLimit && queryExtraInfo.numResults === queryExtraInfo.wrappedLimit) {
+    if (
+      queryExtraInfo.wrapQueryLimit &&
+      queryExtraInfo.numResults === queryExtraInfo.wrapQueryLimit
+    ) {
       resultCount = `${queryExtraInfo.numResults - 1}+ results`;
     } else {
       resultCount = pluralIfNeeded(queryExtraInfo.numResults, 'result');

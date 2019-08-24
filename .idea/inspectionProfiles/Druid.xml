@@ -316,6 +316,33 @@
         <constraint name="k1" within="" contains="" />
         <constraint name="k2" within="" contains="" />
       </searchConfiguration>
+      <searchConfiguration name="Use CollectionUtils.mapValues(Map&lt;K,V&gt;, Function&lt;V,V2&gt;)" text="$x$.entrySet().stream().collect(Collectors.toMap($k$ -&gt; $k$.getKey(), $y$))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="x" within="" contains="" />
+        <constraint name="y" within="" contains="" />
+        <constraint name="k" within="" contains="" />
+        <constraint name="__context__" target="true" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use CollectionUtils.mapValues(Map&lt;k,v&gt;, Function&lt;v,v2&gt;)" text="$x$.entrySet().stream().collect(Collectors.toMap(Entry::getKey, $y$))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="x" within="" contains="" />
+        <constraint name="y" within="" contains="" />
+        <constraint name="__context__" target="true" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use CollectionUtils.mapKeys(Map&lt;K,V&gt;, Function&lt;K,K2&gt;)" text="$x$.entrySet().stream().collect(Collectors.toMap($y$, $v$ -&gt; $v$.getValue()))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="x" within="" contains="" />
+        <constraint name="y" within="" contains="" />
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="v" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use CollectionUtils.mapKeys(Map&lt;k,v&gt;, Function&lt;k,k2&gt;)" text="$x$.entrySet().stream().collect(Collectors.toMap($y$, Map.Entry::getValue))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="x" within="" contains="" />
+        <constraint name="y" within="" contains="" />
+        <constraint name="__context__" target="true" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use collections constructors directly" text="Stream.of($x$).collect(Collectors.$m$())" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="m" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
     </inspection_tool>
     <inspection_tool class="SimplifyStreamApiCallChains" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SpellCheckingInspection" enabled="false" level="TYPO" enabled_by_default="false">

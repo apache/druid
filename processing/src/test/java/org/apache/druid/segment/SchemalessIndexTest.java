@@ -24,7 +24,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -42,6 +41,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -67,9 +67,9 @@ import java.util.Map;
 public class SchemalessIndexTest
 {
   private static final Logger log = new Logger(SchemalessIndexTest.class);
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
-  private static final String testFile = "druid.sample.json";
+  private static final String TEST_FILE = "druid.sample.json";
   private static final String TIMESTAMP = "timestamp";
   private static final List<String> METRICS = Collections.singletonList("index");
   private static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
@@ -82,19 +82,19 @@ public class SchemalessIndexTest
       new CountAggregatorFactory("count")
   };
 
-  private static final IndexSpec indexSpec = new IndexSpec();
+  private static final IndexSpec INDEX_SPEC = new IndexSpec();
 
-  private static final List<Map<String, Object>> events = new ArrayList<>();
+  private static final List<Map<String, Object>> EVENTS = new ArrayList<>();
 
-  private static final Map<Integer, Map<Integer, QueryableIndex>> incrementalIndexes = new HashMap<>();
-  private static final Map<Integer, Map<Integer, QueryableIndex>> mergedIndexes = new HashMap<>();
-  private static final List<QueryableIndex> rowPersistedIndexes = new ArrayList<>();
+  private static final Map<Integer, Map<Integer, QueryableIndex>> INCREMENTAL_INDEXES = new HashMap<>();
+  private static final Map<Integer, Map<Integer, QueryableIndex>> MERGED_INDEXES = new HashMap<>();
+  private static final List<QueryableIndex> ROW_PERSISTED_INDEXES = new ArrayList<>();
 
   private static IncrementalIndex index = null;
   private static QueryableIndex mergedIndex = null;
 
   static {
-    ComplexMetrics.registerSerde("hyperUnique", () -> new HyperUniquesSerde(HyperLogLogHash.getDefault()));
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
   }
 
   private final IndexMerger indexMerger;
@@ -113,7 +113,7 @@ public class SchemalessIndexTest
         return index;
       }
 
-      index = makeIncrementalIndex(testFile, METRIC_AGGS);
+      index = makeIncrementalIndex(TEST_FILE, METRIC_AGGS);
 
       return index;
     }
@@ -122,11 +122,11 @@ public class SchemalessIndexTest
   public static QueryableIndex getIncrementalIndex(int index1, int index2)
   {
     synchronized (log) {
-      if (events.isEmpty()) {
+      if (EVENTS.isEmpty()) {
         makeEvents();
       }
 
-      Map<Integer, QueryableIndex> entry = incrementalIndexes.get(index1);
+      Map<Integer, QueryableIndex> entry = INCREMENTAL_INDEXES.get(index1);
       if (entry != null) {
         QueryableIndex index = entry.get(index2);
         if (index != null) {
@@ -134,13 +134,13 @@ public class SchemalessIndexTest
         }
       } else {
         entry = new HashMap<>();
-        incrementalIndexes.put(index1, entry);
+        INCREMENTAL_INDEXES.put(index1, entry);
       }
 
       IncrementalIndex theIndex = null;
 
       int count = 0;
-      for (final Map<String, Object> event : events) {
+      for (final Map<String, Object> event : EVENTS) {
         if (count != index1 && count != index2) {
           count++;
           continue;
@@ -208,8 +208,8 @@ public class SchemalessIndexTest
         mergedFile.mkdirs();
         mergedFile.deleteOnExit();
 
-        indexMerger.persist(top, topFile, indexSpec, null);
-        indexMerger.persist(bottom, bottomFile, indexSpec, null);
+        indexMerger.persist(top, topFile, INDEX_SPEC, null);
+        indexMerger.persist(bottom, bottomFile, INDEX_SPEC, null);
 
         mergedIndex = indexIO.loadIndex(
             indexMerger.mergeQueryableIndex(
@@ -217,7 +217,7 @@ public class SchemalessIndexTest
                 true,
                 METRIC_AGGS,
                 mergedFile,
-                indexSpec,
+                INDEX_SPEC,
                 null
             )
         );
@@ -234,11 +234,11 @@ public class SchemalessIndexTest
   public QueryableIndex getMergedIncrementalIndex(int index1, int index2)
   {
     synchronized (log) {
-      if (rowPersistedIndexes.isEmpty()) {
+      if (ROW_PERSISTED_INDEXES.isEmpty()) {
         makeRowPersistedIndexes();
       }
 
-      Map<Integer, QueryableIndex> entry = mergedIndexes.get(index1);
+      Map<Integer, QueryableIndex> entry = MERGED_INDEXES.get(index1);
       if (entry != null) {
         QueryableIndex index = entry.get(index2);
         if (index != null) {
@@ -246,7 +246,7 @@ public class SchemalessIndexTest
         }
       } else {
         entry = new HashMap<>();
-        mergedIndexes.put(index1, entry);
+        MERGED_INDEXES.put(index1, entry);
       }
 
       try {
@@ -260,11 +260,11 @@ public class SchemalessIndexTest
 
         QueryableIndex index = indexIO.loadIndex(
             indexMerger.mergeQueryableIndex(
-                Arrays.asList(rowPersistedIndexes.get(index1), rowPersistedIndexes.get(index2)),
+                Arrays.asList(ROW_PERSISTED_INDEXES.get(index1), ROW_PERSISTED_INDEXES.get(index2)),
                 true,
                 METRIC_AGGS,
                 mergedFile,
-                indexSpec,
+                INDEX_SPEC,
                 null
             )
         );
@@ -282,7 +282,7 @@ public class SchemalessIndexTest
   public QueryableIndex getMergedIncrementalIndex(int[] indexes)
   {
     synchronized (log) {
-      if (rowPersistedIndexes.isEmpty()) {
+      if (ROW_PERSISTED_INDEXES.isEmpty()) {
         makeRowPersistedIndexes();
       }
 
@@ -297,11 +297,11 @@ public class SchemalessIndexTest
 
         List<QueryableIndex> indexesToMerge = new ArrayList<>();
         for (int index : indexes) {
-          indexesToMerge.add(rowPersistedIndexes.get(index));
+          indexesToMerge.add(ROW_PERSISTED_INDEXES.get(index));
         }
 
         return indexIO.loadIndex(
-            indexMerger.mergeQueryableIndex(indexesToMerge, true, METRIC_AGGS, mergedFile, indexSpec, null)
+            indexMerger.mergeQueryableIndex(indexesToMerge, true, METRIC_AGGS, mergedFile, INDEX_SPEC, null)
         );
       }
       catch (IOException e) {
@@ -335,13 +335,13 @@ public class SchemalessIndexTest
 
   private static void makeEvents()
   {
-    URL resource = TestIndex.class.getClassLoader().getResource(testFile);
+    URL resource = TestIndex.class.getClassLoader().getResource(TEST_FILE);
     String filename = resource.getFile();
     log.info("Realtime loading index file[%s]", filename);
     try {
-      for (Object obj : jsonMapper.readValue(new File(filename), List.class)) {
-        final Map<String, Object> event = jsonMapper.convertValue(obj, Map.class);
-        events.add(event);
+      for (Object obj : JSON_MAPPER.readValue(new File(filename), List.class)) {
+        final Map<String, Object> event = JSON_MAPPER.convertValue(obj, Map.class);
+        EVENTS.add(event);
       }
     }
     catch (Exception e) {
@@ -353,11 +353,11 @@ public class SchemalessIndexTest
   {
     synchronized (log) {
       try {
-        if (events.isEmpty()) {
+        if (EVENTS.isEmpty()) {
           makeEvents();
         }
 
-        for (final Map<String, Object> event : events) {
+        for (final Map<String, Object> event : EVENTS) {
 
           final long timestamp = new DateTime(event.get(TIMESTAMP), ISOChronology.getInstanceUTC()).getMillis();
           final List<String> dims = new ArrayList<>();
@@ -387,8 +387,8 @@ public class SchemalessIndexTest
           tmpFile.mkdirs();
           tmpFile.deleteOnExit();
 
-          indexMerger.persist(rowIndex, tmpFile, indexSpec, null);
-          rowPersistedIndexes.add(indexIO.loadIndex(tmpFile));
+          indexMerger.persist(rowIndex, tmpFile, INDEX_SPEC, null);
+          ROW_PERSISTED_INDEXES.add(indexIO.loadIndex(tmpFile));
         }
       }
       catch (IOException e) {
@@ -416,9 +416,9 @@ public class SchemalessIndexTest
         .buildOnheap();
 
     try {
-      final List<Object> events = jsonMapper.readValue(new File(filename), List.class);
+      final List<Object> events = JSON_MAPPER.readValue(new File(filename), List.class);
       for (Object obj : events) {
-        final Map<String, Object> event = jsonMapper.convertValue(obj, Map.class);
+        final Map<String, Object> event = JSON_MAPPER.convertValue(obj, Map.class);
 
         final List<String> dims = new ArrayList<>();
         for (Map.Entry<String, Object> entry : event.entrySet()) {
@@ -453,7 +453,7 @@ public class SchemalessIndexTest
       theFile.mkdirs();
       theFile.deleteOnExit();
       filesToMap.add(theFile);
-      indexMerger.persist(index, theFile, indexSpec, null);
+      indexMerger.persist(index, theFile, INDEX_SPEC, null);
     }
 
     return filesToMap;
@@ -473,14 +473,14 @@ public class SchemalessIndexTest
 
       List<File> filesToMap = makeFilesToMap(tmpFile, files);
 
-      VersionedIntervalTimeline<Integer, File> timeline = new VersionedIntervalTimeline<Integer, File>(
+      VersionedIntervalTimeline<Integer, OvershadowableFile> timeline = new VersionedIntervalTimeline<>(
           Comparators.naturalNullsFirst()
       );
 
       ShardSpec noneShardSpec = NoneShardSpec.instance();
 
       for (int i = 0; i < intervals.size(); i++) {
-        timeline.add(intervals.get(i), i, noneShardSpec.createChunk(filesToMap.get(i)));
+        timeline.add(intervals.get(i), i, noneShardSpec.createChunk(new OvershadowableFile(i, filesToMap.get(i))));
       }
 
       final List<IndexableAdapter> adapters = Lists.newArrayList(
@@ -488,23 +488,23 @@ public class SchemalessIndexTest
               // TimelineObjectHolder is actually an iterable of iterable of indexable adapters
               Iterables.transform(
                   timeline.lookup(Intervals.of("1000-01-01/3000-01-01")),
-                  new Function<TimelineObjectHolder<Integer, File>, Iterable<IndexableAdapter>>()
+                  new Function<TimelineObjectHolder<Integer, OvershadowableFile>, Iterable<IndexableAdapter>>()
                   {
                     @Override
-                    public Iterable<IndexableAdapter> apply(final TimelineObjectHolder<Integer, File> timelineObjectHolder)
+                    public Iterable<IndexableAdapter> apply(final TimelineObjectHolder<Integer, OvershadowableFile> timelineObjectHolder)
                     {
                       return Iterables.transform(
                           timelineObjectHolder.getObject(),
 
                           // Each chunk can be used to build the actual IndexableAdapter
-                          new Function<PartitionChunk<File>, IndexableAdapter>()
+                          new Function<PartitionChunk<OvershadowableFile>, IndexableAdapter>()
                           {
                             @Override
-                            public IndexableAdapter apply(PartitionChunk<File> chunk)
+                            public IndexableAdapter apply(PartitionChunk<OvershadowableFile> chunk)
                             {
                               try {
                                 return new RowFilteringIndexAdapter(
-                                    new QueryableIndexIndexableAdapter(indexIO.loadIndex(chunk.getObject())),
+                                    new QueryableIndexIndexableAdapter(indexIO.loadIndex(chunk.getObject().file)),
                                     rowPointer -> timelineObjectHolder.getInterval().contains(rowPointer.getTimestamp())
                                 );
                               }
@@ -520,7 +520,7 @@ public class SchemalessIndexTest
           )
       );
 
-      return indexIO.loadIndex(indexMerger.append(adapters, null, mergedFile, indexSpec, null));
+      return indexIO.loadIndex(indexMerger.append(adapters, null, mergedFile, INDEX_SPEC, null));
     }
     catch (IOException e) {
       throw new RuntimeException(e);
@@ -561,13 +561,61 @@ public class SchemalessIndexTest
               true,
               METRIC_AGGS,
               mergedFile,
-              indexSpec,
+              INDEX_SPEC,
               null
           )
       );
     }
     catch (IOException e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  private static class OvershadowableFile implements Overshadowable<OvershadowableFile>
+  {
+    private final String majorVersion;
+    private final File file;
+
+    OvershadowableFile(int majorVersion, File file)
+    {
+      this.majorVersion = Integer.toString(majorVersion);
+      this.file = file;
+    }
+
+    @Override
+    public boolean overshadows(OvershadowableFile other)
+    {
+      return false;
+    }
+
+    @Override
+    public int getStartRootPartitionId()
+    {
+      return 0;
+    }
+
+    @Override
+    public int getEndRootPartitionId()
+    {
+      return 0;
+    }
+
+    @Override
+    public String getVersion()
+    {
+      return majorVersion;
+    }
+
+    @Override
+    public short getMinorVersion()
+    {
+      return 0;
+    }
+
+    @Override
+    public short getAtomicUpdateGroupSize()
+    {
+      return 0;
     }
   }
 }

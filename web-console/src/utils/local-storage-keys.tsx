@@ -17,6 +17,7 @@
  */
 
 export const LocalStorageKeys = {
+  CAPABILITIES_OVERRIDE: 'capabilities-override' as 'capabilities-override',
   INGESTION_SPEC: 'ingestion-spec' as 'ingestion-spec',
   DATASOURCE_TABLE_COLUMN_SELECTION: 'datasource-table-column-selection' as 'datasource-table-column-selection',
   SEGMENT_TABLE_COLUMN_SELECTION: 'segment-table-column-selection' as 'segment-table-column-selection',
@@ -33,6 +34,8 @@ export const LocalStorageKeys = {
   SERVERS_REFRESH_RATE: 'servers-refresh-rate' as 'servers-refresh-rate',
   SUPERVISORS_REFRESH_RATE: 'supervisors-refresh-rate' as 'supervisors-refresh-rate',
   LOOKUPS_REFRESH_RATE: 'lookups-refresh-rate' as 'lookups-refresh-rate',
+  QUERY_HISTORY: 'query-history' as 'query-history',
+  AUTO_RUN: 'auto-run' as 'auto-run',
 };
 export type LocalStorageKeys = typeof LocalStorageKeys[keyof typeof LocalStorageKeys];
 
@@ -43,7 +46,7 @@ export function localStorageSet(key: LocalStorageKeys, value: string): void {
   localStorage.setItem(key, value);
 }
 
-export function localStorageGet(key: LocalStorageKeys): string | null {
-  if (typeof localStorage === 'undefined') return null;
-  return localStorage.getItem(key);
+export function localStorageGet(key: LocalStorageKeys): string | undefined {
+  if (typeof localStorage === 'undefined') return;
+  return localStorage.getItem(key) || undefined;
 }

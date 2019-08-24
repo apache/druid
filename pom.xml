@@ -79,6 +79,7 @@
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
         <avatica.version>1.12.0</avatica.version>
         <calcite.version>1.17.0</calcite.version>
+        <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
         <fastutil.version>8.2.3</fastutil.version>
         <guava.version>16.0.1</guava.version>
@@ -182,6 +183,12 @@
             <name>${repoOrgName}</name>
             <url>${repoOrgUrl}</url>
         </repository>
+
+        <!-- Only used by core, but moved to root for parallel build dependency resolution -->
+        <repository>
+          <id>sigar</id>
+          <url>https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/</url>
+        </repository>
     </repositories>
 
     <dependencyManagement>
@@ -200,7 +207,7 @@
             <dependency>
                 <groupId>commons-io</groupId>
                 <artifactId>commons-io</artifactId>
-                <version>2.5</version>
+                <version>2.6</version>
             </dependency>
             <dependency>
                 <groupId>commons-logging</groupId>
@@ -212,6 +219,11 @@
                 <artifactId>commons-lang</artifactId>
                 <version>2.6</version>
             </dependency>
+           <dependency>
+               <groupId>commons-net</groupId>
+               <artifactId>commons-net</artifactId>
+               <version>3.6</version>
+           </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk-ec2</artifactId>
@@ -354,7 +366,7 @@
             <dependency>
                 <groupId>org.mozilla</groupId>
                 <artifactId>rhino</artifactId>
-                <version>1.7R5</version>
+                <version>1.7.11</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -629,7 +641,7 @@
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
-                <version>4.4.4</version>
+                <version>4.4.11</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
@@ -669,12 +681,12 @@
             <dependency>
                 <groupId>org.apache.derby</groupId>
                 <artifactId>derbynet</artifactId>
-                <version>10.11.1.1</version>
+                <version>${derby.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.derby</groupId>
                 <artifactId>derbyclient</artifactId>
-                <version>10.11.1.1</version>
+                <version>${derby.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -689,7 +701,7 @@
             <dependency>
                 <groupId>com.opencsv</groupId>
                 <artifactId>opencsv</artifactId>
-                <version>4.2</version>
+                <version>4.6</version>
             </dependency>
             <dependency>
                 <groupId>com.jayway.jsonpath</groupId>
@@ -699,7 +711,7 @@
             <dependency>
                 <groupId>net.thisptr</groupId>
                 <artifactId>jackson-jq</artifactId>
-                <version>0.0.7</version>
+                <version>0.0.10</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -947,7 +959,7 @@
             <dependency>
                 <groupId>pl.pragmatists</groupId>
                 <artifactId>JUnitParams</artifactId>
-                <version>1.0.4</version>
+                <version>1.1.1</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -962,13 +974,33 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>cobertura-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.eluder.coveralls</groupId>
-                <artifactId>coveralls-maven-plugin</artifactId>
-                <version>4.0.0</version>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.4</version>
+                <configuration>
+                    <excludes>
+                        <!-- Ignore generated code -->
+                        <exclude>org/apache/druid/math/expr/antlr/Expr*</exclude>  <!-- core -->
+                        <exclude>org/apache/druid/**/generated/*Benchmark*</exclude>  <!-- benchmarks -->
+                        <exclude>org/apache/druid/data/input/influx/InfluxLineProtocol*</exclude>  <!-- extensions-contrib/influx-extensions -->
+
+                        <!-- Ignore non-production code -->
+                        <exclude>org/apache/druid/**/*Benchmark.*</exclude>  <!-- benchmarks -->
+                        <exclude>org/testng/DruidTestRunnerFactory*</exclude>  <!-- benchmarks -->
+                        <exclude>org/apache/druid/testing/**/*</exclude>  <!-- integration-tests -->
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                        <configuration>
+                            <propertyName>jacocoArgLine</propertyName>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -1125,7 +1157,7 @@
                 <version>1.4.1</version>
                 <executions>
                     <execution>
-                        <id>enforce-banned-dependencies</id>
+                        <id>default-cli</id>
                         <goals>
                             <goal>enforce</goal>
                         </goals>
@@ -1227,11 +1259,12 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>2.19.1</version>
+                    <version>2.22.2</version>
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
                         <!-- set default options -->
                         <argLine>
+                            @{jacocoArgLine}
                             -Xmx1500m
                             -XX:MaxDirectMemorySize=512m
                             -Duser.language=en
@@ -1291,7 +1324,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-resources-plugin</artifactId>
-                    <version>2.5</version>
+                    <version>3.1.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -1326,7 +1359,7 @@
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>exec-maven-plugin</artifactId>
-                    <version>1.2.1</version>
+                    <version>1.6.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -1338,24 +1371,6 @@
 
                         <!-- HadoopFsWrapper javadocs cannot be generated due to missing annotations -->
                         <excludePackageNames>org.apache.hadoop.fs</excludePackageNames>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>cobertura-maven-plugin</artifactId>
-                    <version>2.7</version>
-                    <configuration>
-                        <instrumentation>
-                            <ignores>
-                                <ignore>org.apache.druid.sql.antlr4.*</ignore>
-                            </ignores>
-                            <excludes>
-                                <exclude>org/apache/druid/sql/antlr4/**/*.class</exclude>
-                            </excludes>
-                        </instrumentation>
-                        <format>xml</format>
-                        <!-- aggregated reports for multi-module projects -->
-                        <aggregate>true</aggregate>
                     </configuration>
                 </plugin>
                 <plugin>

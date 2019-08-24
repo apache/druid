@@ -317,7 +317,7 @@ public class IndexGeneratorJob implements Jobby
 
   public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, BytesWritable>
   {
-    private static final HashFunction hashFunction = Hashing.murmur3_128();
+    private static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
 
     private AggregatorFactory[] aggregators;
 
@@ -364,7 +364,7 @@ public class IndexGeneratorJob implements Jobby
       final long truncatedTimestamp = granularitySpec.getQueryGranularity()
                                                      .bucketStart(inputRow.getTimestamp())
                                                      .getMillis();
-      final byte[] hashedDimensions = hashFunction.hashBytes(
+      final byte[] hashedDimensions = HASH_FUNCTION.hashBytes(
           HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(
               Rows.toGroupKey(
                   truncatedTimestamp,
@@ -605,7 +605,7 @@ public class IndexGeneratorJob implements Jobby
     ) throws IOException
     {
       return HadoopDruidIndexerConfig.INDEX_MERGER_V9
-          .persist(index, interval, file, config.getIndexSpec(), progressIndicator, null);
+          .persist(index, interval, file, config.getIndexSpecForIntermediatePersists(), progressIndicator, null);
     }
 
     protected File mergeQueryableIndex(
@@ -823,6 +823,7 @@ public class IndexGeneratorJob implements Jobby
             -1,
             -1
         );
+
         final DataSegment segment = JobHelper.serializeOutIndex(
             segmentTemplate,
             context.getConfiguration(),

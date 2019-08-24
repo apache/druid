@@ -72,6 +72,12 @@ export interface HeaderAndRows {
   rows: SampleEntry[];
 }
 
+export interface ExampleManifest {
+  name: string;
+  description: string;
+  spec: any;
+}
+
 function dedupe(xs: string[]): string[] {
   const seen: Record<string, boolean> = {};
   return xs.filter(x => {
@@ -98,11 +104,7 @@ export function headerFromSampleResponse(
   columnOrder?: string[],
 ): string[] {
   let columns = sortWithPrefixSuffix(
-    dedupe(
-      [].concat(
-        ...(filterMap(sampleResponse.data, s => (s.parsed ? Object.keys(s.parsed) : null)) as any),
-      ),
-    ).sort(),
+    dedupe(sampleResponse.data.flatMap(s => (s.parsed ? Object.keys(s.parsed) : []))).sort(),
     columnOrder || ['__time'],
     [],
     alphanumericCompare,
@@ -524,4 +526,63 @@ export async function sampleForSchema(
   };
 
   return postToSampler(sampleSpec, 'schema');
+}
+
+export async function sampleForExampleManifests(
+  exampleManifestUrl: string,
+): Promise<ExampleManifest[]> {
+  const sampleSpec: SampleSpec = {
+    type: 'index',
+    spec: {
+      type: 'index',
+      ioConfig: {
+        type: 'index',
+        firehose: { type: 'http', uris: [exampleManifestUrl] },
+      },
+      dataSchema: {
+        dataSource: 'sample',
+        parser: {
+          type: 'string',
+          parseSpec: {
+            format: 'tsv',
+            timestampSpec: {
+              column: 'timestamp',
+              missingValue: '2010-01-01T00:00:00Z',
+            },
+            dimensionsSpec: {},
+            hasHeaderRow: true,
+          },
+        },
+      },
+    },
+    samplerConfig: { numRows: 50, timeoutMs: 10000 },
+  };
+
+  const exampleData = await postToSampler(sampleSpec, 'example-manifest');
+
+  return filterMap(exampleData.data, datum => {
+    const parsed = datum.parsed;
+    if (!parsed) return;
+    let { name, description, spec } = parsed;
+    try {
+      spec = JSON.parse(spec);
+    } catch {
+      return;
+    }
+
+    if (
+      typeof name === 'string' &&
+      typeof description === 'string' &&
+      spec &&
+      typeof spec === 'object'
+    ) {
+      return {
+        name: parsed.name,
+        description: parsed.description,
+        spec,
+      };
+    } else {
+      return;
+    }
+  });
 }

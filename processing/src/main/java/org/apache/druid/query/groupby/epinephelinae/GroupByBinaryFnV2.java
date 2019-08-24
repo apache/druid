@@ -19,19 +19,25 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
-import com.google.common.collect.Maps;
-import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.joda.time.DateTime;
+import org.apache.druid.query.groupby.ResultRow;
 
-import java.util.Map;
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.function.BinaryOperator;
 
-public class GroupByBinaryFnV2 implements BinaryFn<Row, Row, Row>
+/**
+ * Class that knows how to merge aggregator data from two groupBy {@link ResultRow} objects that have the same time
+ * and dimensions. This code runs on Brokers as well as data servers, like Historicals.
+ *
+ * Used by
+ * {@link org.apache.druid.query.groupby.strategy.GroupByStrategyV2#mergeResults}.
+ */
+public class GroupByBinaryFnV2 implements BinaryOperator<ResultRow>
 {
   private final GroupByQuery query;
 
@@ -41,7 +47,8 @@ public class GroupByBinaryFnV2 implements BinaryFn<Row, Row, Row>
   }
 
   @Override
-  public Row apply(final Row arg1, final Row arg2)
+  @Nullable
+  public ResultRow apply(@Nullable final ResultRow arg1, @Nullable final ResultRow arg2)
   {
     if (arg1 == null) {
       return arg2;
@@ -49,36 +56,39 @@ public class GroupByBinaryFnV2 implements BinaryFn<Row, Row, Row>
       return arg1;
     }
 
-    final Map<String, Object> newMap = Maps.newHashMapWithExpectedSize(
-        query.getDimensions().size()
-        + query.getAggregatorSpecs().size()
-    );
+    final ResultRow newResult = ResultRow.create(query.getResultRowSizeWithoutPostAggregators());
 
-    // Add dimensions
-    for (DimensionSpec dimension : query.getDimensions()) {
-      newMap.put(dimension.getOutputName(), arg1.getRaw(dimension.getOutputName()));
+    // Add timestamp.
+    if (query.getResultRowHasTimestamp()) {
+      newResult.set(0, adjustTimestamp(arg1));
     }
 
-    // Add aggregations
-    for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
-      newMap.put(
-          aggregatorFactory.getName(),
-          aggregatorFactory.combine(
-              arg1.getRaw(aggregatorFactory.getName()),
-              arg2.getRaw(aggregatorFactory.getName())
-          )
-      );
+    // Add dimensions.
+    final int dimensionStart = query.getResultRowDimensionStart();
+    final List<DimensionSpec> dimensions = query.getDimensions();
+    for (int i = 0; i < dimensions.size(); i++) {
+      final int rowIndex = dimensionStart + i;
+      newResult.set(rowIndex, arg1.get(rowIndex));
     }
 
-    return new MapBasedRow(adjustTimestamp(arg1), newMap);
+    // Add aggregations.
+    final int aggregatorStart = query.getResultRowAggregatorStart();
+    final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
+    for (int i = 0; i < aggregatorSpecs.size(); i++) {
+      final AggregatorFactory aggregatorFactory = aggregatorSpecs.get(i);
+      final int rowIndex = aggregatorStart + i;
+      newResult.set(rowIndex, aggregatorFactory.combine(arg1.get(rowIndex), arg2.get(rowIndex)));
+    }
+
+    return newResult;
   }
 
-  private DateTime adjustTimestamp(final Row row)
+  private long adjustTimestamp(final ResultRow row)
   {
     if (query.getGranularity() instanceof AllGranularity) {
-      return row.getTimestamp();
+      return row.getLong(0);
     } else {
-      return query.getGranularity().bucketStart(row.getTimestamp());
+      return query.getGranularity().bucketStart(DateTimes.utc(row.getLong(0))).getMillis();
     }
   }
 }

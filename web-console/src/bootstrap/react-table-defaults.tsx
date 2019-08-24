@@ -27,7 +27,7 @@ import { ReactTableCustomPagination } from './react-table-custom-pagination';
 /* tslint:disable:max-classes-per-file */
 
 class NoData extends React.PureComponent {
-  render() {
+  render(): JSX.Element | null {
     const { children } = this.props;
     if (!children) return null;
     return <div className="rt-noData">{children}</div>;

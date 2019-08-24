@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { ClearableInput } from './clearable-input';
 
@@ -28,7 +28,7 @@ describe('clearable-input', () => {
         className={'testClassName'}
         value={'testValue'}
         placeholder={'testPlaceholder'}
-        onChange={() => null}
+        onChange={() => {}}
       >
         <div>Hello World</div>
       </ClearableInput>

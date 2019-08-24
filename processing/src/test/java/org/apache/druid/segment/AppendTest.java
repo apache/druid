@@ -68,7 +68,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -88,7 +87,7 @@ public class AppendTest
   };
 
   final String dataSource = "testing";
-  final Granularity allGran = Granularities.ALL;
+  final Granularity ALL_GRAN = Granularities.ALL;
   final String marketDimension = "market";
   final String qualityDimension = "quality";
   final String placementDimension = "placement";
@@ -185,8 +184,7 @@ public class AppendTest
                                     .dataSource(dataSource)
                                     .build();
     QueryRunner runner = TestQueryRunners.makeTimeBoundaryQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -210,8 +208,7 @@ public class AppendTest
                                     .dataSource(dataSource)
                                     .build();
     QueryRunner runner = TestQueryRunners.makeTimeBoundaryQueryRunner(segment2);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -235,8 +232,7 @@ public class AppendTest
 
     TimeseriesQuery query = makeTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -260,8 +256,7 @@ public class AppendTest
 
     TimeseriesQuery query = makeTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment2);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -285,8 +280,7 @@ public class AppendTest
 
     TimeseriesQuery query = makeFilteredTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -310,8 +304,7 @@ public class AppendTest
 
     TimeseriesQuery query = makeFilteredTimeseriesQuery();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment2);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -357,8 +350,7 @@ public class AppendTest
     TopNQuery query = makeTopNQuery();
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment, pool);
-      HashMap<String, Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
   }
 
@@ -405,8 +397,7 @@ public class AppendTest
     TopNQuery query = makeTopNQuery();
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment2, pool);
-      HashMap<String, Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
   }
 
@@ -435,8 +426,7 @@ public class AppendTest
     TopNQuery query = makeFilteredTopNQuery();
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment, pool);
-      HashMap<String, Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
   }
 
@@ -455,8 +445,7 @@ public class AppendTest
     TopNQuery query = makeFilteredTopNQuery();
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment2, pool);
-      HashMap<String, Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
   }
 
@@ -479,8 +468,7 @@ public class AppendTest
 
     SearchQuery query = makeSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -501,8 +489,7 @@ public class AppendTest
 
     SearchQuery query = makeSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment2);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -522,8 +509,7 @@ public class AppendTest
 
     SearchQuery query = makeFilteredSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -544,8 +530,7 @@ public class AppendTest
 
     SearchQuery query = makeFilteredSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment2);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   @Test
@@ -569,7 +554,7 @@ public class AppendTest
 
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(dataSource)
-                                  .granularity(allGran)
+                                  .granularity(ALL_GRAN)
                                   .intervals(fullOnInterval)
                                   .filters(marketDimension, "breakstuff")
                                   .aggregators(
@@ -586,15 +571,14 @@ public class AppendTest
                                   .postAggregators(addRowsIndexConstant)
                                   .build();
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment3);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
   private TimeseriesQuery makeTimeseriesQuery()
   {
     return Druids.newTimeseriesQueryBuilder()
                  .dataSource(dataSource)
-                 .granularity(allGran)
+                 .granularity(ALL_GRAN)
                  .intervals(fullOnInterval)
                  .aggregators(
                      Lists.newArrayList(
@@ -615,7 +599,7 @@ public class AppendTest
   {
     return Druids.newTimeseriesQueryBuilder()
                  .dataSource(dataSource)
-                 .granularity(allGran)
+                 .granularity(ALL_GRAN)
                  .intervals(fullOnInterval)
                  .filters(
                      new OrDimFilter(
@@ -642,7 +626,7 @@ public class AppendTest
   {
     return new TopNQueryBuilder()
         .dataSource(dataSource)
-        .granularity(allGran)
+        .granularity(ALL_GRAN)
         .dimension(marketDimension)
         .metric(indexMetric)
         .threshold(3)
@@ -658,7 +642,7 @@ public class AppendTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(addRowsIndexConstant))
+        .postAggregators(addRowsIndexConstant)
         .build();
   }
 
@@ -666,7 +650,7 @@ public class AppendTest
   {
     return new TopNQueryBuilder()
         .dataSource(dataSource)
-        .granularity(allGran)
+        .granularity(ALL_GRAN)
         .dimension(marketDimension)
         .metric(indexMetric)
         .threshold(3)
@@ -688,7 +672,7 @@ public class AppendTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(addRowsIndexConstant))
+        .postAggregators(addRowsIndexConstant)
         .build();
   }
 
@@ -696,7 +680,7 @@ public class AppendTest
   {
     return Druids.newSearchQueryBuilder()
                  .dataSource(dataSource)
-                 .granularity(allGran)
+                 .granularity(ALL_GRAN)
                  .intervals(fullOnInterval)
                  .query("a")
                  .build();
@@ -707,7 +691,7 @@ public class AppendTest
     return Druids.newSearchQueryBuilder()
                  .dataSource(dataSource)
                  .filters(new NotDimFilter(new SelectorDimFilter(marketDimension, "spot", null)))
-                 .granularity(allGran)
+                 .granularity(ALL_GRAN)
                  .intervals(fullOnInterval)
                  .query("a")
                  .build();

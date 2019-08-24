@@ -25,8 +25,7 @@ import { HashRouter, Route, Switch } from 'react-router-dom';
 
 import { ExternalLink, HeaderActiveTab, HeaderBar, Loader } from './components';
 import { AppToaster } from './singletons/toaster';
-import { UrlBaser } from './singletons/url-baser';
-import { QueryManager } from './utils';
+import { localStorageGet, LocalStorageKeys, QueryManager } from './utils';
 import { DRUID_DOCS_API, DRUID_DOCS_SQL } from './variables';
 import {
   DatasourcesView,
@@ -45,13 +44,10 @@ type Capabilities = 'working-with-sql' | 'working-without-sql' | 'broken';
 
 export interface ConsoleApplicationProps {
   hideLegacy: boolean;
-  baseURL?: string;
-  customHeaderName?: string;
-  customHeaderValue?: string;
+  exampleManifestsUrl?: string;
 }
 
 export interface ConsoleApplicationState {
-  aboutDialogOpen: boolean;
   noSqlMode: boolean;
   capabilitiesLoading: boolean;
 }
@@ -60,20 +56,27 @@ export class ConsoleApplication extends React.PureComponent<
   ConsoleApplicationProps,
   ConsoleApplicationState
 > {
-  static MESSAGE_KEY = 'druid-console-message';
-  static MESSAGE_DISMISSED = 'dismissed';
+  static STATUS_TIMEOUT = 2000;
+
   private capabilitiesQueryManager: QueryManager<null, Capabilities>;
 
   static async discoverCapabilities(): Promise<Capabilities> {
+    const capabilitiesOverride = localStorageGet(LocalStorageKeys.CAPABILITIES_OVERRIDE);
+    if (capabilitiesOverride) return capabilitiesOverride as Capabilities;
+
     try {
-      await axios.post('/druid/v2/sql', { query: 'SELECT 1337' });
+      await axios.post(
+        '/druid/v2/sql',
+        { query: 'SELECT 1337', context: { timeout: ConsoleApplication.STATUS_TIMEOUT } },
+        { timeout: ConsoleApplication.STATUS_TIMEOUT },
+      );
     } catch (e) {
       const { response } = e;
       if (response.status !== 405 || response.statusText !== 'Method Not Allowed') {
         return 'working-with-sql'; // other failure
       }
       try {
-        await axios.get('/status');
+        await axios.get('/status', { timeout: ConsoleApplication.STATUS_TIMEOUT });
       } catch (e) {
         return 'broken'; // total failure
       }
@@ -109,29 +112,20 @@ export class ConsoleApplication extends React.PureComponent<
     });
   }
 
-  private supervisorId: string | undefined;
-  private taskId: string | undefined;
-  private openDialog: string | undefined;
-  private datasource: string | undefined;
-  private onlyUnavailable: boolean | undefined;
-  private initQuery: string | undefined;
-  private middleManager: string | undefined;
+  private supervisorId?: string;
+  private taskId?: string;
+  private openDialog?: string;
+  private datasource?: string;
+  private onlyUnavailable?: boolean;
+  private initQuery?: string;
+  private middleManager?: string;
 
   constructor(props: ConsoleApplicationProps, context: any) {
     super(props, context);
     this.state = {
-      aboutDialogOpen: false,
       noSqlMode: false,
       capabilitiesLoading: true,
     };
-
-    if (props.baseURL) {
-      axios.defaults.baseURL = props.baseURL;
-      UrlBaser.baseURL = props.baseURL;
-    }
-    if (props.customHeaderName && props.customHeaderValue) {
-      axios.defaults.headers.common[props.customHeaderName] = props.customHeaderValue;
-    }
 
     this.capabilitiesQueryManager = new QueryManager({
       processQuery: async () => {
@@ -170,24 +164,37 @@ export class ConsoleApplication extends React.PureComponent<
     }, 50);
   }
 
-  private goToLoadDataView = (supervisorId?: string, taskId?: string) => {
+  private goToLoadData = (supervisorId?: string, taskId?: string) => {
     if (taskId) this.taskId = taskId;
     if (supervisorId) this.supervisorId = supervisorId;
     window.location.hash = 'load-data';
     this.resetInitialsWithDelay();
   };
 
-  private goToTask = (taskId: string | undefined, openDialog?: string) => {
+  private goToDatasources = (datasource: string) => {
+    this.datasource = datasource;
+    window.location.hash = 'datasources';
+    this.resetInitialsWithDelay();
+  };
+
+  private goToSegments = (datasource: string, onlyUnavailable = false) => {
+    this.datasource = datasource;
+    this.onlyUnavailable = onlyUnavailable;
+    window.location.hash = 'segments';
+    this.resetInitialsWithDelay();
+  };
+
+  private goToTaskWithTaskId = (taskId?: string, openDialog?: string) => {
     this.taskId = taskId;
     if (openDialog) this.openDialog = openDialog;
     window.location.hash = 'tasks';
     this.resetInitialsWithDelay();
   };
 
-  private goToSegments = (datasource: string, onlyUnavailable = false) => {
-    this.datasource = `"${datasource}"`;
-    this.onlyUnavailable = onlyUnavailable;
-    window.location.hash = 'segments';
+  private goToTaskWithDatasource = (datasource?: string, openDialog?: string) => {
+    this.datasource = datasource;
+    if (openDialog) this.openDialog = openDialog;
+    window.location.hash = 'tasks';
     this.resetInitialsWithDelay();
   };
 
@@ -224,12 +231,15 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private wrappedLoadDataView = () => {
+    const { exampleManifestsUrl } = this.props;
+
     return this.wrapInViewContainer(
       'load-data',
       <LoadDataView
         initSupervisorId={this.supervisorId}
         initTaskId={this.taskId}
-        goToTask={this.goToTask}
+        exampleManifestsUrl={exampleManifestsUrl}
+        goToTask={this.goToTaskWithTaskId}
       />,
       'narrow-pad',
     );
@@ -244,7 +254,9 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer(
       'datasources',
       <DatasourcesView
+        initDatasource={this.datasource}
         goToQuery={this.goToQuery}
+        goToTask={this.goToTaskWithDatasource}
         goToSegments={this.goToSegments}
         noSqlMode={noSqlMode}
       />,
@@ -270,10 +282,12 @@ export class ConsoleApplication extends React.PureComponent<
       'tasks',
       <TasksView
         taskId={this.taskId}
+        datasourceId={this.datasource}
         openDialog={this.openDialog}
+        goToDatasource={this.goToDatasources}
         goToQuery={this.goToQuery}
         goToMiddleManager={this.goToMiddleManager}
-        goToLoadDataView={this.goToLoadDataView}
+        goToLoadData={this.goToLoadData}
         noSqlMode={noSqlMode}
       />,
     );
@@ -286,7 +300,7 @@ export class ConsoleApplication extends React.PureComponent<
       <ServersView
         middleManager={this.middleManager}
         goToQuery={this.goToQuery}
-        goToTask={this.goToTask}
+        goToTask={this.goToTaskWithTaskId}
         noSqlMode={noSqlMode}
       />,
     );
@@ -296,7 +310,7 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer('lookups', <LookupsView />);
   };
 
-  render() {
+  render(): JSX.Element {
     const { capabilitiesLoading } = this.state;
 
     if (capabilitiesLoading) {

@@ -22,12 +22,21 @@ import React from 'react';
 import { Field } from '../components/auto-form/auto-form';
 import { ExternalLink } from '../components/external-link/external-link';
 
-import { BASIC_FORMAT_VALUES, DATE_FORMAT_VALUES, DATE_TIME_FORMAT_VALUES } from './druid-time';
+import {
+  BASIC_TIME_FORMATS,
+  DATE_ONLY_TIME_FORMATS,
+  DATETIME_TIME_FORMATS,
+  OTHER_TIME_FORMATS,
+} from './druid-time';
 import { deepGet, deepSet } from './object-change';
+
+export const MAX_INLINE_DATA_LENGTH = 65536;
 
 // These constants are used to make sure that they are not constantly recreated thrashing the pure components
 export const EMPTY_OBJECT: any = {};
 export const EMPTY_ARRAY: any[] = [];
+
+const CURRENT_YEAR = new Date().getUTCFullYear();
 
 export interface IngestionSpec {
   type?: IngestionType;
@@ -48,6 +57,8 @@ export type IngestionComboType =
   | 'kinesis'
   | 'index:http'
   | 'index:local'
+  | 'index:ingestSegment'
+  | 'index:inline'
   | 'index:static-s3'
   | 'index:static-google-blobstore';
 
@@ -84,9 +95,11 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
       switch (firehose.type) {
         case 'local':
         case 'http':
+        case 'ingestSegment':
+        case 'inline':
         case 'static-s3':
         case 'static-google-blobstore':
-          return `index:${firehose.type}` as any;
+          return `index:${firehose.type}` as IngestionComboType;
       }
   }
 
@@ -100,6 +113,12 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
     case 'index:http':
       return 'HTTP(s)';
+
+    case 'index:ingestSegment':
+      return 'Reindex from Druid';
+
+    case 'index:inline':
+      return 'Paste data';
 
     case 'index:static-s3':
       return 'Amazon S3';
@@ -129,11 +148,11 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
 export function getIngestionImage(ingestionType: IngestionComboTypeWithExtra): string {
   const parts = ingestionType.split(':');
-  if (parts.length === 2) return parts[1];
+  if (parts.length === 2) return parts[1].toLowerCase();
   return ingestionType;
 }
 
-export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): string | null {
+export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): string | undefined {
   switch (ingestionType) {
     case 'index:static-s3':
       return 'druid-s3-extensions';
@@ -148,7 +167,7 @@ export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): s
       return 'druid-kinesis-indexing-service';
 
     default:
-      return null;
+      return;
   }
 }
 
@@ -263,24 +282,24 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
   {
     name: 'pattern',
     type: 'string',
-    isDefined: (p: ParseSpec) => p.format === 'regex',
+    defined: (p: ParseSpec) => p.format === 'regex',
   },
   {
     name: 'function',
     type: 'string',
-    isDefined: (p: ParseSpec) => p.format === 'javascript',
+    defined: (p: ParseSpec) => p.format === 'javascript',
   },
   {
     name: 'hasHeaderRow',
     type: 'boolean',
-    defaultValue: true,
-    isDefined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
+    defaultValue: false,
+    defined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
   },
   {
     name: 'skipHeaderRows',
     type: 'number',
     defaultValue: 0,
-    isDefined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
+    defined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
     min: 0,
     info: (
       <>
@@ -293,14 +312,14 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
   {
     name: 'columns',
     type: 'string-array',
-    isDefined: (p: ParseSpec) =>
+    defined: (p: ParseSpec) =>
       ((p.format === 'csv' || p.format === 'tsv') && !p.hasHeaderRow) || p.format === 'regex',
   },
   {
     name: 'listDelimiter',
     type: 'string',
     defaultValue: '|',
-    isDefined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
+    defined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
   },
 ];
 
@@ -308,9 +327,9 @@ export function getParseSpecFormFields() {
   return PARSE_SPEC_FORM_FIELDS;
 }
 
-export function issueWithParser(parser: Parser | undefined): string | null {
+export function issueWithParser(parser: Parser | undefined): string | undefined {
   if (!parser) return 'no parser';
-  if (parser.type === 'map') return null;
+  if (parser.type === 'map') return;
 
   const { parseSpec } = parser;
   if (!parseSpec) return 'no parse spec';
@@ -324,7 +343,7 @@ export function issueWithParser(parser: Parser | undefined): string | null {
       if (!parseSpec['function']) return "must have a 'function'";
       break;
   }
-  return null;
+  return;
 }
 
 export function parseSpecHasFlatten(parseSpec: ParseSpec): boolean {
@@ -368,18 +387,21 @@ const TIMESTAMP_SPEC_FORM_FIELDS: Field<TimestampSpec>[] = [
     type: 'string',
     defaultValue: 'auto',
     suggestions: [
-      'auto',
-      ...BASIC_FORMAT_VALUES,
+      ...BASIC_TIME_FORMATS,
       {
         group: 'Date and time formats',
-        suggestions: DATE_TIME_FORMAT_VALUES,
+        suggestions: DATETIME_TIME_FORMATS,
       },
       {
         group: 'Date only formats',
-        suggestions: DATE_FORMAT_VALUES,
+        suggestions: DATE_ONLY_TIME_FORMATS,
+      },
+      {
+        group: 'Other time formats',
+        suggestions: OTHER_TIME_FORMATS,
       },
     ],
-    isDefined: (timestampSpec: TimestampSpec) => isColumnTimestampSpec(timestampSpec),
+    defined: (timestampSpec: TimestampSpec) => isColumnTimestampSpec(timestampSpec),
     info: (
       <p>
         Please specify your timestamp format by using the suggestions menu or typing in a{' '}
@@ -415,10 +437,12 @@ export function getTimestampSpecFormFields(timestampSpec: TimestampSpec) {
   }
 }
 
-export function issueWithTimestampSpec(timestampSpec: TimestampSpec | undefined): string | null {
+export function issueWithTimestampSpec(
+  timestampSpec: TimestampSpec | undefined,
+): string | undefined {
   if (!timestampSpec) return 'no spec';
   if (!timestampSpec.column && !timestampSpec.missingValue) return 'timestamp spec is blank';
-  return null;
+  return;
 }
 
 export interface DimensionsSpec {
@@ -447,7 +471,7 @@ const DIMENSION_SPEC_FORM_FIELDS: Field<DimensionSpec>[] = [
     name: 'createBitmapIndex',
     type: 'boolean',
     defaultValue: true,
-    isDefined: (dimensionSpec: DimensionSpec) => dimensionSpec.type === 'string',
+    defined: (dimensionSpec: DimensionSpec) => dimensionSpec.type === 'string',
   },
 ];
 
@@ -495,7 +519,7 @@ const FLATTEN_FIELD_FORM_FIELDS: Field<FlattenField>[] = [
     name: 'expr',
     type: 'string',
     placeholder: '$.thing',
-    isDefined: (flattenField: FlattenField) =>
+    defined: (flattenField: FlattenField) =>
       flattenField.type === 'path' || flattenField.type === 'jq',
     info: (
       <>
@@ -619,7 +643,7 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'fieldName',
     type: 'string',
-    isDefined: m => {
+    defined: m => {
       return [
         'longSum',
         'doubleSum',
@@ -647,7 +671,7 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
     name: 'maxStringBytes',
     type: 'number',
     defaultValue: 1024,
-    isDefined: m => {
+    defined: m => {
       return ['stringFirst', 'stringLast'].includes(m.type);
     },
   },
@@ -655,21 +679,21 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
     name: 'filterNullValues',
     type: 'boolean',
     defaultValue: false,
-    isDefined: m => {
+    defined: m => {
       return ['stringFirst', 'stringLast'].includes(m.type);
     },
   },
   {
     name: 'filter',
     type: 'json',
-    isDefined: m => {
+    defined: m => {
       return m.type === 'filtered';
     },
   },
   {
     name: 'aggregator',
     type: 'json',
-    isDefined: m => {
+    defined: m => {
       return m.type === 'filtered';
     },
   },
@@ -708,11 +732,21 @@ export interface IoConfig {
 export interface Firehose {
   type: string;
   baseDir?: string;
-  filter?: string;
+  filter?: any;
   uris?: string[];
   prefixes?: string[];
   blobs?: { bucket: string; path: string }[];
   fetchTimeout?: number;
+
+  // ingestSegment
+  dataSource?: string;
+  interval?: string;
+  dimensions?: string[];
+  metrics?: string[];
+  maxInputSegmentBytesPerTask?: number;
+
+  // inline
+  data?: string;
 }
 
 export function getIoConfigFormFields(ingestionComboType: IngestionComboType): Field<IoConfig>[] {
@@ -720,17 +754,15 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     name: 'firehose.type',
     label: 'Firehose type',
     type: 'string',
-    suggestions: ['local', 'http', 'static-s3', 'static-google-blobstore'],
+    suggestions: ['local', 'http', 'inline', 'static-s3', 'static-google-blobstore'],
     info: (
-      <>
-        <p>
-          Druid connects to raw data through{' '}
-          <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html">
-            firehoses
-          </ExternalLink>
-          . You can change your selected firehose here.
-        </p>
-      </>
+      <p>
+        Druid connects to raw data through{' '}
+        <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html">
+          firehoses
+        </ExternalLink>
+        . You can change your selected firehose here.
+      </p>
     ),
   };
 
@@ -794,6 +826,79 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
+    case 'index:ingestSegment':
+      return [
+        firehoseType,
+        {
+          name: 'firehose.dataSource',
+          label: 'Datasource',
+          type: 'string',
+          info: <p>The datasource to fetch rows from.</p>,
+        },
+        {
+          name: 'firehose.interval',
+          label: 'Interval',
+          type: 'string',
+          placeholder: `${CURRENT_YEAR}-01-01/${CURRENT_YEAR + 1}-01-01`,
+          suggestions: [
+            `${CURRENT_YEAR}/${CURRENT_YEAR + 1}`,
+            `${CURRENT_YEAR}-01-01/${CURRENT_YEAR + 1}-01-01`,
+            `${CURRENT_YEAR}-01-01T00:00:00/${CURRENT_YEAR + 1}-01-01T00:00:00`,
+          ],
+          info: (
+            <p>
+              A String representing ISO-8601 Interval. This defines the time range to fetch the data
+              over.
+            </p>
+          ),
+        },
+        {
+          name: 'firehose.dimensions',
+          label: 'Dimensions',
+          type: 'string-array',
+          placeholder: '(optional)',
+          info: (
+            <p>
+              The list of dimensions to select. If left empty, no dimensions are returned. If left
+              null or not defined, all dimensions are returned.
+            </p>
+          ),
+        },
+        {
+          name: 'firehose.metrics',
+          label: 'Metrics',
+          type: 'string-array',
+          placeholder: '(optional)',
+          info: (
+            <p>
+              The list of metrics to select. If left empty, no metrics are returned. If left null or
+              not defined, all metrics are selected.
+            </p>
+          ),
+        },
+        {
+          name: 'firehose.filter',
+          label: 'Filter',
+          type: 'json',
+          placeholder: '(optional)',
+          info: (
+            <p>
+              The{' '}
+              <ExternalLink href="https://druid.apache.org/docs/latest/querying/filters.html">
+                filter
+              </ExternalLink>{' '}
+              to apply to the data as part of querying.
+            </p>
+          ),
+        },
+      ];
+
+    case 'index:inline':
+      return [
+        firehoseType,
+        // do not add 'data' here as it has special handling in the load-data view
+      ];
+
     case 'index:static-s3':
       return [
         firehoseType,
@@ -802,7 +907,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'S3 URIs',
           type: 'string-array',
           placeholder: 's3://your-bucket/some-file1.ext, s3://your-bucket/some-file2.ext',
-          isDefined: ioConfig => !deepGet(ioConfig, 'firehose.prefixes'),
+          defined: ioConfig => !deepGet(ioConfig, 'firehose.prefixes'),
           info: (
             <>
               <p>
@@ -818,7 +923,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'S3 prefixes',
           type: 'string-array',
           placeholder: 's3://your-bucket/some-path1, s3://your-bucket/some-path2',
-          isDefined: ioConfig => !deepGet(ioConfig, 'firehose.uris'),
+          defined: ioConfig => !deepGet(ioConfig, 'firehose.uris'),
           info: (
             <>
               <p>A list of paths (with bucket) where your files are stored.</p>
@@ -870,7 +975,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         {
           name: 'topic',
           type: 'string',
-          isDefined: (i: IoConfig) => i.type === 'kafka',
+          defined: (i: IoConfig) => i.type === 'kafka',
         },
         {
           name: 'consumerProperties',
@@ -957,19 +1062,28 @@ function nonEmptyArray(a: any) {
   return Array.isArray(a) && Boolean(a.length);
 }
 
-function issueWithFirehose(firehose: Firehose | undefined): string | null {
+function issueWithFirehose(firehose: Firehose | undefined): string | undefined {
   if (!firehose) return 'does not exist';
   if (!firehose.type) return 'missing a type';
   switch (firehose.type) {
     case 'local':
-      if (!firehose.baseDir) return "must have a 'baseDir'";
-      if (!firehose.filter) return "must have a 'filter'";
+      if (!firehose.baseDir) return `must have a 'baseDir'`;
+      if (!firehose.filter) return `must have a 'filter'`;
       break;
 
     case 'http':
       if (!nonEmptyArray(firehose.uris)) {
         return 'must have at least one uri';
       }
+      break;
+
+    case 'ingestSegment':
+      if (!firehose.dataSource) return `must have a 'dataSource'`;
+      if (!firehose.interval) return `must have an 'interval'`;
+      break;
+
+    case 'inline':
+      if (!firehose.data) return `must have 'data'`;
       break;
 
     case 'static-s3':
@@ -984,10 +1098,10 @@ function issueWithFirehose(firehose: Firehose | undefined): string | null {
       }
       break;
   }
-  return null;
+  return;
 }
 
-export function issueWithIoConfig(ioConfig: IoConfig | undefined): string | null {
+export function issueWithIoConfig(ioConfig: IoConfig | undefined): string | undefined {
   if (!ioConfig) return 'does not exist';
   if (!ioConfig.type) return 'missing a type';
   switch (ioConfig.type) {
@@ -1007,7 +1121,7 @@ export function issueWithIoConfig(ioConfig: IoConfig | undefined): string | null
       break;
   }
 
-  return null;
+  return;
 }
 
 export function getIoConfigTuningFormFields(
@@ -1082,7 +1196,26 @@ export function getIoConfigTuningFormFields(
       ];
 
     case 'index:local':
+    case 'index:inline':
       return [];
+
+    case 'index:ingestSegment':
+      return [
+        {
+          name: 'firehose.maxFetchCapacityBytes',
+          label: 'Max fetch capacity bytes',
+          type: 'number',
+          defaultValue: 157286400,
+          info: (
+            <p>
+              When used with the native parallel index task, the maximum number of bytes of input
+              segments to process in a single task. If a single segment is larger than this number,
+              it will be processed by itself in a single task (input segments are never split across
+              tasks). Defaults to 150MB.
+            </p>
+          ),
+        },
+      ];
 
     case 'kafka':
     case 'kinesis':
@@ -1091,7 +1224,7 @@ export function getIoConfigTuningFormFields(
           name: 'useEarliestOffset',
           type: 'boolean',
           defaultValue: false,
-          isDefined: (i: IoConfig) => i.type === 'kafka',
+          defined: (i: IoConfig) => i.type === 'kafka',
           info: (
             <>
               <p>
@@ -1107,7 +1240,7 @@ export function getIoConfigTuningFormFields(
           name: 'skipOffsetGaps',
           type: 'boolean',
           defaultValue: false,
-          isDefined: (i: IoConfig) => i.type === 'kafka',
+          defined: (i: IoConfig) => i.type === 'kafka',
           info: (
             <>
               <p>
@@ -1123,7 +1256,7 @@ export function getIoConfigTuningFormFields(
           name: 'pollTimeout',
           type: 'number',
           defaultValue: 100,
-          isDefined: (i: IoConfig) => i.type === 'kafka',
+          defined: (i: IoConfig) => i.type === 'kafka',
           info: (
             <>
               <p>
@@ -1137,7 +1270,7 @@ export function getIoConfigTuningFormFields(
           name: 'useEarliestSequenceNumber',
           type: 'boolean',
           defaultValue: false,
-          isDefined: (i: IoConfig) => i.type === 'kinesis',
+          defined: (i: IoConfig) => i.type === 'kinesis',
           info: (
             <>
               If a supervisor is managing a dataSource for the first time, it will obtain a set of
@@ -1152,20 +1285,20 @@ export function getIoConfigTuningFormFields(
           name: 'recordsPerFetch',
           type: 'number',
           defaultValue: 2000,
-          isDefined: (i: IoConfig) => i.type === 'kinesis',
+          defined: (i: IoConfig) => i.type === 'kinesis',
           info: <>The number of records to request per GetRecords call to Kinesis.</>,
         },
         {
           name: 'fetchDelayMillis',
           type: 'number',
           defaultValue: 1000,
-          isDefined: (i: IoConfig) => i.type === 'kinesis',
+          defined: (i: IoConfig) => i.type === 'kinesis',
           info: <>Time in milliseconds to wait between subsequent GetRecords calls to Kinesis.</>,
         },
         {
           name: 'deaggregate',
           type: 'boolean',
-          isDefined: (i: IoConfig) => i.type === 'kinesis',
+          defined: (i: IoConfig) => i.type === 'kinesis',
           info: <>Whether to use the de-aggregate function of the KCL.</>,
         },
 
@@ -1292,10 +1425,18 @@ export function getIoConfigTuningFormFields(
 
 // ---------------------------------------
 
-function filenameFromPath(path: string | undefined): string | null {
-  if (!path) return null;
+function filterIsFilename(filter: string): boolean {
+  return !/[*?]/.test(filter);
+}
+
+function filenameFromPath(path: string): string | undefined {
   const m = path.match(/([^\/.]+)[^\/]*?\/?$/);
-  return m ? m[1] : null;
+  if (!m) return;
+  return m[1];
+}
+
+function basenameFromFilename(filename: string): string | undefined {
+  return filename.split('.')[0];
 }
 
 export function fillDataSourceName(spec: IngestionSpec): IngestionSpec {
@@ -1306,36 +1447,47 @@ export function fillDataSourceName(spec: IngestionSpec): IngestionSpec {
   return deepSet(spec, 'dataSchema.dataSource', possibleName);
 }
 
-export function guessDataSourceName(ioConfig: IoConfig): string | null {
+export function guessDataSourceName(ioConfig: IoConfig): string | undefined {
   switch (ioConfig.type) {
     case 'index':
     case 'index_parallel':
       const firehose = ioConfig.firehose;
-      if (!firehose) return null;
+      if (!firehose) return;
 
       switch (firehose.type) {
         case 'local':
-          return filenameFromPath(firehose.baseDir);
+          if (firehose.filter && filterIsFilename(firehose.filter)) {
+            return basenameFromFilename(firehose.filter);
+          } else if (firehose.baseDir) {
+            return filenameFromPath(firehose.baseDir);
+          } else {
+            return;
+          }
 
         case 'static-s3':
-          return filenameFromPath(
-            (firehose.uris || EMPTY_ARRAY)[0] || (firehose.prefixes || EMPTY_ARRAY)[0],
-          );
+          const s3Path = (firehose.uris || EMPTY_ARRAY)[0] || (firehose.prefixes || EMPTY_ARRAY)[0];
+          return s3Path ? filenameFromPath(s3Path) : undefined;
 
         case 'http':
-          return filenameFromPath(firehose.uris ? firehose.uris[0] : undefined);
+          return Array.isArray(firehose.uris) ? filenameFromPath(firehose.uris[0]) : undefined;
+
+        case 'ingestSegment':
+          return firehose.dataSource;
+
+        case 'inline':
+          return 'inline_data';
       }
 
-      return null;
+      return;
 
     case 'kafka':
-      return ioConfig.topic || null;
+      return ioConfig.topic;
 
     case 'kinesis':
-      return ioConfig.stream || null;
+      return ioConfig.stream;
 
     default:
-      return null;
+      return;
   }
 }
 
@@ -1343,7 +1495,6 @@ export function guessDataSourceName(ioConfig: IoConfig): string | null {
 
 export interface TuningConfig {
   type: string;
-  targetPartitionSize?: number;
   maxRowsInMemory?: number;
   maxBytesInMemory?: number;
   maxTotalRows?: number;
@@ -1373,32 +1524,24 @@ export interface TuningConfig {
   fetchThreads?: number;
 }
 
+export function invalidTuningConfig(tuningConfig: TuningConfig): boolean {
+  return Boolean(
+    tuningConfig.type === 'index_parallel' &&
+      tuningConfig.forceGuaranteedRollup &&
+      !tuningConfig.numShards,
+  );
+}
+
 export function getPartitionRelatedTuningSpecFormFields(
   specType: IngestionType,
 ): Field<TuningConfig>[] {
   switch (specType) {
     case 'index':
     case 'index_parallel':
-      const myIsParallel = specType === 'index_parallel';
       return [
-        {
-          name: 'partitionDimensions',
-          type: 'string-array',
-          disabled: myIsParallel,
-          info: (
-            <>
-              <p>Does not currently work with parallel ingestion</p>
-              <p>
-                The dimensions to partition on. Leave blank to select all dimensions. Only used with
-                forceGuaranteedRollup = true, will be ignored otherwise.
-              </p>
-            </>
-          ),
-        },
         {
           name: 'forceGuaranteedRollup',
           type: 'boolean',
-          disabled: myIsParallel,
           info: (
             <>
               <p>Does not currently work with parallel ingestion</p>
@@ -1413,18 +1556,11 @@ export function getPartitionRelatedTuningSpecFormFields(
           ),
         },
         {
-          name: 'targetPartitionSize',
+          name: 'numShards', // This is mandatory if index_parallel and forceGuaranteedRollup
           type: 'number',
-          info: (
-            <>
-              Target number of rows to include in a partition, should be a number that targets
-              segments of 500MB~1GB.
-            </>
-          ),
-        },
-        {
-          name: 'numShards',
-          type: 'number',
+          defined: (t: TuningConfig) => Boolean(t.forceGuaranteedRollup),
+          required: (t: TuningConfig) =>
+            Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
           info: (
             <>
               Directly specify the number of shards to create. If this is specified and 'intervals'
@@ -1435,15 +1571,31 @@ export function getPartitionRelatedTuningSpecFormFields(
           ),
         },
         {
+          name: 'partitionDimensions',
+          type: 'string-array',
+          defined: (t: TuningConfig) => Boolean(t.forceGuaranteedRollup),
+          info: (
+            <>
+              <p>Does not currently work with parallel ingestion</p>
+              <p>
+                The dimensions to partition on. Leave blank to select all dimensions. Only used with
+                forceGuaranteedRollup = true, will be ignored otherwise.
+              </p>
+            </>
+          ),
+        },
+        {
           name: 'maxRowsPerSegment',
           type: 'number',
           defaultValue: 5000000,
+          defined: (t: TuningConfig) => !t.forceGuaranteedRollup && t.numShards == null, // Can not be set if numShards is specified
           info: <>Determines how many rows are in each segment.</>,
         },
         {
           name: 'maxTotalRows',
           type: 'number',
           defaultValue: 20000000,
+          defined: (t: TuningConfig) => !t.forceGuaranteedRollup,
           info: <>Total number of rows in segments waiting for being pushed.</>,
         },
       ];
@@ -1471,6 +1623,35 @@ export function getPartitionRelatedTuningSpecFormFields(
 
 const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
   {
+    name: 'maxNumConcurrentSubTasks',
+    type: 'number',
+    defaultValue: 1,
+    defined: (t: TuningConfig) => t.type === 'index_parallel',
+    info: (
+      <>
+        Maximum number of tasks which can be run at the same time. The supervisor task would spawn
+        worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this
+        value is set to 1, the supervisor task processes data ingestion on its own instead of
+        spawning worker tasks. If this value is set to too large, too many worker tasks can be
+        created which might block other ingestion.
+      </>
+    ),
+  },
+  {
+    name: 'maxRetry',
+    type: 'number',
+    defaultValue: 3,
+    defined: (t: TuningConfig) => t.type === 'index_parallel',
+    info: <>Maximum number of retries on task failures.</>,
+  },
+  {
+    name: 'taskStatusCheckPeriodMs',
+    type: 'number',
+    defaultValue: 1000,
+    defined: (t: TuningConfig) => t.type === 'index_parallel',
+    info: <>Polling period in milliseconds to check running task statuses.</>,
+  },
+  {
     name: 'maxRowsInMemory',
     type: 'number',
     defaultValue: 1000000,
@@ -1481,6 +1662,24 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'number',
     placeholder: 'Default: 1/6 of max JVM memory',
     info: <>Used in determining when intermediate persists to disk should occur.</>,
+  },
+  {
+    name: 'maxNumMergeTasks',
+    type: 'number',
+    defaultValue: 10,
+    defined: (t: TuningConfig) => Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
+    info: <>Number of tasks to merge partial segments after shuffle.</>,
+  },
+  {
+    name: 'maxNumSegmentsToMerge',
+    type: 'number',
+    defaultValue: 100,
+    defined: (t: TuningConfig) => Boolean(t.type === 'index_parallel' && t.forceGuaranteedRollup),
+    info: (
+      <>
+        Max limit for the number of segments a single task can merge at the same time after shuffle.
+      </>
+    ),
   },
   {
     name: 'indexSpec.bitmap.type',
@@ -1525,14 +1724,14 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'intermediatePersistPeriod',
     type: 'duration',
     defaultValue: 'PT10M',
-    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
     info: <>The period that determines the rate at which intermediate persists occur.</>,
   },
   {
     name: 'intermediateHandoffPeriod',
     type: 'duration',
     defaultValue: 'P2147483647D',
-    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
     info: (
       <>
         How often the tasks should hand off segments. Handoff will happen either if
@@ -1563,55 +1762,31 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     ),
   },
   {
-    name: 'maxNumSubTasks',
-    type: 'number',
-    defaultValue: 1,
-    info: (
-      <>
-        Maximum number of tasks which can be run at the same time. The supervisor task would spawn
-        worker tasks up to maxNumSubTasks regardless of the available task slots. If this value is
-        set to 1, the supervisor task processes data ingestion on its own instead of spawning worker
-        tasks. If this value is set to too large, too many worker tasks can be created which might
-        block other ingestion.
-      </>
-    ),
-  },
-  {
-    name: 'maxRetry',
-    type: 'number',
-    defaultValue: 3,
-    info: <>Maximum number of retries on task failures.</>,
-  },
-  {
-    name: 'taskStatusCheckPeriodMs',
-    type: 'number',
-    defaultValue: 1000,
-    info: <>Polling period in milliseconds to check running task statuses.</>,
-  },
-  {
     name: 'chatHandlerTimeout',
     type: 'duration',
     defaultValue: 'PT10S',
+    defined: (t: TuningConfig) => t.type === 'index_parallel',
     info: <>Timeout for reporting the pushed segments in worker tasks.</>,
   },
   {
     name: 'chatHandlerNumRetries',
     type: 'number',
     defaultValue: 5,
+    defined: (t: TuningConfig) => t.type === 'index_parallel',
     info: <>Retries for reporting the pushed segments in worker tasks.</>,
   },
   {
     name: 'handoffConditionTimeout',
     type: 'number',
     defaultValue: 0,
-    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
     info: <>Milliseconds to wait for segment handoff. 0 means to wait forever.</>,
   },
   {
     name: 'resetOffsetAutomatically',
     type: 'boolean',
     defaultValue: false,
-    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
     info: (
       <>
         Whether to reset the consumer offset if the next offset that it is trying to fetch is less
@@ -1623,7 +1798,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'workerThreads',
     type: 'number',
     placeholder: 'min(10, taskCount)',
-    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
     info: (
       <>The number of threads that will be used by the supervisor for asynchronous operations.</>
     ),
@@ -1632,14 +1807,14 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'chatThreads',
     type: 'number',
     placeholder: 'min(10, taskCount * replicas)',
-    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
     info: <>The number of threads that will be used for communicating with indexing tasks.</>,
   },
   {
     name: 'chatRetries',
     type: 'number',
     defaultValue: 8,
-    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
     info: (
       <>
         The number of times HTTP requests to indexing tasks will be retried before considering tasks
@@ -1651,14 +1826,14 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'httpTimeout',
     type: 'duration',
     defaultValue: 'PT10S',
-    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
     info: <>How long to wait for a HTTP response from an indexing task.</>,
   },
   {
     name: 'shutdownTimeout',
     type: 'duration',
     defaultValue: 'PT80S',
-    isDefined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kafka' || t.type === 'kinesis',
     info: (
       <>
         How long to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.
@@ -1669,7 +1844,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'offsetFetchPeriod',
     type: 'duration',
     defaultValue: 'PT30S',
-    isDefined: (t: TuningConfig) => t.type === 'kafka',
+    defined: (t: TuningConfig) => t.type === 'kafka',
     info: (
       <>
         How often the supervisor queries Kafka and the indexing tasks to fetch current offsets and
@@ -1681,7 +1856,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'recordBufferSize',
     type: 'number',
     defaultValue: 10000,
-    isDefined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kinesis',
     info: (
       <>
         Size of the buffer (number of events) used between the Kinesis fetch threads and the main
@@ -1693,7 +1868,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'recordBufferOfferTimeout',
     type: 'number',
     defaultValue: 5000,
-    isDefined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kinesis',
     info: (
       <>
         Length of time in milliseconds to wait for space to become available in the buffer before
@@ -1705,7 +1880,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'recordBufferFullWait',
     type: 'number',
     defaultValue: 5000,
-    isDefined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kinesis',
     info: (
       <>
         Length of time in milliseconds to wait for the buffer to drain before attempting to fetch
@@ -1717,7 +1892,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'fetchSequenceNumberTimeout',
     type: 'number',
     defaultValue: 60000,
-    isDefined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kinesis',
     info: (
       <>
         Length of time in milliseconds to wait for Kinesis to return the earliest or latest sequence
@@ -1731,7 +1906,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'fetchThreads',
     type: 'number',
     placeholder: 'max(1, {numProcessors} - 1)',
-    isDefined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kinesis',
     info: (
       <>
         Size of the pool of threads fetching data from Kinesis. There is no benefit in having more
@@ -1743,7 +1918,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     name: 'maxRecordsPerPoll',
     type: 'number',
     defaultValue: 100,
-    isDefined: (t: TuningConfig) => t.type === 'kinesis',
+    defined: (t: TuningConfig) => t.type === 'kinesis',
     info: (
       <>
         The maximum number of records/events to be fetched from buffer per poll. The actual maximum
@@ -1808,8 +1983,17 @@ export function updateIngestionType(
 }
 
 export function fillParser(spec: IngestionSpec, sampleData: string[]): IngestionSpec {
-  if (deepGet(spec, 'ioConfig.firehose.type') === 'sql') {
+  const firehoseType = deepGet(spec, 'ioConfig.firehose.type');
+
+  if (firehoseType === 'sql') {
     return deepSet(spec, 'dataSchema.parser', { type: 'map' });
+  }
+
+  if (firehoseType === 'ingestSegment') {
+    return deepSet(spec, 'dataSchema.parser', {
+      type: 'string',
+      parseSpec: { format: 'timeAndDims' },
+    });
   }
 
   const parseSpec = guessParseSpec(sampleData);
@@ -1818,9 +2002,9 @@ export function fillParser(spec: IngestionSpec, sampleData: string[]): Ingestion
   return deepSet(spec, 'dataSchema.parser', { type: 'string', parseSpec });
 }
 
-function guessParseSpec(sampleData: string[]): ParseSpec | null {
+function guessParseSpec(sampleData: string[]): ParseSpec | undefined {
   const sampleDatum = sampleData[0];
-  if (!sampleDatum) return null;
+  if (!sampleDatum) return;
 
   if (sampleDatum.startsWith('{') && sampleDatum.endsWith('}')) {
     return parseSpecFromFormat('json');
@@ -1837,12 +2021,17 @@ function guessParseSpec(sampleData: string[]): ParseSpec | null {
   return parseSpecFromFormat('regex');
 }
 
-function parseSpecFromFormat(format: string, hasHeaderRow: boolean | null = null): ParseSpec {
+function parseSpecFromFormat(format: string, hasHeaderRow?: boolean): ParseSpec {
   const parseSpec: ParseSpec = {
     format,
     timestampSpec: {},
     dimensionsSpec: {},
   };
+
+  if (format === 'regex') {
+    parseSpec.pattern = '(.*)';
+    parseSpec.columns = ['column1'];
+  }
 
   if (typeof hasHeaderRow === 'boolean') {
     parseSpec.hasHeaderRow = hasHeaderRow;
@@ -1855,7 +2044,7 @@ export type DruidFilter = Record<string, any>;
 
 export interface DimensionFiltersWithRest {
   dimensionFilters: DruidFilter[];
-  restFilter: DruidFilter | null;
+  restFilter?: DruidFilter;
 }
 
 export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRest {
@@ -1875,16 +2064,18 @@ export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRes
       ? restFilters.length > 1
         ? { type: 'and', filters: restFilters }
         : restFilters[0]
-      : null,
+      : undefined,
   };
 }
 
-export function joinFilter(dimensionFiltersWithRest: DimensionFiltersWithRest): DruidFilter | null {
+export function joinFilter(
+  dimensionFiltersWithRest: DimensionFiltersWithRest,
+): DruidFilter | undefined {
   const { dimensionFilters, restFilter } = dimensionFiltersWithRest;
   let newFields = dimensionFilters || EMPTY_ARRAY;
   if (restFilter && restFilter.type) newFields = newFields.concat([restFilter]);
 
-  if (!newFields.length) return null;
+  if (!newFields.length) return;
   if (newFields.length === 1) return newFields[0];
   return { type: 'and', fields: newFields };
 }
@@ -1902,12 +2093,12 @@ const FILTER_FORM_FIELDS: Field<DruidFilter>[] = [
   {
     name: 'value',
     type: 'string',
-    isDefined: (druidFilter: DruidFilter) => druidFilter.type === 'selector',
+    defined: (druidFilter: DruidFilter) => druidFilter.type === 'selector',
   },
   {
     name: 'values',
     type: 'string-array',
-    isDefined: (druidFilter: DruidFilter) => druidFilter.type === 'in',
+    defined: (druidFilter: DruidFilter) => druidFilter.type === 'in',
   },
 ];
 

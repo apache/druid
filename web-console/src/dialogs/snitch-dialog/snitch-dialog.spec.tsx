@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { SnitchDialog } from './snitch-dialog';
 
 describe('snitch dialog', () => {
   it('matches snapshot', () => {
-    const snitchDialog = <SnitchDialog onSave={() => null} isOpen />;
+    const snitchDialog = <SnitchDialog onSave={() => {}} isOpen />;
     render(snitchDialog);
     expect(document.body.lastChild).toMatchSnapshot();
   });

@@ -35,8 +35,9 @@ public class SurrogateActionTest
   public void testSerde() throws IOException
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
-    final SurrogateAction<TaskLock, LockTryAcquireAction> surrogateAction = new SurrogateAction<>(
-        "testId", new LockTryAcquireAction(TaskLockType.EXCLUSIVE, Intervals.of("2018-01-01/2019-01-01"))
+    final SurrogateAction<TaskLock, TimeChunkLockTryAcquireAction> surrogateAction = new SurrogateAction<>(
+        "testId",
+        new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, Intervals.of("2018-01-01/2019-01-01"))
     );
 
     final String json = objectMapper.writeValueAsString(surrogateAction);

@@ -132,7 +132,6 @@ public class HashBasedNumberedShardSpecTest
       specs.add(new HashOverridenShardSpec(i, 3));
     }
 
-
     assertExistsInOneSpec(specs, new HashInputRow(Integer.MIN_VALUE));
     assertExistsInOneSpec(specs, new HashInputRow(Integer.MAX_VALUE));
     assertExistsInOneSpec(specs, new HashInputRow(0));

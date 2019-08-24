@@ -44,6 +44,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ValueType;
@@ -268,6 +269,7 @@ public class GroupByQueryEngine
       this.max = max - increment; // Make sure there is enough room for one more increment
     }
 
+    @Nullable
     public Integer getNext()
     {
       if (nextVal > max) {
@@ -297,14 +299,13 @@ public class GroupByQueryEngine
     private final ByteBuffer metricsBuffer;
     private final int maxIntermediateRows;
 
-    private final List<DimensionSpec> dimensionSpecs;
     private final List<DimensionSelector> dimensions;
     private final ArrayList<String> dimNames;
-    private final List<AggregatorFactory> aggregatorSpecs;
     private final BufferAggregator[] aggregators;
     private final String[] metricNames;
     private final int[] sizesRequired;
 
+    @Nullable
     private List<ByteBuffer> unprocessedKeys;
     private Iterator<Row> delegate;
 
@@ -319,7 +320,7 @@ public class GroupByQueryEngine
 
       unprocessedKeys = null;
       delegate = Collections.emptyIterator();
-      dimensionSpecs = query.getDimensions();
+      List<DimensionSpec> dimensionSpecs = query.getDimensions();
       dimensions = Lists.newArrayListWithExpectedSize(dimensionSpecs.size());
       dimNames = Lists.newArrayListWithExpectedSize(dimensionSpecs.size());
 
@@ -331,7 +332,7 @@ public class GroupByQueryEngine
         }
 
         final DimensionSelector selector = cursor.getColumnSelectorFactory().makeDimensionSelector(dimSpec);
-        if (selector.getValueCardinality() == DimensionSelector.CARDINALITY_UNKNOWN) {
+        if (selector.getValueCardinality() == DimensionDictionarySelector.CARDINALITY_UNKNOWN) {
           throw new UnsupportedOperationException(
               "GroupBy v1 does not support dimension selectors with unknown cardinality.");
         }
@@ -339,7 +340,7 @@ public class GroupByQueryEngine
         dimNames.add(dimSpec.getOutputName());
       }
 
-      aggregatorSpecs = query.getAggregatorSpecs();
+      List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
       aggregators = new BufferAggregator[aggregatorSpecs.size()];
       metricNames = new String[aggregatorSpecs.size()];
       sizesRequired = new int[aggregatorSpecs.size()];

@@ -39,7 +39,7 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
 import org.apache.druid.indexer.path.PathSpec;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.DateTimes;
@@ -83,7 +83,7 @@ import java.util.SortedSet;
  */
 public class HadoopDruidIndexerConfig
 {
-  private static final Injector injector;
+  private static final Injector INJECTOR;
 
   public static final String CONFIG_PROPERTY = "druid.indexer.config";
   public static final Charset JAVA_NATIVE_CHARSET = Charset.forName("Unicode");
@@ -99,7 +99,7 @@ public class HadoopDruidIndexerConfig
 
 
   static {
-    injector = Initialization.makeInjectorWithModules(
+    INJECTOR = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.of(
             new Module()
@@ -118,11 +118,11 @@ public class HadoopDruidIndexerConfig
             new IndexingHadoopModule()
         )
     );
-    JSON_MAPPER = injector.getInstance(ObjectMapper.class);
-    INDEX_IO = injector.getInstance(IndexIO.class);
-    INDEX_MERGER_V9 = injector.getInstance(IndexMergerV9.class);
-    HADOOP_KERBEROS_CONFIG = injector.getInstance(HadoopKerberosConfig.class);
-    DATA_SEGMENT_PUSHER = injector.getInstance(DataSegmentPusher.class);
+    JSON_MAPPER = INJECTOR.getInstance(ObjectMapper.class);
+    INDEX_IO = INJECTOR.getInstance(IndexIO.class);
+    INDEX_MERGER_V9 = INJECTOR.getInstance(IndexMergerV9.class);
+    HADOOP_KERBEROS_CONFIG = INJECTOR.getInstance(HadoopKerberosConfig.class);
+    DATA_SEGMENT_PUSHER = INJECTOR.getInstance(DataSegmentPusher.class);
   }
 
   public enum IndexJobCounters
@@ -289,7 +289,7 @@ public class HadoopDruidIndexerConfig
     this.pathSpec = JSON_MAPPER.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
   }
 
-  public PartitionsSpec getPartitionsSpec()
+  public DimensionBasedPartitionsSpec getPartitionsSpec()
   {
     return schema.getTuningConfig().getPartitionsSpec();
   }
@@ -297,6 +297,11 @@ public class HadoopDruidIndexerConfig
   public IndexSpec getIndexSpec()
   {
     return schema.getTuningConfig().getIndexSpec();
+  }
+
+  public IndexSpec getIndexSpecForIntermediatePersists()
+  {
+    return schema.getTuningConfig().getIndexSpecForIntermediatePersists();
   }
 
   public boolean isOverwriteFiles()
@@ -322,22 +327,18 @@ public class HadoopDruidIndexerConfig
 
   public boolean isDeterminingPartitions()
   {
-    return schema.getTuningConfig().getPartitionsSpec().isDeterminingPartitions();
+    return schema.getTuningConfig().getPartitionsSpec().needsDeterminePartitions(true);
   }
 
-  public Long getTargetPartitionSize()
+  public int getTargetPartitionSize()
   {
-    return schema.getTuningConfig().getPartitionsSpec().getTargetPartitionSize();
+    final Integer targetPartitionSize = schema.getTuningConfig().getPartitionsSpec().getMaxRowsPerSegment();
+    return targetPartitionSize == null ? -1 : targetPartitionSize;
   }
 
   public boolean isForceExtendableShardSpecs()
   {
     return schema.getTuningConfig().isForceExtendableShardSpecs();
-  }
-
-  public long getMaxPartitionSize()
-  {
-    return schema.getTuningConfig().getPartitionsSpec().getMaxPartitionSize();
   }
 
   public boolean isUpdaterJobSpecSet()

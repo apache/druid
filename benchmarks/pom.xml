@@ -85,7 +85,19 @@
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>
+      <artifactId>druid-core</artifactId>
+      <version>${project.parent.version}</version>
+      <type>test-jar</type>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid</groupId>
       <artifactId>druid-processing</artifactId>
+      <version>${project.parent.version}</version>
+      <type>test-jar</type>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid</groupId>
+      <artifactId>druid-server</artifactId>
       <version>${project.parent.version}</version>
       <type>test-jar</type>
     </dependency>
@@ -203,6 +215,9 @@
         </plugin>
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <argLine>@{jacocoArgLine}</argLine>
+          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>

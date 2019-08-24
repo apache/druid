@@ -165,6 +165,8 @@ public class LocalDataSegmentPusherTest
   {
     config.storageDirectory = new File("/druid");
 
+    // If this test fails because the path is returned as "file:/druid/", this can happen
+    // when a /druid directory exists on the local filesystem.
     Assert.assertEquals(
         "file:/druid",
         new LocalDataSegmentPusher(config).getPathForHadoop()

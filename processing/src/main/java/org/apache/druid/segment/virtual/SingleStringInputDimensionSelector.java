@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
@@ -48,12 +49,12 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   )
   {
     // Verify expression has just one binding.
-    if (expression.analyzeInputs().getRequiredColumns().size() != 1) {
+    if (expression.analyzeInputs().getRequiredBindings().size() != 1) {
       throw new ISE("WTF?! Expected expression with just one binding");
     }
 
     // Verify selector has a working dictionary.
-    if (selector.getValueCardinality() == DimensionSelector.CARDINALITY_UNKNOWN
+    if (selector.getValueCardinality() == DimensionDictionarySelector.CARDINALITY_UNKNOWN
         || !selector.nameLookupPossibleInAdvance()) {
       throw new ISE("Selector of class[%s] does not have a dictionary, cannot use it.", selector.getClass().getName());
     }
@@ -70,15 +71,12 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   }
 
   /**
-   * Get the underlying selector {@link IndexedInts} row, or the null adjusted row.
+   * Get the underlying selector {@link IndexedInts} row
    */
   @Override
   public IndexedInts getRow()
   {
-    final IndexedInts row = selector.getRow();
-
-    assert row.size() <= 1;
-    return row;
+    return selector.getRow();
   }
 
   @Override

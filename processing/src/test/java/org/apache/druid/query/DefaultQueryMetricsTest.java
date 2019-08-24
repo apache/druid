@@ -33,7 +33,6 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -60,8 +59,8 @@ public class DefaultQueryMetricsTest
             null
         ))
         .metric("count")
-        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-        .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .aggregators(new CountAggregatorFactory("count"))
         .threshold(5)
         .filters(new SelectorDimFilter("tags", "t3", null))
         .build();
@@ -75,7 +74,7 @@ public class DefaultQueryMetricsTest
     Assert.assertEquals("", actualEvent.get("service"));
     Assert.assertEquals("xx", actualEvent.get(DruidMetrics.DATASOURCE));
     Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
-    List<Interval> expectedIntervals = QueryRunnerTestHelper.fullOnIntervalSpec.getIntervals();
+    List<Interval> expectedIntervals = QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC.getIntervals();
     List<String> expectedStringIntervals =
         expectedIntervals.stream().map(Interval::toString).collect(Collectors.toList());
     Assert.assertEquals(expectedStringIntervals, actualEvent.get(DruidMetrics.INTERVAL));

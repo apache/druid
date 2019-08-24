@@ -16,19 +16,20 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
-import { render } from 'react-testing-library';
 
 import { SupervisorTableActionDialog } from './supervisor-table-action-dialog';
 
 const basicAction = { title: 'test', onAction: () => null };
+
 describe('supervisor table action dialog', () => {
   it('matches snapshot', () => {
     const supervisorTableActionDialog = (
       <SupervisorTableActionDialog
         supervisorId={'test'}
         actions={[basicAction, basicAction, basicAction, basicAction]}
-        onClose={() => null}
+        onClose={() => {}}
         isOpen
       />
     );

@@ -280,8 +280,7 @@ public class MaterializedViewSupervisor implements Supervisor
   public void checkpoint(
       @Nullable Integer taskGroupId,
       String baseSequenceName,
-      DataSourceMetadata previousCheckPoint,
-      DataSourceMetadata currentCheckPoint
+      DataSourceMetadata checkpointMetadata
   )
   {
     // do nothing
@@ -371,16 +370,12 @@ public class MaterializedViewSupervisor implements Supervisor
     Map<Interval, String> toDropInterval = new HashMap<>(difference.entriesOnlyOnRight());
     // if some intervals are in running tasks and the versions are the same, remove it from toBuildInterval
     // if some intervals are in running tasks, but the versions are different, stop the task. 
-    for (Interval interval : runningVersion.keySet()) {
-      if (toBuildInterval.containsKey(interval)
-          && toBuildInterval.get(interval).equals(runningVersion.get(interval))
-          ) {
+    for (Map.Entry<Interval, String> version : runningVersion.entrySet()) {
+      final Interval interval = version.getKey();
+      final String host = version.getValue();
+      if (toBuildInterval.containsKey(interval) && toBuildInterval.get(interval).equals(host)) {
         toBuildInterval.remove(interval);
-
-      } else if (
-          toBuildInterval.containsKey(interval)
-          && !toBuildInterval.get(interval).equals(runningVersion.get(interval))
-      ) {
+      } else if (toBuildInterval.containsKey(interval) && !toBuildInterval.get(interval).equals(host)) {
         if (taskMaster.getTaskQueue().isPresent()) {
           taskMaster.getTaskQueue().get().shutdown(runningTasks.get(interval).getId(), "version mismatch");
           runningTasks.remove(interval);
@@ -390,7 +385,7 @@ public class MaterializedViewSupervisor implements Supervisor
     // drop derivative segments which interval equals the interval in toDeleteBaseSegments 
     for (Interval interval : toDropInterval.keySet()) {
       for (DataSegment segment : derivativeSegments.get(interval)) {
-        segmentManager.removeSegment(segment.getId().toString());
+        segmentManager.markSegmentAsUnused(segment.getId().toString());
       }
     }
     // data of the latest interval will be built firstly.
@@ -498,7 +493,7 @@ public class MaterializedViewSupervisor implements Supervisor
   {
     log.info("Clear all metadata of dataSource %s", dataSource);
     metadataStorageCoordinator.deletePendingSegments(dataSource, ALL_INTERVAL);
-    segmentManager.removeDataSource(dataSource);
+    segmentManager.markAsUnusedAllSegmentsInDataSource(dataSource);
     metadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
   }
 

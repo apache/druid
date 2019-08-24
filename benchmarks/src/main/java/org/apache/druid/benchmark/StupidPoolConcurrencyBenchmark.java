@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class StupidPoolConcurrencyBenchmark
 {
-  private static final Object simpleObject = new Object();
+  private static final Object SIMPLE_OBJECT = new Object();
 
   @State(Scope.Benchmark)
   public static class BenchmarkPool
@@ -50,7 +50,7 @@ public class StupidPoolConcurrencyBenchmark
           public Object get()
           {
             numPools.incrementAndGet();
-            return simpleObject;
+            return SIMPLE_OBJECT;
           }
         }
     );

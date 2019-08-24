@@ -72,8 +72,8 @@ public class HllSketchModule implements DruidModule
   @VisibleForTesting
   public static void registerSerde()
   {
-    ComplexMetrics.registerSerde(TYPE_NAME, HllSketchMergeComplexMetricSerde::new);
-    ComplexMetrics.registerSerde(BUILD_TYPE_NAME, HllSketchBuildComplexMetricSerde::new);
-    ComplexMetrics.registerSerde(MERGE_TYPE_NAME, HllSketchMergeComplexMetricSerde::new);
+    ComplexMetrics.registerSerde(TYPE_NAME, new HllSketchMergeComplexMetricSerde());
+    ComplexMetrics.registerSerde(BUILD_TYPE_NAME, new HllSketchBuildComplexMetricSerde());
+    ComplexMetrics.registerSerde(MERGE_TYPE_NAME, new HllSketchMergeComplexMetricSerde());
   }
 }

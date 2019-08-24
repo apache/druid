@@ -45,7 +45,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 
 @RunWith(Parameterized.class)
@@ -129,8 +128,7 @@ public class TimeseriesQueryRunnerBonusTest
                                   .aggregators(new CountAggregatorFactory("rows"))
                                   .descending(descending)
                                   .build();
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    return runner.run(QueryPlus.wrap(query), context).toList();
+    return runner.run(QueryPlus.wrap(query)).toList();
   }
 
   private static <T> QueryRunner<T> makeQueryRunner(QueryRunnerFactory<T, Query<T>> factory, Segment adapter)
