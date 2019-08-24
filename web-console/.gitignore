@@ -8,7 +8,7 @@ coverage/
 
 coordinator-console/
 pages/
-index.html
+/index.html
 
 lib/sql-function-doc.js
 
