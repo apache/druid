@@ -32,7 +32,7 @@ import java.util.Collection;
 @RunWith(Parameterized.class)
 public class IndexedIntsTest
 {
-  private static final int[] array = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  private static final int[] ARRAY = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
   private final IndexedInts indexed;
 
@@ -41,8 +41,8 @@ public class IndexedIntsTest
   {
     return Arrays.asList(
         new Object[][]{
-            {VSizeColumnarInts.fromArray(array)},
-            {new ArrayBasedIndexedInts(array)}
+            {VSizeColumnarInts.fromArray(ARRAY)},
+            {new ArrayBasedIndexedInts(ARRAY)}
         }
     );
   }
@@ -57,9 +57,9 @@ public class IndexedIntsTest
   @Test
   public void testSanity()
   {
-    Assert.assertEquals(array.length, indexed.size());
-    for (int i = 0; i < array.length; i++) {
-      Assert.assertEquals(array[i], indexed.get(i));
+    Assert.assertEquals(ARRAY.length, indexed.size());
+    for (int i = 0; i < ARRAY.length; i++) {
+      Assert.assertEquals(ARRAY[i], indexed.get(i));
     }
   }
 }

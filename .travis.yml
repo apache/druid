@@ -85,8 +85,8 @@ matrix:
         # Generate dependency reports and checks they are valid. When running on Travis CI, 2 cores are available
         # (https://docs.travis-ci.com/user/reference/overview/#virtualisation-environment-vs-operating-system).
         - mkdir -p target
-        - docs/_bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
-        - docs/_bin/generate-license.py licenses/APACHE2 licenses.yaml LICENSES.BINARY --dependency-reports target/license-reports
+        - distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
+        - distribution/bin/generate-license.py licenses/APACHE2 licenses.yaml LICENSES.BINARY --dependency-reports target/license-reports
 
     - name: "strict compilation"
       install: skip
@@ -115,8 +115,6 @@ matrix:
           ${MAVEN_SKIP} -Dremoteresources.skip=true
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
-      after_success: &upload_java_unit_test_coverage
-        - ${MVN} -pl ${MAVEN_PROJECTS} jacoco:report coveralls:report
 
     - name: "processing module test (SQL Compatibility)"
       env: *processing_env
@@ -129,46 +127,39 @@ matrix:
           ${MAVEN_SKIP} -Dremoteresources.skip=true
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
-      after_success: *upload_java_unit_test_coverage
 
     - name: "indexing modules test"
       env: &indexing_env
       - MAVEN_PROJECTS='indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
       before_script: *setup_java_test
       script: *run_java_test
-      after_success: *upload_java_unit_test_coverage
 
     - name: "indexing modules test (SQL Compatibility)"
       env: *indexing_env
       before_script: *setup_java_test
       script: *run_java_sql_compat_test
-      after_success: *upload_java_unit_test_coverage
 
     - name: "server module test"
       env: &server_env
         - MAVEN_PROJECTS='server'
       before_script: *setup_java_test
       script: *run_java_test
-      after_success: *upload_java_unit_test_coverage
 
     - name: "server module test (SQL Compatibility)"
       env: *server_env
       before_script: *setup_java_test
       script: *run_java_sql_compat_test
-      after_success: *upload_java_unit_test_coverage
 
     - name: "other modules test"
       env: &other_env
         - MAVEN_PROJECTS='!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console'
       before_script: *setup_java_test
       script: *run_java_test
-      after_success: *upload_java_unit_test_coverage
 
     - name: "other modules test (SQL Compatibility)"
       env: *other_env
       before_script: *setup_java_test
       script: *run_java_sql_compat_test
-      after_success: *upload_java_unit_test_coverage
 
     - name: "web console"
       script:

@@ -105,6 +105,7 @@ import {
   issueWithIoConfig,
   issueWithParser,
   joinFilter,
+  MAX_INLINE_DATA_LENGTH,
   MetricSpec,
   normalizeSpec,
   Parser,
@@ -947,7 +948,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           placeholder="Paste your data here"
           value={deepGet(spec, 'ioConfig.firehose.data')}
           onChange={(e: any) => {
-            const stringValue = e.target.value.substr(0, 65536);
+            const stringValue = e.target.value.substr(0, MAX_INLINE_DATA_LENGTH);
             this.updateSpec(deepSet(spec, 'ioConfig.firehose.data', stringValue));
           }}
         />
@@ -2693,6 +2694,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'ioConfig.appendToExisting',
                 label: 'Append to existing',
                 type: 'boolean',
+                defined: spec => !deepGet(spec, 'tuningConfig.forceGuaranteedRollup'),
                 info: (
                   <>
                     Creates segments as additional shards of the latest version, effectively

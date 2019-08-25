@@ -10,12 +10,11 @@ exports[`sql view matches snapshot 1`] = `
     addToGroupBy={[Function]}
     clear={[Function]}
     columnMetadataLoading={true}
-    currentFilters={[Function]}
     defaultSchema="druid"
     filterByRow={[Function]}
-    hasGroupBy={[Function]}
     onQueryStringChange={[Function]}
     queryAst={[Function]}
+    replaceFrom={[Function]}
   />
   <t
     customClassName=""
@@ -43,6 +42,7 @@ exports[`sql view matches snapshot 1`] = `
       >
         <HotkeysTarget(RunButton)
           autoRun={true}
+          onAutoRunChange={[Function]}
           onEditContext={[Function]}
           onExplain={[Function]}
           onHistory={[Function]}
@@ -50,10 +50,20 @@ exports[`sql view matches snapshot 1`] = `
           onRun={[Function]}
           queryContext={Object {}}
           runeMode={false}
-          setAutoRun={[Function]}
-          setWrapQuery={[Function]}
-          wrapQuery={true}
         />
+        <Blueprint3.Tooltip
+          content="Automatically wrap the query with a limit to protect against queries with very large result sets"
+          hoverCloseDelay={0}
+          hoverOpenDelay={800}
+          transitionDuration={100}
+        >
+          <Blueprint3.Switch
+            checked={true}
+            className="smart-query-limit"
+            label="Smart query limit"
+            onChange={[Function]}
+          />
+        </Blueprint3.Tooltip>
       </div>
     </div>
     <QueryOutput

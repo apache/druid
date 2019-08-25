@@ -29,8 +29,8 @@ describe('query extra info', () => {
           queryId: 'e3ee781b-c0b6-4385-9d99-a8a1994bebac',
           startTime: new Date('1986-04-26T01:23:40+03:00'),
           endTime: new Date('1986-04-26T01:23:48+03:00'),
-          numResults: 2000,
-          wrappedLimit: 2000,
+          numResults: 1000,
+          wrapQueryLimit: 1000,
         }}
         onDownload={() => {}}
       />

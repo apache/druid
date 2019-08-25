@@ -20,8 +20,8 @@
 [![Slack](https://img.shields.io/badge/slack-%23druid-72eff8?logo=slack)](https://druid.apache.org/community/join-slack)
 [![Build Status](https://travis-ci.org/apache/incubator-druid.svg?branch=master)](https://travis-ci.org/apache/incubator-druid)
 [![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/apache/incubator-druid.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/apache/incubator-druid/context:java)
-[![Coverage Status](https://coveralls.io/repos/github/apache/incubator-druid/badge.svg?branch=master)](https://coveralls.io/github/apache/incubator-druid?branch=master)
 <!--- Following badges are disabled until they can be fixed: -->
+<!--- [![Coverage Status](https://coveralls.io/repos/github/apache/incubator-druid/badge.svg?branch=master)](https://coveralls.io/github/apache/incubator-druid?branch=master) -->
 <!--- [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) -->
 
 ## Apache Druid (incubating)
@@ -30,34 +30,22 @@ Apache Druid (incubating) is a high performance analytics data store for event-d
 
 *Disclaimer: Apache Druid is an effort undergoing incubation at The Apache Software Foundation (ASF), sponsored by the Apache Incubator. Incubation is required of all newly accepted projects until a further review indicates that the infrastructure, communications, and decision making process have stabilized in a manner consistent with other successful ASF projects. While incubation status is not necessarily a reflection of the completeness or stability of the code, it does indicate that the project has yet to be fully endorsed by the ASF.*
 
-### License
-
-[Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
-
-### More Information
-
-More information about Druid can be found on <https://druid.apache.org>.
-
-### Documentation
-
-You can find the [documentation for the latest Druid release](https://druid.apache.org/docs/latest/) on
-the [project website](https://druid.apache.org/docs/latest/).
-
-If you would like to contribute documentation, please do so under
-`/docs/content` in this repository and submit a pull request.
-
 ### Getting Started
 
 You can get started with Druid with our [quickstart](https://druid.apache.org/docs/latest/tutorials/quickstart.html).
 
-### Reporting Issues
+### Documentation
 
-If you find any bugs, please file a [GitHub issue](https://github.com/apache/incubator-druid/issues).
+You can find the [documentation for the latest Druid release](https://druid.apache.org/docs/latest/) on
+the [project website](https://druid.apache.org).
+
+If you would like to contribute documentation, please do so under
+`/docs` in this repository and submit a pull request.
 
 ### Community
 
 Community support is available on the
-[druid-user mailing list](https://groups.google.com/forum/#!forum/druid-user)(druid-user@googlegroups.com), which
+[druid-user mailing list](https://groups.google.com/forum/#!forum/druid-user), which
 is hosted at Google Groups.
 
 Development discussions occur on [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org), which
@@ -73,5 +61,9 @@ For instructions on building Druid from source, see [docs/content/development/bu
 
 ### Contributing
 
-Please follow the guidelines listed [here](https://druid.apache.org/community/).
+Please follow the [community guidelines](https://druid.apache.org/community/) for contributing.
+
+### License
+
+[Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
 

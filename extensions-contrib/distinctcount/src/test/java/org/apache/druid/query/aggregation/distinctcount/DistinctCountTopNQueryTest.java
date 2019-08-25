@@ -115,14 +115,14 @@ public class DistinctCountTopNQueryTest
         )
     );
 
-    TopNQuery query = new TopNQueryBuilder().dataSource(QueryRunnerTestHelper.dataSource)
-                          .granularity(QueryRunnerTestHelper.allGran)
-                          .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+    TopNQuery query = new TopNQueryBuilder().dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                          .granularity(QueryRunnerTestHelper.ALL_GRAN)
+                          .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                           .dimension(client_type)
                           .metric("UV")
                           .threshold(10)
                           .aggregators(
-                              QueryRunnerTestHelper.rowsCount,
+                              QueryRunnerTestHelper.ROWS_COUNT,
                               new DistinctCountAggregatorFactory("UV", visitor_id, null)
                           )
                           .build();

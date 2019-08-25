@@ -38,7 +38,7 @@ import java.util.List;
 
 public class HashBasedNumberedShardSpec extends NumberedShardSpec
 {
-  private static final HashFunction hashFunction = Hashing.murmur3_32();
+  private static final HashFunction HASH_FUNCTION = Hashing.murmur3_32();
   private static final List<String> DEFAULT_PARTITION_DIMENSIONS = ImmutableList.of();
 
   private final ObjectMapper jsonMapper;
@@ -100,7 +100,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   @VisibleForTesting
   public static int hash(ObjectMapper jsonMapper, List<Object> objects) throws JsonProcessingException
   {
-    return hashFunction.hashBytes(jsonMapper.writeValueAsBytes(objects)).asInt();
+    return HASH_FUNCTION.hashBytes(jsonMapper.writeValueAsBytes(objects)).asInt();
   }
 
   @Override

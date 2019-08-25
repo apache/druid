@@ -28,11 +28,14 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.reflect.ClassPath;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.ClippedFirehoseFactory;
+import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Modifier;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.Collection;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -79,8 +82,10 @@ public class FirehoseModuleTest
   @SuppressWarnings("UnstableApiUsage") // for ClassPath
   private static Set<Class> getFirehoseFactoryClassesInPackage(String packageName) throws IOException
   {
-    ClassLoader loader = Thread.currentThread().getContextClassLoader();
-    ClassPath classPath = ClassPath.from(loader);
+    // workaround for Guava 16, which can only parse the classpath from URLClassLoaders
+    // requires Guava 28 or later to work properly with the system class loader in Java 9 and above
+    URLClassLoader classloader = new URLClassLoader(JvmUtils.systemClassPath().toArray(new URL[0]));
+    ClassPath classPath = ClassPath.from(classloader);
     return classPath.getTopLevelClasses(packageName).stream()
                     .map(ClassPath.ClassInfo::load)
                     .filter(IS_FIREHOSE_FACTORY)
