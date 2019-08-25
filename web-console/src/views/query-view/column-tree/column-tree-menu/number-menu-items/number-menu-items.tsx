@@ -78,11 +78,11 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
           }}
         />
         <MenuItem
-          text={`TRUNCATE("${columnName}", 1) AS "${columnName}_truncated"`}
+          text={`TRUNC("${columnName}", -1) AS "${columnName}_trunc"`}
           onClick={() => {
             onQueryChange(
               parsedQuery.addFunctionToGroupBy(
-                'TRUNCATE',
+                'TRUNC',
                 [' '],
                 [
                   new StringType({
@@ -90,7 +90,7 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
                     chars: columnName,
                     quote: '"',
                   }),
-                  1,
+                  -1,
                 ],
                 aliasFactory(`${columnName}_truncated`),
               ),
