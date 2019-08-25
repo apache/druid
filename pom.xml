@@ -1409,14 +1409,6 @@
                             <release>${java.version}</release>
                         </configuration>
                     </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration combine.self="override">
-                            <!-- disable tests until we fully support JDK 9 and above -->
-                            <skipTests>true</skipTests>
-                        </configuration>
-                    </plugin>
                 </plugins>
             </build>
         </profile>
