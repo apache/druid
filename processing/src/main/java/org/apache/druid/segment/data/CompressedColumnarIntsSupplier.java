@@ -43,7 +43,7 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
   public static final byte VERSION = 0x2;
   public static final int MAX_INTS_IN_BUFFER = CompressedPools.BUFFER_SIZE / Integer.BYTES;
 
-  private static MetaSerdeHelper<CompressedColumnarIntsSupplier> metaSerdeHelper = MetaSerdeHelper
+  private static MetaSerdeHelper<CompressedColumnarIntsSupplier> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((CompressedColumnarIntsSupplier x) -> VERSION)
       .writeInt(x -> x.totalSize)
       .writeInt(x -> x.sizePer)
@@ -98,13 +98,13 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
   @Override
   public long getSerializedSize()
   {
-    return metaSerdeHelper.size(this) + baseIntBuffers.getSerializedSize();
+    return META_SERDE_HELPER.size(this) + baseIntBuffers.getSerializedSize();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     baseIntBuffers.writeTo(channel, smoosher);
   }
 

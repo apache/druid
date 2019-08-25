@@ -52,7 +52,7 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class ApproximateHistogramGroupByQueryTest
 {
-  private static final Closer resourceCloser = Closer.create();
+  private static final Closer RESOURCE_CLOSER = Closer.create();
 
   private final QueryRunner<Row> runner;
   private final GroupByQueryRunnerFactory factory;
@@ -124,7 +124,7 @@ public class ApproximateHistogramGroupByQueryTest
           config
       );
       final GroupByQueryRunnerFactory factory = factoryAndCloser.lhs;
-      resourceCloser.register(factoryAndCloser.rhs);
+      RESOURCE_CLOSER.register(factoryAndCloser.rhs);
       for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
         final String testName = StringUtils.format(
             "config=%s, runner=%s",
@@ -152,7 +152,7 @@ public class ApproximateHistogramGroupByQueryTest
   @After
   public void teardown() throws IOException
   {
-    resourceCloser.close();
+    RESOURCE_CLOSER.close();
   }
 
   @Test
@@ -169,18 +169,18 @@ public class ApproximateHistogramGroupByQueryTest
     );
 
     GroupByQuery query = new GroupByQuery.Builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setGranularity(QueryRunnerTestHelper.allGran).setDimensions(new DefaultDimensionSpec(
-            QueryRunnerTestHelper.marketDimension,
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN).setDimensions(new DefaultDimensionSpec(
+            QueryRunnerTestHelper.MARKET_DIMENSION,
             "marketalias"
         ))
-        .setInterval(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),
                 1
             )
-        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, aggFactory)
+        ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, aggFactory)
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new QuantilePostAggregator("quantile", "apphisto", 0.5f)
@@ -230,18 +230,18 @@ public class ApproximateHistogramGroupByQueryTest
     );
 
     GroupByQuery query = new GroupByQuery.Builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setGranularity(QueryRunnerTestHelper.allGran).setDimensions(new DefaultDimensionSpec(
-            QueryRunnerTestHelper.marketDimension,
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN).setDimensions(new DefaultDimensionSpec(
+            QueryRunnerTestHelper.MARKET_DIMENSION,
             "marketalias"
         ))
-        .setInterval(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),
                 1
             )
-        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, aggFactory)
+        ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, aggFactory)
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new QuantilePostAggregator("quantile", "quantile", 0.5f)

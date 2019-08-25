@@ -39,8 +39,8 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 {
 
   private static final String SEGMENT_FILE_NAME = "segment";
-  private static final String containerName = "container";
-  private static final String blobPath = "/path/to/storage/index.zip";
+  private static final String CONTAINER_NAME = "container";
+  private static final String BLOB_PATH = "/path/to/storage/index.zip";
   private AzureStorage azureStorage;
 
   @Before
@@ -58,13 +58,13 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
     try {
       final InputStream zipStream = new FileInputStream(pulledFile);
 
-      EasyMock.expect(azureStorage.getBlobInputStream(containerName, blobPath)).andReturn(zipStream);
+      EasyMock.expect(azureStorage.getBlobInputStream(CONTAINER_NAME, BLOB_PATH)).andReturn(zipStream);
 
       replayAll();
 
       AzureDataSegmentPuller puller = new AzureDataSegmentPuller(azureStorage);
 
-      FileUtils.FileCopyResult result = puller.getSegmentFiles(containerName, blobPath, toDir);
+      FileUtils.FileCopyResult result = puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH, toDir);
 
       File expected = new File(toDir, SEGMENT_FILE_NAME);
       Assert.assertEquals(value.length(), result.size());
@@ -86,7 +86,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
     final File outDir = Files.createTempDirectory("druid").toFile();
     try {
-      EasyMock.expect(azureStorage.getBlobInputStream(containerName, blobPath)).andThrow(
+      EasyMock.expect(azureStorage.getBlobInputStream(CONTAINER_NAME, BLOB_PATH)).andThrow(
           new URISyntaxException(
               "error",
               "error",
@@ -98,7 +98,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
       AzureDataSegmentPuller puller = new AzureDataSegmentPuller(azureStorage);
 
-      puller.getSegmentFiles(containerName, blobPath, outDir);
+      puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH, outDir);
 
       Assert.assertFalse(outDir.exists());
 

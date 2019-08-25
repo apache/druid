@@ -26,11 +26,9 @@ describe('run button', () => {
     const runButton = (
       <RunButton
         autoRun
-        setAutoRun={() => {}}
-        wrapQuery
-        setWrapQuery={() => {}}
-        onHistory={() => null}
-        onEditContext={() => null}
+        onAutoRunChange={() => {}}
+        onHistory={() => {}}
+        onEditContext={() => {}}
         runeMode={false}
         queryContext={{}}
         onQueryContextChange={() => {}}

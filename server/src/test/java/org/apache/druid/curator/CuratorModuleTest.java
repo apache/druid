@@ -42,9 +42,9 @@ import java.util.Properties;
 public final class CuratorModuleTest
 {
 
-  private static final String curatorHostKey = CuratorModule.CURATOR_CONFIG_PREFIX + ".host";
+  private static final String CURATOR_HOST_KEY = CuratorModule.CURATOR_CONFIG_PREFIX + ".host";
 
-  private static final String exhibitorHostsKey = CuratorModule.EXHIBITOR_CONFIG_PREFIX + ".hosts";
+  private static final String EXHIBITOR_HOSTS_KEY = CuratorModule.EXHIBITOR_CONFIG_PREFIX + ".hosts";
 
   @Test
   public void defaultEnsembleProvider()
@@ -66,7 +66,7 @@ public final class CuratorModuleTest
   public void fixedZkHosts()
   {
     Properties props = new Properties();
-    props.put(curatorHostKey, "hostA");
+    props.put(CURATOR_HOST_KEY, "hostA");
     Injector injector = newInjector(props);
 
     injector.getInstance(CuratorFramework.class); // initialize related components
@@ -85,8 +85,8 @@ public final class CuratorModuleTest
   public void exhibitorEnsembleProvider()
   {
     Properties props = new Properties();
-    props.put(curatorHostKey, "hostA");
-    props.put(exhibitorHostsKey, "[\"hostB\"]");
+    props.put(CURATOR_HOST_KEY, "hostA");
+    props.put(EXHIBITOR_HOSTS_KEY, "[\"hostB\"]");
     Injector injector = newInjector(props);
 
     injector.getInstance(CuratorFramework.class); // initialize related components
@@ -101,8 +101,8 @@ public final class CuratorModuleTest
   public void emptyExhibitorHosts()
   {
     Properties props = new Properties();
-    props.put(curatorHostKey, "hostB");
-    props.put(exhibitorHostsKey, "[]");
+    props.put(CURATOR_HOST_KEY, "hostB");
+    props.put(EXHIBITOR_HOSTS_KEY, "[]");
     Injector injector = newInjector(props);
 
     injector.getInstance(CuratorFramework.class); // initialize related components

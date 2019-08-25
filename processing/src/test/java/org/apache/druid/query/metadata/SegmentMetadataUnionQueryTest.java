@@ -69,7 +69,7 @@ public class SegmentMetadataUnionQueryTest
         new Object[]{
             QueryRunnerTestHelper.makeUnionQueryRunner(
                 FACTORY,
-                new QueryableIndexSegment(TestIndex.getMMappedTestIndex(), QueryRunnerTestHelper.segmentId),
+                new QueryableIndexSegment(TestIndex.getMMappedTestIndex(), QueryRunnerTestHelper.SEGMENT_ID),
                 null
             ),
             true,
@@ -77,7 +77,7 @@ public class SegmentMetadataUnionQueryTest
         new Object[]{
             QueryRunnerTestHelper.makeUnionQueryRunner(
                 FACTORY,
-                new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), QueryRunnerTestHelper.segmentId),
+                new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), QueryRunnerTestHelper.SEGMENT_ID),
                 null
             ),
             false
@@ -90,7 +90,7 @@ public class SegmentMetadataUnionQueryTest
   public void testSegmentMetadataUnionQuery()
   {
     SegmentAnalysis expected = new SegmentAnalysis(
-        QueryRunnerTestHelper.segmentId.toString(),
+        QueryRunnerTestHelper.SEGMENT_ID.toString(),
         Collections.singletonList(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
         ImmutableMap.of(
             "placement",
@@ -112,8 +112,8 @@ public class SegmentMetadataUnionQueryTest
         null
     );
     SegmentMetadataQuery query = new Druids.SegmentMetadataQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.unionDataSource)
-        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .dataSource(QueryRunnerTestHelper.UNION_DATA_SOURCE)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .toInclude(new ListColumnIncluderator(Collections.singletonList("placement")))
         .analysisTypes(
             SegmentMetadataQuery.AnalysisType.CARDINALITY,

@@ -27,16 +27,16 @@ import java.io.IOException;
 
 public class EnvironmentVariablePasswordProviderTest
 {
-  private static final ObjectMapper jsonMapper = new ObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
   @Test
   public void testSerde() throws IOException
   {
     String providerString = "{\"type\": \"environment\", \"variable\" : \"test\"}";
-    PasswordProvider provider = jsonMapper.readValue(providerString, PasswordProvider.class);
+    PasswordProvider provider = JSON_MAPPER.readValue(providerString, PasswordProvider.class);
     Assert.assertTrue(provider instanceof EnvironmentVariablePasswordProvider);
     Assert.assertEquals("test", ((EnvironmentVariablePasswordProvider) provider).getVariable());
-    PasswordProvider serde = jsonMapper.readValue(jsonMapper.writeValueAsString(provider), PasswordProvider.class);
+    PasswordProvider serde = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(provider), PasswordProvider.class);
     Assert.assertEquals(provider, serde);
   }
 }

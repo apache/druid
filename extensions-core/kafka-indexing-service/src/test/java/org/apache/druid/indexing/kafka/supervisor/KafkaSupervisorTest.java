@@ -122,7 +122,7 @@ import java.util.concurrent.Executor;
 @RunWith(Parameterized.class)
 public class KafkaSupervisorTest extends EasyMockSupport
 {
-  private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+  private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final String TOPIC_PREFIX = "testTopic";
   private static final String DATASOURCE = "testDS";
   private static final int NUM_PARTITIONS = 3;
@@ -237,7 +237,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final Map<String, Object> contexts = supervisor.createIndexTasks(
         1,
         "seq",
-        objectMapper,
+        OBJECT_MAPPER,
         new TreeMap<>(),
         new KafkaIndexTaskIOConfig(
             0,
@@ -3393,7 +3393,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskMaster,
         indexerMetadataStorageCoordinator,
         taskClientFactory,
-        objectMapper,
+        OBJECT_MAPPER,
         new KafkaSupervisorSpec(
             dataSchema,
             tuningConfig,
@@ -3404,7 +3404,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             taskMaster,
             indexerMetadataStorageCoordinator,
             taskClientFactory,
-            objectMapper,
+            OBJECT_MAPPER,
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
@@ -3500,7 +3500,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskMaster,
         indexerMetadataStorageCoordinator,
         taskClientFactory,
-        objectMapper,
+        OBJECT_MAPPER,
         new KafkaSupervisorSpec(
             dataSchema,
             tuningConfig,
@@ -3511,7 +3511,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             taskMaster,
             indexerMetadataStorageCoordinator,
             taskClientFactory,
-            objectMapper,
+            OBJECT_MAPPER,
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
@@ -3584,7 +3584,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskMaster,
         indexerMetadataStorageCoordinator,
         taskClientFactory,
-        objectMapper,
+        OBJECT_MAPPER,
         new KafkaSupervisorSpec(
             dataSchema,
             tuningConfig,
@@ -3595,7 +3595,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             taskMaster,
             indexerMetadataStorageCoordinator,
             taskClientFactory,
-            objectMapper,
+            OBJECT_MAPPER,
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
@@ -3613,7 +3613,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     return new DataSchema(
         dataSource,
-        objectMapper.convertValue(
+        OBJECT_MAPPER.convertValue(
             new StringInputRowParser(
                 new JSONParseSpec(
                     new TimestampSpec("timestamp", "iso", null),
@@ -3636,7 +3636,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableList.of()
         ),
         null,
-        objectMapper
+        OBJECT_MAPPER
     );
   }
 
@@ -3717,7 +3717,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         rowIngestionMetersFactory,
-        objectMapper,
+        OBJECT_MAPPER,
         new DummyForInjectionAppenderatorsManager()
     );
   }

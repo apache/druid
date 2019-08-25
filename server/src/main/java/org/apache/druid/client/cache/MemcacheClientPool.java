@@ -43,11 +43,11 @@ final class MemcacheClientPool implements Supplier<ResourceHolder<MemcachedClien
 {
   private static final Logger log = new Logger(MemcacheClientPool.class);
 
-  private static final AtomicLong leakedClients = new AtomicLong(0);
+  private static final AtomicLong LEAKED_CLIENTS = new AtomicLong(0);
 
   public static long leakedClients()
   {
-    return leakedClients.get();
+    return LEAKED_CLIENTS.get();
   }
 
   /**
@@ -153,7 +153,7 @@ final class MemcacheClientPool implements Supplier<ResourceHolder<MemcachedClien
     {
       final int shouldBeZero = count.get();
       if (shouldBeZero != 0) {
-        leakedClients.incrementAndGet();
+        LEAKED_CLIENTS.incrementAndGet();
         log.warn("Expected 0 resource count, got [%d]! Object was[%s].", shouldBeZero, clientIF);
       }
     }

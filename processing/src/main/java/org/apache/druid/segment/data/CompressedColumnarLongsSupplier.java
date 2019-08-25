@@ -38,7 +38,7 @@ public class CompressedColumnarLongsSupplier implements Supplier<ColumnarLongs>,
   public static final byte LZF_VERSION = 0x1;
   public static final byte VERSION = 0x2;
 
-  private static final MetaSerdeHelper<CompressedColumnarLongsSupplier> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<CompressedColumnarLongsSupplier> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((CompressedColumnarLongsSupplier x) -> VERSION)
       .writeInt(x -> x.totalSize)
       .writeInt(x -> x.sizePer)
@@ -87,13 +87,13 @@ public class CompressedColumnarLongsSupplier implements Supplier<ColumnarLongs>,
   @Override
   public long getSerializedSize()
   {
-    return metaSerdeHelper.size(this) + (long) buffer.remaining();
+    return META_SERDE_HELPER.size(this) + (long) buffer.remaining();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     Channels.writeFully(channel, buffer.asReadOnlyBuffer());
   }
 

@@ -53,7 +53,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class Utils
 {
   private static final Logger log = new Logger(Utils.class);
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   public static OutputStream makePathAndOutputStream(JobContext job, Path outputPath, boolean deleteExisting)
       throws IOException
@@ -120,7 +120,7 @@ public class Utils
   {
     FileSystem fs = statsPath.getFileSystem(job.getConfiguration());
 
-    return jsonMapper.readValue(
+    return JSON_MAPPER.readValue(
         fs.open(statsPath),
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
@@ -128,7 +128,7 @@ public class Utils
 
   public static void storeStats(JobContext job, Path path, Map<String, Object> stats) throws IOException
   {
-    jsonMapper.writeValue(makePathAndOutputStream(job, path, true), stats);
+    JSON_MAPPER.writeValue(makePathAndOutputStream(job, path, true), stats);
   }
 
   public static String getFailureMessage(Job failedJob, ObjectMapper jsonMapper)

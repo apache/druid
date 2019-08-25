@@ -100,7 +100,7 @@
         <aws.sdk.version>1.11.199</aws.sdk.version>
         <caffeine.version>2.5.5</caffeine.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
-        <zookeeper.version>3.4.11</zookeeper.version>
+        <zookeeper.version>3.4.14</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
         <com.google.apis.client.version>1.22.0</com.google.apis.client.version>
 
@@ -278,6 +278,10 @@
                     <exclusion>
                         <groupId>io.netty</groupId>
                         <artifactId>netty</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>com.github.spotbugs</groupId>
+                        <artifactId>spotbugs-annotations</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -1001,11 +1005,6 @@
                         </configuration>
                     </execution>
                 </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.eluder.coveralls</groupId>
-                <artifactId>coveralls-maven-plugin</artifactId>
-                <version>4.3.0</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

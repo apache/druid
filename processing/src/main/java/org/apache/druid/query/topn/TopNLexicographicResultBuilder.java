@@ -24,6 +24,7 @@ import com.google.common.collect.Maps;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;
@@ -117,7 +118,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
         metricValues.put(aggFactoryNames[i + 7], metricVals[i + 7]); // lgtm [java/index-out-of-bounds]
       }
 
-      pQueue.add(new DimValHolder.Builder().withDimValue(dimValue).withMetricValues(metricValues).build());
+      pQueue.add(new DimValHolder.Builder().withDimValue(dimValue, ValueType.STRING).withMetricValues(metricValues).build());
       if (pQueue.size() > threshold) {
         pQueue.poll();
       }
@@ -134,7 +135,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
 
     if (shouldAdd(dimensionValue)) {
       pQueue.add(
-          new DimValHolder.Builder().withDimValue(dimensionValue)
+          new DimValHolder.Builder().withDimValue(dimensionValue, ValueType.STRING)
                                     .withMetricValues(dimensionAndMetricValueExtractor.getBaseObject())
                                     .build()
       );

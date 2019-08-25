@@ -57,6 +57,7 @@ export interface TimeMenuItemsProps {
   queryAst?: SqlQuery;
   columnName: string;
   clear: (column: string, preferablyRun: boolean) => void;
+  hasFilter: boolean;
 }
 
 export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
@@ -298,6 +299,19 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
     );
   }
 
+  renderRemoveFilter() {
+    const { columnName, clear } = this.props;
+    return (
+      <MenuItem
+        icon={IconNames.FILTER_REMOVE}
+        text={`Remove filter`}
+        onClick={() => {
+          clear(columnName, true);
+        }}
+      />
+    );
+  }
+
   renderGroupByMenu(): JSX.Element {
     const { columnName, addFunctionToGroupBy } = this.props;
 
@@ -364,7 +378,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
   }
 
   render(): JSX.Element {
-    const { queryAst } = this.props;
+    const { queryAst, hasFilter } = this.props;
     let hasGroupBy;
     if (queryAst) {
       hasGroupBy = queryAst.groupByClause;
@@ -372,6 +386,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
     return (
       <>
         {queryAst && this.renderFilterMenu()}
+        {hasFilter && this.renderRemoveFilter()}
         {hasGroupBy && this.renderGroupByMenu()}
         {hasGroupBy && this.renderAggregateMenu()}
       </>
