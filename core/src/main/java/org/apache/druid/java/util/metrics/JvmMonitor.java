@@ -22,6 +22,7 @@ package org.apache.druid.java.util.metrics;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.gridkit.lab.jvm.perfdata.JStatData;
@@ -29,6 +30,7 @@ import org.gridkit.lab.jvm.perfdata.JStatData.LongCounter;
 import org.gridkit.lab.jvm.perfdata.JStatData.StringCounter;
 import org.gridkit.lab.jvm.perfdata.JStatData.TickCounter;
 
+import javax.annotation.Nullable;
 import java.lang.management.BufferPoolMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
@@ -40,10 +42,12 @@ import java.util.Map;
 
 public class JvmMonitor extends FeedDefiningMonitor
 {
+  private static final Logger log = new Logger(JvmMonitor.class);
+
   private final Map<String, String[]> dimensions;
   private final long pid;
 
-  private final GcCounters gcCounters = new GcCounters();
+  final GcCounters gcCounters;
 
   private final AllocationMetricCollector collector;
 
@@ -69,6 +73,7 @@ public class JvmMonitor extends FeedDefiningMonitor
     this.dimensions = ImmutableMap.copyOf(dimensions);
     this.pid = Preconditions.checkNotNull(pidDiscoverer).getPid();
     this.collector = AllocationMetricCollectors.getAllocationMetricCollector();
+    this.gcCounters = getGcCounters();
   }
 
   @Override
@@ -146,7 +151,25 @@ public class JvmMonitor extends FeedDefiningMonitor
 
   private void emitGcMetrics(ServiceEmitter emitter)
   {
-    gcCounters.emit(emitter, dimensions);
+    if (gcCounters != null) {
+      gcCounters.emit(emitter, dimensions);
+    }
+  }
+
+  @Nullable
+  private GcCounters getGcCounters()
+  {
+    try {
+      return new GcCounters();
+    }
+    catch (RuntimeException e) {
+      // in JDK11 jdk.internal.perf.Perf is not accessible, unless
+      // --add-exports java.base/jdk.internal.perf=ALL-UNNAMED is set
+      log.warn(e, "Cannot initialize GC counters. If running JDK11 and above,"
+                  + " add --add-exports java.base/jdk.internal.perf=ALL-UNNAMED"
+                  + " to the JVM arguments to enable GC counters.");
+    }
+    return null;
   }
 
   /**
