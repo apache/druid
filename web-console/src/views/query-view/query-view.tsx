@@ -32,7 +32,7 @@ import memoizeOne from 'memoize-one';
 import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
 
-import { SQL_FUNCTIONS } from '../../../lib/sql-function-doc';
+import { SQL_FUNCTIONS } from '../../../lib/sql-docs';
 import { QueryPlanDialog } from '../../dialogs';
 import { EditContextDialog } from '../../dialogs/edit-context-dialog/edit-context-dialog';
 import {
