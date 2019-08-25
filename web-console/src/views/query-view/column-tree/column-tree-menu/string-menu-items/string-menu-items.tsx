@@ -36,10 +36,6 @@ export interface StringMenuItemsProps {
 }
 
 export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
-  constructor(props: StringMenuItemsProps, context: any) {
-    super(props, context);
-  }
-
   renderFilterMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = this.props;
 

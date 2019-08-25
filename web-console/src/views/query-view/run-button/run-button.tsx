@@ -57,10 +57,6 @@ export interface RunButtonProps {
 
 @HotkeysTarget
 export class RunButton extends React.PureComponent<RunButtonProps> {
-  constructor(props: RunButtonProps, context: any) {
-    super(props, context);
-  }
-
   public renderHotkeys() {
     return (
       <Hotkeys>

@@ -29,10 +29,6 @@ export interface NumberMenuItemsProps {
 }
 
 export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
-  constructor(props: NumberMenuItemsProps, context: any) {
-    super(props, context);
-  }
-
   renderFilterMenu(): JSX.Element {
     const { columnName, parsedQuery, onQueryChange } = this.props;
 

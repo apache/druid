@@ -18,7 +18,7 @@
 
 import { MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { AdditiveExpression, SqlQuery, timestampFactory } from 'druid-query-toolkit';
+import { AdditiveExpression, SqlQuery, Timestamp, timestampFactory } from 'druid-query-toolkit';
 import {
   aliasFactory,
   intervalFactory,
@@ -34,81 +34,69 @@ export interface TimeMenuItemsProps {
 }
 
 export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
-  constructor(props: TimeMenuItemsProps, context: any) {
-    super(props, context);
+  static dateToTimestamp(date: Date): Timestamp {
+    return timestampFactory(
+      date
+        .toISOString()
+        .split('.')[0]
+        .split('T')
+        .join(' '),
+    );
   }
 
-  formatTime(timePart: number): string {
-    if (timePart % 10 > 0) {
-      return String(timePart);
-    } else return '0' + String(timePart);
+  static floorHour(dt: Date): Date {
+    dt = new Date(dt.valueOf());
+    dt.setUTCMinutes(0, 0, 0);
+    return dt;
   }
 
-  getNextMonth(month: number, year: number): { month: string; year: number } {
-    if (month === 12) {
-      return { month: '01', year: year + 1 };
-    }
-    return { month: this.formatTime(month + 1), year: year };
+  static nextHour(dt: Date): Date {
+    dt = new Date(dt.valueOf());
+    dt.setUTCHours(dt.getUTCHours() + 1);
+    return dt;
   }
 
-  getNextDay(
-    day: number,
-    month: number,
-    year: number,
-  ): { day: string; month: string; year: number } {
-    if (
-      month === 1 ||
-      month === 3 ||
-      month === 5 ||
-      month === 7 ||
-      month === 8 ||
-      month === 10 ||
-      month === 12
-    ) {
-      if (day === 31) {
-        const next = this.getNextMonth(month, year);
-        return { day: '01', month: next.month, year: next.year };
-      }
-    } else if (month === 4 || month === 6 || month === 9 || month === 11) {
-      if (day === 30) {
-        const next = this.getNextMonth(month, year);
-        return { day: '01', month: next.month, year: next.year };
-      }
-    } else if (month === 2) {
-      if ((day === 29 && year % 4 === 0) || (day === 28 && year % 4)) {
-        const next = this.getNextMonth(month, year);
-        return { day: '01', month: next.month, year: next.year };
-      }
-    }
-    return { day: this.formatTime(day + 1), month: this.formatTime(month), year: year };
+  static floorDay(dt: Date): Date {
+    dt = new Date(dt.valueOf());
+    dt.setUTCHours(0, 0, 0, 0);
+    return dt;
   }
 
-  getNextHour(
-    hour: number,
-    day: number,
-    month: number,
-    year: number,
-  ): { hour: string; day: string; month: string; year: number } {
-    if (hour === 23) {
-      const next = this.getNextDay(day, month, year);
-      return { hour: '00', day: next.day, month: next.month, year: next.year };
-    }
-    return {
-      hour: this.formatTime(hour + 1),
-      day: this.formatTime(day),
-      month: this.formatTime(month),
-      year: year,
-    };
+  static nextDay(dt: Date): Date {
+    dt = new Date(dt.valueOf());
+    dt.setUTCDate(dt.getUTCDate() + 1);
+    return dt;
+  }
+
+  static floorMonth(dt: Date): Date {
+    dt = new Date(dt.valueOf());
+    dt.setUTCHours(0, 0, 0, 0);
+    dt.setUTCDate(1);
+    return dt;
+  }
+
+  static nextMonth(dt: Date): Date {
+    dt = new Date(dt.valueOf());
+    dt.setUTCMonth(dt.getUTCMonth() + 1);
+    return dt;
+  }
+
+  static floorYear(dt: Date): Date {
+    dt = new Date(dt.valueOf());
+    dt.setUTCHours(0, 0, 0, 0);
+    dt.setUTCMonth(0, 1);
+    return dt;
+  }
+
+  static nextYear(dt: Date): Date {
+    dt = new Date(dt.valueOf());
+    dt.setUTCFullYear(dt.getUTCFullYear() + 1);
+    return dt;
   }
 
   renderFilterMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = this.props;
-
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const day = date.getDay();
-    const hour = date.getHours();
+    const now = new Date();
 
     return (
       <MenuItem icon={IconNames.FILTER} text={`Filter`}>
@@ -191,18 +179,18 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
         <MenuItem
           text={`Current hour`}
           onClick={() => {
-            const next = this.getNextHour(hour, day, month, year);
+            const hourStart = TimeMenuItems.floorHour(now);
             onQueryChange(
               parsedQuery
                 .removeFilter(columnName)
                 .filterRow(
-                  timestampFactory(`${year}-${month}-${day} ${this.formatTime(hour)}:00:00`),
+                  TimeMenuItems.dateToTimestamp(hourStart),
                   stringFactory(columnName, `"`),
                   '<=',
                 )
                 .filterRow(
                   columnName,
-                  timestampFactory(`${next.year}-${next.month}-${next.day} ${next.hour}:00:00`),
+                  TimeMenuItems.dateToTimestamp(TimeMenuItems.nextHour(hourStart)),
                   '<',
                 ),
               true,
@@ -212,18 +200,18 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
         <MenuItem
           text={`Current day`}
           onClick={() => {
-            const next = this.getNextDay(day, month, year);
+            const dayStart = TimeMenuItems.floorDay(now);
             onQueryChange(
               parsedQuery
                 .removeFilter(columnName)
                 .filterRow(
-                  timestampFactory(`${year}-${month}-${day} 00:00:00`),
+                  TimeMenuItems.dateToTimestamp(dayStart),
                   stringFactory(columnName, `"`),
                   '<=',
                 )
                 .filterRow(
                   columnName,
-                  timestampFactory(`${next.year}-${next.month}-${next.day} 00:00:00`),
+                  TimeMenuItems.dateToTimestamp(TimeMenuItems.nextDay(dayStart)),
                   '<',
                 ),
               true,
@@ -233,18 +221,18 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
         <MenuItem
           text={`Current month`}
           onClick={() => {
-            const next = this.getNextMonth(month, year);
+            const monthStart = TimeMenuItems.floorMonth(now);
             onQueryChange(
               parsedQuery
                 .removeFilter(columnName)
                 .filterRow(
-                  timestampFactory(`${year}-${month}-01 00:00:00`),
+                  TimeMenuItems.dateToTimestamp(monthStart),
                   stringFactory(columnName, `"`),
                   '<=',
                 )
                 .filterRow(
                   columnName,
-                  timestampFactory(`${next.year}-${next.month}-01 00:00:00`),
+                  TimeMenuItems.dateToTimestamp(TimeMenuItems.nextMonth(monthStart)),
                   '<',
                 ),
               true,
@@ -254,15 +242,20 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
         <MenuItem
           text={`Current year`}
           onClick={() => {
+            const yearStart = TimeMenuItems.floorYear(now);
             onQueryChange(
               parsedQuery
                 .removeFilter(columnName)
                 .filterRow(
-                  timestampFactory(`${year}-01-01 00:00:00`),
+                  TimeMenuItems.dateToTimestamp(yearStart),
                   stringFactory(columnName, `"`),
                   '<=',
                 )
-                .filterRow(columnName, timestampFactory(`${Number(year) + 1}-01-01 00:00:00`), '<'),
+                .filterRow(
+                  columnName,
+                  TimeMenuItems.dateToTimestamp(TimeMenuItems.nextYear(yearStart)),
+                  '<',
+                ),
               true,
             );
           }}

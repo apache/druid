@@ -28,10 +28,6 @@ export interface RefreshButtonProps {
 }
 
 export class RefreshButton extends React.PureComponent<RefreshButtonProps> {
-  constructor(props: RefreshButtonProps, context: any) {
-    super(props, context);
-  }
-
   render(): JSX.Element {
     const { onRefresh, localStorageKey } = this.props;
     const intervals = [
