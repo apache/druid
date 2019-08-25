@@ -311,10 +311,15 @@
         <constraint name="k" within="" contains="" />
         <constraint name="v" within="" contains="" />
       </searchConfiguration>
-      <searchConfiguration name="Prohibit Thread.getState() != TERMINATED antipattern" text="while($k$.getDelayedCloseExecutor().getState()!=Thread.State.$k1$){Thread.sleep($k2$)}" recursive="true" caseInsensitive="true" type="JAVA">
-        <constraint name="k" within="" contains="" />
-        <constraint name="k1" within="" contains="" />
-        <constraint name="k2" within="" contains="" />
+      <searchConfiguration name="Prohibit Thread.getState() != TERMINATED antipattern" text="while($t$.getState()!=Thread.State.$state$){Thread.sleep($t1$)}" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="t" within="" contains="" />
+        <constraint name="state" within="" contains="" />
+        <constraint name="t1" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Prohibit Thread.getState() == TERMINATED antipattern" text="while($t$.getState()==Thread.State.$state$){Thread.sleep($t1$)}" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="t" within="" contains="" />
+        <constraint name="state" within="" contains="" />
+        <constraint name="t1" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="Use CollectionUtils.mapValues(Map&lt;K,V&gt;, Function&lt;V,V2&gt;)" text="$x$.entrySet().stream().collect(Collectors.toMap($k$ -&gt; $k$.getKey(), $y$))" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="x" within="" contains="" />
