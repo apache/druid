@@ -100,14 +100,16 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
       <Menu>
         <MenuItem
           icon={IconNames.HELP}
-          text="Query docs"
+          text={runeMode ? 'Native query documentation' : 'DruidSQL documentation'}
           href={runeMode ? DRUID_DOCS_RUNE : DRUID_DOCS_SQL}
           target="_blank"
         />
+        <MenuItem icon={IconNames.HISTORY} text="Query history" onClick={onHistory} />
         {!runeMode && (
           <>
-            {onExplain && <MenuItem icon={IconNames.CLEAN} text="Explain" onClick={onExplain} />}
-            <MenuItem icon={IconNames.HISTORY} text="History" onClick={onHistory} />
+            {onExplain && (
+              <MenuItem icon={IconNames.CLEAN} text="Explain SQL query" onClick={onExplain} />
+            )}
             <MenuCheckbox
               checked={useApproximateCountDistinct}
               label="Use approximate COUNT(DISTINCT)"
