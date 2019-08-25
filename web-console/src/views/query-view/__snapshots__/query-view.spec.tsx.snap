@@ -46,7 +46,7 @@ exports[`sql view matches snapshot 1`] = `
           runeMode={false}
         />
         <Blueprint3.Tooltip
-          content="Automatically wrap the query with a limit to protect against queries with very large result sets"
+          content="Automatically wrap the query with a limit to protect against queries with very large result sets."
           hoverCloseDelay={0}
           hoverOpenDelay={800}
           transitionDuration={100}

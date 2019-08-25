@@ -33,6 +33,7 @@ import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import { MenuCheckbox } from '../../../components';
+import { pluralIfNeeded } from '../../../utils';
 import {
   getUseApproximateCountDistinct,
   getUseApproximateTopN,
@@ -97,6 +98,7 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
     const useCache = getUseCache(queryContext);
     const useApproximateCountDistinct = getUseApproximateCountDistinct(queryContext);
     const useApproximateTopN = getUseApproximateTopN(queryContext);
+    const numContextKeys = Object.keys(queryContext).length;
 
     return (
       <Menu>
@@ -141,7 +143,12 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
           }}
         />
         {!runeMode && (
-          <MenuItem icon={IconNames.PROPERTIES} text="Edit context" onClick={onEditContext} />
+          <MenuItem
+            icon={IconNames.PROPERTIES}
+            text="Edit context"
+            onClick={onEditContext}
+            labelElement={numContextKeys ? pluralIfNeeded(numContextKeys, 'key') : undefined}
+          />
         )}
       </Menu>
     );

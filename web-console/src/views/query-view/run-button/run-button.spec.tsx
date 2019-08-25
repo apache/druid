@@ -30,7 +30,7 @@ describe('run button', () => {
         onHistory={() => {}}
         onEditContext={() => {}}
         runeMode={false}
-        queryContext={{}}
+        queryContext={{ f: 3 }}
         onQueryContextChange={() => {}}
         onRun={() => {}}
         onExplain={() => {}}

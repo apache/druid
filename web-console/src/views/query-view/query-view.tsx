@@ -45,8 +45,10 @@ import {
   downloadFile,
   getDruidErrorMessage,
   localStorageGet,
+  localStorageGetJson,
   LocalStorageKeys,
   localStorageSet,
+  localStorageSetJson,
   parseQueryPlan,
   queryDruidSql,
   QueryManager,
@@ -186,15 +188,10 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     const queryString = props.initQuery || localStorageGet(LocalStorageKeys.QUERY_KEY) || '';
     const parsedQuery = queryString ? parser(queryString) : undefined;
 
-    const localStorageQueryHistory = localStorageGet(LocalStorageKeys.QUERY_HISTORY);
-    let queryHistory = [];
-    if (localStorageQueryHistory) {
-      let possibleQueryHistory: unknown;
-      try {
-        possibleQueryHistory = JSON.parse(localStorageQueryHistory);
-      } catch {}
-      if (Array.isArray(possibleQueryHistory)) queryHistory = possibleQueryHistory;
-    }
+    const queryContext = localStorageGetJson(LocalStorageKeys.QUERY_CONTEXT) || {};
+
+    const possibleQueryHistory = localStorageGetJson(LocalStorageKeys.QUERY_HISTORY);
+    const queryHistory = Array.isArray(possibleQueryHistory) ? possibleQueryHistory : [];
 
     const localStorageAutoRun = localStorageGet(LocalStorageKeys.AUTO_RUN);
     let autoRun = true;
@@ -209,7 +206,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     this.state = {
       queryString,
       parsedQuery,
-      queryContext: {},
+      queryContext,
       wrapQueryLimit: 100,
       autoRun,
 
@@ -417,7 +414,10 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     return (
       <QueryHistoryDialog
         queryRecords={queryHistory}
-        setQueryString={this.handleQueryStringChange}
+        setQueryString={(queryString, queryContext) => {
+          this.handleQueryContextChange(queryContext);
+          this.handleQueryStringChange(queryString);
+        }}
         onClose={() => this.setState({ historyDialogOpen: false })}
       />
     );
@@ -429,10 +429,10 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
     return (
       <EditContextDialog
-        onQueryContextChange={(queryContext: QueryContext) =>
-          this.setState({ queryContext, editContextDialogOpen: false })
-        }
-        onClose={() => this.setState({ editContextDialogOpen: false })}
+        onQueryContextChange={this.handleQueryContextChange}
+        onClose={() => {
+          this.setState({ editContextDialogOpen: false });
+        }}
         queryContext={queryContext}
       />
     );
@@ -444,7 +444,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
     return (
       <Tooltip
-        content="Automatically wrap the query with a limit to protect against queries with very large result sets"
+        content="Automatically wrap the query with a limit to protect against queries with very large result sets."
         hoverOpenDelay={800}
       >
         <Switch
@@ -566,10 +566,15 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     const { queryString, queryContext, wrapQueryLimit, queryHistory } = this.state;
     if (QueryView.isJsonLike(queryString) && !QueryView.validRune(queryString)) return;
 
-    const newQueryHistory = QueryHistoryDialog.addQueryToHistory(queryHistory, queryString);
+    const newQueryHistory = QueryHistoryDialog.addQueryToHistory(
+      queryHistory,
+      queryString,
+      queryContext,
+    );
 
-    localStorageSet(LocalStorageKeys.QUERY_HISTORY, JSON.stringify(newQueryHistory));
+    localStorageSetJson(LocalStorageKeys.QUERY_HISTORY, newQueryHistory);
     localStorageSet(LocalStorageKeys.QUERY_KEY, queryString);
+    localStorageSetJson(LocalStorageKeys.QUERY_CONTEXT, queryContext);
 
     this.setState({ queryHistory: newQueryHistory });
     this.sqlQueryManager.runQuery({ queryString, queryContext, wrapQueryLimit });
