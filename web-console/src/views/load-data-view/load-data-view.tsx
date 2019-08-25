@@ -1044,8 +1044,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             </FormGroup>
           )}
           <Button
-            text={inlineMode ? 'Register' : 'Preview'}
+            text={inlineMode ? 'Register data' : 'Preview'}
             disabled={isBlank}
+            intent={inputQueryState.data ? undefined : Intent.PRIMARY}
             onClick={() => this.queryForConnect()}
           />
         </div>

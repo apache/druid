@@ -16,25 +16,6 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import { sqlParserFactory } from 'druid-query-toolkit';
-import React from 'react';
-
-import { TimeMenuItems } from './time-menu-items';
-
-describe('time menu', () => {
-  const parser = sqlParserFactory(['COUNT']);
-
-  it('matches snapshot', () => {
-    const timeMenu = (
-      <TimeMenuItems
-        columnName={'__time'}
-        parsedQuery={parser(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
-        onQueryChange={() => {}}
-      />
-    );
-
-    const { container } = render(timeMenu);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+export * from './number-menu-items/number-menu-items';
+export * from './string-menu-items/string-menu-items';
+export * from './time-menu-items/time-menu-items';

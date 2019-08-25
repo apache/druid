@@ -27,7 +27,7 @@ import { ChartAxis } from './chart-axis';
 
 import './stacked-bar-chart.scss';
 
-interface StackedBarChartProps extends React.Props<any> {
+interface StackedBarChartProps {
   svgWidth: number;
   svgHeight: number;
   margin: BarChartMargin;

@@ -28,17 +28,14 @@ import ReactTable from 'react-table';
 
 import { copyAndAlert } from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
-import { RowFilter } from '../query-view';
 
 import './query-output.scss';
 
 export interface QueryOutputProps {
   loading: boolean;
-  sqlFilterRow: (filters: RowFilter[], run: boolean) => void;
-  sqlExcludeColumn: (header: string, run: boolean) => void;
-  sqlOrderBy: (header: string, direction: 'ASC' | 'DESC', run: boolean) => void;
   queryResult?: HeaderRows;
   parsedQuery?: SqlQuery;
+  onQueryChange: (query: SqlQuery, run?: boolean) => void;
   error?: string;
   runeMode: boolean;
 }
@@ -97,7 +94,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
     );
   }
   getHeaderActions(h: string) {
-    const { parsedQuery, sqlExcludeColumn, sqlOrderBy, runeMode } = this.props;
+    const { parsedQuery, onQueryChange, runeMode } = this.props;
 
     let actionsMenu;
     if (parsedQuery) {
@@ -110,7 +107,9 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
             basicActions.push({
               icon: sorted.desc ? IconNames.SORT_ASC : IconNames.SORT_DESC,
               title: `Order by: ${h} ${sorted.desc ? 'ASC' : 'DESC'}`,
-              onAction: () => sqlOrderBy(h, sorted.desc ? 'ASC' : 'DESC', true),
+              onAction: () => {
+                onQueryChange(parsedQuery.orderBy(h, sorted.desc ? 'ASC' : 'DESC'), true);
+              },
             });
           }
         });
@@ -120,19 +119,25 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
           {
             icon: IconNames.SORT_ASC,
             title: `Order by: ${h} ASC`,
-            onAction: () => sqlOrderBy(h, 'ASC', true),
+            onAction: () => {
+              onQueryChange(parsedQuery.orderBy(h, 'ASC'), true);
+            },
           },
           {
             icon: IconNames.SORT_DESC,
             title: `Order by: ${h} DESC`,
-            onAction: () => sqlOrderBy(h, 'DESC', true),
+            onAction: () => {
+              onQueryChange(parsedQuery.orderBy(h, 'DESC'), true);
+            },
           },
         );
       }
       basicActions.push({
         icon: IconNames.CROSS,
         title: `Remove: ${h}`,
-        onAction: () => sqlExcludeColumn(h, true),
+        onAction: () => {
+          onQueryChange(parsedQuery.excludeColumn(h), true);
+        },
       });
       actionsMenu = basicActionsToMenu(basicActions);
     } else {
@@ -176,7 +181,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
   }
 
   getRowActions(row: string, header: string) {
-    const { parsedQuery, sqlFilterRow, runeMode } = this.props;
+    const { parsedQuery, onQueryChange, runeMode } = this.props;
 
     let actionsMenu;
     if (parsedQuery) {
@@ -185,24 +190,32 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
           <MenuItem
             icon={IconNames.FILTER_KEEP}
             text={`Filter by: ${header} = ${row}`}
-            onClick={() => sqlFilterRow([{ row, header, operator: '=' }], true)}
+            onClick={() => {
+              onQueryChange(parsedQuery.filterRow(header, row, '='), true);
+            }}
           />
           <MenuItem
             icon={IconNames.FILTER_REMOVE}
             text={`Filter by: ${header} != ${row}`}
-            onClick={() => sqlFilterRow([{ row, header, operator: '!=' }], true)}
+            onClick={() => {
+              onQueryChange(parsedQuery.filterRow(header, row, '!='), true);
+            }}
           />
           {!isNaN(Number(row)) && (
             <>
               <MenuItem
                 icon={IconNames.FILTER_KEEP}
-                text={`Filter by: ${header} > ${row}`}
-                onClick={() => sqlFilterRow([{ row, header, operator: '>' }], true)}
+                text={`Filter by: ${header} >= ${row}`}
+                onClick={() => {
+                  onQueryChange(parsedQuery.filterRow(header, row, '>='), true);
+                }}
               />
               <MenuItem
                 icon={IconNames.FILTER_KEEP}
                 text={`Filter by: ${header} <= ${row}`}
-                onClick={() => sqlFilterRow([{ row, header, operator: '<=' }], true)}
+                onClick={() => {
+                  onQueryChange(parsedQuery.filterRow(header, row, '<='), true);
+                }}
               />
             </>
           )}

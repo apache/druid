@@ -31,10 +31,6 @@ export interface ShowValueProps {
 }
 
 export class ShowValue extends React.PureComponent<ShowValueProps> {
-  constructor(props: ShowValueProps, context: any) {
-    super(props, context);
-  }
-
   render(): JSX.Element {
     const { endpoint, downloadFilename, jsonValue } = this.props;
     return (
