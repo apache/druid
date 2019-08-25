@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.metrics;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
@@ -47,8 +48,11 @@ public class JvmMonitor extends FeedDefiningMonitor
   private final Map<String, String[]> dimensions;
   private final long pid;
 
+  @VisibleForTesting
+  @Nullable
   final GcCounters gcCounters;
 
+  @Nullable
   private final AllocationMetricCollector collector;
 
   public JvmMonitor()
@@ -73,7 +77,7 @@ public class JvmMonitor extends FeedDefiningMonitor
     this.dimensions = ImmutableMap.copyOf(dimensions);
     this.pid = Preconditions.checkNotNull(pidDiscoverer).getPid();
     this.collector = AllocationMetricCollectors.getAllocationMetricCollector();
-    this.gcCounters = getGcCounters();
+    this.gcCounters = tryCreateGcCounters();
   }
 
   @Override
@@ -157,7 +161,7 @@ public class JvmMonitor extends FeedDefiningMonitor
   }
 
   @Nullable
-  private GcCounters getGcCounters()
+  private GcCounters tryCreateGcCounters()
   {
     try {
       return new GcCounters();
@@ -165,9 +169,9 @@ public class JvmMonitor extends FeedDefiningMonitor
     catch (RuntimeException e) {
       // in JDK11 jdk.internal.perf.Perf is not accessible, unless
       // --add-exports java.base/jdk.internal.perf=ALL-UNNAMED is set
-      log.warn(e, "Cannot initialize GC counters. If running JDK11 and above,"
-                  + " add --add-exports java.base/jdk.internal.perf=ALL-UNNAMED"
-                  + " to the JVM arguments to enable GC counters.");
+      log.warn("Cannot initialize GC counters. If running JDK11 and above,"
+               + " add --add-exports java.base/jdk.internal.perf=ALL-UNNAMED"
+               + " to the JVM arguments to enable GC counters.");
     }
     return null;
   }
