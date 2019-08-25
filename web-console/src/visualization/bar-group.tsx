@@ -24,7 +24,7 @@ import { BarUnitData } from '../components/segment-timeline/segment-timeline';
 import { BarUnit } from './bar-unit';
 import { HoveredBarInfo } from './stacked-bar-chart';
 
-interface BarGroupProps extends React.Props<any> {
+interface BarGroupProps {
   dataToRender: BarUnitData[];
   changeActiveDatasource: (e: string) => void;
   formatTick: (e: number) => string;

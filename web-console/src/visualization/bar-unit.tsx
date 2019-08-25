@@ -20,7 +20,7 @@ import React from 'react';
 
 import './bar-unit.scss';
 
-interface BarChartUnitProps extends React.Props<any> {
+interface BarChartUnitProps {
   x: number | undefined;
   y: number;
   width: number;
