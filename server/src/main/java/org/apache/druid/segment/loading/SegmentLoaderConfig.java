@@ -113,7 +113,7 @@ public class SegmentLoaderConfig
 
   private void checkLocationConfigForNull()
   {
-    if (locations == null || locations.size() == 0) {
+    if (getLocations() == null || getLocations().size() == 0) {
       throw new ISE("You have no segment cache locations defined. Please configure druid.segmentCache.locations to use one or more locations.");
     }
   }
