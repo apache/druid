@@ -33,20 +33,28 @@ describe('column tree', () => {
         getParsedQuery={() => {
           return parser(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`);
         }}
+        defaultSchema="druid"
+        defaultTable="wikipedia"
         columnMetadataLoading={false}
         columnMetadata={
           [
             {
               TABLE_SCHEMA: 'druid',
-              TABLE_NAME: 'deletion-tutorial',
+              TABLE_NAME: 'wikipedia',
               COLUMN_NAME: '__time',
               DATA_TYPE: 'TIMESTAMP',
             },
             {
               TABLE_SCHEMA: 'druid',
-              TABLE_NAME: 'deletion-tutorial',
+              TABLE_NAME: 'wikipedia',
               COLUMN_NAME: 'added',
               DATA_TYPE: 'BIGINT',
+            },
+            {
+              TABLE_SCHEMA: 'druid',
+              TABLE_NAME: 'wikipedia',
+              COLUMN_NAME: 'addedBy10',
+              DATA_TYPE: 'FLOAT',
             },
             {
               TABLE_SCHEMA: 'sys',
