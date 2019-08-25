@@ -47,8 +47,6 @@ import { DRUID_DOCS_RUNE, DRUID_DOCS_SQL } from '../../../variables';
 
 export interface RunButtonProps {
   runeMode: boolean;
-  autoRun: boolean;
-  onAutoRunChange: (autoRun: boolean) => void;
   queryContext: QueryContext;
   onQueryContextChange: (newQueryContext: QueryContext) => void;
   onRun: (() => void) | undefined;
@@ -91,8 +89,6 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
       onQueryContextChange,
       onEditContext,
       onHistory,
-      autoRun,
-      onAutoRunChange,
     } = this.props;
 
     const useCache = getUseCache(queryContext);
@@ -112,11 +108,6 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
           <>
             {onExplain && <MenuItem icon={IconNames.CLEAN} text="Explain" onClick={onExplain} />}
             <MenuItem icon={IconNames.HISTORY} text="History" onClick={onHistory} />
-            <MenuCheckbox
-              checked={autoRun}
-              label="Auto run queries"
-              onChange={() => onAutoRunChange(!autoRun)}
-            />
             <MenuCheckbox
               checked={useApproximateCountDistinct}
               label="Use approximate COUNT(DISTINCT)"
@@ -173,7 +164,7 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
           <Button icon={IconNames.CARET_RIGHT} text={runButtonText} disabled />
         )}
         <Popover position={Position.BOTTOM_LEFT} content={this.renderExtraMenu()}>
-          <Button icon={IconNames.MORE} intent={Intent.PRIMARY} />
+          <Button icon={IconNames.MORE} intent={onRun ? Intent.PRIMARY : undefined} />
         </Popover>
       </ButtonGroup>
     );

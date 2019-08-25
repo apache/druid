@@ -193,15 +193,8 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     const possibleQueryHistory = localStorageGetJson(LocalStorageKeys.QUERY_HISTORY);
     const queryHistory = Array.isArray(possibleQueryHistory) ? possibleQueryHistory : [];
 
-    const localStorageAutoRun = localStorageGet(LocalStorageKeys.AUTO_RUN);
-    let autoRun = true;
-    if (localStorageAutoRun) {
-      let possibleAutoRun: unknown;
-      try {
-        possibleAutoRun = JSON.parse(localStorageAutoRun);
-      } catch {}
-      if (typeof possibleAutoRun === 'boolean') autoRun = possibleAutoRun;
-    }
+    const possibleAutoRun = localStorageGetJson(LocalStorageKeys.AUTO_RUN);
+    const autoRun = typeof possibleAutoRun === 'boolean' ? possibleAutoRun : true;
 
     this.state = {
       queryString,
@@ -438,6 +431,25 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     );
   }
 
+  renderAutoRunSwitch() {
+    const { autoRun, queryString } = this.state;
+    if (QueryView.isJsonLike(queryString)) return;
+
+    return (
+      <Tooltip
+        content="Automatically run queries when modified via helper action menus."
+        hoverOpenDelay={800}
+      >
+        <Switch
+          className="auto-run"
+          checked={autoRun}
+          label="Auto run"
+          onChange={() => this.handleAutoRunChange(!autoRun)}
+        />
+      </Tooltip>
+    );
+  }
+
   renderWrapQueryLimitSelector() {
     const { wrapQueryLimit, queryString } = this.state;
     if (QueryView.isJsonLike(queryString)) return;
@@ -458,15 +470,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   }
 
   renderMainArea() {
-    const {
-      queryString,
-      queryContext,
-      loading,
-      result,
-      error,
-      columnMetadata,
-      autoRun,
-    } = this.state;
+    const { queryString, queryContext, loading, result, error, columnMetadata } = this.state;
     const emptyQuery = QueryView.isEmptyQuery(queryString);
 
     let currentSchema;
@@ -507,8 +511,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           />
           <div className="control-bar">
             <RunButton
-              autoRun={autoRun}
-              onAutoRunChange={this.handleAutoRunChange}
               onEditContext={() => this.setState({ editContextDialogOpen: true })}
               runeMode={runeMode}
               queryContext={queryContext}
@@ -517,6 +519,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
               onExplain={emptyQuery ? undefined : this.handleExplain}
               onHistory={() => this.setState({ historyDialogOpen: true })}
             />
+            {this.renderAutoRunSwitch()}
             {this.renderWrapQueryLimitSelector()}
             {result && (
               <QueryExtraInfo
@@ -555,7 +558,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
   private handleAutoRunChange = (autoRun: boolean) => {
     this.setState({ autoRun });
-    localStorageSet(LocalStorageKeys.AUTO_RUN, String(autoRun));
+    localStorageSetJson(LocalStorageKeys.AUTO_RUN, autoRun);
   };
 
   private handleWrapQueryLimitChange = (wrapQueryLimit: number | undefined) => {
