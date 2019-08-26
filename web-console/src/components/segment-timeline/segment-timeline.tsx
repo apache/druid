@@ -433,7 +433,11 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
         svgHeight={chartHeight}
         svgWidth={chartWidth}
         margin={this.chartMargin}
-        changeActiveDatasource={(e: string) => this.setState({ activeDatasource: e })}
+        changeActiveDatasource={(datasource: string) =>
+          this.setState(prevState => ({
+            activeDatasource: prevState.activeDatasource ? null : datasource,
+          }))
+        }
         activeDataType={activeDataType}
         formatTick={(n: number) => this.formatTick(n)}
         xScale={xScale}

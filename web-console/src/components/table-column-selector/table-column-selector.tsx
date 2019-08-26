@@ -30,17 +30,7 @@ interface TableColumnSelectorProps {
   tableColumnsHidden: string[];
 }
 
-interface TableColumnSelectorState {}
-
-export class TableColumnSelector extends React.PureComponent<
-  TableColumnSelectorProps,
-  TableColumnSelectorState
-> {
-  constructor(props: TableColumnSelectorProps) {
-    super(props);
-    this.state = {};
-  }
-
+export class TableColumnSelector extends React.PureComponent<TableColumnSelectorProps> {
   render(): JSX.Element {
     const { columns, onChange, tableColumnsHidden } = this.props;
     const checkboxes = (

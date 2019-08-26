@@ -31,11 +31,6 @@ export interface ShowValueDialogProps {
 }
 
 export class ShowValueDialog extends React.PureComponent<ShowValueDialogProps> {
-  constructor(props: ShowValueDialogProps) {
-    super(props);
-    this.state = {};
-  }
-
   render(): JSX.Element {
     const { onClose, str } = this.props;
 

@@ -47,11 +47,6 @@ interface TableActionDialogProps extends IDialogProps {
 }
 
 export class TableActionDialog extends React.PureComponent<TableActionDialogProps> {
-  constructor(props: TableActionDialogProps) {
-    super(props);
-    this.state = {};
-  }
-
   render(): JSX.Element {
     const { sideButtonMetadata, isOpen, onClose, title, actions, children } = this.props;
     const actionsMenu = actions ? basicActionsToMenu(actions) : undefined;
