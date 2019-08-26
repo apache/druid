@@ -255,7 +255,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
         req,
         new BytesFullResponseHandler()
     );
-    byte[] userMapBytes = responseHolder.getAccumulated();
+    byte[] userMapBytes = responseHolder.getContent();
     Map<String, BasicAuthenticatorUser> userMap = objectMapper.readValue(
         userMapBytes,
         BasicAuthUtils.AUTHENTICATOR_USER_MAP_TYPE_REFERENCE

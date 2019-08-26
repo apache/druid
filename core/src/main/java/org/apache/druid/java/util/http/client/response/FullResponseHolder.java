@@ -56,5 +56,5 @@ public abstract class FullResponseHolder<T>
   /**
    * Get the accumulated data via {@link #addChunk}.
    */
-  public abstract T getAccumulated();
+  public abstract T getContent();
 }

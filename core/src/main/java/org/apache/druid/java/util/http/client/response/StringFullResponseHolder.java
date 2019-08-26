@@ -46,7 +46,7 @@ public class StringFullResponseHolder extends FullResponseHolder<String>
   }
 
   @Override
-  public String getAccumulated()
+  public String getContent()
   {
     return builder.toString();
   }

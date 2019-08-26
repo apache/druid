@@ -81,10 +81,10 @@ public class CoordinatorClient
         throw new ISE(
             "Error while fetching serverView status[%s] content[%s]",
             response.getStatus(),
-            response.getAccumulated()
+            response.getContent()
         );
       }
-      return jsonMapper.readValue(response.getAccumulated(), new TypeReference<Boolean>()
+      return jsonMapper.readValue(response.getContent(), new TypeReference<Boolean>()
       {
       });
     }
@@ -112,11 +112,11 @@ public class CoordinatorClient
         throw new ISE(
             "Error while fetching serverView status[%s] content[%s]",
             response.getStatus(),
-            response.getAccumulated()
+            response.getContent()
         );
       }
       return jsonMapper.readValue(
-          response.getAccumulated(), new TypeReference<List<ImmutableSegmentLoadInfo>>()
+          response.getContent(), new TypeReference<List<ImmutableSegmentLoadInfo>>()
           {
           }
       );
@@ -143,11 +143,11 @@ public class CoordinatorClient
         throw new ISE(
             "Error while fetching database segment data source segments status[%s] content[%s]",
             response.getStatus(),
-            response.getAccumulated()
+            response.getContent()
         );
       }
       return jsonMapper.readValue(
-          response.getAccumulated(), new TypeReference<List<DataSegment>>()
+          response.getContent(), new TypeReference<List<DataSegment>>()
           {
           }
       );
@@ -175,11 +175,11 @@ public class CoordinatorClient
         throw new ISE(
             "Error while fetching database segment data source segment status[%s] content[%s]",
             response.getStatus(),
-            response.getAccumulated()
+            response.getContent()
         );
       }
       return jsonMapper.readValue(
-          response.getAccumulated(), new TypeReference<DataSegment>()
+          response.getContent(), new TypeReference<DataSegment>()
           {
           }
       );

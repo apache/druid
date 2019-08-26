@@ -353,9 +353,9 @@ public abstract class IndexTaskClient implements AutoCloseable
         if (responseCode / 100 == 2) {
           return response;
         } else if (responseCode == 400) { // don't bother retrying if it's a bad request
-          throw new IAE("Received 400 Bad Request with body: %s", response.getAccumulated());
+          throw new IAE("Received 400 Bad Request with body: %s", response.getContent());
         } else {
-          throw new IOE("Received status [%d] and content [%s]", responseCode, response.getAccumulated());
+          throw new IOE("Received status [%d] and content [%s]", responseCode, response.getContent());
         }
       }
       catch (IOException | ChannelException e) {
@@ -401,7 +401,7 @@ public abstract class IndexTaskClient implements AutoCloseable
                 (response != null ? response.getStatus().getCode() : "no response"),
                 urlForLog,
                 new Duration(sleepTime).toString(),
-                (response != null ? response.getAccumulated() : e.getMessage())
+                (response != null ? response.getContent() : e.getMessage())
             );
             Thread.sleep(sleepTime);
           }

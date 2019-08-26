@@ -490,7 +490,7 @@ public abstract class WorkerTaskManager
 
               );
               if (fullResponseHolder.getStatus().getCode() == 200) {
-                String responseContent = fullResponseHolder.getAccumulated();
+                String responseContent = fullResponseHolder.getContent();
                 taskStatusesFromOverlord = jsonMapper.readValue(
                     responseContent,
                     new TypeReference<Map<String, TaskStatus>>()

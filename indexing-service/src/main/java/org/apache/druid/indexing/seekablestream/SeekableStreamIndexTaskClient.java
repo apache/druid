@@ -114,7 +114,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
       );
 
       final HttpResponseStatus responseStatus = response.getStatus();
-      final String responseContent = response.getAccumulated();
+      final String responseContent = response.getContent();
 
       if (responseStatus.equals(HttpResponseStatus.OK)) {
         log.info("Task [%s] paused successfully", id);
@@ -170,7 +170,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
 
     try {
       final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "status", null, true);
-      return deserialize(response.getAccumulated(), SeekableStreamIndexTaskRunner.Status.class);
+      return deserialize(response.getContent(), SeekableStreamIndexTaskRunner.Status.class);
     }
     catch (NoTaskLocationException e) {
       return SeekableStreamIndexTaskRunner.Status.NOT_STARTED;
@@ -188,9 +188,9 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
 
     try {
       final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "time/start", null, true);
-      return response.getAccumulated() == null || response.getAccumulated().isEmpty()
+      return response.getContent() == null || response.getContent().isEmpty()
              ? null
-             : deserialize(response.getAccumulated(), DateTime.class);
+             : deserialize(response.getContent(), DateTime.class);
     }
     catch (NoTaskLocationException e) {
       return null;
@@ -212,9 +212,9 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
           null,
           true
       );
-      return response.getAccumulated() == null || response.getAccumulated().isEmpty()
+      return response.getContent() == null || response.getContent().isEmpty()
              ? Collections.emptyMap()
-             : deserialize(response.getAccumulated(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
+             : deserialize(response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
     }
     catch (NoTaskLocationException e) {
       return Collections.emptyMap();
@@ -236,7 +236,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
           null,
           retry
       );
-      return deserializeMap(response.getAccumulated(), Map.class, getPartitionType(), getSequenceType());
+      return deserializeMap(response.getContent(), Map.class, getPartitionType(), getSequenceType());
     }
     catch (NoTaskLocationException e) {
       return ImmutableMap.of();
@@ -252,7 +252,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     try {
       final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "checkpoints", null, retry);
       return deserializeNestedValueMap(
-          response.getAccumulated(),
+          response.getContent(),
           TreeMap.class,
           Integer.class,
           Map.class,
@@ -282,7 +282,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
 
     try {
       final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "offsets/end", null, true);
-      return deserializeMap(response.getAccumulated(), Map.class, getPartitionType(), getSequenceType());
+      return deserializeMap(response.getContent(), Map.class, getPartitionType(), getSequenceType());
     }
     catch (NoTaskLocationException e) {
       return ImmutableMap.of();

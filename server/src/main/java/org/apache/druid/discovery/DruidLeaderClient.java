@@ -263,7 +263,7 @@ public class DruidLeaderClient
     }
 
     if (responseHolder.getStatus().getCode() == 200) {
-      String leaderUrl = responseHolder.getAccumulated();
+      String leaderUrl = responseHolder.getContent();
 
       //verify this is valid url
       try {
@@ -282,7 +282,7 @@ public class DruidLeaderClient
     throw new ISE(
         "Couldn't find leader, failed response status is [%s] and content [%s].",
         responseHolder.getStatus().getCode(),
-        responseHolder.getAccumulated()
+        responseHolder.getContent()
     );
   }
 

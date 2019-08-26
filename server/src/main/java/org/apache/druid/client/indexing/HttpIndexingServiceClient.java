@@ -112,11 +112,11 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       );
 
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        if (!Strings.isNullOrEmpty(response.getAccumulated())) {
+        if (!Strings.isNullOrEmpty(response.getContent())) {
           throw new ISE(
               "Failed to post task[%s] with error[%s].",
               taskObject,
-              response.getAccumulated()
+              response.getContent()
           );
         } else {
           throw new ISE("Failed to post task[%s]. Please check overlord log", taskObject);
@@ -124,7 +124,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       }
 
       final Map<String, Object> resultMap = jsonMapper.readValue(
-          response.getAccumulated(),
+          response.getContent(),
           JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
       );
       final String taskId = (String) resultMap.get("task");
@@ -151,7 +151,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       }
 
       final Map<String, Object> resultMap = jsonMapper.readValue(
-          response.getAccumulated(),
+          response.getContent(),
           JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
       );
       final String killedTaskId = (String) resultMap.get("task");
@@ -182,11 +182,11 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
         throw new ISE(
             "Error while getting available cluster capacity. status[%s] content[%s]",
             response.getStatus(),
-            response.getAccumulated()
+            response.getContent()
         );
       }
       final Collection<IndexingWorkerInfo> workers = jsonMapper.readValue(
-          response.getAccumulated(),
+          response.getContent(),
           new TypeReference<Collection<IndexingWorkerInfo>>() {}
       );
 
@@ -236,7 +236,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       }
 
       return jsonMapper.readValue(
-          responseHolder.getAccumulated(),
+          responseHolder.getContent(),
           new TypeReference<List<TaskStatusPlus>>()
           {
           }
@@ -259,7 +259,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       );
 
       return jsonMapper.readValue(
-          responseHolder.getAccumulated(),
+          responseHolder.getContent(),
           new TypeReference<TaskStatusResponse>()
           {
           }
@@ -280,7 +280,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       );
 
       return jsonMapper.readValue(
-          responseHolder.getAccumulated(),
+          responseHolder.getContent(),
           new TypeReference<Map<String, TaskStatus>>()
           {
           }
@@ -311,7 +311,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       );
 
       return jsonMapper.readValue(
-          responseHolder.getAccumulated(),
+          responseHolder.getContent(),
           new TypeReference<TaskPayloadResponse>()
           {
           }
@@ -340,7 +340,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       }
 
       final Map<String, Object> resultMap = jsonMapper.readValue(
-          responseHolder.getAccumulated(),
+          responseHolder.getContent(),
           JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
       );
 

@@ -62,11 +62,11 @@ public class ParallelIndexSupervisorTaskClient extends IndexTaskClient
           "task[%s] failed to allocate a new segment identifier with the HTTP code[%d] and content[%s]",
           supervisorTaskId,
           response.getStatus().getCode(),
-          response.getAccumulated()
+          response.getContent()
       );
     } else {
       return deserialize(
-          response.getAccumulated(),
+          response.getContent(),
           new TypeReference<SegmentIdWithShardSpec>()
           {
           }

@@ -264,7 +264,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
         req,
         new BytesFullResponseHandler()
     );
-    byte[] userRoleMapBytes = responseHolder.getAccumulated();
+    byte[] userRoleMapBytes = responseHolder.getContent();
 
     UserAndRoleMap userAndRoleMap = objectMapper.readValue(
         userRoleMapBytes,

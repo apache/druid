@@ -145,13 +145,13 @@ public class CoordinatorRuleManager
         throw new ISE(
             "Error while polling rules, status[%s] content[%s]",
             response.getStatus(),
-            response.getAccumulated()
+            response.getContent()
         );
       }
 
       ConcurrentHashMap<String, List<Rule>> newRules = new ConcurrentHashMap<>(
           (Map<String, List<Rule>>) jsonMapper.readValue(
-              response.getAccumulated(), new TypeReference<Map<String, List<Rule>>>()
+              response.getContent(), new TypeReference<Map<String, List<Rule>>>()
               {
               }
           )

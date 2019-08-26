@@ -44,7 +44,7 @@ public class BytesFullResponseHolder extends FullResponseHolder<byte[]>
   }
 
   @Override
-  public byte[] getAccumulated()
+  public byte[] getContent()
   {
     int size = 0;
     for (byte[] chunk : chunks) {

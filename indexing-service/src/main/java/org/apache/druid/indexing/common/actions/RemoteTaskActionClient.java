@@ -82,7 +82,7 @@ public class RemoteTaskActionClient implements TaskActionClient
 
         if (fullResponseHolder.getStatus().getCode() / 100 == 2) {
           final Map<String, Object> responseDict = jsonMapper.readValue(
-              fullResponseHolder.getAccumulated(),
+              fullResponseHolder.getContent(),
               JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
           );
           return jsonMapper.convertValue(responseDict.get("result"), taskAction.getReturnTypeReference());
@@ -91,7 +91,7 @@ public class RemoteTaskActionClient implements TaskActionClient
           throw new IOE(
               "Error with status[%s] and message[%s]. Check overlord logs for details.",
               fullResponseHolder.getStatus(),
-              fullResponseHolder.getAccumulated()
+              fullResponseHolder.getContent()
           );
         }
       }

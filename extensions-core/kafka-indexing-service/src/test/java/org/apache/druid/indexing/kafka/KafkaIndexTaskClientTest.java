@@ -185,7 +185,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     expectedException.expectMessage("org.apache.druid.java.util.common.IOE: Received status [500] and content []");
 
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.INTERNAL_SERVER_ERROR).times(2);
-    EasyMock.expect(responseHolder.getAccumulated()).andReturn("");
+    EasyMock.expect(responseHolder.getContent()).andReturn("");
     EasyMock.expect(
         httpClient.go(
             EasyMock.anyObject(Request.class),
@@ -208,7 +208,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     expectedException.expectMessage("Received 400 Bad Request with body:");
 
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.BAD_REQUEST).times(2);
-    EasyMock.expect(responseHolder.getAccumulated()).andReturn("");
+    EasyMock.expect(responseHolder.getContent()).andReturn("");
     EasyMock.expect(
         httpClient.go(
             EasyMock.anyObject(Request.class),
@@ -230,7 +230,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(3)
             .andReturn(HttpResponseStatus.OK);
     EasyMock.expect(responseHolder.getResponse()).andReturn(response);
-    EasyMock.expect(responseHolder.getAccumulated()).andReturn("").times(2)
+    EasyMock.expect(responseHolder.getContent()).andReturn("").times(2)
             .andReturn("{}");
     EasyMock.expect(response.headers()).andReturn(headers);
     EasyMock.expect(headers.get("X-Druid-Task-Id")).andReturn("a-different-task-id");
@@ -256,7 +256,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   {
     Capture<Request> captured = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK);
-    EasyMock.expect(responseHolder.getAccumulated()).andReturn("{\"0\":1, \"1\":10}");
+    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":1, \"1\":10}");
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
         EasyMock.anyObject(StringFullResponseHandler.class),
@@ -290,7 +290,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(6)
             .andReturn(HttpResponseStatus.OK).times(1);
-    EasyMock.expect(responseHolder.getAccumulated()).andReturn("").times(4)
+    EasyMock.expect(responseHolder.getContent()).andReturn("").times(4)
             .andReturn("{\"0\":1, \"1\":10}");
     EasyMock.expect(responseHolder.getResponse()).andReturn(response).times(2);
     EasyMock.expect(response.headers()).andReturn(headers).times(2);
@@ -333,7 +333,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     client = new TestableKafkaIndexTaskClient(httpClient, objectMapper, taskInfoProvider, 2);
 
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).anyTimes();
-    EasyMock.expect(responseHolder.getAccumulated()).andReturn("").anyTimes();
+    EasyMock.expect(responseHolder.getContent()).andReturn("").anyTimes();
     EasyMock.expect(responseHolder.getResponse()).andReturn(response).anyTimes();
     EasyMock.expect(response.headers()).andReturn(headers).anyTimes();
     EasyMock.expect(headers.get("X-Druid-Task-Id")).andReturn(TEST_ID).anyTimes();
@@ -356,7 +356,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   {
     Capture<Request> captured = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK);
-    EasyMock.expect(responseHolder.getAccumulated()).andReturn("{\"0\":1, \"1\":10}");
+    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":1, \"1\":10}");
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
         EasyMock.anyObject(StringFullResponseHandler.class),
@@ -394,7 +394,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getResponse()).andReturn(response);
     EasyMock.expect(response.headers()).andReturn(headers);
     EasyMock.expect(headers.get("X-Druid-Task-Id")).andReturn(null);
-    EasyMock.expect(responseHolder.getAccumulated()).andReturn(String.valueOf(now.getMillis())).anyTimes();
+    EasyMock.expect(responseHolder.getContent()).andReturn(String.valueOf(now.getMillis())).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
         EasyMock.anyObject(StringFullResponseHandler.class),
@@ -425,7 +425,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
 
     Capture<Request> captured = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK);
-    EasyMock.expect(responseHolder.getAccumulated()).andReturn(StringUtils.format("\"%s\"", status.toString())).anyTimes();
+    EasyMock.expect(responseHolder.getContent()).andReturn(StringUtils.format("\"%s\"", status.toString())).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
         EasyMock.anyObject(StringFullResponseHandler.class),
@@ -454,7 +454,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   {
     Capture<Request> captured = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).times(2);
-    EasyMock.expect(responseHolder.getAccumulated()).andReturn("{\"0\":1, \"1\":10}").anyTimes();
+    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":1, \"1\":10}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
         EasyMock.anyObject(StringFullResponseHandler.class),
@@ -489,7 +489,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     // one time in IndexTaskClient.submitRequest() and another in KafkaIndexTaskClient.pause()
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.ACCEPTED).times(2)
             .andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(responseHolder.getAccumulated()).andReturn("\"PAUSED\"").times(2)
+    EasyMock.expect(responseHolder.getContent()).andReturn("\"PAUSED\"").times(2)
             .andReturn("{\"0\":1, \"1\":10}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
@@ -759,7 +759,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(responseHolder.getAccumulated()).andReturn("{\"0\":\"1\"}").anyTimes();
+    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":\"1\"}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
         EasyMock.anyObject(StringFullResponseHandler.class),
@@ -796,7 +796,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(responseHolder.getAccumulated()).andReturn("\"READING\"").anyTimes();
+    EasyMock.expect(responseHolder.getContent()).andReturn("\"READING\"").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
         EasyMock.anyObject(StringFullResponseHandler.class),
@@ -834,7 +834,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(responseHolder.getAccumulated()).andReturn(String.valueOf(now.getMillis())).anyTimes();
+    EasyMock.expect(responseHolder.getContent()).andReturn(String.valueOf(now.getMillis())).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
         EasyMock.anyObject(StringFullResponseHandler.class),
@@ -871,7 +871,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(responseHolder.getAccumulated()).andReturn("{\"0\":\"1\"}").anyTimes();
+    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":\"1\"}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
         EasyMock.anyObject(StringFullResponseHandler.class),
@@ -908,7 +908,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(responseHolder.getAccumulated()).andReturn("{\"0\":\"1\"}").anyTimes();
+    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":\"1\"}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
         EasyMock.anyObject(StringFullResponseHandler.class),
