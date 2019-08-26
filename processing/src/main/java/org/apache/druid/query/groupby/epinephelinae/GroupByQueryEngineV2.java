@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
@@ -50,7 +51,10 @@ import org.apache.druid.query.groupby.epinephelinae.column.LongGroupByColumnSele
 import org.apache.druid.query.groupby.epinephelinae.column.NullableValueGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
+import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
@@ -340,7 +344,7 @@ public class GroupByQueryEngineV2
         case STRING:
           DimensionSelector dimSelector = (DimensionSelector) selector;
           if (dimSelector.getValueCardinality() >= 0) {
-            return new StringGroupByColumnSelectorStrategy();
+            return new StringGroupByColumnSelectorStrategy(dimSelector::lookupName);
           } else {
             return new DictionaryBuildingStringGroupByColumnSelectorStrategy();
           }
@@ -393,7 +397,7 @@ public class GroupByQueryEngineV2
       this.querySpecificConfig = querySpecificConfig;
       this.cursor = cursor;
       this.buffer = buffer;
-      this.keySerde = new GroupByEngineKeySerde(dims);
+      this.keySerde = new GroupByEngineKeySerde(dims, query);
       this.dims = dims;
 
       // Time is the same for every row in the cursor
@@ -516,6 +520,8 @@ public class GroupByQueryEngineV2
 
   private static class HashAggregateIterator extends GroupByEngineIterator<ByteBuffer>
   {
+    private static final Logger LOGGER = new Logger(HashAggregateIterator.class);
+
     private final int[] stack;
     private final Object[] valuess;
     private final ByteBuffer keyBuffer;
@@ -544,18 +550,52 @@ public class GroupByQueryEngineV2
     @Override
     protected Grouper<ByteBuffer> newGrouper()
     {
-      return new BufferHashGrouper<>(
-          Suppliers.ofInstance(buffer),
-          keySerde,
-          AggregatorAdapters.factorizeBuffered(
-              cursor.getColumnSelectorFactory(),
-              query.getAggregatorSpecs()
-          ),
-          querySpecificConfig.getBufferGrouperMaxSize(),
-          querySpecificConfig.getBufferGrouperMaxLoadFactor(),
-          querySpecificConfig.getBufferGrouperInitialBuckets(),
-          true
-      );
+      Grouper grouper = null;
+      final DefaultLimitSpec limitSpec = query.isApplyLimitPushDown() ? (DefaultLimitSpec) query.getLimitSpec() : null;
+      if (limitSpec != null) {
+        LimitedBufferHashGrouper limitGrouper = new LimitedBufferHashGrouper<>(
+            Suppliers.ofInstance(buffer),
+            keySerde,
+            AggregatorAdapters.factorizeBuffered(
+                cursor.getColumnSelectorFactory(),
+                query.getAggregatorSpecs()
+            ),
+            querySpecificConfig.getBufferGrouperMaxSize(),
+            querySpecificConfig.getBufferGrouperMaxLoadFactor(),
+            querySpecificConfig.getBufferGrouperInitialBuckets(),
+            limitSpec.getLimit(),
+            DefaultLimitSpec.sortingOrderHasNonGroupingFields(
+                limitSpec,
+                query.getDimensions()
+            )
+        );
+
+        if (limitGrouper.validateBufferCapacity(buffer.capacity())) {
+          grouper = limitGrouper;
+        } else {
+          LOGGER.warn(
+              "Limit is not applied in segment scan phase due to limited buffer capacity for query [%s].",
+              query.getId()
+          );
+        }
+      }
+
+      if (grouper == null) {
+        grouper = new BufferHashGrouper<>(
+            Suppliers.ofInstance(buffer),
+            keySerde,
+            AggregatorAdapters.factorizeBuffered(
+                cursor.getColumnSelectorFactory(),
+                query.getAggregatorSpecs()
+            ),
+            querySpecificConfig.getBufferGrouperMaxSize(),
+            querySpecificConfig.getBufferGrouperMaxLoadFactor(),
+            querySpecificConfig.getBufferGrouperInitialBuckets(),
+            true
+        );
+      }
+
+      return grouper;
     }
 
     @Override
@@ -808,14 +848,19 @@ public class GroupByQueryEngineV2
   private static class GroupByEngineKeySerde implements Grouper.KeySerde<ByteBuffer>
   {
     private final int keySize;
+    private final GroupByColumnSelectorPlus[] dims;
+    private final GroupByQuery query;
 
-    public GroupByEngineKeySerde(final GroupByColumnSelectorPlus[] dims)
+    public GroupByEngineKeySerde(final GroupByColumnSelectorPlus[] dims, GroupByQuery query)
     {
+      this.dims = dims;
       int keySize = 0;
       for (GroupByColumnSelectorPlus selectorPlus : dims) {
         keySize += selectorPlus.getColumnSelectorStrategy().getGroupingKeySize();
       }
       this.keySize = keySize;
+
+      this.query = query;
     }
 
     @Override
@@ -853,8 +898,15 @@ public class GroupByQueryEngineV2
     @Override
     public Grouper.BufferComparator bufferComparator()
     {
-      // No sorting, let mergeRunners handle that
-      throw new UnsupportedOperationException();
+      Preconditions.checkState(query.isApplyLimitPushDown(), "no limit push down");
+      DefaultLimitSpec limitSpec = (DefaultLimitSpec) query.getLimitSpec();
+
+      return GrouperBufferComparatorUtils.bufferComparator(
+          query.getResultRowHasTimestamp(),
+          query.getContextSortByDimsFirst(),
+          query.getDimensions().size(),
+          getDimensionComparators(limitSpec)
+      );
     }
 
     @Override
@@ -863,8 +915,39 @@ public class GroupByQueryEngineV2
         int[] aggregatorOffsets
     )
     {
-      // not called on this
-      throw new UnsupportedOperationException();
+      Preconditions.checkState(query.isApplyLimitPushDown(), "no limit push down");
+      DefaultLimitSpec limitSpec = (DefaultLimitSpec) query.getLimitSpec();
+
+      return GrouperBufferComparatorUtils.bufferComparatorWithAggregators(
+        query.getAggregatorSpecs().toArray(new AggregatorFactory[0]),
+        aggregatorOffsets,
+        limitSpec,
+        query.getDimensions(),
+        getDimensionComparators(limitSpec),
+        query.getResultRowHasTimestamp(),
+        query.getContextSortByDimsFirst()
+      );
+    }
+
+    private Grouper.BufferComparator[] getDimensionComparators(DefaultLimitSpec limitSpec)
+    {
+      Grouper.BufferComparator[] dimComparators = new Grouper.BufferComparator[dims.length];
+
+      for (int i = 0; i < dims.length; i++) {
+        final StringComparator stringComparator;
+        if (limitSpec != null) {
+          final String dimName = query.getDimensions().get(i).getOutputName();
+          stringComparator = DefaultLimitSpec.getComparatorForDimName(limitSpec, dimName);
+        } else {
+          stringComparator = null;
+        }
+        dimComparators[i] = dims[i].getColumnSelectorStrategy().bufferComparator(
+            dims[i].getKeyBufferPosition(),
+            stringComparator
+        );
+      }
+
+      return dimComparators;
     }
 
     @Override

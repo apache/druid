@@ -19,7 +19,11 @@
 
 package org.apache.druid.query.groupby.epinephelinae.column;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.Grouper;
+import org.apache.druid.query.groupby.epinephelinae.GrouperBufferComparatorUtils;
+import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 
@@ -63,6 +67,28 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
   public void writeToKeyBuffer(int keyBufferPosition, @Nullable Object obj, ByteBuffer keyBuffer)
   {
     keyBuffer.putLong(keyBufferPosition, DimensionHandlerUtils.nullToZero((Long) obj));
+  }
+
+  @Override
+  public Grouper.BufferComparator bufferComparator(
+      int keyBufferPosition,
+      @Nullable StringComparator stringComparator
+  )
+  {
+    Grouper.BufferComparator comparator = GrouperBufferComparatorUtils.makeBufferComparatorForLong(
+        keyBufferPosition,
+        true,
+        stringComparator
+    );
+
+    if (NullHandling.sqlCompatible()) {
+      return GrouperBufferComparatorUtils.makeNullHandlingBufferComparatorForNumericData(
+          keyBufferPosition,
+          comparator
+      );
+    } else {
+      return comparator;
+    }
   }
 
   @Override

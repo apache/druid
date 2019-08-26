@@ -19,9 +19,10 @@
 
 package org.apache.druid.query.groupby.epinephelinae.column;
 
-
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.Grouper;
+import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
@@ -86,6 +87,15 @@ public class NullableValueGroupByColumnSelectorStrategy implements GroupByColumn
       keyBuffer.put(keyBufferPosition, NullHandling.IS_NOT_NULL_BYTE);
     }
     delegate.writeToKeyBuffer(keyBufferPosition + Byte.BYTES, obj, keyBuffer);
+  }
+
+  @Override
+  public Grouper.BufferComparator bufferComparator(
+      int keyBufferPosition,
+      @Nullable StringComparator stringComparator
+  )
+  {
+    return delegate.bufferComparator(keyBufferPosition, stringComparator);
   }
 
   @Override
