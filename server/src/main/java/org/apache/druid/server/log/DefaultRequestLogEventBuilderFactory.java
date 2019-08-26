@@ -31,16 +31,7 @@ public final class DefaultRequestLogEventBuilderFactory implements RequestLogEve
 {
   private static final DefaultRequestLogEventBuilderFactory INSTANCE = new DefaultRequestLogEventBuilderFactory();
 
-  /**
-   * With property "druid.request.logging.requestLogEventBuilderFactory=xyz" in the configuration, jackson
-   * tries to find factory method where it could pass the argument "xyz" Or else fails with an exception.
-   */
   @JsonCreator
-  public static DefaultRequestLogEventBuilderFactory instance(String ignored)
-  {
-    return INSTANCE;
-  }
-
   public static DefaultRequestLogEventBuilderFactory instance()
   {
     return INSTANCE;
