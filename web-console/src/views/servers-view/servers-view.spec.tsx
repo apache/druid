@@ -16,21 +16,22 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
+import { render } from '@testing-library/react';
 import React from 'react';
 
-import { ServersView } from './servers-view';
+import { TimedButton } from '../../components';
 
 describe('servers view', () => {
   it('action servers view', () => {
-    const serversView = shallow(
-      <ServersView
-        middleManager={'test'}
-        goToQuery={() => {}}
-        goToTask={() => {}}
-        noSqlMode={false}
-      />,
+    const serversView = (
+      <TimedButton
+        intervals={[{ label: 'timeValue', value: 1000 }]}
+        onRefresh={() => null}
+        label={'label'}
+        defaultValue={1000}
+      />
     );
-    expect(serversView).toMatchSnapshot();
+    const { container } = render(serversView);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

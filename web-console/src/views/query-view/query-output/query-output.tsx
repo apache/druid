@@ -96,6 +96,11 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
       </div>
     );
   }
+
+  componentDidUpdate(): void {
+    console.log(JSON.stringify(this.props.parsedQuery));
+  }
+
   getHeaderActions(h: string) {
     const { parsedQuery, sqlExcludeColumn, sqlOrderBy, runeMode } = this.props;
 

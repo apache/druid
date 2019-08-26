@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`servers view action servers view 1`] = `
+exports[`table column matches snapshot 1`] = `
 <div
   class="bp3-button-group"
 >

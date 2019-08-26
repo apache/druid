@@ -17,19 +17,20 @@
  */
 
 import { render } from '@testing-library/react';
-import { shallow } from 'enzyme';
 import React from 'react';
 
-import { LoadDataView } from './load-data-view';
+import { BarUnit } from './bar-unit';
+import { ChartAxis } from './chart-axis';
 
-describe('load data view', () => {
-  it('matches snapshot', () => {
-    const loadDataView = shallow(<LoadDataView goToTask={() => {}} />);
-    expect(loadDataView).toMatchSnapshot();
+describe('servers view', () => {
+  it('BarUnit', () => {
+    const barGroup = <BarUnit x={10} y={10} width={10} height={10} />;
+    const { container } = render(barGroup);
+    expect(container.firstChild).toMatchSnapshot();
   });
-  it('matches snapshot', () => {
-    const loadDataView = <LoadDataView goToTask={() => null} />;
-    const { container } = render(loadDataView);
+  it('action barGroup', () => {
+    const barGroup = <ChartAxis transform={'value'} scale={() => null} />;
+    const { container } = render(barGroup);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

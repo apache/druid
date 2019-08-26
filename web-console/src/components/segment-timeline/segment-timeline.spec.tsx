@@ -17,19 +17,14 @@
  */
 
 import { render } from '@testing-library/react';
-import { shallow } from 'enzyme';
 import React from 'react';
 
-import { LoadDataView } from './load-data-view';
+import { SegmentTimeline } from './segment-timeline';
 
-describe('load data view', () => {
+describe('table column', () => {
   it('matches snapshot', () => {
-    const loadDataView = shallow(<LoadDataView goToTask={() => {}} />);
-    expect(loadDataView).toMatchSnapshot();
-  });
-  it('matches snapshot', () => {
-    const loadDataView = <LoadDataView goToTask={() => null} />;
-    const { container } = render(loadDataView);
+    const tableColumn = <SegmentTimeline chartHeight={100} chartWidth={100} />;
+    const { container } = render(tableColumn);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

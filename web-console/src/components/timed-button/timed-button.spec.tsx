@@ -17,19 +17,21 @@
  */
 
 import { render } from '@testing-library/react';
-import { shallow } from 'enzyme';
 import React from 'react';
 
-import { LoadDataView } from './load-data-view';
+import { TimedButton } from './timed-button';
 
-describe('load data view', () => {
+describe('table column', () => {
   it('matches snapshot', () => {
-    const loadDataView = shallow(<LoadDataView goToTask={() => {}} />);
-    expect(loadDataView).toMatchSnapshot();
-  });
-  it('matches snapshot', () => {
-    const loadDataView = <LoadDataView goToTask={() => null} />;
-    const { container } = render(loadDataView);
+    const timedButton = (
+      <TimedButton
+        intervals={[{ label: 'timeValue', value: 1000 }]}
+        onRefresh={() => null}
+        label={'label'}
+        defaultValue={1000}
+      />
+    );
+    const { container } = render(timedButton);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

@@ -20,7 +20,6 @@ import { AxisScale } from 'd3-axis';
 import React from 'react';
 
 import { BarUnitData } from '../components/segment-timeline/segment-timeline';
-
 import { BarUnit } from './bar-unit';
 import { HoveredBarInfo } from './stacked-bar-chart';
 

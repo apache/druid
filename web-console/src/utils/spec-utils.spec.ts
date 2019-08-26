@@ -66,3 +66,44 @@ describe('spec-utils', () => {
     });
   });
 });
+
+import { getSamplerType } from './sampler';
+
+describe.skip('test-utils', () => {
+  it('spec-utils', () => {
+    expect(
+      getSamplerType({
+        type: 'index_parallel',
+        ioConfig: {
+          type: 'index_parallel',
+          firehose: {
+            type: 'http',
+            uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+          },
+        },
+        tuningConfig: {
+          type: 'index_parallel',
+        },
+        dataSchema: {
+          dataSource: 'wikipedia',
+          granularitySpec: {
+            type: 'uniform',
+            segmentGranularity: 'DAY',
+            queryGranularity: 'HOUR',
+          },
+          parser: {
+            type: 'string',
+            parseSpec: {
+              format: 'json',
+              timestampSpec: {
+                column: 'timestamp',
+                format: 'iso',
+              },
+              dimensionsSpec: {},
+            },
+          },
+        },
+      }),
+    ).toMatchInlineSnapshot(`"TRIM( TRAILING 'M' undefined 'MADAM')"`);
+  });
+});
