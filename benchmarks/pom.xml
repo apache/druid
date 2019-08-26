@@ -215,6 +215,9 @@
         </plugin>
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <argLine>@{jacocoArgLine}</argLine>
+          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>

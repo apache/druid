@@ -133,9 +133,9 @@ public class MapVirtualColumnSelectTest
   private Druids.SelectQueryBuilder testBuilder()
   {
     return Druids.newSelectQueryBuilder()
-                 .dataSource(QueryRunnerTestHelper.dataSource)
-                 .granularity(QueryRunnerTestHelper.allGran)
-                 .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+                 .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                 .granularity(QueryRunnerTestHelper.ALL_GRAN)
+                 .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                  .pagingSpec(new PagingSpec(null, 3));
   }
 
@@ -197,7 +197,7 @@ public class MapVirtualColumnSelectTest
     Assert.assertEquals(expected.size(), events.size());
     for (int i = 0; i < events.size(); i++) {
       Map event = events.get(i).getEvent();
-      event.remove(EventHolder.timestampKey);
+      event.remove(EventHolder.TIMESTAMP_KEY);
       Assert.assertEquals(expected.get(i), event);
     }
   }

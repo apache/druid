@@ -23,6 +23,7 @@ export interface QueryContext {
   populateCache?: boolean | undefined;
   useApproximateCountDistinct?: boolean | undefined;
   useApproximateTopN?: boolean | undefined;
+  [key: string]: any;
 }
 
 export function isEmptyContext(context: QueryContext): boolean {

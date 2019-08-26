@@ -38,7 +38,7 @@ import java.util.Set;
  */
 public class SelectResultValueBuilder
 {
-  private static final Comparator<EventHolder> comparator = new Comparator<EventHolder>()
+  private static final Comparator<EventHolder> COMPARATOR = new Comparator<EventHolder>()
   {
     @Override
     public int compare(EventHolder o1, EventHolder o2)
@@ -133,7 +133,7 @@ public class SelectResultValueBuilder
     protected Queue<EventHolder> instantiatePQueue()
     {
       int threshold = pagingSpec.getThreshold();
-      return MinMaxPriorityQueue.orderedBy(descending ? comparator.reversed() : comparator)
+      return MinMaxPriorityQueue.orderedBy(descending ? COMPARATOR.reversed() : COMPARATOR)
                                 .maximumSize(threshold > 0 ? threshold : Integer.MAX_VALUE)
                                 .create();
     }

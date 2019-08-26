@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
 
 public class DruidClusterTest
 {
-  private static final List<DataSegment> segments = ImmutableList.of(
+  private static final List<DataSegment> SEGMENTS = ImmutableList.of(
       new DataSegment(
           "test",
           Intervals.of("2015-04-12/2015-04-13"),
@@ -67,26 +67,26 @@ public class DruidClusterTest
       )
   );
 
-  private static final Map<String, ImmutableDruidDataSource> dataSources = ImmutableMap.of(
-      "src1", new ImmutableDruidDataSource("src1", Collections.emptyMap(), Collections.singletonList(segments.get(0))),
-      "src2", new ImmutableDruidDataSource("src2", Collections.emptyMap(), Collections.singletonList(segments.get(0)))
+  private static final Map<String, ImmutableDruidDataSource> DATA_SOURCES = ImmutableMap.of(
+      "src1", new ImmutableDruidDataSource("src1", Collections.emptyMap(), Collections.singletonList(SEGMENTS.get(0))),
+      "src2", new ImmutableDruidDataSource("src2", Collections.emptyMap(), Collections.singletonList(SEGMENTS.get(0)))
   );
 
-  private static final ServerHolder newRealtime = new ServerHolder(
+  private static final ServerHolder NEW_REALTIME = new ServerHolder(
       new ImmutableDruidServer(
           new DruidServerMetadata("name1", "host2", null, 100L, ServerType.REALTIME, "tier1", 0),
           0L,
-          ImmutableMap.of("src1", dataSources.get("src1")),
+          ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
           1
       ),
       new LoadQueuePeonTester()
   );
 
-  private static final ServerHolder newHistorical = new ServerHolder(
+  private static final ServerHolder NEW_HISTORICAL = new ServerHolder(
       new ImmutableDruidServer(
           new DruidServerMetadata("name1", "host2", null, 100L, ServerType.HISTORICAL, "tier1", 0),
           0L,
-          ImmutableMap.of("src1", dataSources.get("src1")),
+          ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
           1
       ),
       new LoadQueuePeonTester()
@@ -104,7 +104,7 @@ public class DruidClusterTest
                 new ImmutableDruidServer(
                     new DruidServerMetadata("name1", "host1", null, 100L, ServerType.REALTIME, "tier1", 0),
                     0L,
-                    ImmutableMap.of("src1", dataSources.get("src1")),
+                    ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
                     1
                 ),
                 new LoadQueuePeonTester()
@@ -116,7 +116,7 @@ public class DruidClusterTest
                 new ImmutableDruidServer(
                     new DruidServerMetadata("name1", "host1", null, 100L, ServerType.HISTORICAL, "tier1", 0),
                     0L,
-                    ImmutableMap.of("src1", dataSources.get("src1")),
+                    ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
                     1
                 ),
                 new LoadQueuePeonTester()
@@ -131,11 +131,11 @@ public class DruidClusterTest
     Assert.assertEquals(1, cluster.getHistoricals().values().stream().mapToInt(Collection::size).sum());
     Assert.assertEquals(1, cluster.getRealtimes().size());
 
-    cluster.add(newRealtime);
+    cluster.add(NEW_REALTIME);
     Assert.assertEquals(1, cluster.getHistoricals().values().stream().mapToInt(Collection::size).sum());
     Assert.assertEquals(2, cluster.getRealtimes().size());
 
-    cluster.add(newHistorical);
+    cluster.add(NEW_HISTORICAL);
     Assert.assertEquals(2, cluster.getHistoricals().values().stream().mapToInt(Collection::size).sum());
     Assert.assertEquals(2, cluster.getRealtimes().size());
   }
@@ -143,8 +143,8 @@ public class DruidClusterTest
   @Test
   public void testGetAllServers()
   {
-    cluster.add(newRealtime);
-    cluster.add(newHistorical);
+    cluster.add(NEW_REALTIME);
+    cluster.add(NEW_HISTORICAL);
     final Set<ServerHolder> expectedRealtimes = cluster.getRealtimes();
     final Map<String, NavigableSet<ServerHolder>> expectedHistoricals = cluster.getHistoricals();
 

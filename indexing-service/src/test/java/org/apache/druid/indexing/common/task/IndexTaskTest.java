@@ -141,7 +141,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
   }
 
-  private static final IndexSpec indexSpec = new IndexSpec();
+  private static final IndexSpec INDEX_SPEC = new IndexSpec();
   private final ObjectMapper jsonMapper;
   private AppenderatorsManager appenderatorsManager;
   private final IndexIO indexIO;
@@ -997,7 +997,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         new HashedPartitionsSpec(2, null, null),
-        indexSpec,
+        INDEX_SPEC,
         null,
         null,
         true,
@@ -1122,7 +1122,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         new DynamicPartitionsSpec(2, null),
-        indexSpec,
+        INDEX_SPEC,
         null,
         null,
         false,
@@ -1240,7 +1240,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         new HashedPartitionsSpec(2, null, null),
-        indexSpec,
+        INDEX_SPEC,
         null,
         null,
         true,
@@ -1669,7 +1669,7 @@ public class IndexTaskTest extends IngestionTestBase
         numShards,
         partitionDimensions,
         null,
-        indexSpec,
+        INDEX_SPEC,
         null,
         null,
         forceGuaranteedRollup,

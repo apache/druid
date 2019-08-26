@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -52,6 +53,7 @@ import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
@@ -138,16 +140,24 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     public String runTask(Object taskObject)
     {
       final Task subTask = (Task) taskObject;
+      try {
+        getTaskStorage().insert(subTask, TaskStatus.running(subTask.getId()));
+      }
+      catch (EntryExistsException e) {
+        throw new RuntimeException(e);
+      }
       tasks.put(subTask.getId(), service.submit(() -> {
         try {
           final TaskToolbox toolbox = createTaskToolbox(subTask);
           if (subTask.isReady(toolbox.getTaskActionClient())) {
             return subTask.run(toolbox);
           } else {
+            getTaskStorage().setStatus(TaskStatus.failure(subTask.getId()));
             throw new ISE("task[%s] is not ready", subTask.getId());
           }
         }
         catch (Exception e) {
+          getTaskStorage().setStatus(TaskStatus.failure(subTask.getId(), e.getMessage()));
           throw new RuntimeException(e);
         }
       }));
@@ -158,6 +168,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     public TaskStatusResponse getTaskStatus(String taskId)
     {
       final Future<TaskStatus> taskStatusFuture = tasks.get(taskId);
+      final Optional<Task> task = getTaskStorage().getTask(taskId);
+      final String groupId = task.isPresent() ? task.get().getGroupId() : null;
       if (taskStatusFuture != null) {
         try {
           if (taskStatusFuture.isDone()) {
@@ -166,6 +178,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                 taskId,
                 new TaskStatusPlus(
                     taskId,
+                    groupId,
                     SinglePhaseSubTask.TYPE,
                     DateTimes.EPOCH,
                     DateTimes.EPOCH,
@@ -182,6 +195,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                 taskId,
                 new TaskStatusPlus(
                     taskId,
+                    groupId,
                     SinglePhaseSubTask.TYPE,
                     DateTimes.EPOCH,
                     DateTimes.EPOCH,
@@ -203,6 +217,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
               taskId,
               new TaskStatusPlus(
                   taskId,
+                  groupId,
                   SinglePhaseSubTask.TYPE,
                   DateTimes.EPOCH,
                   DateTimes.EPOCH,

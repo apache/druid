@@ -52,13 +52,13 @@ public class OrderByColumnSpec
      * Maintain a map of the enum values so that we can just do a lookup and get a null if it doesn't exist instead
      * of an exception thrown.
      */
-    private static final Map<String, Direction> stupidEnumMap;
+    private static final Map<String, Direction> STUPID_ENUM_MAP;
     static {
       final ImmutableMap.Builder<String, Direction> bob = ImmutableMap.builder();
       for (Direction direction : Direction.values()) {
         bob.put(direction.name(), direction);
       }
-      stupidEnumMap = bob.build();
+      STUPID_ENUM_MAP = bob.build();
     }
 
     @JsonValue
@@ -72,7 +72,7 @@ public class OrderByColumnSpec
     public static Direction fromString(String name)
     {
       final String upperName = StringUtils.toUpperCase(name);
-      Direction direction = stupidEnumMap.get(upperName);
+      Direction direction = STUPID_ENUM_MAP.get(upperName);
 
       if (direction == null) {
         for (Direction dir : Direction.values()) {

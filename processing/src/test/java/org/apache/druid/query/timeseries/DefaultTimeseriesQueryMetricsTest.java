@@ -48,11 +48,11 @@ public class DefaultTimeseriesQueryMetricsTest
     DefaultTimeseriesQueryMetrics queryMetrics = new DefaultTimeseriesQueryMetrics();
     TimeseriesQuery query = Druids
         .newTimeseriesQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryRunnerTestHelper.dayGran)
-        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-        .aggregators(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.indexDoubleSum)
-        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.DAY_GRAN)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .aggregators(QueryRunnerTestHelper.ROWS_COUNT, QueryRunnerTestHelper.INDEX_DOUBLE_SUM)
+        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .descending(true)
         .build();
     queryMetrics.query(query);
@@ -64,9 +64,9 @@ public class DefaultTimeseriesQueryMetricsTest
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
     Assert.assertEquals("", actualEvent.get("host"));
     Assert.assertEquals("", actualEvent.get("service"));
-    Assert.assertEquals(QueryRunnerTestHelper.dataSource, actualEvent.get(DruidMetrics.DATASOURCE));
+    Assert.assertEquals(QueryRunnerTestHelper.DATA_SOURCE, actualEvent.get(DruidMetrics.DATASOURCE));
     Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
-    List<Interval> expectedIntervals = QueryRunnerTestHelper.fullOnIntervalSpec.getIntervals();
+    List<Interval> expectedIntervals = QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC.getIntervals();
     List<String> expectedStringIntervals =
         expectedIntervals.stream().map(Interval::toString).collect(Collectors.toList());
     Assert.assertEquals(expectedStringIntervals, actualEvent.get(DruidMetrics.INTERVAL));

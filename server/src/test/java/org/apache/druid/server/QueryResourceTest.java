@@ -78,12 +78,12 @@ import java.util.concurrent.Executors;
  */
 public class QueryResourceTest
 {
-  private static final QueryToolChestWarehouse warehouse = new MapQueryToolChestWarehouse(ImmutableMap.of());
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
-  private static final AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
+  private static final QueryToolChestWarehouse WAREHOUSE = new MapQueryToolChestWarehouse(ImmutableMap.of());
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+  private static final AuthenticationResult AUTHENTICATION_RESULT = new AuthenticationResult("druid", "druid", null, null);
 
   private final HttpServletRequest testServletRequest = EasyMock.createMock(HttpServletRequest.class);
-  public static final QuerySegmentWalker testSegmentWalker = new QuerySegmentWalker()
+  public static final QuerySegmentWalker TEST_SEGMENT_WALKER = new QuerySegmentWalker()
   {
     @Override
     public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
@@ -106,7 +106,7 @@ public class QueryResourceTest
   };
 
 
-  private static final ServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
+  private static final ServiceEmitter NOOP_SERVICE_EMITTER = new NoopServiceEmitter();
 
   private QueryResource queryResource;
   private QueryManager queryManager;
@@ -115,7 +115,7 @@ public class QueryResourceTest
   @BeforeClass
   public static void staticSetup()
   {
-    EmittingLogger.registerEmitter(noopServiceEmitter);
+    EmittingLogger.registerEmitter(NOOP_SERVICE_EMITTER);
   }
 
   @Before
@@ -129,16 +129,16 @@ public class QueryResourceTest
     testRequestLogger = new TestRequestLogger();
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            warehouse,
-            testSegmentWalker,
+            WAREHOUSE,
+            TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER
         ),
-        jsonMapper,
-        jsonMapper,
+        JSON_MAPPER,
+        JSON_MAPPER,
         queryManager,
         new AuthConfig(),
         null,
@@ -146,7 +146,7 @@ public class QueryResourceTest
     );
   }
 
-  private static final String simpleTimeSeriesQuery = "{\n"
+  private static final String SIMPLE_TIMESERIES_QUERY = "{\n"
                                                       + "    \"queryType\": \"timeseries\",\n"
                                                       + "    \"dataSource\": \"mmx_metrics\",\n"
                                                       + "    \"granularity\": \"hour\",\n"
@@ -170,7 +170,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
 
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(authenticationResult)
+            .andReturn(AUTHENTICATION_RESULT)
             .anyTimes();
 
     testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
@@ -178,7 +178,7 @@ public class QueryResourceTest
 
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
         null /*pretty*/,
         testServletRequest
     );
@@ -198,7 +198,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
 
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-        .andReturn(authenticationResult)
+        .andReturn(AUTHENTICATION_RESULT)
         .anyTimes();
 
     testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
@@ -210,7 +210,7 @@ public class QueryResourceTest
 
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
         null /*pretty*/,
         testServletRequest
     );
@@ -233,7 +233,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
 
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-        .andReturn(authenticationResult)
+        .andReturn(AUTHENTICATION_RESULT)
         .anyTimes();
 
     testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
@@ -245,7 +245,7 @@ public class QueryResourceTest
 
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
         null /*pretty*/,
         testServletRequest
     );
@@ -273,7 +273,7 @@ public class QueryResourceTest
     EasyMock.expect(smileRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
 
     EasyMock.expect(smileRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-        .andReturn(authenticationResult)
+        .andReturn(AUTHENTICATION_RESULT)
         .anyTimes();
 
     smileRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
@@ -284,7 +284,7 @@ public class QueryResourceTest
 
     EasyMock.replay(smileRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
         null /*pretty*/,
         smileRequest
     );
@@ -317,7 +317,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
 
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(authenticationResult)
+            .andReturn(AUTHENTICATION_RESULT)
             .anyTimes();
 
     testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
@@ -351,16 +351,16 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            warehouse,
-            testSegmentWalker,
+            WAREHOUSE,
+            TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
             authMapper
         ),
-        jsonMapper,
-        jsonMapper,
+        JSON_MAPPER,
+        JSON_MAPPER,
         queryManager,
         new AuthConfig(),
         authMapper,
@@ -370,7 +370,7 @@ public class QueryResourceTest
 
     try {
       queryResource.doPost(
-          new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
+          new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
           null /*pretty*/,
           testServletRequest
       );
@@ -387,7 +387,7 @@ public class QueryResourceTest
 
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     ((StreamingOutput) response.getEntity()).write(baos);
-    final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
+    final List<Result<TimeBoundaryResultValue>> responses = JSON_MAPPER.readValue(
         baos.toByteArray(),
         new TypeReference<List<Result<TimeBoundaryResultValue>>>() {}
     );
@@ -419,7 +419,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
 
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(authenticationResult)
+            .andReturn(AUTHENTICATION_RESULT)
             .anyTimes();
 
     testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
@@ -465,16 +465,16 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            warehouse,
-            testSegmentWalker,
+            WAREHOUSE,
+            TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
             authMapper
         ),
-        jsonMapper,
-        jsonMapper,
+        JSON_MAPPER,
+        JSON_MAPPER,
         queryManager,
         new AuthConfig(),
         authMapper,
@@ -544,7 +544,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
 
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-        .andReturn(authenticationResult)
+        .andReturn(AUTHENTICATION_RESULT)
             .anyTimes();
 
     testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
@@ -587,16 +587,16 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            warehouse,
-            testSegmentWalker,
+            WAREHOUSE,
+            TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
             authMapper
         ),
-        jsonMapper,
-        jsonMapper,
+        JSON_MAPPER,
+        JSON_MAPPER,
         queryManager,
         new AuthConfig(),
         authMapper,

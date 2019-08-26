@@ -39,7 +39,7 @@ public class MetadataStorageConnectorConfigTest
   )
       throws IOException
   {
-    return jsonMapper.readValue(
+    return JSON_MAPPER.readValue(
         "{" +
         "\"createTables\": \"" + createTables + "\"," +
         "\"host\": \"" + host + "\"," +
@@ -79,7 +79,7 @@ public class MetadataStorageConnectorConfigTest
     Assert.assertTrue(metadataStorageConnectorConfig.hashCode() == metadataStorageConnectorConfig2.hashCode());
   }
 
-  private static final ObjectMapper jsonMapper = new ObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
   @Test
   public void testMetadataStorageConnectionConfigSimplePassword() throws Exception
@@ -119,7 +119,7 @@ public class MetadataStorageConnectorConfigTest
       String pwd
   ) throws Exception
   {
-    MetadataStorageConnectorConfig config = jsonMapper.readValue(
+    MetadataStorageConnectorConfig config = JSON_MAPPER.readValue(
         "{" +
         "\"createTables\": \"" + createTables + "\"," +
         "\"host\": \"" + host + "\"," +
@@ -162,7 +162,7 @@ public class MetadataStorageConnectorConfigTest
           String pwd
   ) throws Exception
   {
-    MetadataStorageConnectorConfig config = jsonMapper.readValue(
+    MetadataStorageConnectorConfig config = JSON_MAPPER.readValue(
             "{" +
                     "\"createTables\": \"" + createTables + "\"," +
                     "\"host\": \"" + host + "\"," +

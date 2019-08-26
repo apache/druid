@@ -25,10 +25,6 @@ export interface DeferredProps {
 export interface DeferredState {}
 
 export class Deferred extends React.PureComponent<DeferredProps, DeferredState> {
-  constructor(props: DeferredProps, context: any) {
-    super(props, context);
-  }
-
   render(): JSX.Element {
     const { content } = this.props;
     return content();

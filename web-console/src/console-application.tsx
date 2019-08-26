@@ -48,7 +48,6 @@ export interface ConsoleApplicationProps {
 }
 
 export interface ConsoleApplicationState {
-  aboutDialogOpen: boolean;
   noSqlMode: boolean;
   capabilitiesLoading: boolean;
 }
@@ -124,7 +123,6 @@ export class ConsoleApplication extends React.PureComponent<
   constructor(props: ConsoleApplicationProps, context: any) {
     super(props, context);
     this.state = {
-      aboutDialogOpen: false,
       noSqlMode: false,
       capabilitiesLoading: true,
     };

@@ -113,7 +113,7 @@ public class AggregatorUtilTest
 
     ArrayList<AggregatorFactory> aggregatorFactories = Lists.newArrayList(
         Iterables.concat(
-            QueryRunnerTestHelper.commonDoubleAggregators,
+            QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS,
             Lists.newArrayList(
                 new DoubleMaxAggregatorFactory("maxIndex", "index"),
                 new DoubleMinAggregatorFactory("minIndex", "index")
@@ -122,8 +122,8 @@ public class AggregatorUtilTest
     );
 
     List<PostAggregator> postAggregatorList = Arrays.asList(
-        QueryRunnerTestHelper.addRowsIndexConstant,
-        QueryRunnerTestHelper.dependentPostAgg
+        QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT,
+        QueryRunnerTestHelper.DEPENDENT_POST_AGG
     );
     Pair<List<AggregatorFactory>, List<PostAggregator>> aggregatorsPair = AggregatorUtil.condensedAggregators(
         aggregatorFactories,
@@ -132,13 +132,13 @@ public class AggregatorUtilTest
     );
     // verify aggregators
     Assert.assertEquals(
-        Lists.newArrayList(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.indexDoubleSum),
+        Lists.newArrayList(QueryRunnerTestHelper.ROWS_COUNT, QueryRunnerTestHelper.INDEX_DOUBLE_SUM),
         aggregatorsPair.lhs
     );
     Assert.assertEquals(
         Lists.newArrayList(
-            QueryRunnerTestHelper.addRowsIndexConstant,
-            QueryRunnerTestHelper.dependentPostAgg
+            QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT,
+            QueryRunnerTestHelper.DEPENDENT_POST_AGG
         ), aggregatorsPair.rhs
     );
 

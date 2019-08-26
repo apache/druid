@@ -46,14 +46,14 @@ import java.util.Map;
  */
 public class SegmentAnalyzerTest
 {
-  private static final EnumSet<SegmentMetadataQuery.AnalysisType> emptyAnalyses =
+  private static final EnumSet<SegmentMetadataQuery.AnalysisType> EMPTY_ANALYSES =
       EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class);
 
   @Test
   public void testIncrementalWorks()
   {
     testIncrementalWorksHelper(null);
-    testIncrementalWorksHelper(emptyAnalyses);
+    testIncrementalWorksHelper(EMPTY_ANALYSES);
   }
 
   private void testIncrementalWorksHelper(EnumSet<SegmentMetadataQuery.AnalysisType> analyses)
@@ -112,7 +112,7 @@ public class SegmentAnalyzerTest
   public void testMappedWorks()
   {
     testMappedWorksHelper(null);
-    testMappedWorksHelper(emptyAnalyses);
+    testMappedWorksHelper(EMPTY_ANALYSES);
   }
 
   private void testMappedWorksHelper(EnumSet<SegmentMetadataQuery.AnalysisType> analyses)

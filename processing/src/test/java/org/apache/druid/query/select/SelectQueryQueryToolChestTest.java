@@ -34,9 +34,9 @@ import java.util.Collections;
 
 public class SelectQueryQueryToolChestTest
 {
-  private static final Supplier<SelectQueryConfig> configSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
+  private static final Supplier<SelectQueryConfig> CONFIG_SUPPLIER = Suppliers.ofInstance(new SelectQueryConfig(true));
 
-  private static final SelectQueryQueryToolChest toolChest = new SelectQueryQueryToolChest(
+  private static final SelectQueryQueryToolChest TOOL_CHEST = new SelectQueryQueryToolChest(
       new DefaultObjectMapper(),
       QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
   );
@@ -48,7 +48,7 @@ public class SelectQueryQueryToolChestTest
                                      .dataSource("dummy")
                                      .dimensions(Collections.singletonList("testDim"))
                                      .intervals(SelectQueryRunnerTest.I_0112_0114_SPEC)
-                                     .granularity(QueryRunnerTestHelper.allGran)
+                                     .granularity(QueryRunnerTestHelper.ALL_GRAN)
                                      .pagingSpec(PagingSpec.newSpec(3))
                                      .descending(false)
                                      .build();
@@ -57,14 +57,14 @@ public class SelectQueryQueryToolChestTest
                                      .dataSource("dummy")
                                      .dimensions(Collections.singletonList("testDim"))
                                      .intervals(SelectQueryRunnerTest.I_0112_0114_SPEC)
-                                     .granularity(QueryRunnerTestHelper.allGran)
+                                     .granularity(QueryRunnerTestHelper.ALL_GRAN)
                                      .pagingSpec(PagingSpec.newSpec(3))
                                      .descending(true)
                                      .build();
 
-    final CacheStrategy<Result<SelectResultValue>, Object, SelectQuery> strategy1 = toolChest.getCacheStrategy(query1);
+    final CacheStrategy<Result<SelectResultValue>, Object, SelectQuery> strategy1 = TOOL_CHEST.getCacheStrategy(query1);
     Assert.assertNotNull(strategy1);
-    final CacheStrategy<Result<SelectResultValue>, Object, SelectQuery> strategy2 = toolChest.getCacheStrategy(query2);
+    final CacheStrategy<Result<SelectResultValue>, Object, SelectQuery> strategy2 = TOOL_CHEST.getCacheStrategy(query2);
     Assert.assertNotNull(strategy2);
 
     Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));

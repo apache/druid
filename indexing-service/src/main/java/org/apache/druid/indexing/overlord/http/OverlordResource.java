@@ -264,6 +264,7 @@ public class OverlordResource
               workItem.getTaskId(),
               new TaskStatusPlus(
                   taskInfo.getId(),
+                  taskInfo.getTask() == null ? null : taskInfo.getTask().getGroupId(),
                   taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
                   taskInfo.getCreatedTime(),
                   // Would be nice to include the real queue insertion time, but the
@@ -285,6 +286,7 @@ public class OverlordResource
             taskid,
             new TaskStatusPlus(
                 taskInfo.getId(),
+                taskInfo.getTask() == null ? null : taskInfo.getTask().getGroupId(),
                 taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
                 taskInfo.getCreatedTime(),
                 // Would be nice to include the real queue insertion time, but the
@@ -577,6 +579,7 @@ public class OverlordResource
     List<TaskStatusPlus> finalTaskList = new ArrayList<>();
     Function<AnyTask, TaskStatusPlus> activeTaskTransformFunc = workItem -> new TaskStatusPlus(
         workItem.getTaskId(),
+        workItem.getTaskGroupId(),
         workItem.getTaskType(),
         workItem.getCreatedTime(),
         workItem.getQueueInsertionTime(),
@@ -590,6 +593,7 @@ public class OverlordResource
 
     Function<TaskInfo<Task, TaskStatus>, TaskStatusPlus> completeTaskTransformFunc = taskInfo -> new TaskStatusPlus(
         taskInfo.getId(),
+        taskInfo.getTask() == null ? null : taskInfo.getTask().getGroupId(),
         taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
         taskInfo.getCreatedTime(),
         // Would be nice to include the real queue insertion time, but the
@@ -626,6 +630,7 @@ public class OverlordResource
         allActiveTasks.add(
             new AnyTask(
                 task.getId(),
+                task.getTask() == null ? null : task.getTask().getGroupId(),
                 task.getTask() == null ? null : task.getTask().getType(),
                 SettableFuture.create(),
                 task.getDataSource(),
@@ -990,6 +995,7 @@ public class OverlordResource
 
   private static class AnyTask extends TaskRunnerWorkItem
   {
+    private final String taskGroupId;
     private final String taskType;
     private final String dataSource;
     private final TaskState taskState;
@@ -1000,6 +1006,7 @@ public class OverlordResource
 
     AnyTask(
         String taskId,
+        String taskGroupId,
         String taskType,
         ListenableFuture<TaskStatus> result,
         String dataSource,
@@ -1011,6 +1018,7 @@ public class OverlordResource
     )
     {
       super(taskId, result, DateTimes.EPOCH, DateTimes.EPOCH);
+      this.taskGroupId = taskGroupId;
       this.taskType = taskType;
       this.dataSource = dataSource;
       this.taskState = state;
@@ -1036,6 +1044,11 @@ public class OverlordResource
     public String getDataSource()
     {
       return dataSource;
+    }
+
+    public String getTaskGroupId()
+    {
+      return taskGroupId;
     }
 
     public TaskState getTaskState()
@@ -1070,6 +1083,7 @@ public class OverlordResource
     {
       return new AnyTask(
           getTaskId(),
+          getTaskGroupId(),
           getTaskType(),
           getResult(),
           getDataSource(),

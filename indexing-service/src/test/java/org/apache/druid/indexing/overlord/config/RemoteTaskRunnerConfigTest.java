@@ -32,7 +32,7 @@ import java.util.Map;
 
 public class RemoteTaskRunnerConfigTest
 {
-  private static final ObjectMapper mapper = new DefaultObjectMapper();
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private static final Period DEFAULT_TIMEOUT = Period.ZERO;
   private static final String DEFAULT_VERSION = "";
   private static final long DEFAULT_MAX_ZNODE = 10 * 1024;
@@ -44,7 +44,7 @@ public class RemoteTaskRunnerConfigTest
   @Test
   public void testIsJsonConfiguratable()
   {
-    JsonConfigurator.verifyClazzIsConfigurable(mapper, RemoteTaskRunnerConfig.class, null);
+    JsonConfigurator.verifyClazzIsConfigurable(MAPPER, RemoteTaskRunnerConfig.class, null);
   }
 
   @Test
@@ -795,7 +795,7 @@ public class RemoteTaskRunnerConfigTest
 
   private RemoteTaskRunnerConfig reflect(RemoteTaskRunnerConfig config) throws IOException
   {
-    return mapper.readValue(mapper.writeValueAsString(config), RemoteTaskRunnerConfig.class);
+    return MAPPER.readValue(MAPPER.writeValueAsString(config), RemoteTaskRunnerConfig.class);
   }
 
   private RemoteTaskRunnerConfig generateRemoteTaskRunnerConfig(
@@ -820,6 +820,6 @@ public class RemoteTaskRunnerConfigTest
     objectMap.put("maxRetriesBeforeBlacklist", maxRetriesBeforeBlacklist);
     objectMap.put("workerBlackListBackoffTime", taskBlackListBackoffTime);
     objectMap.put("workerBlackListCleanupPeriod", taskBlackListCleanupPeriod);
-    return mapper.convertValue(objectMap, RemoteTaskRunnerConfig.class);
+    return MAPPER.convertValue(objectMap, RemoteTaskRunnerConfig.class);
   }
 }

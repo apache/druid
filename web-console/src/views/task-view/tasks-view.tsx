@@ -68,6 +68,7 @@ const supervisorTableColumns: string[] = [
 ];
 const taskTableColumns: string[] = [
   'Task ID',
+  'Group ID',
   'Type',
   'Datasource',
   'Location',
@@ -109,7 +110,7 @@ export interface TasksViewState {
   taskFilter: Filter[];
   supervisorFilter: Filter[];
 
-  groupTasksBy?: 'type' | 'datasource' | 'status';
+  groupTasksBy?: 'group_id' | 'type' | 'datasource' | 'status';
 
   killTaskId?: string;
 
@@ -191,7 +192,7 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
   };
 
   static TASK_SQL = `SELECT
-  "task_id", "type", "datasource", "created_time", "location", "duration", "error_msg",
+  "task_id", "group_id", "type", "datasource", "created_time", "location", "duration", "error_msg",
   CASE WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status",
   (
     CASE WHEN "status" = 'RUNNING' THEN
@@ -745,6 +746,13 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               show: hiddenTaskColumns.exists('Task ID'),
             },
             {
+              Header: 'Group ID',
+              accessor: 'group_id',
+              width: 300,
+              Aggregated: () => '',
+              show: hiddenTaskColumns.exists('Group ID'),
+            },
+            {
               Header: 'Type',
               accessor: 'type',
               Cell: row => {
@@ -1106,7 +1114,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               <TableColumnSelector
                 columns={supervisorTableColumns}
                 onChange={column =>
-                  this.setState({ hiddenSupervisorColumns: hiddenSupervisorColumns.toggle(column) })
+                  this.setState(prevState => ({
+                    hiddenSupervisorColumns: prevState.hiddenSupervisorColumns.toggle(column),
+                  }))
                 }
                 tableColumnsHidden={hiddenSupervisorColumns.storedArray}
               />
@@ -1122,6 +1132,12 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                   onClick={() => this.setState({ groupTasksBy: undefined })}
                 >
                   None
+                </Button>
+                <Button
+                  active={groupTasksBy === 'group_id'}
+                  onClick={() => this.setState({ groupTasksBy: 'group_id' })}
+                >
+                  Group ID
                 </Button>
                 <Button
                   active={groupTasksBy === 'type'}
@@ -1153,7 +1169,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               <TableColumnSelector
                 columns={taskTableColumns}
                 onChange={column =>
-                  this.setState({ hiddenTaskColumns: hiddenTaskColumns.toggle(column) })
+                  this.setState(prevState => ({
+                    hiddenTaskColumns: prevState.hiddenTaskColumns.toggle(column),
+                  }))
                 }
                 tableColumnsHidden={hiddenTaskColumns.storedArray}
               />
