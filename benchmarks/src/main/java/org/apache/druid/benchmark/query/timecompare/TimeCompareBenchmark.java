@@ -116,12 +116,12 @@ public class TimeCompareBenchmark
   @Param({"100"})
   private int threshold;
 
-  protected static final Map<String, String> scriptDoubleSum = new HashMap<>();
+  protected static final Map<String, String> SCRIPT_DOUBLE_SUM = new HashMap<>();
 
   static {
-    scriptDoubleSum.put("fnAggregate", "function aggregate(current, a) { return current + a }");
-    scriptDoubleSum.put("fnReset", "function reset() { return 0 }");
-    scriptDoubleSum.put("fnCombine", "function combine(a,b) { return a + b }");
+    SCRIPT_DOUBLE_SUM.put("fnAggregate", "function aggregate(current, a) { return current + a }");
+    SCRIPT_DOUBLE_SUM.put("fnReset", "function reset() { return 0 }");
+    SCRIPT_DOUBLE_SUM.put("fnCombine", "function combine(a,b) { return a + b }");
   }
 
   private static final Logger log = new Logger(TimeCompareBenchmark.class);

@@ -50,7 +50,7 @@ public class SQLMetadataStorageActionHandlerTest
   @Rule
   public final ExpectedException thrown = ExpectedException.none();
 
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private SQLMetadataStorageActionHandler<Map<String, Integer>, Map<String, Integer>, Map<String, String>, Map<String, Integer>> handler;
 
   @Before
@@ -69,7 +69,7 @@ public class SQLMetadataStorageActionHandlerTest
 
     handler = new DerbyMetadataStorageActionHandler<>(
         connector,
-        jsonMapper,
+        JSON_MAPPER,
         new MetadataStorageActionHandlerTypes<Map<String, Integer>, Map<String, Integer>, Map<String, String>, Map<String, Integer>>()
         {
           @Override

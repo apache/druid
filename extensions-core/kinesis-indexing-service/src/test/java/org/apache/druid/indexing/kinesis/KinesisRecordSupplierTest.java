@@ -53,7 +53,7 @@ import java.util.stream.Collectors;
 
 public class KinesisRecordSupplierTest extends EasyMockSupport
 {
-  private static final String stream = "stream";
+  private static final String STREAM = "stream";
   private static final long POLL_TIMEOUT_MILLIS = 2000;
   private static final String SHARD_ID1 = "1";
   private static final String SHARD_ID0 = "0";
@@ -78,7 +78,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   private static final List<Object> ALL_RECORDS = ImmutableList.builder()
                                                                .addAll(SHARD0_RECORDS.stream()
                                                                                      .map(x -> new OrderedPartitionableRecord<>(
-                                                                                         stream,
+                                                                                         STREAM,
                                                                                          SHARD_ID0,
                                                                                          x.getSequenceNumber(),
                                                                                          Collections
@@ -91,7 +91,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
                                                                                              .toList()))
                                                                .addAll(SHARD1_RECORDS.stream()
                                                                                      .map(x -> new OrderedPartitionableRecord<>(
-                                                                                         stream,
+                                                                                         STREAM,
                                                                                          SHARD_ID1,
                                                                                          x.getSequenceNumber(),
                                                                                          Collections
@@ -182,8 +182,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     replayAll();
 
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
-        StreamPartition.of(stream, SHARD_ID0),
-        StreamPartition.of(stream, SHARD_ID1)
+        StreamPartition.of(STREAM, SHARD_ID0),
+        StreamPartition.of(STREAM, SHARD_ID1)
     );
 
     recordSupplier = new KinesisRecordSupplier(
@@ -204,13 +204,13 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     recordSupplier.assign(partitions);
 
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
-    Assert.assertEquals(ImmutableSet.of(SHARD_ID1, SHARD_ID0), recordSupplier.getPartitionIds(stream));
+    Assert.assertEquals(ImmutableSet.of(SHARD_ID1, SHARD_ID0), recordSupplier.getPartitionIds(STREAM));
     Assert.assertEquals(Collections.emptyList(), recordSupplier.poll(100));
 
     verifyAll();
 
     final DescribeStreamRequest expectedRequest = new DescribeStreamRequest();
-    expectedRequest.setStreamName(stream);
+    expectedRequest.setStreamName(STREAM);
     expectedRequest.setExclusiveStartShardId("0");
     Assert.assertEquals(expectedRequest, capturedRequest.getValue());
   }
@@ -266,8 +266,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     replayAll();
 
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
-        StreamPartition.of(stream, SHARD_ID0),
-        StreamPartition.of(stream, SHARD_ID1)
+        StreamPartition.of(STREAM, SHARD_ID0),
+        StreamPartition.of(STREAM, SHARD_ID1)
     );
 
 
@@ -338,8 +338,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     replayAll();
 
-    StreamPartition<String> shard0Partition = StreamPartition.of(stream, SHARD_ID0);
-    StreamPartition<String> shard1Partition = StreamPartition.of(stream, SHARD_ID1);
+    StreamPartition<String> shard0Partition = StreamPartition.of(STREAM, SHARD_ID0);
+    StreamPartition<String> shard1Partition = StreamPartition.of(STREAM, SHARD_ID1);
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
         shard0Partition,
         shard1Partition
@@ -405,8 +405,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     replayAll();
 
-    StreamPartition<String> shard0 = StreamPartition.of(stream, SHARD_ID0);
-    StreamPartition<String> shard1 = StreamPartition.of(stream, SHARD_ID1);
+    StreamPartition<String> shard0 = StreamPartition.of(STREAM, SHARD_ID0);
+    StreamPartition<String> shard1 = StreamPartition.of(STREAM, SHARD_ID1);
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
         shard0,
         shard1
@@ -440,8 +440,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   @Test(expected = ISE.class)
   public void testSeekUnassigned() throws InterruptedException
   {
-    StreamPartition<String> shard0 = StreamPartition.of(stream, SHARD_ID0);
-    StreamPartition<String> shard1 = StreamPartition.of(stream, SHARD_ID1);
+    StreamPartition<String> shard0 = StreamPartition.of(STREAM, SHARD_ID0);
+    StreamPartition<String> shard1 = StreamPartition.of(STREAM, SHARD_ID1);
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
         shard1
     );
@@ -503,7 +503,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     replayAll();
 
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
-        StreamPartition.of(stream, SHARD_ID1)
+        StreamPartition.of(STREAM, SHARD_ID1)
     );
 
     recordSupplier = new KinesisRecordSupplier(
@@ -520,7 +520,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     );
 
     recordSupplier.assign(partitions);
-    recordSupplier.seek(StreamPartition.of(stream, SHARD_ID1), "5");
+    recordSupplier.seek(StreamPartition.of(STREAM, SHARD_ID1), "5");
     recordSupplier.start();
 
     for (int i = 0; i < 10 && recordSupplier.bufferSize() < 6; i++) {
@@ -534,7 +534,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         firstRecord
     );
 
-    recordSupplier.seek(StreamPartition.of(stream, SHARD_ID1), "7");
+    recordSupplier.seek(StreamPartition.of(STREAM, SHARD_ID1), "7");
     recordSupplier.start();
 
     while (recordSupplier.bufferSize() < 4) {
@@ -585,8 +585,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     replayAll();
 
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
-        StreamPartition.of(stream, SHARD_ID0),
-        StreamPartition.of(stream, SHARD_ID1)
+        StreamPartition.of(STREAM, SHARD_ID0),
+        StreamPartition.of(STREAM, SHARD_ID1)
     );
 
 

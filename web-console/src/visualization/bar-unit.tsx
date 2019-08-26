@@ -20,7 +20,7 @@ import React from 'react';
 
 import './bar-unit.scss';
 
-interface BarChartUnitProps extends React.Props<any> {
+interface BarChartUnitProps {
   x: number | undefined;
   y: number;
   width: number;
@@ -31,25 +31,21 @@ interface BarChartUnitProps extends React.Props<any> {
   offHover?: () => void;
 }
 
-interface BarChartUnitState {}
-
-export class BarUnit extends React.Component<BarChartUnitProps, BarChartUnitState> {
-  constructor(props: BarChartUnitProps) {
-    super(props);
-    this.state = {};
-  }
-
+export class BarUnit extends React.Component<BarChartUnitProps> {
   render(): JSX.Element {
     const { x, y, width, height, style, onClick, onHover, offHover } = this.props;
     return (
-      <g
+      <rect
         className={`bar-chart-unit`}
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        style={style}
         onClick={onClick}
         onMouseOver={onHover}
         onMouseLeave={offHover}
-      >
-        <rect x={x} y={y} width={width} height={height} style={style} />
-      </g>
+      />
     );
   }
 }

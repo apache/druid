@@ -38,7 +38,7 @@ import java.util.List;
  */
 public class VarianceSerde extends ComplexMetricSerde
 {
-  private static final Ordering<VarianceAggregatorCollector> comparator =
+  private static final Ordering<VarianceAggregatorCollector> COMPARATOR =
       Ordering.from(VarianceAggregatorCollector.COMPARATOR).nullsFirst();
 
   @Override
@@ -114,7 +114,7 @@ public class VarianceSerde extends ComplexMetricSerde
       @Override
       public int compare(VarianceAggregatorCollector o1, VarianceAggregatorCollector o2)
       {
-        return comparator.compare(o1, o2);
+        return COMPARATOR.compare(o1, o2);
       }
     };
   }

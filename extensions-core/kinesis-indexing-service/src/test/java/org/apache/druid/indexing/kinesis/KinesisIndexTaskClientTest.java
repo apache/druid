@@ -73,7 +73,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  private static final ObjectMapper objectMapper = new DefaultObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private static final String TEST_ID = "test-id";
   private static final List<String> TEST_IDS = Arrays.asList("test-id1", "test-id2", "test-id3", "test-id4");
   private static final String TEST_HOST = "test-host";
@@ -112,7 +112,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     response = createMock(HttpResponse.class);
     headers = createMock(HttpHeaders.class);
 
-    client = new TestableKinesisIndexTaskClient(httpClient, objectMapper, taskInfoProvider);
+    client = new TestableKinesisIndexTaskClient(httpClient, OBJECT_MAPPER, taskInfoProvider);
     EasyMock.expect(taskInfoProvider.getTaskLocation(TEST_ID))
             .andReturn(new TaskLocation(TEST_HOST, TEST_PORT, TEST_TLS_PORT))
             .anyTimes();
@@ -286,7 +286,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testGetCurrentOffsetsWithRetry() throws Exception
   {
-    client = new TestableKinesisIndexTaskClient(httpClient, objectMapper, taskInfoProvider, 3);
+    client = new TestableKinesisIndexTaskClient(httpClient, OBJECT_MAPPER, taskInfoProvider, 3);
 
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(6)
@@ -331,7 +331,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     expectedException.expect(RuntimeException.class);
     expectedException.expectMessage("org.apache.druid.java.util.common.IOE: Received status [404]");
 
-    client = new TestableKinesisIndexTaskClient(httpClient, objectMapper, taskInfoProvider, 2);
+    client = new TestableKinesisIndexTaskClient(httpClient, OBJECT_MAPPER, taskInfoProvider, 2);
 
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).anyTimes();
     EasyMock.expect(responseHolder.getContent()).andReturn("").anyTimes();
@@ -386,7 +386,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testGetStartTime() throws Exception
   {
-    client = new TestableKinesisIndexTaskClient(httpClient, objectMapper, taskInfoProvider, 2);
+    client = new TestableKinesisIndexTaskClient(httpClient, OBJECT_MAPPER, taskInfoProvider, 2);
     DateTime now = DateTimes.nowUtc();
 
     Capture<Request> captured = Capture.newInstance();

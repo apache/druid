@@ -27,7 +27,7 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 
 public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOperatorConversion
 {
-  private static final String exprFunction = "array_contains";
+  private static final String EXPR_FUNCTION = "array_contains";
 
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("ARRAY_CONTAINS")
@@ -49,6 +49,6 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
 
   public ArrayContainsOperatorConversion()
   {
-    super(SQL_FUNCTION, exprFunction);
+    super(SQL_FUNCTION, EXPR_FUNCTION);
   }
 }

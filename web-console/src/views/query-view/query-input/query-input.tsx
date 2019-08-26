@@ -22,11 +22,15 @@ import escape from 'lodash.escape';
 import React from 'react';
 import AceEditor from 'react-ace';
 
-import { SQL_DATE_TYPES, SQL_FUNCTIONS, SyntaxDescription } from '../../../../lib/sql-function-doc';
+import {
+  SQL_CONSTANTS,
+  SQL_DYNAMICS,
+  SQL_EXPRESSION_PARTS,
+  SQL_KEYWORDS,
+} from '../../../../lib/keywords';
+import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../../../lib/sql-docs';
 import { uniq } from '../../../utils';
 import { ColumnMetadata } from '../../../utils/column-metadata';
-
-import { SQL_CONSTANTS, SQL_DYNAMICS, SQL_EXPRESSION_PARTS, SQL_KEYWORDS } from './keywords';
 
 import './query-input.scss';
 
@@ -60,7 +64,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
       SQL_EXPRESSION_PARTS.map(v => ({ name: v, value: v, score: 0, meta: 'keyword' })),
       SQL_CONSTANTS.map(v => ({ name: v, value: v, score: 0, meta: 'constant' })),
       SQL_DYNAMICS.map(v => ({ name: v, value: v, score: 0, meta: 'dynamic' })),
-      SQL_DATE_TYPES.map(v => ({ name: v.syntax, value: v.syntax, score: 0, meta: 'keyword' })),
+      SQL_DATA_TYPES.map(v => ({ name: v.name, value: v.name, score: 0, meta: 'type' })),
     );
 
     const keywordCompleter = {
@@ -79,13 +83,12 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
   static addFunctionAutoCompleter(): void {
     if (!langTools) return;
 
-    const functionList: any[] = SQL_FUNCTIONS.map((entry: SyntaxDescription) => {
-      const funcName: string = entry.syntax.replace(/\(.*\)/, '()');
+    const functionList: any[] = SQL_FUNCTIONS.map(entry => {
       return {
-        value: funcName,
+        value: entry.name,
         score: 80,
         meta: 'function',
-        syntax: entry.syntax,
+        syntax: entry.name + entry.arguments,
         description: entry.description,
         completer: {
           insertMatch: (editor: any, data: any) => {

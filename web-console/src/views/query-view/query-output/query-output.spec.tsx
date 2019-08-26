@@ -44,9 +44,6 @@ ORDER BY "Count" DESC`);
     const queryOutput = (
       <QueryOutput
         runeMode={false}
-        sqlOrderBy={() => null}
-        sqlFilterRow={() => null}
-        sqlExcludeColumn={() => null}
         loading={false}
         error="lol"
         queryResult={{
@@ -93,6 +90,7 @@ ORDER BY "Count" DESC`);
           ],
         }}
         parsedQuery={parsedQuery}
+        onQueryChange={() => null}
       />
     );
 

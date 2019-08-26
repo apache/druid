@@ -33,15 +33,15 @@ import java.util.List;
 
 public class DruidTestModuleFactory implements IModuleFactory
 {
-  private static final Module module = new DruidTestModule();
-  private static final Injector injector = Initialization.makeInjectorWithModules(
+  private static final Module MODULE = new DruidTestModule();
+  private static final Injector INJECTOR = Initialization.makeInjectorWithModules(
       GuiceInjectors.makeStartupInjector(),
       getModules()
   );
 
   public static Injector getInjector()
   {
-    return injector;
+    return INJECTOR;
   }
 
   private static List<? extends Module> getModules()
@@ -55,8 +55,8 @@ public class DruidTestModuleFactory implements IModuleFactory
   @Override
   public Module createModule(ITestContext context, Class<?> testClass)
   {
-    context.addGuiceModule(DruidTestModule.class, module);
-    context.addInjector(Collections.singletonList(module), injector);
-    return module;
+    context.addGuiceModule(DruidTestModule.class, MODULE);
+    context.addInjector(Collections.singletonList(MODULE), INJECTOR);
+    return MODULE;
   }
 }

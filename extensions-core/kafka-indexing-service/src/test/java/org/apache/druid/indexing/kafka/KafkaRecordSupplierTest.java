@@ -54,8 +54,8 @@ public class KafkaRecordSupplierTest
   private static long poll_timeout_millis = 1000;
   private static int pollRetry = 5;
   private static int topicPosFix = 0;
-  private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
-  
+  private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
+
   private static TestingCluster zkServer;
   private static TestBroker kafkaServer;
 
@@ -126,28 +126,28 @@ public class KafkaRecordSupplierTest
       );
     }).collect(Collectors.toList());
   }
-  
+
   public static class TestKafkaDeserializer implements Deserializer<byte[]>
   {
     @Override
     public void configure(Map<String, ?> map, boolean b)
     {
-    
+
     }
-  
+
     @Override
     public void close()
     {
-    
+
     }
-  
+
     @Override
     public byte[] deserialize(String topic, byte[] data)
     {
       return data;
     }
   }
-  
+
   @BeforeClass
   public static void setupClass() throws Exception
   {
@@ -194,7 +194,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), objectMapper);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER);
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
 
@@ -205,77 +205,77 @@ public class KafkaRecordSupplierTest
 
     recordSupplier.close();
   }
-  
+
   @Test
   public void testSupplierSetupCustomDeserializer() throws ExecutionException, InterruptedException
   {
-    
+
     // Insert data
     insertData();
-    
+
     Set<StreamPartition<Integer>> partitions = ImmutableSet.of(
         StreamPartition.of(topic, 0),
         StreamPartition.of(topic, 1)
     );
-    
+
     Map<String, Object> properties = kafkaServer.consumerProperties();
     properties.put("key.deserializer", KafkaRecordSupplierTest.TestKafkaDeserializer.class.getName());
     properties.put("value.deserializer", KafkaRecordSupplierTest.TestKafkaDeserializer.class.getName());
-    
+
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
         properties,
-        objectMapper
+        OBJECT_MAPPER
     );
-    
+
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
-    
+
     recordSupplier.assign(partitions);
-    
+
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
     Assert.assertEquals(ImmutableSet.of(0, 1), recordSupplier.getPartitionIds(topic));
-    
+
     recordSupplier.close();
   }
-  
+
   @Test
   public void testPollCustomDeserializer() throws InterruptedException, ExecutionException
   {
-    
+
     // Insert data
     insertData();
-    
+
     Set<StreamPartition<Integer>> partitions = ImmutableSet.of(
         StreamPartition.of(topic, 0),
         StreamPartition.of(topic, 1)
     );
-  
+
     Map<String, Object> properties = kafkaServer.consumerProperties();
     properties.put("key.deserializer", KafkaRecordSupplierTest.TestKafkaDeserializer.class.getName());
     properties.put("value.deserializer", KafkaRecordSupplierTest.TestKafkaDeserializer.class.getName());
-  
+
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
         properties,
-        objectMapper
+        OBJECT_MAPPER
     );
-    
+
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
-    
+
     List<OrderedPartitionableRecord<Integer, Long>> initialRecords = new ArrayList<>(createOrderedPartitionableRecords());
-    
+
     List<OrderedPartitionableRecord<Integer, Long>> polledRecords = recordSupplier.poll(poll_timeout_millis);
     for (int i = 0; polledRecords.size() != initialRecords.size() && i < pollRetry; i++) {
       polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
       Thread.sleep(200);
     }
-    
+
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
     Assert.assertEquals(initialRecords.size(), polledRecords.size());
     Assert.assertTrue(initialRecords.containsAll(polledRecords));
-    
+
     recordSupplier.close();
   }
-  
+
   @Test
   public void testPoll() throws InterruptedException, ExecutionException
   {
@@ -289,7 +289,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), objectMapper);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER);
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -330,7 +330,7 @@ public class KafkaRecordSupplierTest
 
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), objectMapper);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER);
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -401,7 +401,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), objectMapper);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER);
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -444,7 +444,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), objectMapper);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER);
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -477,7 +477,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), objectMapper);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER);
 
     recordSupplier.assign(partitions);
 
@@ -503,7 +503,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), objectMapper);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER);
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);

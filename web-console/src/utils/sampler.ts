@@ -556,7 +556,7 @@ export async function sampleForExampleManifests(
         },
       },
     },
-    samplerConfig: { numRows: 50, timeoutMs: 10000 },
+    samplerConfig: { numRows: 50, timeoutMs: 10000, skipCache: true },
   };
 
   const exampleData = await postToSampler(sampleSpec, 'example-manifest');

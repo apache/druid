@@ -45,17 +45,7 @@ export interface LookupEditDialogProps {
   allLookupTiers: string[];
 }
 
-export interface LookupEditDialogState {}
-
-export class LookupEditDialog extends React.PureComponent<
-  LookupEditDialogProps,
-  LookupEditDialogState
-> {
-  constructor(props: LookupEditDialogProps) {
-    super(props);
-    this.state = {};
-  }
-
+export class LookupEditDialog extends React.PureComponent<LookupEditDialogProps> {
   private addISOVersion = () => {
     const { onChange } = this.props;
     const currentDate = new Date();

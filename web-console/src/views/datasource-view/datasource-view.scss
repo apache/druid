@@ -18,7 +18,7 @@
 
 @import '../../variables';
 
-.data-sources-view {
+.datasource-view {
   height: 100%;
   width: 100%;
   overflow: auto;
@@ -27,19 +27,26 @@
     cursor: pointer;
   }
 
-  .chart-container {
-    height: 40vh;
-    margin-bottom: 10px;
-  }
-
   .ReactTable {
     position: absolute;
-    top: 50%; //$view-control-bar-height + $standard-padding;
     bottom: 0;
     width: 100%;
+  }
 
-    &.full-height {
-      top: 50px;
+  &.show-chart {
+    .chart-container {
+      height: calc(50% - 55px);
+      margin-top: 10px;
+    }
+
+    .ReactTable {
+      top: 50%;
+    }
+  }
+
+  &.no-chart {
+    .ReactTable {
+      top: $view-control-bar-height + $standard-padding;
     }
   }
 }
