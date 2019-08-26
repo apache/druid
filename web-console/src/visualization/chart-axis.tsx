@@ -25,19 +25,12 @@ interface ChartAxisProps {
   className?: string;
 }
 
-interface ChartAxisState {}
-
-export class ChartAxis extends React.Component<ChartAxisProps, ChartAxisState> {
-  constructor(props: ChartAxisProps) {
-    super(props);
-    this.state = {};
-  }
-
+export class ChartAxis extends React.Component<ChartAxisProps> {
   render(): JSX.Element {
     const { transform, scale, className } = this.props;
     return (
       <g
-        className={`axis ${className}`}
+        className={`chart-axis ${className}`}
         transform={transform}
         ref={node => d3.select(node).call(scale)}
       />

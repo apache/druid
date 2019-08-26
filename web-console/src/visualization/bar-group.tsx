@@ -26,7 +26,7 @@ import { HoveredBarInfo } from './stacked-bar-chart';
 
 interface BarGroupProps {
   dataToRender: BarUnitData[];
-  changeActiveDatasource: (e: string) => void;
+  changeActiveDatasource: (dataSource: string) => void;
   formatTick: (e: number) => string;
   xScale: AxisScale<Date>;
   yScale: AxisScale<number>;
@@ -36,16 +36,8 @@ interface BarGroupProps {
   hoverOn?: HoveredBarInfo | null;
 }
 
-interface BarGroupState {}
-
-export class BarGroup extends React.Component<BarGroupProps, BarGroupState> {
-  constructor(props: BarGroupProps) {
-    super(props);
-    this.state = {};
-  }
-
-  shouldComponentUpdate(nextProps: BarGroupProps, nextState: BarGroupState): boolean {
-    if (nextState === null) console.log(nextState);
+export class BarGroup extends React.Component<BarGroupProps> {
+  shouldComponentUpdate(nextProps: BarGroupProps): boolean {
     return nextProps.hoverOn === this.props.hoverOn;
   }
 
