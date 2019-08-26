@@ -196,7 +196,7 @@ public class ParserTest
   public void testFunctions()
   {
     validateParser("sqrt(x)", "(sqrt [x])", ImmutableList.of("x"));
-    validateParser("if(cond,then,else)", "(if [cond, then, else])", ImmutableList.of("else", "then", "cond"));
+    validateParser("if(cond,then,else)", "(if [cond, then, else])", ImmutableList.of("cond", "else", "then"));
     validateParser("cast(x, 'STRING')", "(cast [x, STRING])", ImmutableList.of("x"));
     validateParser("cast(x, 'LONG')", "(cast [x, LONG])", ImmutableList.of("x"));
     validateParser("cast(x, 'DOUBLE')", "(cast [x, DOUBLE])", ImmutableList.of("x"));
@@ -319,7 +319,7 @@ public class ParserTest
     validateParser(
         "array_append(map(z -> z + 1, array_append(z, fold((x, acc) -> acc + x, map((x) -> x + 1, x), y))), a)",
         "(array_append [(map ([z] -> (+ z 1)), [(array_append [z, (fold ([x, acc] -> (+ acc x)), [(map ([x] -> (+ x 1)), [x]), y])])]), a])",
-        ImmutableList.of("a", "x", "y", "z"),
+        ImmutableList.of("x", "y", "a", "z"),
         ImmutableSet.of("a"),
         ImmutableSet.of("x", "z")
     );
