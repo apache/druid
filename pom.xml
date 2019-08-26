@@ -78,7 +78,7 @@
         <apache.curator.version>4.1.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
         <avatica.version>1.12.0</avatica.version>
-        <calcite.version>1.17.0</calcite.version>
+        <calcite.version>1.20.0</calcite.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
         <fastutil.version>8.2.3</fastutil.version>
