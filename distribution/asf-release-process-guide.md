@@ -574,7 +574,7 @@ druid_versions:
 * build incubator-druid-website-src into incubator-druid-website
 * stage incubator-druid-website-src and incubator-druid-website repositories to git.
 
-4. Make a PR to the src repo (https://github.com/apache/incubator-druid-website-src) and to the website repo (https://github.com/apache/incubator-druid-website). Once the PR is merged, https://druid.apache.org/ will be updated immediately.
+4. Make a PR to the src repo (https://github.com/apache/incubator-druid-website-src) and to the website repo (https://github.com/apache/incubator-druid-website). Once the website PR is merged, https://druid.apache.org/ will be updated immediately.
 
 ### Draft a release on github
 
