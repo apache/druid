@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.topn;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -27,12 +26,6 @@ import org.apache.druid.segment.Cursor;
 
 public class DefaultTopNQueryMetrics extends DefaultQueryMetrics<TopNQuery> implements TopNQueryMetrics
 {
-
-  public DefaultTopNQueryMetrics(ObjectMapper jsonMapper)
-  {
-    super(jsonMapper);
-  }
-
   @Override
   public void query(TopNQuery query)
   {

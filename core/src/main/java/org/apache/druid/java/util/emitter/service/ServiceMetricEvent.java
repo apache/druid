@@ -146,7 +146,7 @@ public class ServiceMetricEvent implements Event
       return this;
     }
 
-    public Builder setDimension(String dim, String value)
+    public Builder setDimension(String dim, Object value)
     {
       userDims.put(dim, value);
       return this;
