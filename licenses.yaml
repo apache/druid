@@ -3607,6 +3607,63 @@ libraries:
 
 ---
 
+name: JAXB Runtime
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 2.3.1
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/jaxb-runtime.CDDL11
+libraries:
+  - org.glassfish.jaxb: jaxb-runtime
+
+---
+
+name: TXW2 Runtime
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 2.3.1
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/jaxb-runtime.CDDL11
+libraries:
+  - org.glassfish.jaxb: txw2
+
+---
+
+name: Extended StAX API
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 1.8
+copyright: Oracle and/or its affiliates
+license_file_path: licenses/bin/jaxb-runtime.CDDL11
+libraries:
+  - org.jvnet.staxex: stax-ex
+
+---
+
+name: Istack Common Utility Code Runtime
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 3.0.7
+copyright: Oracle and/or its affiliates
+license_file_path: licenses/bin/jaxb-runtime.CDDL11
+libraries:
+  - com.sun.istack: istack-commons-runtime
+
+---
+
+name: FastInfoset
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.2.15
+libraries:
+  - com.sun.xml.fastinfoset: FastInfoset
+
+---
 name: Jersey
 license_category: binary
 module: hadoop-client
@@ -3626,7 +3683,7 @@ module: hadoop-client
 license_name: CDDL 1.1
 version: 1.1
 copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javaxCDDL11
+license_file_path: licenses/bin/javax.CDDL11
 libraries:
   - javax.activation: activation
 

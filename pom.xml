@@ -458,6 +458,11 @@
                 <version>3.0.0</version>
             </dependency>
             <dependency>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>jaxb-runtime</artifactId>
+                <version>2.3.1</version>
+            </dependency>
+            <dependency>
                 <groupId>org.jdbi</groupId>
                 <artifactId>jdbi</artifactId>
                 <version>2.63.1</version>
