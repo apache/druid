@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`servers view BarUnit 1`] = `
+exports[`Visualization BarUnit 1`] = `
 <rect
   class="bar-chart-unit"
   height="10"
@@ -10,7 +10,7 @@ exports[`servers view BarUnit 1`] = `
 />
 `;
 
-exports[`servers view action barGroup 1`] = `
+exports[`Visualization action barGroup 1`] = `
 <g
   class="chart-axis undefined"
   transform="value"

@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
 import { shallow } from 'enzyme';
 import React from 'react';
 
@@ -26,10 +25,5 @@ describe('load data view', () => {
   it('matches snapshot', () => {
     const loadDataView = shallow(<LoadDataView goToTask={() => {}} />);
     expect(loadDataView).toMatchSnapshot();
-  });
-  it('matches snapshot', () => {
-    const loadDataView = <LoadDataView goToTask={() => null} />;
-    const { container } = render(loadDataView);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

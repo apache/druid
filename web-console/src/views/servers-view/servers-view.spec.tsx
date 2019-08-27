@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
+import { shallow } from 'enzyme';
 import React from 'react';
 
 import { TimedButton } from '../../components';
 
 describe('servers view', () => {
   it('action servers view', () => {
-    const serversView = (
+    const serversView = shallow(
       <TimedButton
         intervals={[{ label: 'timeValue', value: 1000 }]}
         onRefresh={() => null}
@@ -31,7 +31,6 @@ describe('servers view', () => {
         defaultValue={1000}
       />
     );
-    const { container } = render(serversView);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(serversView).toMatchSnapshot();
   });
 });

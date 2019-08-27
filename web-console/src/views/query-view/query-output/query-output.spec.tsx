@@ -20,17 +20,13 @@ import { render } from '@testing-library/react';
 import { sqlParserFactory } from 'druid-query-toolkit';
 import React from 'react';
 
-import { SQL_FUNCTIONS, SyntaxDescription } from '../../../../lib/sql-function-doc';
+import { SQL_FUNCTIONS } from '../../../../lib/sql-docs';
 
 import { QueryOutput } from './query-output';
 
 describe('query output', () => {
   it('matches snapshot', () => {
-    const parser = sqlParserFactory(
-      SQL_FUNCTIONS.map((sqlFunction: SyntaxDescription) => {
-        return sqlFunction.syntax.substr(0, sqlFunction.syntax.indexOf('('));
-      }),
-    );
+    const parser = sqlParserFactory(SQL_FUNCTIONS.map(sqlFunction => sqlFunction.name));
 
     const parsedQuery = parser(`SELECT
   "language",

@@ -21,7 +21,7 @@ import React from 'react';
 
 import { SegmentTimeline } from './segment-timeline';
 
-describe('table column', () => {
+describe('Segment Timeline', () => {
   it('matches snapshot', () => {
     const tableColumn = <SegmentTimeline chartHeight={100} chartWidth={100} />;
     const { container } = render(tableColumn);

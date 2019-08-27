@@ -22,7 +22,7 @@ import React from 'react';
 import { BarUnit } from './bar-unit';
 import { ChartAxis } from './chart-axis';
 
-describe('servers view', () => {
+describe('Visualization', () => {
   it('BarUnit', () => {
     const barGroup = <BarUnit x={10} y={10} width={10} height={10} />;
     const { container } = render(barGroup);

@@ -94,10 +94,6 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
     );
   }
 
-  componentDidUpdate(): void {
-    console.log(JSON.stringify(this.props.parsedQuery));
-  }
-
   getHeaderActions(h: string) {
     const { parsedQuery, onQueryChange, runeMode } = this.props;
 

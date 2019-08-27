@@ -1,44 +1,46 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`servers view action servers view 1`] = `
-<div
-  class="bp3-button-group"
->
-  <button
-    class="bp3-button"
-    type="button"
+<Blueprint3.ButtonGroup>
+  <Blueprint3.Button
+    onClick={[Function]}
   />
-  <span
-    class="bp3-popover-wrapper"
-  >
-    <span
-      class="bp3-popover-target"
-    >
-      <button
-        class="bp3-button"
-        type="button"
+  <Blueprint3.Popover
+    boundary="scrollParent"
+    captureDismiss={false}
+    content={
+      <Blueprint3.RadioGroup
+        className="timed-button"
+        label="label"
+        onChange={[Function]}
+        selectedValue={1000}
       >
-        <span
-          class="bp3-icon bp3-icon-caret-down"
-          icon="caret-down"
-        >
-          <svg
-            data-icon="caret-down"
-            height="16"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <desc>
-              caret-down
-            </desc>
-            <path
-              d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
-              fill-rule="evenodd"
-            />
-          </svg>
-        </span>
-      </button>
-    </span>
-  </span>
-</div>
+        <Blueprint3.Radio
+          label="timeValue"
+          value={1000}
+        />
+      </Blueprint3.RadioGroup>
+    }
+    defaultIsOpen={false}
+    disabled={false}
+    fill={false}
+    hasBackdrop={false}
+    hoverCloseDelay={300}
+    hoverOpenDelay={150}
+    inheritDarkTheme={true}
+    interactionKind="click"
+    minimal={false}
+    modifiers={Object {}}
+    openOnTargetFocus={true}
+    position="auto"
+    targetTagName="span"
+    transitionDuration={300}
+    usePortal={true}
+    wrapperTagName="span"
+  >
+    <Blueprint3.Button
+      rightIcon="caret-down"
+    />
+  </Blueprint3.Popover>
+</Blueprint3.ButtonGroup>
 `;

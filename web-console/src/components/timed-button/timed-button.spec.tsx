@@ -21,7 +21,7 @@ import React from 'react';
 
 import { TimedButton } from './timed-button';
 
-describe('table column', () => {
+describe('Timed button', () => {
   it('matches snapshot', () => {
     const timedButton = (
       <TimedButton
