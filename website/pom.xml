@@ -93,6 +93,7 @@
               <executable>script/build-to-docs</executable>
               <arguments>
                 <argument>latest</argument>
+                <argument>${website.src}</argument>
               </arguments>
             </configuration>
           </execution>
