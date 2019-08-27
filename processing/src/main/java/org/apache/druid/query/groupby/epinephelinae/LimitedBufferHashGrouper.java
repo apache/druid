@@ -146,33 +146,31 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
   public void newBucketHook(int bucketOffset)
   {
     heapIndexUpdater.updateHeapIndexForOffset(bucketOffset, -1);
+    if (!sortHasNonGroupingFields) {
+      offsetHeap.addOffset(bucketOffset);
+    }
   }
 
   @Override
   public boolean canSkipAggregate(boolean bucketWasUsed, int bucketOffset)
   {
-    if (bucketWasUsed) {
-      if (!sortHasNonGroupingFields) {
-        if (heapIndexUpdater.getHeapIndexForOffset(bucketOffset) < 0) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return !sortHasNonGroupingFields && heapIndexUpdater.getHeapIndexForOffset(bucketOffset) < 0;
   }
 
   @Override
   public void afterAggregateHook(int bucketOffset)
   {
-    int heapIndex = heapIndexUpdater.getHeapIndexForOffset(bucketOffset);
-    if (heapIndex < 0) {
-      // not in the heap, add it
-      offsetHeap.addOffset(bucketOffset);
-    } else if (sortHasNonGroupingFields) {
-      // Since the sorting columns contain at least one aggregator, we need to remove and reinsert
-      // the entries after aggregating to maintain proper ordering
-      offsetHeap.removeAt(heapIndex);
-      offsetHeap.addOffset(bucketOffset);
+    if (sortHasNonGroupingFields) {
+      int heapIndex = heapIndexUpdater.getHeapIndexForOffset(bucketOffset);
+
+      if (heapIndex < 0) {
+        offsetHeap.addOffset(bucketOffset);
+      } else {
+        // Since the sorting columns contain at least one aggregator, we need to remove and reinsert
+        // the entries after aggregating to maintain proper ordering
+        offsetHeap.removeAt(heapIndex);
+        offsetHeap.addOffset(bucketOffset);
+      }
     }
   }
 
