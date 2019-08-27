@@ -139,7 +139,7 @@ public class StringColumnAggregationTest
   }
 
   @Test
-  public void testGroupBy() throws Exception
+  public void testGroupBy()
   {
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource("test")
@@ -152,6 +152,21 @@ public class StringColumnAggregationTest
             new DoubleMaxAggregatorFactory("multiDoubleMax", multiValue),
             new DoubleMinAggregatorFactory("singleDoubleMin", singleValue),
             new DoubleMinAggregatorFactory("multiDoubleMin", multiValue),
+
+            new FloatSumAggregatorFactory("singleFloatSum", singleValue),
+            new FloatSumAggregatorFactory("multiFloatSum", multiValue),
+            new FloatMaxAggregatorFactory("singleFloatMax", singleValue),
+            new FloatMaxAggregatorFactory("multiFloatMax", multiValue),
+            new FloatMinAggregatorFactory("singleFloatMin", singleValue),
+            new FloatMinAggregatorFactory("multiFloatMin", multiValue),
+
+            new LongSumAggregatorFactory("singleLongSum", singleValue),
+            new LongSumAggregatorFactory("multiLongSum", multiValue),
+            new LongMaxAggregatorFactory("singleLongMax", singleValue),
+            new LongMaxAggregatorFactory("multiLongMax", multiValue),
+            new LongMinAggregatorFactory("singleLongMin", singleValue),
+            new LongMinAggregatorFactory("multiLongMin", multiValue),
+
             new LongSumAggregatorFactory("count", "count")
         )
         .build();
@@ -160,16 +175,31 @@ public class StringColumnAggregationTest
     Row result = Iterables.getOnlyElement(seq.toList()).toMapBasedRow(query);
 
     Assert.assertEquals(numRows, result.getMetric("count").longValue());
+    
     Assert.assertEquals(singleValueSum, result.getMetric("singleDoubleSum").doubleValue(), 0.0001d);
     Assert.assertEquals(multiValueSum, result.getMetric("multiDoubleSum").doubleValue(), 0.0001d);
     Assert.assertEquals(singleValueMax, result.getMetric("singleDoubleMax").doubleValue(), 0.0001d);
     Assert.assertEquals(multiValueMax, result.getMetric("multiDoubleMax").doubleValue(), 0.0001d);
     Assert.assertEquals(singleValueMin, result.getMetric("singleDoubleMin").doubleValue(), 0.0001d);
     Assert.assertEquals(multiValueMin, result.getMetric("multiDoubleMin").doubleValue(), 0.0001d);
+
+    Assert.assertEquals(singleValueSum, result.getMetric("singleFloatSum").floatValue(), 0.0001f);
+    Assert.assertEquals(multiValueSum, result.getMetric("multiFloatSum").floatValue(), 0.0001f);
+    Assert.assertEquals(singleValueMax, result.getMetric("singleFloatMax").floatValue(), 0.0001f);
+    Assert.assertEquals(multiValueMax, result.getMetric("multiFloatMax").floatValue(), 0.0001f);
+    Assert.assertEquals(singleValueMin, result.getMetric("singleFloatMin").floatValue(), 0.0001f);
+    Assert.assertEquals(multiValueMin, result.getMetric("multiFloatMin").floatValue(), 0.0001f);
+
+    Assert.assertEquals((long) singleValueSum, result.getMetric("singleLongSum").longValue());
+    Assert.assertEquals((long) multiValueSum, result.getMetric("multiLongSum").longValue());
+    Assert.assertEquals((long) singleValueMax, result.getMetric("singleLongMax").longValue());
+    Assert.assertEquals((long) multiValueMax, result.getMetric("multiLongMax").longValue());
+    Assert.assertEquals((long) singleValueMin, result.getMetric("singleLongMin").longValue());
+    Assert.assertEquals((long) multiValueMin, result.getMetric("multiLongMin").longValue());
   }
 
   @Test
-  public void testTimeseries() throws Exception
+  public void testTimeseries()
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
@@ -182,6 +212,21 @@ public class StringColumnAggregationTest
                                       new DoubleMaxAggregatorFactory("multiDoubleMax", multiValue),
                                       new DoubleMinAggregatorFactory("singleDoubleMin", singleValue),
                                       new DoubleMinAggregatorFactory("multiDoubleMin", multiValue),
+
+                                      new FloatSumAggregatorFactory("singleFloatSum", singleValue),
+                                      new FloatSumAggregatorFactory("multiFloatSum", multiValue),
+                                      new FloatMaxAggregatorFactory("singleFloatMax", singleValue),
+                                      new FloatMaxAggregatorFactory("multiFloatMax", multiValue),
+                                      new FloatMinAggregatorFactory("singleFloatMin", singleValue),
+                                      new FloatMinAggregatorFactory("multiFloatMin", multiValue),
+
+                                      new LongSumAggregatorFactory("singleLongSum", singleValue),
+                                      new LongSumAggregatorFactory("multiLongSum", multiValue),
+                                      new LongMaxAggregatorFactory("singleLongMax", singleValue),
+                                      new LongMaxAggregatorFactory("multiLongMax", multiValue),
+                                      new LongMinAggregatorFactory("singleLongMin", singleValue),
+                                      new LongMinAggregatorFactory("multiLongMin", multiValue),
+                                      
                                       new LongSumAggregatorFactory("count", "count")
                                   )
                                   .build();
@@ -197,5 +242,19 @@ public class StringColumnAggregationTest
     Assert.assertEquals(multiValueMax, result.getDoubleMetric("multiDoubleMax").doubleValue(), 0.0001d);
     Assert.assertEquals(singleValueMin, result.getDoubleMetric("singleDoubleMin").doubleValue(), 0.0001d);
     Assert.assertEquals(multiValueMin, result.getDoubleMetric("multiDoubleMin").doubleValue(), 0.0001d);
+
+    Assert.assertEquals(singleValueSum, result.getFloatMetric("singleFloatSum").floatValue(), 0.0001f);
+    Assert.assertEquals(multiValueSum, result.getFloatMetric("multiFloatSum").floatValue(), 0.0001f);
+    Assert.assertEquals(singleValueMax, result.getFloatMetric("singleFloatMax").floatValue(), 0.0001f);
+    Assert.assertEquals(multiValueMax, result.getFloatMetric("multiFloatMax").floatValue(), 0.0001f);
+    Assert.assertEquals(singleValueMin, result.getFloatMetric("singleFloatMin").floatValue(), 0.0001f);
+    Assert.assertEquals(multiValueMin, result.getFloatMetric("multiFloatMin").floatValue(), 0.0001f);
+
+    Assert.assertEquals((long) singleValueSum, result.getLongMetric("singleLongSum").longValue());
+    Assert.assertEquals((long) multiValueSum, result.getLongMetric("multiLongSum").longValue());
+    Assert.assertEquals((long) singleValueMax, result.getLongMetric("singleLongMax").longValue());
+    Assert.assertEquals((long) multiValueMax, result.getLongMetric("multiLongMax").longValue());
+    Assert.assertEquals((long) singleValueMin, result.getLongMetric("singleLongMin").longValue());
+    Assert.assertEquals((long) multiValueMin, result.getLongMetric("multiLongMin").longValue());
   }
 }
