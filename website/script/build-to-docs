@@ -16,9 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-
-if [ ["$#" -ne 1]| ["$#" -ne 2] ]; then
+if [ "$#" -ne 1 ] && [ "$#" -ne 2 ]; then
   echo "Illegal number of parameters, should one or two: the version, or the version and website-src directory";
   exit 1;
 fi
