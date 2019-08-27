@@ -21,9 +21,9 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>druid-console</artifactId>
-  <name>druid-console</name>
-  <description>Unified web console for a Druid cluster</description>
+  <artifactId>druid-website</artifactId>
+  <name>druid-website</name>
+  <description>Website for druid.apache.org</description>
 
   <parent>
     <groupId>org.apache.druid</groupId>
@@ -31,19 +31,11 @@
     <version>0.16.0-incubating-SNAPSHOT</version>
   </parent>
 
-  <properties>
-    <resources.directory>${project.build.directory}/resources</resources.directory>
-    <druid.console.skip>false</druid.console.skip>  <!-- this property is overidden in Travis CI to skip the javascript-related work -->
-  </properties>
-
   <build>
     <plugins>
       <plugin>
         <groupId>com.github.eirslett</groupId>
         <artifactId>frontend-maven-plugin</artifactId>
-        <configuration>
-          <skip>${druid.console.skip}</skip>
-        </configuration>
         <executions>
           <execution>
             <id>install-node-and-npm</id>
@@ -67,89 +59,39 @@
               <installDirectory>${project.build.directory}</installDirectory>
             </configuration>
           </execution>
-          <execution>
-            <id>license-check</id>
-            <goals>
-              <goal>npm</goal>
-            </goals>
-            <configuration>
-              <arguments>run check-licenses</arguments>
-              <workingDirectory>${project.build.directory}</workingDirectory>
-            </configuration>
-          </execution>
-          <execution>
-            <id>test-console</id>
-            <goals>
-              <goal>npm</goal>
-            </goals>
-            <phase>test</phase>
-            <configuration>
-              <arguments>test</arguments>
-              <workingDirectory>${project.build.directory}</workingDirectory>
-            </configuration>
-          </execution>
-
-          <execution>
-            <id>generate-licenses-file</id>
-            <goals>
-              <goal>npm</goal>
-            </goals>
-            <configuration>
-              <arguments>run generate-licenses-file</arguments>
-              <workingDirectory>${project.build.directory}</workingDirectory>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
-        <configuration>
-          <skip>${druid.console.skip}</skip>
-        </configuration>
         <executions>
           <execution>
-            <id>clean-console</id>
-            <phase>clean</phase>
+            <id>build-docs</id>
+            <phase>compile</phase>
             <goals>
               <goal>exec</goal>
             </goals>
             <configuration>
-              <executable>script/clean</executable>
-            </configuration>
-          </execution>
-          <execution>
-            <id>build-console</id>
-            <phase>generate-resources</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>script/build</executable>
-            </configuration>
-          </execution>
-          <execution>
-            <id>package-console</id>
-            <phase>generate-resources</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>script/cp-to</executable>
+              <executable>script/build-to-docs</executable>
               <arguments>
-                <argument>${resources.directory}</argument>
+                <argument>${project.parent.version}</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>build-latest-docs</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>script/build-to-docs</executable>
+              <arguments>
+                <argument>latest</argument>
               </arguments>
             </configuration>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-resources-plugin</artifactId>
-        <configuration>
-          <outputDirectory>${project.build.outputDirectory}/org/apache/druid/console</outputDirectory>
-          <skip>${druid.console.skip}</skip>
-        </configuration>
       </plugin>
     </plugins>
 

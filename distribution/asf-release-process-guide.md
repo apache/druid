@@ -553,24 +553,13 @@ http://www.apache.org/legal/release-policy.html#release-announcements
 
 1. Pull https://github.com/apache/incubator-druid-website and https://github.com/apache/incubator-druid-website-src. These repositories should be in the same directory as your Druid repository that should have the release tag checked out.
 
-
-2. Delete the 'latest' docs from the root of the website src repo (https://github.com/apache/incubator-druid-website-src).
-
-```
-rm -rf docs/latest/*
-```
-
-3. From the tag built for the release, build the Druid documentation website
+2. From the tag built for the release, build the Druid documentation website
 
 ```
-$ cd website/
-$ npm install
-...
-$ scripts/build-to-docs 0.15.1
-$ scripts/build-to-docs latest
+$ mvn -Pwebsite-docs compile -pl website
 ```
 
-This will update the website src repo (https://github.com/apache/incubator-druid-website-src).
+This will update the website src repo (https://github.com/apache/incubator-druid-website-src) and stage the changes to git.
 
 Note: the docs were not actually built this way prior to 0.16.0-incubating; previous releases involved copying the docs folder from the Druid repository to the Druid website src directory:
 
@@ -582,7 +571,7 @@ find docs/latest -name "*.md" -print0 | xargs -0 perl -pi -e's/\#\{DRUIDVERSION\
 ```
 
 
-4. To update the downloads page of the website, update the _config.yml file in the root of the website src repo. Versions are grouped by release branch:
+3. To update the downloads page of the website, update the _config.yml file in the root of the website src repo. Versions are grouped by release branch:
 
 ```yaml
 druid_versions:
@@ -596,13 +585,13 @@ druid_versions:
         date: 2019-05-27
 ```
 
-5. Make a PR to the src repo (https://github.com/apache/incubator-druid-website-src).
+4. Make a PR to the src repo (https://github.com/apache/incubator-druid-website-src).
 
-6. Run `npm run build` from the root of the src repo (https://github.com/apache/incubator-druid-website-src). This will automatically update your local website repo (https://github.com/apache/incubator-druid-website).
+5. Run `npm run build` from the root of the src repo (https://github.com/apache/incubator-druid-website-src). This will automatically update your local website repo (https://github.com/apache/incubator-druid-website).
 
 This command might fail if your src repo and website repo are not at the same directory. Check https://github.com/apache/incubator-druid-website-src/blob/master/package.json for more details.
 
-7. Make a PR to the website repo (https://github.com/apache/incubator-druid-website). Once the PR is merged, https://druid.apache.org/ will be updated immediately.
+6. Make a PR to the website repo (https://github.com/apache/incubator-druid-website). Once the PR is merged, https://druid.apache.org/ will be updated immediately.
 
 
 ### Draft a release on github
