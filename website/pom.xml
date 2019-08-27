@@ -94,11 +94,5 @@
         </executions>
       </plugin>
     </plugins>
-
-    <resources>
-      <resource>
-        <directory>${resources.directory}</directory>
-      </resource>
-    </resources>
   </build>
 </project>
