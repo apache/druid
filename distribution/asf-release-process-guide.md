@@ -553,25 +553,7 @@ http://www.apache.org/legal/release-policy.html#release-announcements
 
 1. Pull https://github.com/apache/incubator-druid-website and https://github.com/apache/incubator-druid-website-src. These repositories should be in the same directory as your Druid repository that should have the release tag checked out.
 
-2. From the tag built for the release, build the Druid documentation website
-
-```
-$ mvn -Pwebsite-docs compile -pl website
-```
-
-This will update the website src repo (https://github.com/apache/incubator-druid-website-src) and stage the changes to git.
-
-Note: the docs were not actually built this way prior to 0.16.0-incubating; previous releases involved copying the docs folder from the Druid repository to the Druid website src directory:
-
-```
-cp -r /path/to/incubator-druid/docs/content/* docs/latest/
-find docs/latest -name "*.md" -print0 | xargs -0 perl -pi -e's/\#\{DRUIDVERSION\}/'"0.15.1-incubating"'/g'
-/path/to/incubator-druid/docs/_bin/make-redirects.py docs/latest /path/to/incubator-druid/docs/_redirects.json
-
-```
-
-
-3. To update the downloads page of the website, update the _config.yml file in the root of the website src repo. Versions are grouped by release branch:
+2. To update the downloads page of the website, update the _config.yml file in the root of the website src repo. Versions are grouped by release branch:
 
 ```yaml
 druid_versions:
@@ -585,14 +567,14 @@ druid_versions:
         date: 2019-05-27
 ```
 
-4. Make a PR to the src repo (https://github.com/apache/incubator-druid-website-src).
+3. From incubator-druid-website-src, run `npm run build-release -- 0.16.0-incubating`, replacing `0.16.0-incubating` with the Druid release version. This script will:
 
-5. Run `npm run build` from the root of the src repo (https://github.com/apache/incubator-druid-website-src). This will automatically update your local website repo (https://github.com/apache/incubator-druid-website).
+* checkout the tag of the Druid release version
+* build the docs for that version into incubator-druid-website-src
+* build incubator-druid-website-src into incubator-druid-website
+* stage incubator-druid-website-src and incubator-druid-website repositories to git.
 
-This command might fail if your src repo and website repo are not at the same directory. Check https://github.com/apache/incubator-druid-website-src/blob/master/package.json for more details.
-
-6. Make a PR to the website repo (https://github.com/apache/incubator-druid-website). Once the PR is merged, https://druid.apache.org/ will be updated immediately.
-
+4. Make a PR to the src repo (https://github.com/apache/incubator-druid-website-src) and to the website repo (https://github.com/apache/incubator-druid-website). Once the PR is merged, https://druid.apache.org/ will be updated immediately.
 
 ### Draft a release on github
 

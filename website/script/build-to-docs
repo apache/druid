@@ -16,12 +16,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [ "$#" -ne 1 ]; then
-  echo "Illegal number of parameters, should be just one: the version";
+
+
+if [ ["$#" -ne 1]| ["$#" -ne 2] ]; then
+  echo "Illegal number of parameters, should one or two: the version, or the version and website-src directory";
   exit 1;
 fi
 
-echo "Building to docs for '$1'..."
+VERSION=$1
+WEBSRC="../../incubator-druid-website-src"
+
+if [ "$#" -gt 1 ]; then
+  WEBSRC=$2
+fi
+
+echo "Building to docs for '$VERSION' to $WEBSRC ..."
 
 npm run compile-scss
 
@@ -35,22 +44,22 @@ else
   rm build-log.txt
 fi
 
-node script/fix-path.js $1
+node script/fix-path.js $VERSION
 
 echo "Cleaning..."
-rm -rf ../../incubator-druid-website-src/docs/$1/
-mkdir -p ../../incubator-druid-website-src/docs/$1/
+rm -rf $WEBSRC/docs/$VERSION/
+mkdir -p $WEBSRC/docs/$VERSION/
 
-cp -r ./build/ApacheDruid/docs/* ../../incubator-druid-website-src/docs/$1/
+cp -r ./build/ApacheDruid/docs/* $WEBSRC/docs/$VERSION/
 
-mkdir -p ../../incubator-druid-website-src/css
-cp ./build/ApacheDruid/css/* ../../incubator-druid-website-src/css
+mkdir -p $WEBSRC/css
+cp ./build/ApacheDruid/css/* $WEBSRC/css
 
-mkdir -p ../../incubator-druid-website-src/js
-cp ./build/ApacheDruid/js/* ../../incubator-druid-website-src/js
+mkdir -p $WEBSRC/js
+cp ./build/ApacheDruid/js/* $WEBSRC/js
 
 pushd $(pwd)
-cd ../../incubator-druid-website-src/
-git add docs/$1/
+cd $WEBSRC/
+git add docs/$VERSION/
 git add -u .
 popd
