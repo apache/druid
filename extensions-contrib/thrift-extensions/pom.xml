@@ -36,8 +36,9 @@
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
-    <thrift.version>0.9.3</thrift.version>
-    <elephantbird.version>4.8</elephantbird.version>
+    <thrift.version>0.10.0</thrift.version>
+    <elephantbird.version>4.17</elephantbird.version>
+    <scrooge.version>19.8.0</scrooge.version>
   </properties>
 
   <dependencies>
@@ -94,7 +95,7 @@
     <dependency>
       <groupId>com.twitter</groupId>
       <artifactId>scrooge-core_2.11</artifactId>
-      <version>4.10.0</version>
+      <version>${scrooge.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -109,7 +110,7 @@
       <plugin>
         <groupId>com.twitter</groupId>
         <artifactId>scrooge-maven-plugin</artifactId>
-        <version>4.11.0</version>
+        <version>${scrooge.version}</version>
         <configuration>
           <language>java</language>
         </configuration>
