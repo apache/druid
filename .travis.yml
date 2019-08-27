@@ -117,7 +117,9 @@ matrix:
         - free -m
       after_success: &upload_java_unit_test_coverage
         - ${MVN} -pl ${MAVEN_PROJECTS} jacoco:report
-        - travis_retry bash <(curl -s https://codecov.io/bash) -X gcov  # retry in case of network error
+        # retry in case of network error
+        - travis_retry curl -o codecov.sh -s https://codecov.io/bash
+        - travis_retry bash codecov.sh -X gcov
 
     - name: "processing module test (SQL Compatibility)"
       env: *processing_env
@@ -176,7 +178,7 @@ matrix:
       script:
         - ${MVN} test -pl 'web-console'
       after_success:
-        - (cd web-console && travis_retry npm run codecov)
+        - (cd web-console && travis_retry npm run codecov)  # retry in case of network error
 
     - name: "docs"
       install: (cd website && npm install)
