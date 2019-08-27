@@ -57,9 +57,3 @@ cp ./build/ApacheDruid/css/* $WEBSRC/css
 
 mkdir -p $WEBSRC/js
 cp ./build/ApacheDruid/js/* $WEBSRC/js
-
-pushd $(pwd)
-cd $WEBSRC/
-git add docs/$VERSION/
-git add -u .
-popd
