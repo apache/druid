@@ -152,7 +152,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
   }
 
   @Override
-  public boolean canSkipAggregate(boolean bucketWasUsed, int bucketOffset)
+  public boolean canSkipAggregate(int bucketOffset)
   {
     return !sortHasNonGroupingFields && heapIndexUpdater.getHeapIndexForOffset(bucketOffset) < 0;
   }
