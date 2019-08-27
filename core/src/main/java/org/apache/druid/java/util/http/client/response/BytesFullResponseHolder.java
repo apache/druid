@@ -22,39 +22,40 @@ package org.apache.druid.java.util.http.client.response;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-/**
- * This class is to hold data while receiving stream data via HTTP. Used with {@link HttpResponseHandler}.
- *
- * @param <T> data type
- */
-public abstract class FullResponseHolder<T>
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+
+public class BytesFullResponseHolder extends FullResponseHolder<byte[]>
 {
-  private final HttpResponseStatus status;
-  private final HttpResponse response;
+  private final List<byte[]> chunks;
 
-  public FullResponseHolder(HttpResponseStatus status, HttpResponse response)
+  public BytesFullResponseHolder(HttpResponseStatus status, HttpResponse response)
   {
-    this.status = status;
-    this.response = response;
+    super(status, response);
+    this.chunks = new ArrayList<>();
   }
 
-  public HttpResponseStatus getStatus()
+  @Override
+  public BytesFullResponseHolder addChunk(byte[] chunk)
   {
-    return status;
+    chunks.add(chunk);
+    return this;
   }
 
-  public HttpResponse getResponse()
+  @Override
+  public byte[] getContent()
   {
-    return response;
+    int size = 0;
+    for (byte[] chunk : chunks) {
+      size += chunk.length;
+    }
+    ByteBuffer buf = ByteBuffer.wrap(new byte[size]);
+
+    for (byte[] chunk : chunks) {
+      buf.put(chunk);
+    }
+
+    return buf.array();
   }
-
-  /**
-   * Append a new chunk of data.
-   */
-  public abstract FullResponseHolder addChunk(T chunk);
-
-  /**
-   * Get the accumulated data via {@link #addChunk}.
-   */
-  public abstract T getContent();
 }

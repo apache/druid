@@ -26,7 +26,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.easymock.EasyMock;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -41,6 +41,7 @@ import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
 
 public class IndexTaskClientTest
@@ -81,17 +82,17 @@ public class IndexTaskClientTest
     EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject()))
             .andReturn(
                 Futures.immediateFuture(
-                    new FullResponseHolder(
+                    new StringFullResponseHolder(
                         HttpResponseStatus.OK,
                         new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK),
-                        new StringBuilder()
+                        StandardCharsets.UTF_8
                     )
                 )
             )
             .once();
     EasyMock.replay(httpClient);
     try (IndexTaskClient indexTaskClient = buildIndexTaskClient(httpClient, id -> TaskLocation.create(id, 8000, -1))) {
-      final FullResponseHolder response = indexTaskClient.submitRequestWithEmptyContent(
+      final StringFullResponseHolder response = indexTaskClient.submitRequestWithEmptyContent(
           "taskId",
           HttpMethod.GET,
           "test",
