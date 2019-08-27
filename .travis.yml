@@ -47,40 +47,27 @@ env:
 # output.  To compensate, use travis_wait to extend the timeout.
 install: MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
 
-stages:
-  - compile
-  - test
-  - integration
-  - package
-
 jobs:
   include:
-    - stage: compile
-      name: "animal sniffer checks"
+    - name: "animal sniffer checks"
       script: ${MVN} animal-sniffer:check --fail-at-end
 
-    - stage: compile
-      name: "checkstyle"
+    - name: "checkstyle"
       script: ${MVN} checkstyle:checkstyle --fail-at-end
 
-    - stage: compile
-      name: "enforcer checks"
+    - name: "enforcer checks"
       script: ${MVN} enforcer:enforce --fail-at-end
 
-    - stage: compile
-      name: "forbidden api checks"
+    - name: "forbidden api checks"
       script: ${MVN} forbiddenapis:check forbiddenapis:testCheck --fail-at-end
 
-    - stage: compile
-      name: "pmd checks"
+    - name: "pmd checks"
       script: ${MVN} pmd:check --fail-at-end  # TODO: consider adding pmd:cpd-check
 
-    - stage: compile
-      name: "spotbugs checks"
+    - name: "spotbugs checks"
       script: ${MVN} spotbugs:check --fail-at-end -pl '!benchmarks'
 
-    - stage: compile
-      name: "license checks"
+    - name: "license checks"
       install: skip
       before_script: &setup_generate_license
         - sudo apt-get update && sudo apt-get install python3 python3-pip python3-setuptools -y
@@ -98,7 +85,6 @@ jobs:
         - distribution/bin/generate-license.py licenses/APACHE2 licenses.yaml LICENSES.BINARY --dependency-reports target/license-reports
 
     - &compile_strict
-      stage: compile
       name: "(openjdk8) strict compilation"
       install: skip
       # Strict compilation requires more than 2 GB
@@ -107,7 +93,6 @@ jobs:
         -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
     - &package
-      stage: package
       name: "(openjdk8) packaging check"
       install: skip
       before_script: *setup_generate_license
@@ -120,7 +105,6 @@ jobs:
       jdk: openjdk11
 
     - &test_processing_module
-      stage: test
       name: "(openjdk8) processing module test"
       env: &processing_env
       - MAVEN_PROJECTS='processing'
@@ -140,7 +124,6 @@ jobs:
       jdk: openjdk11
 
     - &test_processing_module_sqlcompat
-      stage: test
       name: "(openjdk8) processing module test (SQL Compatibility)"
       env: *processing_env
       before_script: *setup_java_test
@@ -158,7 +141,6 @@ jobs:
       jdk: openjdk11
 
     - &test_indexing_module
-      stage: test
       name: "(openjdk8) indexing modules test"
       env: &indexing_env
       - MAVEN_PROJECTS='indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
@@ -170,7 +152,6 @@ jobs:
       jdk: openjdk11
 
     - &test_indexing_module_sqlcompat
-      stage: test
       name: "(openjdk8) indexing modules test (SQL Compatibility)"
       env: *indexing_env
       before_script: *setup_java_test
@@ -181,7 +162,6 @@ jobs:
       jdk: openjdk11
 
     - &test_server_module
-      stage: test
       name: "(openjdk8) server module test"
       env: &server_env
         - MAVEN_PROJECTS='server'
@@ -193,7 +173,6 @@ jobs:
       jdk: openjdk11
 
     - &test_server_module_sqlcompat
-      stage: test
       name: "(openjdk8) server module test (SQL Compatibility)"
       env: *server_env
       before_script: *setup_java_test
@@ -204,7 +183,6 @@ jobs:
       jdk: openjdk11
 
     - &test_modules
-      stage: test
       name: "(openjdk8) other modules test"
       env: &other_env
         - MAVEN_PROJECTS='!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console'
@@ -216,7 +194,6 @@ jobs:
       jdk: openjdk11
 
     - &test_modules_sqlcompat
-      stage: test
       name: "(openjdk8) other modules test (SQL Compatibility)"
       env: *other_env
       before_script: *setup_java_test
@@ -231,13 +208,11 @@ jobs:
       install: skip
       script: ${MVN} test -pl 'web-console'
 
-    - stage: package
-      name: "docs"
+    - name: "docs"
       install: (cd website && npm install)
       script: (cd website && npm run lint)
 
     - &integration_batch_index
-      stage: integration
       name: "batch index integration test"
       services: &integration_test_services
         - docker
@@ -254,7 +229,6 @@ jobs:
           done
 
     - &integration_kafka_index
-      stage: integration
       name: "kafka index integration test"
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=kafka-index'
@@ -262,7 +236,6 @@ jobs:
       after_failure: *integration_test_diags
 
     - &integration_query
-      stage: integration
       name: "query integration test"
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=query'
@@ -270,7 +243,6 @@ jobs:
       after_failure: *integration_test_diags
 
     - &integration_realtime_index
-      stage: integration
       name: "realtime index integration test"
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=realtime-index'
@@ -278,7 +250,6 @@ jobs:
       after_failure: *integration_test_diags
 
     - &integration_tests
-      stage: integration
       name: "other integration test"
       services: *integration_test_services
       env: TESTNG_GROUPS='-DexcludedGroups=batch-index,kafka-index,query,realtime-index'
