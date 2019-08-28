@@ -34,8 +34,8 @@ public class BucketExtractionFn implements ExtractionFn
 
   @JsonCreator
   public BucketExtractionFn(
-      @Nullable @JsonProperty("size") Double size,
-      @Nullable @JsonProperty("offset") Double offset
+      @JsonProperty("size") @Nullable Double size,
+      @JsonProperty("offset") @Nullable Double offset
   )
   {
     this.size = size == null ? 1 : size;

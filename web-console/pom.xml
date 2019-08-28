@@ -28,7 +28,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.16.0-incubating-SNAPSHOT</version>
+    <version>0.17.0-incubating-SNAPSHOT</version>
   </parent>
 
   <properties>
@@ -51,8 +51,8 @@
               <goal>install-node-and-npm</goal>
             </goals>
             <configuration>
-              <nodeVersion>v10.14.2</nodeVersion>
-              <npmVersion>6.5.0</npmVersion>
+              <nodeVersion>${node.version}</nodeVersion>
+              <npmVersion>${npm.version}</npmVersion>
               <workingDirectory>${project.build.directory}</workingDirectory>
               <installDirectory>${project.build.directory}</installDirectory>
             </configuration>

@@ -6,6 +6,8 @@ exports[`sql view matches snapshot 1`] = `
 >
   <ColumnTree
     columnMetadataLoading={true}
+    defaultSchema="druid"
+    getParsedQuery={[Function]}
     onQueryStringChange={[Function]}
   />
   <t
@@ -24,6 +26,7 @@ exports[`sql view matches snapshot 1`] = `
       className="control-pane"
     >
       <QueryInput
+        currentSchema="druid"
         onQueryStringChange={[Function]}
         queryString="test"
         runeMode={false}
@@ -34,20 +37,44 @@ exports[`sql view matches snapshot 1`] = `
         <HotkeysTarget(RunButton)
           onEditContext={[Function]}
           onExplain={[Function]}
+          onHistory={[Function]}
           onQueryContextChange={[Function]}
           onRun={[Function]}
           queryContext={Object {}}
           runeMode={false}
         />
+        <Blueprint3.Tooltip
+          content="Automatically run queries when modified via helper action menus."
+          hoverCloseDelay={0}
+          hoverOpenDelay={800}
+          transitionDuration={100}
+        >
+          <Blueprint3.Switch
+            checked={true}
+            className="auto-run"
+            label="Auto run"
+            onChange={[Function]}
+          />
+        </Blueprint3.Tooltip>
+        <Blueprint3.Tooltip
+          content="Automatically wrap the query with a limit to protect against queries with very large result sets."
+          hoverCloseDelay={0}
+          hoverOpenDelay={800}
+          transitionDuration={100}
+        >
+          <Blueprint3.Switch
+            checked={true}
+            className="smart-query-limit"
+            label="Smart query limit"
+            onChange={[Function]}
+          />
+        </Blueprint3.Tooltip>
       </div>
     </div>
     <QueryOutput
-      disabled={true}
       loading={false}
+      onQueryChange={[Function]}
       runeMode={false}
-      sqlExcludeColumn={[Function]}
-      sqlFilterRow={[Function]}
-      sqlOrderBy={[Function]}
     />
   </t>
 </div>

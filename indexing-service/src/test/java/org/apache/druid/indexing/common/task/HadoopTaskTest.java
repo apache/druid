@@ -70,6 +70,11 @@ public class HadoopTaskTest
       }
 
       @Override
+      public void stopGracefully(TaskConfig taskConfig)
+      {
+      }
+
+      @Override
       public boolean requireLockExistingSegments()
       {
         return true;
@@ -95,7 +100,7 @@ public class HadoopTaskTest
       }
 
       @Override
-      public TaskStatus run(TaskToolbox toolbox)
+      public TaskStatus runTask(TaskToolbox toolbox)
       {
         return null;
       }
@@ -123,6 +128,7 @@ public class HadoopTaskTest
     final Class<?> druidHadoopConfigClazz = Class.forName("org.apache.druid.indexer.HadoopDruidIndexerConfig", false, classLoader);
     assertClassLoaderIsSingular(druidHadoopConfigClazz.getClassLoader());
   }
+
   public static void assertClassLoaderIsSingular(ClassLoader classLoader)
   {
     // This is a check against the current HadoopTask which creates a single URLClassLoader with null parent

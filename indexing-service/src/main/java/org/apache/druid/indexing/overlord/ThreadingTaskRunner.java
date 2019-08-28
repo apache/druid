@@ -61,7 +61,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -126,7 +125,7 @@ public class ThreadingTaskRunner
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(String taskid, long offset) throws IOException
+  public Optional<ByteSource> streamTaskLog(String taskid, long offset)
   {
     // task logs will appear in the main indexer log, streaming individual task logs is not supported
     return Optional.absent();
@@ -233,7 +232,7 @@ public class ThreadingTaskRunner
                           finally {
                             try {
                               taskReportFileWriter.delete(task.getId());
-                              appenderatorsManager.removeAppenderatorForTask(task.getId());
+                              appenderatorsManager.removeAppenderatorsForTask(task.getId(), task.getDataSource());
 
                               synchronized (tasks) {
                                 tasks.remove(task.getId());

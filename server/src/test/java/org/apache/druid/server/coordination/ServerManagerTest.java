@@ -579,7 +579,7 @@ public class ServerManagerTest
     @Override
     public QueryMetrics<Query<?>> makeMetrics(QueryType query)
     {
-      return new DefaultQueryMetrics<>(new DefaultObjectMapper());
+      return new DefaultQueryMetrics<>();
     }
 
     @Override

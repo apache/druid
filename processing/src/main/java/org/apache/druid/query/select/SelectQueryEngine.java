@@ -267,7 +267,7 @@ public class SelectQueryEngine
             int lastOffset = offset.startOffset();
             for (; !cursor.isDone() && offset.hasNext(); cursor.advance(), offset.next()) {
               final Map<String, Object> theEvent = singleEvent(
-                  EventHolder.timestampKey,
+                  EventHolder.TIMESTAMP_KEY,
                   timestampColumnSelector,
                   selectorPlusList,
                   metSelectors

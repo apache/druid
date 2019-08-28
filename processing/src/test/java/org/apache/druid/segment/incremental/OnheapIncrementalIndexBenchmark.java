@@ -81,13 +81,13 @@ import java.util.concurrent.atomic.AtomicLong;
 public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 {
   private static AggregatorFactory[] factories;
-  static final int dimensionCount = 5;
+  static final int DIMENSION_COUNT = 5;
 
   static {
 
-    final ArrayList<AggregatorFactory> ingestAggregatorFactories = new ArrayList<>(dimensionCount + 1);
+    final ArrayList<AggregatorFactory> ingestAggregatorFactories = new ArrayList<>(DIMENSION_COUNT + 1);
     ingestAggregatorFactories.add(new CountAggregatorFactory("rows"));
-    for (int i = 0; i < dimensionCount; ++i) {
+    for (int i = 0; i < DIMENSION_COUNT; ++i) {
       ingestAggregatorFactories.add(
           new LongSumAggregatorFactory(
               StringUtils.format("sumResult%s", i),
@@ -302,9 +302,9 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         true,
         elementsPerThread * taskCount
     );
-    final ArrayList<AggregatorFactory> queryAggregatorFactories = new ArrayList<>(dimensionCount + 1);
+    final ArrayList<AggregatorFactory> queryAggregatorFactories = new ArrayList<>(DIMENSION_COUNT + 1);
     queryAggregatorFactories.add(new CountAggregatorFactory("rows"));
-    for (int i = 0; i < dimensionCount; ++i) {
+    for (int i = 0; i < DIMENSION_COUNT; ++i) {
       queryAggregatorFactories.add(
           new LongSumAggregatorFactory(
               StringUtils.format("sumResult%s", i),
@@ -362,7 +362,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                   currentlyRunning.incrementAndGet();
                   try {
                     for (int i = 0; i < elementsPerThread; i++) {
-                      incrementalIndex.add(getLongRow(timestamp + i, 1, dimensionCount));
+                      incrementalIndex.add(getLongRow(timestamp + i, 1, DIMENSION_COUNT));
                     }
                   }
                   catch (IndexSizeExceededException e) {
@@ -428,7 +428,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     final int expectedVal = elementsPerThread * taskCount;
     for (Result<TimeseriesResultValue> result : results) {
       Assert.assertEquals(elementsPerThread, result.getValue().getLongMetric("rows").intValue());
-      for (int i = 0; i < dimensionCount; ++i) {
+      for (int i = 0; i < DIMENSION_COUNT; ++i) {
         Assert.assertEquals(
             StringUtils.format("Failed long sum on dimension %d", i),
             expectedVal,

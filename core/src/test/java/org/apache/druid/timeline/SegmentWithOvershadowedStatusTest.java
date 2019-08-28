@@ -43,7 +43,7 @@ import java.util.Map;
 
 public class SegmentWithOvershadowedStatusTest
 {
-  private static final ObjectMapper mapper = new TestObjectMapper();
+  private static final ObjectMapper MAPPER = new TestObjectMapper();
   private static final int TEST_VERSION = 0x9;
 
   @Before
@@ -51,7 +51,7 @@ public class SegmentWithOvershadowedStatusTest
   {
     InjectableValues.Std injectableValues = new InjectableValues.Std();
     injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
-    mapper.setInjectableValues(injectableValues);
+    MAPPER.setInjectableValues(injectableValues);
   }
 
   @Test
@@ -74,8 +74,8 @@ public class SegmentWithOvershadowedStatusTest
 
     final SegmentWithOvershadowedStatus segment = new SegmentWithOvershadowedStatus(dataSegment, false);
 
-    final Map<String, Object> objectMap = mapper.readValue(
-        mapper.writeValueAsString(segment),
+    final Map<String, Object> objectMap = MAPPER.readValue(
+        MAPPER.writeValueAsString(segment),
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
@@ -91,9 +91,9 @@ public class SegmentWithOvershadowedStatusTest
     Assert.assertEquals(1, objectMap.get("size"));
     Assert.assertEquals(false, objectMap.get("overshadowed"));
 
-    final String json = mapper.writeValueAsString(segment);
+    final String json = MAPPER.writeValueAsString(segment);
 
-    final TestSegmentWithOvershadowedStatus deserializedSegment = mapper.readValue(
+    final TestSegmentWithOvershadowedStatus deserializedSegment = MAPPER.readValue(
         json,
         TestSegmentWithOvershadowedStatus.class
     );

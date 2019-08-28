@@ -71,7 +71,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   public BloomFilterAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("field") final DimensionSpec field,
-      @Nullable @JsonProperty("maxNumEntries") Integer maxNumEntries
+      @JsonProperty("maxNumEntries") @Nullable Integer maxNumEntries
   )
   {
     this.name = name;

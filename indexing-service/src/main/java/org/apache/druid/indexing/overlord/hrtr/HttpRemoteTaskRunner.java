@@ -1138,6 +1138,17 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     }
   }
 
+  @Override
+  public TaskLocation getTaskLocation(String taskId)
+  {
+    final HttpRemoteTaskRunnerWorkItem workItem = tasks.get(taskId);
+    if (workItem == null) {
+      return TaskLocation.unknown();
+    } else {
+      return workItem.getLocation();
+    }
+  }
+
   public List<String> getBlacklistedWorkers()
   {
     return blackListedWorkers.values().stream().map(

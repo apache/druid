@@ -25,8 +25,10 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSubTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialSegmentGenerateTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialSegmentMergeTask;
+import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 
@@ -52,7 +54,10 @@ import java.util.Map;
     @JsonSubTypes.Type(name = "restore", value = RestoreTask.class),
     @JsonSubTypes.Type(name = "index", value = IndexTask.class),
     @JsonSubTypes.Type(name = ParallelIndexSupervisorTask.TYPE, value = ParallelIndexSupervisorTask.class),
-    @JsonSubTypes.Type(name = ParallelIndexSubTask.TYPE, value = ParallelIndexSubTask.class),
+    @JsonSubTypes.Type(name = SinglePhaseSubTask.TYPE, value = SinglePhaseSubTask.class),
+    @JsonSubTypes.Type(name = "index_sub", value = SinglePhaseSubTask.class), // for backward compatibility
+    @JsonSubTypes.Type(name = PartialSegmentGenerateTask.TYPE, value = PartialSegmentGenerateTask.class),
+    @JsonSubTypes.Type(name = PartialSegmentMergeTask.TYPE, value = PartialSegmentMergeTask.class),
     @JsonSubTypes.Type(name = "index_hadoop", value = HadoopIndexTask.class),
     @JsonSubTypes.Type(name = "index_realtime", value = RealtimeIndexTask.class),
     @JsonSubTypes.Type(name = "index_realtime_appenderator", value = AppenderatorDriverRealtimeIndexTask.class),
@@ -161,8 +166,22 @@ public interface Task
   boolean canRestore();
 
   /**
-   * Asks a task to arrange for its "run" method to exit promptly. Tasks that take too long to stop gracefully will be terminated with
-   * extreme prejudice.
+   * Asks a task to arrange for its "run" method to exit promptly. Tasks that take too long to stop gracefully will be
+   * terminated with extreme prejudice.
+   *
+   * This method can be called at any time no matter when {@link #run} is executed. Regardless of when this method is
+   * called with respect to {@link #run}, its implementations must not allow a resource leak or lingering executions
+   * (local or remote).
+   *
+   * Depending on the task executor type, one of the two cases below can happen when the task is killed.
+   * - When the task is executed by a middleManager, {@link org.apache.druid.indexing.overlord.ForkingTaskRunner} kills
+   *   the process running the task, which triggers
+   *   {@link org.apache.druid.indexing.overlord.SingleTaskBackgroundRunner#stop}.
+   * - When the task is executed by an indexer, {@link org.apache.druid.indexing.overlord.ThreadingTaskRunner#shutdown}
+   *   calls this method directly.
+   *
+   * If the task has some resources to clean up on abnormal exit, e.g., sub tasks of parallel indexing task
+   * or Hadoop jobs spawned by Hadoop indexing tasks, those resource cleanups should be done in this method.
    *
    * @param taskConfig TaskConfig for this task
    */

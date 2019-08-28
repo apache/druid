@@ -32,7 +32,7 @@ import java.util.Map;
  */
 public class EventHolder
 {
-  public static final String timestampKey = "timestamp";
+  public static final String TIMESTAMP_KEY = "timestamp";
 
   private final String segmentId;
   private final int offset;
@@ -52,7 +52,7 @@ public class EventHolder
 
   public DateTime getTimestamp()
   {
-    Object retVal = event.get(timestampKey);
+    Object retVal = event.get(TIMESTAMP_KEY);
     if (retVal instanceof Long) {
       return DateTimes.utc((Long) retVal);
     } else if (retVal instanceof String) {

@@ -25,6 +25,8 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
+
 import java.util.Comparator;
 
 /**
@@ -70,6 +72,7 @@ public interface DimensionHandler
    * Get {@link MultiValueHandling} for the column associated with this handler.
    * Only string columns can have {@link MultiValueHandling} currently.
    */
+  @Nullable
   default MultiValueHandling getMultivalueHandling()
   {
     return null;

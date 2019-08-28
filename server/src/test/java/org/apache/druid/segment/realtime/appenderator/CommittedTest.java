@@ -32,7 +32,7 @@ import java.util.Map;
 
 public class CommittedTest
 {
-  private static final ObjectMapper objectMapper = new DefaultObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
 
   private static final SegmentIdWithShardSpec IDENTIFIER_OBJECT1 = new SegmentIdWithShardSpec(
       "foo",
@@ -85,8 +85,8 @@ public class CommittedTest
   public void testSerde() throws Exception
   {
     final Committed committed = fixedInstance();
-    final byte[] bytes = objectMapper.writeValueAsBytes(committed);
-    final Committed committed2 = objectMapper.readValue(bytes, Committed.class);
+    final byte[] bytes = OBJECT_MAPPER.writeValueAsBytes(committed);
+    final Committed committed2 = OBJECT_MAPPER.readValue(bytes, Committed.class);
     Assert.assertEquals("Round trip: overall", committed, committed2);
     Assert.assertEquals("Round trip: metadata", committed.getMetadata(), committed2.getMetadata());
     Assert.assertEquals("Round trip: identifiers", committed.getHydrants().keySet(), committed2.getHydrants().keySet());

@@ -34,9 +34,10 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.FullResponseHandler;
 import org.apache.druid.java.util.http.client.response.FullResponseHolder;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -139,9 +140,9 @@ public class DruidLeaderClient
     return makeRequest(httpMethod, urlPath, true);
   }
 
-  public FullResponseHolder go(Request request) throws IOException, InterruptedException
+  public StringFullResponseHolder go(Request request) throws IOException, InterruptedException
   {
-    return go(request, new FullResponseHandler(StandardCharsets.UTF_8));
+    return go(request, new StringFullResponseHandler(StandardCharsets.UTF_8));
   }
 
   /**
@@ -159,15 +160,13 @@ public class DruidLeaderClient
   /**
    * Executes a Request object aimed at the leader. Throws IOException if the leader cannot be located.
    */
-  public FullResponseHolder go(
-      Request request,
-      HttpResponseHandler<FullResponseHolder, FullResponseHolder> responseHandler
-  ) throws IOException, InterruptedException
+  public <T, H extends FullResponseHolder<T>> H go(Request request, HttpResponseHandler<H, H> responseHandler)
+      throws IOException, InterruptedException
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     for (int counter = 0; counter < MAX_RETRIES; counter++) {
 
-      final FullResponseHolder fullResponseHolder;
+      final H fullResponseHolder;
 
       try {
         try {
@@ -255,7 +254,7 @@ public class DruidLeaderClient
   public String findCurrentLeader()
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
-    final FullResponseHolder responseHolder;
+    final StringFullResponseHolder responseHolder;
     try {
       responseHolder = go(makeRequest(HttpMethod.GET, leaderRequestPath));
     }

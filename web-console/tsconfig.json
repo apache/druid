@@ -20,5 +20,5 @@
     "jsx": "react",
     "rootDirs": ["lib", "src"]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "lib/sql-function-doc.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

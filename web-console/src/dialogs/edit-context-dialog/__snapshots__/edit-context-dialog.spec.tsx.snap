@@ -62,9 +62,8 @@ exports[`clipboard dialog matches snapshot 1`] = `
         <div
           class="bp3-dialog-footer-actions"
         >
-          
           <div
-            class="bp3-button-group edit-context-dialog-buttons"
+            class="edit-context-dialog-buttons"
           >
             <button
               class="bp3-button"
@@ -83,7 +82,7 @@ exports[`clipboard dialog matches snapshot 1`] = `
               <span
                 class="bp3-button-text"
               >
-                Submit
+                Save
               </span>
             </button>
           </div>

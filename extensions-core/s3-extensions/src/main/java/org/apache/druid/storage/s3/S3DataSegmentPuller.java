@@ -57,7 +57,7 @@ public class S3DataSegmentPuller implements URIDataPuller
 {
   public static final int DEFAULT_RETRY_COUNT = 3;
 
-  public static final String scheme = S3StorageDruidModule.SCHEME;
+  public static final String SCHEME = S3StorageDruidModule.SCHEME;
 
   private static final Logger log = new Logger(S3DataSegmentPuller.class);
 
@@ -141,8 +141,8 @@ public class S3DataSegmentPuller implements URIDataPuller
 
   public static URI checkURI(URI uri)
   {
-    if (uri.getScheme().equalsIgnoreCase(scheme)) {
-      uri = URI.create("s3" + uri.toString().substring(scheme.length()));
+    if (uri.getScheme().equalsIgnoreCase(SCHEME)) {
+      uri = URI.create("s3" + uri.toString().substring(SCHEME.length()));
     } else if (!"s3".equalsIgnoreCase(uri.getScheme())) {
       throw new IAE("Don't know how to load scheme for URI [%s]", uri.toString());
     }

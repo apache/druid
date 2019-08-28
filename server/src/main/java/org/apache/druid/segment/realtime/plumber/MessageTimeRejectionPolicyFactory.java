@@ -38,7 +38,7 @@ public class MessageTimeRejectionPolicyFactory implements RejectionPolicyFactory
 
   private static class MessageTimeRejectionPolicy implements RejectionPolicy
   {
-    private static final AtomicLongFieldUpdater<MessageTimeRejectionPolicy> maxTimestampUpdater =
+    private static final AtomicLongFieldUpdater<MessageTimeRejectionPolicy> MAX_TIMESTAMP_UPDATER =
         AtomicLongFieldUpdater.newUpdater(MessageTimeRejectionPolicy.class, "maxTimestamp");
     private final long windowMillis;
     private final Period windowPeriod;
@@ -76,7 +76,7 @@ public class MessageTimeRejectionPolicyFactory implements RejectionPolicyFactory
         if (timestamp <= currentMaxTimestamp) {
           return currentMaxTimestamp;
         }
-      } while (!maxTimestampUpdater.compareAndSet(this, currentMaxTimestamp, timestamp));
+      } while (!MAX_TIMESTAMP_UPDATER.compareAndSet(this, currentMaxTimestamp, timestamp));
       return timestamp;
     }
 

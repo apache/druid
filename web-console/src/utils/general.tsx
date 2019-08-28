@@ -179,9 +179,9 @@ export function mapRecord<T, Q>(
 }
 
 export function groupBy<T, Q>(
-  array: T[],
+  array: readonly T[],
   keyFn: (x: T, index: number) => string,
-  aggregateFn: (xs: T[], key: string) => Q,
+  aggregateFn: (xs: readonly T[], key: string) => Q,
 ): Q[] {
   const buckets: Record<string, T[]> = {};
   const n = array.length;
@@ -194,7 +194,7 @@ export function groupBy<T, Q>(
   return Object.keys(buckets).map(key => aggregateFn(buckets[key], key));
 }
 
-export function uniq(array: string[]): string[] {
+export function uniq(array: readonly string[]): string[] {
   const seen: Record<string, boolean> = {};
   return array.filter(s => {
     if (hasOwnProp(seen, s)) {

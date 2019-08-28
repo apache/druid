@@ -304,16 +304,6 @@ GROUP BY 1`;
 
   private refresh = (auto: any): void => {
     this.datasourceQueryManager.rerunLastQuery(auto);
-    // this looks ugly, but it forces the chart to re-render when refresh is clicked
-    this.setState(
-      {
-        showChart: !this.state.showChart,
-      },
-      () =>
-        this.setState({
-          showChart: !this.state.showChart,
-        }),
-    );
   };
 
   componentDidMount(): void {
@@ -700,7 +690,6 @@ GROUP BY 1`;
       datasourceFilter,
       showDisabled,
       hiddenColumns,
-      showChart,
     } = this.state;
     let data = datasources || [];
     if (!showDisabled) {
@@ -859,7 +848,13 @@ GROUP BY 1`;
                 const { compaction } = row.original;
                 let text: string;
                 if (compaction) {
-                  text = `Target: ${formatBytes(compaction.targetCompactionSizeBytes)}`;
+                  if (compaction.targetCompactionSizeBytes == null) {
+                    text = `Target: Default (${formatBytes(
+                      CompactionDialog.DEFAULT_TARGET_COMPACTION_SIZE_BYTES,
+                    )})`;
+                  } else {
+                    text = `Target: ${formatBytes(compaction.targetCompactionSizeBytes)}`;
+                  }
                 } else {
                   text = 'None';
                 }
@@ -937,7 +932,6 @@ GROUP BY 1`;
             },
           ]}
           defaultPageSize={50}
-          className={classNames(`-striped -highlight`, showChart ? '' : 'full-height')}
         />
         {this.renderDropDataAction()}
         {this.renderEnableAction()}
@@ -962,7 +956,9 @@ GROUP BY 1`;
     } = this.state;
 
     return (
-      <div className="data-sources-view app-view">
+      <div
+        className={classNames('datasource-view app-view', showChart ? 'show-chart' : 'no-chart')}
+      >
         <ViewControlBar label="Datasources">
           <RefreshButton
             onRefresh={auto => {
@@ -983,7 +979,11 @@ GROUP BY 1`;
           />
           <TableColumnSelector
             columns={noSqlMode ? tableColumnsNoSql : tableColumns}
-            onChange={column => this.setState({ hiddenColumns: hiddenColumns.toggle(column) })}
+            onChange={column =>
+              this.setState(prevState => ({
+                hiddenColumns: prevState.hiddenColumns.toggle(column),
+              }))
+            }
             tableColumnsHidden={hiddenColumns.storedArray}
           />
         </ViewControlBar>

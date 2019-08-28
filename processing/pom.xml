@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.16.0-incubating-SNAPSHOT</version>
+        <version>0.17.0-incubating-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -208,6 +208,7 @@
                     <!-- locale settings must be set on the command line before startup -->
                     <!-- set default options -->
                     <argLine>
+                        @{jacocoArgLine}
                         -Xmx512m
                         -XX:MaxDirectMemorySize=2500m
                         -Duser.language=en

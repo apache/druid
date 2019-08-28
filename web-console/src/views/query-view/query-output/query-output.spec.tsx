@@ -24,15 +24,7 @@ import { QueryOutput } from './query-output';
 describe('query output', () => {
   it('matches snapshot', () => {
     const queryOutput = (
-      <QueryOutput
-        runeMode={false}
-        sqlOrderBy={() => null}
-        sqlFilterRow={() => null}
-        sqlExcludeColumn={() => null}
-        disabled={false}
-        loading={false}
-        error="lol"
-      />
+      <QueryOutput runeMode={false} onQueryChange={() => {}} loading={false} error="lol" />
     );
 
     const { container } = render(queryOutput);

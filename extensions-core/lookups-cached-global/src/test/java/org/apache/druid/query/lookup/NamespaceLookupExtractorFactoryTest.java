@@ -69,7 +69,9 @@ import java.util.Map;
     CacheScheduler.VersionedCache.class,
     CacheScheduler.Entry.class
 })
-@PowerMockIgnore("javax.net.ssl.*")
+// defer classloading of the following classes to the system classloader
+// since they need to be loaded in the right Java module in JDK9 and above
+@PowerMockIgnore({"javax.net.ssl.*", "javax.xml.*", "com.sun.xml.*"})
 public class NamespaceLookupExtractorFactoryTest
 {
   private final ObjectMapper mapper = new DefaultObjectMapper();

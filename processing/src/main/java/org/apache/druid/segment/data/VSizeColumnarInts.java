@@ -38,7 +38,7 @@ public class VSizeColumnarInts implements ColumnarInts, Comparable<VSizeColumnar
 {
   public static final byte VERSION = 0x0;
 
-  private static final MetaSerdeHelper<VSizeColumnarInts> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<VSizeColumnarInts> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((VSizeColumnarInts x) -> VERSION)
       .writeByte(x -> ByteUtils.checkedCast(x.numBytes))
       .writeInt(x -> x.buffer.remaining());
@@ -158,13 +158,13 @@ public class VSizeColumnarInts implements ColumnarInts, Comparable<VSizeColumnar
   @Override
   public long getSerializedSize()
   {
-    return metaSerdeHelper.size(this) + buffer.remaining();
+    return META_SERDE_HELPER.size(this) + buffer.remaining();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     Channels.writeFully(channel, buffer.asReadOnlyBuffer());
   }
 

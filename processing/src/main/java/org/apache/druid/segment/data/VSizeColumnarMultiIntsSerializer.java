@@ -38,7 +38,7 @@ public class VSizeColumnarMultiIntsSerializer extends ColumnarMultiIntsSerialize
 {
   private static final byte VERSION = 0x1;
 
-  private static final MetaSerdeHelper<VSizeColumnarMultiIntsSerializer> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<VSizeColumnarMultiIntsSerializer> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((VSizeColumnarMultiIntsSerializer x) -> VERSION)
       .writeByte(x -> VSizeColumnarInts.getNumBytesForMax(x.maxId))
       .writeInt(x -> Ints.checkedCast(x.headerOut.size() + x.valuesOut.size() + Integer.BYTES))
@@ -126,7 +126,7 @@ public class VSizeColumnarMultiIntsSerializer extends ColumnarMultiIntsSerialize
   public long getSerializedSize() throws IOException
   {
     writeNumBytesForMax();
-    return metaSerdeHelper.size(this) + headerOut.size() + valuesOut.size();
+    return META_SERDE_HELPER.size(this) + headerOut.size() + valuesOut.size();
   }
 
   @Override
@@ -149,7 +149,7 @@ public class VSizeColumnarMultiIntsSerializer extends ColumnarMultiIntsSerialize
         numBytesWritten
     );
 
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     headerOut.writeTo(channel);
     valuesOut.writeTo(channel);
   }

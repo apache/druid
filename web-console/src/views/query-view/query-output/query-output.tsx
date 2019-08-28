@@ -18,7 +18,7 @@
 
 import { Menu, MenuItem, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { HeaderRows } from 'druid-query-toolkit';
+import { HeaderRows, SqlQuery } from 'druid-query-toolkit';
 import {
   basicIdentifierEscape,
   basicLiteralEscape,
@@ -32,30 +32,35 @@ import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
 import './query-output.scss';
 
 export interface QueryOutputProps {
-  aggregateColumns?: string[];
-  disabled: boolean;
   loading: boolean;
-  sqlFilterRow: (row: string, header: string, operator: '=' | '!=') => void;
-  sqlExcludeColumn: (header: string) => void;
-  sqlOrderBy: (header: string, direction: 'ASC' | 'DESC') => void;
-  sorted?: { id: string; desc: boolean }[];
-  result?: HeaderRows;
+  queryResult?: HeaderRows;
+  parsedQuery?: SqlQuery;
+  onQueryChange: (query: SqlQuery, run?: boolean) => void;
   error?: string;
   runeMode: boolean;
 }
 
 export class QueryOutput extends React.PureComponent<QueryOutputProps> {
   render(): JSX.Element {
-    const { result, loading, error } = this.props;
+    const { queryResult, parsedQuery, loading, error } = this.props;
+
+    let aggregateColumns: string[] | undefined;
+    if (parsedQuery) {
+      aggregateColumns = parsedQuery.getAggregateColumns();
+    }
 
     return (
       <div className="query-output">
         <ReactTable
-          data={result ? result.rows : []}
+          data={queryResult ? queryResult.rows : []}
           loading={loading}
-          noDataText={!loading && result && !result.rows.length ? 'No results' : error || ''}
+          noDataText={
+            !loading && queryResult && !queryResult.rows.length
+              ? 'Query returned no data'
+              : error || ''
+          }
           sortable={false}
-          columns={(result ? result.header : []).map((h: any, i) => {
+          columns={(queryResult ? queryResult.header : []).map((h: any, i) => {
             return {
               Header: () => {
                 return (
@@ -80,11 +85,8 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
                 }
                 return value;
               },
-              className: this.props.aggregateColumns
-                ? this.props.aggregateColumns.indexOf(h) > -1
-                  ? 'aggregate-column'
-                  : undefined
-                : undefined,
+              className:
+                aggregateColumns && aggregateColumns.includes(h) ? 'aggregate-column' : undefined,
             };
           })}
         />
@@ -92,9 +94,53 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
     );
   }
   getHeaderActions(h: string) {
-    const { disabled, sqlExcludeColumn, sqlOrderBy, runeMode } = this.props;
+    const { parsedQuery, onQueryChange, runeMode } = this.props;
+
     let actionsMenu;
-    if (disabled) {
+    if (parsedQuery) {
+      const sorted = parsedQuery.getSorted();
+
+      const basicActions: BasicAction[] = [];
+      if (sorted) {
+        sorted.map(sorted => {
+          if (sorted.id === h) {
+            basicActions.push({
+              icon: sorted.desc ? IconNames.SORT_ASC : IconNames.SORT_DESC,
+              title: `Order by: ${h} ${sorted.desc ? 'ASC' : 'DESC'}`,
+              onAction: () => {
+                onQueryChange(parsedQuery.orderBy(h, sorted.desc ? 'ASC' : 'DESC'), true);
+              },
+            });
+          }
+        });
+      }
+      if (!basicActions.length) {
+        basicActions.push(
+          {
+            icon: IconNames.SORT_ASC,
+            title: `Order by: ${h} ASC`,
+            onAction: () => {
+              onQueryChange(parsedQuery.orderBy(h, 'ASC'), true);
+            },
+          },
+          {
+            icon: IconNames.SORT_DESC,
+            title: `Order by: ${h} DESC`,
+            onAction: () => {
+              onQueryChange(parsedQuery.orderBy(h, 'DESC'), true);
+            },
+          },
+        );
+      }
+      basicActions.push({
+        icon: IconNames.CROSS,
+        title: `Remove: ${h}`,
+        onAction: () => {
+          onQueryChange(parsedQuery.excludeColumn(h), true);
+        },
+      });
+      actionsMenu = basicActionsToMenu(basicActions);
+    } else {
       actionsMenu = (
         <Menu>
           <MenuItem
@@ -130,48 +176,52 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
           )}
         </Menu>
       );
-    } else {
-      const { sorted } = this.props;
-      const basicActions: BasicAction[] = [];
-      if (sorted) {
-        sorted.map(sorted => {
-          if (sorted.id === h) {
-            basicActions.push({
-              icon: sorted.desc ? IconNames.SORT_ASC : IconNames.SORT_DESC,
-              title: `Order by: ${h} ${sorted.desc ? 'ASC' : 'DESC'}`,
-              onAction: () => sqlOrderBy(h, sorted.desc ? 'ASC' : 'DESC'),
-            });
-          }
-        });
-      }
-      if (!basicActions.length) {
-        basicActions.push(
-          {
-            icon: IconNames.SORT_ASC,
-            title: `Order by: ${h} ASC`,
-            onAction: () => sqlOrderBy(h, 'ASC'),
-          },
-          {
-            icon: IconNames.SORT_DESC,
-            title: `Order by: ${h} DESC`,
-            onAction: () => sqlOrderBy(h, 'DESC'),
-          },
-        );
-      }
-      basicActions.push({
-        icon: IconNames.CROSS,
-        title: `Remove: ${h}`,
-        onAction: () => sqlExcludeColumn(h),
-      });
-      actionsMenu = basicActionsToMenu(basicActions);
     }
     return actionsMenu ? actionsMenu : undefined;
   }
 
   getRowActions(row: string, header: string) {
-    const { disabled, sqlFilterRow, runeMode } = this.props;
+    const { parsedQuery, onQueryChange, runeMode } = this.props;
+
     let actionsMenu;
-    if (disabled) {
+    if (parsedQuery) {
+      actionsMenu = (
+        <Menu>
+          <MenuItem
+            icon={IconNames.FILTER_KEEP}
+            text={`Filter by: ${header} = ${row}`}
+            onClick={() => {
+              onQueryChange(parsedQuery.filterRow(header, row, '='), true);
+            }}
+          />
+          <MenuItem
+            icon={IconNames.FILTER_REMOVE}
+            text={`Filter by: ${header} != ${row}`}
+            onClick={() => {
+              onQueryChange(parsedQuery.filterRow(header, row, '!='), true);
+            }}
+          />
+          {!isNaN(Number(row)) && (
+            <>
+              <MenuItem
+                icon={IconNames.FILTER_KEEP}
+                text={`Filter by: ${header} >= ${row}`}
+                onClick={() => {
+                  onQueryChange(parsedQuery.filterRow(header, row, '>='), true);
+                }}
+              />
+              <MenuItem
+                icon={IconNames.FILTER_KEEP}
+                text={`Filter by: ${header} <= ${row}`}
+                onClick={() => {
+                  onQueryChange(parsedQuery.filterRow(header, row, '<='), true);
+                }}
+              />
+            </>
+          )}
+        </Menu>
+      );
+    } else {
       actionsMenu = (
         <Menu>
           <MenuItem
@@ -209,38 +259,29 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
           )}
         </Menu>
       );
-    } else {
-      actionsMenu = basicActionsToMenu([
-        {
-          icon: IconNames.FILTER_KEEP,
-          title: `Filter by: ${header} = ${row}`,
-          onAction: () => sqlFilterRow(row, header, '='),
-        },
-        {
-          icon: IconNames.FILTER_REMOVE,
-          title: `Filter by: ${header} != ${row}`,
-          onAction: () => sqlFilterRow(row, header, '!='),
-        },
-      ]);
     }
-    return actionsMenu ? actionsMenu : undefined;
+    return actionsMenu;
   }
 
   getHeaderClassName(h: string) {
-    const { sorted, aggregateColumns } = this.props;
+    const { parsedQuery } = this.props;
+
     const className = [];
-    className.push(
-      sorted
-        ? sorted.map(sorted => {
+    if (parsedQuery) {
+      const sorted = parsedQuery.getSorted();
+      if (sorted) {
+        className.push(
+          sorted.map(sorted => {
             if (sorted.id === h) {
               return sorted.desc ? '-sort-desc' : '-sort-asc';
             }
             return '';
-          })[0]
-        : undefined,
-    );
-    if (aggregateColumns) {
-      if (aggregateColumns.includes(h)) {
+          })[0],
+        );
+      }
+
+      const aggregateColumns = parsedQuery.getAggregateColumns();
+      if (aggregateColumns && aggregateColumns.includes(h)) {
         className.push('aggregate-header');
       }
     }

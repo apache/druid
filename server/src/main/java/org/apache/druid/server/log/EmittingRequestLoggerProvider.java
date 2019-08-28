@@ -42,7 +42,7 @@ public class EmittingRequestLoggerProvider implements RequestLoggerProvider
 
   @JsonProperty
   @NotNull
-  private RequestLogEventBuilderFactory requestLogEventBuilderFactory = null;
+  private RequestLogEventBuilderFactory requestLogEventBuilderFactory = DefaultRequestLogEventBuilderFactory.instance();
 
   @JacksonInject
   @NotNull

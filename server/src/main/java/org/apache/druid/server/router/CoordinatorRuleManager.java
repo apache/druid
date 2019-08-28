@@ -33,7 +33,7 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.RulesResource;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -137,7 +137,7 @@ public class CoordinatorRuleManager
   public void poll()
   {
     try {
-      FullResponseHolder response = druidLeaderClient.go(
+      StringFullResponseHolder response = druidLeaderClient.go(
           druidLeaderClient.makeRequest(HttpMethod.GET, RulesResource.RULES_ENDPOINT)
       );
 

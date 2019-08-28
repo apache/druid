@@ -45,7 +45,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
         final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
         final Closeable ignored2 = unloader(REINDEX_DATASOURCE + config.getExtraDatasourceNameSuffix())
     ) {
-      doIndexTestTest(
+      doIndexTest(
           INDEX_DATASOURCE,
           INDEX_TASK,
           INDEX_QUERIES_RESOURCE,

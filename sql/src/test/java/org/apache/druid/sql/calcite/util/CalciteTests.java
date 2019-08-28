@@ -531,7 +531,7 @@ public class CalciteTests
                 new ScanQueryRunnerFactory(
                     new ScanQueryQueryToolChest(
                         new ScanQueryConfig(),
-                        new DefaultGenericQueryMetricsFactory(TestHelper.makeJsonMapper())
+                        new DefaultGenericQueryMetricsFactory()
                     ),
                     new ScanQueryEngine(),
                     new ScanQueryConfig()
@@ -588,7 +588,7 @@ public class CalciteTests
           }
         },
         walker,
-        new DefaultGenericQueryMetricsFactory(INJECTOR.getInstance(Key.get(ObjectMapper.class, Json.class))),
+        new DefaultGenericQueryMetricsFactory(),
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
         new AuthConfig(),

@@ -27,6 +27,7 @@ import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.search.SearchQuerySpec;
 
 /**
@@ -37,7 +38,8 @@ public class SearchQueryFilter extends DimensionPredicateFilter
   public SearchQueryFilter(
       @JsonProperty("dimension") final String dimension,
       @JsonProperty("query") final SearchQuerySpec query,
-      @JsonProperty("extractionFn") final ExtractionFn extractionFn
+      @JsonProperty("extractionFn") final ExtractionFn extractionFn,
+      @JsonProperty("filterTuning") final FilterTuning filterTuning
   )
   {
     super(
@@ -68,7 +70,8 @@ public class SearchQueryFilter extends DimensionPredicateFilter
             return input -> query.accept(String.valueOf(input));
           }
         },
-        extractionFn
+        extractionFn,
+        filterTuning
     );
   }
 }
