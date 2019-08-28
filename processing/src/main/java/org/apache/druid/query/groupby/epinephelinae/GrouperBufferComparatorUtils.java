@@ -146,7 +146,6 @@ public class GrouperBufferComparatorUtils
       } else {
         int aggIndex = OrderByColumnSpec.getAggIndexForOrderBy(orderSpec, Arrays.asList(aggregatorFactories));
         if (aggIndex >= 0) {
-          final RowBasedKeySerdeHelper serdeHelper;
           final StringComparator stringComparator = orderSpec.getDimensionComparator();
           final String typeName = aggregatorFactories[aggIndex].getTypeName();
           final int aggOffset = aggregatorOffsets[aggIndex] - Integer.BYTES;
