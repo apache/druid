@@ -47,12 +47,8 @@ env:
 # output.  To compensate, use travis_wait to extend the timeout.
 install: MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
 
-matrix:
+jobs:
   include:
-    - name: "java 11 build"
-      jdk: openjdk11
-      script: ${MVN} test -pl '!web-console' ${MAVEN_SKIP}
-
     - name: "animal sniffer checks"
       script: ${MVN} animal-sniffer:check --fail-at-end
 
@@ -88,21 +84,28 @@ matrix:
         - distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
         - distribution/bin/generate-license.py licenses/APACHE2 licenses.yaml LICENSES.BINARY --dependency-reports target/license-reports
 
-    - name: "strict compilation"
+    - &compile_strict
+      name: "(openjdk8) strict compilation"
       install: skip
       # Strict compilation requires more than 2 GB
       script: >
         MAVEN_OPTS='-Xmx3000m' ${MVN} clean -Pstrict compile test-compile --fail-at-end
         -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
-    - name: "packaging check"
+    - &package
+      name: "(openjdk8) packaging check"
       install: skip
       before_script: *setup_generate_license
       script: >
         MAVEN_OPTS='-Xmx3000m' ${MVN} clean install -Pdist -Pbundle-contrib-exts --fail-at-end
         -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Ddruid.console.skip=false -T1C
 
-    - name: "processing module test"
+    - <<: *package
+      name: "(openjdk11) packaging check"
+      jdk: openjdk11
+
+    - &test_processing_module
+      name: "(openjdk8) processing module test"
       env: &processing_env
       - MAVEN_PROJECTS='processing'
       before_script: &setup_java_test
@@ -116,7 +119,12 @@ matrix:
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
 
-    - name: "processing module test (SQL Compatibility)"
+    - <<: *test_processing_module
+      name: "(openjdk11) processing module test"
+      jdk: openjdk11
+
+    - &test_processing_module_sqlcompat
+      name: "(openjdk8) processing module test (SQL Compatibility)"
       env: *processing_env
       before_script: *setup_java_test
       script: &run_java_sql_compat_test
@@ -128,40 +136,75 @@ matrix:
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
 
-    - name: "indexing modules test"
+    - <<: *test_processing_module_sqlcompat
+      name: "(openjdk11) processing module test (SQL Compatibility)"
+      jdk: openjdk11
+
+    - &test_indexing_module
+      name: "(openjdk8) indexing modules test"
       env: &indexing_env
       - MAVEN_PROJECTS='indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
       before_script: *setup_java_test
       script: *run_java_test
 
-    - name: "indexing modules test (SQL Compatibility)"
+    - <<: *test_indexing_module
+      name: "(openjdk11) indexing modules test"
+      jdk: openjdk11
+
+    - &test_indexing_module_sqlcompat
+      name: "(openjdk8) indexing modules test (SQL Compatibility)"
       env: *indexing_env
       before_script: *setup_java_test
       script: *run_java_sql_compat_test
 
-    - name: "server module test"
+    - <<: *test_indexing_module_sqlcompat
+      name: "(openjdk11) indexing modules test (SQL Compatibility)"
+      jdk: openjdk11
+
+    - &test_server_module
+      name: "(openjdk8) server module test"
       env: &server_env
         - MAVEN_PROJECTS='server'
       before_script: *setup_java_test
       script: *run_java_test
 
-    - name: "server module test (SQL Compatibility)"
+    - <<: *test_server_module
+      name: "(openjdk11) server module test"
+      jdk: openjdk11
+
+    - &test_server_module_sqlcompat
+      name: "(openjdk8) server module test (SQL Compatibility)"
       env: *server_env
       before_script: *setup_java_test
       script: *run_java_sql_compat_test
 
-    - name: "other modules test"
+    - <<: *test_server_module_sqlcompat
+      name: "(openjdk11) server module test (SQL Compatibility)"
+      jdk: openjdk11
+
+    - &test_modules
+      name: "(openjdk8) other modules test"
       env: &other_env
         - MAVEN_PROJECTS='!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console'
       before_script: *setup_java_test
       script: *run_java_test
 
-    - name: "other modules test (SQL Compatibility)"
+    - <<: *test_modules
+      name: "(openjdk11) other modules test"
+      jdk: openjdk11
+
+    - &test_modules_sqlcompat
+      name: "(openjdk8) other modules test (SQL Compatibility)"
       env: *other_env
       before_script: *setup_java_test
       script: *run_java_sql_compat_test
 
-    - name: "web console"
+    - <<: *test_modules_sqlcompat
+      name: "(openjdk11) other modules test (SQL Compatibility)"
+      jdk: openjdk11
+
+    - &test_webconsole
+      name: "web console"
       install: skip
       script: ${MVN} test -pl 'web-console'
 
@@ -169,7 +212,8 @@ matrix:
       install: (cd website && npm install)
       script: (cd website && npm run lint)
 
-    - name: "batch index integration test"
+    - &integration_batch_index
+      name: "batch index integration test"
       services: &integration_test_services
         - docker
       env: TESTNG_GROUPS='-Dgroups=batch-index'
@@ -184,25 +228,29 @@ matrix:
           docker exec -it druid-$v sh -c 'dmesg | tail -3' ;
           done
 
-    - name: "kafka index integration test"
+    - &integration_kafka_index
+      name: "kafka index integration test"
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=kafka-index'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
-    - name: "query integration test"
+    - &integration_query
+      name: "query integration test"
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=query'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
-    - name: "realtime index integration test"
+    - &integration_realtime_index
+      name: "realtime index integration test"
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=realtime-index'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
-    - name: "other integration test"
+    - &integration_tests
+      name: "other integration test"
       services: *integration_test_services
       env: TESTNG_GROUPS='-DexcludedGroups=batch-index,kafka-index,query,realtime-index'
       script: *run_integration_test
