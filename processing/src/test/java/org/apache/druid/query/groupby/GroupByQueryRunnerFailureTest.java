@@ -103,15 +103,15 @@ public class GroupByQueryRunnerFailureTest
         configSupplier,
         new GroupByStrategyV1(
             configSupplier,
-            new GroupByQueryEngine(configSupplier, bufferPool),
+            new GroupByQueryEngine(configSupplier, BUFFER_POOL),
             QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-            bufferPool
+            BUFFER_POOL
         ),
         new GroupByStrategyV2(
             DEFAULT_PROCESSING_CONFIG,
             configSupplier,
-            bufferPool,
-            mergeBufferPool,
+            BUFFER_POOL,
+            MERGE_BUFFER_POOL,
             mapper,
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         )
@@ -123,7 +123,7 @@ public class GroupByQueryRunnerFailureTest
     return new GroupByQueryRunnerFactory(strategySelector, toolChest);
   }
 
-  private static final CloseableStupidPool<ByteBuffer> bufferPool = new CloseableStupidPool<>(
+  private static final CloseableStupidPool<ByteBuffer> BUFFER_POOL = new CloseableStupidPool<>(
       "GroupByQueryEngine-bufferPool",
       new Supplier<ByteBuffer>()
       {
@@ -134,7 +134,7 @@ public class GroupByQueryRunnerFailureTest
         }
       }
   );
-  private static final CloseableDefaultBlockingPool<ByteBuffer> mergeBufferPool = new CloseableDefaultBlockingPool<>(
+  private static final CloseableDefaultBlockingPool<ByteBuffer> MERGE_BUFFER_POOL = new CloseableDefaultBlockingPool<>(
       new Supplier<ByteBuffer>()
       {
         @Override
@@ -146,7 +146,7 @@ public class GroupByQueryRunnerFailureTest
       DEFAULT_PROCESSING_CONFIG.getNumMergeBuffers()
   );
 
-  private static final GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(
+  private static final GroupByQueryRunnerFactory FACTORY = makeQueryRunnerFactory(
       GroupByQueryRunnerTest.DEFAULT_MAPPER,
       new GroupByQueryConfig()
       {
@@ -163,15 +163,15 @@ public class GroupByQueryRunnerFailureTest
   @AfterClass
   public static void teardownClass()
   {
-    bufferPool.close();
-    mergeBufferPool.close();
+    BUFFER_POOL.close();
+    MERGE_BUFFER_POOL.close();
   }
 
   @Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
   {
     final List<Object[]> args = new ArrayList<>();
-    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
+    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(FACTORY)) {
       args.add(new Object[]{runner});
     }
     return args;
@@ -179,7 +179,7 @@ public class GroupByQueryRunnerFailureTest
 
   public GroupByQueryRunnerFailureTest(QueryRunner<ResultRow> runner)
   {
-    this.runner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
+    this.runner = FACTORY.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
   }
 
   @Test(timeout = 60_000L)
@@ -194,21 +194,21 @@ public class GroupByQueryRunnerFailureTest
         .setDataSource(
             new QueryDataSource(
                 GroupByQuery.builder()
-                            .setDataSource(QueryRunnerTestHelper.dataSource)
-                            .setInterval(QueryRunnerTestHelper.firstToThird)
+                            .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                            .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
                             .setGranularity(Granularities.ALL)
                             .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
+                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT))
                             .build()
             )
         )
         .setGranularity(Granularities.ALL)
-        .setInterval(QueryRunnerTestHelper.firstToThird)
+        .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
         .build();
 
-    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
   }
 
   @Test(timeout = 60_000L)
@@ -223,30 +223,30 @@ public class GroupByQueryRunnerFailureTest
                 GroupByQuery.builder()
                             .setDataSource(
                                 GroupByQuery.builder()
-                                            .setDataSource(QueryRunnerTestHelper.dataSource)
-                                            .setInterval(QueryRunnerTestHelper.firstToThird)
+                                            .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                            .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
                                             .setGranularity(Granularities.ALL)
                                             .setDimensions(
                                                 new DefaultDimensionSpec("quality", "alias"),
                                                 new DefaultDimensionSpec("market", null)
                                             )
-                                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
+                                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT))
                                             .build()
                             )
-                            .setInterval(QueryRunnerTestHelper.firstToThird)
+                            .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
                             .setGranularity(Granularities.ALL)
                             .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
+                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT))
                             .build()
             )
         )
         .setGranularity(Granularities.ALL)
-        .setInterval(QueryRunnerTestHelper.firstToThird)
+        .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
         .build();
 
-    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
   }
 
   @Test(timeout = 60_000L, expected = InsufficientResourcesException.class)
@@ -257,24 +257,24 @@ public class GroupByQueryRunnerFailureTest
         .setDataSource(
             new QueryDataSource(
                 GroupByQuery.builder()
-                            .setDataSource(QueryRunnerTestHelper.dataSource)
-                            .setInterval(QueryRunnerTestHelper.firstToThird)
+                            .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                            .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
                             .setGranularity(Granularities.ALL)
                             .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
+                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT))
                             .build()
             )
         )
         .setGranularity(Granularities.ALL)
-        .setInterval(QueryRunnerTestHelper.firstToThird)
+        .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
         .build();
 
     List<ReferenceCountingResourceHolder<ByteBuffer>> holder = null;
     try {
-      holder = mergeBufferPool.takeBatch(1, 10);
-      GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+      holder = MERGE_BUFFER_POOL.takeBatch(1, 10);
+      GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
     }
     finally {
       if (holder != null) {

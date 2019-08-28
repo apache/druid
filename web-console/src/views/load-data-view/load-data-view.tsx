@@ -105,6 +105,7 @@ import {
   issueWithIoConfig,
   issueWithParser,
   joinFilter,
+  MAX_INLINE_DATA_LENGTH,
   MetricSpec,
   normalizeSpec,
   Parser,
@@ -947,7 +948,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           placeholder="Paste your data here"
           value={deepGet(spec, 'ioConfig.firehose.data')}
           onChange={(e: any) => {
-            const stringValue = e.target.value.substr(0, 65536);
+            const stringValue = e.target.value.substr(0, MAX_INLINE_DATA_LENGTH);
             this.updateSpec(deepSet(spec, 'ioConfig.firehose.data', stringValue));
           }}
         />
@@ -1043,8 +1044,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             </FormGroup>
           )}
           <Button
-            text={inlineMode ? 'Register' : 'Preview'}
+            text={inlineMode ? 'Register data' : 'Preview'}
             disabled={isBlank}
+            intent={inputQueryState.data ? undefined : Intent.PRIMARY}
             onClick={() => this.queryForConnect()}
           />
         </div>

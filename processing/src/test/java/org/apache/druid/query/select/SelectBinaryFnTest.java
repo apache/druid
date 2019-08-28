@@ -40,9 +40,9 @@ import java.util.Set;
  */
 public class SelectBinaryFnTest
 {
-  private static final String segmentId1 = "testSegment1";
+  private static final String SEGMENT_ID1 = "testSegment1";
 
-  private static final String segmentId2 = "testSegment2";
+  private static final String SEGMENT_ID2 = "testSegment2";
 
   @Test
   public void testApply()
@@ -57,30 +57,30 @@ public class SelectBinaryFnTest
             Sets.newHashSet("sixth"),
             Arrays.asList(
                 new EventHolder(
-                    segmentId1,
+                        SEGMENT_ID1,
                     0,
                     ImmutableMap.of(
-                        EventHolder.timestampKey,
+                        EventHolder.TIMESTAMP_KEY,
                         DateTimes.of("2013-01-01T00"),
                         "dim",
                         "first"
                     )
                 ),
                 new EventHolder(
-                    segmentId1,
+                    SEGMENT_ID1,
                     1,
                     ImmutableMap.of(
-                        EventHolder.timestampKey,
+                        EventHolder.TIMESTAMP_KEY,
                         DateTimes.of("2013-01-01T03"),
                         "dim",
                         "fourth"
                     )
                 ),
                 new EventHolder(
-                    segmentId1,
+                    SEGMENT_ID1,
                     2,
                     ImmutableMap.of(
-                        EventHolder.timestampKey,
+                        EventHolder.TIMESTAMP_KEY,
                         DateTimes.of("2013-01-01T05"),
                         "dim",
                         "sixth"
@@ -99,30 +99,30 @@ public class SelectBinaryFnTest
             Sets.newHashSet("fifth"),
             Arrays.asList(
                 new EventHolder(
-                    segmentId2,
+                    SEGMENT_ID2,
                     0,
                     ImmutableMap.of(
-                        EventHolder.timestampKey,
+                        EventHolder.TIMESTAMP_KEY,
                         DateTimes.of("2013-01-01T00"),
                         "dim",
                         "second"
                     )
                 ),
                 new EventHolder(
-                    segmentId2,
+                    SEGMENT_ID2,
                     1,
                     ImmutableMap.of(
-                        EventHolder.timestampKey,
+                        EventHolder.TIMESTAMP_KEY,
                         DateTimes.of("2013-01-01T02"),
                         "dim",
                         "third"
                     )
                 ),
                 new EventHolder(
-                    segmentId2,
+                    SEGMENT_ID2,
                     2,
                     ImmutableMap.of(
-                        EventHolder.timestampKey,
+                        EventHolder.TIMESTAMP_KEY,
                         DateTimes.of("2013-01-01T04"),
                         "dim",
                         "fifth"
@@ -137,8 +137,8 @@ public class SelectBinaryFnTest
     Assert.assertEquals(res1.getTimestamp(), merged.getTimestamp());
 
     LinkedHashMap<String, Integer> expectedPageIds = Maps.newLinkedHashMap();
-    expectedPageIds.put(segmentId1, 1);
-    expectedPageIds.put(segmentId2, 2);
+    expectedPageIds.put(SEGMENT_ID1, 1);
+    expectedPageIds.put(SEGMENT_ID2, 2);
 
     Iterator<String> exSegmentIter = expectedPageIds.keySet().iterator();
     Iterator<String> acSegmentIter = merged.getValue().getPagingIdentifiers().keySet().iterator();
@@ -152,48 +152,48 @@ public class SelectBinaryFnTest
 
     List<EventHolder> exEvents = Arrays.asList(
         new EventHolder(
-            segmentId1,
+            SEGMENT_ID1,
             0,
             ImmutableMap.of(
-                EventHolder.timestampKey,
+                EventHolder.TIMESTAMP_KEY,
                 DateTimes.of("2013-01-01T00"), "dim", "first"
             )
         ),
         new EventHolder(
-            segmentId2,
+            SEGMENT_ID2,
             0,
             ImmutableMap.of(
-                EventHolder.timestampKey,
+                EventHolder.TIMESTAMP_KEY,
                 DateTimes.of("2013-01-01T00"),
                 "dim",
                 "second"
             )
         ),
         new EventHolder(
-            segmentId2,
+            SEGMENT_ID2,
             1,
             ImmutableMap.of(
-                EventHolder.timestampKey,
+                EventHolder.TIMESTAMP_KEY,
                 DateTimes.of("2013-01-01T02"),
                 "dim",
                 "third"
             )
         ),
         new EventHolder(
-            segmentId1,
+            SEGMENT_ID1,
             1,
             ImmutableMap.of(
-                EventHolder.timestampKey,
+                EventHolder.TIMESTAMP_KEY,
                 DateTimes.of("2013-01-01T03"),
                 "dim",
                 "fourth"
             )
         ),
         new EventHolder(
-            segmentId2,
+            SEGMENT_ID2,
             2,
             ImmutableMap.of(
-                EventHolder.timestampKey,
+                EventHolder.TIMESTAMP_KEY,
                 DateTimes.of("2013-01-01T04"),
                 "dim",
                 "fifth"
@@ -220,9 +220,9 @@ public class SelectBinaryFnTest
             Sets.newHashSet("eight", "nineth"),
             Collections.singletonList(
                 new EventHolder(
-                    segmentId1,
+                    SEGMENT_ID1,
                     0,
-                    ImmutableMap.of(EventHolder.timestampKey, DateTimes.of("2013-01-01T00"), "dim", "first")
+                    ImmutableMap.of(EventHolder.TIMESTAMP_KEY, DateTimes.of("2013-01-01T00"), "dim", "first")
                 )
             )
         )
@@ -236,9 +236,9 @@ public class SelectBinaryFnTest
             Sets.newHashSet("seventh"),
             Collections.singletonList(
                 new EventHolder(
-                    segmentId2,
+                    SEGMENT_ID2,
                     0,
-                    ImmutableMap.of(EventHolder.timestampKey, DateTimes.of("2013-01-01T00"), "dim", "second")
+                    ImmutableMap.of(EventHolder.TIMESTAMP_KEY, DateTimes.of("2013-01-01T00"), "dim", "second")
                 )
             )
         )

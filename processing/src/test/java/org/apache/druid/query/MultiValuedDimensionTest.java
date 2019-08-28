@@ -1014,7 +1014,7 @@ public class MultiValuedDimensionTest
             null
         ))
         .metric("count")
-        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .aggregators(new CountAggregatorFactory("count"))
         .threshold(5)
         .filters(new SelectorDimFilter("tags", "t3", null))
@@ -1068,7 +1068,7 @@ public class MultiValuedDimensionTest
             )
         )
         .metric("count")
-        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .aggregators(new CountAggregatorFactory("count"))
         .threshold(15)
         .build();
@@ -1128,7 +1128,7 @@ public class MultiValuedDimensionTest
             )
         )
         .metric("count")
-        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .aggregators(new CountAggregatorFactory("count"))
         .threshold(15)
         .build();

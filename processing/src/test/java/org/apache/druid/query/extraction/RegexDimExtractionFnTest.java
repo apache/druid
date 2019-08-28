@@ -34,7 +34,7 @@ import java.util.Set;
  */
 public class RegexDimExtractionFnTest
 {
-  private static final String[] paths = {
+  private static final String[] PATHS = {
       "/druid/prod/historical",
       "/druid/prod/broker",
       "/druid/prod/coordinator",
@@ -45,7 +45,7 @@ public class RegexDimExtractionFnTest
       "/dash/baloo"
   };
 
-  private static final String[] testStrings = {
+  private static final String[] TEST_STRINGS = {
       "apple",
       "awesome",
       "asylum",
@@ -61,7 +61,7 @@ public class RegexDimExtractionFnTest
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, false, null);
     Set<String> extracted = new LinkedHashSet<>();
 
-    for (String path : paths) {
+    for (String path : PATHS) {
       extracted.add(extractionFn.apply(path));
     }
 
@@ -76,7 +76,7 @@ public class RegexDimExtractionFnTest
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, false, null);
     Set<String> extracted = new LinkedHashSet<>();
 
-    for (String path : paths) {
+    for (String path : PATHS) {
       extracted.add(extractionFn.apply(path));
     }
 
@@ -96,7 +96,7 @@ public class RegexDimExtractionFnTest
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, 0, true, null);
     Set<String> extracted = new LinkedHashSet<>();
 
-    for (String path : paths) {
+    for (String path : PATHS) {
       extracted.add(extractionFn.apply(path));
     }
 
@@ -113,7 +113,7 @@ public class RegexDimExtractionFnTest
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, 2, true, null);
     Set<String> extracted = new LinkedHashSet<>();
 
-    for (String path : paths) {
+    for (String path : PATHS) {
       extracted.add(extractionFn.apply(path));
     }
 
@@ -133,7 +133,7 @@ public class RegexDimExtractionFnTest
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, false, null);
     Set<String> extracted = new LinkedHashSet<>();
 
-    for (String testString : testStrings) {
+    for (String testString : TEST_STRINGS) {
       extracted.add(extractionFn.apply(testString));
     }
 
@@ -194,7 +194,7 @@ public class RegexDimExtractionFnTest
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, true, "foobar");
     Set<String> extracted = new LinkedHashSet<>();
 
-    for (String testString : testStrings) {
+    for (String testString : TEST_STRINGS) {
       extracted.add(extractionFn.apply(testString));
     }
 
@@ -213,7 +213,7 @@ public class RegexDimExtractionFnTest
     ExtractionFn nullExtractionFn = new RegexDimExtractionFn(regex, true, null);
     Set<String> extracted2 = new LinkedHashSet<>();
 
-    for (String testString : testStrings) {
+    for (String testString : TEST_STRINGS) {
       extracted2.add(nullExtractionFn.apply(testString));
     }
 

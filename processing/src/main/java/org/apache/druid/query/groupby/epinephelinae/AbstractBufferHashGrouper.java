@@ -76,13 +76,12 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
   /**
    * Called to check if it's possible to skip aggregation for a row.
    *
-   * @param bucketWasUsed Was the row a new entry in the hash table?
    * @param bucketOffset  Offset of the bucket containing this row's entry in the hash table,
    *                      within the buffer returned by hashTable.getTableBuffer()
    *
    * @return true if aggregation can be skipped, false otherwise.
    */
-  public abstract boolean canSkipAggregate(boolean bucketWasUsed, int bucketOffset);
+  public abstract boolean canSkipAggregate(int bucketOffset);
 
   /**
    * Called after a row is aggregated. An implementing BufferHashGrouper class can use this to update
@@ -154,7 +153,7 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
       newBucketHook(bucketStartOffset);
     }
 
-    if (canSkipAggregate(bucketWasUsed, bucketStartOffset)) {
+    if (canSkipAggregate(bucketStartOffset)) {
       return AggregateResult.ok();
     }
 

@@ -25,6 +25,7 @@ title: "Single server deployment"
 
 Druid includes a set of reference configurations and launch scripts for single-machine deployments:
 
+- `nano-quickstart`
 - `micro-quickstart`
 - `small`
 - `medium`
@@ -32,6 +33,8 @@ Druid includes a set of reference configurations and launch scripts for single-m
 - `xlarge`
 
 The `micro-quickstart` is sized for small machines like laptops and is intended for quick evaluation use-cases.
+
+The `nano-quickstart` is an even smaller configuration, targeting a machine with 1 CPU and 4GB memory. It is meant for limited evaluations in resource constrained environments, such as small Docker containers.
 
 The other configurations are intended for general use single-machine deployments. They are sized for hardware roughly based on Amazon's i3 series of EC2 instances.
 
@@ -42,6 +45,11 @@ The example configurations run the Druid Coordinator and Overlord together in a 
 While example configurations are provided for very large single machines, at higher scales we recommend running Druid in a [clustered deployment](../tutorials/cluster.md), for fault-tolerance and reduced resource contention.
 
 ## Single Server Reference Configurations
+
+Nano-Quickstart: 1 CPU, 4GB RAM
+------------
+Launch command: `bin/start-nano-quickstart`
+Configuration directory: `conf/druid/single-server/nano-quickstart`
 
 Micro-Quickstart: 4 CPU, 16GB RAM
 ------------

@@ -499,7 +499,7 @@ public class ParallelCombiner<KeyType>
     @Override
     public ColumnCapabilities getColumnCapabilities(String column)
     {
-      throw new UnsupportedOperationException();
+      return null;
     }
   }
 }

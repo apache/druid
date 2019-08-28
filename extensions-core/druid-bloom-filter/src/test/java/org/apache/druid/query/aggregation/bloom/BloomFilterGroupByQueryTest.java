@@ -53,13 +53,13 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class BloomFilterGroupByQueryTest
 {
-  private static final BloomFilterExtensionModule module = new BloomFilterExtensionModule();
+  private static final BloomFilterExtensionModule MODULE = new BloomFilterExtensionModule();
 
   static {
     // throwaway, just using to properly initialize jackson modules
     Guice.createInjector(
         binder -> binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper()),
-        module
+        MODULE
     );
   }
 
@@ -72,7 +72,7 @@ public class BloomFilterGroupByQueryTest
   public BloomFilterGroupByQueryTest(final GroupByQueryConfig config)
   {
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        Lists.newArrayList(module.getJacksonModules()),
+        Lists.newArrayList(MODULE.getJacksonModules()),
         config,
         tempFolder
     );

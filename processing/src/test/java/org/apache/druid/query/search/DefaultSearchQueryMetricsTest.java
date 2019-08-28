@@ -49,9 +49,9 @@ public class DefaultSearchQueryMetricsTest
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
     SearchQuery query = Druids
         .newSearchQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryRunnerTestHelper.dayGran)
-        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.DAY_GRAN)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .dimensions(new ListFilteredDimensionSpec(
             new DefaultDimensionSpec("tags", "tags"),
             ImmutableSet.of("t3"),
@@ -70,9 +70,9 @@ public class DefaultSearchQueryMetricsTest
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
     Assert.assertEquals("", actualEvent.get("host"));
     Assert.assertEquals("", actualEvent.get("service"));
-    Assert.assertEquals(QueryRunnerTestHelper.dataSource, actualEvent.get(DruidMetrics.DATASOURCE));
+    Assert.assertEquals(QueryRunnerTestHelper.DATA_SOURCE, actualEvent.get(DruidMetrics.DATASOURCE));
     Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
-    List<Interval> expectedIntervals = QueryRunnerTestHelper.fullOnIntervalSpec.getIntervals();
+    List<Interval> expectedIntervals = QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC.getIntervals();
     List<String> expectedStringIntervals =
         expectedIntervals.stream().map(Interval::toString).collect(Collectors.toList());
     Assert.assertEquals(expectedStringIntervals, actualEvent.get(DruidMetrics.INTERVAL));
@@ -90,9 +90,9 @@ public class DefaultSearchQueryMetricsTest
   {
     SearchQuery query = Druids
         .newSearchQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryRunnerTestHelper.dayGran)
-        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.DAY_GRAN)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .build();
 
     CachingEmitter cachingEmitter = new CachingEmitter();
