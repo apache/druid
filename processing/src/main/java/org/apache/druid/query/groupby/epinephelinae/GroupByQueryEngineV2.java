@@ -52,7 +52,6 @@ import org.apache.druid.query.groupby.epinephelinae.column.NullableValueGroupByC
 import org.apache.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
-import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -551,7 +550,9 @@ public class GroupByQueryEngineV2
     protected Grouper<ByteBuffer> newGrouper()
     {
       Grouper grouper = null;
-      final DefaultLimitSpec limitSpec = query.isApplyLimitPushDown() ? (DefaultLimitSpec) query.getLimitSpec() : null;
+      final DefaultLimitSpec limitSpec = query.isApplyLimitPushDown() &&
+                                         querySpecificConfig.isApplyLimitPushDownToSegment() ?
+                                         (DefaultLimitSpec) query.getLimitSpec() : null;
       if (limitSpec != null) {
         LimitedBufferHashGrouper limitGrouper = new LimitedBufferHashGrouper<>(
             Suppliers.ofInstance(buffer),
