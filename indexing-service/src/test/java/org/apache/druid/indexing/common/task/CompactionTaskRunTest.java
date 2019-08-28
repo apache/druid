@@ -121,7 +121,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
   }
 
-  private static final RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory(new RetryPolicyConfig());
+  private static final RetryPolicyFactory RETRY_POLICY_FACTORY = new RetryPolicyFactory(new RetryPolicyConfig());
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
   private final CoordinatorClient coordinatorClient;
   private final SegmentLoaderFactory segmentLoaderFactory;
@@ -171,7 +171,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory,
+        RETRY_POLICY_FACTORY,
         appenderatorsManager
     );
 
@@ -215,7 +215,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory,
+        RETRY_POLICY_FACTORY,
         appenderatorsManager
     );
 
@@ -291,7 +291,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory,
+        RETRY_POLICY_FACTORY,
         appenderatorsManager
     );
 
@@ -388,7 +388,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory,
+        RETRY_POLICY_FACTORY,
         appenderatorsManager
     );
 
@@ -441,7 +441,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory,
+        RETRY_POLICY_FACTORY,
         appenderatorsManager
     );
 
@@ -488,7 +488,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory,
+        RETRY_POLICY_FACTORY,
         appenderatorsManager
     );
 
@@ -546,7 +546,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory,
+        RETRY_POLICY_FACTORY,
         appenderatorsManager
     );
 
@@ -722,7 +722,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         null,
         null,
         null,
-        new NoopTestTaskReportFileWriter()
+        new NoopTestTaskReportFileWriter(),
+        null
     );
 
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);

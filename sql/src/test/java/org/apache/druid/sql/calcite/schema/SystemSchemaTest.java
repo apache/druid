@@ -466,7 +466,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final SystemSchema.TasksTable tasksTable = (SystemSchema.TasksTable) schema.getTableMap().get("tasks");
     final RelDataType sysRowType = tasksTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> sysFields = sysRowType.getFieldList();
-    Assert.assertEquals(13, sysFields.size());
+    Assert.assertEquals(14, sysFields.size());
 
     Assert.assertEquals("task_id", sysFields.get(0).getName());
     Assert.assertEquals(SqlTypeName.VARCHAR, sysFields.get(0).getType().getSqlTypeName());
@@ -1012,6 +1012,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     String json = "[{\n"
                   + "\t\"id\": \"index_wikipedia_2018-09-20T22:33:44.911Z\",\n"
+                  + "\t\"groupId\": \"group_index_wikipedia_2018-09-20T22:33:44.911Z\",\n"
                   + "\t\"type\": \"index\",\n"
                   + "\t\"createdTime\": \"2018-09-20T22:33:44.922Z\",\n"
                   + "\t\"queueInsertionTime\": \"1970-01-01T00:00:00.000Z\",\n"
@@ -1027,6 +1028,7 @@ public class SystemSchemaTest extends CalciteTestBase
                   + "\t\"errorMsg\": null\n"
                   + "}, {\n"
                   + "\t\"id\": \"index_wikipedia_2018-09-21T18:38:47.773Z\",\n"
+                  + "\t\"groupId\": \"group_index_wikipedia_2018-09-21T18:38:47.773Z\",\n"
                   + "\t\"type\": \"index\",\n"
                   + "\t\"createdTime\": \"2018-09-21T18:38:47.873Z\",\n"
                   + "\t\"queueInsertionTime\": \"2018-09-21T18:38:47.910Z\",\n"
@@ -1077,17 +1079,35 @@ public class SystemSchemaTest extends CalciteTestBase
 
     Object[] row0 = rows.get(0);
     Assert.assertEquals("index_wikipedia_2018-09-20T22:33:44.911Z", row0[0].toString());
-    Assert.assertEquals("FAILED", row0[5].toString());
-    Assert.assertEquals("NONE", row0[6].toString());
-    Assert.assertEquals(-1L, row0[7]);
-    Assert.assertEquals("testHost:1234", row0[8]);
+    Assert.assertEquals("group_index_wikipedia_2018-09-20T22:33:44.911Z", row0[1].toString());
+    Assert.assertEquals("index", row0[2].toString());
+    Assert.assertEquals("wikipedia", row0[3].toString());
+    Assert.assertEquals("2018-09-20T22:33:44.922Z", row0[4].toString());
+    Assert.assertEquals("1970-01-01T00:00:00.000Z", row0[5].toString());
+    Assert.assertEquals("FAILED", row0[6].toString());
+    Assert.assertEquals("NONE", row0[7].toString());
+    Assert.assertEquals(-1L, row0[8]);
+    Assert.assertEquals("testHost:1234", row0[9]);
+    Assert.assertEquals("testHost", row0[10]);
+    Assert.assertEquals(1234L, row0[11]);
+    Assert.assertEquals(-1L, row0[12]);
+    Assert.assertEquals(null, row0[13]);
 
     Object[] row1 = rows.get(1);
     Assert.assertEquals("index_wikipedia_2018-09-21T18:38:47.773Z", row1[0].toString());
-    Assert.assertEquals("RUNNING", row1[5].toString());
+    Assert.assertEquals("group_index_wikipedia_2018-09-21T18:38:47.773Z", row1[1].toString());
+    Assert.assertEquals("index", row1[2].toString());
+    Assert.assertEquals("wikipedia", row1[3].toString());
+    Assert.assertEquals("2018-09-21T18:38:47.873Z", row1[4].toString());
+    Assert.assertEquals("2018-09-21T18:38:47.910Z", row1[5].toString());
     Assert.assertEquals("RUNNING", row1[6].toString());
-    Assert.assertEquals(0L, row1[7]);
-    Assert.assertEquals("192.168.1.6:8100", row1[8]);
+    Assert.assertEquals("RUNNING", row1[7].toString());
+    Assert.assertEquals(0L, row1[8]);
+    Assert.assertEquals("192.168.1.6:8100", row1[9]);
+    Assert.assertEquals("192.168.1.6", row1[10]);
+    Assert.assertEquals(8100L, row1[11]);
+    Assert.assertEquals(-1L, row1[12]);
+    Assert.assertEquals(null, row1[13]);
 
     // Verify value types.
     verifyTypes(rows, SystemSchema.TASKS_SIGNATURE);

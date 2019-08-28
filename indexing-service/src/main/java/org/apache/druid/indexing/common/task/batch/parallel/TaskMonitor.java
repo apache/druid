@@ -136,7 +136,7 @@ public class TaskMonitor<T extends Task>
                       log.warn("task[%s] failed!", taskId);
                       if (monitorEntry.numTries() < maxRetry) {
                         log.info(
-                            "We still have chances[%d/%d] to complete for spec[%s].",
+                            "We still have more chances[%d/%d] to process the spec[%s].",
                             monitorEntry.numTries(),
                             maxRetry,
                             monitorEntry.spec.getId()
@@ -181,33 +181,41 @@ public class TaskMonitor<T extends Task>
   public void stop()
   {
     synchronized (startStopLock) {
-      running = false;
-      taskStatusChecker.shutdownNow();
-
-      if (numRunningTasks > 0) {
-        final Iterator<MonitorEntry> iterator = runningTasks.values().iterator();
-        while (iterator.hasNext()) {
-          final MonitorEntry entry = iterator.next();
-          iterator.remove();
-          final String taskId = entry.runningTask.getId();
-          log.info("Request to kill subtask[%s]", taskId);
-          indexingServiceClient.cancelTask(taskId);
-          numRunningTasks--;
-          numKilledTasks++;
-        }
+      if (running) {
+        running = false;
+        taskStatusChecker.shutdownNow();
 
         if (numRunningTasks > 0) {
-          log.warn(
-              "Inconsistent state: numRunningTasks[%d] is still not zero after trying to kill all running tasks.",
-              numRunningTasks
-          );
-        }
-      }
+          final Iterator<MonitorEntry> iterator = runningTasks.values().iterator();
+          while (iterator.hasNext()) {
+            final MonitorEntry entry = iterator.next();
+            iterator.remove();
+            final String taskId = entry.runningTask.getId();
+            log.info("Request to kill subtask[%s]", taskId);
+            indexingServiceClient.cancelTask(taskId);
+            numRunningTasks--;
+            numKilledTasks++;
+          }
 
-      log.info("Stopped taskMonitor");
+          if (numRunningTasks > 0) {
+            log.warn(
+                "Inconsistent state: numRunningTasks[%d] is still not zero after trying to kill all running tasks.",
+                numRunningTasks
+            );
+          }
+        }
+
+        log.info("Stopped taskMonitor");
+      }
     }
   }
 
+  /**
+   * Submits a {@link SubTaskSpec} to process to this TaskMonitor. TaskMonitor can issue one or more tasks to process
+   * the given spec. The returned future is done when
+   * 1) a sub task successfully processed the given spec or
+   * 2) the last sub task for the spec failed after all retries were exhausted.
+   */
   public ListenableFuture<SubTaskCompleteEvent<T>> submit(SubTaskSpec<T> spec)
   {
     synchronized (startStopLock) {

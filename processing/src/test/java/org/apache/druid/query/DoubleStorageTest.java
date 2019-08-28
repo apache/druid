@@ -85,13 +85,13 @@ public class DoubleStorageTest
       QueryRunnerTestHelper.NOOP_QUERYWATCHER
   );
 
-  private static final ScanQueryQueryToolChest scanQueryQueryToolChest = new ScanQueryQueryToolChest(
+  private static final ScanQueryQueryToolChest SCAN_QUERY_QUERY_TOOL_CHEST = new ScanQueryQueryToolChest(
       new ScanQueryConfig(),
       DefaultGenericQueryMetricsFactory.instance()
   );
 
   private static final ScanQueryRunnerFactory SCAN_QUERY_RUNNER_FACTORY = new ScanQueryRunnerFactory(
-      scanQueryQueryToolChest,
+      SCAN_QUERY_QUERY_TOOL_CHEST,
       new ScanQueryEngine(),
       new ScanQueryConfig()
   );
@@ -99,9 +99,9 @@ public class DoubleStorageTest
   private Druids.ScanQueryBuilder newTestQuery()
   {
     return Druids.newScanQueryBuilder()
-                 .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
+                 .dataSource(new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE))
                  .columns(Collections.emptyList())
-                 .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+                 .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                  .limit(Integer.MAX_VALUE)
                  .legacy(false);
   }

@@ -35,7 +35,7 @@ import java.util.Arrays;
 @RunWith(Parameterized.class)
 public class TimeseriesQueryTest
 {
-  private static final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+  private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
   @Parameterized.Parameters(name = "descending={0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -54,16 +54,16 @@ public class TimeseriesQueryTest
   public void testQuerySerialization() throws IOException
   {
     Query query = Druids.newTimeseriesQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryRunnerTestHelper.dayGran)
-        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-        .aggregators(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.indexDoubleSum)
-        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.DAY_GRAN)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .aggregators(QueryRunnerTestHelper.ROWS_COUNT, QueryRunnerTestHelper.INDEX_DOUBLE_SUM)
+        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .descending(descending)
         .build();
 
-    String json = jsonMapper.writeValueAsString(query);
-    Query serdeQuery = jsonMapper.readValue(json, Query.class);
+    String json = JSON_MAPPER.writeValueAsString(query);
+    Query serdeQuery = JSON_MAPPER.readValue(json, Query.class);
 
     Assert.assertEquals(query, serdeQuery);
   }

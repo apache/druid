@@ -32,7 +32,7 @@ import java.nio.channels.WritableByteChannel;
  */
 public class EntireLayoutColumnarLongsSerializer implements ColumnarLongsSerializer
 {
-  private static final MetaSerdeHelper<EntireLayoutColumnarLongsSerializer> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<EntireLayoutColumnarLongsSerializer> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((EntireLayoutColumnarLongsSerializer x) -> CompressedColumnarLongsSupplier.VERSION)
       .writeInt(x -> x.numInserted)
       .writeInt(x -> 0)
@@ -77,14 +77,14 @@ public class EntireLayoutColumnarLongsSerializer implements ColumnarLongsSeriali
   public long getSerializedSize() throws IOException
   {
     writer.flush();
-    return metaSerdeHelper.size(this) + valuesOut.size();
+    return META_SERDE_HELPER.size(this) + valuesOut.size();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     writer.flush();
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     valuesOut.writeTo(channel);
   }
 }

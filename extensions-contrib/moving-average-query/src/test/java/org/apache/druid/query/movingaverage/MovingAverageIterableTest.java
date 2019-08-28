@@ -60,22 +60,22 @@ public class MovingAverageIterableTest
   private static final String AGE = "age";
   private static final String COUNTRY = "country";
 
-  private static final Map<String, Object> dims1 = new HashMap<>();
-  private static final Map<String, Object> dims2 = new HashMap<>();
-  private static final Map<String, Object> dims3 = new HashMap<>();
+  private static final Map<String, Object> DIMS1 = new HashMap<>();
+  private static final Map<String, Object> DIMS2 = new HashMap<>();
+  private static final Map<String, Object> DIMS3 = new HashMap<>();
 
   static {
-    dims1.put(GENDER, "m");
-    dims1.put(AGE, "10");
-    dims1.put(COUNTRY, "US");
+    DIMS1.put(GENDER, "m");
+    DIMS1.put(AGE, "10");
+    DIMS1.put(COUNTRY, "US");
 
-    dims2.put(GENDER, "f");
-    dims2.put(AGE, "8");
-    dims2.put(COUNTRY, "US");
+    DIMS2.put(GENDER, "f");
+    DIMS2.put(AGE, "8");
+    DIMS2.put(COUNTRY, "US");
 
-    dims3.put(GENDER, "u");
-    dims3.put(AGE, "5");
-    dims3.put(COUNTRY, "UK");
+    DIMS3.put(GENDER, "u");
+    DIMS3.put(AGE, "5");
+    DIMS3.put(COUNTRY, "UK");
   }
 
   @Test
@@ -90,16 +90,16 @@ public class MovingAverageIterableTest
 
     Sequence<RowBucket> dayBuckets = Sequences.simple(Arrays.asList(
         new RowBucket(JAN_1, Arrays.asList(
-            new MapBasedRow(JAN_1, dims1),
-            new MapBasedRow(JAN_1, dims2)
+            new MapBasedRow(JAN_1, DIMS1),
+            new MapBasedRow(JAN_1, DIMS2)
         )),
         new RowBucket(JAN_2, Collections.singletonList(
-            new MapBasedRow(JAN_2, dims1)
+            new MapBasedRow(JAN_2, DIMS1)
         )),
         new RowBucket(JAN_3, Collections.emptyList()),
         new RowBucket(JAN_4, Arrays.asList(
-            new MapBasedRow(JAN_4, dims2),
-            new MapBasedRow(JAN_4, dims3)
+            new MapBasedRow(JAN_4, DIMS2),
+            new MapBasedRow(JAN_4, DIMS3)
         ))
     ));
 

@@ -207,10 +207,10 @@ public class CardinalityAggregatorTest
     combine(values1, values2): 8 distinct rows
     combine(values1, values2): 7 distinct values
    */
-  private static final List<String[]> values1 = dimensionValues(
+  private static final List<String[]> VALUES1 = dimensionValues(
       "a", "b", "c", "a", "a", null, "b", "b", "b", "b", "a", "a"
   );
-  private static final List<String[]> values2 = dimensionValues(
+  private static final List<String[]> VALUES2 = dimensionValues(
       "a",
       "b",
       "c",
@@ -290,8 +290,8 @@ public class CardinalityAggregatorTest
 
   public CardinalityAggregatorTest()
   {
-    dim1 = new TestDimensionSelector(values1, null);
-    dim2 = new TestDimensionSelector(values2, null);
+    dim1 = new TestDimensionSelector(VALUES1, null);
+    dim2 = new TestDimensionSelector(VALUES2, null);
 
     dimInfoList = Lists.newArrayList(
         new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
@@ -342,8 +342,8 @@ public class CardinalityAggregatorTest
 
     String superJsFn = "function(str) { return 'super-' + str; }";
     ExtractionFn superFn = new JavaScriptExtractionFn(superJsFn, false, JavaScriptConfig.getEnabledInstance());
-    dim1WithExtraction = new TestDimensionSelector(values1, superFn);
-    dim2WithExtraction = new TestDimensionSelector(values2, superFn);
+    dim1WithExtraction = new TestDimensionSelector(VALUES1, superFn);
+    dim2WithExtraction = new TestDimensionSelector(VALUES2, superFn);
     selectorListWithExtraction = Lists.newArrayList(dim1WithExtraction, dim2WithExtraction);
     dimInfoListWithExtraction = Lists.newArrayList(
         new ColumnSelectorPlus<>(
@@ -360,8 +360,8 @@ public class CardinalityAggregatorTest
 
     String helloJsFn = "function(str) { return 'hello' }";
     ExtractionFn helloFn = new JavaScriptExtractionFn(helloJsFn, false, JavaScriptConfig.getEnabledInstance());
-    dim1ConstantVal = new TestDimensionSelector(values1, helloFn);
-    dim2ConstantVal = new TestDimensionSelector(values2, helloFn);
+    dim1ConstantVal = new TestDimensionSelector(VALUES1, helloFn);
+    dim2ConstantVal = new TestDimensionSelector(VALUES2, helloFn);
     selectorListConstantVal = Lists.newArrayList(dim1ConstantVal, dim2ConstantVal);
     dimInfoListConstantVal = Lists.newArrayList(
         new ColumnSelectorPlus<>(
@@ -387,7 +387,7 @@ public class CardinalityAggregatorTest
     );
 
 
-    for (int i = 0; i < values1.size(); ++i) {
+    for (int i = 0; i < VALUES1.size(); ++i) {
       aggregate(selectorList, agg);
     }
     Assert.assertEquals(9.0, (Double) rowAggregatorFactory.finalizeComputation(agg.get()), 0.05);
@@ -402,7 +402,7 @@ public class CardinalityAggregatorTest
         false
     );
 
-    for (int i = 0; i < values1.size(); ++i) {
+    for (int i = 0; i < VALUES1.size(); ++i) {
       aggregate(selectorList, agg);
     }
     Assert.assertEquals(NullHandling.replaceWithDefault() ? 7.0 : 6.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get()), 0.05);
@@ -424,7 +424,7 @@ public class CardinalityAggregatorTest
 
     agg.init(buf, pos);
 
-    for (int i = 0; i < values1.size(); ++i) {
+    for (int i = 0; i < VALUES1.size(); ++i) {
       bufferAggregate(selectorList, agg, buf, pos);
     }
     Assert.assertEquals(9.0, (Double) rowAggregatorFactory.finalizeComputation(agg.get(buf, pos)), 0.05);
@@ -446,7 +446,7 @@ public class CardinalityAggregatorTest
 
     agg.init(buf, pos);
 
-    for (int i = 0; i < values1.size(); ++i) {
+    for (int i = 0; i < VALUES1.size(); ++i) {
       bufferAggregate(selectorList, agg, buf, pos);
     }
     Assert.assertEquals(NullHandling.replaceWithDefault() ? 7.0 : 6.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos)), 0.05);
@@ -476,10 +476,10 @@ public class CardinalityAggregatorTest
     CardinalityAggregator agg1 = new CardinalityAggregator(dimInfo1, true);
     CardinalityAggregator agg2 = new CardinalityAggregator(dimInfo2, true);
 
-    for (int i = 0; i < values1.size(); ++i) {
+    for (int i = 0; i < VALUES1.size(); ++i) {
       aggregate(selector1, agg1);
     }
-    for (int i = 0; i < values2.size(); ++i) {
+    for (int i = 0; i < VALUES2.size(); ++i) {
       aggregate(selector2, agg2);
     }
 
@@ -522,10 +522,10 @@ public class CardinalityAggregatorTest
     CardinalityAggregator agg1 = new CardinalityAggregator(dimInfo1, false);
     CardinalityAggregator agg2 = new CardinalityAggregator(dimInfo2, false);
 
-    for (int i = 0; i < values1.size(); ++i) {
+    for (int i = 0; i < VALUES1.size(); ++i) {
       aggregate(selector1, agg1);
     }
-    for (int i = 0; i < values2.size(); ++i) {
+    for (int i = 0; i < VALUES2.size(); ++i) {
       aggregate(selector2, agg2);
     }
 
@@ -551,7 +551,7 @@ public class CardinalityAggregatorTest
         dimInfoListWithExtraction,
         true
     );
-    for (int i = 0; i < values1.size(); ++i) {
+    for (int i = 0; i < VALUES1.size(); ++i) {
       aggregate(selectorListWithExtraction, agg);
     }
     Assert.assertEquals(9.0, (Double) rowAggregatorFactory.finalizeComputation(agg.get()), 0.05);
@@ -560,7 +560,7 @@ public class CardinalityAggregatorTest
         dimInfoListConstantVal,
         true
     );
-    for (int i = 0; i < values1.size(); ++i) {
+    for (int i = 0; i < VALUES1.size(); ++i) {
       aggregate(selectorListConstantVal, agg2);
     }
     Assert.assertEquals(3.0, (Double) rowAggregatorFactory.finalizeComputation(agg2.get()), 0.05);
@@ -573,7 +573,7 @@ public class CardinalityAggregatorTest
         dimInfoListWithExtraction,
         false
     );
-    for (int i = 0; i < values1.size(); ++i) {
+    for (int i = 0; i < VALUES1.size(); ++i) {
       aggregate(selectorListWithExtraction, agg);
     }
     Assert.assertEquals(7.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get()), 0.05);
@@ -582,7 +582,7 @@ public class CardinalityAggregatorTest
         dimInfoListConstantVal,
         false
     );
-    for (int i = 0; i < values1.size(); ++i) {
+    for (int i = 0; i < VALUES1.size(); ++i) {
       aggregate(selectorListConstantVal, agg2);
     }
     Assert.assertEquals(1.0, (Double) valueAggregatorFactory.finalizeComputation(agg2.get()), 0.05);

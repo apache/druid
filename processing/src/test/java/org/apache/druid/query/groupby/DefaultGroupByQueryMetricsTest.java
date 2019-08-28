@@ -56,7 +56,7 @@ public class DefaultGroupByQueryMetricsTest
     DefaultGroupByQueryMetrics queryMetrics = new DefaultGroupByQueryMetrics(TestHelper.makeJsonMapper());
     GroupByQuery.Builder builder = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setInterval("2011-04-02/2011-04-04").setDimensions(new ExtractionDimensionSpec(
             "quality",
             "alias",
@@ -67,7 +67,7 @@ public class DefaultGroupByQueryMetricsTest
                 true,
                 false
             )
-        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        )).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
         .setContext(ImmutableMap.of("bySegment", true));
@@ -81,7 +81,7 @@ public class DefaultGroupByQueryMetricsTest
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
     Assert.assertEquals("", actualEvent.get("host"));
     Assert.assertEquals("", actualEvent.get("service"));
-    Assert.assertEquals(QueryRunnerTestHelper.dataSource, actualEvent.get(DruidMetrics.DATASOURCE));
+    Assert.assertEquals(QueryRunnerTestHelper.DATA_SOURCE, actualEvent.get(DruidMetrics.DATASOURCE));
     Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
     Interval expectedInterval = Intervals.of("2011-04-02/2011-04-04");
     Assert.assertEquals(Collections.singletonList(expectedInterval.toString()), actualEvent.get(DruidMetrics.INTERVAL));

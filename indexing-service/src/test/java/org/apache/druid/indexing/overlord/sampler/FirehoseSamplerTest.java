@@ -71,7 +71,7 @@ public class FirehoseSamplerTest
     MAP, STR_JSON, STR_CSV
   }
 
-  private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+  private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final boolean USE_DEFAULT_VALUE_FOR_NULL = Boolean.valueOf(System.getProperty(
       NullHandling.NULL_HANDLING_CONFIG_STRING,
       "true"
@@ -130,7 +130,7 @@ public class FirehoseSamplerTest
   public void setupTest()
   {
     samplerCache = new SamplerCache(MapCache.create(100000));
-    firehoseSampler = new FirehoseSampler(objectMapper, samplerCache);
+    firehoseSampler = new FirehoseSampler(OBJECT_MAPPER, samplerCache);
   }
 
   @Test
@@ -216,7 +216,7 @@ public class FirehoseSamplerTest
     FirehoseFactory firehoseFactory = getFirehoseFactory(getTestRows());
 
     ParseSpec parseSpec = getParseSpec(new TimestampSpec(null, null, DateTimes.of("1970")), new DimensionsSpec(null));
-    DataSchema dataSchema = new DataSchema("sampler", getParser(parseSpec), null, null, null, objectMapper);
+    DataSchema dataSchema = new DataSchema("sampler", getParser(parseSpec), null, null, null, OBJECT_MAPPER);
 
     SamplerResponse response = firehoseSampler.sample(firehoseFactory, dataSchema, null);
 
@@ -270,7 +270,7 @@ public class FirehoseSamplerTest
     FirehoseFactory firehoseFactory = getFirehoseFactory(getTestRows());
 
     ParseSpec parseSpec = getParseSpec(new TimestampSpec("t", null, null), new DimensionsSpec(null));
-    DataSchema dataSchema = new DataSchema("sampler", getParser(parseSpec), null, null, null, objectMapper);
+    DataSchema dataSchema = new DataSchema("sampler", getParser(parseSpec), null, null, null, OBJECT_MAPPER);
 
     SamplerResponse response = firehoseSampler.sample(firehoseFactory, dataSchema, null);
 
@@ -330,7 +330,7 @@ public class FirehoseSamplerTest
             StringDimensionSchema.create("met1")
         ))
     );
-    DataSchema dataSchema = new DataSchema("sampler", getParser(parseSpec), null, null, null, objectMapper);
+    DataSchema dataSchema = new DataSchema("sampler", getParser(parseSpec), null, null, null, OBJECT_MAPPER);
 
     SamplerResponse response = firehoseSampler.sample(firehoseFactory, dataSchema, null);
 
@@ -392,7 +392,7 @@ public class FirehoseSamplerTest
         aggregatorFactories,
         granularitySpec,
         null,
-        objectMapper
+        OBJECT_MAPPER
     );
 
     SamplerResponse response = firehoseSampler.sample(firehoseFactory, dataSchema, null);
@@ -455,7 +455,7 @@ public class FirehoseSamplerTest
         aggregatorFactories,
         granularitySpec,
         null,
-        objectMapper
+        OBJECT_MAPPER
     );
 
     SamplerResponse response = firehoseSampler.sample(firehoseFactory, dataSchema, null);
@@ -509,7 +509,7 @@ public class FirehoseSamplerTest
         aggregatorFactories,
         granularitySpec,
         null,
-        objectMapper
+        OBJECT_MAPPER
     );
 
     SamplerResponse response = firehoseSampler.sample(firehoseFactory, dataSchema, null);
@@ -557,7 +557,7 @@ public class FirehoseSamplerTest
         aggregatorFactories,
         granularitySpec,
         null,
-        objectMapper
+        OBJECT_MAPPER
     );
 
     SamplerResponse response = firehoseSampler.sample(firehoseFactory, dataSchema, null);
@@ -615,7 +615,7 @@ public class FirehoseSamplerTest
         aggregatorFactories,
         granularitySpec,
         transformSpec,
-        objectMapper
+        OBJECT_MAPPER
     );
 
     SamplerResponse response = firehoseSampler.sample(firehoseFactory, dataSchema, null);
@@ -680,7 +680,7 @@ public class FirehoseSamplerTest
         aggregatorFactories,
         granularitySpec,
         transformSpec,
-        objectMapper
+        OBJECT_MAPPER
     );
 
     SamplerResponse response = firehoseSampler.sample(firehoseFactory, dataSchema, null);
@@ -729,7 +729,7 @@ public class FirehoseSamplerTest
         aggregatorFactories,
         granularitySpec,
         transformSpec,
-        objectMapper
+        OBJECT_MAPPER
     );
 
     SamplerResponse response = firehoseSampler.sample(firehoseFactory, dataSchema, null);
@@ -762,7 +762,7 @@ public class FirehoseSamplerTest
 
   private Map<String, Object> getParser(ParseSpec parseSpec)
   {
-    return objectMapper.convertValue(
+    return OBJECT_MAPPER.convertValue(
         ParserType.MAP.equals(parserType)
         ? new MapInputRowParser(parseSpec)
         : new StringInputRowParser(parseSpec, StandardCharsets.UTF_8.name()),

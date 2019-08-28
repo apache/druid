@@ -34,7 +34,9 @@ public class ClientCompactionTaskQueryTuningConfig
   @Nullable
   private final Integer maxRowsInMemory;
   @Nullable
-  private final Integer maxTotalRows;
+  private final Long maxBytesInMemory;
+  @Nullable
+  private final Long maxTotalRows;
   @Nullable
   private final IndexSpec indexSpec;
   @Nullable
@@ -50,9 +52,12 @@ public class ClientCompactionTaskQueryTuningConfig
     return new ClientCompactionTaskQueryTuningConfig(
         maxRowsPerSegment,
         userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getMaxRowsInMemory(),
+        userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getMaxBytesInMemory(),
         userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getMaxTotalRows(),
         userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getIndexSpec(),
-        userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getMaxPendingPersists(),
+        userCompactionTaskQueryTuningConfig == null
+        ? null
+        : userCompactionTaskQueryTuningConfig.getMaxPendingPersists(),
         userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getPushTimeout()
     );
   }
@@ -61,7 +66,8 @@ public class ClientCompactionTaskQueryTuningConfig
   public ClientCompactionTaskQueryTuningConfig(
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
-      @JsonProperty("maxTotalRows") @Nullable Integer maxTotalRows,
+      @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
+      @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
       @JsonProperty("pushTimeout") @Nullable Long pushTimeout
@@ -69,6 +75,7 @@ public class ClientCompactionTaskQueryTuningConfig
   {
     this.maxRowsPerSegment = maxRowsPerSegment;
     this.maxRowsInMemory = maxRowsInMemory;
+    this.maxBytesInMemory = maxBytesInMemory;
     this.maxTotalRows = maxTotalRows;
     this.indexSpec = indexSpec;
     this.maxPendingPersists = maxPendingPersists;
@@ -97,7 +104,14 @@ public class ClientCompactionTaskQueryTuningConfig
 
   @JsonProperty
   @Nullable
-  public Integer getMaxTotalRows()
+  public Long getMaxBytesInMemory()
+  {
+    return maxBytesInMemory;
+  }
+
+  @JsonProperty
+  @Nullable
+  public Long getMaxTotalRows()
   {
     return maxTotalRows;
   }
@@ -134,6 +148,7 @@ public class ClientCompactionTaskQueryTuningConfig
     }
     ClientCompactionTaskQueryTuningConfig that = (ClientCompactionTaskQueryTuningConfig) o;
     return Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&
+           Objects.equals(maxBytesInMemory, that.maxBytesInMemory) &&
            Objects.equals(maxRowsInMemory, that.maxRowsInMemory) &&
            Objects.equals(maxTotalRows, that.maxTotalRows) &&
            Objects.equals(indexSpec, that.indexSpec) &&
@@ -144,15 +159,24 @@ public class ClientCompactionTaskQueryTuningConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(maxRowsPerSegment, maxRowsInMemory, maxTotalRows, indexSpec, maxPendingPersists, pushTimeout);
+    return Objects.hash(
+        maxRowsPerSegment,
+        maxBytesInMemory,
+        maxRowsInMemory,
+        maxTotalRows,
+        indexSpec,
+        maxPendingPersists,
+        pushTimeout
+    );
   }
 
   @Override
   public String toString()
   {
-    return getClass().getSimpleName() + "{" +
+    return "ClientCompactQueryTuningConfig{" +
            "maxRowsPerSegment=" + maxRowsPerSegment +
            ", maxRowsInMemory=" + maxRowsInMemory +
+           ", maxBytesInMemory=" + maxBytesInMemory +
            ", maxTotalRows=" + maxTotalRows +
            ", indexSpec=" + indexSpec +
            ", maxPendingPersists=" + maxPendingPersists +

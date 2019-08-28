@@ -1106,7 +1106,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               <TableColumnSelector
                 columns={supervisorTableColumns}
                 onChange={column =>
-                  this.setState({ hiddenSupervisorColumns: hiddenSupervisorColumns.toggle(column) })
+                  this.setState(prevState => ({
+                    hiddenSupervisorColumns: prevState.hiddenSupervisorColumns.toggle(column),
+                  }))
                 }
                 tableColumnsHidden={hiddenSupervisorColumns.storedArray}
               />
@@ -1153,7 +1155,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               <TableColumnSelector
                 columns={taskTableColumns}
                 onChange={column =>
-                  this.setState({ hiddenTaskColumns: hiddenTaskColumns.toggle(column) })
+                  this.setState(prevState => ({
+                    hiddenTaskColumns: prevState.hiddenTaskColumns.toggle(column),
+                  }))
                 }
                 tableColumnsHidden={hiddenTaskColumns.storedArray}
               />

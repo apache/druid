@@ -67,7 +67,7 @@ $(document).ready(function() {
           ret.push(100*(currSizes[i]/maxSizes[i]));
         }
       }
-      
+
       return ret;
     }());
     var avg = serverTable.getColTotal('Server percentUsed') / serverTable.getNumRows();
@@ -75,7 +75,7 @@ $(document).ready(function() {
       $('#avg_server_metric').html('Average Server Percent Used: ' + avg + '%');
     }else{
       $('.loading').html('Server is still starting...Please try after few minutes.');
-      $('.loading').show()
+      $('.loading').show();
     }
     serverTable.toHTMLTable($('#servers'));
     segmentTable.toHTMLTable($('#segments'));
@@ -132,7 +132,7 @@ $(document).ready(function() {
     if ($.isEmptyObject(CONSOLE.selected_segments)) {
       alert("Please select at least one segment");
     }
-    for (seg in CONSOLE.selected_segments) {
+    for (var seg in CONSOLE.selected_segments) {
       data.push({
         'segmentName' : seg,
         'from' : CONSOLE.selected_segments[seg].children('.server_host').text(),
@@ -145,7 +145,7 @@ $(document).ready(function() {
 
   $.get('/druid/coordinator/v1/servers?full', function(data) {
     $('.loading').hide();
-    
+
     initTables(data);
 
     var oTable = [];

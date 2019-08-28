@@ -567,10 +567,7 @@ public class KafkaIndexTaskTest
             Objects.hash(
                 DATA_SCHEMA.getDataSource(),
                 0,
-                new KafkaDataSourceMetadata(startPartitions),
-                new KafkaDataSourceMetadata(
-                    new SeekableStreamEndSequenceNumbers<>(topic, currentOffsets)
-                )
+                new KafkaDataSourceMetadata(startPartitions)
             )
         )
     );
@@ -700,10 +697,7 @@ public class KafkaIndexTaskTest
             Objects.hash(
                 DATA_SCHEMA.getDataSource(),
                 0,
-                new KafkaDataSourceMetadata(startPartitions),
-                new KafkaDataSourceMetadata(
-                    new SeekableStreamEndSequenceNumbers<>(topic, currentOffsets)
-                )
+                new KafkaDataSourceMetadata(startPartitions)
             )
         )
     );
@@ -714,8 +708,7 @@ public class KafkaIndexTaskTest
                 0,
                 new KafkaDataSourceMetadata(
                     new SeekableStreamStartSequenceNumbers<>(topic, currentOffsets, ImmutableSet.of())
-                ),
-                new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, nextOffsets))
+                )
             )
         )
     );
@@ -820,10 +813,7 @@ public class KafkaIndexTaskTest
             Objects.hash(
                 DATA_SCHEMA.getDataSource(),
                 0,
-                new KafkaDataSourceMetadata(startPartitions),
-                new KafkaDataSourceMetadata(
-                    new SeekableStreamEndSequenceNumbers<>(topic, checkpoint.getPartitionSequenceNumberMap())
-                )
+                new KafkaDataSourceMetadata(startPartitions)
             )
         )
     );
@@ -2653,8 +2643,7 @@ public class KafkaIndexTaskTest
               String supervisorId,
               @Nullable Integer taskGroupId,
               String baseSequenceName,
-              @Nullable DataSourceMetadata previousDataSourceMetadata,
-              @Nullable DataSourceMetadata currentDataSourceMetadata
+              @Nullable DataSourceMetadata previousDataSourceMetadata
           )
           {
             log.info("Adding checkpoint hash to the set");
@@ -2662,8 +2651,7 @@ public class KafkaIndexTaskTest
                 Objects.hash(
                     supervisorId,
                     taskGroupId,
-                    previousDataSourceMetadata,
-                    currentDataSourceMetadata
+                    previousDataSourceMetadata
                 )
             );
             return true;
@@ -2733,7 +2721,8 @@ public class KafkaIndexTaskTest
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0),
-        new SingleFileTaskReportFileWriter(reportsFile)
+        new SingleFileTaskReportFileWriter(reportsFile),
+        null
     );
   }
 

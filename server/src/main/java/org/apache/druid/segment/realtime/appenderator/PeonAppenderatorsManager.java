@@ -131,7 +131,7 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
   }
 
   @Override
-  public void removeAppenderatorForTask(String taskId)
+  public void removeAppenderatorsForTask(String taskId, String dataSource)
   {
     // the peon only runs one task, and the process will shutdown later, don't need to do anything
   }

@@ -32,13 +32,14 @@ public class UserCompactionTaskQueryTuningConfig extends ClientCompactionTaskQue
   @JsonCreator
   public UserCompactionTaskQueryTuningConfig(
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
-      @JsonProperty("maxTotalRows") @Nullable Integer maxTotalRows,
+      @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
+      @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
       @JsonProperty("pushTimeout") @Nullable Long pushTimeout
   )
   {
-    super(null, maxRowsInMemory, maxTotalRows, indexSpec, maxPendingPersists, pushTimeout);
+    super(null, maxRowsInMemory, maxBytesInMemory, maxTotalRows, indexSpec, maxPendingPersists, pushTimeout);
   }
 
   @Override

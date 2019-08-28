@@ -48,7 +48,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
   private final List<PostAggregator> postAggs;
   private final PriorityQueue<DimValHolder> pQueue;
   private final String[] aggFactoryNames;
-  private static final Comparator<Comparable> dimValueComparator = new Comparator<Comparable>()
+  private static final Comparator<Comparable> DIM_VALUE_COMPARATOR = new Comparator<Comparable>()
   {
     @Override
     public int compare(Comparable o1, Comparable o2)
@@ -96,7 +96,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
       int retVal = metricComparator.compare(d1.getTopNMetricVal(), d2.getTopNMetricVal());
 
       if (retVal == 0) {
-        retVal = dimValueComparator.compare(d1.getDimValue(), d2.getDimValue());
+        retVal = DIM_VALUE_COMPARATOR.compare(d1.getDimValue(), d2.getDimValue());
       }
 
       return retVal;
@@ -228,7 +228,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
           int retVal = metricComparator.compare(d2.getTopNMetricVal(), d1.getTopNMetricVal());
 
           if (retVal == 0) {
-            retVal = dimValueComparator.compare(d1.getDimValue(), d2.getDimValue());
+            retVal = DIM_VALUE_COMPARATOR.compare(d1.getDimValue(), d2.getDimValue());
           }
 
           return retVal;

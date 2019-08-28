@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
-import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
@@ -55,13 +54,23 @@ public class DoubleSumAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
-  protected BaseDoubleColumnValueSelector selector(ColumnSelectorFactory metricFactory)
+  protected double nullValue()
   {
-    return getDoubleColumnSelector(
-        metricFactory,
-        0.0d
-    );
+    return 0.0d;
   }
+
+  @Override
+  protected Aggregator buildAggregator(BaseDoubleColumnValueSelector selector)
+  {
+    return new DoubleSumAggregator(selector);
+  }
+
+  @Override
+  protected BufferAggregator buildBufferAggregator(BaseDoubleColumnValueSelector selector)
+  {
+    return new DoubleSumBufferAggregator(selector);
+  }
+
 
   @Override
   protected VectorValueSelector vectorSelector(VectorColumnSelectorFactory columnSelectorFactory)
@@ -70,24 +79,9 @@ public class DoubleSumAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
-  protected Aggregator factorize(ColumnSelectorFactory metricFactory, BaseDoubleColumnValueSelector selector)
-  {
-    return new DoubleSumAggregator(selector);
-  }
-
-  @Override
   public boolean canVectorize()
   {
     return expression == null;
-  }
-
-  @Override
-  protected BufferAggregator factorizeBuffered(
-      ColumnSelectorFactory metricFactory,
-      BaseDoubleColumnValueSelector selector
-  )
-  {
-    return new DoubleSumBufferAggregator(selector);
   }
 
   @Override

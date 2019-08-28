@@ -21,7 +21,6 @@ package org.apache.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
@@ -205,8 +204,7 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
     }
   }
 
-  @VisibleForTesting
-  URLConnection openURLConnection(URI object) throws IOException
+  private URLConnection openURLConnection(URI object) throws IOException
   {
     URLConnection urlConnection = object.toURL().openConnection();
     if (!Strings.isNullOrEmpty(httpAuthenticationUsername) && httpAuthenticationPasswordProvider != null) {

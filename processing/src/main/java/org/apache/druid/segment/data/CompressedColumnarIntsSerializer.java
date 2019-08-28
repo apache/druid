@@ -38,7 +38,7 @@ public class CompressedColumnarIntsSerializer extends SingleValueColumnarIntsSer
 {
   private static final byte VERSION = CompressedColumnarIntsSupplier.VERSION;
 
-  private static final MetaSerdeHelper<CompressedColumnarIntsSerializer> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<CompressedColumnarIntsSerializer> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((CompressedColumnarIntsSerializer x) -> VERSION)
       .writeInt(x -> x.numInserted)
       .writeInt(x -> x.chunkFactor)
@@ -116,14 +116,14 @@ public class CompressedColumnarIntsSerializer extends SingleValueColumnarIntsSer
   public long getSerializedSize() throws IOException
   {
     writeEndBuffer();
-    return metaSerdeHelper.size(this) + flattener.getSerializedSize();
+    return META_SERDE_HELPER.size(this) + flattener.getSerializedSize();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     writeEndBuffer();
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     flattener.writeTo(channel, smoosher);
   }
 

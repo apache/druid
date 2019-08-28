@@ -46,7 +46,7 @@ import java.util.stream.IntStream;
 /**
  * Allocates all necessary segments locally at the beginning and reuse them.
  */
-class CachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
+public class CachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
 {
   private final TaskToolbox toolbox;
   private final String taskId;
@@ -58,7 +58,7 @@ class CachingLocalSegmentAllocator implements IndexTaskSegmentAllocator
   // sequenceName -> segmentId
   private final Map<String, SegmentIdWithShardSpec> sequenceNameToSegmentId;
 
-  CachingLocalSegmentAllocator(
+  public CachingLocalSegmentAllocator(
       TaskToolbox toolbox,
       String taskId,
       String dataSource,

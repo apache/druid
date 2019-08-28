@@ -27,6 +27,14 @@ describe('column tree', () => {
   it('matches snapshot', () => {
     const columnTree = (
       <ColumnTree
+        currentFilters={() => []}
+        queryAst={() => undefined}
+        hasGroupBy={() => false}
+        clear={() => null}
+        addFunctionToGroupBy={() => null}
+        filterByRow={() => null}
+        addAggregateColumn={() => null}
+        addToGroupBy={() => null}
         columnMetadataLoading={false}
         columnMetadata={
           [
@@ -51,6 +59,7 @@ describe('column tree', () => {
           ] as ColumnMetadata[]
         }
         onQueryStringChange={() => {}}
+        replaceFrom={() => null}
       />
     );
 

@@ -30,6 +30,8 @@ import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 
+import java.io.IOException;
+
 public class Plumbers
 {
   private static final Logger log = new Logger(Plumbers.class);
@@ -45,7 +47,7 @@ public class Plumbers
       final Plumber plumber,
       final boolean reportParseExceptions,
       final FireDepartmentMetrics metrics
-  )
+  ) throws IOException
   {
     final InputRow inputRow;
     try {

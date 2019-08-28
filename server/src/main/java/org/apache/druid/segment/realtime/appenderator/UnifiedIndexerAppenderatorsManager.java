@@ -20,11 +20,13 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -33,6 +35,7 @@ import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -59,18 +62,24 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 
 /**
  * Manages {@link Appenderator} instances for the CliIndexer task execution service, which runs all tasks in
  * a single process.
  *
- * This class keeps two maps:
+ * This class keeps a map of {@link DatasourceBundle} objects, keyed by datasource name. Each bundle contains:
  * - A per-datasource {@link SinkQuerySegmentWalker} (with an associated per-datasource timeline)
- * - A map that associates a taskId with the Appenderator created for that task
+ * - A map that associates a taskId with a list of Appenderators created for that task
+ *
+ * Access to the datasource bundle map and the task->appenderator maps is synchronized. The methods
+ * on this class can be called concurrently from multiple task threads. If there are no remaining
+ * appenderators for a given datasource, the corresponding bundle will be removed from the bundle map.
  *
  * Appenderators created by this class will use the shared per-datasource SinkQuerySegmentWalkers.
  *
@@ -78,6 +87,7 @@ import java.util.concurrent.ExecutorService;
  *
  * Each task that requests an Appenderator from this AppenderatorsManager will receive a heap memory limit
  * equal to {@link WorkerConfig#globalIngestionHeapLimitBytes} evenly divided by {@link WorkerConfig#capacity}.
+ * This assumes that each task will only ingest to one Appenderator simultaneously.
  *
  * The Appenderators created by this class share an executor pool for {@link IndexMerger} persist
  * and merge operations, with concurrent operations limited to `druid.worker.capacity` divided 2. This limit is imposed
@@ -85,13 +95,18 @@ import java.util.concurrent.ExecutorService;
  */
 public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
 {
-  private final ConcurrentHashMap<String, SinkQuerySegmentWalker> datasourceSegmentWalkers = new ConcurrentHashMap<>();
+  private final Logger LOG = new Logger(UnifiedIndexerAppenderatorsManager.class);
+
+  private final Map<String, DatasourceBundle> datasourceBundles = new HashMap<>();
 
   private final ExecutorService queryExecutorService;
   private final WorkerConfig workerConfig;
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
+  private final ObjectMapper objectMapper;
+  private final ServiceEmitter serviceEmitter;
+  private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
 
   private ListeningExecutorService mergeExecutor;
 
@@ -101,7 +116,10 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       WorkerConfig workerConfig,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      ObjectMapper objectMapper,
+      ServiceEmitter serviceEmitter,
+      Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider
   )
   {
     this.queryExecutorService = queryExecutorService;
@@ -109,6 +127,9 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     this.cache = cache;
     this.cacheConfig = cacheConfig;
     this.cachePopulatorStats = cachePopulatorStats;
+    this.objectMapper = objectMapper;
+    this.serviceEmitter = serviceEmitter;
+    this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
 
     this.mergeExecutor = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(workerConfig.getNumConcurrentMerges(), "unified-indexer-merge-pool-%d")
@@ -134,41 +155,28 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       CachePopulatorStats cachePopulatorStats
   )
   {
-    SinkQuerySegmentWalker segmentWalker = datasourceSegmentWalkers.computeIfAbsent(
-        schema.getDataSource(),
-        (datasource) -> {
-          VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<>(
-              String.CASE_INSENSITIVE_ORDER
-          );
-          SinkQuerySegmentWalker datasourceSegmentWalker = new SinkQuerySegmentWalker(
-              schema.getDataSource(),
-              sinkTimeline,
-              objectMapper,
-              emitter,
-              conglomerate,
-              this.queryExecutorService,
-              Preconditions.checkNotNull(this.cache, "cache"),
-              this.cacheConfig,
-              this.cachePopulatorStats
-          );
-          return datasourceSegmentWalker;
-        }
-    );
+    synchronized (this) {
+      DatasourceBundle datasourceBundle = datasourceBundles.computeIfAbsent(
+          schema.getDataSource(),
+          DatasourceBundle::new
+      );
 
-    Appenderator appenderator = new AppenderatorImpl(
-        schema,
-        rewriteAppenderatorConfigMemoryLimits(config),
-        metrics,
-        dataSegmentPusher,
-        objectMapper,
-        segmentAnnouncer,
-        segmentWalker,
-        indexIO,
-        wrapIndexMerger(indexMerger),
-        cache
-    );
+      Appenderator appenderator = new AppenderatorImpl(
+          schema,
+          rewriteAppenderatorConfigMemoryLimits(config),
+          metrics,
+          dataSegmentPusher,
+          objectMapper,
+          segmentAnnouncer,
+          datasourceBundle.getWalker(),
+          indexIO,
+          wrapIndexMerger(indexMerger),
+          cache
+      );
 
-    return appenderator;
+      datasourceBundle.addAppenderator(taskId, appenderator);
+      return appenderator;
+    }
   }
 
   @Override
@@ -183,22 +191,48 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger
   )
   {
-    Appenderator appenderator = Appenderators.createOffline(
-        schema,
-        rewriteAppenderatorConfigMemoryLimits(config),
-        metrics,
-        dataSegmentPusher,
-        objectMapper,
-        indexIO,
-        wrapIndexMerger(indexMerger)
-    );
-    return appenderator;
+    synchronized (this) {
+      DatasourceBundle datasourceBundle = datasourceBundles.computeIfAbsent(
+          schema.getDataSource(),
+          (datasource) -> {
+            return new DatasourceBundle(datasource);
+          }
+      );
+
+      Appenderator appenderator = Appenderators.createOffline(
+          schema,
+          rewriteAppenderatorConfigMemoryLimits(config),
+          metrics,
+          dataSegmentPusher,
+          objectMapper,
+          indexIO,
+          wrapIndexMerger(indexMerger)
+      );
+      datasourceBundle.addAppenderator(taskId, appenderator);
+      return appenderator;
+    }
   }
 
   @Override
-  public void removeAppenderatorForTask(String taskId)
+  public void removeAppenderatorsForTask(
+      String taskId,
+      String dataSource
+  )
   {
-    // nothing to remove presently
+    synchronized (this) {
+      DatasourceBundle datasourceBundle = datasourceBundles.get(dataSource);
+      if (datasourceBundle == null) {
+        LOG.error("Could not find datasource bundle for [%s], task [%s]", dataSource, taskId);
+      } else {
+        List<Appenderator> existingAppenderators = datasourceBundle.taskAppenderatorMap.remove(taskId);
+        if (existingAppenderators == null) {
+          LOG.error("Tried to remove appenderators for task [%s] but none were found.", taskId);
+        }
+        if (datasourceBundle.taskAppenderatorMap.isEmpty()) {
+          datasourceBundles.remove(dataSource);
+        }
+      }
+    }
   }
 
   @Override
@@ -207,11 +241,14 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       Iterable<Interval> intervals
   )
   {
-    SinkQuerySegmentWalker segmentWalker = datasourceSegmentWalkers.get(query.getDataSource().toString());
-    if (segmentWalker == null) {
-      throw new IAE("Could not find segment walker for datasource [%s]", query.getDataSource().toString());
+    DatasourceBundle datasourceBundle;
+    synchronized (this) {
+      datasourceBundle = datasourceBundles.get(query.getDataSource().toString());
+      if (datasourceBundle == null) {
+        throw new IAE("Could not find segment walker for datasource [%s]", query.getDataSource().toString());
+      }
     }
-    return segmentWalker.getQueryRunnerForIntervals(query, intervals);
+    return datasourceBundle.getWalker().getQueryRunnerForIntervals(query, intervals);
   }
 
   @Override
@@ -220,11 +257,14 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       Iterable<SegmentDescriptor> specs
   )
   {
-    SinkQuerySegmentWalker segmentWalker = datasourceSegmentWalkers.get(query.getDataSource().toString());
-    if (segmentWalker == null) {
-      throw new IAE("Could not find segment walker for datasource [%s]", query.getDataSource().toString());
+    DatasourceBundle datasourceBundle;
+    synchronized (this) {
+      datasourceBundle = datasourceBundles.get(query.getDataSource().toString());
+      if (datasourceBundle == null) {
+        throw new IAE("Could not find segment walker for datasource [%s]", query.getDataSource().toString());
+      }
     }
-    return segmentWalker.getQueryRunnerForSegments(query, specs);
+    return datasourceBundle.getWalker().getQueryRunnerForSegments(query, specs);
   }
 
   @Override
@@ -242,10 +282,60 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     }
   }
 
+  @VisibleForTesting
+  public Map<String, DatasourceBundle> getDatasourceBundles()
+  {
+    return datasourceBundles;
+  }
+
   private AppenderatorConfig rewriteAppenderatorConfigMemoryLimits(AppenderatorConfig baseConfig)
   {
     long perWorkerLimit = workerConfig.getGlobalIngestionHeapLimitBytes() / workerConfig.getCapacity();
     return new MemoryParameterOverridingAppenderatorConfig(baseConfig, perWorkerLimit);
+  }
+
+  @VisibleForTesting
+  public class DatasourceBundle
+  {
+    private final SinkQuerySegmentWalker walker;
+    private final Map<String, List<Appenderator>> taskAppenderatorMap;
+
+    public DatasourceBundle(
+        String dataSource
+    )
+    {
+      this.taskAppenderatorMap = new HashMap<>();
+
+      VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<>(
+          String.CASE_INSENSITIVE_ORDER
+      );
+      this.walker = new SinkQuerySegmentWalker(
+          dataSource,
+          sinkTimeline,
+          objectMapper,
+          serviceEmitter,
+          queryRunnerFactoryConglomerateProvider.get(),
+          queryExecutorService,
+          Preconditions.checkNotNull(cache, "cache"),
+          cacheConfig,
+          cachePopulatorStats
+      );
+    }
+
+    public SinkQuerySegmentWalker getWalker()
+    {
+      return walker;
+    }
+
+    public void addAppenderator(String taskId, Appenderator appenderator)
+    {
+      taskAppenderatorMap.computeIfAbsent(
+          taskId,
+          (myTaskId) -> {
+            return new ArrayList<>();
+          }
+      ).add(appenderator);
+    }
   }
 
   /**
@@ -329,6 +419,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     public File getBasePersistDirectory()
     {
       return baseConfig.getBasePersistDirectory();
+    }
+
+    @Override
+    public AppenderatorConfig withBasePersistDirectory(File basePersistDirectory)
+    {
+      return this;
     }
 
     @Nullable

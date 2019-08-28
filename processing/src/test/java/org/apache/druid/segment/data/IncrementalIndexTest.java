@@ -99,12 +99,12 @@ public class IncrementalIndexTest
     IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories);
   }
 
-  private static final Closer resourceCloser = Closer.create();
+  private static final Closer RESOURCE_CLOSER = Closer.create();
 
   @AfterClass
   public static void teardown() throws IOException
   {
-    resourceCloser.close();
+    RESOURCE_CLOSER.close();
   }
 
   private final IndexCreator indexCreator;
@@ -126,7 +126,7 @@ public class IncrementalIndexTest
         "OffheapIncrementalIndex-bufferPool",
         () -> ByteBuffer.allocate(256 * 1024)
     );
-    resourceCloser.register(pool1);
+    RESOURCE_CLOSER.register(pool1);
     params.add(
         new Object[] {
             (IndexCreator) factories -> new Builder()
@@ -140,7 +140,7 @@ public class IncrementalIndexTest
         "OffheapIncrementalIndex-bufferPool",
         () -> ByteBuffer.allocate(256 * 1024)
     );
-    resourceCloser.register(pool2);
+    RESOURCE_CLOSER.register(pool2);
     params.add(
         new Object[] {
             (IndexCreator) factories -> new Builder()
@@ -160,7 +160,7 @@ public class IncrementalIndexTest
 
   public static AggregatorFactory[] getDefaultCombiningAggregatorFactories()
   {
-    return defaultCombiningAggregatorFactories;
+    return DEFAULT_COMBINING_AGGREGATOR_FACTORIES;
   }
 
   public static IncrementalIndex createIndex(
@@ -169,7 +169,7 @@ public class IncrementalIndexTest
   )
   {
     if (null == aggregatorFactories) {
-      aggregatorFactories = defaultAggregatorFactories;
+      aggregatorFactories = DEFAULT_AGGREGATOR_FACTORIES;
     }
 
     return new IncrementalIndex.Builder()
@@ -186,7 +186,7 @@ public class IncrementalIndexTest
   public static IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories)
   {
     if (null == aggregatorFactories) {
-      aggregatorFactories = defaultAggregatorFactories;
+      aggregatorFactories = DEFAULT_AGGREGATOR_FACTORIES;
     }
 
     return new IncrementalIndex.Builder()
@@ -198,7 +198,7 @@ public class IncrementalIndexTest
   public static IncrementalIndex createNoRollupIndex(AggregatorFactory[] aggregatorFactories)
   {
     if (null == aggregatorFactories) {
-      aggregatorFactories = defaultAggregatorFactories;
+      aggregatorFactories = DEFAULT_AGGREGATOR_FACTORIES;
     }
 
     return new IncrementalIndex.Builder()
@@ -250,21 +250,21 @@ public class IncrementalIndexTest
     return new MapBasedInputRow(timestamp, dimensionList, builder.build());
   }
 
-  private static final AggregatorFactory[] defaultAggregatorFactories = new AggregatorFactory[]{
+  private static final AggregatorFactory[] DEFAULT_AGGREGATOR_FACTORIES = new AggregatorFactory[]{
       new CountAggregatorFactory(
           "count"
       )
   };
 
-  private static final AggregatorFactory[] defaultCombiningAggregatorFactories = new AggregatorFactory[]{
-      defaultAggregatorFactories[0].getCombiningFactory()
+  private static final AggregatorFactory[] DEFAULT_COMBINING_AGGREGATOR_FACTORIES = new AggregatorFactory[]{
+      DEFAULT_AGGREGATOR_FACTORIES[0].getCombiningFactory()
   };
 
   @Test
   public void testCaseSensitivity() throws Exception
   {
     long timestamp = System.currentTimeMillis();
-    IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex(defaultAggregatorFactories));
+    IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex(DEFAULT_AGGREGATOR_FACTORIES));
 
     populateIndex(timestamp, index);
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensionNames());
@@ -675,7 +675,7 @@ public class IncrementalIndexTest
   @Test
   public void testConcurrentAdd() throws Exception
   {
-    final IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex(defaultAggregatorFactories));
+    final IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex(DEFAULT_AGGREGATOR_FACTORIES));
     final int threadCount = 10;
     final int elementsPerThread = 200;
     final int dimensionCount = 5;

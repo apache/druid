@@ -249,6 +249,7 @@ public class TimestampAggregatorFactory extends AggregatorFactory
     return result;
   }
 
+  @Nullable
   static Long convertLong(TimestampSpec timestampSpec, Object input)
   {
     if (input instanceof Number) {

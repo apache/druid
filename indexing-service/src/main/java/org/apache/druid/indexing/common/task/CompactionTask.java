@@ -112,6 +112,18 @@ import java.util.stream.StreamSupport;
  */
 public class CompactionTask extends AbstractBatchIndexTask
 {
+  /**
+   * The CompactionTask creates and runs multiple IndexTask instances. When the {@link AppenderatorsManager}
+   * is asked to clean up, it does so on a per-task basis keyed by task ID. However, the subtask IDs of the
+   * CompactionTask are not externally visible. This context flag is used to ensure that all the appenderators
+   * created for the CompactionTasks's subtasks are tracked under the ID of the parent CompactionTask.
+   * The CompactionTask may change in the future and no longer require this behavior (e.g., reusing the same
+   * Appenderator across subtasks, or allowing the subtasks to use the same ID). The CompactionTask is also the only
+   * task type that currently creates multiple appenderators. Thus, a context flag is used to handle this case
+   * instead of a more general approach such as new methods on the Task interface.
+   */
+  public static final String CTX_KEY_APPENDERATOR_TRACKING_TASK_ID = "appenderatorTrackingTaskId";
+
   private static final Logger log = new Logger(CompactionTask.class);
   /**
    * Must be synced with {@link
@@ -156,10 +168,18 @@ public class CompactionTask extends AbstractBatchIndexTask
   private final RetryPolicyFactory retryPolicyFactory;
 
   @JsonIgnore
-  private List<IndexTask> indexTaskSpecs;
+  private final AppenderatorsManager appenderatorsManager;
 
   @JsonIgnore
-  private AppenderatorsManager appenderatorsManager;
+  private final CurrentSubTaskHolder currentSubTaskHolder = new CurrentSubTaskHolder(
+      (taskObject, config) -> {
+        final IndexTask indexTask = (IndexTask) taskObject;
+        indexTask.stopGracefully(config);
+      }
+  );
+
+  @JsonIgnore
+  private List<IndexTask> indexTaskSpecs;
 
   @JsonCreator
   public CompactionTask(
@@ -299,7 +319,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox) throws Exception
+  public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
     if (indexTaskSpecs == null) {
       final List<IndexIngestionSpec> ingestionSpecs = createIngestionSchema(
@@ -322,7 +342,7 @@ public class CompactionTask extends AbstractBatchIndexTask
               getTaskResource(),
               getDataSource(),
               ingestionSpecs.get(i),
-              getContext(),
+              createContextForSubtask(),
               authorizerMapper,
               chatHandlerProvider,
               rowIngestionMetersFactory,
@@ -336,16 +356,20 @@ public class CompactionTask extends AbstractBatchIndexTask
       log.warn("Interval[%s] has no segments, nothing to do.", interval);
       return TaskStatus.failure(getId());
     } else {
+      registerResourceCloserOnAbnormalExit(currentSubTaskHolder);
       final int totalNumSpecs = indexTaskSpecs.size();
       log.info("Generated [%d] compaction task specs", totalNumSpecs);
 
       int failCnt = 0;
       for (IndexTask eachSpec : indexTaskSpecs) {
         final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
-        log.info("Running indexSpec: " + json);
-
+        if (!currentSubTaskHolder.setTask(eachSpec)) {
+          log.info("Task is asked to stop. Finish as failed.");
+          return TaskStatus.failure(getId());
+        }
         try {
           if (eachSpec.isReady(toolbox.getTaskActionClient())) {
+            log.info("Running indexSpec: " + json);
             final TaskStatus eachResult = eachSpec.run(toolbox);
             if (!eachResult.isSuccess()) {
               failCnt++;
@@ -365,6 +389,13 @@ public class CompactionTask extends AbstractBatchIndexTask
       log.info("Run [%d] specs, [%d] succeeded, [%d] failed", totalNumSpecs, totalNumSpecs - failCnt, failCnt);
       return failCnt == 0 ? TaskStatus.success(getId()) : TaskStatus.failure(getId());
     }
+  }
+
+  private Map<String, Object> createContextForSubtask()
+  {
+    final Map<String, Object> newContext = new HashMap<>(getContext());
+    newContext.put(CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, getId());
+    return newContext;
   }
 
   private String createIndexTaskSpecId(int i)

@@ -128,13 +128,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @JsonIgnore
   private String errorMsg;
 
-  @JsonIgnore
-  private Thread runThread;
-
-  @JsonIgnore
-  private boolean stopped = false;
-
-
   /**
    * @param spec is used by the HadoopDruidIndexerJob to set up the appropriate parameters
    *             for creating Druid index segments. It may be modified.
@@ -264,22 +257,24 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     return classpathPrefix;
   }
 
-  public String getHadoopJobIdFileName()
+  private String getHadoopJobIdFileName()
   {
-    return new File(taskConfig.getTaskDir(getId()), HADOOP_JOB_ID_FILENAME).getAbsolutePath();
+    return getHadoopJobIdFile().getAbsolutePath();
+  }
+
+  private boolean hadoopJobIdFileExists()
+  {
+    return getHadoopJobIdFile().exists();
+  }
+
+  private File getHadoopJobIdFile()
+  {
+    return new File(taskConfig.getTaskDir(getId()), HADOOP_JOB_ID_FILENAME);
   }
 
   @Override
-  public TaskStatus run(TaskToolbox toolbox)
+  public TaskStatus runTask(TaskToolbox toolbox)
   {
-    synchronized (this) {
-      if (stopped) {
-        return TaskStatus.failure(getId());
-      } else {
-        runThread = Thread.currentThread();
-      }
-    }
-
     try {
       taskConfig = toolbox.getConfig();
       if (chatHandlerProvider.isPresent()) {
@@ -319,6 +314,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @SuppressWarnings("unchecked")
   private TaskStatus runInternal(TaskToolbox toolbox) throws Exception
   {
+    registerResourceCloserOnAbnormalExit(config -> killHadoopJob());
     String hadoopJobIdFile = getHadoopJobIdFileName();
     final ClassLoader loader = buildClassLoader(toolbox);
     boolean determineIntervals = !spec.getDataSchema().getGranularitySpec().bucketIntervals().isPresent();
@@ -475,33 +471,25 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     }
   }
 
-  @Override
-  public void stopGracefully(TaskConfig taskConfig)
+  private void killHadoopJob()
   {
-    synchronized (this) {
-      stopped = true;
-      if (runThread == null) {
-        // didn't actually start, just return
-        return;
-      }
-    }
     // To avoid issue of kill command once the ingestion task is actually completed
-    if (!ingestionState.equals(IngestionState.COMPLETED)) {
+    if (hadoopJobIdFileExists() && !ingestionState.equals(IngestionState.COMPLETED)) {
       final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
       String hadoopJobIdFile = getHadoopJobIdFileName();
 
       try {
-        ClassLoader loader = HadoopTask.buildClassLoader(getHadoopDependencyCoordinates(),
-            taskConfig.getDefaultHadoopCoordinates());
+        ClassLoader loader = HadoopTask.buildClassLoader(
+            getHadoopDependencyCoordinates(),
+            taskConfig.getDefaultHadoopCoordinates()
+        );
 
         Object killMRJobInnerProcessingRunner = getForeignClassloaderObject(
             "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopKillMRJobIdProcessingRunner",
             loader
         );
 
-        String[] buildKillJobInput = new String[]{
-            hadoopJobIdFile
-        };
+        String[] buildKillJobInput = new String[]{hadoopJobIdFile};
 
         Class<?> buildKillJobRunnerClass = killMRJobInnerProcessingRunner.getClass();
         Method innerProcessingRunTask = buildKillJobRunnerClass.getMethod("runTask", buildKillJobInput.getClass());
@@ -519,7 +507,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       }
       finally {
         Thread.currentThread().setContextClassLoader(oldLoader);
-        runThread.interrupt();
       }
     }
   }
@@ -716,7 +703,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       // can be injected based on the configuration given in config.getSchema().getIOConfig().getMetadataUpdateSpec()
       final MetadataStorageUpdaterJobHandler maybeHandler;
       if (config.isUpdaterJobSpecSet()) {
-        maybeHandler = injector.getInstance(MetadataStorageUpdaterJobHandler.class);
+        maybeHandler = INJECTOR.getInstance(MetadataStorageUpdaterJobHandler.class);
       } else {
         maybeHandler = null;
       }

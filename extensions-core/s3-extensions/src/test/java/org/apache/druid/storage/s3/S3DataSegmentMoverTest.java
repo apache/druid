@@ -51,7 +51,7 @@ import java.util.Set;
 
 public class S3DataSegmentMoverTest
 {
-  private static final DataSegment sourceSegment = new DataSegment(
+  private static final DataSegment SOURCE_SEGMENT = new DataSegment(
       "test",
       Intervals.of("2013-01-01/2013-01-02"),
       "1",
@@ -80,7 +80,7 @@ public class S3DataSegmentMoverTest
     );
 
     DataSegment movedSegment = mover.move(
-        sourceSegment,
+        SOURCE_SEGMENT,
         ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
     );
 
@@ -105,7 +105,7 @@ public class S3DataSegmentMoverTest
     );
 
     DataSegment movedSegment = mover.move(
-        sourceSegment,
+        SOURCE_SEGMENT,
         ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
     );
 
@@ -126,7 +126,7 @@ public class S3DataSegmentMoverTest
     S3DataSegmentMover mover = new S3DataSegmentMover(mockS3Client, new S3DataSegmentPusherConfig());
 
     mover.move(
-        sourceSegment,
+        SOURCE_SEGMENT,
         ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
     );
   }

@@ -269,6 +269,7 @@ public class GroupByQueryEngine
       this.max = max - increment; // Make sure there is enough room for one more increment
     }
 
+    @Nullable
     public Integer getNext()
     {
       if (nextVal > max) {

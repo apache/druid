@@ -34,7 +34,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class VarianceAggregatorCollectorTest
 {
-  private static final float[] market_upfront = new float[]{
+  private static final float[] MARKET_UPFRONT = new float[]{
       800.0f, 800.0f, 826.0602f, 1564.6177f, 1006.4021f, 869.64374f, 809.04175f, 1458.4027f, 852.4375f, 879.9881f,
       950.1468f, 712.7746f, 846.2675f, 682.8855f, 1109.875f, 594.3817f, 870.1159f, 677.511f, 1410.2781f, 1219.4321f,
       979.306f, 1224.5016f, 1215.5898f, 716.6092f, 1301.0233f, 786.3633f, 989.9315f, 1609.0967f, 1023.2952f, 1367.6381f,
@@ -57,7 +57,7 @@ public class VarianceAggregatorCollectorTest
       989.0328f, 744.7446f, 1166.4012f, 753.105f, 962.7312f, 780.272f
   };
 
-  private static final float[] market_total_market = new float[]{
+  private static final float[] MARKET_TOTAL_MARKET = new float[]{
       1000.0f, 1000.0f, 1040.9456f, 1689.0128f, 1049.142f, 1073.4766f, 1007.36554f, 1545.7089f, 1016.9652f, 1077.6127f,
       1075.0896f, 953.9954f, 1022.7833f, 937.06195f, 1156.7448f, 849.8775f, 1066.208f, 904.34064f, 1240.5255f,
       1343.2325f, 1088.9431f, 1349.2544f, 1102.8667f, 939.2441f, 1109.8754f, 997.99457f, 1037.4495f, 1686.4197f,
@@ -85,7 +85,7 @@ public class VarianceAggregatorCollectorTest
   public void testVariance()
   {
     Random random = ThreadLocalRandom.current();
-    for (float[] values : Arrays.asList(market_upfront, market_total_market)) {
+    for (float[] values : Arrays.asList(MARKET_UPFRONT, MARKET_TOTAL_MARKET)) {
       double sum = 0;
       for (float f : values) {
         sum += f;

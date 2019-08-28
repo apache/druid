@@ -150,7 +150,7 @@ public abstract class ResponseContext
      */
     NUM_SCANNED_ROWS(
         "count",
-            (oldValue, newValue) -> (long) oldValue + (long) newValue
+            (oldValue, newValue) -> ((Number) oldValue).longValue() + ((Number) newValue).longValue()
     ),
     /**
      * The total CPU time for threads related to Sequence processing of the query.
@@ -159,7 +159,7 @@ public abstract class ResponseContext
      */
     CPU_CONSUMED_NANOS(
         "cpuConsumed",
-            (oldValue, newValue) -> (long) oldValue + (long) newValue
+            (oldValue, newValue) -> ((Number) oldValue).longValue() + ((Number) newValue).longValue()
     ),
     /**
      * Indicates if a {@link ResponseContext} was truncated during serialization.
@@ -172,7 +172,7 @@ public abstract class ResponseContext
     /**
      * TreeMap is used to have the natural ordering of its keys
      */
-    private static final Map<String, BaseKey> registeredKeys = new TreeMap<>();
+    private static final Map<String, BaseKey> REGISTERED_KEYS = new TreeMap<>();
 
     static {
       for (BaseKey key : values()) {
@@ -187,11 +187,11 @@ public abstract class ResponseContext
     public static synchronized void registerKey(BaseKey key)
     {
       Preconditions.checkArgument(
-          !registeredKeys.containsKey(key.getName()),
+          !REGISTERED_KEYS.containsKey(key.getName()),
           "Key [%s] has already been registered as a context key",
           key.getName()
       );
-      registeredKeys.put(key.getName(), key);
+      REGISTERED_KEYS.put(key.getName(), key);
     }
 
     /**
@@ -201,11 +201,11 @@ public abstract class ResponseContext
     public static BaseKey keyOf(String name)
     {
       Preconditions.checkState(
-          registeredKeys.containsKey(name),
+           REGISTERED_KEYS.containsKey(name),
           "Key [%s] has not yet been registered as a context key",
           name
       );
-      return registeredKeys.get(name);
+      return REGISTERED_KEYS.get(name);
     }
 
     /**
@@ -213,7 +213,7 @@ public abstract class ResponseContext
      */
     public static Collection<BaseKey> getAllRegisteredKeys()
     {
-      return Collections.unmodifiableCollection(registeredKeys.values());
+      return Collections.unmodifiableCollection(REGISTERED_KEYS.values());
     }
 
     private final String name;
@@ -247,7 +247,7 @@ public abstract class ResponseContext
 
   protected abstract Map<BaseKey, Object> getDelegate();
 
-  private static final Comparator<Map.Entry<String, JsonNode>> valueLengthReversedComparator =
+  private static final Comparator<Map.Entry<String, JsonNode>> VALUE_LENGTH_REVERSED_COMPARATOR =
       Comparator.comparing((Map.Entry<String, JsonNode> e) -> e.getValue().toString().length()).reversed();
 
   /**
@@ -341,7 +341,7 @@ public abstract class ResponseContext
       add(Key.TRUNCATED, true);
       final ObjectNode contextJsonNode = objectMapper.valueToTree(getDelegate());
       final ArrayList<Map.Entry<String, JsonNode>> sortedNodesByLength = Lists.newArrayList(contextJsonNode.fields());
-      sortedNodesByLength.sort(valueLengthReversedComparator);
+      sortedNodesByLength.sort(VALUE_LENGTH_REVERSED_COMPARATOR);
       int needToRemoveCharsNumber = fullSerializedString.length() - maxCharsNumber;
       // The complexity of this block is O(n*m*log(m)) where n - context size, m - context's array size
       for (Map.Entry<String, JsonNode> e : sortedNodesByLength) {

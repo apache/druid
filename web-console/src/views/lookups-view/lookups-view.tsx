@@ -138,21 +138,21 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   }
 
   private async openLookupEditDialog(tier: string, id: string) {
-    const { lookups, allLookupTiers } = this.state;
+    const { lookups } = this.state;
     if (!lookups) return;
 
     const target: any = lookups.find((lookupEntry: any) => {
       return lookupEntry.tier === tier && lookupEntry.id === id;
     });
     if (id === '') {
-      this.setState({
+      this.setState(prevState => ({
         lookupEditName: '',
-        lookupEditTier: allLookupTiers[0],
+        lookupEditTier: prevState.allLookupTiers[0],
         lookupEditDialogOpen: true,
         lookupEditSpec: '',
         lookupEditVersion: new Date().toISOString(),
         isEdit: false,
-      });
+      }));
     } else {
       this.setState({
         lookupEditName: id,
@@ -382,7 +382,11 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           )}
           <TableColumnSelector
             columns={tableColumns}
-            onChange={column => this.setState({ hiddenColumns: hiddenColumns.toggle(column) })}
+            onChange={column =>
+              this.setState(prevState => ({
+                hiddenColumns: prevState.hiddenColumns.toggle(column),
+              }))
+            }
             tableColumnsHidden={hiddenColumns.storedArray}
           />
         </ViewControlBar>

@@ -28,6 +28,7 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.joda.time.Interval;
 
@@ -84,6 +85,11 @@ public abstract class AbstractFixedIntervalTask extends AbstractTask
   public Interval getInterval()
   {
     return interval;
+  }
+
+  @Override
+  public void stopGracefully(TaskConfig taskConfig)
+  {
   }
 
   TaskLock getAndCheckLock(TaskToolbox toolbox) throws IOException

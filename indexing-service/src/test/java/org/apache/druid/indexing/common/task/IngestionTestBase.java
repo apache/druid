@@ -304,7 +304,8 @@ public abstract class IngestionTestBase
             null,
             null,
             null,
-            new SingleFileTaskReportFileWriter(taskReportsFile)
+            new SingleFileTaskReportFileWriter(taskReportsFile),
+            null
         );
 
         if (task.isReady(box.getTaskActionClient())) {
