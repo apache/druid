@@ -2,7 +2,7 @@
 
 exports[`data source view matches snapshot 1`] = `
 <div
-  className="data-sources-view app-view"
+  className="datasource-view app-view no-chart"
 >
   <ViewControlBar
     label="Datasources"
@@ -95,7 +95,7 @@ exports[`data source view matches snapshot 1`] = `
     TrComponent={[Function]}
     TrGroupComponent={[Function]}
     aggregatedKey="_aggregated"
-    className="-striped -highlight full-height"
+    className=""
     collapseOnDataChange={true}
     collapseOnPageChange={true}
     collapseOnSortingChange={true}

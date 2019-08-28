@@ -26,9 +26,10 @@ import './query-history-dialog.scss';
 export interface QueryRecord {
   version: string;
   queryString: string;
+  queryContext?: Record<string, any>;
 }
 export interface QueryHistoryDialogProps {
-  setQueryString: (queryString: string) => void;
+  setQueryString: (queryString: string, queryContext: Record<string, any>) => void;
   onClose: () => void;
   queryRecords: readonly QueryRecord[];
 }
@@ -51,9 +52,14 @@ export class QueryHistoryDialog extends React.PureComponent<
   static addQueryToHistory(
     queryHistory: readonly QueryRecord[],
     queryString: string,
+    queryContext: Record<string, any>,
   ): readonly QueryRecord[] {
-    // Do not add to history if already the same as the last element
-    if (queryHistory.length && queryHistory[0].queryString === queryString) {
+    // Do not add to history if already the same as the last element in query and context
+    if (
+      queryHistory.length &&
+      queryHistory[0].queryString === queryString &&
+      JSON.stringify(queryHistory[0].queryContext) === JSON.stringify(queryContext)
+    ) {
       return queryHistory;
     }
 
@@ -61,7 +67,8 @@ export class QueryHistoryDialog extends React.PureComponent<
       {
         version: QueryHistoryDialog.getHistoryVersion(),
         queryString,
-      },
+        queryContext,
+      } as QueryRecord,
     ]
       .concat(queryHistory)
       .slice(0, 10);
@@ -75,10 +82,12 @@ export class QueryHistoryDialog extends React.PureComponent<
   }
 
   private handleSelect = () => {
-    const { queryRecords, setQueryString } = this.props;
+    const { queryRecords, setQueryString, onClose } = this.props;
     const { activeTab } = this.state;
+    const queryRecord = queryRecords[activeTab];
 
-    setQueryString(queryRecords[activeTab].queryString);
+    setQueryString(queryRecord.queryString, queryRecord.queryContext || {});
+    onClose();
   };
 
   private handleTabChange = (tab: number) => {

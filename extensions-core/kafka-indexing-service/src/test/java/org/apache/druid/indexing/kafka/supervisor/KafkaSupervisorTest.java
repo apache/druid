@@ -2053,12 +2053,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     EasyMock.reset(indexerMetadataStorageCoordinator);
     // unknown DataSourceMetadata in metadata store
-    EasyMock.expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE))
-            .andReturn(
-                new KafkaDataSourceMetadata(
-                    new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(1, 100L, 2, 200L))
-                )
-            ).times(4);
+    EasyMock
+        .expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE))
+        .andReturn(
+            new KafkaDataSourceMetadata(
+                new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(1, 100L, 2, 200L))
+            )
+        )
+        .times(4);
     // getOffsetFromStorageForPartition() throws an exception when the offsets are automatically reset.
     // Since getOffsetFromStorageForPartition() is called per partition, all partitions can't be reset at the same time.
     // Instead, subsequent partitions will be reset in the following supervisor runs.

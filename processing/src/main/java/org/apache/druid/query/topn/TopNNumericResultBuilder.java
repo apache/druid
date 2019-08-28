@@ -169,7 +169,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     if (shouldAdd(topNMetricVal)) {
       DimValHolder dimValHolder = new DimValHolder.Builder()
           .withTopNMetricVal(topNMetricVal)
-          .withDimValue(dimValueObj)
+          .withDimValue(dimValueObj, dimSpec.getOutputType())
           .withDimValIndex(dimValIndex)
           .withMetricValues(metricValues)
           .build();
@@ -198,7 +198,10 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     if (shouldAdd(dimValue)) {
       final DimValHolder valHolder = new DimValHolder.Builder()
           .withTopNMetricVal(dimValue)
-          .withDimValue((Comparable) dimensionAndMetricValueExtractor.getDimensionValue(dimSpec.getOutputName()))
+          .withDimValue(
+              (Comparable) dimensionAndMetricValueExtractor.getDimensionValue(dimSpec.getOutputName()),
+              dimSpec.getOutputType()
+          )
           .withMetricValues(dimensionAndMetricValueExtractor.getBaseObject())
           .build();
       pQueue.add(valHolder);

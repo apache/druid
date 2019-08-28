@@ -55,7 +55,7 @@ import org.apache.druid.segment.realtime.RealtimeMetricsMonitor;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
-import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
+import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.joda.time.Interval;
@@ -83,7 +83,7 @@ public class PartialSegmentGenerateTask extends AbstractBatchIndexTask
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
   private final IndexingServiceClient indexingServiceClient;
-  private final IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory;
+  private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory;
   private final AppenderatorsManager appenderatorsManager;
 
   @JsonCreator
@@ -97,7 +97,7 @@ public class PartialSegmentGenerateTask extends AbstractBatchIndexTask
       @JsonProperty("spec") final ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context,
       @JacksonInject IndexingServiceClient indexingServiceClient,
-      @JacksonInject IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory,
+      @JacksonInject IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
       @JacksonInject AppenderatorsManager appenderatorsManager
   )
   {
@@ -212,7 +212,7 @@ public class PartialSegmentGenerateTask extends AbstractBatchIndexTask
     // Firehose temporary directory is automatically removed when this IndexTask completes.
     FileUtils.forceMkdir(firehoseTempDir);
 
-    final ParallelIndexTaskClient taskClient = taskClientFactory.build(
+    final ParallelIndexSupervisorTaskClient taskClient = taskClientFactory.build(
         new ClientBasedTaskInfoProvider(indexingServiceClient),
         getId(),
         1, // always use a single http thread
@@ -301,7 +301,7 @@ public class PartialSegmentGenerateTask extends AbstractBatchIndexTask
           tuningConfig.getMaxParseExceptions(),
           pushTimeout
       );
-      final SegmentsAndMetadata pushed = firehoseProcessor.process(
+      final SegmentsAndCommitMetadata pushed = firehoseProcessor.process(
           dataSchema,
           driver,
           partitionsSpec,

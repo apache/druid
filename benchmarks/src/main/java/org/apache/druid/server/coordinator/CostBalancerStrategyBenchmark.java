@@ -55,12 +55,12 @@ public class CostBalancerStrategyBenchmark
   @Setup
   public void setupDummyCluster()
   {
-    segment = createSegment(t0);
+    segment = createSegment(T0);
 
     Random r = ThreadLocalRandom.current();
     segments = new ArrayList<>(n);
     for (int i = 0; i < n; ++i) {
-      final DateTime t = t0.minusHours(r.nextInt(365 * 24) - 365 * 12);
+      final DateTime t = T0.minusHours(r.nextInt(365 * 24) - 365 * 12);
       segments.add(createSegment(t));
     }
   }

@@ -19,6 +19,9 @@
 
 package org.apache.druid.query.topn;
 
+import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.ValueType;
+
 import java.util.Map;
 
 /**
@@ -84,9 +87,24 @@ public class DimValHolder
       return this;
     }
 
-    public Builder withDimValue(Comparable dimValue)
+    /**
+     * This method is called by {@link TopNResultBuilder#addEntry} to store query results.
+     *
+     * The method accepts a type argument because Jackson will deserialize numbers as integers instead of longs
+     * if they are small enough. Similarly, type mismatch can arise when using floats when Jackson deserializes
+     * numbers as doubles instead.
+     *
+     * This method will ensure that any added dimension value is converted to the expected
+     * type.
+     *
+     * @param dimValue Dimension value from TopNResultBuilder
+     * @param type     Type that dimValue should have, according to the output type of the
+     *                 {@link org.apache.druid.query.dimension.DimensionSpec} associated with dimValue from the
+     *                 calling TopNResultBuilder
+     */
+    public Builder withDimValue(Comparable dimValue, ValueType type)
     {
-      this.dimValue = dimValue;
+      this.dimValue = DimensionHandlerUtils.convertObjectToType(dimValue, type);
       return this;
     }
 

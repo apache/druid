@@ -162,11 +162,12 @@ matrix:
       script: *run_java_sql_compat_test
 
     - name: "web console"
-      script:
-        - ${MVN} test -pl 'web-console'
+      install: skip
+      script: ${MVN} test -pl 'web-console'
 
     - name: "docs"
-      script: cd website && npm install && npm run lint
+      install: (cd website && npm install)
+      script: (cd website && npm run lint)
 
     - name: "batch index integration test"
       services: &integration_test_services

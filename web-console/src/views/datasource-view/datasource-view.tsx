@@ -306,16 +306,6 @@ GROUP BY 1`;
 
   private refresh = (auto: any): void => {
     this.datasourceQueryManager.rerunLastQuery(auto);
-    // this looks ugly, but it forces the chart to re-render when refresh is clicked
-    this.setState(
-      prevState => ({
-        showChart: !prevState.showChart,
-      }),
-      () =>
-        this.setState(prevState => ({
-          showChart: !prevState.showChart,
-        })),
-    );
   };
 
   componentDidMount(): void {
@@ -713,7 +703,6 @@ GROUP BY 1`;
       datasourceFilter,
       showUnused,
       hiddenColumns,
-      showChart,
     } = this.state;
     let data = datasources || [];
     if (!showUnused) {
@@ -956,7 +945,6 @@ GROUP BY 1`;
             },
           ]}
           defaultPageSize={50}
-          className={classNames(`-striped -highlight`, showChart ? '' : 'full-height')}
         />
         {this.renderUnuseAction()}
         {this.renderUseAction()}
@@ -981,7 +969,9 @@ GROUP BY 1`;
     } = this.state;
 
     return (
-      <div className="data-sources-view app-view">
+      <div
+        className={classNames('datasource-view app-view', showChart ? 'show-chart' : 'no-chart')}
+      >
         <ViewControlBar label="Datasources">
           <RefreshButton
             onRefresh={auto => {
