@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { getDruidErrorMessage, parseHtmlError, parseQueryPlan } from './druid-query';
 import {
   getColumnTypeFromHeaderAndRows,
   getDimensionSpecs,
@@ -35,7 +36,6 @@ import {
   sampleForTimestamp,
   sampleForTransform,
 } from './sampler';
-import { getDruidErrorMessage, parseHtmlError, parseQueryPlan } from './druid-query';
 
 describe('test-utils', () => {
   const ingestionSpec = {

@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { getSamplerType } from './sampler';
 import { computeFlattenExprsForData } from './spec-utils';
 
 describe('spec-utils', () => {
@@ -66,8 +67,6 @@ describe('spec-utils', () => {
     });
   });
 });
-
-import { getSamplerType } from './sampler';
 
 describe.skip('test-utils', () => {
   it('spec-utils', () => {

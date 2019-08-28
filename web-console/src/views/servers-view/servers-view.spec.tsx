@@ -29,7 +29,7 @@ describe('servers view', () => {
         onRefresh={() => null}
         label={'label'}
         defaultValue={1000}
-      />
+      />,
     );
     expect(serversView).toMatchSnapshot();
   });
