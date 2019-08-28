@@ -103,7 +103,6 @@ export function headerFromSampleResponse(
   ignoreColumn?: string,
   columnOrder?: string[],
 ): string[] {
-  console.log(JSON.stringify(sampleResponse));
   let columns = sortWithPrefixSuffix(
     dedupe(sampleResponse.data.flatMap(s => (s.parsed ? Object.keys(s.parsed) : []))).sort(),
     columnOrder || ['__time'],

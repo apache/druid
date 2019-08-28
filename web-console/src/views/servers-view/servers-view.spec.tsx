@@ -19,16 +19,16 @@
 import { shallow } from 'enzyme';
 import React from 'react';
 
-import { TimedButton } from '../../components';
+import { ServersView } from './servers-view';
 
 describe('servers view', () => {
   it('action servers view', () => {
     const serversView = shallow(
-      <TimedButton
-        intervals={[{ label: 'timeValue', value: 1000 }]}
-        onRefresh={() => null}
-        label={'label'}
-        defaultValue={1000}
+      <ServersView
+        middleManager={'test'}
+        goToQuery={() => {}}
+        goToTask={() => {}}
+        noSqlMode={false}
       />,
     );
     expect(serversView).toMatchSnapshot();
