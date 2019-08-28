@@ -39,6 +39,14 @@ $ git checkout origin/master
 $ git checkout -b 0.16.0-incubating
 ```
 
+Then push the branch to `origin`. If doing a quarterly release, it will also be necessary to bump the version in master to the next release snapshot:
+
+```
+$ mvn versions:set -DnewVersion=0.17.0-incubating-SNAPSHOT
+```
+
+and open a PR to the master branch. Bug fix releases should already have the correct snapshot version from the previous releases on the branch, so this step is not necessary.
+
 The only additions to the release branch after this branch should be bug fixes, which should be back-ported from the master branch, via a second PR, not with a direct PR to the release branch. Bug fix release branches may be initially populated via cherry-picking, but it is recommended to leave at least 1 commit to do as a backport PR in order to run through CI. (Note that CI is sometimes flaky for older branches).
 
 Once all issues and PRs that are still tagged with the release milestone have been merged, closed, or removed from the milestone, the next step is to put together a release candidate.
