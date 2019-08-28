@@ -442,3 +442,19 @@ Supported query contexts:
 |`maxIntermediateRows`|Can be used to lower the value of `druid.query.groupBy.maxIntermediateRows` for this query.|None|
 |`maxResults`|Can be used to lower the value of `druid.query.groupBy.maxResults` for this query.|None|
 |`useOffheap`|Set to true to store aggregations off-heap when merging results.|false|
+
+##### Array based result rows
+
+Internally Druid always uses an array based representation of groupBy result rows, but by default this is translated
+into a map based result format at the Broker. To reduce the overhead of this translation, results may also be returned
+from the Broker directly in the array based format if `resultAsArray` is set to `true` on the query context.
+
+Each row is positional, and has the following fields, in order:
+
+* Timestamp (optional; only if granularity != ALL)
+* Dimensions (in order)
+* Aggregators (in order)
+* Post-aggregators (optional; in order, if present)
+
+This schema is not available on the response, so it must be computed from the issued query in order to properly read
+the results.
