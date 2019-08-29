@@ -60,8 +60,6 @@ def is_non_empty(dic, key):
 def print_license_phrase(license_phrase):
     remaining = license_phrase
     while len(remaining) > 0:
-        # print("remaining: {}".format(remaining))
-        # print("len: {}".format(len(remaining)))
         if len(remaining) > 120:
             chars_of_200 = remaining[0:120]
             phrase_len = chars_of_200.rfind(" ")
@@ -137,7 +135,6 @@ def print_license_name_underbar(license_name):
     print_outfile("{}\n".format(underbar))
 
 def generate_license(apache_license_v2, license_yaml):
-    # Generate LICENSE.BINARY file
     print_log_to_stderr("=== Generating the contents of LICENSE.BINARY file ===\n")
     
     # Print Apache license first.
