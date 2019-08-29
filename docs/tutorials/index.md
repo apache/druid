@@ -80,9 +80,9 @@ need to download and run Zookeeper.
 In the package root, run the following commands:
 
 ```bash
-curl https://archive.apache.org/dist/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz -o zookeeper-3.4.14.tar.gz
-tar -xzf zookeeper-3.4.14.tar.gz
-mv zookeeper-3.4.14 zk
+curl https://archive.apache.org/dist/zookeeper/zookeeper-3.5.5/apache-zookeeper-3.5.5-bin.tar.gz -o zookeeper-3.5.5-bin.tar.gz
+tar -xzf zookeeper-3.5.5-bin.tar.gz
+mv zookeeper-3.5.5-bin zk
 ```
 
 The startup scripts for the tutorial will expect the contents of the Zookeeper tarball to be located at `zk` under the
