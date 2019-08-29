@@ -37,7 +37,6 @@ import javax.annotation.Nullable;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -198,13 +197,15 @@ public final class CacheScheduler
       }
     }
 
-    public VersionedCache createFromExisitngCache(@Nullable EntryImpl<? extends ExtractionNamespace> entryId,
-                                    String version,
-                                    ConcurrentMap<String, String> newCacheEntries)
+    public VersionedCache createFromExistingCache(
+        @Nullable EntryImpl<? extends ExtractionNamespace> entryId,
+        String version,
+        Map<String, String> newCacheEntries
+    )
     {
       VersionedCache state = (VersionedCache) cacheStateHolder.get();
       state.cacheHandler.getCache().putAll(newCacheEntries);
-      return createVersionedCache(entryId, version, state.cacheHandler.getCache());
+      return createVersionedCache(entryId, version, state.cacheHandler);
     }
 
     private void updateCache()
@@ -242,7 +243,7 @@ public final class CacheScheduler
           CacheState previousCacheState = swapCacheState(newVersionedCache);
           if (previousCacheState != NoCache.ENTRY_CLOSED) {
             updatedCacheSuccessfully = true;
-            if (previousCacheState instanceof VersionedCache) {
+            if (previousCacheState instanceof VersionedCache && !(newVersionedCache).incremental) {
               ((VersionedCache) previousCacheState).close();
             }
             log.debug("%s: the cache was successfully updated", this);
@@ -397,19 +398,14 @@ public final class CacheScheduler
     final String entryId;
     final CacheHandler cacheHandler;
     final String version;
+    boolean incremental;
 
-    private VersionedCache(String entryId, String version)
+    private VersionedCache(String entryId, String version, @Nullable CacheHandler cacheHandler)
     {
       this.entryId = entryId;
-      this.cacheHandler = cacheManager.createCache();
+      this.cacheHandler = (cacheHandler == null) ? cacheManager.createCache() : cacheHandler;
       this.version = version;
-    }
-
-    private VersionedCache(String entryId, String version, ConcurrentMap<String, String> cache)
-    {
-      this.entryId = entryId;
-      this.cacheHandler = cacheManager.createCache(cache);
-      this.version = version;
+      this.incremental = cacheHandler != null;
     }
 
     public Map<String, String> getCache()
@@ -484,18 +480,14 @@ public final class CacheScheduler
    *                created
    * @param version version, associated with the cache
    */
-  public VersionedCache createVersionedCache(@Nullable EntryImpl<? extends ExtractionNamespace> entryId, String version)
+  public VersionedCache createVersionedCache(
+      @Nullable EntryImpl<? extends ExtractionNamespace> entryId,
+      String version,
+      @Nullable CacheHandler cacheHandler
+  )
   {
     updatesStarted.incrementAndGet();
-    return new VersionedCache(String.valueOf(entryId), version);
-  }
-
-  public VersionedCache createVersionedCache(@Nullable EntryImpl<? extends ExtractionNamespace> entryId,
-                                             String version,
-                                             ConcurrentMap<String, String> cache)
-  {
-    updatesStarted.incrementAndGet();
-    return new VersionedCache(String.valueOf(entryId), version, cache);
+    return new VersionedCache(String.valueOf(entryId), version, cacheHandler);
   }
 
   @VisibleForTesting

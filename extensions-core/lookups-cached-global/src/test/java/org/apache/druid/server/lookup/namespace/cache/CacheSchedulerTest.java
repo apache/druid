@@ -147,7 +147,7 @@ public class CacheSchedulerTest
       {
         Thread.sleep(2); // To make absolutely sure there is a unique currentTimeMillis
         String version = Long.toString(System.currentTimeMillis());
-        CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(id, version);
+        CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(id, version, null);
         // Don't actually read off disk because TravisCI doesn't like that
         versionedCache.getCache().put(KEY, VALUE);
         return versionedCache;

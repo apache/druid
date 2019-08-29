@@ -28,12 +28,16 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.namespace.CacheGenerator;
 import org.apache.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
+import org.joda.time.Period;
+import org.joda.time.format.PeriodFormatter;
+import org.joda.time.format.PeriodFormatterBuilder;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 import org.skife.jdbi.v2.util.TimestampMapper;
 
 import javax.annotation.Nullable;
 import java.sql.Timestamp;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -47,6 +51,14 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
   private static final Logger LOG = new Logger(JdbcCacheGenerator.class);
   private final ConcurrentMap<CacheScheduler.EntryImpl<JdbcExtractionNamespace>, DBI> dbiCache =
       new ConcurrentHashMap<>();
+
+  PeriodFormatter formatter = new PeriodFormatterBuilder()
+      .appendDays().appendSuffix(" day, ", " days, ")
+      .appendHours().appendSuffix(" hour, ", " hours, ")
+      .appendMinutes().appendSuffix(" minute, ", " minutes, ")
+      .appendSeconds().appendSuffix(" second", " seconds")
+      .printZeroNever()
+      .toFormatter();
 
   @Override
   @Nullable
@@ -91,24 +103,33 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     try {
       if (doIncrementalLoad) {
         newVersion = StringUtils.format("%d", lastDBUpdate);
-        ConcurrentMap<String, String> newCachedEntries = new ConcurrentHashMap<>();
-        LOG.info(" found %s new incremental entries for %s", pairs.size(), entryId);
+        Map<String, String> newCachedEntries = new HashMap<>();
         for (Pair<String, String> pair : pairs) {
           newCachedEntries.put(pair.lhs, pair.rhs);
         }
-        versionedCache = entryId.createFromExisitngCache(entryId, newVersion, newCachedEntries);
+        versionedCache = entryId.createFromExistingCache(entryId, newVersion, newCachedEntries);
+        LOG.info("Finished loading %d new incremental values in last %s for %s ",
+            newCachedEntries.size(),
+            formatter.print(new Period(lastCheck, lastDBUpdate)),
+            entryId
+        );
         return versionedCache;
       } else {
-        LOG.info("Not doing incremental load since lastDBUpdate: %s, namespace.getTsColumn() %s, lastVersion %s," +
-              " lastCheck %s", lastDBUpdate, namespace.getTsColumn(), lastVersion, lastCheck);
+        LOG.debug("Not doing incremental load because either " +
+                "namespace.getTsColumn() is not set or this is the first load." +
+                " lastDBUpdate: %s, namespace.getTsColumn(): %s, lastVersion: %s",
+            lastDBUpdate,
+            namespace.getTsColumn(),
+            lastVersion);
         if (lastDBUpdate != null) {
-          // for incremental lookups this will set the new version to last db update,
-          // so that during next load we will read all keys that were added after the db update.
+          // Setting newVersion to lastDBUpdate will ensure that during next load
+          // we read the keys that were modified after lastDBUpdate.
+          // See how lastCheck is being set in the beginning of generateCache().
           newVersion = StringUtils.format("%d", lastDBUpdate);
         } else {
           newVersion = StringUtils.format("%d", dbQueryStart);
         }
-        versionedCache = scheduler.createVersionedCache(entryId, newVersion);
+        versionedCache = scheduler.createVersionedCache(entryId, newVersion, null);
         final Map<String, String> cache = versionedCache.getCache();
         for (Pair<String, String> pair : pairs) {
           cache.put(pair.lhs, pair.rhs);
@@ -200,16 +221,13 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
           valueColumn
       );
     }
-
     return StringUtils.format(
-          "SELECT %s, %s FROM %s WHERE %s AND %s >= '%s' AND %s IS NOT NULL",
-          keyColumn,
-          valueColumn,
-          table,
-          filter,
-          tsColumn,
-          new Timestamp(lastLoadTs).toString(),
-          valueColumn
+        "SELECT %s, %s FROM %s WHERE %s%s IS NOT NULL",
+        keyColumn,
+        valueColumn,
+        table,
+        Strings.isNullOrEmpty(filter) ? "" : filter + " AND ",
+        valueColumn
     );
   }
 
