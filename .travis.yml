@@ -82,7 +82,7 @@ jobs:
         # (https://docs.travis-ci.com/user/reference/overview/#virtualisation-environment-vs-operating-system).
         - mkdir -p target
         - distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
-        - distribution/bin/generate-license.py licenses/APACHE2 licenses.yaml LICENSES.BINARY --dependency-reports target/license-reports
+        - distribution/bin/check-licenses.py licenses.yaml target/license-reports
 
     - &compile_strict
       name: "(openjdk8) strict compilation"
