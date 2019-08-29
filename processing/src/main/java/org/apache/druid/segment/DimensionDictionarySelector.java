@@ -47,6 +47,10 @@ public interface DimensionDictionarySelector
    * dimension selector has no dictionary, and avoid storing ids, calling "lookupId", or calling "lookupName"
    * outside of the context of operating on a single row.
    *
+   * If cardinality is known then it is assumed that underlying dictionary is sorted by the encoded value.
+   * For example if there are values "A" , "B" , "C" in a column with cardinality 3 then it is assumed that
+   * id("A) < id("B") < id("C")
+   *
    * @return the value cardinality, or -1 if unknown.
    */
   int getValueCardinality();
