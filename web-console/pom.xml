@@ -28,7 +28,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.16.0-incubating-SNAPSHOT</version>
+    <version>0.17.0-incubating-SNAPSHOT</version>
   </parent>
 
   <properties>
@@ -84,7 +84,7 @@
             </goals>
             <phase>test</phase>
             <configuration>
-              <arguments>test</arguments>
+              <arguments>run test-ci</arguments>
               <workingDirectory>${project.build.directory}</workingDirectory>
             </configuration>
           </execution>
