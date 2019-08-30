@@ -34,12 +34,12 @@ import java.util.Map;
  */
 public class QuerySegmentSpecTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   @Test
   public void testSerializationLegacyString() throws Exception
   {
-    QuerySegmentSpec spec = jsonMapper.readValue(
+    QuerySegmentSpec spec = JSON_MAPPER.readValue(
         "\"2011-10-01/2011-10-10,2011-11-01/2011-11-10\"", QuerySegmentSpec.class
     );
     Assert.assertTrue(spec instanceof LegacySegmentSpec);
@@ -52,7 +52,7 @@ public class QuerySegmentSpecTest
   @Test
   public void testSerializationLegacyArray() throws Exception
   {
-    QuerySegmentSpec spec = jsonMapper.readValue(
+    QuerySegmentSpec spec = JSON_MAPPER.readValue(
         "[\"2011-09-01/2011-10-10\", \"2011-11-01/2011-11-10\"]", QuerySegmentSpec.class
     );
     Assert.assertTrue(spec instanceof LegacySegmentSpec);
@@ -65,7 +65,7 @@ public class QuerySegmentSpecTest
   @Test
   public void testSerializationIntervals() throws Exception
   {
-    QuerySegmentSpec spec = jsonMapper.readValue(
+    QuerySegmentSpec spec = JSON_MAPPER.readValue(
         "{\"type\": \"intervals\", \"intervals\":[\"2011-08-01/2011-10-10\", \"2011-11-01/2011-11-10\"]}",
         QuerySegmentSpec.class
     );
@@ -79,7 +79,7 @@ public class QuerySegmentSpecTest
   @Test
   public void testSerializationSegments()
   {
-    QuerySegmentSpec spec = jsonMapper.convertValue(
+    QuerySegmentSpec spec = JSON_MAPPER.convertValue(
         ImmutableMap.<String, Object>of(
             "type", "segments",
 

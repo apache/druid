@@ -29,11 +29,6 @@ interface StatusDialogProps extends IDialogProps {
 }
 
 export class StatusDialog extends React.PureComponent<StatusDialogProps> {
-  constructor(props: StatusDialogProps) {
-    super(props);
-    this.state = {};
-  }
-
   render(): JSX.Element {
     const { onClose, title, isOpen } = this.props;
 

@@ -40,7 +40,7 @@ import java.util.Properties;
 
 public class LookupListeningAnnouncerConfigTest
 {
-  private static final String propertyBase = "some.property";
+  private static final String PROPERTY_BASE = "some.property";
   private final Injector injector = Initialization.makeInjectorWithModules(
       GuiceInjectors.makeStartupInjector(),
       ImmutableList.of(
@@ -76,7 +76,7 @@ public class LookupListeningAnnouncerConfigTest
   {
     final JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
     final JsonConfigProvider<LookupListeningAnnouncerConfig> configProvider = JsonConfigProvider.of(
-        propertyBase,
+        PROPERTY_BASE,
         LookupListeningAnnouncerConfig.class
     );
     configProvider.inject(properties, configurator);
@@ -89,9 +89,9 @@ public class LookupListeningAnnouncerConfigTest
   {
     final String lookupTier = "some_tier";
     final JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
-    properties.put(propertyBase + ".lookupTier", lookupTier);
+    properties.put(PROPERTY_BASE + ".lookupTier", lookupTier);
     final JsonConfigProvider<LookupListeningAnnouncerConfig> configProvider = JsonConfigProvider.of(
-        propertyBase,
+        PROPERTY_BASE,
         LookupListeningAnnouncerConfig.class
     );
     configProvider.inject(properties, configurator);
@@ -103,9 +103,9 @@ public class LookupListeningAnnouncerConfigTest
   public void testFailsOnEmptyTier()
   {
     final JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
-    properties.put(propertyBase + ".lookupTier", "");
+    properties.put(PROPERTY_BASE + ".lookupTier", "");
     final JsonConfigProvider<LookupListeningAnnouncerConfig> configProvider = JsonConfigProvider.of(
-        propertyBase,
+        PROPERTY_BASE,
         LookupListeningAnnouncerConfig.class
     );
     configProvider.inject(properties, configurator);
@@ -117,9 +117,9 @@ public class LookupListeningAnnouncerConfigTest
   public void testDatasourceInjection()
   {
     final JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
-    properties.put(propertyBase + ".lookupTierIsDatasource", "true");
+    properties.put(PROPERTY_BASE + ".lookupTierIsDatasource", "true");
     final JsonConfigProvider<LookupListeningAnnouncerConfig> configProvider = JsonConfigProvider.of(
-        propertyBase,
+        PROPERTY_BASE,
         LookupListeningAnnouncerConfig.class
     );
     configProvider.inject(properties, configurator);
@@ -132,10 +132,10 @@ public class LookupListeningAnnouncerConfigTest
   {
     final String lookupTier = "some_tier";
     final JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
-    properties.put(propertyBase + ".lookupTier", lookupTier);
-    properties.put(propertyBase + ".lookupTierIsDatasource", "true");
+    properties.put(PROPERTY_BASE + ".lookupTier", lookupTier);
+    properties.put(PROPERTY_BASE + ".lookupTierIsDatasource", "true");
     final JsonConfigProvider<LookupListeningAnnouncerConfig> configProvider = JsonConfigProvider.of(
-        propertyBase,
+        PROPERTY_BASE,
         LookupListeningAnnouncerConfig.class
     );
     configProvider.inject(properties, configurator);

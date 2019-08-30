@@ -46,21 +46,21 @@ public class ZkPathsConfigTest extends JsonConfigTesterBase<ZkPathsConfig>
   {
     JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
 
-    JsonConfigProvider<ZkPathsConfig> zkPathsConfig = JsonConfigProvider.of(configPrefix, ZkPathsConfig.class);
+    JsonConfigProvider<ZkPathsConfig> zkPathsConfig = JsonConfigProvider.of(CONFIG_PREFIX, ZkPathsConfig.class);
     testProperties.clear();
     String base = UUID.randomUUID().toString();
-    testProperties.put(StringUtils.format("%s.base", configPrefix), base);
+    testProperties.put(StringUtils.format("%s.base", CONFIG_PREFIX), base);
     zkPathsConfig.inject(testProperties, configurator);
 
     propertyValues.clear();
-    propertyValues.put(StringUtils.format("%s.base", configPrefix), base);
-    propertyValues.put(StringUtils.format("%s.propertiesPath", configPrefix), ZKPaths.makePath(base, "properties"));
-    propertyValues.put(StringUtils.format("%s.announcementsPath", configPrefix), ZKPaths.makePath(base, "announcements"));
-    propertyValues.put(StringUtils.format("%s.servedSegmentsPath", configPrefix), ZKPaths.makePath(base, "servedSegments"));
-    propertyValues.put(StringUtils.format("%s.liveSegmentsPath", configPrefix), ZKPaths.makePath(base, "segments"));
-    propertyValues.put(StringUtils.format("%s.coordinatorPath", configPrefix), ZKPaths.makePath(base, "coordinator"));
-    propertyValues.put(StringUtils.format("%s.loadQueuePath", configPrefix), ZKPaths.makePath(base, "loadQueue"));
-    propertyValues.put(StringUtils.format("%s.connectorPath", configPrefix), ZKPaths.makePath(base, "connector"));
+    propertyValues.put(StringUtils.format("%s.base", CONFIG_PREFIX), base);
+    propertyValues.put(StringUtils.format("%s.propertiesPath", CONFIG_PREFIX), ZKPaths.makePath(base, "properties"));
+    propertyValues.put(StringUtils.format("%s.announcementsPath", CONFIG_PREFIX), ZKPaths.makePath(base, "announcements"));
+    propertyValues.put(StringUtils.format("%s.servedSegmentsPath", CONFIG_PREFIX), ZKPaths.makePath(base, "servedSegments"));
+    propertyValues.put(StringUtils.format("%s.liveSegmentsPath", CONFIG_PREFIX), ZKPaths.makePath(base, "segments"));
+    propertyValues.put(StringUtils.format("%s.coordinatorPath", CONFIG_PREFIX), ZKPaths.makePath(base, "coordinator"));
+    propertyValues.put(StringUtils.format("%s.loadQueuePath", CONFIG_PREFIX), ZKPaths.makePath(base, "loadQueue"));
+    propertyValues.put(StringUtils.format("%s.connectorPath", CONFIG_PREFIX), ZKPaths.makePath(base, "connector"));
 
     ZkPathsConfig zkPathsConfigObj = zkPathsConfig.get().get();
     validateEntries(zkPathsConfigObj);

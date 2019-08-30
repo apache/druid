@@ -87,7 +87,7 @@ public class AppendTest
   };
 
   final String dataSource = "testing";
-  final Granularity allGran = Granularities.ALL;
+  final Granularity ALL_GRAN = Granularities.ALL;
   final String marketDimension = "market";
   final String qualityDimension = "quality";
   final String placementDimension = "placement";
@@ -554,7 +554,7 @@ public class AppendTest
 
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(dataSource)
-                                  .granularity(allGran)
+                                  .granularity(ALL_GRAN)
                                   .intervals(fullOnInterval)
                                   .filters(marketDimension, "breakstuff")
                                   .aggregators(
@@ -578,7 +578,7 @@ public class AppendTest
   {
     return Druids.newTimeseriesQueryBuilder()
                  .dataSource(dataSource)
-                 .granularity(allGran)
+                 .granularity(ALL_GRAN)
                  .intervals(fullOnInterval)
                  .aggregators(
                      Lists.newArrayList(
@@ -599,7 +599,7 @@ public class AppendTest
   {
     return Druids.newTimeseriesQueryBuilder()
                  .dataSource(dataSource)
-                 .granularity(allGran)
+                 .granularity(ALL_GRAN)
                  .intervals(fullOnInterval)
                  .filters(
                      new OrDimFilter(
@@ -626,7 +626,7 @@ public class AppendTest
   {
     return new TopNQueryBuilder()
         .dataSource(dataSource)
-        .granularity(allGran)
+        .granularity(ALL_GRAN)
         .dimension(marketDimension)
         .metric(indexMetric)
         .threshold(3)
@@ -650,7 +650,7 @@ public class AppendTest
   {
     return new TopNQueryBuilder()
         .dataSource(dataSource)
-        .granularity(allGran)
+        .granularity(ALL_GRAN)
         .dimension(marketDimension)
         .metric(indexMetric)
         .threshold(3)
@@ -680,7 +680,7 @@ public class AppendTest
   {
     return Druids.newSearchQueryBuilder()
                  .dataSource(dataSource)
-                 .granularity(allGran)
+                 .granularity(ALL_GRAN)
                  .intervals(fullOnInterval)
                  .query("a")
                  .build();
@@ -691,7 +691,7 @@ public class AppendTest
     return Druids.newSearchQueryBuilder()
                  .dataSource(dataSource)
                  .filters(new NotDimFilter(new SelectorDimFilter(marketDimension, "spot", null)))
-                 .granularity(allGran)
+                 .granularity(ALL_GRAN)
                  .intervals(fullOnInterval)
                  .query("a")
                  .build();

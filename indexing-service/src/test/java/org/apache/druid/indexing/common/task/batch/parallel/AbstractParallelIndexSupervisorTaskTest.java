@@ -39,7 +39,6 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
@@ -100,7 +99,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       0
   );
 
-  TaskActionClient actionClient;
+  TestLocalTaskActionClient actionClient;
   LocalIndexingServiceClient indexingServiceClient;
   TaskToolbox toolbox;
   File localDeepStorage;
@@ -375,7 +374,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
   }
 
-  static class LocalParallelIndexTaskClientFactory implements IndexTaskClientFactory<ParallelIndexTaskClient>
+  static class LocalParallelIndexTaskClientFactory implements IndexTaskClientFactory<ParallelIndexSupervisorTaskClient>
   {
     private final ParallelIndexSupervisorTask supervisorTask;
 
@@ -385,7 +384,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
 
     @Override
-    public ParallelIndexTaskClient build(
+    public ParallelIndexSupervisorTaskClient build(
         TaskInfoProvider taskInfoProvider,
         String callerId,
         int numThreads,
@@ -393,15 +392,15 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         long numRetries
     )
     {
-      return new LocalParallelIndexTaskClient(callerId, supervisorTask);
+      return new LocalParallelIndexSupervisorTaskClient(callerId, supervisorTask);
     }
   }
 
-  static class LocalParallelIndexTaskClient extends ParallelIndexTaskClient
+  static class LocalParallelIndexSupervisorTaskClient extends ParallelIndexSupervisorTaskClient
   {
     private final ParallelIndexSupervisorTask supervisorTask;
 
-    LocalParallelIndexTaskClient(String callerId, ParallelIndexSupervisorTask supervisorTask)
+    LocalParallelIndexSupervisorTaskClient(String callerId, ParallelIndexSupervisorTask supervisorTask)
     {
       super(null, null, null, null, callerId, 0);
       this.supervisorTask = supervisorTask;

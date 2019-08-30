@@ -30,7 +30,6 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.segment.TestHelper;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -51,7 +50,7 @@ public class DefaultTopNQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultTopNQueryMetrics queryMetrics = new DefaultTopNQueryMetrics(TestHelper.makeJsonMapper());
+    DefaultTopNQueryMetrics queryMetrics = new DefaultTopNQueryMetrics();
     TopNQuery query = new TopNQueryBuilder()
         .dataSource("xx")
         .granularity(Granularities.ALL)
@@ -61,7 +60,7 @@ public class DefaultTopNQueryMetricsTest
             null
         ))
         .metric("count")
-        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .aggregators(new CountAggregatorFactory("count"))
         .threshold(5)
         .filters(new SelectorDimFilter("tags", "t3", null))
@@ -77,7 +76,7 @@ public class DefaultTopNQueryMetricsTest
     Assert.assertEquals("", actualEvent.get("service"));
     Assert.assertEquals("xx", actualEvent.get(DruidMetrics.DATASOURCE));
     Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
-    List<Interval> expectedIntervals = QueryRunnerTestHelper.fullOnIntervalSpec.getIntervals();
+    List<Interval> expectedIntervals = QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC.getIntervals();
     List<String> expectedStringIntervals =
         expectedIntervals.stream().map(Interval::toString).collect(Collectors.toList());
     Assert.assertEquals(expectedStringIntervals, actualEvent.get(DruidMetrics.INTERVAL));
@@ -101,7 +100,7 @@ public class DefaultTopNQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultTopNQueryMetrics queryMetrics = new DefaultTopNQueryMetrics(TestHelper.makeJsonMapper());
+    DefaultTopNQueryMetrics queryMetrics = new DefaultTopNQueryMetrics();
     DefaultQueryMetricsTest.testQueryMetricsDefaultMetricNamesAndUnits(cachingEmitter, serviceEmitter, queryMetrics);
   }
 }

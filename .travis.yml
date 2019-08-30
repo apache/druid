@@ -27,7 +27,6 @@ cache:
 
 env:
   global:
-    - COVERALLS_PARALLEL=true
     - DOCKER_IP=127.0.0.1  # for integration tests
     - MVN="mvn -B"
     - > # Various options to make execution of maven goals faster (e.g., mvn install)
@@ -42,9 +41,6 @@ env:
       -Dspotbugs.skip=true
       "
     - MAVEN_SKIP_TESTS="-DskipTests -Djacoco.skip=true"
-
-notifications:
-  webhooks: https://coveralls.io/webhook
 
 # Add various options to make 'mvn install' fast and skip javascript compile (-Ddruid.console.skip=true) since it is not
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
@@ -119,8 +115,6 @@ matrix:
           ${MAVEN_SKIP} -Dremoteresources.skip=true
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
-      after_success: &upload_java_unit_test_coverage
-        - ${MVN} -pl ${MAVEN_PROJECTS} jacoco:report coveralls:report
 
     - name: "processing module test (SQL Compatibility)"
       env: *processing_env
@@ -133,53 +127,47 @@ matrix:
           ${MAVEN_SKIP} -Dremoteresources.skip=true
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
-      after_success: *upload_java_unit_test_coverage
 
     - name: "indexing modules test"
       env: &indexing_env
       - MAVEN_PROJECTS='indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
       before_script: *setup_java_test
       script: *run_java_test
-      after_success: *upload_java_unit_test_coverage
 
     - name: "indexing modules test (SQL Compatibility)"
       env: *indexing_env
       before_script: *setup_java_test
       script: *run_java_sql_compat_test
-      after_success: *upload_java_unit_test_coverage
 
     - name: "server module test"
       env: &server_env
         - MAVEN_PROJECTS='server'
       before_script: *setup_java_test
       script: *run_java_test
-      after_success: *upload_java_unit_test_coverage
 
     - name: "server module test (SQL Compatibility)"
       env: *server_env
       before_script: *setup_java_test
       script: *run_java_sql_compat_test
-      after_success: *upload_java_unit_test_coverage
 
     - name: "other modules test"
       env: &other_env
         - MAVEN_PROJECTS='!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console'
       before_script: *setup_java_test
       script: *run_java_test
-      after_success: *upload_java_unit_test_coverage
 
     - name: "other modules test (SQL Compatibility)"
       env: *other_env
       before_script: *setup_java_test
       script: *run_java_sql_compat_test
-      after_success: *upload_java_unit_test_coverage
 
     - name: "web console"
-      script:
-        - ${MVN} test -pl 'web-console'
+      install: skip
+      script: ${MVN} test -pl 'web-console'
 
     - name: "docs"
-      script: cd website && npm install && npm run lint
+      install: (cd website && npm install)
+      script: (cd website && npm run lint)
 
     - name: "batch index integration test"
       services: &integration_test_services

@@ -45,9 +45,9 @@ import javax.ws.rs.core.Response;
  */
 public class WorkerResourceTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
-  private static final String basePath = "/test/druid";
-  private static final String announcementsPath = StringUtils.format("%s/indexer/announcements/host", basePath);
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+  private static final String BASE_PATH = "/test/druid";
+  private static final String ANNOUNCEMENT_PATH = StringUtils.format("%s/indexer/announcements/host", BASE_PATH);
 
   private TestingCluster testingCluster;
   private CuratorFramework cf;
@@ -70,7 +70,7 @@ public class WorkerResourceTest
                                 .build();
     cf.start();
     cf.blockUntilConnected();
-    cf.create().creatingParentsIfNeeded().forPath(basePath);
+    cf.create().creatingParentsIfNeeded().forPath(BASE_PATH);
 
     worker = new Worker(
         "http",
@@ -81,13 +81,13 @@ public class WorkerResourceTest
     );
 
     curatorCoordinator = new WorkerCuratorCoordinator(
-        jsonMapper,
+        JSON_MAPPER,
         new IndexerZkConfig(new ZkPathsConfig()
         {
           @Override
           public String getBase()
           {
-            return basePath;
+            return BASE_PATH;
           }
         }, null, null, null, null),
         new RemoteTaskRunnerConfig(),
@@ -115,13 +115,13 @@ public class WorkerResourceTest
   @Test
   public void testDoDisable() throws Exception
   {
-    Worker theWorker = jsonMapper.readValue(cf.getData().forPath(announcementsPath), Worker.class);
+    Worker theWorker = JSON_MAPPER.readValue(cf.getData().forPath(ANNOUNCEMENT_PATH), Worker.class);
     Assert.assertEquals("v1", theWorker.getVersion());
 
     Response res = workerResource.doDisable();
     Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
 
-    theWorker = jsonMapper.readValue(cf.getData().forPath(announcementsPath), Worker.class);
+    theWorker = JSON_MAPPER.readValue(cf.getData().forPath(ANNOUNCEMENT_PATH), Worker.class);
     Assert.assertTrue(theWorker.getVersion().isEmpty());
   }
 
@@ -131,13 +131,13 @@ public class WorkerResourceTest
     // Disable the worker
     Response res = workerResource.doDisable();
     Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
-    Worker theWorker = jsonMapper.readValue(cf.getData().forPath(announcementsPath), Worker.class);
+    Worker theWorker = JSON_MAPPER.readValue(cf.getData().forPath(ANNOUNCEMENT_PATH), Worker.class);
     Assert.assertTrue(theWorker.getVersion().isEmpty());
 
     // Enable the worker
     res = workerResource.doEnable();
     Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
-    theWorker = jsonMapper.readValue(cf.getData().forPath(announcementsPath), Worker.class);
+    theWorker = JSON_MAPPER.readValue(cf.getData().forPath(ANNOUNCEMENT_PATH), Worker.class);
     Assert.assertEquals("v1", theWorker.getVersion());
   }
 }

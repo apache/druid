@@ -46,7 +46,7 @@ public class FloatCardinalityAggregatorColumnSelectorStrategy
   public void hashValues(BaseFloatColumnValueSelector selector, HyperLogLogCollector collector)
   {
     if (NullHandling.replaceWithDefault() || !selector.isNull()) {
-      collector.add(CardinalityAggregator.hashFn.hashInt(Float.floatToIntBits(selector.getFloat())).asBytes());
+      collector.add(CardinalityAggregator.HASH_FUNCTION.hashInt(Float.floatToIntBits(selector.getFloat())).asBytes());
     }
   }
 }

@@ -153,7 +153,7 @@ public class TestIndex
       new DoubleMaxAggregatorFactory(DOUBLE_METRICS[2], VIRTUAL_COLUMNS.getVirtualColumns()[0].getOutputName()),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
-  private static final IndexSpec indexSpec = new IndexSpec();
+  private static final IndexSpec INDEX_SPEC = new IndexSpec();
 
   private static final IndexMerger INDEX_MERGER =
       TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
@@ -200,8 +200,8 @@ public class TestIndex
       mergedFile.mkdirs();
       mergedFile.deleteOnExit();
 
-      INDEX_MERGER.persist(top, DATA_INTERVAL, topFile, indexSpec, null);
-      INDEX_MERGER.persist(bottom, DATA_INTERVAL, bottomFile, indexSpec, null);
+      INDEX_MERGER.persist(top, DATA_INTERVAL, topFile, INDEX_SPEC, null);
+      INDEX_MERGER.persist(bottom, DATA_INTERVAL, bottomFile, INDEX_SPEC, null);
 
       return INDEX_IO.loadIndex(
           INDEX_MERGER.mergeQueryableIndex(
@@ -209,7 +209,7 @@ public class TestIndex
               true,
               METRIC_AGGS,
               mergedFile,
-              indexSpec,
+              INDEX_SPEC,
               null
           )
       );
@@ -376,7 +376,7 @@ public class TestIndex
       someTmpFile.mkdirs();
       someTmpFile.deleteOnExit();
 
-      INDEX_MERGER.persist(index, someTmpFile, indexSpec, null);
+      INDEX_MERGER.persist(index, someTmpFile, INDEX_SPEC, null);
       return INDEX_IO.loadIndex(someTmpFile);
     }
     catch (IOException e) {

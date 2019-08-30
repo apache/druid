@@ -33,11 +33,11 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
 {
   private static final Logger log = new Logger(ReferenceCountingResourceHolder.class);
 
-  private static final AtomicLong leakedResources = new AtomicLong();
+  private static final AtomicLong LEAKED_RESOURCES = new AtomicLong();
 
   public static long leakedResources()
   {
-    return leakedResources.get();
+    return LEAKED_RESOURCES.get();
   }
 
   private final T object;
@@ -164,7 +164,7 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
         }
         if (refCount.compareAndSet(count, 0)) {
           try {
-            leakedResources.incrementAndGet();
+            LEAKED_RESOURCES.incrementAndGet();
             closer.close();
             return;
           }
