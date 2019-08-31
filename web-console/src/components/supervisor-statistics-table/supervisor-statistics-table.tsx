@@ -104,7 +104,7 @@ export class SupervisorStatisticsTable extends React.PureComponent<
 
   renderTable(error?: string) {
     const { data } = this.state;
-    console.log(data);
+
     let columns: Column<TableRow>[] = [
       {
         Header: 'Task ID',

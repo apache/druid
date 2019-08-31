@@ -26,7 +26,7 @@ import { Loader } from '../loader/loader';
 import './datasource-columns-table.scss';
 
 interface TableRow {
-  columnsName: string;
+  columnName: string;
   columnType: string;
 }
 
@@ -63,7 +63,7 @@ export class DatasourceColumnsTable extends React.PureComponent<
         });
 
         return resp.map(object => {
-          return { columnsName: object.COLUMN_NAME, columnType: object.DATA_TYPE };
+          return { columnName: object.COLUMN_NAME, columnType: object.DATA_TYPE };
         });
       },
       onStateChange: ({ result, error, loading }) => {
@@ -87,7 +87,7 @@ export class DatasourceColumnsTable extends React.PureComponent<
         columns={[
           {
             Header: 'Column name',
-            accessor: 'columnsName',
+            accessor: 'columnName',
           },
           {
             Header: 'Data type',
