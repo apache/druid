@@ -21,10 +21,10 @@ import axios from 'axios';
 import React from 'react';
 import ReactTable, { Column } from 'react-table';
 
-import { Loader } from '..';
 import { UrlBaser } from '../../singletons/url-baser';
 import { QueryManager } from '../../utils';
 import { deepGet } from '../../utils/object-change';
+import { Loader } from '../loader/loader';
 
 import './supervisor-statistics-table.scss';
 
@@ -61,14 +61,15 @@ export class SupervisorStatisticsTable extends React.PureComponent<
   SupervisorStatisticsTableProps,
   SupervisorStatisticsTableState
 > {
-  private supervisorStatisticsTableQueryManager: QueryManager<null, TableRow[]>;
+  private supervisorStatisticsQueryManager: QueryManager<null, TableRow[]>;
 
   constructor(props: SupervisorStatisticsTableProps, context: any) {
     super(props, context);
     this.state = {
       loading: true,
     };
-    this.supervisorStatisticsTableQueryManager = new QueryManager({
+
+    this.supervisorStatisticsQueryManager = new QueryManager({
       processQuery: async () => {
         const { endpoint } = this.props;
         const resp = await axios.get(endpoint);
@@ -89,7 +90,7 @@ export class SupervisorStatisticsTable extends React.PureComponent<
   }
 
   componentDidMount(): void {
-    this.supervisorStatisticsTableQueryManager.runQuery(null);
+    this.supervisorStatisticsQueryManager.runQuery(null);
   }
 
   renderCell(data: StatsEntry | undefined) {
@@ -106,7 +107,7 @@ export class SupervisorStatisticsTable extends React.PureComponent<
     console.log(data);
     let columns: Column<TableRow>[] = [
       {
-        Header: 'Task Id',
+        Header: 'Task ID',
         id: 'task_id',
         accessor: d => d.taskId,
       },

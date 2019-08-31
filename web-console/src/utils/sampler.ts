@@ -18,7 +18,7 @@
 
 import axios from 'axios';
 
-import { getDruidErrorMessage } from './druid-query';
+import { getDruidErrorMessage, queryDruidRune } from './druid-query';
 import { alphanumericCompare, filterMap, sortWithPrefixSuffix } from './general';
 import {
   DimensionsSpec,
@@ -27,6 +27,7 @@ import {
   IngestionSpec,
   IoConfig,
   isColumnTimestampSpec,
+  isIngestSegment,
   MetricSpec,
   Parser,
   ParseSpec,
@@ -58,6 +59,13 @@ export interface SamplerConfig {
 export interface SampleResponse {
   cacheKey?: string;
   data: SampleEntry[];
+}
+
+export interface SampleResponseWithExtraInfo extends SampleResponse {
+  queryGranularity?: any;
+  timestampSpec?: any;
+  rollup?: boolean;
+  aggregators?: any;
 }
 
 export interface SampleEntry {
@@ -167,16 +175,49 @@ function makeSamplerIoConfig(
   return ioConfig;
 }
 
+/**
+ * This function scopes down the interval of an ingestSegment firehose for the data sampler
+ * this is needed because the ingestSegment firehose gets the interval you are sampling over,
+ * looks up the corresponding segments and segment locations from metadata store, downloads
+ * every segment from deep storage to disk, and then maps all the segments into memory;
+ * and this happens in the constructor before the timer thread is even created meaning the sampler
+ * will time out on a larger interval.
+ * @param ioConfig
+ */
+export async function scopeDownIngestSegmentFirehoseIntervalIfNeeded(
+  ioConfig: IoConfig,
+): Promise<IoConfig> {
+  if (deepGet(ioConfig, 'firehose.type') !== 'ingestSegment') return ioConfig;
+  const interval = deepGet(ioConfig, 'firehose.interval');
+  const intervalParts = interval.split('/');
+  const start = new Date(intervalParts[0]);
+  if (isNaN(start.valueOf())) throw new Error(`could not decode interval start`);
+  const end = new Date(intervalParts[1]);
+  if (isNaN(end.valueOf())) throw new Error(`could not decode interval end`);
+
+  // Less than or equal to 1 hour so no need to adjust intervals
+  if (Math.abs(end.valueOf() - start.valueOf()) <= 60 * 60 * 1000) return ioConfig;
+
+  // const dataSourceMetadataResponse = await queryDruidRune({
+  //   queryType: 'dataSourceMetadata',
+  //   dataSource: deepGet(ioConfig, 'firehose.dataSource'),
+  // });
+
+  return ioConfig; // ToDo: ...
+}
+
 export async function sampleForConnect(
   spec: IngestionSpec,
   sampleStrategy: SampleStrategy,
-): Promise<SampleResponse> {
+): Promise<SampleResponseWithExtraInfo> {
   const samplerType = getSamplerType(spec);
   const ioConfig: IoConfig = makeSamplerIoConfig(
     deepGet(spec, 'ioConfig'),
     samplerType,
     sampleStrategy,
   );
+
+  const ingestSegmentMode = isIngestSegment(spec);
 
   const sampleSpec: SampleSpec = {
     type: samplerType,
@@ -200,7 +241,32 @@ export async function sampleForConnect(
     samplerConfig: BASE_SAMPLER_CONFIG,
   };
 
-  return postToSampler(sampleSpec, 'connect');
+  const samplerResponse: SampleResponseWithExtraInfo = await postToSampler(sampleSpec, 'connect');
+
+  if (!samplerResponse.data.length) return samplerResponse;
+
+  if (ingestSegmentMode) {
+    const segmentMetadataResponse = await queryDruidRune({
+      queryType: 'segmentMetadata',
+      dataSource: deepGet(ioConfig, 'firehose.dataSource'),
+      intervals: [deepGet(ioConfig, 'firehose.interval')],
+      merge: true,
+      lenientAggregatorMerge: true,
+      analysisTypes: ['timestampSpec', 'queryGranularity', 'aggregators', 'rollup'],
+    });
+
+    if (Array.isArray(segmentMetadataResponse) && segmentMetadataResponse.length === 1) {
+      const segmentMetadataResponse0 = segmentMetadataResponse[0];
+      samplerResponse.queryGranularity = segmentMetadataResponse0.queryGranularity;
+      samplerResponse.timestampSpec = segmentMetadataResponse0.timestampSpec;
+      samplerResponse.rollup = segmentMetadataResponse0.rollup;
+      samplerResponse.aggregators = segmentMetadataResponse0.aggregators;
+    } else {
+      throw new Error(`unexpected response from segmentMetadata query`);
+    }
+  }
+
+  return samplerResponse;
 }
 
 export async function sampleForParser(

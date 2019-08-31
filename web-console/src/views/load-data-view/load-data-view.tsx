@@ -101,6 +101,7 @@ import {
   IoConfig,
   isColumnTimestampSpec,
   isEmptyIngestionSpec,
+  isIngestSegment,
   isParallel,
   issueWithIoConfig,
   issueWithParser,
@@ -132,6 +133,7 @@ import {
   sampleForTimestamp,
   sampleForTransform,
   SampleResponse,
+  SampleResponseWithExtraInfo,
   SampleStrategy,
 } from '../../utils/sampler';
 import { computeFlattenPathsForData } from '../../utils/spec-utils';
@@ -261,7 +263,7 @@ export interface LoadDataViewState {
   specialColumnsOnly: boolean;
 
   // for ioConfig
-  inputQueryState: QueryState<SampleEntry[]>;
+  inputQueryState: QueryState<SampleResponseWithExtraInfo>;
 
   // for parser
   parserQueryState: QueryState<HeaderAndRows>;
@@ -586,9 +588,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     });
   }
 
-  renderIngestionCard(comboType: IngestionComboTypeWithExtra, disabled?: boolean) {
+  renderIngestionCard(
+    comboType: IngestionComboTypeWithExtra,
+    disabled?: boolean,
+  ): JSX.Element | undefined {
     const { overlordModules, selectedComboType } = this.state;
-    if (!overlordModules) return null;
+    if (!overlordModules) return;
     const requiredModule = getRequiredModule(comboType);
     const goodToGo = !disabled && (!requiredModule || overlordModules.includes(requiredModule));
 
@@ -639,9 +644,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  renderViewValueModal() {
+  renderViewValueModal(): JSX.Element | undefined {
     const { showViewValueModal, str } = this.state;
-    if (!showViewValueModal) return null;
+    if (!showViewValueModal) return;
+
     return (
       <ShowValueDialog onClose={() => this.setState({ showViewValueModal: false })} str={str} />
     );
@@ -756,12 +762,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
   }
 
-  renderWelcomeStepControls() {
+  renderWelcomeStepControls(): JSX.Element | undefined {
     const { goToTask } = this.props;
     const { spec, selectedComboType, exampleManifests } = this.state;
 
     const issue = this.selectedIngestionTypeIssue();
-    if (issue) return null;
+    if (issue) return;
 
     switch (selectedComboType) {
       case 'index:http':
@@ -847,23 +853,36 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         );
 
       default:
-        return null;
+        return;
     }
   }
 
-  selectedIngestionTypeIssue(): JSX.Element | null {
+  selectedIngestionTypeIssue(): JSX.Element | undefined {
     const { selectedComboType, overlordModules } = this.state;
-    if (!selectedComboType || !overlordModules) return null;
+    if (!selectedComboType || !overlordModules) return;
 
     const requiredModule = getRequiredModule(selectedComboType);
-    if (!requiredModule || overlordModules.includes(requiredModule)) return null;
+    if (!requiredModule || overlordModules.includes(requiredModule)) return;
 
     return (
-      <p>
-        {`${getIngestionTitle(selectedComboType)} ingestion requires the `}
-        <strong>{requiredModule}</strong>
-        {` extension to be loaded.`}
-      </p>
+      <>
+        <p>
+          {`${getIngestionTitle(selectedComboType)} ingestion requires the `}
+          <strong>{requiredModule}</strong>
+          {` extension to be loaded.`}
+        </p>
+        <p>
+          Please make sure that the
+          <Code>"{requiredModule}"</Code> extension is included in the <Code>loadList</Code>.
+        </p>
+        <p>
+          For more information please refer to the{' '}
+          <ExternalLink href="https://druid.apache.org/docs/latest/operations/including-extensions">
+            documentation on loading extensions
+          </ExternalLink>
+          .
+        </p>
+      </>
     );
   }
 
@@ -876,9 +895,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     this.updateSpec({} as any);
   };
 
-  renderResetConfirm() {
+  renderResetConfirm(): JSX.Element | undefined {
     const { showResetConfirm } = this.state;
-    if (!showResetConfirm) return null;
+    if (!showResetConfirm) return;
 
     return (
       <Alert
@@ -929,7 +948,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     this.setState({
       cacheKey: sampleResponse.cacheKey,
-      inputQueryState: new QueryState({ data: sampleResponse.data }),
+      inputQueryState: new QueryState({ data: sampleResponse }),
     });
   }
 
@@ -965,7 +984,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     } else if (inputQueryState.error) {
       mainFill = <CenterMessage>{`Error: ${inputQueryState.error}`}</CenterMessage>;
     } else if (inputQueryState.data) {
-      const inputData = inputQueryState.data;
+      const inputData = inputQueryState.data.data;
       mainFill = (
         <TextArea
           className="raw-lines"
@@ -1054,9 +1073,45 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           disabled: !inputQueryState.data,
           onNextStep: () => {
             if (!inputQueryState.data) return;
-            this.updateSpec(
-              fillDataSourceName(fillParser(spec, inputQueryState.data.map(l => l.raw))),
-            );
+            const inputData = inputQueryState.data;
+
+            if (isIngestSegment(spec)) {
+              let newSpec = fillParser(spec, []);
+
+              if (typeof inputData.rollup === 'boolean') {
+                newSpec = deepSet(newSpec, 'dataSchema.granularitySpec.rollup', inputData.rollup);
+              }
+
+              if (inputData.timestampSpec) {
+                newSpec = deepSet(
+                  newSpec,
+                  'dataSchema.parser.parseSpec.timestampSpec',
+                  inputData.timestampSpec,
+                );
+              }
+
+              if (inputData.queryGranularity) {
+                newSpec = deepSet(
+                  newSpec,
+                  'dataSchema.granularitySpec.queryGranularity',
+                  inputData.queryGranularity,
+                );
+              }
+
+              if (inputData.aggregators) {
+                newSpec = deepSet(
+                  newSpec,
+                  'dataSchema.metricsSpec',
+                  Object.values(inputData.aggregators),
+                );
+              }
+
+              this.updateSpec(fillDataSourceName(newSpec));
+            } else {
+              this.updateSpec(
+                fillDataSourceName(fillParser(spec, inputQueryState.data.data.map(l => l.raw))),
+              );
+            }
           },
         })}
       </>
@@ -1253,10 +1308,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     });
   };
 
-  renderFlattenControls() {
+  renderFlattenControls(): JSX.Element | undefined {
     const { spec, selectedFlattenField, selectedFlattenFieldIndex } = this.state;
     const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || EMPTY_OBJECT;
-    if (!parseSpecHasFlatten(parseSpec)) return null;
+    if (!parseSpecHasFlatten(parseSpec)) return;
 
     const close = () => {
       this.setState({
@@ -2640,9 +2695,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  renderParallelPickerIfNeeded() {
+  renderParallelPickerIfNeeded(): JSX.Element | undefined {
     const { spec } = this.state;
-    if (!hasParallelAbility(spec)) return null;
+    if (!hasParallelAbility(spec)) return;
 
     return (
       <FormGroup>

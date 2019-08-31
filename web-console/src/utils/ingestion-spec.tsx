@@ -229,6 +229,10 @@ export function getSpecType(spec: Partial<IngestionSpec>): IngestionType | undef
   );
 }
 
+export function isIngestSegment(spec: IngestionSpec): boolean {
+  return deepGet(spec, 'ioConfig.firehose.type') === 'ingestSegment';
+}
+
 export function changeParallel(spec: IngestionSpec, parallel: boolean): IngestionSpec {
   if (!hasParallelAbility(spec)) return spec;
   const newType = parallel ? 'index_parallel' : 'index';
@@ -841,9 +845,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string',
           placeholder: `${CURRENT_YEAR}-01-01/${CURRENT_YEAR + 1}-01-01`,
           suggestions: [
-            `${CURRENT_YEAR}/${CURRENT_YEAR + 1}`,
-            `${CURRENT_YEAR}-01-01/${CURRENT_YEAR + 1}-01-01`,
             `${CURRENT_YEAR}-01-01T00:00:00/${CURRENT_YEAR + 1}-01-01T00:00:00`,
+            `${CURRENT_YEAR}-01-01/${CURRENT_YEAR + 1}-01-01`,
+            `${CURRENT_YEAR}/${CURRENT_YEAR + 1}`,
           ],
           info: (
             <p>

@@ -17,11 +17,11 @@
  */
 
 import React from 'react';
-import ReactTable, { Column } from 'react-table';
+import ReactTable from 'react-table';
 
-import { Loader } from '..';
 import { queryDruidSql, QueryManager } from '../../utils';
 import { ColumnMetadata } from '../../utils/column-metadata';
+import { Loader } from '../loader/loader';
 
 import './datasource-columns-table.scss';
 
@@ -36,7 +36,7 @@ export interface DatasourceColumnsTableProps {
 }
 
 export interface DatasourceColumnsTableState {
-  columns?: any;
+  columns?: TableRow[];
   loading: boolean;
   error?: string;
 }
@@ -45,24 +45,26 @@ export class DatasourceColumnsTable extends React.PureComponent<
   DatasourceColumnsTableProps,
   DatasourceColumnsTableState
 > {
-  private supervisorStatisticsTableQueryManager: QueryManager<null, TableRow[]>;
+  private datasourceColumnsQueryManager: QueryManager<null, TableRow[]>;
 
   constructor(props: DatasourceColumnsTableProps, context: any) {
     super(props, context);
     this.state = {
       loading: true,
     };
-    this.supervisorStatisticsTableQueryManager = new QueryManager({
+
+    this.datasourceColumnsQueryManager = new QueryManager({
       processQuery: async () => {
         const { datasourceId } = this.props;
+
         const resp = await queryDruidSql<ColumnMetadata>({
           query: `SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
           WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = '${datasourceId}'`,
         });
-        const dimensionArray = resp.map(object => {
+
+        return resp.map(object => {
           return { columnsName: object.COLUMN_NAME, columnType: object.DATA_TYPE };
         });
-        return dimensionArray;
       },
       onStateChange: ({ result, error, loading }) => {
         this.setState({ columns: result, error, loading });
@@ -71,30 +73,28 @@ export class DatasourceColumnsTable extends React.PureComponent<
   }
 
   componentDidMount(): void {
-    this.supervisorStatisticsTableQueryManager.runQuery(null);
+    this.datasourceColumnsQueryManager.runQuery(null);
   }
 
   renderTable(error?: string) {
     const { columns } = this.state;
-    console.log(columns);
-    const tableColumns: Column<TableRow>[] = [
-      {
-        Header: 'Column Name',
-        accessor: 'columnsName',
-      },
-      {
-        Header: 'Data Type',
-        accessor: 'columnType',
-      },
-    ];
 
     return (
       <ReactTable
-        data={this.state.columns ? this.state.columns : []}
-        showPagination={false}
-        defaultPageSize={15}
-        columns={tableColumns}
-        noDataText={error ? error : 'No statistics data found'}
+        data={columns || []}
+        defaultPageSize={20}
+        filterable
+        columns={[
+          {
+            Header: 'Column name',
+            accessor: 'columnsName',
+          },
+          {
+            Header: 'Data type',
+            accessor: 'columnType',
+          },
+        ]}
+        noDataText={error ? error : 'No column data found'}
       />
     );
   }
