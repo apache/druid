@@ -29,6 +29,7 @@ import {
   H5,
   HTMLSelect,
   Icon,
+  IconName,
   Intent,
   Popover,
   Switch,
@@ -451,32 +452,36 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSON.stringify(newSpec));
   };
 
+  renderActionCard(icon: IconName, title: string, caption: string, onClick: () => void) {
+    return (
+      <Card className={'spec-card'} interactive onClick={onClick}>
+        <Icon className="spec-card-icon" icon={icon} iconSize={30} />
+        <div className={'spec-card-header'}>
+          {title}
+          <div className={'spec-card-caption'}>{caption}</div>
+        </div>
+      </Card>
+    );
+  }
+
   render(): JSX.Element {
     const { step, continueToSpec } = this.state;
+
     if (!continueToSpec) {
       return (
         <div className={classNames('load-data-continue-view load-data-view')}>
-          <Card className={'spec-card'} interactive onClick={this.handleResetSpec}>
-            <Icon className="spec-card-icon" icon={IconNames.ASTERISK} iconSize={30} />
-            <div className={'spec-card-header'}>
-              Start a new spec
-              <div className={'spec-card-caption'}>Start a new ingestion flow</div>
-            </div>
-          </Card>
-          <Card
-            className={'spec-card'}
-            interactive
-            onClick={() => this.setState({ continueToSpec: true })}
-          >
-            <Icon className="spec-card-icon" icon={IconNames.REPEAT} iconSize={30} />
-            <div className={'spec-card-header'}>
-              Continue from previous spec
-              <div className={'spec-card-caption'}>
-                Continue from most recent spec you were working on
-              </div>
-            </div>
-          </Card>
-          {this.renderResetConfirm()}
+          {this.renderActionCard(
+            IconNames.ASTERISK,
+            'Start a new spec',
+            'Begin a new ingestion flow',
+            this.handleResetSpec,
+          )}
+          {this.renderActionCard(
+            IconNames.REPEAT,
+            'Continue from previous spec',
+            'Go back to the most recent spec you were working on',
+            this.handleContinueSpec,
+          )}
         </div>
       );
     }
@@ -891,8 +896,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   };
 
   private handleResetSpec = () => {
-    this.setState({ showResetConfirm: false, step: 'welcome', continueToSpec: true });
+    this.setState({ showResetConfirm: false, continueToSpec: true });
     this.updateSpec({} as any);
+    this.updateStep('welcome');
+  };
+
+  private handleContinueSpec = () => {
+    this.setState({ continueToSpec: true });
   };
 
   renderResetConfirm(): JSX.Element | undefined {
