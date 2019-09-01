@@ -1286,7 +1286,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           disabled: !parserQueryState.data,
           onNextStep: () => {
             if (!parserQueryState.data) return;
-            const possibleTimestampSpec = getTimestampSpec(parserQueryState.data);
+            let possibleTimestampSpec: TimestampSpec;
+            if (isIngestSegment(spec)) {
+              possibleTimestampSpec = {
+                column: '__time',
+                format: 'auto',
+              };
+            } else {
+              possibleTimestampSpec = getTimestampSpec(parserQueryState.data);
+            }
+
             if (possibleTimestampSpec) {
               const newSpec: IngestionSpec = deepSet(
                 spec,

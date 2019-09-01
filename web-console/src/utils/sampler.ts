@@ -36,6 +36,8 @@ import {
 } from './ingestion-spec';
 import { deepGet, deepSet, whitelistKeys } from './object-change';
 
+const MS_IN_HOUR = 60 * 60 * 1000;
+
 const SAMPLER_URL = `/druid/indexer/v1/sampler`;
 const BASE_SAMPLER_CONFIG: SamplerConfig = {
   // skipCache: true,
@@ -182,7 +184,8 @@ function makeSamplerIoConfig(
  * every segment from deep storage to disk, and then maps all the segments into memory;
  * and this happens in the constructor before the timer thread is even created meaning the sampler
  * will time out on a larger interval.
- * @param ioConfig
+ * This is essentially a workaround for https://github.com/apache/incubator-druid/issues/8448
+ * @param ioConfig The IO Config to scope down the interval of
  */
 export async function scopeDownIngestSegmentFirehoseIntervalIfNeeded(
   ioConfig: IoConfig,
@@ -195,15 +198,32 @@ export async function scopeDownIngestSegmentFirehoseIntervalIfNeeded(
   const end = new Date(intervalParts[1]);
   if (isNaN(end.valueOf())) throw new Error(`could not decode interval end`);
 
-  // Less than or equal to 1 hour so no need to adjust intervals
-  if (Math.abs(end.valueOf() - start.valueOf()) <= 60 * 60 * 1000) return ioConfig;
+  // Less than or equal to 1 hour so there is no need to adjust intervals
+  if (Math.abs(end.valueOf() - start.valueOf()) <= MS_IN_HOUR) return ioConfig;
 
-  // const dataSourceMetadataResponse = await queryDruidRune({
-  //   queryType: 'dataSourceMetadata',
-  //   dataSource: deepGet(ioConfig, 'firehose.dataSource'),
-  // });
+  const dataSourceMetadataResponse = await queryDruidRune({
+    queryType: 'dataSourceMetadata',
+    dataSource: deepGet(ioConfig, 'firehose.dataSource'),
+  });
 
-  return ioConfig; // ToDo: ...
+  const maxIngestedEventTime = new Date(
+    deepGet(dataSourceMetadataResponse, '0.result.maxIngestedEventTime'),
+  );
+
+  // If invalid maxIngestedEventTime do nothing
+  if (isNaN(maxIngestedEventTime.valueOf())) return ioConfig;
+
+  // If maxIngestedEventTime is before the start of the interval do nothing
+  if (maxIngestedEventTime < start) return ioConfig;
+
+  const newEnd = maxIngestedEventTime < end ? maxIngestedEventTime : end;
+  const newStart = new Date(newEnd.valueOf() - MS_IN_HOUR); // Set start to 1hr ago
+
+  return deepSet(
+    ioConfig,
+    'firehose.interval',
+    `${newStart.toISOString()}/${newEnd.toISOString()}`,
+  );
 }
 
 export async function sampleForConnect(
@@ -211,10 +231,8 @@ export async function sampleForConnect(
   sampleStrategy: SampleStrategy,
 ): Promise<SampleResponseWithExtraInfo> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = makeSamplerIoConfig(
-    deepGet(spec, 'ioConfig'),
-    samplerType,
-    sampleStrategy,
+  const ioConfig: IoConfig = await scopeDownIngestSegmentFirehoseIntervalIfNeeded(
+    makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy),
   );
 
   const ingestSegmentMode = isIngestSegment(spec);
@@ -275,10 +293,8 @@ export async function sampleForParser(
   cacheKey: string | undefined,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = makeSamplerIoConfig(
-    deepGet(spec, 'ioConfig'),
-    samplerType,
-    sampleStrategy,
+  const ioConfig: IoConfig = await scopeDownIngestSegmentFirehoseIntervalIfNeeded(
+    makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy),
   );
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
 
@@ -314,10 +330,8 @@ export async function sampleForTimestamp(
   cacheKey: string | undefined,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = makeSamplerIoConfig(
-    deepGet(spec, 'ioConfig'),
-    samplerType,
-    sampleStrategy,
+  const ioConfig: IoConfig = await scopeDownIngestSegmentFirehoseIntervalIfNeeded(
+    makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy),
   );
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
   const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
@@ -405,10 +419,8 @@ export async function sampleForTransform(
   cacheKey: string | undefined,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = makeSamplerIoConfig(
-    deepGet(spec, 'ioConfig'),
-    samplerType,
-    sampleStrategy,
+  const ioConfig: IoConfig = await scopeDownIngestSegmentFirehoseIntervalIfNeeded(
+    makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy),
   );
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
   const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
@@ -481,10 +493,8 @@ export async function sampleForFilter(
   cacheKey: string | undefined,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = makeSamplerIoConfig(
-    deepGet(spec, 'ioConfig'),
-    samplerType,
-    sampleStrategy,
+  const ioConfig: IoConfig = await scopeDownIngestSegmentFirehoseIntervalIfNeeded(
+    makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy),
   );
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
   const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
@@ -559,10 +569,8 @@ export async function sampleForSchema(
   cacheKey: string | undefined,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = makeSamplerIoConfig(
-    deepGet(spec, 'ioConfig'),
-    samplerType,
-    sampleStrategy,
+  const ioConfig: IoConfig = await scopeDownIngestSegmentFirehoseIntervalIfNeeded(
+    makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy),
   );
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
   const transformSpec: TransformSpec =

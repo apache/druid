@@ -781,13 +781,25 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           placeholder:
             'https://example.com/path/to/file1.ext, https://example.com/path/to/file2.ext',
           info: (
-            <>
-              <p>
-                The full URI of your file. To ingest from multiple URIs, use commas to separate each
-                individual URI.
-              </p>
-            </>
+            <p>
+              The full URI of your file. To ingest from multiple URIs, use commas to separate each
+              individual URI.
+            </p>
           ),
+        },
+        {
+          name: 'firehose.httpAuthenticationUsername',
+          label: 'HTTP auth username',
+          type: 'string',
+          placeholder: '(optional)',
+          info: <p>Username to use for authentication with specified URIs</p>,
+        },
+        {
+          name: 'firehose.httpAuthenticationPassword',
+          label: 'HTTP auth password',
+          type: 'string',
+          placeholder: '(optional)',
+          info: <p>Password to use for authentication with specified URIs</p>,
         },
       ];
 
