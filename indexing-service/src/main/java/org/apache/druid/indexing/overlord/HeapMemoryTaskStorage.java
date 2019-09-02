@@ -195,6 +195,26 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
+  public List<Task> getActiveTasksByDatasource(String datasource)
+  {
+    giant.lock();
+
+    try {
+      final ImmutableList.Builder<Task> listBuilder = ImmutableList.builder();
+      tasks.values()
+           .stream()
+           .filter(taskStuff -> taskStuff.getStatus().isRunnable() && datasource.equals(taskStuff.getDataSource()))
+           .forEach(taskStuff -> {
+             listBuilder.add(taskStuff.getTask());
+           });
+      return listBuilder.build();
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  @Override
   public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
   {
     giant.lock();
