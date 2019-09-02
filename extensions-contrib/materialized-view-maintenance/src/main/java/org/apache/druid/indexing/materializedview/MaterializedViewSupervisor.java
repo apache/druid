@@ -63,6 +63,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.IntSupplier;
 
 public class MaterializedViewSupervisor implements Supervisor
 {
@@ -373,11 +374,12 @@ public class MaterializedViewSupervisor implements Supervisor
     Map<Interval, MapDifference.ValueDifference<String>> checkIfNewestVersion =
             new HashMap<>(difference.entriesDiffering());
     for (Map.Entry<Interval, MapDifference.ValueDifference<String>> entry : checkIfNewestVersion.entrySet()) {
-      String versionOfBase = maxCreatedDate.get(entry.getKey());
-      String versionOfDerivative = derivativeVersion.get(entry.getKey());
-      if (versionOfBase.compareTo(versionOfDerivative) > 0 &&
-              baseSegments.get(entry.getKey()).size() == metadataStorageCoordinator.getUsedSegmentsForInterval(
-                      spec.getBaseDataSource(), entry.getKey()).size()) {
+      final String versionOfBase = maxCreatedDate.get(entry.getKey());
+      final String versionOfDerivative = derivativeVersion.get(entry.getKey());
+      final int baseCount = baseSegments.get(entry.getKey()).size();
+      final IntSupplier usedCountSupplier = () ->
+              metadataStorageCoordinator.getUsedSegmentsForInterval(spec.getBaseDataSource(), entry.getKey()).size();
+      if (versionOfBase.compareTo(versionOfDerivative) > 0 && baseCount == usedCountSupplier.getAsInt()) {
         toBuildInterval.put(entry.getKey(), versionOfBase);
       }
     }
