@@ -19,18 +19,12 @@
 
 package org.apache.druid.query.timeseries;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidMetrics;
 
 public class DefaultTimeseriesQueryMetrics extends DefaultQueryMetrics<TimeseriesQuery>
     implements TimeseriesQueryMetrics
 {
-  public DefaultTimeseriesQueryMetrics(ObjectMapper jsonMapper)
-  {
-    super(jsonMapper);
-  }
-
   @Override
   public void query(TimeseriesQuery query)
   {

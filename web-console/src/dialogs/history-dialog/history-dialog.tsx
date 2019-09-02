@@ -27,14 +27,7 @@ interface HistoryDialogProps extends IDialogProps {
   historyRecords: any[];
 }
 
-interface HistoryDialogState {}
-
-export class HistoryDialog extends React.PureComponent<HistoryDialogProps, HistoryDialogState> {
-  constructor(props: HistoryDialogProps) {
-    super(props);
-    this.state = {};
-  }
-
+export class HistoryDialog extends React.PureComponent<HistoryDialogProps> {
   renderRecords() {
     const { children, historyRecords } = this.props;
     let content;

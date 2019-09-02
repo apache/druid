@@ -34,7 +34,7 @@ import java.util.Set;
  */
 public class MatchingDimExtractionFnTest
 {
-  private static final String[] testStrings = {
+  private static final String[] TEST_STRINGS = {
       "Quito",
       "Calgary",
       "Tokyo",
@@ -54,7 +54,7 @@ public class MatchingDimExtractionFnTest
     List<String> expected = Arrays.asList("Quito", "Tokyo", "Stockholm", "Pretoria", "Wellington");
     Set<String> extracted = new HashSet<>();
 
-    for (String str : testStrings) {
+    for (String str : TEST_STRINGS) {
       String res = extractionFn.apply(str);
       if (res != null) {
         extracted.add(res);

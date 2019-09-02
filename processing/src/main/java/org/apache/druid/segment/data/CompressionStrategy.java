@@ -31,6 +31,7 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.CompressedPools;
 
 import java.io.IOException;
@@ -51,13 +52,13 @@ public enum CompressionStrategy
     @Override
     public Decompressor getDecompressor()
     {
-      return LZFDecompressor.defaultDecompressor;
+      return LZFDecompressor.DEFAULT_DECOMPRESSOR;
     }
 
     @Override
     public Compressor getCompressor()
     {
-      return LZFCompressor.defaultCompressor;
+      return LZFCompressor.DEFAULT_COMPRESSOR;
     }
   },
 
@@ -65,26 +66,26 @@ public enum CompressionStrategy
     @Override
     public Decompressor getDecompressor()
     {
-      return LZ4Decompressor.defaultDecompressor;
+      return LZ4Decompressor.DEFAULT_COMPRESSOR;
     }
 
     @Override
     public Compressor getCompressor()
     {
-      return LZ4Compressor.defaultCompressor;
+      return LZ4Compressor.DEFAULT_COMPRESSOR;
     }
   },
   UNCOMPRESSED((byte) 0xFF) {
     @Override
     public Decompressor getDecompressor()
     {
-      return UncompressedDecompressor.defaultDecompressor;
+      return UncompressedDecompressor.DEFAULT_DECOMPRESSOR;
     }
 
     @Override
     public Compressor getCompressor()
     {
-      return UncompressedCompressor.defaultCompressor;
+      return UncompressedCompressor.DEFAULT_COMPRESSOR;
     }
   },
   /**
@@ -105,6 +106,8 @@ public enum CompressionStrategy
       throw new UnsupportedOperationException("NONE compression strategy shouldn't use any compressor");
     }
   };
+  private static final Logger LOG = new Logger(CompressionStrategy.class);
+
   public static final CompressionStrategy DEFAULT_COMPRESSION_STRATEGY = LZ4;
 
   final byte id;
@@ -136,17 +139,17 @@ public enum CompressionStrategy
     return valueOf(StringUtils.toUpperCase(name));
   }
 
-  static final Map<Byte, CompressionStrategy> idMap = new HashMap<>();
+  static final Map<Byte, CompressionStrategy> ID_MAP = new HashMap<>();
 
   static {
     for (CompressionStrategy strategy : CompressionStrategy.values()) {
-      idMap.put(strategy.getId(), strategy);
+      ID_MAP.put(strategy.getId(), strategy);
     }
   }
 
   public static CompressionStrategy forId(byte id)
   {
-    return idMap.get(id);
+    return ID_MAP.get(id);
   }
 
   // TODO remove this method and change all its callers to use all CompressionStrategy values when NONE type is supported by all types
@@ -199,7 +202,7 @@ public enum CompressionStrategy
 
   public static class UncompressedCompressor extends Compressor
   {
-    private static final UncompressedCompressor defaultCompressor = new UncompressedCompressor();
+    private static final UncompressedCompressor DEFAULT_COMPRESSOR = new UncompressedCompressor();
 
     @Override
     ByteBuffer allocateOutBuffer(int inputSize, Closer closer)
@@ -216,7 +219,7 @@ public enum CompressionStrategy
 
   public static class UncompressedDecompressor implements Decompressor
   {
-    private static final UncompressedDecompressor defaultDecompressor = new UncompressedDecompressor();
+    private static final UncompressedDecompressor DEFAULT_DECOMPRESSOR = new UncompressedDecompressor();
 
     @Override
     public void decompress(ByteBuffer in, int numBytes, ByteBuffer out)
@@ -231,7 +234,7 @@ public enum CompressionStrategy
 
   public static class LZFDecompressor implements Decompressor
   {
-    private static final LZFDecompressor defaultDecompressor = new LZFDecompressor();
+    private static final LZFDecompressor DEFAULT_DECOMPRESSOR = new LZFDecompressor();
 
     @Override
     public void decompress(ByteBuffer in, int numBytes, ByteBuffer out)
@@ -254,7 +257,7 @@ public enum CompressionStrategy
 
   public static class LZFCompressor extends Compressor
   {
-    private static final LZFCompressor defaultCompressor = new LZFCompressor();
+    private static final LZFCompressor DEFAULT_COMPRESSOR = new LZFCompressor();
 
     @Override
     public ByteBuffer allocateOutBuffer(int inputSize, Closer closer)
@@ -283,15 +286,15 @@ public enum CompressionStrategy
 
   public static class LZ4Decompressor implements Decompressor
   {
-    private static final LZ4SafeDecompressor lz4Safe = LZ4Factory.fastestInstance().safeDecompressor();
-    private static final LZ4Decompressor defaultDecompressor = new LZ4Decompressor();
+    private static final LZ4SafeDecompressor LZ4_SAFE = LZ4Factory.fastestInstance().safeDecompressor();
+    private static final LZ4Decompressor DEFAULT_COMPRESSOR = new LZ4Decompressor();
 
     @Override
     public void decompress(ByteBuffer in, int numBytes, ByteBuffer out)
     {
       // Since decompressed size is NOT known, must use lz4Safe
       // lz4Safe.decompress does not modify buffer positions
-      final int numDecompressedBytes = lz4Safe.decompress(
+      final int numDecompressedBytes = LZ4_SAFE.decompress(
           in,
           in.position(),
           numBytes,
@@ -306,8 +309,12 @@ public enum CompressionStrategy
 
   public static class LZ4Compressor extends Compressor
   {
-    private static final LZ4Compressor defaultCompressor = new LZ4Compressor();
-    private static final net.jpountz.lz4.LZ4Compressor lz4High = LZ4Factory.fastestInstance().highCompressor();
+    private static final LZ4Compressor DEFAULT_COMPRESSOR = new LZ4Compressor();
+    private static final net.jpountz.lz4.LZ4Compressor LZ4_HIGH = LZ4Factory.fastestInstance().highCompressor();
+
+    static {
+      logLZ4State();
+    }
 
     @Override
     ByteBuffer allocateInBuffer(int inputSize, Closer closer)
@@ -320,7 +327,7 @@ public enum CompressionStrategy
     @Override
     ByteBuffer allocateOutBuffer(int inputSize, Closer closer)
     {
-      ByteBuffer outBuffer = ByteBuffer.allocateDirect(lz4High.maxCompressedLength(inputSize));
+      ByteBuffer outBuffer = ByteBuffer.allocateDirect(LZ4_HIGH.maxCompressedLength(inputSize));
       closer.register(() -> ByteBufferUtils.free(outBuffer));
       return outBuffer;
     }
@@ -330,10 +337,42 @@ public enum CompressionStrategy
     {
       out.clear();
       int position = in.position();
-      lz4High.compress(in, out);
+      LZ4_HIGH.compress(in, out);
       in.position(position);
       out.flip();
       return out;
+    }
+  }
+
+  /**
+   * Logs info relating to whether LZ4 is using native or pure Java implementations
+   */
+  private static void logLZ4State()
+  {
+    LOG.info("java.library.path: " + System.getProperty("java.library.path"));
+    LZ4Factory fastestInstance = LZ4Factory.fastestInstance();
+    try {
+      //noinspection ObjectEquality
+      if (fastestInstance == LZ4Factory.nativeInstance()) {
+        LOG.info("LZ4 compression is using native instance.");
+      }
+    }
+    catch (Throwable t) {
+      // getting an exception means we're not using the native instance
+    }
+    try {
+      //noinspection ObjectEquality
+      if (fastestInstance == LZ4Factory.unsafeInstance()) {
+        LOG.info("LZ4 compression is using unsafe instance.");
+      }
+    }
+    catch (Throwable t) {
+      // getting an exception means we're not using the unsafe instance
+    }
+
+    //noinspection ObjectEquality
+    if (fastestInstance == LZ4Factory.safeInstance()) {
+      LOG.info("LZ4 compression is using safe instance.");
     }
   }
 }

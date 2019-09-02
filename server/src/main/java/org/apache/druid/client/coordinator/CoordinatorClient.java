@@ -26,7 +26,7 @@ import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -60,7 +60,7 @@ public class CoordinatorClient
   public Boolean isHandOffComplete(String dataSource, SegmentDescriptor descriptor)
   {
     try {
-      FullResponseHolder response = druidLeaderClient.go(
+      StringFullResponseHolder response = druidLeaderClient.go(
           druidLeaderClient.makeRequest(
               HttpMethod.GET,
               StringUtils.format(
@@ -96,7 +96,7 @@ public class CoordinatorClient
   public List<ImmutableSegmentLoadInfo> fetchServerView(String dataSource, Interval interval, boolean incompleteOk)
   {
     try {
-      FullResponseHolder response = druidLeaderClient.go(
+      StringFullResponseHolder response = druidLeaderClient.go(
           druidLeaderClient.makeRequest(
               HttpMethod.GET,
               StringUtils.format(
@@ -129,7 +129,7 @@ public class CoordinatorClient
   public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
   {
     try {
-      FullResponseHolder response = druidLeaderClient.go(
+      StringFullResponseHolder response = druidLeaderClient.go(
           druidLeaderClient.makeRequest(
               HttpMethod.POST,
               StringUtils.format(
@@ -160,7 +160,7 @@ public class CoordinatorClient
   public DataSegment getDatabaseSegmentDataSourceSegment(String dataSource, String segmentId)
   {
     try {
-      FullResponseHolder response = druidLeaderClient.go(
+      StringFullResponseHolder response = druidLeaderClient.go(
           druidLeaderClient.makeRequest(
               HttpMethod.GET,
               StringUtils.format(

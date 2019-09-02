@@ -144,7 +144,7 @@ import java.util.concurrent.Executor;
 public class RealtimeIndexTaskTest
 {
   private static final Logger log = new Logger(RealtimeIndexTaskTest.class);
-  private static final ServiceEmitter emitter = new ServiceEmitter(
+  private static final ServiceEmitter EMITTER = new ServiceEmitter(
       "service",
       "host",
       new NoopEmitter()
@@ -163,8 +163,8 @@ public class RealtimeIndexTaskTest
   @Before
   public void setUp()
   {
-    EmittingLogger.registerEmitter(emitter);
-    emitter.start();
+    EmittingLogger.registerEmitter(EMITTER);
+    EMITTER.start();
     taskExec = MoreExecutors.listeningDecorator(Execs.singleThreaded("realtime-index-task-test-%d"));
     now = DateTimes.nowUtc();
   }
@@ -894,7 +894,7 @@ public class RealtimeIndexTaskTest
         taskLockbox,
         taskStorage,
         mdc,
-        emitter,
+        EMITTER,
         EasyMock.createMock(SupervisorManager.class)
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
@@ -978,7 +978,7 @@ public class RealtimeIndexTaskTest
         taskConfig,
         null, // taskExecutorNode
         taskActionClientFactory,
-        emitter,
+        EMITTER,
         new TestDataSegmentPusher(),
         new TestDataSegmentKiller(),
         null, // DataSegmentMover
@@ -1000,7 +1000,8 @@ public class RealtimeIndexTaskTest
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
-        new NoopTestTaskReportFileWriter()
+        new NoopTestTaskReportFileWriter(),
+        null
     );
 
     return toolboxFactory.build(task);

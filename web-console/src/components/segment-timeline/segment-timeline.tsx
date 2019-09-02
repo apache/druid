@@ -27,7 +27,7 @@ import { Loader } from '../loader/loader';
 
 import './segment-timeline.scss';
 
-interface SegmentTimelineProps extends React.Props<any> {
+interface SegmentTimelineProps {
   chartHeight: number;
   chartWidth: number;
 }
@@ -71,9 +71,7 @@ export interface BarChartMargin {
 }
 
 export class SegmentTimeline extends React.Component<SegmentTimelineProps, SegmentTimelineState> {
-  private dataQueryManager: QueryManager<null, any>;
-  private datasourceQueryManager: QueryManager<null, any>;
-  private colors = [
+  static COLORS = [
     '#b33040',
     '#d25c4d',
     '#f2b447',
@@ -91,6 +89,13 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
     '#915412',
     '#87606c',
   ];
+
+  static getColor(index: number): string {
+    return SegmentTimeline.COLORS[index % SegmentTimeline.COLORS.length];
+  }
+
+  private dataQueryManager: QueryManager<null, any>;
+  private datasourceQueryManager: QueryManager<null, any>;
   private chartMargin = { top: 20, right: 10, bottom: 20, left: 10 };
 
   constructor(props: SegmentTimelineProps) {
@@ -249,7 +254,7 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
             y: d[datasource] === undefined ? 0 : d[datasource],
             y0,
             datasource,
-            color: this.colors[i],
+            color: SegmentTimeline.getColor(i),
           };
           y0 += d[datasource] === undefined ? 0 : d[datasource];
           return barUnitData;
@@ -279,7 +284,7 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
             x: d.day,
             y,
             datasource,
-            color: this.colors[i],
+            color: SegmentTimeline.getColor(i),
           };
         });
         if (!dataResult.every((d: any) => d.y === 0)) {
@@ -428,7 +433,11 @@ export class SegmentTimeline extends React.Component<SegmentTimelineProps, Segme
         svgHeight={chartHeight}
         svgWidth={chartWidth}
         margin={this.chartMargin}
-        changeActiveDatasource={(e: string) => this.setState({ activeDatasource: e })}
+        changeActiveDatasource={(datasource: string) =>
+          this.setState(prevState => ({
+            activeDatasource: prevState.activeDatasource ? null : datasource,
+          }))
+        }
         activeDataType={activeDataType}
         formatTick={(n: number) => this.formatTick(n)}
         xScale={xScale}

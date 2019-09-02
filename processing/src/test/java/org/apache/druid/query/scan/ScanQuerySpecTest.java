@@ -33,7 +33,7 @@ import java.util.Arrays;
 
 public class ScanQuerySpecTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   @Test
   public void testSerializationLegacyString() throws Exception
@@ -62,7 +62,7 @@ public class ScanQuerySpecTest
         + "\"granularity\":{\"type\":\"all\"}}";
 
     ScanQuery query = new ScanQuery(
-        new TableDataSource(QueryRunnerTestHelper.dataSource),
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         new LegacySegmentSpec(Intervals.of("2011-01-12/2011-01-14")),
         VirtualColumns.EMPTY,
         ScanQuery.ResultFormat.RESULT_FORMAT_LIST,
@@ -75,9 +75,9 @@ public class ScanQuerySpecTest
         null
     );
 
-    String actual = jsonMapper.writeValueAsString(query);
+    String actual = JSON_MAPPER.writeValueAsString(query);
     Assert.assertEquals(current, actual);
-    Assert.assertEquals(query, jsonMapper.readValue(actual, ScanQuery.class));
-    Assert.assertEquals(query, jsonMapper.readValue(legacy, ScanQuery.class));
+    Assert.assertEquals(query, JSON_MAPPER.readValue(actual, ScanQuery.class));
+    Assert.assertEquals(query, JSON_MAPPER.readValue(legacy, ScanQuery.class));
   }
 }

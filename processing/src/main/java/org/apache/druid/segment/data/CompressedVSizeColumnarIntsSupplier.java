@@ -42,7 +42,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
 {
   public static final byte VERSION = 0x2;
 
-  private static final MetaSerdeHelper<CompressedVSizeColumnarIntsSupplier> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<CompressedVSizeColumnarIntsSupplier> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((CompressedVSizeColumnarIntsSupplier x) -> VERSION)
       .writeByte(x -> ByteUtils.checkedCast(x.numBytes))
       .writeInt(x -> x.totalSize)
@@ -124,13 +124,13 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
   @Override
   public long getSerializedSize()
   {
-    return metaSerdeHelper.size(this) + baseBuffers.getSerializedSize();
+    return META_SERDE_HELPER.size(this) + baseBuffers.getSerializedSize();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     baseBuffers.writeTo(channel, smoosher);
   }
 

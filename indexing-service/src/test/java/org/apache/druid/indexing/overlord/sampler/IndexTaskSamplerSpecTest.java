@@ -41,7 +41,7 @@ import java.util.Map;
 
 public class IndexTaskSamplerSpecTest extends EasyMockSupport
 {
-  private static final ObjectMapper mapper = TestHelper.makeJsonMapper();
+  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
   private final FirehoseSampler firehoseSampler = createMock(FirehoseSampler.class);
 
@@ -50,13 +50,13 @@ public class IndexTaskSamplerSpecTest extends EasyMockSupport
 
   public IndexTaskSamplerSpecTest()
   {
-    mapper.setInjectableValues(
+    MAPPER.setInjectableValues(
         new InjectableValues.Std()
             .addValue(FirehoseSampler.class, firehoseSampler)
-            .addValue(ObjectMapper.class, mapper)
+            .addValue(ObjectMapper.class, MAPPER)
     );
-    mapper.registerModules((Iterable<Module>) new SamplerModule().getJacksonModules());
-    mapper.registerModules((Iterable<Module>) new FirehoseModule().getJacksonModules());
+    MAPPER.registerModules((Iterable<Module>) new SamplerModule().getJacksonModules());
+    MAPPER.registerModules((Iterable<Module>) new FirehoseModule().getJacksonModules());
   }
 
   @Test
@@ -99,7 +99,7 @@ public class IndexTaskSamplerSpecTest extends EasyMockSupport
     Capture<DataSchema> capturedDataSchema = EasyMock.newCapture();
     Capture<SamplerConfig> capturedSamplerConfig = EasyMock.newCapture();
 
-    IndexTaskSamplerSpec spec = mapper.readValue(json, IndexTaskSamplerSpec.class);
+    IndexTaskSamplerSpec spec = MAPPER.readValue(json, IndexTaskSamplerSpec.class);
 
     EasyMock.expect(firehoseSampler.sample(
         EasyMock.capture(capturedFirehoseFactory),

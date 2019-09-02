@@ -35,10 +35,6 @@ export class ActionCell extends React.PureComponent<ActionCellProps> {
   static COLUMN_LABEL = 'Actions';
   static COLUMN_WIDTH = 70;
 
-  constructor(props: ActionCellProps, context: any) {
-    super(props, context);
-  }
-
   render(): JSX.Element {
     const { onDetail, actions } = this.props;
     const actionsMenu = actions ? basicActionsToMenu(actions) : null;

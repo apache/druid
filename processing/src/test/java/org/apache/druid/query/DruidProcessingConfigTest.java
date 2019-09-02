@@ -36,10 +36,10 @@ import java.util.Properties;
  */
 public class DruidProcessingConfigTest
 {
-  private static final long bufferSize = 1024L * 1024L * 1024L;
-  private static final int numProcessors = 4;
-  private static final long directSize = bufferSize * (3L + 2L + 1L);
-  private static final long heapSize = bufferSize * 2L;
+  private static final long BUFFER_SIZE = 1024L * 1024L * 1024L;
+  private static final int NUM_PROCESSORS = 4;
+  private static final long DIRECT_SIZE = BUFFER_SIZE * (3L + 2L + 1L);
+  private static final long HEAP_SIZE = BUFFER_SIZE * 2L;
 
   private static Injector makeInjector(int numProcessors, long directMemorySize, long heapSize)
   {
@@ -77,22 +77,22 @@ public class DruidProcessingConfigTest
   @Test
   public void testDefaultsMultiProcessor()
   {
-    Injector injector = makeInjector(numProcessors, directSize, heapSize);
+    Injector injector = makeInjector(NUM_PROCESSORS, DIRECT_SIZE, HEAP_SIZE);
     DruidProcessingConfig config = injector.getInstance(DruidProcessingConfig.class);
 
     Assert.assertEquals(Integer.MAX_VALUE, config.poolCacheMaxCount());
-    Assert.assertEquals(numProcessors - 1, config.getNumThreads());
+    Assert.assertEquals(NUM_PROCESSORS - 1, config.getNumThreads());
     Assert.assertEquals(Math.max(2, config.getNumThreads() / 4), config.getNumMergeBuffers());
     Assert.assertEquals(0, config.columnCacheSizeBytes());
     Assert.assertFalse(config.isFifo());
     Assert.assertEquals(System.getProperty("java.io.tmpdir"), config.getTmpDir());
-    Assert.assertEquals(bufferSize, config.intermediateComputeSizeBytes());
+    Assert.assertEquals(BUFFER_SIZE, config.intermediateComputeSizeBytes());
   }
 
   @Test
   public void testDefaultsSingleProcessor()
   {
-    Injector injector = makeInjector(1, bufferSize * 4L, heapSize);
+    Injector injector = makeInjector(1, BUFFER_SIZE * 4L, HEAP_SIZE);
     DruidProcessingConfig config = injector.getInstance(DruidProcessingConfig.class);
 
     Assert.assertEquals(Integer.MAX_VALUE, config.poolCacheMaxCount());
@@ -101,14 +101,14 @@ public class DruidProcessingConfigTest
     Assert.assertEquals(0, config.columnCacheSizeBytes());
     Assert.assertFalse(config.isFifo());
     Assert.assertEquals(System.getProperty("java.io.tmpdir"), config.getTmpDir());
-    Assert.assertEquals(bufferSize, config.intermediateComputeSizeBytes());
+    Assert.assertEquals(BUFFER_SIZE, config.intermediateComputeSizeBytes());
   }
 
   @Test
   public void testDefaultsLargeDirect()
   {
     // test that auto sized buffer is no larger than 1
-    Injector injector = makeInjector(1, bufferSize * 100L, heapSize);
+    Injector injector = makeInjector(1, BUFFER_SIZE * 100L, HEAP_SIZE);
     DruidProcessingConfig config = injector.getInstance(DruidProcessingConfig.class);
 
     Assert.assertEquals(
@@ -129,9 +129,9 @@ public class DruidProcessingConfigTest
     props.setProperty("druid.processing.tmpDir", "/test/path");
 
     Injector injector = makeInjector(
-        numProcessors,
-        directSize,
-        heapSize,
+        NUM_PROCESSORS,
+        DIRECT_SIZE,
+        HEAP_SIZE,
         props,
         ImmutableMap.of("base_path", "druid.processing")
     );

@@ -48,6 +48,13 @@
   <suppress checks="Indentation" files="[\\/]target[\\/]generated-test-sources[\\/]" />
   <suppress checks="Indentation" files="ProtoTestEventWrapper.java" />
   <suppress checks="Regexp" id="argumentLineBreaking" files="ProtoTestEventWrapper.java" />
+  <suppress checks="ConstantName" files="ProtoTestEventWrapper.java" />
+  <suppress checks="ConstantName" files="MySubRecord.java" />
+  <suppress checks="ConstantName" files="SomeAvroDatum.java" />
+  <suppress checks="ConstantName" files="MyFixed.java" />
+  <suppress checks="ConstantName" files="MyEnum.java" />
+  <suppress checks="ConstantName" files="Author" />
+  <suppress checks="ConstantName" files="Book" />
 
   <suppress checks="OneStatementPerLine" files="[\\/]target[\\/]generated-test-sources[\\/]" />
 

@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 
+import javax.annotation.Nullable;
+
 /**
  * Represents the status of a task from the perspective of the coordinator. The task may be ongoing
  * ({@link #isComplete()} false) or it may be complete ({@link #isComplete()} true).
@@ -37,32 +39,32 @@ public class TaskStatus
 
   public static TaskStatus running(String taskId)
   {
-    return new TaskStatus(taskId, TaskState.RUNNING, -1, null);
+    return new TaskStatus(taskId, TaskState.RUNNING, -1, null, null);
   }
 
   public static TaskStatus success(String taskId)
   {
-    return new TaskStatus(taskId, TaskState.SUCCESS, -1, null);
+    return new TaskStatus(taskId, TaskState.SUCCESS, -1, null, null);
   }
 
   public static TaskStatus success(String taskId, String errorMsg)
   {
-    return new TaskStatus(taskId, TaskState.SUCCESS, -1, errorMsg);
+    return new TaskStatus(taskId, TaskState.SUCCESS, -1, errorMsg, null);
   }
 
   public static TaskStatus failure(String taskId)
   {
-    return new TaskStatus(taskId, TaskState.FAILED, -1, null);
+    return new TaskStatus(taskId, TaskState.FAILED, -1, null, null);
   }
 
   public static TaskStatus failure(String taskId, String errorMsg)
   {
-    return new TaskStatus(taskId, TaskState.FAILED, -1, errorMsg);
+    return new TaskStatus(taskId, TaskState.FAILED, -1, errorMsg, null);
   }
 
   public static TaskStatus fromCode(String taskId, TaskState code)
   {
-    return new TaskStatus(taskId, code, -1, null);
+    return new TaskStatus(taskId, code, -1, null, null);
   }
 
   // The error message can be large, so truncate it to avoid storing large objects in zookeeper/metadata storage.
@@ -80,19 +82,22 @@ public class TaskStatus
   private final TaskState status;
   private final long duration;
   private final String errorMsg;
+  private final TaskLocation location;
 
   @JsonCreator
   protected TaskStatus(
       @JsonProperty("id") String id,
       @JsonProperty("status") TaskState status,
       @JsonProperty("duration") long duration,
-      @JsonProperty("errorMsg") String errorMsg
+      @JsonProperty("errorMsg") String errorMsg,
+      @Nullable @JsonProperty("location") TaskLocation location
   )
   {
     this.id = id;
     this.status = status;
     this.duration = duration;
     this.errorMsg = truncateErrorMsg(errorMsg);
+    this.location = location == null ? TaskLocation.unknown() : location;
 
     // Check class invariants.
     Preconditions.checkNotNull(id, "id");
@@ -121,6 +126,12 @@ public class TaskStatus
   public String getErrorMsg()
   {
     return errorMsg;
+  }
+
+  @JsonProperty("location")
+  public TaskLocation getLocation()
+  {
+    return location;
   }
 
   /**
@@ -172,7 +183,21 @@ public class TaskStatus
 
   public TaskStatus withDuration(long _duration)
   {
-    return new TaskStatus(id, status, _duration, errorMsg);
+    return new TaskStatus(id, status, _duration, errorMsg, location);
+  }
+
+  public TaskStatus withLocation(TaskLocation location)
+  {
+    if (location == null) {
+      location = TaskLocation.unknown();
+    }
+    return new TaskStatus(
+        id,
+        status,
+        duration,
+        errorMsg,
+        location
+    );
   }
 
   @Override

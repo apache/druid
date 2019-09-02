@@ -73,7 +73,7 @@ public class PullDependencies implements Runnable
   private static final Logger log = new Logger(PullDependencies.class);
 
   @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
-  private static final Set<String> exclusions = new HashSet<>(
+  private static final Set<String> EXCLUSIONS = new HashSet<>(
       /*
 
       // It is possible that extensions will pull down a lot of jars that are either
@@ -389,7 +389,7 @@ public class PullDependencies implements Runnable
 
               private boolean accept(final Artifact artifact)
               {
-                return exclusions.contains(artifact.getGroupId());
+                return EXCLUSIONS.contains(artifact.getGroupId());
               }
             }
         )
@@ -400,7 +400,7 @@ public class PullDependencies implements Runnable
       final List<Artifact> artifacts = aether.resolveArtifacts(dependencyRequest);
 
       for (Artifact artifact : artifacts) {
-        if (!exclusions.contains(artifact.getGroupId())) {
+        if (!EXCLUSIONS.contains(artifact.getGroupId())) {
           log.info("Adding file [%s] at [%s]", artifact.getFile().getName(), toLocation.getAbsolutePath());
           FileUtils.copyFileToDirectory(artifact.getFile(), toLocation);
         } else {
