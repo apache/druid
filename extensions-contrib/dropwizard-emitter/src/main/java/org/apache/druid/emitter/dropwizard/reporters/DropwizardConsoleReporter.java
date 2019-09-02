@@ -130,4 +130,14 @@ public class DropwizardConsoleReporter implements DropwizardReporter
     result = 31 * result + (consoleReporter != null ? consoleReporter.hashCode() : 0);
     return result;
   }
+
+  @Override
+  public String toString()
+  {
+    return "DropwizardConsoleReporter{" +
+           "emitIntervalInSecs=" + emitIntervalInSecs +
+           ", rates=" + rates +
+           ", durations=" + durations +
+           '}';
+  }
 }

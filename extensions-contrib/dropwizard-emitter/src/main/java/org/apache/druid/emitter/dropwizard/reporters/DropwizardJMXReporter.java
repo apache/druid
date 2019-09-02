@@ -75,4 +75,12 @@ public class DropwizardJMXReporter implements DropwizardReporter
   {
     return Objects.hash(domain);
   }
+
+  @Override
+  public String toString()
+  {
+    return "DropwizardJMXReporter{" +
+           "domain='" + domain + '\'' +
+           '}';
+  }
 }
