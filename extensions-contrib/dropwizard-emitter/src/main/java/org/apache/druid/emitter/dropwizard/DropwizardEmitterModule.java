@@ -28,7 +28,6 @@ import com.google.inject.Provides;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import org.apache.druid.guice.JsonConfigProvider;
-import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.emitter.core.Emitter;
 
@@ -53,7 +52,6 @@ public class DropwizardEmitterModule implements DruidModule
   }
 
   @Provides
-  @ManageLifecycle
   @Named(EMITTER_TYPE)
   public Emitter getEmitter(
       DropwizardEmitterConfig dropwizardEmitterConfig,

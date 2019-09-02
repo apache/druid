@@ -22,12 +22,10 @@ package org.apache.druid.emitter.dropwizard.reporters;
 import com.codahale.metrics.ConsoleReporter;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.emitter.dropwizard.DropwizardReporter;
 
 import java.util.concurrent.TimeUnit;
 
-@JsonTypeName("console")
 public class DropwizardConsoleReporter implements DropwizardReporter
 {
   private long emitIntervalInSecs;

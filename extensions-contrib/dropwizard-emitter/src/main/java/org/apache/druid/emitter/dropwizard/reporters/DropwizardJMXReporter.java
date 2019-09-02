@@ -19,15 +19,13 @@
 
 package org.apache.druid.emitter.dropwizard.reporters;
 
-import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.jmx.JmxReporter;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.emitter.dropwizard.DropwizardReporter;
 
 import java.util.Objects;
 
-@JsonTypeName("jmx")
 public class DropwizardJMXReporter implements DropwizardReporter
 {
   private String domain = "org.apache.druid";

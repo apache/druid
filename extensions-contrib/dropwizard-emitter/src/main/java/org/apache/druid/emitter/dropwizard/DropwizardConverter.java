@@ -58,10 +58,9 @@ public class DropwizardConverter
       Map<String, String> filteredDimensions
   )
   {
-     /*
-        Find the metric in the map. If we cant find it try to look it up prefixed by the service name.
-        This is because some metrics are reported differently, but with the same name, from different services.
-       */
+
+    // Find the metric in the map. If we cant find it try to look it up prefixed by the service name.
+    // This is because some metrics are reported differently, but with the same name, from different services.
     DropwizardMetricSpec metricSpec = null;
     DropwizardMetricSpec dropwizardMetricSpec = metricMap.get(metric);
     if (dropwizardMetricSpec != null) {

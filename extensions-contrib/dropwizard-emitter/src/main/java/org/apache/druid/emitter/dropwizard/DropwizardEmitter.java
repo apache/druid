@@ -143,6 +143,9 @@ public class DropwizardEmitter implements Emitter
         if (prevVal == null) {
           metricsRegistry.register(name, (Gauge<Number>) () -> gagues.get(name));
         }
+        break;
+      default:
+        throw new ISE("Unknown Metric Type [%s]", metricSpec.getType());
     }
   }
 
