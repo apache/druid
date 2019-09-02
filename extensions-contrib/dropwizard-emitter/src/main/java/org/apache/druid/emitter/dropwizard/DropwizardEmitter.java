@@ -20,8 +20,11 @@
 package org.apache.druid.emitter.dropwizard;
 
 import com.codahale.metrics.Gauge;
+import com.codahale.metrics.Metric;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.ISE;
@@ -32,25 +35,22 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class DropwizardEmitter implements Emitter
 {
   private static final Logger log = new Logger(DropwizardEmitter.class);
-  private final MetricRegistry metricsRegistry = new MetricRegistry();
+  private final MetricRegistry metricsRegistry;
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final DropwizardConverter converter;
   private final List<Emitter> alertEmitters;
   private final List<DropwizardReporter> reporters;
   private final DropwizardEmitterConfig config;
-  // Note: the gauges do not represent the actual instantaneous value for the metrics.
-  // Instead they have the last known value for it.
-  private final Map<String, Number> gagues;
 
   public DropwizardEmitter(
       DropwizardEmitterConfig config,
@@ -62,7 +62,18 @@ public class DropwizardEmitter implements Emitter
     this.config = config;
     this.reporters = config.getReporters();
     this.converter = new DropwizardConverter(mapper, config.getDimensionMapPath());
-    this.gagues = Collections.synchronizedMap(new GaugesCache<>(config.getMaxGaugeCount()));
+    final Cache<String, Metric> metricsRegistryCache = Caffeine.newBuilder()
+                                                               .recordStats()
+                                                               .maximumSize(config.getMaxMetricsRegistrySize())
+                                                               .build();
+    metricsRegistry = new MetricRegistry()
+    {
+      @Override
+      protected ConcurrentMap<String, Metric> buildMap()
+      {
+        return metricsRegistryCache.asMap();
+      }
+    };
   }
 
 
@@ -100,12 +111,12 @@ public class DropwizardEmitter implements Emitter
         if (config.getPrefix() != null) {
           nameBuilder.add(config.getPrefix());
         }
-        nameBuilder.add("metric=" + metric);
-        nameBuilder.add("service=" + service);
+        nameBuilder.add(StringUtils.format("metric=%s", metric));
+        nameBuilder.add(StringUtils.format("service=%s", service));
         if (config.getIncludeHost()) {
-          nameBuilder.add("hostname=" + host);
+          nameBuilder.add(StringUtils.format("hostname=%s", host));
         }
-        dims.forEach((key, value1) -> nameBuilder.add(key + "=" + value1));
+        dims.forEach((key, value1) -> nameBuilder.add(StringUtils.format("%s=%s", key, value1)));
 
         String fullName = StringUtils.replaceChar(Joiner.on(",").join(nameBuilder.build()), '/', ".");
         updateMetric(fullName, value, metricSpec);
@@ -138,11 +149,8 @@ public class DropwizardEmitter implements Emitter
         metricsRegistry.histogram(name).update(value.longValue());
         break;
       case gauge:
-        Number prevVal = gagues.put(name, value);
-        // It is the first time we get this metric, register it with metricsRegistry
-        if (prevVal == null) {
-          metricsRegistry.register(name, (Gauge<Number>) () -> gagues.get(name));
-        }
+        SettableGauge gauge = (SettableGauge) metricsRegistry.gauge(name, () -> new SettableGauge(value));
+        gauge.setValue(value);
         break;
       default:
         throw new ISE("Unknown Metric Type [%s]", metricSpec.getType());
@@ -165,6 +173,27 @@ public class DropwizardEmitter implements Emitter
       for (DropwizardReporter reporter : reporters) {
         reporter.close();
       }
+    }
+  }
+
+  private static class SettableGauge implements Gauge<Number>
+  {
+    private Number value;
+
+    public SettableGauge(Number value)
+    {
+      this.value = value;
+    }
+
+    public void setValue(Number value)
+    {
+      this.value = value;
+    }
+
+    @Override
+    public Number getValue()
+    {
+      return null;
     }
   }
 

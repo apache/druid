@@ -21,6 +21,7 @@ package org.apache.druid.emitter.dropwizard;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 
 import java.util.Collections;
 import java.util.List;
@@ -29,7 +30,8 @@ import java.util.Objects;
 
 public class DropwizardEmitterConfig
 {
-  private static int DEFAULT_MAX_GAUGE_COUNT = 100_000;
+  // default to 100 Mb
+  private static int DEFAULT_METRICS_REGISTRY_SIZE = 100_000_000;
   @JsonProperty
   private final List<DropwizardReporter> reporters;
   @JsonProperty
@@ -41,7 +43,7 @@ public class DropwizardEmitterConfig
   @JsonProperty
   private final List<String> alertEmitters;
   @JsonProperty
-  private final int maxGaugeCount;
+  private final int maxMetricsRegistrySize;
 
   @JsonCreator
   public DropwizardEmitterConfig(
@@ -50,15 +52,16 @@ public class DropwizardEmitterConfig
       @JsonProperty("includeHost") Boolean includeHost,
       @JsonProperty("dimensionMapPath") String dimensionMapPath,
       @JsonProperty("alertEmitters") List<String> alertEmitters,
-      @JsonProperty("maxGaugeCount") Integer maxGaugeCount
+      @JsonProperty("metricsRegistrySize") Integer maxMetricsRegistrySize
   )
   {
+    Preconditions.checkArgument(reporters != null && !reporters.isEmpty());
     this.reporters = reporters;
     this.prefix = prefix;
     this.alertEmitters = alertEmitters == null ? Collections.emptyList() : alertEmitters;
     this.includeHost = includeHost != null ? includeHost : true;
     this.dimensionMapPath = dimensionMapPath;
-    this.maxGaugeCount = maxGaugeCount == null ? DEFAULT_MAX_GAUGE_COUNT : maxGaugeCount;
+    this.maxMetricsRegistrySize = maxMetricsRegistrySize == null ? DEFAULT_METRICS_REGISTRY_SIZE : maxMetricsRegistrySize;
   }
 
   @JsonProperty
@@ -92,9 +95,9 @@ public class DropwizardEmitterConfig
   }
 
   @JsonProperty
-  public int getMaxGaugeCount()
+  public int getMaxMetricsRegistrySize()
   {
-    return maxGaugeCount;
+    return maxMetricsRegistrySize;
   }
 
   @Override
@@ -107,7 +110,7 @@ public class DropwizardEmitterConfig
       return false;
     }
     DropwizardEmitterConfig that = (DropwizardEmitterConfig) o;
-    return maxGaugeCount == that.maxGaugeCount &&
+    return maxMetricsRegistrySize == that.maxMetricsRegistrySize &&
            Objects.equals(reporters, that.reporters) &&
            Objects.equals(prefix, that.prefix) &&
            Objects.equals(includeHost, that.includeHost) &&
@@ -118,7 +121,7 @@ public class DropwizardEmitterConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(reporters, prefix, includeHost, dimensionMapPath, alertEmitters, maxGaugeCount);
+    return Objects.hash(reporters, prefix, includeHost, dimensionMapPath, alertEmitters, maxMetricsRegistrySize);
   }
 
   @Override
@@ -130,7 +133,7 @@ public class DropwizardEmitterConfig
            ", includeHost=" + includeHost +
            ", dimensionMapPath='" + dimensionMapPath + '\'' +
            ", alertEmitters=" + alertEmitters +
-           ", maxGaugeCount=" + maxGaugeCount +
+           ", maxMetricsRegistrySize=" + maxMetricsRegistrySize +
            '}';
   }
 }

@@ -24,7 +24,7 @@ title: "Dropwizard metrics emitter"
 
 # Dropwizard Emitter
 
-To use this extension, make sure to [include](../../operations/including-extensions.html) `dropwizard-emitter` extension.
+To use this extension, make sure to [include](../../development/extensions.md#loading-extensions) `dropwizard-emitter` extension.
 
 ## Introduction
 
@@ -44,7 +44,7 @@ All the configuration parameters for Dropwizard emitter are under `druid.emitter
 |`druid.emitter.dropwizard.includeHost`|Flag to include the host and port as part of the metric name.|no|yes|
 |`druid.emitter.dropwizard.dimensionMapPath`|Path to JSON file defining the dropwizard metric type, and desired dimensions for every Druid metric|no|Default mapping provided. See below.|
 |`druid.emitter.dropwizard.alertEmitters`| List of emitters where alerts will be forwarded to. |no| empty list (no forwarding)|
-|`druid.emitter.dropwizard.maxGaugeCount`| Maximum size of distinct gauge metrics to be cached at any time. |no| 100K|
+|`druid.emitter.dropwizard.maxMetricsRegistrySize`| Maximum size of metrics registry to be cached at any time. |no| 100Mb|
 
 
 ### Druid to Dropwizard Event Conversion
@@ -71,7 +71,7 @@ For most use-cases, the default mapping is sufficient.
 Used to report druid metrics via JMX.
 ```
 
-druid.emitter.dropwizard.reporter={"type":"jmx"}
+druid.emitter.dropwizard.reporters={"type":"jmx"}
 
 ```
 
@@ -80,11 +80,12 @@ Used to print Druid Metrics to console logs.
 
 ```
 
-druid.emitter.dropwizard.reporter={"type":"console","emitIntervalInSecs":30}"}
+druid.emitter.dropwizard.reporters={"type":"console","emitIntervalInSecs":30}"}
 
 ```
 
 ### Default Metrics Mapping
+Latest default metrics mapping can be foung [here] (https://github.com/apache/incubator-druid/tree/master/extensions-contrib/dropwizard/src/main/resources/defaultMetricDimensions.json)
 ```json
 {
   "query/time": {
