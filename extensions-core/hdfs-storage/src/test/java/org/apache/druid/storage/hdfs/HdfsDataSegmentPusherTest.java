@@ -249,13 +249,16 @@ public class HdfsDataSegmentPusherTest
 
       // push twice will fail and temp dir cleaned
       File outDir = new File(StringUtils.format("%s/%s", config.getStorageDirectory(), segmentPath));
+      Exception ex = null;
       outDir.setReadOnly();
       try {
         pusher.push(segmentDir, segments[i], false);
       }
       catch (IOException e) {
-        Assert.fail("should not throw exception");
+        ex = e;
       }
+      // Should throw exception when pushing segment twice.
+      Assert.assertNotNull(ex);
     }
   }
 
@@ -324,13 +327,16 @@ public class HdfsDataSegmentPusherTest
 
     // push twice will fail and temp dir cleaned
     File outDir = new File(StringUtils.format("%s/%s", config.getStorageDirectory(), segmentPath));
+    Exception ex = null;
     outDir.setReadOnly();
     try {
       pusher.push(segmentDir, segmentToPush, false);
     }
     catch (IOException e) {
-      Assert.fail("should not throw exception");
+      ex = e;
     }
+    // Should throw exception when pushing segment twice.
+    Assert.assertNotNull(ex);
   }
 
   public static class TestObjectMapper extends ObjectMapper
