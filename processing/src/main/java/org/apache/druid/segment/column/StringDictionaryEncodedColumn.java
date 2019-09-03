@@ -121,11 +121,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       @Override
       public int getValueCardinality()
       {
-        if (extractionFn != null) {
-          return CARDINALITY_UNKNOWN;
-        } else {
-          return getCardinality();
-        }
+        return getCardinality();
       }
 
       @Override
