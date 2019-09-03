@@ -36,7 +36,7 @@ import java.util.function.BinaryOperator;
 public class ComplexSequenceTest
 {
   // Integer::sum with more nulls
-  private static final BinaryOperator<Integer> PLUS_NULLABLE = (arg1, arg2) -> {
+  public static final BinaryOperator<Integer> PLUS_NULLABLE = (arg1, arg2) -> {
     if (arg1 == null) {
       return arg2;
     }

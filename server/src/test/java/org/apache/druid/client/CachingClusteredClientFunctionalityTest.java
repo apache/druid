@@ -35,6 +35,7 @@ import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
+import org.apache.druid.guice.LifecycleForkJoinPool;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -68,6 +69,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  */
@@ -313,7 +315,8 @@ public class CachingClusteredClientFunctionalityTest
           {
             return 0L;
           }
-        }
+        },
+        new LifecycleForkJoinPool(6, ForkJoinPool.defaultForkJoinWorkerThreadFactory, null, true, 1000L)
     );
   }
 

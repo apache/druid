@@ -41,6 +41,7 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.LifecycleForkJoinPool;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
@@ -84,6 +85,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  * Base class for implementing MovingAverageQuery tests
@@ -349,7 +351,8 @@ public class MovingAverageQueryTest
           {
             return 0L;
           }
-        }
+        },
+        new LifecycleForkJoinPool(6, ForkJoinPool.defaultForkJoinWorkerThreadFactory, null, true, 1000L)
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(

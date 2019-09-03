@@ -53,6 +53,7 @@ import org.apache.druid.utils.JvmUtils;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  */
@@ -132,6 +133,19 @@ public class DruidProcessingModule implements Module
     return new DefaultBlockingPool<>(
         new OffheapBufferGenerator("result merging", config.intermediateComputeSizeBytes()),
         config.getNumMergeBuffers()
+    );
+  }
+
+  @Provides
+  @ManageLifecycle
+  public LifecycleForkJoinPool getMergeProcessingPool(DruidProcessingConfig config)
+  {
+    return new LifecycleForkJoinPool(
+        config.getNumThreadsMergePool(),
+        ForkJoinPool.defaultForkJoinWorkerThreadFactory, // todo: ?
+        null,
+        true,
+        config.getMergePoolAwaitShutdownMillis()
     );
   }
 

@@ -36,6 +36,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
 import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
+import org.apache.druid.guice.LifecycleForkJoinPool;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
@@ -45,6 +46,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.LazySequence;
+import org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -102,6 +104,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final CachePopulator cachePopulator;
   private final CacheConfig cacheConfig;
   private final DruidHttpClientConfig httpClientConfig;
+  private final LifecycleForkJoinPool pool;
 
   @Inject
   public CachingClusteredClient(
@@ -111,7 +114,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       @Smile ObjectMapper objectMapper,
       CachePopulator cachePopulator,
       CacheConfig cacheConfig,
-      @Client DruidHttpClientConfig httpClientConfig
+      @Client DruidHttpClientConfig httpClientConfig,
+      LifecycleForkJoinPool pool
   )
   {
     this.warehouse = warehouse;
@@ -121,6 +125,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.cachePopulator = cachePopulator;
     this.cacheConfig = cacheConfig;
     this.httpClientConfig = httpClientConfig;
+    this.pool = pool;
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
       log.warn(
@@ -286,10 +291,33 @@ public class CachingClusteredClient implements QuerySegmentWalker
         List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size() + segmentsByServer.size());
         addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
         addSequencesFromServer(sequencesByInterval, segmentsByServer);
+        return merge(sequencesByInterval);
+      });
+    }
+
+    private Sequence<T> merge(List<Sequence<T>> sequencesByInterval)
+    {
+      if (QueryContexts.getEnableParallelMerges(query)) {
+        final int yieldAfter = QueryContexts.getParallelMergeInitialYieldRows(query);
+        final int batchSize = QueryContexts.getParallelMergeSmallBatchRows(query);
+        return new ParallelMergeCombiningSequence<>(
+            pool,
+            sequencesByInterval,
+            query.getResultOrdering(),
+            toolChest.createMergeFn(query),
+            8 * (yieldAfter / batchSize),
+            QueryContexts.hasTimeout(query),
+            QueryContexts.getTimeout(query),
+            QueryContexts.getPriority(query),
+            QueryContexts.getParallelMergeParallelism(query),
+            yieldAfter,
+            batchSize
+        );
+      } else {
         return Sequences
             .simple(sequencesByInterval)
             .flatMerge(seq -> seq, query.getResultOrdering());
-      });
+      }
     }
 
     private Set<ServerToSegment> computeSegmentsToQuery(TimelineLookup<String, ServerSelector> timeline)

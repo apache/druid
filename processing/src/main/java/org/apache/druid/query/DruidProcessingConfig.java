@@ -34,6 +34,7 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   public static final int DEFAULT_NUM_MERGE_BUFFERS = -1;
   public static final int DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = -1;
   public static final int MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = 1024 * 1024 * 1024;
+  public static final int DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS = 60_000;
 
   private AtomicReference<Integer> computedBufferSizeBytes = new AtomicReference<>();
 
@@ -143,5 +144,27 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   public String getTmpDir()
   {
     return System.getProperty("java.io.tmpdir");
+  }
+
+  @Config(value = "${base_path}.numMergePoolThreads")
+  public int getNumThreadsMergePoolConfigured()
+  {
+    return DEFAULT_NUM_THREADS;
+  }
+
+  public int getNumThreadsMergePool()
+  {
+    int numThreadsConfigured = getNumThreadsMergePoolConfigured();
+    if (numThreadsConfigured != DEFAULT_NUM_THREADS) {
+      return numThreadsConfigured;
+    } else {
+      return (int) Math.ceil(JvmUtils.getRuntimeInfo().getAvailableProcessors() * 1.5);
+    }
+  }
+
+  @Config(value = "${base_path}.mergePoolAwaitShutdownMillis")
+  public long getMergePoolAwaitShutdownMillis()
+  {
+    return DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS;
   }
 }

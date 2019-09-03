@@ -52,6 +52,7 @@ import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
+import org.apache.druid.guice.LifecycleForkJoinPool;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
@@ -163,6 +164,7 @@ import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  *
@@ -2756,7 +2758,14 @@ public class CachingClusteredClientTest
           {
             return 0L;
           }
-        }
+        },
+        new LifecycleForkJoinPool(
+            (int) Math.ceil(Runtime.getRuntime().availableProcessors() * 1.5),
+            ForkJoinPool.defaultForkJoinWorkerThreadFactory,
+            null,
+            true,
+            1000L
+        )
     );
   }
 
