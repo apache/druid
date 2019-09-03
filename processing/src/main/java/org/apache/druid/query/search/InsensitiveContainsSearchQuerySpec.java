@@ -41,22 +41,4 @@ public class InsensitiveContainsSearchQuerySpec extends ContainsSearchQuerySpec
            "value=" + getValue() +
            "}";
   }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    return super.equals(o);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return super.hashCode();
-  }
 }
