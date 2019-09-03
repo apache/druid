@@ -26,16 +26,20 @@ import org.apache.druid.metadata.PasswordProvider;
 
 import javax.validation.constraints.Min;
 
-/**
- */
 public class CuratorConfig
 {
-  @JsonProperty("host")
+  static final String HOST = "host";
+  @JsonProperty(HOST)
   private String zkHosts = "localhost";
 
   @JsonProperty("sessionTimeoutMs")
   @Min(0)
-  private int zkSessionTimeoutMs = 30000;
+  private int zkSessionTimeoutMs = 30_000;
+
+  static final String CONNECTION_TIMEOUT_MS = "connectionTimeoutMs";
+  @JsonProperty(CONNECTION_TIMEOUT_MS)
+  @Min(0)
+  private int zkConnectionTimeoutMs = 15_000;
 
   @JsonProperty("compress")
   private boolean enableCompression = true;
@@ -51,10 +55,6 @@ public class CuratorConfig
 
   @JsonProperty("authScheme")
   private String authScheme = "digest";
-
-  @JsonProperty("terminateDruidProcessOnConnectFail")
-  private boolean terminateDruidProcessOnConnectFail = false;
-
 
   public String getZkHosts()
   {
@@ -74,6 +74,16 @@ public class CuratorConfig
   public void setZkSessionTimeoutMs(Integer zkSessionTimeoutMs)
   {
     this.zkSessionTimeoutMs = zkSessionTimeoutMs;
+  }
+
+  public Integer getZkConnectionTimeoutMs()
+  {
+    return zkConnectionTimeoutMs;
+  }
+
+  public void setZkConnectionTimeoutMs(Integer zkConnectionTimeoutMs)
+  {
+    this.zkConnectionTimeoutMs = zkConnectionTimeoutMs;
   }
 
   public boolean getEnableCompression()
@@ -112,19 +122,4 @@ public class CuratorConfig
   {
     return authScheme;
   }
-
-  public boolean getTerminateDruidProcessOnConnectFail()
-  {
-    return terminateDruidProcessOnConnectFail;
-  }
-
-  public void setTerminateDruidProcessOnConnectFail(Boolean terminateDruidProcessOnConnectFail)
-  {
-    if (terminateDruidProcessOnConnectFail == null) {
-      this.terminateDruidProcessOnConnectFail = false;
-    } else {
-      this.terminateDruidProcessOnConnectFail = terminateDruidProcessOnConnectFail;
-    }
-  }
-
 }
