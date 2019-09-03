@@ -19,18 +19,21 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { TableActionDialog } from './table-action-dialog';
+import { ExamplePicker } from './example-picker';
 
-describe('table action dialog', () => {
+describe('example picker', () => {
   it('matches snapshot', () => {
-    const tableActionDialog = (
-      <TableActionDialog
-        title="Table dummy actions"
-        sideButtonMetadata={[{ icon: 'badge', text: 'test' }]}
-        onClose={() => {}}
+    const examplePicker = (
+      <ExamplePicker
+        exampleManifests={[
+          { name: 'Wikipedia', description: 'stuff stuff', spec: {} },
+          { name: 'Ex 2', description: 'stuff stuff', spec: {} },
+        ]}
+        onSelectExample={() => {}}
       />
     );
-    render(tableActionDialog);
-    expect(document.body.lastChild).toMatchSnapshot();
+
+    const { container } = render(examplePicker);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

@@ -53,7 +53,7 @@ if (typeof consoleConfig.title === 'string') {
 
 if (consoleConfig.baseURL) {
   axios.defaults.baseURL = consoleConfig.baseURL;
-  UrlBaser.baseURL = consoleConfig.baseURL;
+  UrlBaser.baseUrl = consoleConfig.baseURL;
 }
 if (consoleConfig.customHeaderName && consoleConfig.customHeaderValue) {
   axios.defaults.headers.common[consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;

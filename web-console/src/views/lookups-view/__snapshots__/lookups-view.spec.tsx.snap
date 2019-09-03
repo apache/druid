@@ -208,17 +208,5 @@ exports[`lookups view matches snapshot 1`] = `
     style={Object {}}
     subRowsKey="_subRows"
   />
-  <LookupEditDialog
-    allLookupTiers={Array []}
-    isEdit={false}
-    isOpen={false}
-    lookupName=""
-    lookupSpec=""
-    lookupTier=""
-    lookupVersion=""
-    onChange={[Function]}
-    onClose={[Function]}
-    onSubmit={[Function]}
-  />
 </div>
 `;
