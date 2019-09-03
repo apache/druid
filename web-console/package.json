@@ -61,7 +61,7 @@
     "d3": "^5.10.1",
     "d3-array": "^2.3.1",
     "druid-console": "0.0.2",
-    "druid-query-toolkit": "^0.3.26",
+    "druid-query-toolkit": "^0.3.27",
     "file-saver": "^2.0.2",
     "has-own-prop": "^2.0.0",
     "hjson": "^3.1.2",

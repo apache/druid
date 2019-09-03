@@ -93,7 +93,7 @@ export class ShowJson extends React.PureComponent<ShowJsonProps, ShowJsonState> 
               onClick={() => {
                 copy(jsonValue ? jsonValue : '', { format: 'text/plain' });
                 AppToaster.show({
-                  message: 'JSON copied to clipboard',
+                  message: 'JSON value copied to clipboard',
                   intent: Intent.SUCCESS,
                 });
               }}

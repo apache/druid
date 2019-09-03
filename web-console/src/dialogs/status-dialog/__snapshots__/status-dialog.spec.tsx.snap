@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`table action dialog matches snapshot 1`] = `
+exports[`status dialog matches snapshot 1`] = `
 <div
   class="bp3-portal"
 >
@@ -9,13 +9,14 @@ exports[`table action dialog matches snapshot 1`] = `
   >
     <div
       class="bp3-overlay-backdrop bp3-overlay-appear bp3-overlay-appear-active"
+      tabindex="0"
     />
     <div
       class="bp3-dialog-container bp3-overlay-content bp3-overlay-appear bp3-overlay-appear-active"
       tabindex="0"
     >
       <div
-        class="bp3-dialog spec-dialog"
+        class="bp3-dialog status-dialog"
       >
         <div
           class="bp3-dialog-header"
@@ -23,7 +24,7 @@ exports[`table action dialog matches snapshot 1`] = `
           <h4
             class="bp3-heading"
           >
-            spec-dialog
+            Status
           </h4>
           <button
             aria-label="Close"
@@ -52,91 +53,58 @@ exports[`table action dialog matches snapshot 1`] = `
           </button>
         </div>
         <div
-          class=" ace_editor ace-tm spec-dialog-textarea"
-          id="brace-editor"
-          style="width: 100%; height: 500px;"
+          class="status-dialog-main-area"
         >
-          <textarea
-            autocapitalize="off"
-            autocorrect="off"
-            class="ace_text-input"
-            spellcheck="false"
-            style="opacity: 0;"
-            wrap="off"
-          />
           <div
-            aria-hidden="true"
-            class="ace_gutter"
+            class="show-json"
           >
             <div
-              class="ace_layer ace_gutter-layer ace_folding-enabled"
-            />
-            <div
-              class="ace_gutter-active-line"
-            />
-          </div>
-          <div
-            class="ace_scroller"
-          >
-            <div
-              class="ace_content"
+              class="top-actions"
             >
               <div
-                class="ace_layer ace_print-margin-layer"
+                class="bp3-button-group right-buttons"
               >
-                <div
-                  class="ace_print-margin"
-                  style="left: 4px; visibility: hidden;"
-                />
-              </div>
-              <div
-                class="ace_layer ace_marker-layer"
-              />
-              <div
-                class="ace_layer ace_text-layer"
-                style="padding: 0px 4px;"
-              />
-              <div
-                class="ace_layer ace_marker-layer"
-              />
-              <div
-                class="ace_layer ace_cursor-layer ace_hidden-cursors"
-              >
-                <div
-                  class="ace_cursor"
-                />
+                <button
+                  class="bp3-button bp3-disabled bp3-minimal"
+                  disabled=""
+                  tabindex="-1"
+                  type="button"
+                >
+                  <span
+                    class="bp3-button-text"
+                  >
+                    Save
+                  </span>
+                </button>
+                <button
+                  class="bp3-button bp3-disabled bp3-minimal"
+                  disabled=""
+                  tabindex="-1"
+                  type="button"
+                >
+                  <span
+                    class="bp3-button-text"
+                  >
+                    Copy
+                  </span>
+                </button>
+                <button
+                  class="bp3-button bp3-disabled bp3-minimal"
+                  disabled=""
+                  tabindex="-1"
+                  type="button"
+                >
+                  <span
+                    class="bp3-button-text"
+                  >
+                    View raw
+                  </span>
+                </button>
               </div>
             </div>
-          </div>
-          <div
-            class="ace_scrollbar ace_scrollbar-v"
-            style="display: none; width: 20px;"
-          >
             <div
-              class="ace_scrollbar-inner"
-              style="width: 20px;"
+              class="main-area"
             />
-          </div>
-          <div
-            class="ace_scrollbar ace_scrollbar-h"
-            style="display: none; height: 20px;"
-          >
-            <div
-              class="ace_scrollbar-inner"
-              style="height: 20px;"
-            />
-          </div>
-          <div
-            style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: hidden;"
-          >
-            <div
-              style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
-            />
-            <div
-              style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
-            >
-              XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-            </div>
           </div>
         </div>
         <div
@@ -146,23 +114,13 @@ exports[`table action dialog matches snapshot 1`] = `
             class="bp3-dialog-footer-actions"
           >
             <button
-              class="bp3-button"
-              type="button"
-            >
-              <span
-                class="bp3-button-text"
-              >
-                Close
-              </span>
-            </button>
-            <button
               class="bp3-button bp3-intent-primary"
               type="button"
             >
               <span
                 class="bp3-button-text"
               >
-                Submit
+                Close
               </span>
             </button>
           </div>

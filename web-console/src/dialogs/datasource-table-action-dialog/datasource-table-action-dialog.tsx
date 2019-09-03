@@ -16,14 +16,13 @@
  * limitations under the License.
  */
 
-import { IDialogProps } from '@blueprintjs/core';
 import React from 'react';
 
 import { DatasourceColumnsTable } from '../../components/datasource-columns-table/datasource-columns-table';
 import { BasicAction } from '../../utils/basic-action';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
-interface DatasourceTableActionDialogProps extends IDialogProps {
+interface DatasourceTableActionDialogProps {
   datasourceId?: string;
   actions: BasicAction[];
   onClose: () => void;
@@ -59,7 +58,6 @@ export class DatasourceTableActionDialog extends React.PureComponent<
 
     return (
       <TableActionDialog
-        isOpen
         sideButtonMetadata={taskTableSideButtonMetadata}
         onClose={onClose}
         title={`Datasource: ${datasourceId}`}
