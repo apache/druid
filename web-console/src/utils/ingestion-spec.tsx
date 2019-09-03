@@ -1455,7 +1455,9 @@ function basenameFromFilename(filename: string): string | undefined {
   return filename.split('.')[0];
 }
 
-export function fillDataSourceName(spec: IngestionSpec): IngestionSpec {
+export function fillDataSourceNameIfNeeded(spec: IngestionSpec): IngestionSpec {
+  // Do not overwrite if the spec already has a name
+  if (deepGet(spec, 'dataSchema.dataSource')) return spec;
   const ioConfig = deepGet(spec, 'ioConfig');
   if (!ioConfig) return spec;
   const possibleName = guessDataSourceName(ioConfig);

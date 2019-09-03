@@ -36,7 +36,7 @@ import {
 } from './ingestion-spec';
 import { deepGet, deepSet, whitelistKeys } from './object-change';
 
-const MS_IN_HOUR = 60 * 60 * 1000;
+const MS_IN_HALF_HOUR = 30 * 60 * 1000;
 
 const SAMPLER_URL = `/druid/indexer/v1/sampler`;
 const BASE_SAMPLER_CONFIG: SamplerConfig = {
@@ -67,7 +67,8 @@ export interface SampleResponseWithExtraInfo extends SampleResponse {
   queryGranularity?: any;
   timestampSpec?: any;
   rollup?: boolean;
-  aggregators?: any;
+  columns?: Record<string, any>;
+  aggregators?: Record<string, any>;
 }
 
 export interface SampleEntry {
@@ -199,7 +200,7 @@ export async function scopeDownIngestSegmentFirehoseIntervalIfNeeded(
   if (isNaN(end.valueOf())) throw new Error(`could not decode interval end`);
 
   // Less than or equal to 1 hour so there is no need to adjust intervals
-  if (Math.abs(end.valueOf() - start.valueOf()) <= MS_IN_HOUR) return ioConfig;
+  if (Math.abs(end.valueOf() - start.valueOf()) <= MS_IN_HALF_HOUR) return ioConfig;
 
   const dataSourceMetadataResponse = await queryDruidRune({
     queryType: 'dataSourceMetadata',
@@ -217,7 +218,7 @@ export async function scopeDownIngestSegmentFirehoseIntervalIfNeeded(
   if (maxIngestedEventTime < start) return ioConfig;
 
   const newEnd = maxIngestedEventTime < end ? maxIngestedEventTime : end;
-  const newStart = new Date(newEnd.valueOf() - MS_IN_HOUR); // Set start to 1hr ago
+  const newStart = new Date(newEnd.valueOf() - MS_IN_HALF_HOUR); // Set start to 1hr ago
 
   return deepSet(
     ioConfig,
@@ -278,6 +279,7 @@ export async function sampleForConnect(
       samplerResponse.queryGranularity = segmentMetadataResponse0.queryGranularity;
       samplerResponse.timestampSpec = segmentMetadataResponse0.timestampSpec;
       samplerResponse.rollup = segmentMetadataResponse0.rollup;
+      samplerResponse.columns = segmentMetadataResponse0.columns;
       samplerResponse.aggregators = segmentMetadataResponse0.aggregators;
     } else {
       throw new Error(`unexpected response from segmentMetadata query`);

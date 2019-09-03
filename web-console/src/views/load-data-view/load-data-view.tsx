@@ -72,7 +72,7 @@ import {
   DruidFilter,
   EMPTY_ARRAY,
   EMPTY_OBJECT,
-  fillDataSourceName,
+  fillDataSourceNameIfNeeded,
   fillParser,
   FlattenField,
   getDimensionMode,
@@ -1100,6 +1100,20 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 );
               }
 
+              if (inputData.columns) {
+                const aggregators = inputData.aggregators || {};
+                newSpec = deepSet(
+                  newSpec,
+                  'dataSchema.parser.parseSpec.dimensionsSpec.dimensions',
+                  Object.keys(inputData.columns)
+                    .filter(k => k !== '__time' && !aggregators[k])
+                    .map(k => ({
+                      name: k,
+                      type: String(inputData.columns![k].type || 'string').toLowerCase(),
+                    })),
+                );
+              }
+
               if (inputData.aggregators) {
                 newSpec = deepSet(
                   newSpec,
@@ -1108,10 +1122,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 );
               }
 
-              this.updateSpec(fillDataSourceName(newSpec));
+              this.updateSpec(fillDataSourceNameIfNeeded(newSpec));
             } else {
               this.updateSpec(
-                fillDataSourceName(fillParser(spec, inputQueryState.data.data.map(l => l.raw))),
+                fillDataSourceNameIfNeeded(
+                  fillParser(spec, inputQueryState.data.data.map(l => l.raw)),
+                ),
               );
             }
           },
@@ -1706,9 +1722,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           disabled: !transformQueryState.data,
           onNextStep: () => {
             if (!transformQueryState.data) return;
-            this.updateSpec(
-              updateSchemaWithSample(spec, transformQueryState.data, 'specific', true),
-            );
+            if (!isIngestSegment(spec)) {
+              this.updateSpec(
+                updateSchemaWithSample(spec, transformQueryState.data, 'specific', true),
+              );
+            }
           },
         })}
       </>
