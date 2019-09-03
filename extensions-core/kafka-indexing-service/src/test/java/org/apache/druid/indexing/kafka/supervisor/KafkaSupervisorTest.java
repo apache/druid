@@ -653,22 +653,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testDontKillTasksWithMismatchedDatasourceAndType() throws Exception
+  public void testDontKillTasksWithMismatchedType() throws Exception
   {
     supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
     addSomeEvents(1);
-
-    // different datasource (don't kill)
-    Task id1 = createKafkaIndexTask(
-        "id1",
-        "other-datasource",
-        2,
-        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(0, 0L), ImmutableSet.of()),
-        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(0, 10L)),
-        null,
-        null,
-        supervisor.getTuningConfig()
-    );
 
     // non KafkaIndexTask (don't kill)
     Task id2 = new RealtimeIndexTask(
@@ -682,7 +670,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null
     );
 
-    List<Task> existingTasks = ImmutableList.of(id1, id2);
+    List<Task> existingTasks = ImmutableList.of(id2);
 
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
