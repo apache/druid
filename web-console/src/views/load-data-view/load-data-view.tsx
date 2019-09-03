@@ -139,6 +139,7 @@ import {
 } from '../../utils/sampler';
 import { computeFlattenPathsForData } from '../../utils/spec-utils';
 
+import { ExamplePicker } from './example-picker/example-picker';
 import { FilterTable } from './filter-table/filter-table';
 import { ParseDataTable } from './parse-data-table/parse-data-table';
 import { ParseTimeTable } from './parse-time-table/parse-time-table';
@@ -623,6 +624,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec, exampleManifests } = this.state;
     const noExamples = Boolean(!exampleManifests || !exampleManifests.length);
 
+    const welcomeMessage = this.renderWelcomeStepMessage();
     return (
       <>
         <div className="main bp3-input">
@@ -639,7 +641,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderIngestionCard('other')}
         </div>
         <div className="control">
-          <Callout className="intro">{this.renderWelcomeStepMessage()}</Callout>
+          {welcomeMessage && <Callout className="intro">{welcomeMessage}</Callout>}
           {this.renderWelcomeStepControls()}
           {!isEmptyIngestionSpec(spec) && (
             <Button icon={IconNames.RESET} text="Reset spec" onClick={this.handleResetConfirm} />
@@ -658,7 +660,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  renderWelcomeStepMessage() {
+  renderWelcomeStepMessage(): JSX.Element | undefined {
     const { selectedComboType, exampleManifests } = this.state;
 
     if (!selectedComboType) {
@@ -746,9 +748,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       case 'example':
         if (exampleManifests && exampleManifests.length) {
-          return <p>Pick one of these examples to get you started.</p>;
+          return; // Yield to example picker controls
         } else {
-          return <p>Could not load example.</p>;
+          return <p>Could not load examples.</p>;
         }
 
       case 'other':
@@ -812,27 +814,17 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         );
 
       case 'example':
+        if (!exampleManifests) return;
         return (
-          <>
-            {exampleManifests &&
-              exampleManifests.map((exampleManifest, i) => (
-                <FormGroup key={i}>
-                  <Button
-                    text={exampleManifest.name}
-                    rightIcon={IconNames.ARROW_RIGHT}
-                    intent={Intent.PRIMARY}
-                    title={exampleManifest.description}
-                    fill
-                    onClick={() => {
-                      this.updateSpec(exampleManifest.spec);
-                      setTimeout(() => {
-                        this.updateStep('connect');
-                      }, 10);
-                    }}
-                  />
-                </FormGroup>
-              ))}
-          </>
+          <ExamplePicker
+            exampleManifests={exampleManifests}
+            onSelectExample={exampleManifest => {
+              this.updateSpec(exampleManifest.spec);
+              setTimeout(() => {
+                this.updateStep('connect');
+              }, 10);
+            }}
+          />
         );
 
       case 'other':
