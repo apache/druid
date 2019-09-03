@@ -1298,7 +1298,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final Map<Integer, TaskGroup> taskGroupsToVerify = new HashMap<>();
 
     for (Task task : tasks) {
-      if (!doesTaskTypeMatchSupervisor(task) || !dataSource.equals(task.getDataSource())) {
+      if (!doesTaskTypeMatchSupervisor(task)) {
         continue;
       }
 
