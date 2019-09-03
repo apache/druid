@@ -199,7 +199,7 @@ export async function scopeDownIngestSegmentFirehoseIntervalIfNeeded(
   const end = new Date(intervalParts[1]);
   if (isNaN(end.valueOf())) throw new Error(`could not decode interval end`);
 
-  // Less than or equal to 1 hour so there is no need to adjust intervals
+  // Less than or equal to 1/2 hour so there is no need to adjust intervals
   if (Math.abs(end.valueOf() - start.valueOf()) <= MS_IN_HALF_HOUR) return ioConfig;
 
   const dataSourceMetadataResponse = await queryDruidRune({
@@ -218,7 +218,7 @@ export async function scopeDownIngestSegmentFirehoseIntervalIfNeeded(
   if (maxIngestedEventTime < start) return ioConfig;
 
   const newEnd = maxIngestedEventTime < end ? maxIngestedEventTime : end;
-  const newStart = new Date(newEnd.valueOf() - MS_IN_HALF_HOUR); // Set start to 1hr ago
+  const newStart = new Date(newEnd.valueOf() - MS_IN_HALF_HOUR); // Set start to 1/2hr ago
 
   return deepSet(
     ioConfig,
