@@ -9,7 +9,6 @@ exports[`coordinator dynamic config matches snapshot 1`] = `
   >
     <div
       class="bp3-overlay-backdrop bp3-overlay-appear bp3-overlay-appear-active"
-      tabindex="0"
     />
     <div
       class="bp3-dialog-container bp3-overlay-content bp3-overlay-appear bp3-overlay-appear-active"

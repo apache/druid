@@ -120,7 +120,6 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<
     return (
       <SnitchDialog
         className="overlord-dynamic-config-dialog"
-        isOpen
         onSave={this.saveConfig}
         onClose={onClose}
         title="Overlord dynamic config"

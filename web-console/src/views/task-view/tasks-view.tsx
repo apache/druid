@@ -1204,7 +1204,6 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         </Alert>
         {supervisorTableActionDialogId && (
           <SupervisorTableActionDialog
-            isOpen
             supervisorId={supervisorTableActionDialogId}
             actions={supervisorTableActionDialogActions}
             onClose={() => this.setState({ supervisorTableActionDialogId: undefined })}
@@ -1212,7 +1211,6 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         )}
         {taskTableActionDialogId && taskTableActionDialogStatus && (
           <TaskTableActionDialog
-            isOpen
             status={taskTableActionDialogStatus}
             taskId={taskTableActionDialogId}
             actions={taskTableActionDialogActions}

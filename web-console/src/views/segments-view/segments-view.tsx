@@ -711,7 +711,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             datasourceId={datasourceTableActionDialogId}
             actions={actions}
             onClose={() => this.setState({ segmentTableActionDialogId: undefined })}
-            isOpen
           />
         )}
       </>
