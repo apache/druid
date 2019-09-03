@@ -79,6 +79,7 @@
         <apache.curator.version>4.1.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
         <avatica.version>1.12.0</avatica.version>
+        <avro.version>1.9.0</avro.version>
         <calcite.version>1.17.0</calcite.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
@@ -227,7 +228,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
-                <version>3.7</version>
+                <version>3.8.1</version>
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
@@ -924,14 +925,12 @@
             <dependency>
                 <groupId>org.apache.avro</groupId>
                 <artifactId>avro</artifactId>
-                <version>1.9.0</version>
-                <scope>provided</scope>
+                <version>${avro.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.directory.api</groupId>
                 <artifactId>api-util</artifactId>
                 <version>1.0.0-M20</version>
-                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>com.yahoo.datasketches</groupId>

@@ -385,20 +385,6 @@ notices:
 
 ---
 
-name: Apache Commons CLI
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.3.1
-libraries:
-  - commons-cli: commons-cli
-notices:
-  - commons-cli: |
-      Apache Commons CLI
-      Copyright 2001-2015 The Apache Software Foundation
-
----
-
 name: Apache Commons Codec
 license_category: binary
 module: java-core
@@ -466,24 +452,6 @@ notices:
 
 ---
 
-name: Apache Commons Lang
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 3.7
-libraries:
-  - org.apache.commons: commons-lang3
-notices:
-  - commons-lang: |
-      Apache Commons Lang
-      Copyright 2001-2019 The Apache Software Foundation
-
-      This product includes software developed at
-      The Apache Software Foundation (http://www.apache.org/).
-      Apache Commons Lang
-
----
-
 name: Apache Commons Logging
 license_category: binary
 module: java-core
@@ -515,20 +483,6 @@ license_name: Apache License version 2.0
 version: 3.6
 libraries:
   - commons-net: commons-net
-
----
-
-name: Apache Commons Pool
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.6
-libraries:
-  - commons-pool: commons-pool
-notices:
-  - commons-pool: |
-      Apache Commons Pool
-      Copyright 2001-2012 The Apache Software Foundation
 
 ---
 
