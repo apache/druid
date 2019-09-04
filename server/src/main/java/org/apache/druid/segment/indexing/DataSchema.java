@@ -74,6 +74,9 @@ public class DataSchema
 
     Preconditions.checkArgument(!Strings.isNullOrEmpty(dataSource), "dataSource cannot be null or empty. Please provide a dataSource.");
     Preconditions.checkArgument(!dataSource.contains("/"), "dataSource cannot contain the '/' character.");
+    Preconditions.checkArgument(!dataSource.contains("\t"), "dataSource cannot contain the '\\t' character.");
+    Preconditions.checkArgument(!dataSource.contains("\n"), "dataSource cannot contain the '\\n' character.");
+    Preconditions.checkArgument(!dataSource.contains("\r"), "dataSource cannot contain the '\\r' character.");
     this.dataSource = dataSource;
 
     if (granularitySpec == null) {
