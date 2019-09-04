@@ -45,7 +45,7 @@ public class DoubleMeanAggregator implements Aggregator
 
     if (update instanceof DoubleMeanHolder) {
       value.update((DoubleMeanHolder) update);
-    }  else if (update instanceof List) {
+    } else if (update instanceof List) {
       for (Object o : (List) update) {
         value.update(Numbers.tryParseDouble(o, 0));
       }

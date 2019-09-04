@@ -53,7 +53,7 @@ public class DoubleMeanBufferAggregator implements BufferAggregator
 
     if (update instanceof DoubleMeanHolder) {
       DoubleMeanHolder.update(buf, position, (DoubleMeanHolder) update);
-    }  else if (update instanceof List) {
+    } else if (update instanceof List) {
       for (Object o : (List) update) {
         DoubleMeanHolder.update(buf, position, Numbers.tryParseDouble(o, 0));
       }
