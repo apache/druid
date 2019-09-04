@@ -29,6 +29,7 @@ import org.apache.druid.server.lookup.cache.loading.LoadingCache;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @JsonTypeName("loadingLookup")
@@ -137,6 +138,11 @@ public class LoadingLookupFactory implements LookupExtractorFactory
     return reverseLoadingCache != null
            ? reverseLoadingCache.equals(that.reverseLoadingCache)
            : that.reverseLoadingCache == null;
+  }
 
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dataFetcher, loadingCache, reverseLoadingCache);
   }
 }
