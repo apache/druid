@@ -61,6 +61,7 @@ module.exports = env => {
       publicPath: '/public',
       index: './index.html',
       openPage: 'unified-console.html',
+      host: '0.0.0.0',
       port: 18081,
       proxy: {
         '/status': proxyTarget,
