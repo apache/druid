@@ -110,7 +110,7 @@ public class DataSchema
     Matcher m = INVALIDCHARS.matcher(dataSource);
     Preconditions.checkArgument(
         !m.matches(),
-        "dataSource cannot contain whitespace character."
+        "dataSource cannot contain whitespace character except space."
     );
     Preconditions.checkArgument(!dataSource.contains("/"), "dataSource cannot contain the '/' character.");
   }

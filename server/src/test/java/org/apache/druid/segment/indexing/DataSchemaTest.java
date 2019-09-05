@@ -328,7 +328,7 @@ public class DataSchemaTest
 
 
   @Test
-  public void testWhitespaceDatasource()
+  public void testInvalidWhitespaceDatasource()
   {
     Map<String, String> invalidCharToDataSourceName = ImmutableMap.of(
         "\\t", "\tab\t",
@@ -337,13 +337,13 @@ public class DataSchemaTest
     );
 
     for (Map.Entry<String, String> entry : invalidCharToDataSourceName.entrySet()) {
-      testWhitespaceDatasourceHelper(entry.getValue(), entry.getKey());
+      testInvalidWhitespaceDatasourceHelper(entry.getValue(), entry.getKey());
     }
   }
 
-  private void testWhitespaceDatasourceHelper(String dataSource, String invalidChar)
+  private void testInvalidWhitespaceDatasourceHelper(String dataSource, String invalidChar)
   {
-    String testFailMsg = "dataSource contain invalid character: " + invalidChar;
+    String testFailMsg = "dataSource contain invalid whitespace character: " + invalidChar;
     try {
       DataSchema schema = new DataSchema(
           dataSource,
@@ -356,7 +356,7 @@ public class DataSchemaTest
       Assert.fail(testFailMsg);
     }
     catch (IllegalArgumentException errorMsg) {
-      String expectedMsg = "dataSource cannot contain whitespace character.";
+      String expectedMsg = "dataSource cannot contain whitespace character except space.";
       Assert.assertEquals(testFailMsg, expectedMsg, errorMsg.getMessage());
     }
   }
