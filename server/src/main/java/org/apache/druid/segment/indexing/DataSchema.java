@@ -51,7 +51,7 @@ import java.util.regex.Pattern;
 public class DataSchema
 {
   private static final Logger log = new Logger(DataSchema.class);
-
+  private static final Pattern INVALIDCHARS = Pattern.compile("(?s).*[^\\S ].*");
   private final String dataSource;
   private final Map<String, Object> parser;
   private final AggregatorFactory[] aggregators;
@@ -107,8 +107,7 @@ public class DataSchema
         !Strings.isNullOrEmpty(dataSource),
         "dataSource cannot be null or empty. Please provide a dataSource."
     );
-    Pattern p = Pattern.compile("(?s).*[^\\S ].*");
-    Matcher m = p.matcher(dataSource);
+    Matcher m = INVALIDCHARS.matcher(dataSource);
     Preconditions.checkArgument(
         !m.matches(),
         "dataSource cannot contain whitespace character."

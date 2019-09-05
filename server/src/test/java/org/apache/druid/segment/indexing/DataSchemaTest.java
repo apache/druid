@@ -52,8 +52,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 
 public class DataSchemaTest
@@ -330,27 +329,31 @@ public class DataSchemaTest
   @Test
   public void testWhitespaceDatasource()
   {
-    List<String> dataSource = Arrays.asList("\tab\t", "\rcarriage\return\r", "\nnew\nline\n");
-    for (String name : dataSource) {
-      testDatasource(name);
+    String[] dataSource = {"\tab\t", "\rcarriage\return\r", "\nnew\nline\n"};
+    String[] invalidChars = {"\\t", "\\r", "\\n"};
+    for (int i = 0; i < dataSource.length; ++i) {
+      testWhitespaceDatasourceHelper(dataSource[i], invalidChars[i]);
     }
   }
 
-  private void testDatasource(String dataSource)
+  private void testWhitespaceDatasourceHelper(String dataSource, String invalidChar)
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage(
-        "dataSource cannot contain whitespace character."
-    );
-
-    DataSchema schema = new DataSchema(
-        dataSource,
-        new HashMap<>(),
-        null,
-        null,
-        null,
-        jsonMapper
-    );
+    String testFailMsg = "dataSource contain invalid character: " + invalidChar;
+    try {
+      DataSchema schema = new DataSchema(
+          dataSource,
+          Collections.emptyMap(),
+          null,
+          null,
+          null,
+          jsonMapper
+      );
+      Assert.assertTrue(testFailMsg, false);
+    }
+    catch (IllegalArgumentException errorMsg) {
+      String expectedMsg = "dataSource cannot contain whitespace character.";
+      Assert.assertEquals(testFailMsg, errorMsg.getMessage(), expectedMsg);
+    }
   }
 
 
