@@ -22,6 +22,7 @@ package org.apache.druid.segment.indexing;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -329,10 +330,14 @@ public class DataSchemaTest
   @Test
   public void testWhitespaceDatasource()
   {
-    String[] dataSource = {"\tab\t", "\rcarriage\return\r", "\nnew\nline\n"};
-    String[] invalidChars = {"\\t", "\\r", "\\n"};
-    for (int i = 0; i < dataSource.length; ++i) {
-      testWhitespaceDatasourceHelper(dataSource[i], invalidChars[i]);
+    Map<String, String> invalidCharToDataSourceName = ImmutableMap.of(
+        "\\t", "\tab\t",
+        "\\r", "\rcarriage\return\r",
+        "\\n", "\nnew\nline\n"
+    );
+
+    for (Map.Entry<String, String> entry : invalidCharToDataSourceName.entrySet()) {
+      testWhitespaceDatasourceHelper(entry.getValue(), entry.getKey());
     }
   }
 
@@ -348,11 +353,11 @@ public class DataSchemaTest
           null,
           jsonMapper
       );
-      Assert.assertTrue(testFailMsg, false);
+      Assert.fail(testFailMsg);
     }
     catch (IllegalArgumentException errorMsg) {
       String expectedMsg = "dataSource cannot contain whitespace character.";
-      Assert.assertEquals(testFailMsg, errorMsg.getMessage(), expectedMsg);
+      Assert.assertEquals(testFailMsg, expectedMsg, errorMsg.getMessage());
     }
   }
 
