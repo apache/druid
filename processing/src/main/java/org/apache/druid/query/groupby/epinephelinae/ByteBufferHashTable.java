@@ -22,6 +22,8 @@ package org.apache.druid.query.groupby.epinephelinae;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 
+import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class ByteBufferHashTable
@@ -74,7 +76,7 @@ public class ByteBufferHashTable
   // how many times the table buffer has filled/readjusted (through adjustTableWhenFull())
   protected int growthCount;
 
-
+  @Nullable
   protected BucketUpdateHandler bucketUpdateHandler;
 
   public ByteBufferHashTable(
@@ -84,7 +86,7 @@ public class ByteBufferHashTable
       ByteBuffer buffer,
       int keySize,
       int maxSizeForTesting,
-      BucketUpdateHandler bucketUpdateHandler
+      @Nullable BucketUpdateHandler bucketUpdateHandler
   )
   {
     this.maxLoadFactor = maxLoadFactor;

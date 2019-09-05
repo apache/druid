@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.common.granularity;
 
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormatter;
 
 /**
@@ -57,6 +58,15 @@ public class NoneGranularity extends Granularity
   public DateTime toDate(String filePath, Formatter formatter)
   {
     throw new UnsupportedOperationException("This method should not be invoked for this granularity type");
+  }
+
+  /**
+   * Any interval is aligned with none granularity since it's effectively millisecond granularity.
+   */
+  @Override
+  public boolean isAligned(Interval interval)
+  {
+    return true;
   }
 
   @Override

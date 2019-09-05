@@ -107,6 +107,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
       public void reset(ColumnValueSelector selector)
       {
         union.reset();
+        combined.invalidateCache();
         fold(selector);
       }
 

@@ -61,7 +61,7 @@ public interface IndexMerger
 {
   Logger log = new Logger(IndexMerger.class);
 
-  SerializerUtils serializerUtils = new SerializerUtils();
+  SerializerUtils SERIALIZER_UTILS = new SerializerUtils();
   int INVALID_ROW = -1;
 
   static List<String> getMergedDimensionsFromQueryableIndexes(List<QueryableIndex> indexes)
@@ -88,6 +88,7 @@ public interface IndexMerger
     }
   }
 
+  @Nullable
   static List<String> getLongestSharedDimOrder(List<IndexableAdapter> indexes)
   {
     int maxSize = 0;

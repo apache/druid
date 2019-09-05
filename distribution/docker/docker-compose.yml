@@ -124,7 +124,7 @@ services:
       - environment
 
   router:
-    image: druid
+    image: apache/incubator-druid
     container_name: router
     volumes:
       - router_var:/opt/druid/var

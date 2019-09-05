@@ -42,6 +42,7 @@ import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
@@ -96,6 +97,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
@@ -154,6 +156,7 @@ public class CompactionTaskTest
   private static RowIngestionMetersFactory rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
   private static Map<DataSegment, File> segmentMap = new HashMap<>();
   private static CoordinatorClient coordinatorClient = new TestCoordinatorClient(segmentMap);
+  private static AppenderatorsManager appenderatorsManager = new TestAppenderatorsManager();
   private static ObjectMapper objectMapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
   private static RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory(new RetryPolicyConfig());
 
@@ -244,6 +247,7 @@ public class CompactionTaskTest
                   binder.bind(RowIngestionMetersFactory.class).toInstance(rowIngestionMetersFactory);
                   binder.bind(CoordinatorClient.class).toInstance(coordinatorClient);
                   binder.bind(SegmentLoaderFactory.class).toInstance(new SegmentLoaderFactory(null, objectMapper));
+                  binder.bind(AppenderatorsManager.class).toInstance(appenderatorsManager);
                 }
             )
         )
@@ -282,6 +286,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -290,7 +295,6 @@ public class CompactionTaskTest
         ),
         null,
         5000,
-        true,
         true,
         false,
         null,
@@ -328,7 +332,8 @@ public class CompactionTaskTest
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        retryPolicyFactory,
+        appenderatorsManager
     );
     final CompactionTask task = builder
         .interval(COMPACTION_INTERVAL)
@@ -352,7 +357,8 @@ public class CompactionTaskTest
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        retryPolicyFactory,
+        appenderatorsManager
     );
     final CompactionTask task = builder
         .segments(SEGMENTS)
@@ -376,7 +382,8 @@ public class CompactionTaskTest
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        retryPolicyFactory,
+        appenderatorsManager
     );
 
     final CompactionTask task = builder
@@ -450,13 +457,14 @@ public class CompactionTaskTest
   {
     final IndexTuningConfig tuningConfig = new IndexTuningConfig(
         null,
-        6,
+        null,
         500000,
         1000000L,
         null,
         null,
         null,
         null,
+        new HashedPartitionsSpec(6, null, null),
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -465,7 +473,6 @@ public class CompactionTaskTest
         ),
         null,
         5000,
-        true,
         true,
         false,
         null,
@@ -514,10 +521,11 @@ public class CompactionTaskTest
         null,
         500000,
         1000000L,
-        6L,
         null,
         null,
         null,
+        null,
+        new HashedPartitionsSpec(null, 6, null),
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -526,7 +534,6 @@ public class CompactionTaskTest
         ),
         null,
         5000,
-        true,
         true,
         false,
         null,
@@ -577,8 +584,9 @@ public class CompactionTaskTest
         1000000L,
         null,
         null,
-        3,
         null,
+        null,
+        new HashedPartitionsSpec(null, 3, null),
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -587,7 +595,6 @@ public class CompactionTaskTest
         ),
         null,
         5000,
-        true,
         true,
         false,
         null,
@@ -824,7 +831,8 @@ public class CompactionTaskTest
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        retryPolicyFactory,
+        appenderatorsManager
     );
 
     final CompactionTask task = builder
@@ -837,13 +845,14 @@ public class CompactionTaskTest
   {
     final IndexTuningConfig tuningConfig = new IndexTuningConfig(
         null,
-        6,
+        null,
         500000,
         1000000L,
         null,
         null,
         null,
         null,
+        new HashedPartitionsSpec(6, null, null),
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -852,7 +861,6 @@ public class CompactionTaskTest
         ),
         null,
         5000,
-        true,
         true,
         false,
         null,
@@ -1011,7 +1019,7 @@ public class CompactionTaskTest
     );
   }
 
-  private static void assertIngestionSchema(
+  private void assertIngestionSchema(
       List<IndexIngestionSpec> ingestionSchemas,
       List<DimensionsSpec> expectedDimensionsSpecs,
       List<AggregatorFactory> expectedMetricsSpec,
@@ -1026,13 +1034,14 @@ public class CompactionTaskTest
         expectedSegmentIntervals,
         new IndexTuningConfig(
             null,
-            41943040, // automatically computed targetPartitionSize
+            null,
             500000,
             1000000L,
             Long.MAX_VALUE,
             null,
             null,
             null,
+            new HashedPartitionsSpec(41943040, null, null), // automatically computed targetPartitionSize
             new IndexSpec(
                 new RoaringBitmapSerdeFactory(true),
                 CompressionStrategy.LZ4,
@@ -1041,7 +1050,6 @@ public class CompactionTaskTest
             ),
             null,
             5000,
-            true,
             true,
             false,
             null,
@@ -1055,7 +1063,7 @@ public class CompactionTaskTest
     );
   }
 
-  private static void assertIngestionSchema(
+  private void assertIngestionSchema(
       List<IndexIngestionSpec> ingestionSchemas,
       List<DimensionsSpec> expectedDimensionsSpecs,
       List<AggregatorFactory> expectedMetricsSpec,
@@ -1153,6 +1161,7 @@ public class CompactionTaskTest
     {
       super(
           null,
+          null,
           taskActionClient,
           null,
           null,
@@ -1177,7 +1186,8 @@ public class CompactionTaskTest
           null,
           null,
           null,
-          new NoopTestTaskFileWriter()
+          new NoopTestTaskReportFileWriter(),
+          null
       );
       this.segmentFileMap = segmentFileMap;
     }

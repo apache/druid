@@ -32,15 +32,8 @@ export interface AboutDialogProps {
   onClose: () => void;
 }
 
-export interface AboutDialogState {}
-
-export class AboutDialog extends React.PureComponent<AboutDialogProps, AboutDialogState> {
-  constructor(props: AboutDialogProps) {
-    super(props);
-    this.state = {};
-  }
-
-  render() {
+export class AboutDialog extends React.PureComponent<AboutDialogProps> {
+  render(): JSX.Element {
     const { onClose } = this.props;
 
     return (

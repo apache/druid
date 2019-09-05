@@ -21,7 +21,7 @@ import React from 'react';
 
 import { SupervisorTableActionDialog } from './supervisor-table-action-dialog';
 
-const basicAction = { title: 'test', onAction: () => null };
+const basicAction = { title: 'test', onAction: () => {} };
 
 describe('supervisor table action dialog', () => {
   it('matches snapshot', () => {
@@ -29,8 +29,7 @@ describe('supervisor table action dialog', () => {
       <SupervisorTableActionDialog
         supervisorId={'test'}
         actions={[basicAction, basicAction, basicAction, basicAction]}
-        onClose={() => null}
-        isOpen
+        onClose={() => {}}
       />
     );
     render(supervisorTableActionDialog);

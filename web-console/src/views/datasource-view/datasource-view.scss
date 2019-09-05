@@ -18,9 +18,10 @@
 
 @import '../../variables';
 
-.data-sources-view {
+.datasource-view {
   height: 100%;
   width: 100%;
+  overflow: auto;
 
   .clickable-cell {
     cursor: pointer;
@@ -28,8 +29,24 @@
 
   .ReactTable {
     position: absolute;
-    top: $view-control-bar-height + $standard-padding;
     bottom: 0;
     width: 100%;
+  }
+
+  &.show-chart {
+    .chart-container {
+      height: calc(50% - 55px);
+      margin-top: 10px;
+    }
+
+    .ReactTable {
+      top: 50%;
+    }
+  }
+
+  &.no-chart {
+    .ReactTable {
+      top: $view-control-bar-height + $standard-padding;
+    }
   }
 }

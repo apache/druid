@@ -98,7 +98,7 @@ public class CachingQueryRunnerTest
       new LongSumAggregatorFactory("impers", "imps")
   );
 
-  private static final Object[] objects = new Object[]{
+  private static final Object[] OBJECTS = new Object[]{
       DateTimes.of("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
       DateTimes.of("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
       DateTimes.of("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
@@ -128,8 +128,8 @@ public class CachingQueryRunnerTest
   @Test
   public void testCloseAndPopulate() throws Exception
   {
-    List<Result> expectedRes = makeTopNResults(false, objects);
-    List<Result> expectedCacheRes = makeTopNResults(true, objects);
+    List<Result> expectedRes = makeTopNResults(false, OBJECTS);
+    List<Result> expectedCacheRes = makeTopNResults(true, OBJECTS);
 
     TopNQueryBuilder builder = new TopNQueryBuilder()
         .dataSource("ds")
@@ -154,17 +154,17 @@ public class CachingQueryRunnerTest
   {
     for (boolean descending : new boolean[]{false, true}) {
       TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                    .dataSource(QueryRunnerTestHelper.dataSource)
-                                    .granularity(QueryRunnerTestHelper.dayGran)
-                                    .intervals(QueryRunnerTestHelper.firstToThird)
+                                    .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                    .granularity(QueryRunnerTestHelper.DAY_GRAN)
+                                    .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
                                     .aggregators(
                                         Arrays.asList(
-                                            QueryRunnerTestHelper.rowsCount,
+                                            QueryRunnerTestHelper.ROWS_COUNT,
                                             new LongSumAggregatorFactory(
                                                 "idx",
                                                 "index"
                                             ),
-                                            QueryRunnerTestHelper.qualityUniques
+                                            QueryRunnerTestHelper.QUALITY_UNIQUES
                                         )
                                     )
                                     .descending(descending)

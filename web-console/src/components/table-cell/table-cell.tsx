@@ -69,7 +69,7 @@ export class TableCell extends React.PureComponent<NullTableCellProps> {
     };
   }
 
-  render() {
+  render(): React.ReactNode {
     const { value, timestamp, unparseable } = this.props;
     if (unparseable) {
       return <span className="table-cell unparseable">error</span>;

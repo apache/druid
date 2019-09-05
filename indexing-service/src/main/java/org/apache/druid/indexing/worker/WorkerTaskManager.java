@@ -46,7 +46,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -158,6 +158,8 @@ public abstract class WorkerTaskManager
 
     synchronized (lock) {
       try {
+        // When stopping, the task status should not be communicated to the overlord, so the listener and exec
+        // are shut down before the taskRunner is stopped.
         taskRunner.unregisterListener("WorkerTaskManager");
         exec.shutdownNow();
         taskRunner.stop();
@@ -480,7 +482,7 @@ public abstract class WorkerTaskManager
             Map<String, TaskStatus> taskStatusesFromOverlord = null;
 
             try {
-              FullResponseHolder fullResponseHolder = overlordClient.go(
+              StringFullResponseHolder fullResponseHolder = overlordClient.go(
                   overlordClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/taskStatus")
                                 .setContent(jsonMapper.writeValueAsBytes(taskIds))
                                 .addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON)
@@ -693,7 +695,6 @@ public abstract class WorkerTaskManager
 
         changeHistory.addChangeRequest(new WorkerHistoryItem.TaskUpdate(latest));
         taskAnnouncementChanged(latest);
-
         log.info(
             "Job's finished. Completed [%s] with status [%s]",
             task.getId(),

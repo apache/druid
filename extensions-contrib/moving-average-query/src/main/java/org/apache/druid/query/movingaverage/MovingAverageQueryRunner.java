@@ -40,6 +40,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -67,10 +68,6 @@ import java.util.stream.Collectors;
  */
 public class MovingAverageQueryRunner implements QueryRunner<Row>
 {
-
-  public static final String QUERY_FAIL_TIME = "queryFailTime";
-  public static final String QUERY_TOTAL_BYTES_GATHERED = "queryTotalBytesGathered";
-
   private final QuerySegmentWalker walker;
   private final RequestLogger requestLogger;
 
@@ -126,10 +123,13 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
       GroupByQuery gbq = builder.build();
 
       ResponseContext gbqResponseContext = ResponseContext.createEmpty();
-      gbqResponseContext.put(QUERY_FAIL_TIME, System.currentTimeMillis() + QueryContexts.getTimeout(gbq));
-      gbqResponseContext.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
+      gbqResponseContext.put(
+          ResponseContext.Key.QUERY_FAIL_DEADLINE_MILLIS,
+          System.currentTimeMillis() + QueryContexts.getTimeout(gbq)
+      );
+      gbqResponseContext.put(ResponseContext.Key.QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
 
-      Sequence<Row> results = gbq.getRunner(walker).run(QueryPlus.wrap(gbq), gbqResponseContext);
+      Sequence<ResultRow> results = gbq.getRunner(walker).run(QueryPlus.wrap(gbq), gbqResponseContext);
       try {
         // use localhost for remote address
         requestLogger.logNativeQuery(RequestLogLine.forNative(
@@ -148,7 +148,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
         throw Throwables.propagate(e);
       }
 
-      resultsSeq = results;
+      resultsSeq = results.map(row -> row.toMapBasedRow(gbq));
     } else {
       // no dimensions, so optimize this as a TimeSeries
       TimeseriesQuery tsq = new TimeseriesQuery(
@@ -164,8 +164,11 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
           maq.getContext()
       );
       ResponseContext tsqResponseContext = ResponseContext.createEmpty();
-      tsqResponseContext.put(QUERY_FAIL_TIME, System.currentTimeMillis() + QueryContexts.getTimeout(tsq));
-      tsqResponseContext.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
+      tsqResponseContext.put(
+          ResponseContext.Key.QUERY_FAIL_DEADLINE_MILLIS,
+          System.currentTimeMillis() + QueryContexts.getTimeout(tsq)
+      );
+      tsqResponseContext.put(ResponseContext.Key.QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
 
       Sequence<Result<TimeseriesResultValue>> results = tsq.getRunner(walker).run(QueryPlus.wrap(tsq), tsqResponseContext);
       try {
@@ -201,7 +204,8 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
             maq.getAveragerSpecs(),
             maq.getPostAggregatorSpecs(),
             maq.getAggregatorSpecs()
-        ));
+        )
+    );
 
     // Apply any postAveragers
     Sequence<Row> movingAvgResultsWithPostAveragers =
@@ -216,7 +220,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
         );
 
     // Apply any having, sorting, and limits
-    movingAvgResults = ((MovingAverageQuery) maq).applyLimit(movingAvgResults);
+    movingAvgResults = maq.applyLimit(movingAvgResults);
 
     return movingAvgResults;
 

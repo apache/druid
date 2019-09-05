@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -72,6 +73,12 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
     super(appenderator, segmentAllocator, usedSegmentChecker, dataSegmentKiller);
   }
 
+  @Nullable
+  public Object startJob()
+  {
+    return startJob(AppenderatorDriverSegmentLockHelper.NOOP);
+  }
+
   /**
    * This method always returns null because batch ingestion doesn't support restoring tasks on failures.
    *
@@ -79,7 +86,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
    */
   @Override
   @Nullable
-  public Object startJob()
+  public Object startJob(AppenderatorDriverSegmentLockHelper lockHelper)
   {
     final Object metadata = appenderator.startJob();
     if (metadata != null) {
@@ -129,11 +136,12 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
       long pushAndClearTimeoutMs
   ) throws InterruptedException, ExecutionException, TimeoutException
   {
-    final Map<SegmentIdWithShardSpec, SegmentWithState> requestedSegmentIdsForSequences = getAppendingSegments(sequenceNames)
-        .collect(Collectors.toMap(SegmentWithState::getSegmentIdentifier, Function.identity()));
+    final Set<SegmentIdWithShardSpec> requestedSegmentIdsForSequences = getAppendingSegments(sequenceNames)
+        .map(SegmentWithState::getSegmentIdentifier)
+        .collect(Collectors.toSet());
 
     final ListenableFuture<SegmentsAndMetadata> future = ListenableFutures.transformAsync(
-        pushInBackground(null, requestedSegmentIdsForSequences.keySet(), false),
+        pushInBackground(null, requestedSegmentIdsForSequences, false),
         this::dropInBackground
     );
 
@@ -147,11 +155,11 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
         .stream()
         .collect(Collectors.toMap(SegmentIdWithShardSpec::fromDataSegment, Function.identity()));
 
-    if (!pushedSegmentIdToSegmentMap.keySet().equals(requestedSegmentIdsForSequences.keySet())) {
+    if (!pushedSegmentIdToSegmentMap.keySet().equals(requestedSegmentIdsForSequences)) {
       throw new ISE(
           "Pushed segments[%s] are different from the requested ones[%s]",
           pushedSegmentIdToSegmentMap.keySet(),
-          requestedSegmentIdsForSequences.keySet()
+          requestedSegmentIdsForSequences
       );
     }
 
@@ -184,11 +192,15 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
   /**
    * Publish all segments.
    *
-   * @param publisher segment publisher
+   * @param segmentsToBeOverwritten segments which can be overwritten by new segments published by the given publisher
+   * @param publisher               segment publisher
    *
    * @return a {@link ListenableFuture} for the publish task
    */
-  public ListenableFuture<SegmentsAndMetadata> publishAll(final TransactionalSegmentPublisher publisher)
+  public ListenableFuture<SegmentsAndMetadata> publishAll(
+      @Nullable final Set<DataSegment> segmentsToBeOverwritten,
+      final TransactionalSegmentPublisher publisher
+  )
   {
     final Map<String, SegmentsForSequence> snapshot;
     synchronized (segments) {
@@ -196,6 +208,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
     }
 
     return publishInBackground(
+        segmentsToBeOverwritten,
         new SegmentsAndMetadata(
             snapshot
                 .values()

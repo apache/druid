@@ -23,7 +23,7 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>0.16.0-incubating-SNAPSHOT</version>
+    <version>0.17.0-incubating-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
@@ -58,7 +58,6 @@
     <dependency>
       <groupId>pl.pragmatists</groupId>
       <artifactId>JUnitParams</artifactId>
-      <version>1.0.4</version>
       <scope>test</scope>
     </dependency>
     <dependency>

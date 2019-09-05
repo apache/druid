@@ -23,7 +23,7 @@ import { SnitchDialog } from './snitch-dialog';
 
 describe('snitch dialog', () => {
   it('matches snapshot', () => {
-    const snitchDialog = <SnitchDialog onSave={() => null} isOpen />;
+    const snitchDialog = <SnitchDialog title="Be snitchin" onSave={() => {}} onClose={() => {}} />;
     render(snitchDialog);
     expect(document.body.lastChild).toMatchSnapshot();
   });

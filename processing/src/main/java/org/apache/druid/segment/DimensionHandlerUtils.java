@@ -67,7 +67,7 @@ public final class DimensionHandlerUtils
   public static DimensionHandler getHandlerFromCapabilities(
       String dimensionName,
       ColumnCapabilities capabilities,
-      MultiValueHandling multiValueHandling
+      @Nullable MultiValueHandling multiValueHandling
   )
   {
     if (capabilities == null) {

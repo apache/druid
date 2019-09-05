@@ -20,5 +20,4 @@ export * from './general';
 export * from './druid-query';
 export * from './query-manager';
 export * from './query-state';
-export * from './rune-decoder';
 export * from './local-storage-keys';

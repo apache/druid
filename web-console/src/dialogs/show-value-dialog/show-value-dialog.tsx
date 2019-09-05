@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import { Button, Classes, Dialog, Intent, TextArea } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
@@ -30,12 +31,7 @@ export interface ShowValueDialogProps {
 }
 
 export class ShowValueDialog extends React.PureComponent<ShowValueDialogProps> {
-  constructor(props: ShowValueDialogProps) {
-    super(props);
-    this.state = {};
-  }
-
-  render() {
+  render(): JSX.Element {
     const { onClose, str } = this.props;
 
     return (

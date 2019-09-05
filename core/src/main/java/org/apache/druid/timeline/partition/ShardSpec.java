@@ -37,7 +37,8 @@ import java.util.Map;
     @JsonSubTypes.Type(name = "single", value = SingleDimensionShardSpec.class),
     @JsonSubTypes.Type(name = "linear", value = LinearShardSpec.class),
     @JsonSubTypes.Type(name = "numbered", value = NumberedShardSpec.class),
-    @JsonSubTypes.Type(name = "hashed", value = HashBasedNumberedShardSpec.class)
+    @JsonSubTypes.Type(name = "hashed", value = HashBasedNumberedShardSpec.class),
+    @JsonSubTypes.Type(name = "numbered_overwrite", value = NumberedOverwriteShardSpec.class)
 })
 public interface ShardSpec
 {
@@ -46,6 +47,26 @@ public interface ShardSpec
   boolean isInChunk(long timestamp, InputRow inputRow);
 
   int getPartitionNum();
+
+  default int getStartRootPartitionId()
+  {
+    return getPartitionNum();
+  }
+
+  default int getEndRootPartitionId()
+  {
+    return getPartitionNum() + 1;
+  }
+
+  default short getMinorVersion()
+  {
+    return 0;
+  }
+
+  default short getAtomicUpdateGroupSize()
+  {
+    return 1;
+  }
 
   ShardSpecLookup getLookup(List<ShardSpec> shardSpecs);
 
@@ -61,4 +82,9 @@ public interface ShardSpec
    * @return possibility of in domain
    */
   boolean possibleInDomain(Map<String, RangeSet<String>> domain);
+
+  /**
+   * Returns true if two segments of this and other shardSpecs can exist in the same timeChunk.
+   */
+  boolean isCompatible(Class<? extends ShardSpec> other);
 }

@@ -22,16 +22,14 @@ package org.apache.druid.query.groupby.orderby;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import org.apache.druid.data.input.Row;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.PostAggregator;
-import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.ResultRow;
 
-import java.util.List;
+import java.util.Set;
 
 /**
+ *
  */
 public final class NoopLimitSpec implements LimitSpec
 {
@@ -50,13 +48,7 @@ public final class NoopLimitSpec implements LimitSpec
   }
 
   @Override
-  public Function<Sequence<Row>, Sequence<Row>> build(
-      List<DimensionSpec> dimensions,
-      List<AggregatorFactory> aggs,
-      List<PostAggregator> postAggs,
-      Granularity granularity,
-      boolean sortByDimsFirst
-  )
+  public Function<Sequence<ResultRow>, Sequence<ResultRow>> build(GroupByQuery query)
   {
     return Functions.identity();
   }
@@ -65,6 +57,12 @@ public final class NoopLimitSpec implements LimitSpec
   public LimitSpec merge(LimitSpec other)
   {
     return other;
+  }
+
+  @Override
+  public LimitSpec filterColumns(Set<String> names)
+  {
+    return this;
   }
 
   @Override

@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.worker;
 
-import com.amazonaws.util.StringUtils;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
@@ -43,6 +42,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -115,20 +115,22 @@ public class IntermediaryDataManagerAutoCleanupTest
   public void testCleanup() throws IOException, InterruptedException
   {
     final String supervisorTaskId = "supervisorTaskId";
+    final String subTaskId = "subTaskId";
     final Interval interval = Intervals.of("2018/2019");
-    final File segmentFile = generateSegmentFile();
+    final File segmentFile = generateSegmentDir("test");
     final DataSegment segment = newSegment(interval, 0);
-    intermediaryDataManager.addSegment(supervisorTaskId, "subTaskId", segment, segmentFile);
+    intermediaryDataManager.addSegment(supervisorTaskId, subTaskId, segment, segmentFile);
 
-    Thread.sleep(8000);
-    Assert.assertTrue(intermediaryDataManager.findPartitionFiles(supervisorTaskId, interval, 0).isEmpty());
+    Thread.sleep(3000);
+    Assert.assertNull(intermediaryDataManager.findPartitionFile(supervisorTaskId, subTaskId, interval, 0));
   }
 
-  private File generateSegmentFile() throws IOException
+  private File generateSegmentDir(String fileName) throws IOException
   {
-    final File segmentFile = tempDir.newFile();
-    FileUtils.write(segmentFile, "test data.", StringUtils.UTF8);
-    return segmentFile;
+    // Each file size is 138 bytes after compression
+    final File segmentDir = tempDir.newFolder();
+    FileUtils.write(new File(segmentDir, fileName), "test data.", StandardCharsets.UTF_8);
+    return segmentDir;
   }
 
   private DataSegment newSegment(Interval interval, int partitionId)

@@ -89,7 +89,7 @@ public class SchemalessTestFullTest
 
   final SchemalessIndexTest schemalessIndexTest;
   final String dataSource = "testing";
-  final Granularity allGran = Granularities.ALL;
+  final Granularity ALL_GRAN = Granularities.ALL;
   final String marketDimension = "market";
   final String qualityDimension = "quality";
   final String placementDimension = "placement";
@@ -1448,7 +1448,7 @@ public class SchemalessTestFullTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(dataSource)
-                                  .granularity(allGran)
+                                  .granularity(ALL_GRAN)
                                   .intervals(fullOnInterval)
                                   .aggregators(
                                       Lists.newArrayList(
@@ -1477,7 +1477,7 @@ public class SchemalessTestFullTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(dataSource)
-                                  .granularity(allGran)
+                                  .granularity(ALL_GRAN)
                                   .intervals(fullOnInterval)
                                   .filters(marketDimension, "spot")
                                   .aggregators(
@@ -1505,7 +1505,7 @@ public class SchemalessTestFullTest
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(dataSource)
-        .granularity(allGran)
+        .granularity(ALL_GRAN)
         .dimension(marketDimension)
         .metric(indexMetric)
         .threshold(3)
@@ -1536,7 +1536,7 @@ public class SchemalessTestFullTest
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(dataSource)
-        .granularity(allGran)
+        .granularity(ALL_GRAN)
         .dimension(marketDimension)
         .filters(marketDimension, "spot")
         .metric(indexMetric)
@@ -1565,7 +1565,7 @@ public class SchemalessTestFullTest
   {
     SearchQuery query = Druids.newSearchQueryBuilder()
                               .dataSource(dataSource)
-                              .granularity(allGran)
+                              .granularity(ALL_GRAN)
                               .intervals(fullOnInterval)
                               .query("a")
                               .build();
@@ -1579,7 +1579,7 @@ public class SchemalessTestFullTest
   {
     SearchQuery query = Druids.newSearchQueryBuilder()
                               .dataSource(dataSource)
-                              .granularity(allGran)
+                              .granularity(ALL_GRAN)
                               .filters(marketDimension, "spot")
                               .intervals(fullOnInterval)
                               .query("a")

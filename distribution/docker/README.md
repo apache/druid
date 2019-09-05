@@ -19,14 +19,18 @@
 
 ## Build
 
-From the root of the repo, run `mvn package -Pdist,docker`
+From the root of the repo, run `docker build -t apache/incubator-druid:tag -f distribution/docker/Dockerfile .`
 
 ## Run
 
 Edit `environment` to suite. Run `docker-compose -f distribution/docker/docker-compose.yml up`
 
-## mysql database connector
+## MySQL Database Connector
 
-This image contains solely the postgres metadata database connector. If you need
-the mysql metadata storage connector you can build it in with `mvn package -Pdist,docker -DskipDockerMysql=false
+This image contains solely the postgres metadata storage connector. If you
+need the mysql metadata storage connector, you can use Dockerfile.mysql to add
+it to the base image above.
 
+`docker build -t apache/incubator-druid:tag-mysql --build-arg DRUID_RELEASE=apache/incubator-druid:tag -f distribution/docker/Dockerfile.mysql .`
+
+where `druid:tag` is the version to use as the base.

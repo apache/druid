@@ -38,11 +38,11 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
 import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
-import org.apache.druid.security.basic.authentication.BytesFullResponseHandler;
-import org.apache.druid.security.basic.authentication.BytesFullResponseHolder;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
@@ -251,11 +251,11 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
         HttpMethod.GET,
         StringUtils.format("/druid-ext/basic-security/authentication/db/%s/cachedSerializedUserMap", prefix)
     );
-    BytesFullResponseHolder responseHolder = (BytesFullResponseHolder) druidLeaderClient.go(
+    BytesFullResponseHolder responseHolder = druidLeaderClient.go(
         req,
         new BytesFullResponseHandler()
     );
-    byte[] userMapBytes = responseHolder.getBytes();
+    byte[] userMapBytes = responseHolder.getContent();
     Map<String, BasicAuthenticatorUser> userMap = objectMapper.readValue(
         userMapBytes,
         BasicAuthUtils.AUTHENTICATOR_USER_MAP_TYPE_REFERENCE

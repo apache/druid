@@ -22,6 +22,7 @@ package org.apache.druid.segment.loading;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -38,18 +39,18 @@ public class StorageLocationTest
   {
     // free space ignored only maxSize matters
     StorageLocation locationPlain = fakeLocation(100_000, 5_000, 10_000, null);
-    Assert.assertTrue(locationPlain.canHandle(makeSegment("2012/2013", 9_000)));
-    Assert.assertFalse(locationPlain.canHandle(makeSegment("2012/2013", 11_000)));
+    Assert.assertTrue(locationPlain.canHandle(newSegmentId("2012/2013").toString(), 9_000));
+    Assert.assertFalse(locationPlain.canHandle(newSegmentId("2012/2013").toString(), 11_000));
 
     // enough space available maxSize is the limit
     StorageLocation locationFree = fakeLocation(100_000, 25_000, 10_000, 10.0);
-    Assert.assertTrue(locationFree.canHandle(makeSegment("2012/2013", 9_000)));
-    Assert.assertFalse(locationFree.canHandle(makeSegment("2012/2013", 11_000)));
+    Assert.assertTrue(locationFree.canHandle(newSegmentId("2012/2013").toString(), 9_000));
+    Assert.assertFalse(locationFree.canHandle(newSegmentId("2012/2013").toString(), 11_000));
 
     // disk almost full percentage is the limit
     StorageLocation locationFull = fakeLocation(100_000, 15_000, 10_000, 10.0);
-    Assert.assertTrue(locationFull.canHandle(makeSegment("2012/2013", 4_000)));
-    Assert.assertFalse(locationFull.canHandle(makeSegment("2012/2013", 6_000)));
+    Assert.assertTrue(locationFull.canHandle(newSegmentId("2012/2013").toString(), 4_000));
+    Assert.assertFalse(locationFull.canHandle(newSegmentId("2012/2013").toString(), 6_000));
   }
 
   private StorageLocation fakeLocation(long total, long free, long max, Double percent)
@@ -71,34 +72,34 @@ public class StorageLocationTest
 
     final DataSegment secondSegment = makeSegment("2012-01-02/2012-01-03", 23);
 
-    loc.addSegmentDir(new File("test1"), makeSegment("2012-01-01/2012-01-02", 10));
+    loc.reserve("test1", makeSegment("2012-01-01/2012-01-02", 10));
     expectedAvail -= 10;
     verifyLoc(expectedAvail, loc);
 
-    loc.addSegmentDir(new File("test1"), makeSegment("2012-01-01/2012-01-02", 10));
+    loc.reserve("test1", makeSegment("2012-01-01/2012-01-02", 10));
     verifyLoc(expectedAvail, loc);
 
-    loc.addSegmentDir(new File("test2"), secondSegment);
+    loc.reserve("test2", secondSegment);
     expectedAvail -= 23;
     verifyLoc(expectedAvail, loc);
 
-    loc.removeSegmentDir(new File("test1"), makeSegment("2012-01-01/2012-01-02", 10));
+    loc.removeSegmentDir(new File("/tmp/test1"), makeSegment("2012-01-01/2012-01-02", 10));
     expectedAvail += 10;
     verifyLoc(expectedAvail, loc);
 
-    loc.removeSegmentDir(new File("test1"), makeSegment("2012-01-01/2012-01-02", 10));
+    loc.removeSegmentDir(new File("/tmp/test1"), makeSegment("2012-01-01/2012-01-02", 10));
     verifyLoc(expectedAvail, loc);
 
-    loc.removeSegmentDir(new File("test2"), secondSegment);
+    loc.removeSegmentDir(new File("/tmp/test2"), secondSegment);
     expectedAvail += 23;
     verifyLoc(expectedAvail, loc);
   }
 
   private void verifyLoc(long maxSize, StorageLocation loc)
   {
-    Assert.assertEquals(maxSize, loc.available());
+    Assert.assertEquals(maxSize, loc.availableSizeBytes());
     for (int i = 0; i <= maxSize; ++i) {
-      Assert.assertTrue(String.valueOf(i), loc.canHandle(makeSegment("2013/2014", i)));
+      Assert.assertTrue(String.valueOf(i), loc.canHandle(newSegmentId("2013/2014").toString(), i));
     }
   }
 
@@ -115,5 +116,10 @@ public class StorageLocationTest
         null,
         size
     );
+  }
+
+  private SegmentId newSegmentId(String intervalString)
+  {
+    return SegmentId.of("test", Intervals.of(intervalString), "1", 0);
   }
 }

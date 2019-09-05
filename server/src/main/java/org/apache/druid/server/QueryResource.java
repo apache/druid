@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.joda.ser.DateTimeSerializer;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -42,6 +43,7 @@ import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.security.Access;
@@ -51,6 +53,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -71,8 +74,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- */
 @LazySingleton
 @Path("/druid/v2/")
 public class QueryResource implements QueryCountStatsProvider
@@ -163,7 +164,9 @@ public class QueryResource implements QueryCountStatsProvider
   public Response doPost(
       final InputStream in,
       @QueryParam("pretty") final String pretty,
-      @Context final HttpServletRequest req // used to get request content-type,Accept header, remote address and auth-related headers
+
+      // used to get request content-type,Accept header, remote address and auth-related headers
+      @Context final HttpServletRequest req
   ) throws IOException
   {
     final QueryLifecycle queryLifecycle = queryLifecycleFactory.factorize();
@@ -179,12 +182,20 @@ public class QueryResource implements QueryCountStatsProvider
 
     final String currThreadName = Thread.currentThread().getName();
     try {
-      queryLifecycle.initialize(readQuery(req, in));
+      queryLifecycle.initialize(readQuery(req, in, ioReaderWriter));
       query = queryLifecycle.getQuery();
       final String queryId = query.getId();
 
-      Thread.currentThread()
-            .setName(StringUtils.format("%s[%s_%s_%s]", currThreadName, query.getType(), query.getDataSource().getNames(), queryId));
+      final String queryThreadName = StringUtils.format(
+          "%s[%s_%s_%s]",
+          currThreadName,
+          query.getType(),
+          query.getDataSource().getNames(),
+          queryId
+      );
+
+      Thread.currentThread().setName(queryThreadName);
+
       if (log.isDebugEnabled()) {
         log.debug("Got query [%s]", query);
       }
@@ -199,7 +210,7 @@ public class QueryResource implements QueryCountStatsProvider
       final ResponseContext responseContext = queryResponse.getResponseContext();
       final String prevEtag = getPreviousEtag(req);
 
-      if (prevEtag != null && prevEtag.equals(responseContext.get(ResponseContext.CTX_ETAG))) {
+      if (prevEtag != null && prevEtag.equals(responseContext.get(ResponseContext.Key.ETAG))) {
         queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), -1);
         successfulQueryCount.incrementAndGet();
         return Response.notModified().build();
@@ -212,8 +223,14 @@ public class QueryResource implements QueryCountStatsProvider
         boolean serializeDateTimeAsLong =
             QueryContexts.isSerializeDateTimeAsLong(query, false)
             || (!shouldFinalize && QueryContexts.isSerializeDateTimeAsLongInner(query, false));
-        final ObjectWriter jsonWriter = ioReaderWriter.newOutputWriter(serializeDateTimeAsLong);
-        Response.ResponseBuilder builder = Response
+
+        final ObjectWriter jsonWriter = ioReaderWriter.newOutputWriter(
+            queryLifecycle.getToolChest(),
+            queryLifecycle.getQuery(),
+            serializeDateTimeAsLong
+        );
+
+        Response.ResponseBuilder responseBuilder = Response
             .ok(
                 new StreamingOutput()
                 {
@@ -252,9 +269,9 @@ public class QueryResource implements QueryCountStatsProvider
             )
             .header("X-Druid-Query-Id", queryId);
 
-        if (responseContext.get(ResponseContext.CTX_ETAG) != null) {
-          builder.header(HEADER_ETAG, responseContext.get(ResponseContext.CTX_ETAG));
-          responseContext.remove(ResponseContext.CTX_ETAG);
+        Object entityTag = responseContext.remove(ResponseContext.Key.ETAG);
+        if (entityTag != null) {
+          responseBuilder.header(HEADER_ETAG, entityTag);
         }
 
         DirectDruidClient.removeMagicResponseContextFields(responseContext);
@@ -262,14 +279,20 @@ public class QueryResource implements QueryCountStatsProvider
         //Limit the response-context header, see https://github.com/apache/incubator-druid/issues/2331
         //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
         //and encodes the string using ASCII, so 1 char is = 1 byte
-        String responseCtxString = responseContext.serializeWith(jsonMapper);
-        if (responseCtxString.length() > RESPONSE_CTX_HEADER_LEN_LIMIT) {
-          log.warn("Response Context truncated for id [%s] . Full context is [%s].", queryId, responseCtxString);
-          responseCtxString = responseCtxString.substring(0, RESPONSE_CTX_HEADER_LEN_LIMIT);
+        final ResponseContext.SerializationResult serializationResult = responseContext.serializeWith(
+            jsonMapper,
+            RESPONSE_CTX_HEADER_LEN_LIMIT
+        );
+        if (serializationResult.isReduced()) {
+          log.info(
+              "Response Context truncated for id [%s] . Full context is [%s].",
+              queryId,
+              serializationResult.getFullResult()
+          );
         }
 
-        return builder
-            .header(HEADER_RESPONSE_CONTEXT, responseCtxString)
+        return responseBuilder
+            .header(HEADER_RESPONSE_CONTEXT, serializationResult.getTruncatedResult())
             .build();
       }
       catch (Exception e) {
@@ -311,10 +334,11 @@ public class QueryResource implements QueryCountStatsProvider
 
   private Query<?> readQuery(
       final HttpServletRequest req,
-      final InputStream in
+      final InputStream in,
+      final ResourceIOReaderWriter ioReaderWriter
   ) throws IOException
   {
-    Query baseQuery = getMapperForRequest(req.getContentType()).readValue(in, Query.class);
+    Query baseQuery = ioReaderWriter.getInputMapper().readValue(in, Query.class);
     String prevEtag = getPreviousEtag(req);
 
     if (prevEtag != null) {
@@ -329,13 +353,6 @@ public class QueryResource implements QueryCountStatsProvider
   private static String getPreviousEtag(final HttpServletRequest req)
   {
     return req.getHeader(HEADER_IF_NONE_MATCH);
-  }
-
-  protected ObjectMapper getMapperForRequest(String requestContentType)
-  {
-    boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(requestContentType) ||
-        APPLICATION_SMILE.equals(requestContentType);
-    return isSmile ? smileMapper : jsonMapper;
   }
 
   protected ObjectMapper serializeDataTimeAsLong(ObjectMapper mapper)
@@ -386,22 +403,35 @@ public class QueryResource implements QueryCountStatsProvider
       return inputMapper;
     }
 
-    ObjectWriter newOutputWriter(boolean serializeDateTimeAsLong)
+    ObjectWriter newOutputWriter(
+        @Nullable QueryToolChest toolChest,
+        @Nullable Query query,
+        boolean serializeDateTimeAsLong
+    )
     {
-      ObjectMapper mapper = serializeDateTimeAsLong ? serializeDateTimeAsLongInputMapper : inputMapper;
-      return isPretty ? mapper.writerWithDefaultPrettyPrinter() : mapper.writer();
+      final ObjectMapper mapper = serializeDateTimeAsLong ? serializeDateTimeAsLongInputMapper : inputMapper;
+      final ObjectMapper decoratedMapper;
+      if (toolChest != null) {
+        decoratedMapper = toolChest.decorateObjectMapper(mapper, Preconditions.checkNotNull(query, "query"));
+      } else {
+        decoratedMapper = mapper;
+      }
+      return isPretty ? decoratedMapper.writerWithDefaultPrettyPrinter() : decoratedMapper.writer();
     }
 
     Response ok(Object object) throws IOException
     {
-      return Response.ok(newOutputWriter(false).writeValueAsString(object), contentType).build();
+      return Response.ok(newOutputWriter(null, null, false).writeValueAsString(object), contentType).build();
     }
 
     Response gotError(Exception e) throws IOException
     {
       return Response.serverError()
                      .type(contentType)
-                     .entity(newOutputWriter(false).writeValueAsBytes(QueryInterruptedException.wrapIfNeeded(e)))
+                     .entity(
+                         newOutputWriter(null, null, false)
+                             .writeValueAsBytes(QueryInterruptedException.wrapIfNeeded(e))
+                     )
                      .build();
     }
   }

@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormat;
@@ -134,6 +135,12 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
     }
 
     return null;
+  }
+
+  @Override
+  public boolean isAligned(Interval interval)
+  {
+    return bucket(interval.getStart()).equals(interval);
   }
 
   @Override

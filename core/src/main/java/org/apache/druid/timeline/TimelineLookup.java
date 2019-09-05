@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 
-public interface TimelineLookup<VersionType, ObjectType>
+public interface TimelineLookup<VersionType, ObjectType extends Overshadowable<ObjectType>>
 {
 
   /**

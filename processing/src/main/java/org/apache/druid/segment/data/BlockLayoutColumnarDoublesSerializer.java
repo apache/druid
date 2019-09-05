@@ -37,7 +37,7 @@ import java.nio.channels.WritableByteChannel;
  */
 public class BlockLayoutColumnarDoublesSerializer implements ColumnarDoublesSerializer
 {
-  private static final MetaSerdeHelper<BlockLayoutColumnarDoublesSerializer> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<BlockLayoutColumnarDoublesSerializer> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((BlockLayoutColumnarDoublesSerializer x) -> CompressedColumnarDoublesSuppliers.VERSION)
       .writeInt(x -> x.numInserted)
       .writeInt(x -> CompressedPools.BUFFER_SIZE / Double.BYTES)
@@ -95,14 +95,14 @@ public class BlockLayoutColumnarDoublesSerializer implements ColumnarDoublesSeri
   public long getSerializedSize() throws IOException
   {
     writeEndBuffer();
-    return metaSerdeHelper.size(this) + flattener.getSerializedSize();
+    return META_SERDE_HELPER.size(this) + flattener.getSerializedSize();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     writeEndBuffer();
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     flattener.writeTo(channel, smoosher);
   }
 

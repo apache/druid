@@ -25,13 +25,15 @@ import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.easymock.EasyMock;
+import org.jboss.netty.buffer.BigEndianHeapChannelBuffer;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -43,6 +45,7 @@ import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -71,7 +74,7 @@ public class RemoteTaskActionClientTest
 
     // return status code 200 and a list with size equals 1
     Map<String, Object> responseBody = new HashMap<>();
-    final List<TaskLock> expectedLocks = Collections.singletonList(new TaskLock(
+    final List<TaskLock> expectedLocks = Collections.singletonList(new TimeChunkLock(
         TaskLockType.SHARED,
         "groupId",
         "dataSource",
@@ -81,17 +84,20 @@ public class RemoteTaskActionClientTest
     ));
     responseBody.put("result", expectedLocks);
     String strResult = objectMapper.writeValueAsString(responseBody);
-    FullResponseHolder responseHolder = new FullResponseHolder(
+    final HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
+    EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.replay(response);
+    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
         HttpResponseStatus.OK,
-        EasyMock.createNiceMock(HttpResponse.class),
-        new StringBuilder().append(strResult)
-    );
+        response,
+        StandardCharsets.UTF_8
+    ).addChunk(strResult);
 
     // set up mocks
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
     EasyMock.replay(druidLeaderClient);
 
-    Task task = new NoopTask("id", null, 0, 0, null, null, null);
+    Task task = NoopTask.create("id", 0);
     RemoteTaskActionClient client = new RemoteTaskActionClient(
         task,
         druidLeaderClient,
@@ -113,17 +119,20 @@ public class RemoteTaskActionClientTest
             .andReturn(request);
 
     // return status code 200 and a list with size equals 1
-    FullResponseHolder responseHolder = new FullResponseHolder(
+    final HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
+    EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.replay(response);
+    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
         HttpResponseStatus.BAD_REQUEST,
-        EasyMock.createNiceMock(HttpResponse.class),
-        new StringBuilder().append("testSubmitWithIllegalStatusCode")
-    );
+        response,
+        StandardCharsets.UTF_8
+    ).addChunk("testSubmitWithIllegalStatusCode");
 
     // set up mocks
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
     EasyMock.replay(druidLeaderClient);
 
-    Task task = new NoopTask("id", null, 0, 0, null, null, null);
+    Task task = NoopTask.create("id", 0);
     RemoteTaskActionClient client = new RemoteTaskActionClient(
         task,
         druidLeaderClient,
