@@ -46,8 +46,6 @@ public class StringDimensionIndexerBenchmark
     for (int i = 0; i < rowSize; i++) {
       exampleArray[i] = i * stride;
     }
-
-    System.out.println(indexer.getMaxValue());
   }
 
   @Benchmark
