@@ -38,10 +38,10 @@ RUN ["/busybox/busybox", "--install", "/bin"]
 COPY --from=extractor /opt /opt
 COPY ./docker/druid.sh /druid.sh
 
-RUN addgroup --gid 1000 druid \
- && adduser -h /opt/druid -s /bin/sh -H -u 1000 -g '' -G druid -D druid \
+RUN addgroup -S -g 1000 druid \
+ && adduser -S -u 1000 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid \
  && mkdir -p /opt/druid/var \
- && chown -R druid:druid /opt/ \
+ && chown -R druid:druid /opt \
  && chmod 775 /opt/druid/var
 
 USER druid

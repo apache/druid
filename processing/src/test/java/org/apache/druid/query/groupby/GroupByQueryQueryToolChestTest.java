@@ -24,9 +24,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -75,38 +75,38 @@ public class GroupByQueryQueryToolChestTest
   {
     final GroupByQuery query1 = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
                 new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
             )
         )
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
     final GroupByQuery query2 = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
                 new ExpressionPostAggregator("post", "alias - 'x'", null, TestExprMacroTable.INSTANCE)
             )
         )
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
-    final CacheStrategy<Row, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
         null,
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
     ).getCacheStrategy(query1);
 
-    final CacheStrategy<Row, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
         null,
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
     ).getCacheStrategy(query2);
@@ -123,16 +123,16 @@ public class GroupByQueryQueryToolChestTest
   {
     final GroupByQuery query1 = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
                 new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
             )
         )
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .setLimitSpec(
             new DefaultLimitSpec(
                 ImmutableList.of(
@@ -145,16 +145,16 @@ public class GroupByQueryQueryToolChestTest
 
     final GroupByQuery query2 = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
                 new ExpressionPostAggregator("post", "alias - 'x'", null, TestExprMacroTable.INSTANCE)
             )
         )
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .setLimitSpec(
             new DefaultLimitSpec(
                 ImmutableList.of(
@@ -165,12 +165,12 @@ public class GroupByQueryQueryToolChestTest
         )
         .build();
 
-    final CacheStrategy<Row, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
         null,
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
     ).getCacheStrategy(query1);
 
-    final CacheStrategy<Row, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
         null,
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
     ).getCacheStrategy(query2);
@@ -187,16 +187,16 @@ public class GroupByQueryQueryToolChestTest
   {
     final GroupByQuery query1 = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
                 new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
             )
         )
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .setLimitSpec(
             new DefaultLimitSpec(
                 ImmutableList.of(
@@ -205,21 +205,21 @@ public class GroupByQueryQueryToolChestTest
                 Integer.MAX_VALUE
             )
         )
-        .setHavingSpec(new GreaterThanHavingSpec(QueryRunnerTestHelper.uniqueMetric, 8))
+        .setHavingSpec(new GreaterThanHavingSpec(QueryRunnerTestHelper.UNIQUE_METRIC, 8))
         .build();
 
     final GroupByQuery query2 = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
                 new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
             )
         )
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .setLimitSpec(
             new DefaultLimitSpec(
                 ImmutableList.of(
@@ -228,15 +228,15 @@ public class GroupByQueryQueryToolChestTest
                 Integer.MAX_VALUE
             )
         )
-        .setHavingSpec(new GreaterThanHavingSpec(QueryRunnerTestHelper.uniqueMetric, 10))
+        .setHavingSpec(new GreaterThanHavingSpec(QueryRunnerTestHelper.UNIQUE_METRIC, 10))
         .build();
 
-    final CacheStrategy<Row, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
         null,
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
     ).getCacheStrategy(query1);
 
-    final CacheStrategy<Row, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
         null,
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
     ).getCacheStrategy(query2);
@@ -275,16 +275,16 @@ public class GroupByQueryQueryToolChestTest
 
     final GroupByQuery query1 = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
                 new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
             )
         )
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .setLimitSpec(
             new DefaultLimitSpec(
                 ImmutableList.of(
@@ -298,16 +298,16 @@ public class GroupByQueryQueryToolChestTest
 
     final GroupByQuery query2 = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
                 new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
             )
         )
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .setLimitSpec(
             new DefaultLimitSpec(
                 ImmutableList.of(
@@ -319,12 +319,12 @@ public class GroupByQueryQueryToolChestTest
         .setHavingSpec(andHavingSpec2)
         .build();
 
-    final CacheStrategy<Row, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
         null,
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
     ).getCacheStrategy(query1);
 
-    final CacheStrategy<Row, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
         null,
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
     ).getCacheStrategy(query2);
@@ -370,16 +370,16 @@ public class GroupByQueryQueryToolChestTest
     );
     final GroupByQuery query1 = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
                 new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
             )
         )
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .setLimitSpec(
             new DefaultLimitSpec(
                 ImmutableList.of(
@@ -393,16 +393,16 @@ public class GroupByQueryQueryToolChestTest
 
     final GroupByQuery query2 = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
                 new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
             )
         )
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .setLimitSpec(
             new DefaultLimitSpec(
                 ImmutableList.of(
@@ -414,12 +414,12 @@ public class GroupByQueryQueryToolChestTest
         .setHavingSpec(havingSpec2)
         .build();
 
-    final CacheStrategy<Row, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
         null,
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
     ).getCacheStrategy(query1);
 
-    final CacheStrategy<Row, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
         null,
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
     ).getCacheStrategy(query2);
@@ -436,21 +436,21 @@ public class GroupByQueryQueryToolChestTest
   {
     final GroupByQuery query1 = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("quality", "alias"),
             new DefaultDimensionSpec("market", "market")
         ))
         .setAggregatorSpecs(
             Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
+                QueryRunnerTestHelper.ROWS_COUNT,
                 new LongSumAggregatorFactory("idx", "index"),
                 new FloatSumAggregatorFactory("idxFloat", "indexFloat"),
                 new DoubleSumAggregatorFactory("idxDouble", "index")
             )
         )
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .setSubtotalsSpec(ImmutableList.of(
             ImmutableList.of("alias"),
             ImmutableList.of("market"),
@@ -460,33 +460,33 @@ public class GroupByQueryQueryToolChestTest
 
     final GroupByQuery query2 = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("quality", "alias"),
             new DefaultDimensionSpec("market", "market")
         ))
         .setAggregatorSpecs(
             Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
+                QueryRunnerTestHelper.ROWS_COUNT,
                 new LongSumAggregatorFactory("idx", "index"),
                 new FloatSumAggregatorFactory("idxFloat", "indexFloat"),
                 new DoubleSumAggregatorFactory("idxDouble", "index")
             )
         )
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .setSubtotalsSpec(ImmutableList.of(
             ImmutableList.of("alias"),
             ImmutableList.of()
         ))
         .build();
 
-    final CacheStrategy<Row, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
         null,
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
     ).getCacheStrategy(query1);
 
-    final CacheStrategy<Row, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
         null,
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
     ).getCacheStrategy(query2);
@@ -505,6 +505,113 @@ public class GroupByQueryQueryToolChestTest
     doTestCacheStrategy(ValueType.FLOAT, 2.1f);
     doTestCacheStrategy(ValueType.DOUBLE, 2.1d);
     doTestCacheStrategy(ValueType.LONG, 2L);
+  }
+
+  @Test
+  public void testResultSerde() throws Exception
+  {
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(Collections.singletonList(DefaultDimensionSpec.of("test")))
+        .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT))
+        .setPostAggregatorSpecs(Collections.singletonList(new ConstantPostAggregator("post", 10)))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
+        null,
+        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+    );
+
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    final ObjectMapper arraysObjectMapper = toolChest.decorateObjectMapper(
+        objectMapper,
+        query.withOverriddenContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true))
+    );
+    final ObjectMapper mapsObjectMapper = toolChest.decorateObjectMapper(
+        objectMapper,
+        query.withOverriddenContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false))
+    );
+
+    final Object[] rowObjects = {DateTimes.of("2000").getMillis(), "foo", 100, 10};
+    final ResultRow resultRow = ResultRow.of(rowObjects);
+
+    Assert.assertEquals(
+        resultRow,
+        arraysObjectMapper.readValue(
+            StringUtils.format("[%s, \"foo\", 100, 10]", DateTimes.of("2000").getMillis()),
+            ResultRow.class
+        )
+    );
+
+    Assert.assertEquals(
+        resultRow,
+        arraysObjectMapper.readValue(
+            StringUtils.format(
+                "{\"version\":\"v1\","
+                + "\"timestamp\":\"%s\","
+                + "\"event\":"
+                + "  {\"test\":\"foo\", \"rows\":100, \"post\":10}"
+                + "}",
+                DateTimes.of("2000")
+            ),
+            ResultRow.class
+        )
+    );
+
+    Assert.assertArrayEquals(
+        rowObjects,
+        objectMapper.readValue(
+            arraysObjectMapper.writeValueAsBytes(resultRow),
+            Object[].class
+        )
+    );
+
+    Assert.assertEquals(
+        resultRow.toMapBasedRow(query),
+        objectMapper.readValue(
+            mapsObjectMapper.writeValueAsBytes(resultRow),
+            Row.class
+        )
+    );
+
+    Assert.assertEquals(
+        "arrays read arrays",
+        resultRow,
+        arraysObjectMapper.readValue(
+            arraysObjectMapper.writeValueAsBytes(resultRow),
+            ResultRow.class
+        )
+    );
+
+    Assert.assertEquals(
+        "arrays read maps",
+        resultRow,
+        arraysObjectMapper.readValue(
+            mapsObjectMapper.writeValueAsBytes(resultRow),
+            ResultRow.class
+        )
+    );
+
+    Assert.assertEquals(
+        "maps read arrays",
+        resultRow,
+        mapsObjectMapper.readValue(
+            arraysObjectMapper.writeValueAsBytes(resultRow),
+            ResultRow.class
+        )
+    );
+
+    Assert.assertEquals(
+        "maps read maps",
+        resultRow,
+        mapsObjectMapper.readValue(
+            mapsObjectMapper.writeValueAsBytes(resultRow),
+            ResultRow.class
+        )
+    );
   }
 
   private AggregatorFactory getComplexAggregatorFactoryForValueType(final ValueType valueType)
@@ -541,41 +648,32 @@ public class GroupByQueryQueryToolChestTest
   {
     final GroupByQuery query1 = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(Collections.singletonList(
             new DefaultDimensionSpec("test", "test", valueType)
         ))
         .setAggregatorSpecs(
             Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
+                QueryRunnerTestHelper.ROWS_COUNT,
                 getComplexAggregatorFactoryForValueType(valueType)
             )
         )
         .setPostAggregatorSpecs(
             ImmutableList.of(new ConstantPostAggregator("post", 10))
         )
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
-    CacheStrategy<Row, Object, GroupByQuery> strategy =
+    CacheStrategy<ResultRow, Object, GroupByQuery> strategy =
         new GroupByQueryQueryToolChest(null, null).getCacheStrategy(
             query1
         );
 
-    final Row result1 = new MapBasedRow(
-        // test timestamps that result in integer size millis
-        DateTimes.utc(123L),
-        ImmutableMap.of(
-            "test", dimValue,
-            "rows", 1,
-            "complexMetric", getIntermediateComplexValue(valueType, dimValue)
-        )
-    );
+    // test timestamps that result in integer size millis
+    final ResultRow result1 = ResultRow.of(123L, dimValue, 1, getIntermediateComplexValue(valueType, dimValue));
 
-    Object preparedValue = strategy.prepareForSegmentLevelCache().apply(
-        result1
-    );
+    Object preparedValue = strategy.prepareForSegmentLevelCache().apply(result1);
 
     ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     Object fromCacheValue = objectMapper.readValue(
@@ -583,43 +681,19 @@ public class GroupByQueryQueryToolChestTest
         strategy.getCacheObjectClazz()
     );
 
-    Row fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
+    ResultRow fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
     Assert.assertEquals(result1, fromCacheResult);
 
-    final Row result2 = new MapBasedRow(
-        // test timestamps that result in integer size millis
-        DateTimes.utc(123L),
-        ImmutableMap.of(
-            "test", dimValue,
-            "rows", 1,
-            "complexMetric", dimValue,
-            "post", 10
-        )
-    );
+    // test timestamps that result in integer size millis
+    final ResultRow result2 = ResultRow.of(123L, dimValue, 1, dimValue, 10);
 
     // Please see the comments on aggregator serde and type handling in CacheStrategy.fetchAggregatorsFromCache()
-    final Row typeAdjustedResult2;
+    final ResultRow typeAdjustedResult2;
     if (valueType == ValueType.FLOAT) {
-      typeAdjustedResult2 = new MapBasedRow(
-          DateTimes.utc(123L),
-          ImmutableMap.of(
-              "test", dimValue,
-              "rows", 1,
-              "complexMetric", 2.1d,
-              "post", 10
-          )
-      );
+      typeAdjustedResult2 = ResultRow.of(123L, dimValue, 1, 2.1d, 10);
     } else if (valueType == ValueType.LONG) {
-      typeAdjustedResult2 = new MapBasedRow(
-          DateTimes.utc(123L),
-          ImmutableMap.of(
-              "test", dimValue,
-              "rows", 1,
-              "complexMetric", 2,
-              "post", 10
-          )
-      );
+      typeAdjustedResult2 = ResultRow.of(123L, dimValue, 1, 2, 10);
     } else {
       typeAdjustedResult2 = result2;
     }
@@ -634,7 +708,7 @@ public class GroupByQueryQueryToolChestTest
         strategy.getCacheObjectClazz()
     );
 
-    Row fromResultCacheResult = strategy.pullFromCache(true).apply(fromResultCacheValue);
+    ResultRow fromResultCacheResult = strategy.pullFromCache(true).apply(fromResultCacheValue);
     Assert.assertEquals(typeAdjustedResult2, fromResultCacheResult);
   }
 }

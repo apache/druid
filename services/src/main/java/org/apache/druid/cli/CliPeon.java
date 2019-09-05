@@ -55,9 +55,11 @@ import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
+import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
@@ -71,7 +73,7 @@ import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactor
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskClient;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskClientFactory;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -91,12 +93,15 @@ import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.OmniDataSegmentArchiver;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.apache.druid.segment.loading.OmniDataSegmentMover;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.realtime.appenderator.PeonAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
 import org.apache.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierConfig;
 import org.apache.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierFactory;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.BatchDataSegmentAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.http.SegmentListerResource;
@@ -166,62 +171,15 @@ public class CliPeon extends GuiceRunnable
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
 
-            PolyBind.createChoice(
-                binder,
-                "druid.indexer.task.rowIngestionMeters.type",
-                Key.get(RowIngestionMetersFactory.class),
-                Key.get(DropwizardRowIngestionMetersFactory.class)
-            );
-            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder =
-                PolyBind.optionBinder(binder, Key.get(RowIngestionMetersFactory.class));
-            rowIngestionMetersHandlerProviderBinder
-                .addBinding("dropwizard")
-                .to(DropwizardRowIngestionMetersFactory.class)
-                .in(LazySingleton.class);
-            binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+            JsonConfigProvider.bind(binder, "druid.task.executor", DruidNode.class, Parent.class);
 
-            PolyBind.createChoice(
-                binder,
-                "druid.indexer.task.chathandler.type",
-                Key.get(ChatHandlerProvider.class),
-                Key.get(ServiceAnnouncingChatHandlerProvider.class)
-            );
-            final MapBinder<String, ChatHandlerProvider> handlerProviderBinder =
-                PolyBind.optionBinder(binder, Key.get(ChatHandlerProvider.class));
-            handlerProviderBinder
-                .addBinding("announce")
-                .to(ServiceAnnouncingChatHandlerProvider.class)
-                .in(LazySingleton.class);
-            handlerProviderBinder
-                .addBinding("noop")
-                .to(NoopChatHandlerProvider.class)
-                .in(LazySingleton.class);
-            binder.bind(ServiceAnnouncingChatHandlerProvider.class).in(LazySingleton.class);
+            bindRowIngestionMeters(binder);
 
-            binder.bind(NoopChatHandlerProvider.class).in(LazySingleton.class);
+            bindChatHandler(binder);
 
-            binder.bind(TaskToolboxFactory.class).in(LazySingleton.class);
+            bindTaskConfigAndClients(binder);
 
-            JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
-            JsonConfigProvider.bind(binder, "druid.indexer.auditlog", TaskAuditLogConfig.class);
-            JsonConfigProvider.bind(binder, "druid.peon.taskActionClient.retry", RetryPolicyConfig.class);
-
-            configureTaskActionClient(binder);
-            binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
-
-            binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexTaskClient>>(){})
-                  .to(ParallelIndexTaskClientFactory.class)
-                  .in(LazySingleton.class);
-
-            binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
-
-            // Build it to make it bind even if nothing binds to it.
-            Binders.dataSegmentKillerBinder(binder);
-            binder.bind(DataSegmentKiller.class).to(OmniDataSegmentKiller.class).in(LazySingleton.class);
-            Binders.dataSegmentMoverBinder(binder);
-            binder.bind(DataSegmentMover.class).to(OmniDataSegmentMover.class).in(LazySingleton.class);
-            Binders.dataSegmentArchiverBinder(binder);
-            binder.bind(DataSegmentArchiver.class).to(OmniDataSegmentArchiver.class).in(LazySingleton.class);
+            bindPeonDataSegmentHandlers(binder);
 
             binder.bind(ExecutorLifecycle.class).in(ManageLifecycle.class);
             LifecycleModule.register(binder, ExecutorLifecycle.class);
@@ -232,7 +190,7 @@ public class CliPeon extends GuiceRunnable
             );
 
             binder.bind(TaskReportFileWriter.class).toInstance(
-                new TaskReportFileWriter(
+                new SingleFileTaskReportFileWriter(
                     new File(taskReportPath)
                 )
             );
@@ -241,51 +199,18 @@ public class CliPeon extends GuiceRunnable
             binder.bind(QuerySegmentWalker.class).to(SingleTaskBackgroundRunner.class);
             binder.bind(SingleTaskBackgroundRunner.class).in(ManageLifecycle.class);
 
-            JsonConfigProvider.bind(binder, "druid.realtime.cache", CacheConfig.class);
-            binder.install(new CacheModule());
+            bindRealtimeCache(binder);
 
-            JsonConfigProvider.bind(
-                binder,
-                "druid.segment.handoff",
-                CoordinatorBasedSegmentHandoffNotifierConfig.class
-            );
-            binder.bind(SegmentHandoffNotifierFactory.class)
-                  .to(CoordinatorBasedSegmentHandoffNotifierFactory.class)
+            bindCoordinatorHandoffNotiferAndClient(binder);
+
+            binder.bind(AppenderatorsManager.class)
+                  .to(PeonAppenderatorsManager.class)
                   .in(LazySingleton.class);
-
-            binder.bind(CoordinatorClient.class).in(LazySingleton.class);
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
             Jerseys.addResource(binder, SegmentListerResource.class);
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(ServerType.fromString(nodeType)));
             LifecycleModule.register(binder, Server.class);
-          }
-
-          private void configureTaskActionClient(Binder binder)
-          {
-            PolyBind.createChoice(
-                binder,
-                "druid.peon.mode",
-                Key.get(TaskActionClientFactory.class),
-                Key.get(RemoteTaskActionClientFactory.class)
-            );
-            final MapBinder<String, TaskActionClientFactory> taskActionBinder =
-                PolyBind.optionBinder(binder, Key.get(TaskActionClientFactory.class));
-            taskActionBinder
-                .addBinding("local")
-                .to(LocalTaskActionClientFactory.class)
-                .in(LazySingleton.class);
-            // all of these bindings are so that we can run the peon in local mode
-            JsonConfigProvider.bind(binder, "druid.indexer.storage", TaskStorageConfig.class);
-            binder.bind(TaskStorage.class).to(HeapMemoryTaskStorage.class).in(LazySingleton.class);
-            binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
-            binder.bind(IndexerMetadataStorageCoordinator.class)
-                  .to(IndexerSQLMetadataStorageCoordinator.class)
-                  .in(LazySingleton.class);
-            taskActionBinder
-                .addBinding("remote")
-                .to(RemoteTaskActionClientFactory.class)
-                .in(LazySingleton.class);
           }
 
           @Provides
@@ -383,4 +308,120 @@ public class CliPeon extends GuiceRunnable
       throw new RuntimeException(e);
     }
   }
+
+  public static void bindRowIngestionMeters(Binder binder)
+  {
+    PolyBind.createChoice(
+        binder,
+        "druid.indexer.task.rowIngestionMeters.type",
+        Key.get(RowIngestionMetersFactory.class),
+        Key.get(DropwizardRowIngestionMetersFactory.class)
+    );
+    final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder =
+        PolyBind.optionBinder(binder, Key.get(RowIngestionMetersFactory.class));
+    rowIngestionMetersHandlerProviderBinder
+        .addBinding("dropwizard")
+        .to(DropwizardRowIngestionMetersFactory.class)
+        .in(LazySingleton.class);
+    binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+  }
+
+  public static void bindChatHandler(Binder binder)
+  {
+    PolyBind.createChoice(
+        binder,
+        "druid.indexer.task.chathandler.type",
+        Key.get(ChatHandlerProvider.class),
+        Key.get(ServiceAnnouncingChatHandlerProvider.class)
+    );
+    final MapBinder<String, ChatHandlerProvider> handlerProviderBinder =
+        PolyBind.optionBinder(binder, Key.get(ChatHandlerProvider.class));
+    handlerProviderBinder
+        .addBinding("announce")
+        .to(ServiceAnnouncingChatHandlerProvider.class)
+        .in(LazySingleton.class);
+    handlerProviderBinder
+        .addBinding("noop")
+        .to(NoopChatHandlerProvider.class)
+        .in(LazySingleton.class);
+    binder.bind(ServiceAnnouncingChatHandlerProvider.class).in(LazySingleton.class);
+    binder.bind(NoopChatHandlerProvider.class).in(LazySingleton.class);
+  }
+
+  public static void bindPeonDataSegmentHandlers(Binder binder)
+  {
+    // Build it to make it bind even if nothing binds to it.
+    Binders.dataSegmentKillerBinder(binder);
+    binder.bind(DataSegmentKiller.class).to(OmniDataSegmentKiller.class).in(LazySingleton.class);
+    Binders.dataSegmentMoverBinder(binder);
+    binder.bind(DataSegmentMover.class).to(OmniDataSegmentMover.class).in(LazySingleton.class);
+    Binders.dataSegmentArchiverBinder(binder);
+    binder.bind(DataSegmentArchiver.class).to(OmniDataSegmentArchiver.class).in(LazySingleton.class);
+  }
+
+  public static void configureTaskActionClient(Binder binder)
+  {
+    PolyBind.createChoice(
+        binder,
+        "druid.peon.mode",
+        Key.get(TaskActionClientFactory.class),
+        Key.get(RemoteTaskActionClientFactory.class)
+    );
+    final MapBinder<String, TaskActionClientFactory> taskActionBinder =
+        PolyBind.optionBinder(binder, Key.get(TaskActionClientFactory.class));
+    taskActionBinder
+        .addBinding("local")
+        .to(LocalTaskActionClientFactory.class)
+        .in(LazySingleton.class);
+    // all of these bindings are so that we can run the peon in local mode
+    JsonConfigProvider.bind(binder, "druid.indexer.storage", TaskStorageConfig.class);
+    binder.bind(TaskStorage.class).to(HeapMemoryTaskStorage.class).in(LazySingleton.class);
+    binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
+    binder.bind(IndexerMetadataStorageCoordinator.class)
+          .to(IndexerSQLMetadataStorageCoordinator.class)
+          .in(LazySingleton.class);
+    taskActionBinder
+        .addBinding("remote")
+        .to(RemoteTaskActionClientFactory.class)
+        .in(LazySingleton.class);
+  }
+
+  public static void bindTaskConfigAndClients(Binder binder)
+  {
+    binder.bind(TaskToolboxFactory.class).in(LazySingleton.class);
+
+    JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
+    JsonConfigProvider.bind(binder, "druid.indexer.auditlog", TaskAuditLogConfig.class);
+    JsonConfigProvider.bind(binder, "druid.peon.taskActionClient.retry", RetryPolicyConfig.class);
+
+    configureTaskActionClient(binder);
+    binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
+
+    binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexSupervisorTaskClient>>(){})
+          .to(ParallelIndexTaskClientFactory.class)
+          .in(LazySingleton.class);
+
+    binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
+  }
+
+  public static void bindRealtimeCache(Binder binder)
+  {
+    JsonConfigProvider.bind(binder, "druid.realtime.cache", CacheConfig.class);
+    binder.install(new CacheModule());
+  }
+
+  public static void bindCoordinatorHandoffNotiferAndClient(Binder binder)
+  {
+    JsonConfigProvider.bind(
+        binder,
+        "druid.segment.handoff",
+        CoordinatorBasedSegmentHandoffNotifierConfig.class
+    );
+    binder.bind(SegmentHandoffNotifierFactory.class)
+          .to(CoordinatorBasedSegmentHandoffNotifierFactory.class)
+          .in(LazySingleton.class);
+
+    binder.bind(CoordinatorClient.class).in(LazySingleton.class);
+  }
+
 }

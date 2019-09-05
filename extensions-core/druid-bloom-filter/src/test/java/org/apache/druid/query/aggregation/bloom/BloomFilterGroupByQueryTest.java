@@ -30,8 +30,10 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.filter.BloomKFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.TestHelper;
 import org.junit.After;
@@ -51,13 +53,13 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class BloomFilterGroupByQueryTest
 {
-  private static final BloomFilterExtensionModule module = new BloomFilterExtensionModule();
+  private static final BloomFilterExtensionModule MODULE = new BloomFilterExtensionModule();
 
   static {
     // throwaway, just using to properly initialize jackson modules
     Guice.createInjector(
         binder -> binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper()),
-        module
+        MODULE
     );
   }
 
@@ -70,7 +72,7 @@ public class BloomFilterGroupByQueryTest
   public BloomFilterGroupByQueryTest(final GroupByQueryConfig config)
   {
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        Lists.newArrayList(module.getJacksonModules()),
+        Lists.newArrayList(MODULE.getJacksonModules()),
         config,
         tempFolder
     );
@@ -241,7 +243,7 @@ public class BloomFilterGroupByQueryTest
                        + "  }"
                        + "}";
 
-    Sequence seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         this.getClass().getClassLoader().getResourceAsStream("sample.data.tsv"),
         parseSpec,
         metricSpec,
@@ -251,6 +253,6 @@ public class BloomFilterGroupByQueryTest
         query
     );
 
-    return (MapBasedRow) seq.toList().get(0);
+    return seq.toList().get(0).toMapBasedRow((GroupByQuery) helper.readQuery(query));
   }
 }

@@ -23,19 +23,23 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import org.apache.druid.data.input.Row;
+import org.apache.druid.data.input.Rows;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.IdentityExtractionFn;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.ResultRow;
 
 import java.util.List;
 import java.util.Objects;
 
-public class DimensionSelectorHavingSpec extends BaseHavingSpec
+public class DimensionSelectorHavingSpec implements HavingSpec
 {
   private final String dimension;
   private final String value;
   private final ExtractionFn extractionFn;
+
+  private volatile int columnNumber;
 
   @JsonCreator
   public DimensionSelectorHavingSpec(
@@ -68,9 +72,19 @@ public class DimensionSelectorHavingSpec extends BaseHavingSpec
   }
 
   @Override
-  public boolean eval(Row row)
+  public void setQuery(GroupByQuery query)
   {
-    List<String> dimRowValList = row.getDimension(dimension);
+    columnNumber = query.getResultRowPositionLookup().getInt(dimension);
+  }
+
+  @Override
+  public boolean eval(ResultRow row)
+  {
+    if (columnNumber < 0) {
+      return Strings.isNullOrEmpty(value);
+    }
+
+    List<String> dimRowValList = Rows.objectToStrings(row.get(columnNumber));
     if (dimRowValList == null || dimRowValList.isEmpty()) {
       return Strings.isNullOrEmpty(value);
     }

@@ -42,7 +42,7 @@ import java.util.Properties;
 
 public class ParametrizedUriEmitterTest
 {
-  private static final ObjectMapper jsonMapper = new ObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
   private MockHttpClient httpClient;
   private Lifecycle lifecycle;
@@ -98,8 +98,8 @@ public class ParametrizedUriEmitterTest
             Assert.assertEquals(
                 StringUtils.format(
                     "[%s,%s]\n",
-                    jsonMapper.writeValueAsString(events.get(0)),
-                    jsonMapper.writeValueAsString(events.get(1))
+                    JSON_MAPPER.writeValueAsString(events.get(0)),
+                    JSON_MAPPER.writeValueAsString(events.get(1))
                 ),
                 StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
@@ -148,8 +148,8 @@ public class ParametrizedUriEmitterTest
     emitter.flush();
     Assert.assertTrue(httpClient.succeeded());
     Map<String, String> expected = ImmutableMap.of(
-        "http://example.com/test1", StringUtils.format("[%s]\n", jsonMapper.writeValueAsString(events.get(0))),
-        "http://example.com/test2", StringUtils.format("[%s]\n", jsonMapper.writeValueAsString(events.get(1)))
+        "http://example.com/test1", StringUtils.format("[%s]\n", JSON_MAPPER.writeValueAsString(events.get(0))),
+        "http://example.com/test2", StringUtils.format("[%s]\n", JSON_MAPPER.writeValueAsString(events.get(1)))
     );
     Assert.assertEquals(expected, results);
   }
@@ -173,8 +173,8 @@ public class ParametrizedUriEmitterTest
             Assert.assertEquals(
                 StringUtils.format(
                     "[%s,%s]\n",
-                    jsonMapper.writeValueAsString(events.get(0)),
-                    jsonMapper.writeValueAsString(events.get(1))
+                    JSON_MAPPER.writeValueAsString(events.get(0)),
+                    JSON_MAPPER.writeValueAsString(events.get(1))
                 ),
                 StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );

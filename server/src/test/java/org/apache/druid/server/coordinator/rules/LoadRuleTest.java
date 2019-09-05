@@ -72,15 +72,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class LoadRuleTest
 {
   private static final Logger log = new Logger(LoadRuleTest.class);
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
-  private static final ServiceEmitter emitter = new ServiceEmitter(
+  private static final ServiceEmitter EMITTER = new ServiceEmitter(
       "service",
       "host",
       new LoggingEmitter(
           log,
           LoggingEmitter.Level.ERROR,
-          jsonMapper
+          JSON_MAPPER
       )
   );
 
@@ -94,8 +94,8 @@ public class LoadRuleTest
   @Before
   public void setUp()
   {
-    EmittingLogger.registerEmitter(emitter);
-    emitter.start();
+    EmittingLogger.registerEmitter(EMITTER);
+    EMITTER.start();
     throttler = EasyMock.createMock(ReplicationThrottler.class);
 
     exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
@@ -108,7 +108,7 @@ public class LoadRuleTest
   public void tearDown() throws Exception
   {
     exec.shutdown();
-    emitter.close();
+    EMITTER.close();
   }
 
   @Test
@@ -737,11 +737,11 @@ public class LoadRuleTest
     return mockPeon;
   }
 
-  private static final AtomicInteger serverId = new AtomicInteger();
+  private static final AtomicInteger SERVER_ID = new AtomicInteger();
 
   private static DruidServer createServer(String tier)
   {
-    int serverId = LoadRuleTest.serverId.incrementAndGet();
+    int serverId = LoadRuleTest.SERVER_ID.incrementAndGet();
     return new DruidServer(
         "server" + serverId,
         "127.0.0.1:800" + serverId,

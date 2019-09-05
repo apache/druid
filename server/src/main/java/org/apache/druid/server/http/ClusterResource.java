@@ -74,6 +74,11 @@ public class ClusterResource
       entityBuilder.put(NodeType.MIDDLE_MANAGER, mmNodes);
     }
 
+    Collection<Object> indexerNodes = getNodes(NodeType.INDEXER, full);
+    if (!indexerNodes.isEmpty()) {
+      entityBuilder.put(NodeType.INDEXER, indexerNodes);
+    }
+
     Collection<Object> routerNodes = getNodes(NodeType.ROUTER, full);
     if (!routerNodes.isEmpty()) {
       entityBuilder.put(NodeType.ROUTER, routerNodes);

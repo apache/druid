@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import java.util.Collection;
 import java.util.List;
 
 public class SegmentListUsedAction implements TaskAction<List<DataSegment>>
@@ -44,7 +45,7 @@ public class SegmentListUsedAction implements TaskAction<List<DataSegment>>
   public SegmentListUsedAction(
       @JsonProperty("dataSource") String dataSource,
       @Deprecated @JsonProperty("interval") Interval interval,
-      @JsonProperty("intervals") List<Interval> intervals
+      @JsonProperty("intervals") Collection<Interval> intervals
   )
   {
     this.dataSource = dataSource;

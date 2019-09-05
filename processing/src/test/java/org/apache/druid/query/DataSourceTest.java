@@ -32,28 +32,28 @@ import java.io.IOException;
 
 public class DataSourceTest
 {
-  private static final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+  private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
   @Test
   public void testSerialization() throws IOException
   {
     DataSource dataSource = new TableDataSource("somedatasource");
-    String json = jsonMapper.writeValueAsString(dataSource);
-    DataSource serdeDataSource = jsonMapper.readValue(json, DataSource.class);
+    String json = JSON_MAPPER.writeValueAsString(dataSource);
+    DataSource serdeDataSource = JSON_MAPPER.readValue(json, DataSource.class);
     Assert.assertEquals(dataSource, serdeDataSource);
   }
 
   @Test
   public void testLegacyDataSource() throws IOException
   {
-    DataSource dataSource = jsonMapper.readValue("\"somedatasource\"", DataSource.class);
+    DataSource dataSource = JSON_MAPPER.readValue("\"somedatasource\"", DataSource.class);
     Assert.assertEquals(new TableDataSource("somedatasource"), dataSource);
   }
 
   @Test
   public void testTableDataSource() throws IOException
   {
-    DataSource dataSource = jsonMapper.readValue("{\"type\":\"table\", \"name\":\"somedatasource\"}", DataSource.class);
+    DataSource dataSource = JSON_MAPPER.readValue("{\"type\":\"table\", \"name\":\"somedatasource\"}", DataSource.class);
     Assert.assertEquals(new TableDataSource("somedatasource"), dataSource);
   }
 
@@ -62,23 +62,23 @@ public class DataSourceTest
   {
     GroupByQuery query = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
-    String dataSourceJSON = "{\"type\":\"query\", \"query\":" + jsonMapper.writeValueAsString(query) + "}";
+    String dataSourceJSON = "{\"type\":\"query\", \"query\":" + JSON_MAPPER.writeValueAsString(query) + "}";
 
-    DataSource dataSource = jsonMapper.readValue(dataSourceJSON, DataSource.class);
+    DataSource dataSource = JSON_MAPPER.readValue(dataSourceJSON, DataSource.class);
     Assert.assertEquals(new QueryDataSource(query), dataSource);
   }
 
   @Test
   public void testUnionDataSource() throws Exception
   {
-    DataSource dataSource = jsonMapper.readValue(
+    DataSource dataSource = JSON_MAPPER.readValue(
         "{\"type\":\"union\", \"dataSources\":[\"ds1\", \"ds2\"]}",
         DataSource.class
     );
@@ -92,7 +92,7 @@ public class DataSourceTest
         Lists.newArrayList(dataSource.getNames())
     );
 
-    final DataSource serde = jsonMapper.readValue(jsonMapper.writeValueAsString(dataSource), DataSource.class);
+    final DataSource serde = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(dataSource), DataSource.class);
     Assert.assertEquals(dataSource, serde);
   }
 

@@ -36,6 +36,7 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.worker.IntermediaryDataManager;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -67,6 +68,7 @@ import java.util.concurrent.ExecutorService;
 public class TaskToolbox
 {
   private final TaskConfig config;
+  private final DruidNode taskExecutorNode;
   private final TaskActionClient taskActionClient;
   private final ServiceEmitter emitter;
   private final DataSegmentPusher segmentPusher;
@@ -98,9 +100,11 @@ public class TaskToolbox
   private final DruidNode druidNode;
   private final LookupNodeService lookupNodeService;
   private final DataNodeService dataNodeService;
+  private final IntermediaryDataManager intermediaryDataManager;
 
   public TaskToolbox(
       TaskConfig config,
+      DruidNode taskExecutorNode,
       TaskActionClient taskActionClient,
       ServiceEmitter emitter,
       DataSegmentPusher segmentPusher,
@@ -125,10 +129,12 @@ public class TaskToolbox
       DruidNode druidNode,
       LookupNodeService lookupNodeService,
       DataNodeService dataNodeService,
-      TaskReportFileWriter taskReportFileWriter
+      TaskReportFileWriter taskReportFileWriter,
+      IntermediaryDataManager intermediaryDataManager
   )
   {
     this.config = config;
+    this.taskExecutorNode = taskExecutorNode;
     this.taskActionClient = taskActionClient;
     this.emitter = emitter;
     this.segmentPusher = segmentPusher;
@@ -155,11 +161,17 @@ public class TaskToolbox
     this.dataNodeService = dataNodeService;
     this.taskReportFileWriter = taskReportFileWriter;
     this.taskReportFileWriter.setObjectMapper(this.objectMapper);
+    this.intermediaryDataManager = intermediaryDataManager;
   }
 
   public TaskConfig getConfig()
   {
     return config;
+  }
+
+  public DruidNode getTaskExecutorNode()
+  {
+    return taskExecutorNode;
   }
 
   public TaskActionClient getTaskActionClient()
@@ -320,5 +332,10 @@ public class TaskToolbox
   public TaskReportFileWriter getTaskReportFileWriter()
   {
     return taskReportFileWriter;
+  }
+
+  public IntermediaryDataManager getIntermediaryDataManager()
+  {
+    return intermediaryDataManager;
   }
 }

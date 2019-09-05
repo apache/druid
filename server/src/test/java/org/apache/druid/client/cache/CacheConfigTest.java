@@ -45,7 +45,7 @@ public class CacheConfigTest
   static Injector injector;
   static JsonConfigurator configurator;
   JsonConfigProvider<CacheConfig> configProvider;
-  private static final String propertyPrefix = "org.apache.druid.collections.test.cache";
+  private static final String PROPERTY_PREFIX = "org.apache.druid.collections.test.cache";
 
   @BeforeClass
   public static void populateStatics()
@@ -66,7 +66,7 @@ public class CacheConfigTest
     @Override
     public void configure(Binder binder)
     {
-      JsonConfigProvider.bind(binder, propertyPrefix, CacheConfig.class);
+      JsonConfigProvider.bind(binder, PROPERTY_PREFIX, CacheConfig.class);
     }
   }
 
@@ -76,16 +76,16 @@ public class CacheConfigTest
   public void setupTest()
   {
     properties.clear();
-    configProvider = JsonConfigProvider.of(propertyPrefix, CacheConfig.class);
+    configProvider = JsonConfigProvider.of(PROPERTY_PREFIX, CacheConfig.class);
   }
 
   @Test
   public void testInjection1()
   {
-    properties.put(propertyPrefix + ".numBackgroundThreads", "5");
-    properties.put(propertyPrefix + ".populateCache", "true");
-    properties.put(propertyPrefix + ".useCache", "true");
-    properties.put(propertyPrefix + ".unCacheable", "[\"a\",\"b\"]");
+    properties.put(PROPERTY_PREFIX + ".numBackgroundThreads", "5");
+    properties.put(PROPERTY_PREFIX + ".populateCache", "true");
+    properties.put(PROPERTY_PREFIX + ".useCache", "true");
+    properties.put(PROPERTY_PREFIX + ".unCacheable", "[\"a\",\"b\"]");
 
     configProvider.inject(properties, configurator);
     CacheConfig config = configProvider.get().get();
@@ -98,9 +98,9 @@ public class CacheConfigTest
   @Test
   public void testInjection2()
   {
-    properties.put(propertyPrefix + ".numBackgroundThreads", "99");
-    properties.put(propertyPrefix + ".populateCache", "false");
-    properties.put(propertyPrefix + ".useCache", "false");
+    properties.put(PROPERTY_PREFIX + ".numBackgroundThreads", "99");
+    properties.put(PROPERTY_PREFIX + ".populateCache", "false");
+    properties.put(PROPERTY_PREFIX + ".useCache", "false");
 
     configProvider.inject(properties, configurator);
     CacheConfig config = configProvider.get().get();
@@ -113,7 +113,7 @@ public class CacheConfigTest
   @Test(expected = ProvisionException.class)
   public void testValidationError()
   {
-    properties.put(propertyPrefix + ".numBackgroundThreads", "-1");
+    properties.put(PROPERTY_PREFIX + ".numBackgroundThreads", "-1");
 
     configProvider.inject(properties, configurator);
     CacheConfig config = configProvider.get().get();
@@ -124,7 +124,7 @@ public class CacheConfigTest
   @Test(expected = ProvisionException.class)
   public void testValidationInsaneError()
   {
-    properties.put(propertyPrefix + ".numBackgroundThreads", "BABBA YAGA");
+    properties.put(PROPERTY_PREFIX + ".numBackgroundThreads", "BABBA YAGA");
     configProvider.inject(properties, configurator);
     CacheConfig config = configProvider.get().get();
     throw new IllegalStateException("Should have already failed");
@@ -133,7 +133,7 @@ public class CacheConfigTest
   @Test(expected = ProvisionException.class)
   public void testTRUE()
   {
-    properties.put(propertyPrefix + ".populateCache", "TRUE");
+    properties.put(PROPERTY_PREFIX + ".populateCache", "TRUE");
     configProvider.inject(properties, configurator);
     CacheConfig config = configProvider.get().get();
     throw new IllegalStateException("Should have already failed");
@@ -142,7 +142,7 @@ public class CacheConfigTest
   @Test(expected = ProvisionException.class)
   public void testFALSE()
   {
-    properties.put(propertyPrefix + ".populateCache", "FALSE");
+    properties.put(PROPERTY_PREFIX + ".populateCache", "FALSE");
     configProvider.inject(properties, configurator);
     CacheConfig config = configProvider.get().get();
     throw new IllegalStateException("Should have already failed");
@@ -152,7 +152,7 @@ public class CacheConfigTest
   @Test(expected = ProvisionException.class)
   public void testFaLse()
   {
-    properties.put(propertyPrefix + ".populateCache", "FaLse");
+    properties.put(PROPERTY_PREFIX + ".populateCache", "FaLse");
     configProvider.inject(properties, configurator);
     CacheConfig config = configProvider.get().get();
     throw new IllegalStateException("Should have already failed");

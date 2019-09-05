@@ -22,7 +22,6 @@ package org.apache.druid.query.groupby;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -61,12 +60,12 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 {
-  private static final Closer resourceCloser = Closer.create();
+  private static final Closer RESOURCE_CLOSER = Closer.create();
 
   @AfterClass
   public static void teardown() throws IOException
   {
-    resourceCloser.close();
+    RESOURCE_CLOSER.close();
   }
 
   @SuppressWarnings("unchecked")
@@ -79,18 +78,18 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
         config
     );
     final GroupByQueryRunnerFactory factory = factoryAndCloser.lhs;
-    resourceCloser.register(factoryAndCloser.rhs);
+    RESOURCE_CLOSER.register(factoryAndCloser.rhs);
 
     final List<Object[]> constructors = new ArrayList<>();
 
-    for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
+    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
       final QueryRunner modifiedRunner = new QueryRunner()
       {
         @Override
         public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
         {
           TimeseriesQuery tsQuery = (TimeseriesQuery) queryPlus.getQuery();
-          QueryRunner<Row> newRunner = factory.mergeRunners(
+          QueryRunner<ResultRow> newRunner = factory.mergeRunners(
               Execs.directExecutor(), ImmutableList.of(runner)
           );
           QueryToolChest toolChest = factory.getToolchest();
@@ -114,15 +113,16 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 
           return Sequences.map(
               newRunner.run(queryPlus.withQuery(newQuery), responseContext),
-              new Function<Row, Result<TimeseriesResultValue>>()
+              new Function<ResultRow, Result<TimeseriesResultValue>>()
               {
                 @Override
-                public Result<TimeseriesResultValue> apply(final Row input)
+                public Result<TimeseriesResultValue> apply(final ResultRow input)
                 {
-                  MapBasedRow row = (MapBasedRow) input;
+                  final MapBasedRow mapBasedRow = input.toMapBasedRow(newQuery);
 
                   return new Result<>(
-                      row.getTimestamp(), new TimeseriesResultValue(row.getEvent())
+                      mapBasedRow.getTimestamp(),
+                      new TimeseriesResultValue(mapBasedRow.getEvent())
                   );
                 }
               }
@@ -149,7 +149,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 
   public GroupByTimeseriesQueryRunnerTest(QueryRunner runner, boolean vectorize)
   {
-    super(runner, false, vectorize, QueryRunnerTestHelper.commonDoubleAggregators);
+    super(runner, false, vectorize, QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS);
   }
 
   // GroupBy handles timestamps differently when granularity is ALL
@@ -158,9 +158,9 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   public void testFullOnTimeseriesMaxMin()
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(Granularities.ALL)
-                                  .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+                                  .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                                   .aggregators(
                                       new DoubleMaxAggregatorFactory("maxIndex", "index"),
                                       new DoubleMinAggregatorFactory("minIndex", "index")

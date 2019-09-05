@@ -41,6 +41,7 @@ import org.apache.druid.query.UnionQueryRunner;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.IncrementalIndexSegment;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -70,15 +71,15 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class MultiSegmentSelectQueryTest
 {
-  private static final Supplier<SelectQueryConfig> configSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
+  private static final Supplier<SelectQueryConfig> CONFIG_SUPPLIER = Suppliers.ofInstance(new SelectQueryConfig(true));
 
-  private static final SelectQueryQueryToolChest toolChest = new SelectQueryQueryToolChest(
+  private static final SelectQueryQueryToolChest TOOL_CHEST = new SelectQueryQueryToolChest(
       new DefaultObjectMapper(),
       QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
   );
 
-  private static final QueryRunnerFactory factory = new SelectQueryRunnerFactory(
-      toolChest,
+  private static final QueryRunnerFactory FACTORY = new SelectQueryRunnerFactory(
+      TOOL_CHEST,
       new SelectQueryEngine(),
       QueryRunnerTestHelper.NOOP_QUERYWATCHER
   );
@@ -146,18 +147,29 @@ public class MultiSegmentSelectQueryTest
     segment1 = new IncrementalIndexSegment(index1, makeIdentifier(index1, "v1"));
     segment_override = new IncrementalIndexSegment(index2, makeIdentifier(index2, "v2"));
 
-    VersionedIntervalTimeline<String, Segment> timeline =
-        new VersionedIntervalTimeline<>(StringComparators.LEXICOGRAPHIC);
-    timeline.add(index0.getInterval(), "v1", new SingleElementPartitionChunk<>(segment0));
-    timeline.add(index1.getInterval(), "v1", new SingleElementPartitionChunk<>(segment1));
-    timeline.add(index2.getInterval(), "v2", new SingleElementPartitionChunk<>(segment_override));
+    VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = new VersionedIntervalTimeline<>(StringComparators.LEXICOGRAPHIC);
+    timeline.add(
+        index0.getInterval(),
+        "v1",
+        new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment0))
+    );
+    timeline.add(
+        index1.getInterval(),
+        "v1",
+        new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment1))
+    );
+    timeline.add(
+        index2.getInterval(),
+        "v2",
+        new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment_override))
+    );
 
     segmentIdentifiers = new ArrayList<>();
     for (TimelineObjectHolder<String, ?> holder : timeline.lookup(Intervals.of("2011-01-12/2011-01-14"))) {
       segmentIdentifiers.add(makeIdentifier(holder.getInterval(), holder.getVersion()).toString());
     }
 
-    runner = QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, factory);
+    runner = QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, FACTORY);
   }
 
   private static SegmentId makeIdentifier(IncrementalIndex index, String version)
@@ -167,7 +179,7 @@ public class MultiSegmentSelectQueryTest
 
   private static SegmentId makeIdentifier(Interval interval, String version)
   {
-    return SegmentId.of(QueryRunnerTestHelper.dataSource, interval, version, NoneShardSpec.instance());
+    return SegmentId.of(QueryRunnerTestHelper.DATA_SOURCE, interval, version, NoneShardSpec.instance());
   }
 
   private static IncrementalIndex newIndex(String minTimeStamp)
@@ -212,10 +224,10 @@ public class MultiSegmentSelectQueryTest
   private Druids.SelectQueryBuilder newBuilder()
   {
     return Druids.newSelectQueryBuilder()
-                 .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
+                 .dataSource(new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE))
                  .intervals(SelectQueryRunnerTest.I_0112_0114_SPEC)
-                 .granularity(QueryRunnerTestHelper.allGran)
-                 .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.dimensions))
+                 .granularity(QueryRunnerTestHelper.ALL_GRAN)
+                 .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.DIMENSIONS))
                  .pagingSpec(PagingSpec.newSpec(3));
   }
 
@@ -265,7 +277,7 @@ public class MultiSegmentSelectQueryTest
   public void testDayGranularity()
   {
     runDayGranularityTest(
-        newBuilder().granularity(QueryRunnerTestHelper.dayGran).build(),
+        newBuilder().granularity(QueryRunnerTestHelper.DAY_GRAN).build(),
         new int[][]{
             {2, -1, -1, 2, 3, 0, 0, 3}, {3, 1, -1, 5, 1, 2, 0, 3}, {-1, 3, 0, 8, 0, 2, 1, 3},
             {-1, -1, 3, 11, 0, 0, 3, 3}, {-1, -1, 4, 12, 0, 0, 1, 1}, {-1, -1, 5, 13, 0, 0, 0, 0}
@@ -273,7 +285,7 @@ public class MultiSegmentSelectQueryTest
     );
 
     runDayGranularityTest(
-        newBuilder().granularity(QueryRunnerTestHelper.dayGran).descending(true).build(),
+        newBuilder().granularity(QueryRunnerTestHelper.DAY_GRAN).descending(true).build(),
         new int[][]{
             {0, 0, -3, -3, 0, 0, 3, 3}, {0, -1, -5, -6, 0, 1, 2, 3}, {0, -4, 0, -9, 0, 3, 0, 3},
             {-3, 0, 0, -12, 3, 0, 0, 3}, {-4, 0, 0, -13, 1, 0, 0, 1}, {-5, 0, 0, -14, 0, 0, 0, 0}
@@ -313,14 +325,14 @@ public class MultiSegmentSelectQueryTest
         .dataSource(
             new UnionDataSource(
                 ImmutableList.of(
-                    new TableDataSource(QueryRunnerTestHelper.dataSource),
+                    new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
                     new TableDataSource("testing-2")
                 )
             )
         )
         .intervals(SelectQueryRunnerTest.I_0112_0114_SPEC)
-        .granularity(QueryRunnerTestHelper.allGran)
-        .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.dimensions))
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.DIMENSIONS))
         .pagingSpec(PagingSpec.newSpec(3));
 
     SelectQuery query = selectQueryBuilder.build();

@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.worker;
 
-import com.amazonaws.util.StringUtils;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
@@ -41,8 +40,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Comparator;
-import java.util.List;
+import java.nio.charset.StandardCharsets;
 
 public class IntermediaryDataManagerManualAddAndDeleteTest
 {
@@ -67,7 +65,7 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
         false,
         null,
         null,
-        ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), 150L, null))
+        ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), 600L, null))
     );
     final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient();
     intermediaryDataManager = new IntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
@@ -83,15 +81,16 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
   @Test
   public void testAddSegmentFailure() throws IOException
   {
-    for (int i = 0; i < 15; i++) {
-      File segmentFile = generateSegmentFile();
+    int i = 0;
+    for (; i < 4; i++) {
+      File segmentFile = generateSegmentDir("file_" + i);
       DataSegment segment = newSegment(Intervals.of("2018/2019"), i);
       intermediaryDataManager.addSegment("supervisorTaskId", "subTaskId", segment, segmentFile);
     }
     expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage("Can't find location to handle segment");
-    File segmentFile = generateSegmentFile();
-    DataSegment segment = newSegment(Intervals.of("2018/2019"), 16);
+    File segmentFile = generateSegmentDir("file_" + i);
+    DataSegment segment = newSegment(Intervals.of("2018/2019"), 4);
     intermediaryDataManager.addSegment("supervisorTaskId", "subTaskId", segment, segmentFile);
   }
 
@@ -101,16 +100,19 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
     final String supervisorTaskId = "supervisorTaskId";
     final Interval interval = Intervals.of("2018/2019");
     final int partitionId = 0;
-    for (int i = 0; i < 10; i++) {
-      final File segmentFile = generateSegmentFile();
+    for (int i = 0; i < 4; i++) {
+      final File segmentFile = generateSegmentDir("file_" + i);
       final DataSegment segment = newSegment(interval, partitionId);
       intermediaryDataManager.addSegment(supervisorTaskId, "subTaskId_" + i, segment, segmentFile);
     }
-    final List<File> files = intermediaryDataManager.findPartitionFiles(supervisorTaskId, interval, partitionId);
-    Assert.assertEquals(10, files.size());
-    files.sort(Comparator.comparing(File::getName));
-    for (int i = 0; i < 10; i++) {
-      Assert.assertEquals("subTaskId_" + i, files.get(i).getName());
+    for (int i = 0; i < 4; i++) {
+      final File file = intermediaryDataManager.findPartitionFile(
+          supervisorTaskId,
+          "subTaskId_" + i,
+          interval,
+          partitionId
+      );
+      Assert.assertNotNull(file);
     }
   }
 
@@ -119,9 +121,9 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
   {
     final String supervisorTaskId = "supervisorTaskId";
     final Interval interval = Intervals.of("2018/2019");
-    for (int partitionId = 0; partitionId < 5; partitionId++) {
-      for (int subTaskId = 0; subTaskId < 3; subTaskId++) {
-        final File segmentFile = generateSegmentFile();
+    for (int partitionId = 0; partitionId < 2; partitionId++) {
+      for (int subTaskId = 0; subTaskId < 2; subTaskId++) {
+        final File segmentFile = generateSegmentDir("file_" + partitionId + "_" + subTaskId);
         final DataSegment segment = newSegment(interval, partitionId);
         intermediaryDataManager.addSegment(supervisorTaskId, "subTaskId_" + subTaskId, segment, segmentFile);
       }
@@ -129,8 +131,12 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
 
     intermediaryDataManager.deletePartitions(supervisorTaskId);
 
-    for (int partitionId = 0; partitionId < 5; partitionId++) {
-      Assert.assertTrue(intermediaryDataManager.findPartitionFiles(supervisorTaskId, interval, partitionId).isEmpty());
+    for (int partitionId = 0; partitionId < 2; partitionId++) {
+      for (int subTaskId = 0; subTaskId < 2; subTaskId++) {
+        Assert.assertNull(
+            intermediaryDataManager.findPartitionFile(supervisorTaskId, "subTaskId_" + subTaskId, interval, partitionId)
+        );
+      }
     }
   }
 
@@ -139,22 +145,24 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
   {
     final String supervisorTaskId = "supervisorTaskId";
     final Interval interval = Intervals.of("2018/2019");
-    for (int i = 0; i < 15; i++) {
-      File segmentFile = generateSegmentFile();
+    int i = 0;
+    for (; i < 4; i++) {
+      File segmentFile = generateSegmentDir("file_" + i);
       DataSegment segment = newSegment(interval, i);
       intermediaryDataManager.addSegment("supervisorTaskId", "subTaskId", segment, segmentFile);
     }
     intermediaryDataManager.deletePartitions(supervisorTaskId);
-    File segmentFile = generateSegmentFile();
-    DataSegment segment = newSegment(interval, 16);
+    File segmentFile = generateSegmentDir("file_" + i);
+    DataSegment segment = newSegment(interval, i);
     intermediaryDataManager.addSegment(supervisorTaskId, "subTaskId", segment, segmentFile);
   }
 
-  private File generateSegmentFile() throws IOException
+  private File generateSegmentDir(String fileName) throws IOException
   {
-    final File segmentFile = tempDir.newFile();
-    FileUtils.write(segmentFile, "test data.", StringUtils.UTF8);
-    return segmentFile;
+    // Each file size is 138 bytes after compression
+    final File segmentDir = tempDir.newFolder();
+    FileUtils.write(new File(segmentDir, fileName), "test data.", StandardCharsets.UTF_8);
+    return segmentDir;
   }
 
   private DataSegment newSegment(Interval interval, int partitionId)

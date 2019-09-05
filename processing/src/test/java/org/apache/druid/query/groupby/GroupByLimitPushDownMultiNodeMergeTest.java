@@ -33,7 +33,6 @@ import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -113,8 +112,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest
   private static final IndexIO INDEX_IO;
 
   private File tmpDir;
-  private QueryRunnerFactory<Row, GroupByQuery> groupByFactory;
-  private QueryRunnerFactory<Row, GroupByQuery> groupByFactory2;
+  private QueryRunnerFactory<ResultRow, GroupByQuery> groupByFactory;
+  private QueryRunnerFactory<ResultRow, GroupByQuery> groupByFactory2;
   private List<IncrementalIndex> incrementalIndices = new ArrayList<>();
   private List<QueryableIndex> groupByIndices = new ArrayList<>();
   private ExecutorService executorService;
@@ -461,27 +460,27 @@ public class GroupByLimitPushDownMultiNodeMergeTest
   @Test
   public void testDescendingNumerics()
   {
-    QueryToolChest<Row, GroupByQuery> toolChest = groupByFactory.getToolchest();
-    QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
+    QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
+    QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             groupByFactory.mergeRunners(executorService, getRunner1(2))
         ),
         (QueryToolChest) toolChest
     );
 
-    QueryRunner<Row> theRunner2 = new FinalizeResultsQueryRunner<>(
+    QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             groupByFactory2.mergeRunners(executorService, getRunner2(3))
         ),
         (QueryToolChest) toolChest
     );
 
-    QueryRunner<Row> finalRunner = new FinalizeResultsQueryRunner<>(
+    QueryRunner<ResultRow> finalRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            new QueryRunner<Row>()
+            new QueryRunner<ResultRow>()
             {
               @Override
-              public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
+              public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
               {
                 return Sequences
                     .simple(
@@ -550,31 +549,35 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query));
-    List<Row> results = queryResult.toList();
+    Sequence<ResultRow> queryResult = finalRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    List<ResultRow> results = queryResult.toList();
 
-    Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "2017-07-14T02:40:00.000Z",
         "d0", 2027L,
         "d1", 3L,
         "d2", 17L,
         "a0", 2L
     );
-    Row expectedRow1 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow1 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "2017-07-14T02:40:00.000Z",
         "d0", 2024L,
         "d1", 1L,
         "d2", 14L,
         "a0", 2L
     );
-    Row expectedRow2 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow2 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "2017-07-14T02:40:00.000Z",
         "d0", 2020L,
         "d1", 11L,
         "d2", 13L,
         "a0", 2L
     );
-    Row expectedRow3 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow3 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "2017-07-14T02:40:00.000Z",
         "d0", 2017L,
         "d1", 9L,
@@ -594,27 +597,27 @@ public class GroupByLimitPushDownMultiNodeMergeTest
   {
     // one segment's results use limit push down, the other doesn't because of insufficient buffer capacity
 
-    QueryToolChest<Row, GroupByQuery> toolChest = groupByFactory.getToolchest();
-    QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
+    QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
+    QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             groupByFactory.mergeRunners(executorService, getRunner1(0))
         ),
         (QueryToolChest) toolChest
     );
 
-    QueryRunner<Row> theRunner2 = new FinalizeResultsQueryRunner<>(
+    QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             groupByFactory2.mergeRunners(executorService, getRunner2(1))
         ),
         (QueryToolChest) toolChest
     );
 
-    QueryRunner<Row> finalRunner = new FinalizeResultsQueryRunner<>(
+    QueryRunner<ResultRow> finalRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            new QueryRunner<Row>()
+            new QueryRunner<ResultRow>()
             {
               @Override
-              public Sequence<Row> run(QueryPlus<Row> queryPlus, ResponseContext responseContext)
+              public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
               {
                 return Sequences
                     .simple(
@@ -671,28 +674,32 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query));
-    List<Row> results = queryResult.toList();
+    Sequence<ResultRow> queryResult = finalRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    List<ResultRow> results = queryResult.toList();
 
-    Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "2017-07-14T02:40:00.000Z",
         "dimA", "mango",
         "hour", 1505260800000L,
         "metASum", 26L
     );
-    Row expectedRow1 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow1 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "2017-07-14T02:40:00.000Z",
         "dimA", "pomegranate",
         "hour", 1505260800000L,
         "metASum", 7113L
     );
-    Row expectedRow2 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow2 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "2017-07-14T02:40:00.000Z",
         "dimA", "mango",
         "hour", 1505264400000L,
         "metASum", 10L
     );
-    Row expectedRow3 = GroupByQueryRunnerTestHelper.createExpectedRow(
+    ResultRow expectedRow3 = GroupByQueryRunnerTestHelper.createExpectedRow(
+        query,
         "2017-07-14T02:40:00.000Z",
         "dimA", "pomegranate",
         "hour", 1505264400000L,
@@ -706,11 +713,11 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     Assert.assertEquals(expectedRow3, results.get(3));
   }
 
-  private List<QueryRunner<Row>> getRunner1(int qIndexNumber)
+  private List<QueryRunner<ResultRow>> getRunner1(int qIndexNumber)
   {
-    List<QueryRunner<Row>> runners = new ArrayList<>();
+    List<QueryRunner<ResultRow>> runners = new ArrayList<>();
     QueryableIndex index = groupByIndices.get(qIndexNumber);
-    QueryRunner<Row> runner = makeQueryRunner(
+    QueryRunner<ResultRow> runner = makeQueryRunner(
         groupByFactory,
         SegmentId.dummy(index.toString()),
         new QueryableIndexSegment(index, SegmentId.dummy(index.toString()))
@@ -719,11 +726,11 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     return runners;
   }
 
-  private List<QueryRunner<Row>> getRunner2(int qIndexNumber)
+  private List<QueryRunner<ResultRow>> getRunner2(int qIndexNumber)
   {
-    List<QueryRunner<Row>> runners = new ArrayList<>();
+    List<QueryRunner<ResultRow>> runners = new ArrayList<>();
     QueryableIndex index2 = groupByIndices.get(qIndexNumber);
-    QueryRunner<Row> tooSmallRunner = makeQueryRunner(
+    QueryRunner<ResultRow> tooSmallRunner = makeQueryRunner(
         groupByFactory2,
         SegmentId.dummy(index2.toString()),
         new QueryableIndexSegment(index2, SegmentId.dummy(index2.toString()))

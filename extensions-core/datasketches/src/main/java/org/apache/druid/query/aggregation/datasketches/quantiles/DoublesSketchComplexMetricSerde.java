@@ -39,7 +39,7 @@ import java.nio.ByteBuffer;
 public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
 {
 
-  private static final DoublesSketchObjectStrategy strategy = new DoublesSketchObjectStrategy();
+  private static final DoublesSketchObjectStrategy STRATEGY = new DoublesSketchObjectStrategy();
 
   @Override
   public String getTypeName()
@@ -50,7 +50,7 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
   @Override
   public ObjectStrategy<DoublesSketch> getObjectStrategy()
   {
-    return strategy;
+    return STRATEGY;
   }
 
   @Override
@@ -105,7 +105,7 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
   @Override
   public void deserializeColumn(final ByteBuffer buffer, final ColumnBuilder builder)
   {
-    final GenericIndexed<DoublesSketch> column = GenericIndexed.read(buffer, strategy, builder.getFileMapper());
+    final GenericIndexed<DoublesSketch> column = GenericIndexed.read(buffer, STRATEGY, builder.getFileMapper());
     builder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
   }
 

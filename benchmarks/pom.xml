@@ -27,7 +27,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.16.0-incubating-SNAPSHOT</version>
+    <version>0.17.0-incubating-SNAPSHOT</version>
   </parent>
 
   <prerequisites>
@@ -215,6 +215,9 @@
         </plugin>
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <argLine>@{jacocoArgLine}</argLine>
+          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>

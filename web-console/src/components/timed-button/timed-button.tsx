@@ -92,7 +92,7 @@ export class TimedButton extends React.PureComponent<TimedButtonProps, TimedButt
     this.continuousRefresh(selectedInterval);
   };
 
-  render() {
+  render(): JSX.Element {
     const {
       label,
       intervals,

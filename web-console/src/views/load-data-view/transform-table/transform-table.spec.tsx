@@ -40,7 +40,7 @@ describe('transform table', () => {
         transformedColumnsOnly={false}
         transforms={[]}
         selectedTransformIndex={-1}
-        onTransformSelect={() => null}
+        onTransformSelect={() => {}}
       />
     );
 

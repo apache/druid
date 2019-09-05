@@ -50,7 +50,7 @@ public class JdbcDataFetcherTest
   
   
 
-  private static final Map<String, String> lookupMap = ImmutableMap.of(
+  private static final Map<String, String> LOOKUP_MAP = ImmutableMap.of(
       "foo", "bar",
       "bad", "bar",
       "how about that", "foo",
@@ -77,7 +77,7 @@ public class JdbcDataFetcherTest
     );
     handle.createStatement(StringUtils.format("TRUNCATE TABLE %s", tableName)).setQueryTimeout(1).execute();
 
-    for (Map.Entry<String, String> entry : lookupMap.entrySet()) {
+    for (Map.Entry<String, String> entry : LOOKUP_MAP.entrySet()) {
       insertValues(entry.getKey(), entry.getValue(), handle);
     }
     handle.commit();
@@ -94,7 +94,7 @@ public class JdbcDataFetcherTest
   public void testFetch()
   {
     Assert.assertEquals("null check", null, jdbcDataFetcher.fetch("baz"));
-    assertMapLookup(lookupMap, jdbcDataFetcher);
+    assertMapLookup(LOOKUP_MAP, jdbcDataFetcher);
   }
 
   @Test
@@ -102,15 +102,15 @@ public class JdbcDataFetcherTest
   {
     ImmutableMap.Builder<String, String> mapBuilder = ImmutableMap.builder();
     jdbcDataFetcher.fetchAll().forEach(mapBuilder::put);
-    Assert.assertEquals("maps should match", lookupMap, mapBuilder.build());
+    Assert.assertEquals("maps should match", LOOKUP_MAP, mapBuilder.build());
   }
 
   @Test
   public void testFetchKeys()
   {
     ImmutableMap.Builder<String, String> mapBuilder = ImmutableMap.builder();
-    jdbcDataFetcher.fetch(lookupMap.keySet()).forEach(mapBuilder::put);
-    Assert.assertEquals(lookupMap, mapBuilder.build());
+    jdbcDataFetcher.fetch(LOOKUP_MAP.keySet()).forEach(mapBuilder::put);
+    Assert.assertEquals(LOOKUP_MAP, mapBuilder.build());
   }
 
   @Test

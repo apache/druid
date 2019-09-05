@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
@@ -27,11 +28,7 @@ export interface RefreshButtonProps {
 }
 
 export class RefreshButton extends React.PureComponent<RefreshButtonProps> {
-  constructor(props: RefreshButtonProps, context: any) {
-    super(props, context);
-  }
-
-  render() {
+  render(): JSX.Element {
     const { onRefresh, localStorageKey } = this.props;
     const intervals = [
       { label: '5 seconds', value: 5000 },

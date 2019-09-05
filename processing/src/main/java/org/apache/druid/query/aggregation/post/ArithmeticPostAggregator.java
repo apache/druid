@@ -29,6 +29,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
+import javax.annotation.Nullable;
+
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -71,7 +73,7 @@ public class ArithmeticPostAggregator implements PostAggregator
       @JsonProperty("name") String name,
       @JsonProperty("fn") String fnName,
       @JsonProperty("fields") List<PostAggregator> fields,
-      @JsonProperty("ordering") String ordering
+      @JsonProperty("ordering") @Nullable String ordering
   )
   {
     Preconditions.checkArgument(fnName != null, "fn cannot not be null");
@@ -241,11 +243,11 @@ public class ArithmeticPostAggregator implements PostAggregator
       }
     };
 
-    private static final Map<String, Ops> lookupMap = new HashMap<>();
+    private static final Map<String, Ops> LOOKUP_MAP = new HashMap<>();
 
     static {
       for (Ops op : Ops.values()) {
-        lookupMap.put(op.getFn(), op);
+        LOOKUP_MAP.put(op.getFn(), op);
       }
     }
 
@@ -265,12 +267,12 @@ public class ArithmeticPostAggregator implements PostAggregator
 
     static Ops lookup(String fn)
     {
-      return lookupMap.get(fn);
+      return LOOKUP_MAP.get(fn);
     }
 
     static Set<String> getFns()
     {
-      return lookupMap.keySet();
+      return LOOKUP_MAP.keySet();
     }
   }
 

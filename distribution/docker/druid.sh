@@ -45,45 +45,56 @@ echo "$(date -Is) startup service $SERVICE"
 
 # We put all the config in /tmp/conf to allow for a
 # read-only root filesystem
-cp -r /opt/druid/conf /tmp/conf
+mkdir -p /tmp/conf/
+cp -r /opt/druid/conf/druid /tmp/conf/druid
+
+getConfPath() {
+    cluster_conf_base=/tmp/conf/druid/cluster
+    case "$1" in
+    _common) echo $cluster_conf_base/_common ;;
+    historical) echo $cluster_conf_base/data/historical ;;
+    middleManager) echo $cluster_conf_base/data/middleManager ;;
+    coordinator | overlord) echo $cluster_conf_base/master/coordinator-overlord ;;
+    broker) echo $cluster_conf_base/query/broker ;;
+    router) echo $cluster_conf_base/query/router ;;
+    esac
+}
+COMMON_CONF_DIR=$(getConfPath _common)
+SERVICE_CONF_DIR=$(getConfPath ${SERVICE})
 
 # Delete the old key (if existing) and append new key=value
 setKey() {
     service="$1"
     key="$2"
     value="$3"
-    case "$service" in
-        _common)
-          fname=common.runtime.properties ;;
-        *)
-          fname=runtime.properties ;;
-    esac
+    service_conf=$(getConfPath $service)/runtime.properties
     # Delete from all
-    sed -ri "/$key=/d" /tmp/conf/druid/cluster/_common/common.runtime.properties
-    [ -f /tmp/conf/druid/cluster/$service/$fname ] && sed -ri "/$key=/d" /tmp/conf/druid/cluster/$service/$fname
-    [ -f /tmp/conf/druid/cluster/$service/$fname ] && echo "$key=$value" >> /tmp/conf/druid/cluster/$service/$fname
-    [ -f /tmp/conf/druid/cluster/$service/$fname ] || echo "$key=$value" >> /tmp/conf/druid/cluster/_common/$fname
+    sed -ri "/$key=/d" $COMMON_CONF_DIR/common.runtime.properties
+    [ -f $service_conf ] && sed -ri "/$key=/d" $service_conf
+    [ -f $service_conf ] && echo "$key=$value" >>$service_conf
+    [ -f $service_conf ] || echo "$key=$value" >>$COMMON_CONF_DIR/common.runtime.properties
+
+    echo "Setting $key=$value in $service_conf"
 }
 
 setJavaKey() {
     service="$1"
     key=$2
     value=$3
-    file=/tmp/conf/druid/cluster/$service/jvm.config
+    file=$(getConfPath $service)/jvm.config
     sed -ri "/$key/d" $file
     echo $value >> $file
 }
 
 ## Setup host names
-if [ -n "${ZOOKEEPER}" ]
+if [ -n "${ZOOKEEPER}" ];
 then
     setKey _common druid.zk.service.host "${ZOOKEEPER}"
 fi
 
 setKey $SERVICE druid.host $(ip r get 1 | awk '{print $7;exit}')
 
-
-env |grep ^druid_ | while read evar
+env | grep ^druid_ | while read evar;
 do
     # Can't use IFS='=' to parse since var might have = in it (e.g. password)
     val=$(echo "$evar" | sed -e 's?[^=]*=??')
@@ -95,14 +106,14 @@ env |grep ^s3service | while read evar
 do
     val=$(echo "$evar" | sed -e 's?[^=]*=??')
     var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?' -e 's?_?-?g')
-    echo "$var=$val" >> /tmp/conf/druid/cluster/_common/jets3t.properties
+    echo "$var=$val" >>$COMMON_CONF_DIR/jets3t.properties
 done
 
 # This is to allow configuration via a Kubernetes configMap without
 # e.g. using subPath (you can also mount the configMap on /tmp/conf/druid)
 if [ -n "$DRUID_CONFIG_COMMON" ]
 then
-    cp -f "$DRUID_CONFIG_COMMON" /tmp/conf/druid/cluster/_common/common.runtime.properties
+    cp -f "$DRUID_CONFIG_COMMON" $COMMON_CONF_DIR/common.runtime.properties
 fi
 
 SCONFIG=$(printf "%s_%s" DRUID_CONFIG ${SERVICE})
@@ -110,7 +121,7 @@ SCONFIG=$(eval echo \$$(echo $SCONFIG))
 
 if [ -n "${SCONFIG}" ]
 then
-    cp -f "${SCONFIG}" /tmp/conf/druid/cluster/${SERVICE}/runtime.properties
+    cp -f "${SCONFIG}" $SERVICE_CONF_DIR/runtime.properties
 fi
 
 # Now do the java options
@@ -121,17 +132,17 @@ if [ -n "$DRUID_MAXNEWSIZE" ]; then setJavaKey ${SERVICE} -XX:MaxNewSize -XX:Max
 if [ -n "$DRUID_NEWSIZE" ]; then setJavaKey ${SERVICE} -XX:NewSize -XX:MaxNewSize=${DRUID_NEWSIZE}; fi
 if [ -n "$DRUID_MAXDIRECTMEMORYSIZE" ]; then setJavaKey ${SERVICE} -XX:MaxDirectMemorySize -XX:MaxDirectMemorySize=${DRUID_MAXDIRECTMEMORYSIZE}; fi
 
-JAVA_OPTS="$JAVA_OPTS $(cat /tmp/conf/druid/cluster/${SERVICE}/jvm.config | xargs)"
+JAVA_OPTS="$JAVA_OPTS $(cat $SERVICE_CONF_DIR/jvm.config | xargs)"
 
 if [ -n "$DRUID_LOG_LEVEL" ]
 then
-    sed -ri 's/"info"/"'$DRUID_LOG_LEVEL'"/g' /tmp/conf/druid/cluster/_common/log4j2.xml
+    sed -ri 's/"info"/"'$DRUID_LOG_LEVEL'"/g' $COMMON_CONF_DIR/log4j2.xml
 fi
 
 if [ -n "$DRUID_LOG4J" ]
 then
-    echo "$DRUID_LOG4J" > /tmp/conf/druid/cluster/_common/log4j2.xml
+    echo "$DRUID_LOG4J" >$COMMON_CONF_DIR/log4j2.xml
 fi
 
 mkdir -p var/tmp var/druid/segments var/druid/indexing-logs var/druid/task var/druid/hadoop-tmp var/druid/segment-cache
-exec java ${JAVA_OPTS} -cp /tmp/conf/druid/cluster/_common:/tmp/conf/druid/cluster/${SERVICE}:lib/*: org.apache.druid.cli.Main server $@
+exec java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*: org.apache.druid.cli.Main server $@

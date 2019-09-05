@@ -25,9 +25,9 @@ describe('table action dialog', () => {
   it('matches snapshot', () => {
     const tableActionDialog = (
       <TableActionDialog
+        title="Table dummy actions"
         sideButtonMetadata={[{ icon: 'badge', text: 'test' }]}
-        onClose={() => null}
-        isOpen
+        onClose={() => {}}
       />
     );
     render(tableActionDialog);
