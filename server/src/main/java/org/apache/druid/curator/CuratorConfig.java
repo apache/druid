@@ -39,7 +39,7 @@ public class CuratorConfig
   static final String CONNECTION_TIMEOUT_MS = "connectionTimeoutMs";
   @JsonProperty(CONNECTION_TIMEOUT_MS)
   @Min(0)
-  private int zkConnectionTimeoutMs = 15_000;
+  private int zkConnectionTimeoutMs = 15_000;  // same as Curator default: https://git.io/fjhhr
 
   @JsonProperty("compress")
   private boolean enableCompression = true;
@@ -66,7 +66,7 @@ public class CuratorConfig
     this.zkHosts = zkHosts;
   }
 
-  public Integer getZkSessionTimeoutMs()
+  public int getZkSessionTimeoutMs()
   {
     return zkSessionTimeoutMs;
   }
@@ -76,7 +76,7 @@ public class CuratorConfig
     this.zkSessionTimeoutMs = zkSessionTimeoutMs;
   }
 
-  public Integer getZkConnectionTimeoutMs()
+  public int getZkConnectionTimeoutMs()
   {
     return zkConnectionTimeoutMs;
   }

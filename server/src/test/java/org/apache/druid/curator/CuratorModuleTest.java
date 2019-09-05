@@ -38,6 +38,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.ExpectedSystemExit;
@@ -152,6 +153,7 @@ public final class CuratorModuleTest
     Assert.assertEquals("Unhandled error in Curator Framework", logEvent.getMessage().getFormattedMessage());
   }
 
+  @Ignore("Verifies changes in https://github.com/apache/incubator-druid/pull/8458, but overkill for regular testing")
   @Test
   public void ignoresDeprecatedCuratorConfigProperties()
   {

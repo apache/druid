@@ -177,7 +177,7 @@ public class CuratorModule implements Module
       lifecycle.stop();
     }
     catch (Throwable t) {
-      log.warn(t, "Exception when stopping druid lifecycle");
+      log.error(t, "Exception when stopping druid lifecycle");
     }
     finally {
       System.exit(1);
