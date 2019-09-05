@@ -41,6 +41,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.*;
+
 
 /**
  *
@@ -104,11 +106,13 @@ public class DataSchema
         !Strings.isNullOrEmpty(dataSource),
         "dataSource cannot be null or empty. Please provide a dataSource."
     );
-    Preconditions.checkArgument(!dataSource.contains("/"), "dataSource cannot contain the '/' character.");
+    Pattern p = Pattern.compile("(?s).*[^\\S ].*");
+    Matcher m = p.matcher(dataSource);
     Preconditions.checkArgument(
-        !dataSource.matches("(?s)(.*)\\s(.*)"),
+        !m.matches(),
         "dataSource cannot contain whitespace character."
     );
+    Preconditions.checkArgument(!dataSource.contains("/"), "dataSource cannot contain the '/' character.");
   }
 
   @JsonProperty

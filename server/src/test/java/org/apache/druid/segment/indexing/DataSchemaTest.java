@@ -53,6 +53,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.List;
 
 public class DataSchemaTest
 {
@@ -324,33 +326,26 @@ public class DataSchemaTest
     );
   }
 
-  @Test
-  public void testNewlineDatasource()
-  {
-    Map<String, Object> parser = jsonMapper.convertValue(
-        new StringInputRowParser(
-            new JSONParseSpec(
-                new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(
-                    DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "col2")),
-                    ImmutableList.of("dimC"),
-                    null
-                ),
-                null,
-                null
-            ),
-            null
-        ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-    );
 
+  @Test
+  public void testWhitespaceDatasource()
+  {
+    List<String> dataSource = Arrays.asList("\tab\t", "\rcarriage\return\r", "\nnew\nline\n");
+    for (String name : dataSource) {
+      testDatasource(name);
+    }
+  }
+
+  private void testDatasource(String dataSource)
+  {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage(
         "dataSource cannot contain whitespace character."
     );
 
     DataSchema schema = new DataSchema(
-        "new\nline\ncharacter",
-        parser,
+        dataSource,
+        new HashMap<>(),
         null,
         null,
         null,
@@ -358,74 +353,6 @@ public class DataSchemaTest
     );
   }
 
-
-  @Test
-  public void testCarriageReturnDatasource()
-  {
-    Map<String, Object> parser = jsonMapper.convertValue(
-        new StringInputRowParser(
-            new JSONParseSpec(
-                new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(
-                    DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "col2")),
-                    ImmutableList.of("dimC"),
-                    null
-                ),
-                null,
-                null
-            ),
-            null
-        ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-    );
-
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage(
-        "dataSource cannot contain whitespace character."
-    );
-
-    DataSchema schema = new DataSchema(
-        "carriage\return\rcharacter",
-        parser,
-        null,
-        null,
-        null,
-        jsonMapper
-    );
-  }
-
-  @Test
-  public void testTabDatasource()
-  {
-    Map<String, Object> parser = jsonMapper.convertValue(
-        new StringInputRowParser(
-            new JSONParseSpec(
-                new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(
-                    DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "col2")),
-                    ImmutableList.of("dimC"),
-                    null
-                ),
-                null,
-                null
-            ),
-            null
-        ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-    );
-
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage(
-        "dataSource cannot contain whitespace character."
-    );
-
-    DataSchema schema = new DataSchema(
-        "\tab\tcharacter\t",
-        parser,
-        null,
-        null,
-        null,
-        jsonMapper
-    );
-  }
 
   @Test
   public void testSerde() throws Exception
