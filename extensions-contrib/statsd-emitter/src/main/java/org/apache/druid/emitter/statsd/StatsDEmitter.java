@@ -103,7 +103,7 @@ public class StatsDEmitter implements Emitter
       ImmutableMap.Builder<String, String> dimsBuilder = new ImmutableMap.Builder<>();
 
       if (config.isDogstatsd() && config.isDogstatsdServiceAsTag()) {
-        dimsBuilder.put("service", service);
+        dimsBuilder.put("druid_service", service);
         nameBuilder.add(DRUID_DEFAULT_PREFIX);
       } else {
         nameBuilder.add(service);
