@@ -343,19 +343,85 @@ public class DataSchemaTest
         ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    expectedException.expect(CoreMatchers.instanceOf(IllegalArgumentException.class));
+    expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage(
-        "dataSource cannot contain the '/n' character."
+        "dataSource cannot contain whitespace character."
     );
 
     DataSchema schema = new DataSchema(
         "new\nline\ncharacter",
         parser,
-        new AggregatorFactory[]{
-            new DoubleSumAggregatorFactory("metric1", "col1"),
-            new DoubleSumAggregatorFactory("metric2", "col2"),
-            },
-        new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
+        null,
+        null,
+        null,
+        jsonMapper
+    );
+  }
+
+
+  @Test
+  public void testCarriageReturnDatasource()
+  {
+    Map<String, Object> parser = jsonMapper.convertValue(
+        new StringInputRowParser(
+            new JSONParseSpec(
+                new TimestampSpec("time", "auto", null),
+                new DimensionsSpec(
+                    DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "col2")),
+                    ImmutableList.of("dimC"),
+                    null
+                ),
+                null,
+                null
+            ),
+            null
+        ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
+
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage(
+        "dataSource cannot contain whitespace character."
+    );
+
+    DataSchema schema = new DataSchema(
+        "carriage\return\rcharacter",
+        parser,
+        null,
+        null,
+        null,
+        jsonMapper
+    );
+  }
+
+  @Test
+  public void testTabDatasource()
+  {
+    Map<String, Object> parser = jsonMapper.convertValue(
+        new StringInputRowParser(
+            new JSONParseSpec(
+                new TimestampSpec("time", "auto", null),
+                new DimensionsSpec(
+                    DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "col2")),
+                    ImmutableList.of("dimC"),
+                    null
+                ),
+                null,
+                null
+            ),
+            null
+        ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
+
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage(
+        "dataSource cannot contain whitespace character."
+    );
+
+    DataSchema schema = new DataSchema(
+        "\tab\tcharacter\t",
+        parser,
+        null,
+        null,
         null,
         jsonMapper
     );

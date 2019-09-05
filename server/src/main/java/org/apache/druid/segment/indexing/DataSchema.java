@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ *
  */
 public class DataSchema
 {
@@ -72,11 +73,7 @@ public class DataSchema
     this.parser = parser;
     this.transformSpec = transformSpec == null ? TransformSpec.NONE : transformSpec;
 
-    Preconditions.checkArgument(!Strings.isNullOrEmpty(dataSource), "dataSource cannot be null or empty. Please provide a dataSource.");
-    Preconditions.checkArgument(!dataSource.contains("/"), "dataSource cannot contain the '/' character.");
-    Preconditions.checkArgument(!dataSource.contains("\t"), "dataSource cannot contain the '\\t' character.");
-    Preconditions.checkArgument(!dataSource.contains("\n"), "dataSource cannot contain the '\\n' character.");
-    Preconditions.checkArgument(!dataSource.contains("\r"), "dataSource cannot contain the '\\r' character.");
+    validateDatasourceName(dataSource);
     this.dataSource = dataSource;
 
     if (granularitySpec == null) {
@@ -99,6 +96,19 @@ public class DataSchema
     }
 
     this.aggregators = aggregators == null ? new AggregatorFactory[]{} : aggregators;
+  }
+
+  static void validateDatasourceName(String dataSource)
+  {
+    Preconditions.checkArgument(
+        !Strings.isNullOrEmpty(dataSource),
+        "dataSource cannot be null or empty. Please provide a dataSource."
+    );
+    Preconditions.checkArgument(!dataSource.contains("/"), "dataSource cannot contain the '/' character.");
+    Preconditions.checkArgument(
+        !dataSource.matches("(?s)(.*)\\s(.*)"),
+        "dataSource cannot contain whitespace character."
+    );
   }
 
   @JsonProperty
