@@ -36,7 +36,7 @@ import {
 } from './ingestion-spec';
 import { deepGet, deepSet, whitelistKeys } from './object-change';
 
-const MS_IN_HALF_HOUR = 30 * 60 * 1000;
+const MS_IN_HOUR = 60 * 60 * 1000;
 
 const SAMPLER_URL = `/druid/indexer/v1/sampler`;
 const BASE_SAMPLER_CONFIG: SamplerConfig = {
@@ -199,8 +199,8 @@ export async function scopeDownIngestSegmentFirehoseIntervalIfNeeded(
   const end = new Date(intervalParts[1]);
   if (isNaN(end.valueOf())) throw new Error(`could not decode interval end`);
 
-  // Less than or equal to 1/2 hour so there is no need to adjust intervals
-  if (Math.abs(end.valueOf() - start.valueOf()) <= MS_IN_HALF_HOUR) return ioConfig;
+  // Less than or equal to 1 hour so there is no need to adjust intervals
+  if (Math.abs(end.valueOf() - start.valueOf()) <= MS_IN_HOUR) return ioConfig;
 
   const dataSourceMetadataResponse = await queryDruidRune({
     queryType: 'dataSourceMetadata',
@@ -218,7 +218,7 @@ export async function scopeDownIngestSegmentFirehoseIntervalIfNeeded(
   if (maxIngestedEventTime < start) return ioConfig;
 
   const newEnd = maxIngestedEventTime < end ? maxIngestedEventTime : end;
-  const newStart = new Date(newEnd.valueOf() - MS_IN_HALF_HOUR); // Set start to 1/2hr ago
+  const newStart = new Date(newEnd.valueOf() - MS_IN_HOUR); // Set start to 1 hour ago
 
   return deepSet(
     ioConfig,
