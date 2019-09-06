@@ -1456,16 +1456,15 @@ function basenameFromFilename(filename: string): string | undefined {
 }
 
 export function fillDataSourceNameIfNeeded(spec: IngestionSpec): IngestionSpec {
-  // Do not overwrite if the spec already has a name
-  if (deepGet(spec, 'dataSchema.dataSource')) return spec;
-  const ioConfig = deepGet(spec, 'ioConfig');
-  if (!ioConfig) return spec;
-  const possibleName = guessDataSourceName(ioConfig);
+  const possibleName = guessDataSourceName(spec);
   if (!possibleName) return spec;
   return deepSet(spec, 'dataSchema.dataSource', possibleName);
 }
 
-export function guessDataSourceName(ioConfig: IoConfig): string | undefined {
+export function guessDataSourceName(spec: IngestionSpec): string | undefined {
+  const ioConfig = deepGet(spec, 'ioConfig');
+  if (!ioConfig) return;
+
   switch (ioConfig.type) {
     case 'index':
     case 'index_parallel':
