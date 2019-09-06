@@ -118,7 +118,6 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
     return (
       <SnitchDialog
         className="coordinator-dynamic-config-dialog"
-        isOpen
         onSave={this.saveClusterConfig}
         onClose={onClose}
         title="Coordinator dynamic config"

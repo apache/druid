@@ -28,7 +28,6 @@ describe('Datasource table action dialog', () => {
         datasourceId="test"
         actions={[{ title: 'test', onAction: () => null }]}
         onClose={() => {}}
-        isOpen
       />
     );
     render(datasourceTableActionDialog);

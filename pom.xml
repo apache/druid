@@ -30,7 +30,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.16.0-incubating-SNAPSHOT</version>
+    <version>0.17.0-incubating-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -95,6 +95,8 @@
         <netty3.version>3.10.6.Final</netty3.version>
         <!-- Spark updated in https://github.com/apache/spark/pull/19884 -->
         <netty4.version>4.1.30.Final</netty4.version>
+        <node.version>v10.14.2</node.version>
+        <npm.version>6.5.0</npm.version>
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
         <hadoop.compile.version>2.8.3</hadoop.compile.version>
@@ -125,10 +127,10 @@
         <module>benchmarks</module>
         <module>extendedset</module>
         <module>hll</module>
+        <module>web-console</module>
         <!-- Core cloud functionality -->
         <module>cloud/aws-common</module>
         <module>cloud/gcp-common</module>
-        <module>web-console</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/datasketches</module>
@@ -493,6 +495,11 @@
                 <groupId>org.glassfish.grizzly</groupId>
                 <artifactId>grizzly-http-server</artifactId>
                 <version>2.2.16</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>jaxb-runtime</artifactId>
+                <version>2.3.1</version>
             </dependency>
             <dependency>
                 <groupId>org.jdbi</groupId>
@@ -1145,7 +1152,8 @@
                         <exclude>org/apache/druid/data/input/influx/InfluxLineProtocol*</exclude>  <!-- extensions-contrib/influx-extensions -->
 
                         <!-- Ignore non-production code -->
-                        <exclude>org/apache/druid/**/*Benchmark.*</exclude>  <!-- benchmarks -->
+                        <exclude>org/apache/druid/benchmark/**/*</exclude>  <!-- benchmarks -->
+                        <exclude>org/apache/druid/**/*Benchmark*</exclude>  <!-- benchmarks -->
                         <exclude>org/testng/DruidTestRunnerFactory*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/testing/**/*</exclude>  <!-- integration-tests -->
                     </excludes>
@@ -1572,14 +1580,6 @@
                             <release>${java.version}</release>
                         </configuration>
                     </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration combine.self="override">
-                            <!-- disable tests until we fully support JDK 9 and above -->
-                            <skipTests>true</skipTests>
-                        </configuration>
-                    </plugin>
                 </plugins>
             </build>
         </profile>
@@ -1808,6 +1808,12 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+        <profile>
+          <id>website-docs</id>
+          <modules>
+            <module>website</module>
+          </modules>
         </profile>
     </profiles>
 </project>

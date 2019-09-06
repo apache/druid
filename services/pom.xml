@@ -27,7 +27,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.16.0-incubating-SNAPSHOT</version>
+        <version>0.17.0-incubating-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -66,6 +66,10 @@
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>airline</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.code.findbugs</groupId>
@@ -151,7 +155,6 @@
             <groupId>javax.xml.bind</groupId>
             <artifactId>jaxb-api</artifactId>
         </dependency>
-
         <!-- Test Dependencies -->
         <dependency>
             <groupId>junit</groupId>

@@ -19,18 +19,14 @@
 
 package org.apache.druid.query;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.jackson.DefaultObjectMapper;
 
 @LazySingleton
 public class DefaultGenericQueryMetricsFactory implements GenericQueryMetricsFactory
 {
   private static final GenericQueryMetricsFactory INSTANCE =
-      new DefaultGenericQueryMetricsFactory(new DefaultObjectMapper());
+      new DefaultGenericQueryMetricsFactory();
 
   /**
    * Should be used only in tests, directly or indirectly (e. g. in {@link
@@ -42,18 +38,10 @@ public class DefaultGenericQueryMetricsFactory implements GenericQueryMetricsFac
     return INSTANCE;
   }
 
-  private final ObjectMapper jsonMapper;
-
-  @Inject
-  public DefaultGenericQueryMetricsFactory(@Json ObjectMapper jsonMapper)
-  {
-    this.jsonMapper = jsonMapper;
-  }
-
   @Override
   public QueryMetrics<Query<?>> makeMetrics(Query<?> query)
   {
-    DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>(jsonMapper);
+    DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>();
     queryMetrics.query(query);
     return queryMetrics;
   }

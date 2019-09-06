@@ -20,6 +20,8 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Floats;
+import com.google.common.primitives.Longs;
 
 import javax.annotation.Nullable;
 
@@ -111,6 +113,55 @@ public final class Numbers
     } else if (val instanceof String) {
       Double d = Doubles.tryParse((String) val);
       return d == null ? nullValue : d.doubleValue();
+    } else {
+      throw new IAE("Unknown object type [%s]", val.getClass().getName());
+    }
+  }
+
+  /**
+   * Try parsing the given Number or String object val as long.
+   * @param val
+   * @param nullValue value to return when input was string type but not parseable into long value
+   * @return parsed long value
+   */
+  public static long tryParseLong(@Nullable Object val, long nullValue)
+  {
+    if (val == null) {
+      return nullValue;
+    } else if (val instanceof Number) {
+      return ((Number) val).longValue();
+    } else if (val instanceof String) {
+      long l = nullValue;
+      Long lobj = Longs.tryParse((String) val);
+      if (lobj == null) {  // for "ddd.dd" , Longs.tryParse(..) returns null
+        Double dobj = Doubles.tryParse((String) val);
+        if (dobj != null) {
+          l = dobj.longValue();
+        }
+      } else {
+        l = lobj.longValue();
+      }
+      return l;
+    } else {
+      throw new IAE("Unknown object type [%s]", val.getClass().getName());
+    }
+  }
+
+  /**
+   * Try parsing the given Number or String object val as float.
+   * @param val
+   * @param nullValue value to return when input was string type but not parseable into float value
+   * @return parsed float value
+   */
+  public static float tryParseFloat(@Nullable Object val, float nullValue)
+  {
+    if (val == null) {
+      return nullValue;
+    } else if (val instanceof Number) {
+      return ((Number) val).floatValue();
+    } else if (val instanceof String) {
+      Float f = Floats.tryParse((String) val);
+      return f == null ? nullValue : f.floatValue();
     } else {
       throw new IAE("Unknown object type [%s]", val.getClass().getName());
     }

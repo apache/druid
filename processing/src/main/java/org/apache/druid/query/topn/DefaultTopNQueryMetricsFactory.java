@@ -19,17 +19,13 @@
 
 package org.apache.druid.query.topn;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.jackson.DefaultObjectMapper;
 
 @LazySingleton
 public class DefaultTopNQueryMetricsFactory implements TopNQueryMetricsFactory
 {
-  private static final TopNQueryMetricsFactory INSTANCE = new DefaultTopNQueryMetricsFactory(new DefaultObjectMapper());
+  private static final TopNQueryMetricsFactory INSTANCE = new DefaultTopNQueryMetricsFactory();
 
   /**
    * Should be used only in tests, directly or indirectly (via {@link TopNQueryQueryToolChest#TopNQueryQueryToolChest}).
@@ -40,17 +36,9 @@ public class DefaultTopNQueryMetricsFactory implements TopNQueryMetricsFactory
     return INSTANCE;
   }
 
-  private final ObjectMapper jsonMapper;
-
-  @Inject
-  public DefaultTopNQueryMetricsFactory(@Json ObjectMapper jsonMapper)
-  {
-    this.jsonMapper = jsonMapper;
-  }
-
   @Override
   public TopNQueryMetrics makeMetrics()
   {
-    return new DefaultTopNQueryMetrics(jsonMapper);
+    return new DefaultTopNQueryMetrics();
   }
 }

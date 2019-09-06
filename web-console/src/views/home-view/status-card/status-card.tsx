@@ -21,41 +21,50 @@ import axios from 'axios';
 import React from 'react';
 
 import { StatusDialog } from '../../../dialogs/status-dialog/status-dialog';
-import { QueryManager } from '../../../utils';
+import { pluralIfNeeded, QueryManager } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface StatusCardProps {}
 
 export interface StatusCardState {
-  versionLoading: boolean;
-  version: string;
-  versionError?: string;
+  statusLoading: boolean;
+  version?: string;
+  extensionCount?: number;
+  statusError?: string;
 
   showStatusDialog: boolean;
 }
 
+interface StatusSummary {
+  version: string;
+  extensionCount: number;
+}
+
 export class StatusCard extends React.PureComponent<StatusCardProps, StatusCardState> {
-  private versionQueryManager: QueryManager<null, string>;
+  private versionQueryManager: QueryManager<null, StatusSummary>;
 
   constructor(props: StatusCardProps, context: any) {
     super(props, context);
-    this.state = {
-      versionLoading: true,
-      version: '',
 
+    this.state = {
+      statusLoading: true,
       showStatusDialog: false,
     };
 
     this.versionQueryManager = new QueryManager({
       processQuery: async () => {
         const statusResp = await axios.get('/status');
-        return statusResp.data.version;
+        return {
+          version: statusResp.data.version,
+          extensionCount: statusResp.data.modules.length,
+        };
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
-          versionLoading: loading,
-          version: result,
-          versionError: error,
+          statusLoading: loading,
+          version: result ? result.version : undefined,
+          extensionCount: result ? result.extensionCount : undefined,
+          statusError: error,
         });
       },
     });
@@ -69,35 +78,39 @@ export class StatusCard extends React.PureComponent<StatusCardProps, StatusCardS
     this.versionQueryManager.terminate();
   }
 
+  private handleStatusDialogOpen = () => {
+    this.setState({ showStatusDialog: true });
+  };
+
+  private handleStatusDialogClose = () => {
+    this.setState({ showStatusDialog: false });
+  };
+
   renderStatusDialog() {
     const { showStatusDialog } = this.state;
-    if (!showStatusDialog) {
-      return null;
-    }
-    return (
-      <StatusDialog
-        onClose={() => this.setState({ showStatusDialog: false })}
-        title={'Status'}
-        isOpen
-      />
-    );
+    if (!showStatusDialog) return;
+
+    return <StatusDialog onClose={this.handleStatusDialogClose} />;
   }
 
   render(): JSX.Element {
-    const { version, versionLoading, versionError } = this.state;
+    const { version, extensionCount, statusLoading, statusError } = this.state;
 
     return (
-      <HomeViewCard
-        className="status-card"
-        onClick={() => this.setState({ showStatusDialog: true })}
-        icon={IconNames.GRAPH}
-        title="Status"
-        loading={versionLoading}
-        error={versionError}
-      >
-        {version ? `Apache Druid is running version ${version}` : ''}
+      <>
+        <HomeViewCard
+          className="status-card"
+          onClick={this.handleStatusDialogOpen}
+          icon={IconNames.GRAPH}
+          title="Status"
+          loading={statusLoading}
+          error={statusError}
+        >
+          {version && <p>{`Apache Druid is running version ${version}`}</p>}
+          {extensionCount && <p>{`${pluralIfNeeded(extensionCount, 'extension')} loaded`}</p>}
+        </HomeViewCard>
         {this.renderStatusDialog()}
-      </HomeViewCard>
+      </>
     );
   }
 }

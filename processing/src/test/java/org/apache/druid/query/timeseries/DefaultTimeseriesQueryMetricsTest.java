@@ -25,7 +25,6 @@ import org.apache.druid.query.DefaultQueryMetricsTest;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunnerTestHelper;
-import org.apache.druid.segment.TestHelper;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -46,7 +45,7 @@ public class DefaultTimeseriesQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultTimeseriesQueryMetrics queryMetrics = new DefaultTimeseriesQueryMetrics(TestHelper.makeJsonMapper());
+    DefaultTimeseriesQueryMetrics queryMetrics = new DefaultTimeseriesQueryMetrics();
     TimeseriesQuery query = Druids
         .newTimeseriesQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -89,7 +88,7 @@ public class DefaultTimeseriesQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultTimeseriesQueryMetrics queryMetrics = new DefaultTimeseriesQueryMetrics(TestHelper.makeJsonMapper());
+    DefaultTimeseriesQueryMetrics queryMetrics = new DefaultTimeseriesQueryMetrics();
     DefaultQueryMetricsTest.testQueryMetricsDefaultMetricNamesAndUnits(cachingEmitter, serviceEmitter, queryMetrics);
   }
 }
