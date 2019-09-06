@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
+import { Button, Classes, Dialog, InputGroup, Intent } from '@blueprintjs/core';
 import axios from 'axios';
 import React from 'react';
 import ReactTable from 'react-table';
 
-import { ShowJson } from '../../components';
 import { UrlBaser } from '../../singletons/url-baser';
 import { QueryManager } from '../../utils';
 
@@ -35,6 +34,7 @@ interface StatusDialogState {
   response: any;
   loading: boolean;
   error?: string;
+  version: string;
 }
 
 export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusDialogState> {
@@ -44,12 +44,13 @@ export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusD
     this.state = {
       response: [],
       loading: false,
+      version: '',
     };
     this.showStatusQueryManager = new QueryManager({
       processQuery: async () => {
         const endpoint = UrlBaser.base(`/status`);
         const resp = await axios.get(endpoint);
-        console.log(resp.data);
+        this.setState({ version: 'Version ' + resp.data.version });
         return resp.data.modules;
       },
       onStateChange: ({ result, loading, error }) => {
@@ -68,29 +69,46 @@ export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusD
 
   render(): JSX.Element {
     const { onClose } = this.props;
-    const { response, loading } = this.state;
-    const columns = [
-      {
-        Header: 'Name',
-        accessor: 'name',
-      },
-      {
-        Header: 'Artifact',
-        accessor: 'artifact',
-      },
-      {
-        Header: 'Version',
-        accessor: 'version',
-      },
-    ];
+    const { response, loading, version } = this.state;
     return (
       <Dialog className={'status-dialog'} onClose={onClose} isOpen title="Status">
         <div className={'status-dialog-main-area'}>
-          <ReactTable data={response} columns={columns} loading={loading} />
-          <ShowJson endpoint={UrlBaser.base(`/status`)} downloadFilename={'status'} />
+          <InputGroup defaultValue={version} readOnly />
+          <ReactTable
+            data={response}
+            columns={[
+              {
+                Header: 'Extensions',
+                columns: [
+                  {
+                    Header: 'Extension Name',
+                    accessor: 'artifact',
+                    width: 200,
+                  },
+                  {
+                    Header: 'Fully Qualified Name',
+                    accessor: 'name',
+                  },
+                  {
+                    Header: 'Version',
+                    accessor: 'version',
+                    width: 200,
+                  },
+                ],
+              },
+            ]}
+            loading={loading}
+            filterable
+          />
         </div>
         <div className={Classes.DIALOG_FOOTER}>
           <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+            <Button
+              text="View raw"
+              disabled={!response}
+              minimal
+              onClick={() => window.open(UrlBaser.base(UrlBaser.base(`/status`)), '_blank')}
+            />
             <Button text="Close" intent={Intent.PRIMARY} onClick={onClose} />
           </div>
         </div>
