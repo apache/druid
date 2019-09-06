@@ -17,10 +17,13 @@
  */
 
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
+import axios from 'axios';
 import React from 'react';
+import ReactTable from 'react-table';
 
 import { ShowJson } from '../../components';
 import { UrlBaser } from '../../singletons/url-baser';
+import { QueryManager } from '../../utils';
 
 import './status-dialog.scss';
 
@@ -28,13 +31,62 @@ interface StatusDialogProps {
   onClose: () => void;
 }
 
-export class StatusDialog extends React.PureComponent<StatusDialogProps> {
+interface StatusDialogState {
+  response: any;
+  loading: boolean;
+  error?: string;
+}
+
+export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusDialogState> {
+  private showStatusQueryManager: QueryManager<null, string>;
+  constructor(props: StatusDialogProps, context: any) {
+    super(props, context);
+    this.state = {
+      response: [],
+      loading: false,
+    };
+    this.showStatusQueryManager = new QueryManager({
+      processQuery: async () => {
+        const endpoint = UrlBaser.base(`/status`);
+        const resp = await axios.get(endpoint);
+        console.log(resp.data);
+        return resp.data.modules;
+      },
+      onStateChange: ({ result, loading, error }) => {
+        this.setState({
+          loading,
+          error,
+          response: result,
+        });
+      },
+    });
+  }
+
+  componentDidMount(): void {
+    this.showStatusQueryManager.runQuery(null);
+  }
+
   render(): JSX.Element {
     const { onClose } = this.props;
-
+    const { response, loading } = this.state;
+    const columns = [
+      {
+        Header: 'Name',
+        accessor: 'name',
+      },
+      {
+        Header: 'Artifact',
+        accessor: 'artifact',
+      },
+      {
+        Header: 'Version',
+        accessor: 'version',
+      },
+    ];
     return (
       <Dialog className={'status-dialog'} onClose={onClose} isOpen title="Status">
         <div className={'status-dialog-main-area'}>
+          <ReactTable data={response} columns={columns} loading={loading} />
           <ShowJson endpoint={UrlBaser.base(`/status`)} downloadFilename={'status'} />
         </div>
         <div className={Classes.DIALOG_FOOTER}>
