@@ -218,7 +218,7 @@ export async function scopeDownIngestSegmentFirehoseIntervalIfNeeded(
   if (maxIngestedEventTime < start) return ioConfig;
 
   const newEnd = maxIngestedEventTime < end ? maxIngestedEventTime : end;
-  const newStart = new Date(newEnd.valueOf() - MS_IN_HOUR); // Set start to 1/2hr ago
+  const newStart = new Date(newEnd.valueOf() - MS_IN_HOUR); // Set start to 1 hour ago
 
   return deepSet(
     ioConfig,
