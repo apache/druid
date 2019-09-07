@@ -1869,7 +1869,7 @@ name: RoaringBitmap
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.8.6
+version: 0.8.11
 libraries:
   - org.roaringbitmap: RoaringBitmap
   - org.roaringbitmap: shims
