@@ -760,21 +760,17 @@ module: java-core
 license_name: Apache License version 2.0
 version: 4.1.30.Final
 libraries:
-  - io.netty: netty-all
-
----
-
-name: Netty
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 4.1.29.Final
-libraries:
+  - io.netty: netty-buffer
+  - io.netty: netty-codec
   - io.netty: netty-codec-dns
+  - io.netty: netty-codec-http
   - io.netty: netty-codec-socks
+  - io.netty: netty-common
+  - io.netty: netty-handler
   - io.netty: netty-handler-proxy
   - io.netty: netty-resolver
   - io.netty: netty-resolver-dns
+  - io.netty: netty-transport
   - io.netty: netty-transport-native-epoll
   - io.netty: netty-transport-native-unix-common
 notice: |
@@ -1001,21 +997,6 @@ notice: |
       * license/LICENSE.mvn-wrapper.txt (Apache License 2.0)
     * HOMEPAGE:
       * https://github.com/takari/maven-wrapper
-
----
-
-name: Netty
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 4.1.30.Final
-libraries:
-  - io.netty: netty-buffer
-  - io.netty: netty-codec
-  - io.netty: netty-codec-http
-  - io.netty: netty-common
-  - io.netty: netty-handler
-  - io.netty: netty-transport
 
 ---
 
