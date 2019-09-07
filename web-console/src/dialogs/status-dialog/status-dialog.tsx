@@ -33,7 +33,6 @@ interface StatusDialogProps {
 interface StatusDialogState {
   response: any;
   loading: boolean;
-  error?: string;
   version: string;
 }
 
@@ -53,10 +52,9 @@ export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusD
         this.setState({ version: 'Version ' + resp.data.version });
         return resp.data.modules;
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: ({ result, loading }) => {
         this.setState({
           loading,
-          error,
           response: result,
         });
       },
