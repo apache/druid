@@ -54,8 +54,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -136,7 +136,7 @@ public class SystemSchemaTest extends CalciteTestBase
   private DruidLeaderClient client;
   private TimelineServerView serverView;
   private ObjectMapper mapper;
-  private FullResponseHolder responseHolder;
+  private StringFullResponseHolder responseHolder;
   private BytesAccumulatingResponseHandler responseHandler;
   private Request request;
   private DruidSchema druidSchema;
@@ -171,7 +171,7 @@ public class SystemSchemaTest extends CalciteTestBase
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
     client = EasyMock.createMock(DruidLeaderClient.class);
     mapper = TestHelper.makeJsonMapper();
-    responseHolder = EasyMock.createMock(FullResponseHolder.class);
+    responseHolder = EasyMock.createMock(StringFullResponseHolder.class);
     responseHandler = EasyMock.createMockBuilder(BytesAccumulatingResponseHandler.class)
                               .withConstructor()
                               .addMockedMethod(

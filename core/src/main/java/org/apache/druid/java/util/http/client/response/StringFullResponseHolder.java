@@ -17,47 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.security.basic.authentication;
+package org.apache.druid.java.util.http.client.response;
 
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.charset.Charset;
 
-public class BytesFullResponseHolder extends FullResponseHolder
+public class StringFullResponseHolder extends FullResponseHolder<String>
 {
-  private final List<byte[]> chunks;
+  private final StringBuilder builder;
 
-  public BytesFullResponseHolder(
+  public StringFullResponseHolder(
       HttpResponseStatus status,
       HttpResponse response,
-      StringBuilder builder
+      Charset charset
   )
   {
-    super(status, response, builder);
-    this.chunks = new ArrayList<>();
+    super(status, response);
+    this.builder = new StringBuilder(response.getContent().toString(charset));
   }
 
-  public void addChunk(byte[] chunk)
+  @Override
+  public StringFullResponseHolder addChunk(String chunk)
   {
-    chunks.add(chunk);
+    builder.append(chunk);
+    return this;
   }
 
-  public byte[] getBytes()
+  @Override
+  public String getContent()
   {
-    int size = 0;
-    for (byte[] chunk : chunks) {
-      size += chunk.length;
-    }
-    ByteBuffer buf = ByteBuffer.wrap(new byte[size]);
-
-    for (byte[] chunk : chunks) {
-      buf.put(chunk);
-    }
-
-    return buf.array();
+    return builder.toString();
   }
 }

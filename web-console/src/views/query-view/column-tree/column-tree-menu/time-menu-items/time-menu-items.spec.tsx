@@ -28,14 +28,9 @@ describe('time menu', () => {
   it('matches snapshot', () => {
     const timeMenu = (
       <TimeMenuItems
-        hasFilter
-        clear={() => null}
-        addFunctionToGroupBy={() => null}
-        addToGroupBy={() => null}
-        addAggregateColumn={() => null}
-        filterByRow={() => null}
         columnName={'__time'}
-        queryAst={parser(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
+        parsedQuery={parser(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
+        onQueryChange={() => {}}
       />
     );
 

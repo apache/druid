@@ -25,12 +25,10 @@ describe('run button', () => {
   it('matches snapshot', () => {
     const runButton = (
       <RunButton
-        autoRun
-        onAutoRunChange={() => {}}
         onHistory={() => {}}
         onEditContext={() => {}}
         runeMode={false}
-        queryContext={{}}
+        queryContext={{ f: 3 }}
         onQueryContextChange={() => {}}
         onRun={() => {}}
         onExplain={() => {}}

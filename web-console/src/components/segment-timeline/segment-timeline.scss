@@ -20,7 +20,6 @@
   display: grid;
   grid-template-columns: 85% 15%;
   height: 100%;
-  margin-top: 10px;
 
   .loader {
     width: 85%;
@@ -35,12 +34,11 @@
   }
 
   .bar-chart-tooltip {
-    margin-top: 15px;
-    text-align: center;
+    margin-left: 53px;
 
     div {
       display: inline-block;
-      width: 200px;
+      width: 230px;
     }
   }
 

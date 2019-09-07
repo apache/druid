@@ -131,7 +131,7 @@ public class QueryResourceTest
         new QueryLifecycleFactory(
             WAREHOUSE,
             TEST_SEGMENT_WALKER,
-            new DefaultGenericQueryMetricsFactory(JSON_MAPPER),
+            new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
@@ -142,7 +142,7 @@ public class QueryResourceTest
         queryManager,
         new AuthConfig(),
         null,
-        new DefaultGenericQueryMetricsFactory(JSON_MAPPER)
+        new DefaultGenericQueryMetricsFactory()
     );
   }
 
@@ -353,7 +353,7 @@ public class QueryResourceTest
         new QueryLifecycleFactory(
             WAREHOUSE,
             TEST_SEGMENT_WALKER,
-            new DefaultGenericQueryMetricsFactory(JSON_MAPPER),
+            new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
@@ -364,7 +364,7 @@ public class QueryResourceTest
         queryManager,
         new AuthConfig(),
         authMapper,
-        new DefaultGenericQueryMetricsFactory(JSON_MAPPER)
+        new DefaultGenericQueryMetricsFactory()
     );
 
 
@@ -467,7 +467,7 @@ public class QueryResourceTest
         new QueryLifecycleFactory(
             WAREHOUSE,
             TEST_SEGMENT_WALKER,
-            new DefaultGenericQueryMetricsFactory(JSON_MAPPER),
+            new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
@@ -478,7 +478,7 @@ public class QueryResourceTest
         queryManager,
         new AuthConfig(),
         authMapper,
-        new DefaultGenericQueryMetricsFactory(JSON_MAPPER)
+        new DefaultGenericQueryMetricsFactory()
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -589,7 +589,7 @@ public class QueryResourceTest
         new QueryLifecycleFactory(
             WAREHOUSE,
             TEST_SEGMENT_WALKER,
-            new DefaultGenericQueryMetricsFactory(JSON_MAPPER),
+            new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
@@ -600,7 +600,7 @@ public class QueryResourceTest
         queryManager,
         new AuthConfig(),
         authMapper,
-        new DefaultGenericQueryMetricsFactory(JSON_MAPPER)
+        new DefaultGenericQueryMetricsFactory()
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","

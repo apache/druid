@@ -55,7 +55,9 @@ exports[`query plan dialog matches snapshot 1`] = `
         <div
           class="bp3-dialog-body"
         >
-          <div>
+          <div
+            class="generic-result"
+          >
             test
           </div>
         </div>
@@ -73,16 +75,6 @@ exports[`query plan dialog matches snapshot 1`] = `
                 class="bp3-button-text"
               >
                 Close
-              </span>
-            </button>
-            <button
-              class="bp3-button bp3-intent-primary"
-              type="button"
-            >
-              <span
-                class="bp3-button-text"
-              >
-                Open
               </span>
             </button>
           </div>

@@ -16,16 +16,7 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  Classes,
-  Dialog,
-  Icon,
-  IconName,
-  IDialogProps,
-  Intent,
-  Popover,
-} from '@blueprintjs/core';
+import { Button, Classes, Dialog, Icon, IconName, Intent, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
@@ -40,24 +31,20 @@ export interface SideButtonMetaData {
   onClick?: () => void;
 }
 
-interface TableActionDialogProps extends IDialogProps {
+interface TableActionDialogProps {
+  title: string;
   sideButtonMetadata: SideButtonMetaData[];
   onClose: () => void;
   actions?: BasicAction[];
 }
 
 export class TableActionDialog extends React.PureComponent<TableActionDialogProps> {
-  constructor(props: TableActionDialogProps) {
-    super(props);
-    this.state = {};
-  }
-
   render(): JSX.Element {
-    const { sideButtonMetadata, isOpen, onClose, title, actions, children } = this.props;
+    const { sideButtonMetadata, onClose, title, actions, children } = this.props;
     const actionsMenu = actions ? basicActionsToMenu(actions) : undefined;
 
     return (
-      <Dialog className="table-action-dialog" isOpen={isOpen} onClose={onClose} title={title}>
+      <Dialog className="table-action-dialog" isOpen onClose={onClose} title={title}>
         <div className={Classes.DIALOG_BODY}>
           <div className="side-bar">
             {sideButtonMetadata.map((d, i) => (

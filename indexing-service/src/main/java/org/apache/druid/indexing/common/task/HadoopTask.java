@@ -29,6 +29,7 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -138,14 +139,22 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
                                                           ? hadoopDependencyCoordinates
                                                           : defaultHadoopCoordinates;
 
-    final List<URL> jobURLs = Lists.newArrayList(
-        Arrays.asList(((URLClassLoader) HadoopIndexTask.class.getClassLoader()).getURLs())
-    );
+    ClassLoader taskClassLoader = HadoopIndexTask.class.getClassLoader();
+    final List<URL> jobURLs;
+    if (taskClassLoader instanceof URLClassLoader) {
+      // this only works with Java 8
+      jobURLs = Lists.newArrayList(
+          Arrays.asList(((URLClassLoader) taskClassLoader).getURLs())
+      );
+    } else {
+      // fallback to parsing system classpath
+      jobURLs = JvmUtils.systemClassPath();
+    }
 
     final List<URL> extensionURLs = new ArrayList<>();
     for (final File extension : Initialization.getExtensionFilesToLoad(EXTENSIONS_CONFIG)) {
-      final ClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension, false);
-      extensionURLs.addAll(Arrays.asList(((URLClassLoader) extensionLoader).getURLs()));
+      final URLClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension, false);
+      extensionURLs.addAll(Arrays.asList(extensionLoader.getURLs()));
     }
 
     jobURLs.addAll(extensionURLs);
@@ -158,8 +167,8 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
             finalHadoopDependencyCoordinates,
             EXTENSIONS_CONFIG
         )) {
-      final ClassLoader hadoopLoader = Initialization.getClassLoaderForExtension(hadoopDependency, false);
-      localClassLoaderURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
+      final URLClassLoader hadoopLoader = Initialization.getClassLoaderForExtension(hadoopDependency, false);
+      localClassLoaderURLs.addAll(Arrays.asList(hadoopLoader.getURLs()));
     }
 
     final ClassLoader classLoader = new URLClassLoader(

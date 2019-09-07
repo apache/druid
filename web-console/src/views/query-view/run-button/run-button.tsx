@@ -33,6 +33,7 @@ import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import { MenuCheckbox } from '../../../components';
+import { pluralIfNeeded } from '../../../utils';
 import {
   getUseApproximateCountDistinct,
   getUseApproximateTopN,
@@ -46,8 +47,6 @@ import { DRUID_DOCS_RUNE, DRUID_DOCS_SQL } from '../../../variables';
 
 export interface RunButtonProps {
   runeMode: boolean;
-  autoRun: boolean;
-  onAutoRunChange: (autoRun: boolean) => void;
   queryContext: QueryContext;
   onQueryContextChange: (newQueryContext: QueryContext) => void;
   onRun: (() => void) | undefined;
@@ -58,10 +57,6 @@ export interface RunButtonProps {
 
 @HotkeysTarget
 export class RunButton extends React.PureComponent<RunButtonProps> {
-  constructor(props: RunButtonProps, context: any) {
-    super(props, context);
-  }
-
   public renderHotkeys() {
     return (
       <Hotkeys>
@@ -90,31 +85,27 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
       onQueryContextChange,
       onEditContext,
       onHistory,
-      autoRun,
-      onAutoRunChange,
     } = this.props;
 
     const useCache = getUseCache(queryContext);
     const useApproximateCountDistinct = getUseApproximateCountDistinct(queryContext);
     const useApproximateTopN = getUseApproximateTopN(queryContext);
+    const numContextKeys = Object.keys(queryContext).length;
 
     return (
       <Menu>
         <MenuItem
           icon={IconNames.HELP}
-          text="Query docs"
+          text={runeMode ? 'Native query documentation' : 'DruidSQL documentation'}
           href={runeMode ? DRUID_DOCS_RUNE : DRUID_DOCS_SQL}
           target="_blank"
         />
+        <MenuItem icon={IconNames.HISTORY} text="Query history" onClick={onHistory} />
         {!runeMode && (
           <>
-            {onExplain && <MenuItem icon={IconNames.CLEAN} text="Explain" onClick={onExplain} />}
-            <MenuItem icon={IconNames.HISTORY} text="History" onClick={onHistory} />
-            <MenuCheckbox
-              checked={autoRun}
-              label="Auto run queries"
-              onChange={() => onAutoRunChange(!autoRun)}
-            />
+            {onExplain && (
+              <MenuItem icon={IconNames.CLEAN} text="Explain SQL query" onClick={onExplain} />
+            )}
             <MenuCheckbox
               checked={useApproximateCountDistinct}
               label="Use approximate COUNT(DISTINCT)"
@@ -141,7 +132,12 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
           }}
         />
         {!runeMode && (
-          <MenuItem icon={IconNames.PROPERTIES} text="Edit context" onClick={onEditContext} />
+          <MenuItem
+            icon={IconNames.PROPERTIES}
+            text="Edit context"
+            onClick={onEditContext}
+            labelElement={numContextKeys ? pluralIfNeeded(numContextKeys, 'key') : undefined}
+          />
         )}
       </Menu>
     );
@@ -166,7 +162,7 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
           <Button icon={IconNames.CARET_RIGHT} text={runButtonText} disabled />
         )}
         <Popover position={Position.BOTTOM_LEFT} content={this.renderExtraMenu()}>
-          <Button icon={IconNames.MORE} intent={Intent.PRIMARY} />
+          <Button icon={IconNames.MORE} intent={onRun ? Intent.PRIMARY : undefined} />
         </Popover>
       </ButtonGroup>
     );

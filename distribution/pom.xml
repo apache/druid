@@ -31,7 +31,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
-        <version>0.16.0-incubating-SNAPSHOT</version>
+        <version>0.17.0-incubating-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -117,13 +117,13 @@
                         <artifactId>exec-maven-plugin</artifactId>
                         <executions>
                             <execution>
-                                <id>versionify-readme</id>
+                                <id>generate-readme</id>
                                 <phase>initialize</phase>
                                 <goals>
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <executable>${project.parent.basedir}/distribution/bin/build-textfile-readme.sh</executable>
+                                    <executable>${project.basedir}/bin/build-textfile-readme.sh</executable>
                                     <arguments>
                                         <argument>${project.basedir}/../</argument>
                                         <argument>${project.parent.version}</argument>
@@ -131,17 +131,17 @@
                                 </configuration>
                             </execution>
                             <execution>
-                                <id>generate-license</id>
+                                <id>generate-binary-license</id>
                                 <phase>initialize</phase>
                                 <goals>
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <executable>${project.parent.basedir}/distribution/bin/generate-license.py</executable>
+                                    <executable>${project.basedir}/bin/generate-binary-license.py</executable>
                                     <arguments>
-                                        <argument>${project.basedir}/../licenses/APACHE2</argument>
-                                        <argument>${project.basedir}/../licenses.yaml</argument>
-                                        <argument>${project.basedir}/../LICENSE.BINARY</argument>
+                                        <argument>${project.parent.basedir}/licenses/APACHE2</argument>
+                                        <argument>${project.parent.basedir}/licenses.yaml</argument>
+                                        <argument>${project.parent.basedir}/LICENSE.BINARY</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -152,11 +152,11 @@
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <executable>${project.parent.basedir}/distribution/bin/generate-notice-binary.py</executable>
+                                    <executable>${project.basedir}/bin/generate-binary-notice.py</executable>
                                     <arguments>
-                                        <argument>${project.basedir}/../NOTICE</argument>
-                                        <argument>${project.basedir}/../licenses.yaml</argument>
-                                        <argument>${project.basedir}/../NOTICE.BINARY</argument>
+                                        <argument>${project.parent.basedir}/NOTICE</argument>
+                                        <argument>${project.parent.basedir}/licenses.yaml</argument>
+                                        <argument>${project.parent.basedir}/NOTICE.BINARY</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -276,6 +276,43 @@
             <id>apache-release</id>
             <build>
                 <plugins>
+                    <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>generate-licenses-report</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${project.basedir}/bin/generate-license-dependency-reports.py</executable>
+                                    <arguments>
+                                        <argument>${project.basedir}/../</argument>
+                                        <argument>${project.basedir}/target</argument>
+                                        <argument>--clean-maven-artifact-transfer</argument>
+                                        <argument>--parallel</argument>
+                                        <argument>2</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>check-licenses</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${project.basedir}/bin/check-licenses.py</executable>
+                                    <arguments>
+                                        <argument>${project.parent.basedir}/licenses.yaml</argument>
+                                        <argument>${project.basedir}/target/license-reports</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-assembly-plugin</artifactId>

@@ -27,7 +27,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
@@ -71,7 +71,7 @@ public class RemoteTaskActionClient implements TaskActionClient
     while (true) {
       try {
 
-        final FullResponseHolder fullResponseHolder;
+        final StringFullResponseHolder fullResponseHolder;
 
         log.info("Submitting action for task[%s] to overlord: [%s].", task.getId(), taskAction);
 
