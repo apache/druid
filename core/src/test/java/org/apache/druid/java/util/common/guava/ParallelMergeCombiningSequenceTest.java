@@ -22,6 +22,7 @@ package org.apache.druid.java.util.common.guava;
 import com.google.common.collect.Ordering;
 import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -36,6 +37,8 @@ import java.util.function.BinaryOperator;
 
 public class ParallelMergeCombiningSequenceTest
 {
+  private static final Logger LOG = new Logger(ParallelMergeCombiningSequenceTest.class);
+
   private ForkJoinPool pool;
 
   @Before
@@ -51,7 +54,50 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testSimple() throws Exception
+  public void testNone() throws Exception
+  {
+    List<Sequence<IntPair>> input = new ArrayList<>();
+    assertResult(input);
+  }
+
+  @Test
+  public void testEmptySerial() throws Exception
+  {
+    List<IntPair> pairs1 = Arrays.asList(
+        new IntPair(0, 6),
+        new IntPair(1, 1),
+        new IntPair(2, 1),
+        new IntPair(5, 11),
+        new IntPair(6, 1)
+    );
+    List<Sequence<IntPair>> input = new ArrayList<>();
+    input.add(Sequences.empty());
+    input.add(Sequences.simple(pairs1));
+    assertResult(input);
+  }
+
+  @Test
+  public void testEmpty() throws Exception
+  {
+    List<IntPair> pairs1 = Arrays.asList(
+        new IntPair(0, 6),
+        new IntPair(1, 1),
+        new IntPair(2, 1),
+        new IntPair(5, 11),
+        new IntPair(6, 1)
+    );
+    List<Sequence<IntPair>> input = new ArrayList<>();
+    input.add(Sequences.empty());
+    input.add(Sequences.empty());
+    input.add(Sequences.empty());
+    input.add(Sequences.empty());
+    input.add(Sequences.empty());
+    input.add(Sequences.simple(pairs1));
+    assertResult(input);
+  }
+
+  @Test
+  public void testSimpleSerial() throws Exception
   {
     List<IntPair> pairs1 = Arrays.asList(
         new IntPair(0, 6),
@@ -77,7 +123,49 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testLongBoy() throws Exception
+  public void testSimpleParallel() throws Exception
+  {
+    List<IntPair> pairs1 = Arrays.asList(
+        new IntPair(0, 6),
+        new IntPair(1, 1),
+        new IntPair(2, 1),
+        new IntPair(5, 11),
+        new IntPair(6, 1)
+    );
+
+    List<IntPair> pairs2 = Arrays.asList(
+        new IntPair(0, 1),
+        new IntPair(1, 13),
+        new IntPair(4, 1),
+        new IntPair(5, 2)
+    );
+
+    List<IntPair> pairs3 = Arrays.asList(
+        new IntPair(0, 1),
+        new IntPair(1, 13),
+        new IntPair(4, 1),
+        new IntPair(5, 2)
+    );
+
+    List<IntPair> pairs4 = Arrays.asList(
+        new IntPair(0, 1),
+        new IntPair(1, 13),
+        new IntPair(4, 1),
+        new IntPair(5, 2)
+    );
+
+
+    List<Sequence<IntPair>> input = new ArrayList<>();
+    input.add(Sequences.simple(pairs1));
+    input.add(Sequences.simple(pairs2));
+    input.add(Sequences.simple(pairs3));
+    input.add(Sequences.simple(pairs4));
+
+    assertResult(input);
+  }
+
+  @Test
+  public void testLongBoySerial() throws Exception
   {
     List<IntPair> pairs1 = Arrays.asList(
         new IntPair(0, 6),
@@ -111,7 +199,6 @@ public class ParallelMergeCombiningSequenceTest
         new IntPair(28, 2)
     );
 
-
     List<Sequence<IntPair>> input = new ArrayList<>();
     input.add(Sequences.simple(pairs1));
     input.add(Sequences.simple(pairs2));
@@ -120,7 +207,101 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testSomeStuff() throws Exception
+  public void testLongBoyParallel() throws Exception
+  {
+    List<IntPair> pairs1 = Arrays.asList(
+        new IntPair(0, 6),
+        new IntPair(1, 1),
+        new IntPair(2, 1),
+        new IntPair(5, 11),
+        new IntPair(6, 11),
+        new IntPair(7, 11),
+        new IntPair(9, 11),
+        new IntPair(11, 11),
+        new IntPair(16, 11),
+        new IntPair(24, 11),
+        new IntPair(25, 11),
+        new IntPair(27, 11),
+        new IntPair(28, 1)
+    );
+
+    List<IntPair> pairs2 = Arrays.asList(
+        new IntPair(0, 1),
+        new IntPair(1, 13),
+        new IntPair(4, 1),
+        new IntPair(5, 1),
+        new IntPair(7, 1),
+        new IntPair(9, 1),
+        new IntPair(10, 1),
+        new IntPair(13, 1),
+        new IntPair(14, 1),
+        new IntPair(23, 1),
+        new IntPair(25, 1),
+        new IntPair(27, 1),
+        new IntPair(28, 2)
+    );
+
+    List<IntPair> pairs3 = Arrays.asList(
+        new IntPair(0, 1),
+        new IntPair(1, 13),
+        new IntPair(4, 1),
+        new IntPair(5, 1),
+        new IntPair(7, 6),
+        new IntPair(9, 1),
+        new IntPair(10, 2),
+        new IntPair(13, 1),
+        new IntPair(14, 3),
+        new IntPair(15, 1),
+        new IntPair(19, 7),
+        new IntPair(21, 1),
+        new IntPair(22, 2)
+    );
+
+    List<IntPair> pairs4 = Arrays.asList(
+        new IntPair(0, 1),
+        new IntPair(1, 13),
+        new IntPair(4, 1),
+        new IntPair(5, 1),
+        new IntPair(7, 4),
+        new IntPair(9, 1),
+        new IntPair(10, 2),
+        new IntPair(13, 1),
+        new IntPair(14, 11),
+        new IntPair(16, 1),
+        new IntPair(17, 13),
+        new IntPair(20, 1),
+        new IntPair(22, 2)
+    );
+
+    List<IntPair> pairs5 = Arrays.asList(
+        new IntPair(0, 1),
+        new IntPair(1, 13),
+        new IntPair(4, 1),
+        new IntPair(5, 1),
+        new IntPair(7, 1),
+        new IntPair(9, 1),
+        new IntPair(10, 1),
+        new IntPair(13, 1),
+        new IntPair(14, 1),
+        new IntPair(16, 1),
+        new IntPair(25, 7),
+        new IntPair(27, 1),
+        new IntPair(30, 2)
+    );
+
+
+    List<Sequence<IntPair>> input = new ArrayList<>();
+    input.add(Sequences.simple(pairs1));
+    input.add(Sequences.simple(pairs2));
+    input.add(Sequences.simple(pairs3));
+    input.add(Sequences.simple(pairs4));
+    input.add(Sequences.simple(pairs5));
+
+    assertResult(input);
+  }
+
+  @Test
+  public void testMixedLength() throws Exception
   {
     List<IntPair> pairs1 = Arrays.asList(
         new IntPair(0, 6),
@@ -211,7 +392,7 @@ public class ParallelMergeCombiningSequenceTest
 
     while (!combiningYielder.isDone() && !parallelMergeCombineYielder.isDone()) {
       Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
-      System.out.println(parallelMergeCombineYielder.get());
+      LOG.info("%s", parallelMergeCombineYielder.get());
       Assert.assertNotEquals(parallelMergeCombineYielder.get(), prev);
       prev = parallelMergeCombineYielder.get();
       combiningYielder = combiningYielder.next(combiningYielder.get());
