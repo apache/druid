@@ -118,17 +118,17 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
       if (!basicActions.length) {
         basicActions.push(
           {
-            icon: IconNames.SORT_ASC,
-            title: `Order by: ${h} ASC`,
-            onAction: () => {
-              onQueryChange(parsedQuery.orderBy(h, 'ASC'), true);
-            },
-          },
-          {
             icon: IconNames.SORT_DESC,
             title: `Order by: ${h} DESC`,
             onAction: () => {
               onQueryChange(parsedQuery.orderBy(h, 'DESC'), true);
+            },
+          },
+          {
+            icon: IconNames.SORT_ASC,
+            title: `Order by: ${h} ASC`,
+            onAction: () => {
+              onQueryChange(parsedQuery.orderBy(h, 'ASC'), true);
             },
           },
         );

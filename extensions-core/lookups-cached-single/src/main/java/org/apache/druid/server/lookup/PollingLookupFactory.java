@@ -30,6 +30,7 @@ import org.apache.druid.server.lookup.cache.polling.PollingCacheFactory;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @JsonTypeName("pollingLookup")
@@ -155,6 +156,11 @@ public class PollingLookupFactory implements LookupExtractorFactory
            ? (that.cacheFactory != null
               && cacheFactory.getClass() == (that.cacheFactory).getClass())
            : that.cacheFactory == null;
+  }
 
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(pollPeriod, dataFetcher, cacheFactory);
   }
 }
