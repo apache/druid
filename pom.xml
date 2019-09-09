@@ -720,7 +720,7 @@
             <dependency>
                 <groupId>org.roaringbitmap</groupId>
                 <artifactId>RoaringBitmap</artifactId>
-                <version>0.8.6</version>
+                <version>0.8.11</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
