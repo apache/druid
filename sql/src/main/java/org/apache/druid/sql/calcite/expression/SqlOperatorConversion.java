@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.expression;
 
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -29,7 +28,6 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
-import java.util.List;
 
 public interface SqlOperatorConversion
 {

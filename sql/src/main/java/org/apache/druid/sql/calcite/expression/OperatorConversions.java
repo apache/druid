@@ -185,8 +185,6 @@ public class OperatorConversions
   )
   {
     final SqlKind kind = rexNode.getKind();
-    final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
-
     if (kind == SqlKind.INPUT_REF) {
       // Translate field references.
       final RexInputRef ref = (RexInputRef) rexNode;
