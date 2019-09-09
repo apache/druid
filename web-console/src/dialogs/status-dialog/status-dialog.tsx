@@ -21,6 +21,7 @@ import axios from 'axios';
 import React from 'react';
 import ReactTable from 'react-table';
 
+import { Loader } from '../../components/loader/loader';
 import { UrlBaser } from '../../singletons/url-baser';
 import { QueryManager } from '../../utils';
 
@@ -33,24 +34,21 @@ interface StatusDialogProps {
 interface StatusDialogState {
   response: any;
   loading: boolean;
-  version: string;
 }
 
 export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusDialogState> {
-  private showStatusQueryManager: QueryManager<null, string>;
+  private showStatusQueryManager: QueryManager<null, any>;
   constructor(props: StatusDialogProps, context: any) {
     super(props, context);
     this.state = {
       response: [],
       loading: false,
-      version: '',
     };
     this.showStatusQueryManager = new QueryManager({
       processQuery: async () => {
         const endpoint = UrlBaser.base(`/status`);
         const resp = await axios.get(endpoint);
-        this.setState({ version: 'Version ' + resp.data.version });
-        return resp.data.modules;
+        return resp.data;
       },
       onStateChange: ({ result, loading }) => {
         this.setState({
@@ -67,24 +65,25 @@ export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusD
 
   render(): JSX.Element {
     const { onClose } = this.props;
-    const { response, loading, version } = this.state;
+    const { response, loading } = this.state;
+    if (loading) return <Loader />;
     return (
       <Dialog className={'status-dialog'} onClose={onClose} isOpen title="Status">
         <div className={'status-dialog-main-area'}>
-          <InputGroup defaultValue={version} readOnly />
+          <InputGroup defaultValue={response.version} readOnly />
           <ReactTable
-            data={response}
+            data={response.modules}
             columns={[
               {
                 Header: 'Extensions',
                 columns: [
                   {
-                    Header: 'Extension Name',
+                    Header: 'Extension name',
                     accessor: 'artifact',
                     width: 200,
                   },
                   {
-                    Header: 'Fully Qualified Name',
+                    Header: 'Fully qualified name',
                     accessor: 'name',
                   },
                   {
