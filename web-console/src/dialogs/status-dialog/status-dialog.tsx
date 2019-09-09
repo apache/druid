@@ -70,7 +70,7 @@ export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusD
     return (
       <Dialog className={'status-dialog'} onClose={onClose} isOpen title="Status">
         <div className={'status-dialog-main-area'}>
-          <InputGroup defaultValue={response.version} readOnly />
+          <InputGroup defaultValue={'Version ' + response.version} readOnly />
           <ReactTable
             data={response.modules}
             columns={[
