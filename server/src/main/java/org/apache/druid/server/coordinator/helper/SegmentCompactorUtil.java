@@ -31,17 +31,11 @@ import java.util.List;
  */
 class SegmentCompactorUtil
 {
-  static boolean isCompactibleSize(long targetBytes, long currentTotalBytes, long additionalBytes)
-  {
-    return currentTotalBytes + additionalBytes <= targetBytes;
-  }
-
-  static boolean isCompactibleNum(int numTargetSegments, int numCurrentSegments, int numAdditionalSegments)
-  {
-    return numCurrentSegments + numAdditionalSegments <= numTargetSegments;
-  }
-
-  private static final double COMPACTED_SEGMENT_SIZE_MARGIN = .2;
+  /**
+   * The allowed error rate of the segment size after compaction.
+   * Its value is determined experimentally.
+   */
+  private static final double ALLOWED_ERROR_OF_SEGMENT_SIZE = .2;
 
   static boolean needsCompaction(@Nullable Long targetCompactionSizeBytes, List<DataSegment> candidates)
   {
@@ -49,8 +43,8 @@ class SegmentCompactorUtil
       // If targetCompactionSizeBytes is null, we have no way to check that the given segments need compaction or not.
       return true;
     }
-    final double minAllowedSize = targetCompactionSizeBytes * (1 - COMPACTED_SEGMENT_SIZE_MARGIN);
-    final double maxAllowedSize = targetCompactionSizeBytes * (1 + COMPACTED_SEGMENT_SIZE_MARGIN);
+    final double minAllowedSize = targetCompactionSizeBytes * (1 - ALLOWED_ERROR_OF_SEGMENT_SIZE);
+    final double maxAllowedSize = targetCompactionSizeBytes * (1 + ALLOWED_ERROR_OF_SEGMENT_SIZE);
 
     return candidates
         .stream()

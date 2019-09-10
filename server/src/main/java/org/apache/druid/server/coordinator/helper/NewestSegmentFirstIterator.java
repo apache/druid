@@ -472,12 +472,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       this.totalSize = segments.stream().mapToLong(DataSegment::getSize).sum();
     }
 
-    private boolean isEmpty()
-    {
-      Preconditions.checkState((totalSize == 0) == segments.isEmpty());
-      return segments.isEmpty();
-    }
-
     private int getNumSegments()
     {
       return segments.size();
