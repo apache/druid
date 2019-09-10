@@ -265,7 +265,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         if (!isCompactibleSize) {
           log.warn(
               "total segment size[%d] for datasource[%s] and interval[%s] is larger than inputSegmentSize[%d]."
-              + " Continue to the next shard.",
+              + " Continue to the next interval.",
               candidates.getTotalSize(),
               candidates.segments.get(0).getDataSource(),
               candidates.segments.get(0).getInterval(),
@@ -277,7 +277,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
               "Number of segments[%d] for datasource[%s] and interval[%s] is larger than "
               + "maxNumSegmentsToCompact[%d]. If you see lots of shards are being skipped due to too many "
               + "segments, consider increasing 'numTargetCompactionSegments' and "
-              + "'druid.indexer.runner.maxZnodeBytes'. Continue to the next shard.",
+              + "'druid.indexer.runner.maxZnodeBytes'. Continue to the next interval.",
               candidates.getNumSegments(),
               candidates.segments.get(0).getDataSource(),
               candidates.segments.get(0).getInterval(),
@@ -287,7 +287,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         if (!needsCompaction) {
           log.warn(
               "Size of most of segments[%s] is larger than targetCompactionSizeBytes[%s] "
-              + "for datasource[%s] and interval[%s]",
+              + "for datasource[%s] and interval[%s]. Skipping compaction for this interval.",
               candidates.segments.stream().map(DataSegment::getSize).collect(Collectors.toList()),
               targetCompactionSizeBytes,
               candidates.segments.get(0).getDataSource(),
