@@ -31,14 +31,14 @@ $side-bar-width: 120px;
 
     .bp3-dialog-footer {
       position: relative;
-      display:inline;
+      display: inline;
       overflow: auto;
       white-space: nowrap;
-      .viewRawButton{
-        float:left;
+      .viewRawButton {
+        float: left;
       }
-      .closeButton{
-        float:right;
+      .closeButton {
+        float: right;
       }
       .footer-actions-left {
         position: absolute;
