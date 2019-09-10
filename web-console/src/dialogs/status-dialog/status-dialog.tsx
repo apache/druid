@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, InputGroup, Intent } from '@blueprintjs/core';
+import { Button, Classes, Dialog, FormGroup, InputGroup, Intent } from '@blueprintjs/core';
 import axios from 'axios';
 import React from 'react';
 import ReactTable from 'react-table';
@@ -70,12 +70,13 @@ export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusD
     return (
       <Dialog className={'status-dialog'} onClose={onClose} isOpen title="Status">
         <div className={'status-dialog-main-area'}>
-          <InputGroup defaultValue={'Version ' + response.version} readOnly />
+          <FormGroup label="Version" labelFor="version" inline>
+            <InputGroup id="version" defaultValue={response.version} readOnly />
+          </FormGroup>
           <ReactTable
             data={response.modules}
             columns={[
               {
-                Header: 'Extensions',
                 columns: [
                   {
                     Header: 'Extension name',
@@ -96,16 +97,22 @@ export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusD
             ]}
             loading={loading}
             filterable
+            defaultFilterMethod={(filter, row) => {
+              const id = filter.pivotId || filter.id;
+              return row[id] !== undefined ? String(row[id]).includes(filter.value) : true;
+            }}
           />
         </div>
         <div className={Classes.DIALOG_FOOTER}>
-          <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+          <div className="viewRawButton">
             <Button
               text="View raw"
               disabled={!response}
               minimal
               onClick={() => window.open(UrlBaser.base(UrlBaser.base(`/status`)), '_blank')}
             />
+          </div>
+          <div className="closeButton">
             <Button text="Close" intent={Intent.PRIMARY} onClick={onClose} />
           </div>
         </div>

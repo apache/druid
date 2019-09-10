@@ -26,12 +26,20 @@ $side-bar-width: 120px;
     .status-dialog-main-area {
       height: 60vh;
       padding: 10px;
+      display: table;
     }
 
     .bp3-dialog-footer {
       position: relative;
-      padding-top: 50px;
-
+      display:inline;
+      overflow: auto;
+      white-space: nowrap;
+      .viewRawButton{
+        float:left;
+      }
+      .closeButton{
+        float:right;
+      }
       .footer-actions-left {
         position: absolute;
         left: $side-bar-width;
