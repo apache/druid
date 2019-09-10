@@ -43,12 +43,12 @@ class SegmentCompactorUtil
       // If targetCompactionSizeBytes is null, we have no way to check that the given segments need compaction or not.
       return true;
     }
-    final double minAllowedSize = targetCompactionSizeBytes * (1 - ALLOWED_ERROR_OF_SEGMENT_SIZE);
-    final double maxAllowedSize = targetCompactionSizeBytes * (1 + ALLOWED_ERROR_OF_SEGMENT_SIZE);
+    final double minTargetThreshold = targetCompactionSizeBytes * (1 - ALLOWED_ERROR_OF_SEGMENT_SIZE);
+    final double maxTargetThreshold = targetCompactionSizeBytes * (1 + ALLOWED_ERROR_OF_SEGMENT_SIZE);
 
     return candidates
         .stream()
-        .filter(segment -> segment.getSize() < minAllowedSize || segment.getSize() > maxAllowedSize)
+        .filter(segment -> segment.getSize() < minTargetThreshold || segment.getSize() > maxTargetThreshold)
         .count() > 1;
   }
 
