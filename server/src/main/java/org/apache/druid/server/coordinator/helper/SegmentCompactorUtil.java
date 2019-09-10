@@ -20,7 +20,11 @@
 package org.apache.druid.server.coordinator.helper;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * Util class used by {@link DruidCoordinatorSegmentCompactor} and {@link CompactionSegmentSearchPolicy}.
@@ -35,6 +39,23 @@ class SegmentCompactorUtil
   static boolean isCompactibleNum(int numTargetSegments, int numCurrentSegments, int numAdditionalSegments)
   {
     return numCurrentSegments + numAdditionalSegments <= numTargetSegments;
+  }
+
+  private static final double COMPACTED_SEGMENT_SIZE_MARGIN = .2;
+
+  static boolean needsCompaction(@Nullable Long targetCompactionSizeBytes, List<DataSegment> candidates)
+  {
+    if (targetCompactionSizeBytes == null) {
+      // If targetCompactionSizeBytes is null, we have no way to check that the given segments need compaction or not.
+      return true;
+    }
+    final double minAllowedSize = targetCompactionSizeBytes * (1 - COMPACTED_SEGMENT_SIZE_MARGIN);
+    final double maxAllowedSize = targetCompactionSizeBytes * (1 + COMPACTED_SEGMENT_SIZE_MARGIN);
+
+    return candidates
+        .stream()
+        .filter(segment -> segment.getSize() < minAllowedSize || segment.getSize() > maxAllowedSize)
+        .count() > 1;
   }
 
   /**
