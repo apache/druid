@@ -27,4 +27,19 @@ describe('status dialog', () => {
     render(statusDialog);
     expect(document.body.lastChild).toMatchSnapshot();
   });
+  it('filters data that contains input', () => {
+    const data = [
+      'org.apache.druid.common.gcp.GcpModule',
+      'org.apache.druid.common.aws.AWSModule',
+      'io.imply.druid.UtilityBeltModule',
+    ];
+    let filterFunction;
+    filterFunction = (filter: { id: string | number; value: string }, row: { [x: string]: any }) =>
+      String(row[filter.id]).includes(filter.value);
+    expect(filterFunction({ id: 0, value: 'common' }, data)).toEqual(true);
+    expect(filterFunction({ id: 1, value: 'common' }, data)).toEqual(true);
+    expect(filterFunction({ id: 0, value: 'org' }, data)).toEqual(true);
+    expect(filterFunction({ id: 1, value: 'org' }, data)).toEqual(true);
+    expect(filterFunction({ id: 2, value: 'common' }, data)).toEqual(false);
+  });
 });

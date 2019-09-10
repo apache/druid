@@ -98,8 +98,7 @@ export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusD
             loading={loading}
             filterable
             defaultFilterMethod={(filter, row) => {
-              const id = filter.pivotId || filter.id;
-              return row[id] !== undefined ? String(row[id]).includes(filter.value) : false;
+              return String(row[filter.id]).includes(filter.value);
             }}
           />
         </div>
