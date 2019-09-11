@@ -22,10 +22,10 @@ $side-bar-width: 120px;
     margin-top: 5vh;
     top: 5%;
     width: 60vw;
-    height: 100vh;
+    max-height: 95vh;
     .status-dialog-main-area {
       padding: 10px;
-      overflow: scroll;
+      overflow: auto;
     }
 
     .bp3-dialog-footer {
