@@ -19,6 +19,7 @@
 
 package org.apache.druid.emitter.statsd;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -30,6 +31,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.util.List;
@@ -47,6 +49,7 @@ public class StatsDEmitter implements Emitter
   private static final Pattern STATSD_SEPARATOR = Pattern.compile("[:|]");
   private static final Pattern BLANK = Pattern.compile("\\s+");
   private static final String[] EMPTY_ARRAY = new String[0];
+  private static final String TAG_HOSTNAME = "hostname";
 
   static StatsDEmitter of(StatsDEmitterConfig config, ObjectMapper mapper)
   {
@@ -75,12 +78,14 @@ public class StatsDEmitter implements Emitter
   private final StatsDClient statsd;
   private final StatsDEmitterConfig config;
   private final DimensionConverter converter;
+  private final ObjectMapper mapper;
 
   public StatsDEmitter(StatsDEmitterConfig config, ObjectMapper mapper, StatsDClient client)
   {
     this.config = config;
     this.converter = new DimensionConverter(mapper, config.getDimensionMapPath());
     this.statsd = client;
+    this.mapper = mapper;
   }
 
   @Override
@@ -117,14 +122,11 @@ public class StatsDEmitter implements Emitter
         String[] tags;
         if (config.isDogstatsd()) {
           if (config.getIncludeHost()) {
-            dimsBuilder.put("hostname", host);
+            dimsBuilder.put(TAG_HOSTNAME, host);
           }
 
           fullNameList = nameBuilder.build();
-          tags = dimsBuilder.build().entrySet()
-            .stream()
-            .map(e -> e.getKey() + ":" + e.getValue())
-            .toArray(String[]::new);
+          tags = tagsFromMap(dimsBuilder.build());
         } else {
           ImmutableList.Builder<String> fullNameBuilder = new ImmutableList.Builder<>();
           if (config.getIncludeHost()) {
@@ -174,6 +176,59 @@ public class StatsDEmitter implements Emitter
       } else {
         log.debug("Service=[%s], Metric=[%s] has no StatsD type mapping", service, metric);
       }
+    } else if (event instanceof AlertEvent && config.isDogstatsd()) {
+      AlertEvent alertEvent = (AlertEvent) event;
+
+      ImmutableMap.Builder<String, String> tagBuilder = ImmutableMap.builder();
+
+      tagBuilder
+          .put("feed", alertEvent.getFeed())
+          .put("service", alertEvent.getService())
+          .put("severity", alertEvent.getSeverity().toString());
+      if (config.getIncludeHost()) {
+        tagBuilder.put("hostname", alertEvent.getHost());
+      }
+
+      String text;
+      try {
+        text = mapper.writeValueAsString(alertEvent.getDataMap());
+      }
+      catch (JsonProcessingException e) {
+        log.error(e, "Unable to convert alert data to json");
+        text = "Unable to convert alert data to JSON: " + e.getMessage();
+      }
+      statsd.recordEvent(
+          com.timgroup.statsd.Event
+              .builder()
+              .withDate(alertEvent.getCreatedTime().getMillis())
+              .withAlertType(alertType(alertEvent.getSeverity()))
+              .withPriority(com.timgroup.statsd.Event.Priority.NORMAL)
+              .withTitle(alertEvent.getDescription())
+              .withText(text)
+              .build(),
+          tagsFromMap(tagBuilder.build())
+      );
+    }
+  }
+
+  private static String[] tagsFromMap(Map<String, String> tags)
+  {
+    return tags.entrySet()
+               .stream()
+               .map(e -> e.getKey() + ":" + e.getValue())
+               .toArray(String[]::new);
+  }
+
+  private static com.timgroup.statsd.Event.AlertType alertType(AlertEvent.Severity severity)
+  {
+    switch (severity) {
+      case ANOMALY:
+        return com.timgroup.statsd.Event.AlertType.WARNING;
+      case COMPONENT_FAILURE:
+      case SERVICE_FAILURE:
+        return com.timgroup.statsd.Event.AlertType.ERROR;
+      default:
+        return com.timgroup.statsd.Event.AlertType.INFO;
     }
   }
 
