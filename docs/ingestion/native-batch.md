@@ -61,7 +61,7 @@ partitioned data from middleManagers or indexers and merges them to create the f
 As in the single phase execution, the created segments are reported to the supervisor task to publish at once.
 
 To use this task, the `firehose` in `ioConfig` should be _splittable_ and `maxNumConcurrentSubTasks` should be set something larger than 1 in `tuningConfig`.
-Otherwise, this task runs sequentially. Here is the list of currently splittable fireshoses.
+Otherwise, this task runs sequentially. Here is the list of currently splittable firehoses.
 
 - [`LocalFirehose`](#local-firehose)
 - [`IngestSegmentFirehose`](#segment-firehose)
@@ -629,7 +629,7 @@ For perfect rollup, you should use `hashed`.
 |--------|-----------|-------|---------|
 |type|This should always be `hashed`|none|yes|
 |maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
-|numShards|Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data. numShards cannot be specified if maxRowsPerSegment is set.|null|no|
+|numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
 |partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions.|null|no|
 
 For best-effort rollup, you should use `dynamic`.

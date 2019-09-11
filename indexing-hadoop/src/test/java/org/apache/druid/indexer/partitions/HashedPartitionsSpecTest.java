@@ -25,8 +25,6 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
-/**
- */
 public class HashedPartitionsSpecTest
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
@@ -34,35 +32,29 @@ public class HashedPartitionsSpecTest
   @Test
   public void testHashedPartitionsSpec()
   {
-    {
-      final PartitionsSpec partitionsSpec = jsonReadWriteRead(
-          "{"
-          + "   \"targetPartitionSize\":100,"
-          + "   \"type\":\"hashed\""
-          + "}",
-          PartitionsSpec.class
-      );
-      Assert.assertTrue("partitionsSpec", partitionsSpec instanceof HashedPartitionsSpec);
-      final HashedPartitionsSpec hadoopHashedPartitionsSpec = (HashedPartitionsSpec) partitionsSpec;
+    final PartitionsSpec partitionsSpec = jsonReadWriteRead(
+        "{"
+        + "   \"targetPartitionSize\":100,"
+        + "   \"type\":\"hashed\""
+        + "}",
+        PartitionsSpec.class
+    );
+    Assert.assertTrue("partitionsSpec", partitionsSpec instanceof HashedPartitionsSpec);
+    final HashedPartitionsSpec hadoopHashedPartitionsSpec = (HashedPartitionsSpec) partitionsSpec;
 
-      Assert.assertEquals(
-          "isDeterminingPartitions",
-          hadoopHashedPartitionsSpec.needsDeterminePartitions(true),
-          true
-      );
+    Assert.assertTrue("isDeterminingPartitions", hadoopHashedPartitionsSpec.needsDeterminePartitions(true));
 
-      Assert.assertEquals(
-          "getTargetPartitionSize",
-          hadoopHashedPartitionsSpec.getMaxRowsPerSegment().intValue(),
-          100
-      );
+    Assert.assertEquals(
+        "getTargetPartitionSize",
+        100,
+        hadoopHashedPartitionsSpec.getMaxRowsPerSegment().intValue()
+    );
 
-      Assert.assertEquals(
-          "getPartitionDimensions",
-          hadoopHashedPartitionsSpec.getPartitionDimensions(),
-          ImmutableList.of()
-      );
-    }
+    Assert.assertEquals(
+        "getPartitionDimensions",
+        ImmutableList.of(),
+        hadoopHashedPartitionsSpec.getPartitionDimensions()
+    );
   }
 
   @Test
@@ -78,11 +70,7 @@ public class HashedPartitionsSpecTest
     Assert.assertTrue("partitionsSpec", partitionsSpec instanceof HashedPartitionsSpec);
     final HashedPartitionsSpec hadoopHashedPartitionsSpec = (HashedPartitionsSpec) partitionsSpec;
 
-    Assert.assertEquals(
-        "isDeterminingPartitions",
-        hadoopHashedPartitionsSpec.needsDeterminePartitions(true),
-        false
-    );
+    Assert.assertFalse("isDeterminingPartitions", hadoopHashedPartitionsSpec.needsDeterminePartitions(true));
 
     Assert.assertNull(
         "getTargetPartitionSize",
@@ -91,14 +79,14 @@ public class HashedPartitionsSpecTest
 
     Assert.assertEquals(
         "shardCount",
-        hadoopHashedPartitionsSpec.getNumShards().intValue(),
-        2
+        2,
+        hadoopHashedPartitionsSpec.getNumShards().intValue()
     );
 
     Assert.assertEquals(
         "getPartitionDimensions",
-        hadoopHashedPartitionsSpec.getPartitionDimensions(),
-        ImmutableList.of()
+        ImmutableList.of(),
+        hadoopHashedPartitionsSpec.getPartitionDimensions()
     );
 
   }

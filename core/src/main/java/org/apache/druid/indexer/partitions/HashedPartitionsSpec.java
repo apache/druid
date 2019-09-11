@@ -31,6 +31,7 @@ import java.util.Objects;
 
 public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
 {
+  static final String NAME = "hashed";
   private static final Logger LOG = new Logger(HashedPartitionsSpec.class);
 
   @Nullable
@@ -50,15 +51,18 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
       @Nullable List<String> partitionDimensions
   )
   {
-    this(null, maxRowsPerSegment, numShards, partitionDimensions);
+    this(maxRowsPerSegment, numShards, partitionDimensions, null);
   }
 
   @JsonCreator
   public HashedPartitionsSpec(
-      @JsonProperty("targetPartitionSize") @Deprecated @Nullable Integer targetPartitionSize,
-      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
+      @JsonProperty(PartitionsSpec.MAX_ROWS_PER_SEGMENT) @Nullable Integer maxRowsPerSegment,
       @JsonProperty("numShards") @Nullable Integer numShards,
-      @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions
+      @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
+
+      // Deprecated properties preserved for backward compatibility:
+      @Deprecated @JsonProperty(DimensionBasedPartitionsSpec.TARGET_PARTITION_SIZE) @Nullable
+          Integer targetPartitionSize
   )
   {
     Preconditions.checkArgument(

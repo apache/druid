@@ -150,8 +150,8 @@ public class HadoopIngestionSpecTest
 
     Assert.assertEquals(
         "getTargetPartitionSize",
-        partitionsSpec.getMaxRowsPerSegment().intValue(),
-        100
+        100,
+        partitionsSpec.getMaxRowsPerSegment().intValue()
     );
 
     Assert.assertTrue(
@@ -167,14 +167,13 @@ public class HadoopIngestionSpecTest
 
     try {
       schema = jsonReadWriteRead(
-
           "{\n"
           + "    \"tuningConfig\": {\n"
           + "        \"type\": \"hadoop\",\n"
           + "        \"partitionsSpec\": {\n"
           + "            \"type\": \"dimension\",\n"
           + "            \"targetPartitionSize\": 100,\n"
-          + "            \"maxPartitionSize\" : 200,\n"
+          + "            \"maxPartitionSize\" : null,\n"
           + "            \"partitionDimension\" : \"foo\"\n"
           + "        }\n"
           + "    }\n"
@@ -186,32 +185,29 @@ public class HadoopIngestionSpecTest
       throw new RuntimeException(e);
     }
 
-    final SingleDimensionPartitionsSpec partitionsSpec =
-        (SingleDimensionPartitionsSpec) schema.getTuningConfig().getPartitionsSpec();
+    PartitionsSpec partitionsSpec = schema.getTuningConfig().getPartitionsSpec();
+    Assert.assertTrue("partitionsSpec", partitionsSpec instanceof SingleDimensionPartitionsSpec);
 
-    Assert.assertEquals(
-        "isDeterminingPartitions",
-        partitionsSpec.needsDeterminePartitions(true),
-        true
-    );
+    SingleDimensionPartitionsSpec singleDimensionPartitionsSpec = (SingleDimensionPartitionsSpec) partitionsSpec;
+
+    Assert.assertTrue("isDeterminingPartitions", singleDimensionPartitionsSpec.needsDeterminePartitions(true));
 
     Assert.assertEquals(
         "getTargetPartitionSize",
-        partitionsSpec.getMaxRowsPerSegment().intValue(),
-        100
+        100,
+        singleDimensionPartitionsSpec.getTargetRowsPerSegment().intValue()
     );
 
     Assert.assertEquals(
         "getMaxPartitionSize",
-        partitionsSpec.getMaxPartitionSize(),
-        200
+        150,
+        singleDimensionPartitionsSpec.getMaxRowsPerSegment().intValue()
     );
 
-    Assert.assertTrue("partitionsSpec", partitionsSpec instanceof SingleDimensionPartitionsSpec);
     Assert.assertEquals(
         "getPartitionDimension",
-        partitionsSpec.getPartitionDimension(),
-        "foo"
+        "foo",
+        singleDimensionPartitionsSpec.getPartitionDimension()
     );
   }
 
@@ -262,15 +258,11 @@ public class HadoopIngestionSpecTest
 
     Assert.assertEquals(
         "cleanupOnFailure",
-        schema.getTuningConfig().isCleanupOnFailure(),
-        true
+        true,
+        schema.getTuningConfig().isCleanupOnFailure()
     );
 
-    Assert.assertEquals(
-        "overwriteFiles",
-        schema.getTuningConfig().isOverwriteFiles(),
-        false
-    );
+    Assert.assertFalse("overwriteFiles", schema.getTuningConfig().isOverwriteFiles());
 
     Assert.assertFalse(
         "isDeterminingPartitions",
@@ -324,14 +316,10 @@ public class HadoopIngestionSpecTest
       throw new RuntimeException(e);
     }
 
-    Assert.assertEquals(
-        "cleanupOnFailure",
-        schema.getTuningConfig().isCleanupOnFailure(),
-        false
-    );
+    Assert.assertFalse("cleanupOnFailure", schema.getTuningConfig().isCleanupOnFailure());
   }
 
-  private <T> T jsonReadWriteRead(String s, Class<T> klass)
+  private static <T> T jsonReadWriteRead(String s, Class<T> klass)
   {
     try {
       return JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsBytes(JSON_MAPPER.readValue(s, klass)), klass);

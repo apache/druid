@@ -186,7 +186,7 @@ Here is what goes inside `ingestionSpec`:
 |-----|----|-----------|--------|
 |dataSource|String|Druid dataSource name from which you are loading the data.|yes|
 |intervals|List|A list of strings representing ISO-8601 Intervals.|yes|
-|segments|List|List of segments from which to read data from, by default it is obtained automatically. You can obtain list of segments to put here by making a POST query to Coordinator at url /druid/coordinator/v1/metadata/datasources/segments?full with list of intervals specified in the request paylod e.g. ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]. You may want to provide this list manually in order to ensure that segments read are exactly same as they were at the time of task submission, task would fail if the list provided by the user does not match with state of database when the task actually runs.|no|
+|segments|List|List of segments from which to read data from, by default it is obtained automatically. You can obtain list of segments to put here by making a POST query to Coordinator at url /druid/coordinator/v1/metadata/datasources/segments?full with list of intervals specified in the request payload e.g. ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]. You may want to provide this list manually in order to ensure that segments read are exactly same as they were at the time of task submission, task would fail if the list provided by the user does not match with state of database when the task actually runs.|no|
 |filter|JSON|See [Filters](../querying/filters.md)|no|
 |dimensions|Array of String|Name of dimension columns to load. By default, the list will be constructed from parseSpec. If parseSpec does not have an explicit list of dimensions then all the dimension columns present in stored data will be read.|no|
 |metrics|Array of String|Name of metric columns to load. By default, the list will be constructed from the "name" of all the configured aggregators.|no|
@@ -285,7 +285,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |jobProperties|Object|A map of properties to add to the Hadoop job configuration, see below for details.|no (default == null)|
 |indexSpec|Object|Tune how data is indexed. See [`indexSpec`](index.md#indexspec) on the main ingestion page for more information.|no|
 |indexSpecForIntermediatePersists|defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [`indexSpec`](index.md#indexspec) for possible values.|no (default = same as indexSpec)|
-|numBackgroundPersistThreads|Integer|The number of new background threads to use for incremental persists. Using this feature causes a notable increase in memory pressure and cpu usage but will make the job finish more quickly. If changing from the default of 0 (use current thread for persists), we recommend setting it to 1.|no (default == 0)|
+|numBackgroundPersistThreads|Integer|The number of new background threads to use for incremental persists. Using this feature causes a notable increase in memory pressure and CPU usage but will make the job finish more quickly. If changing from the default of 0 (use current thread for persists), we recommend setting it to 1.|no (default == 0)|
 |forceExtendableShardSpecs|Boolean|Forces use of extendable shardSpecs. Hash-based partitioning always uses an extendable shardSpec. For single-dimension partitioning, this option should be set to true to use an extendable shardSpec. For partitioning, please check [Partitioning specification](#partitionsspec). This option can be useful when you need to append more data to existing dataSource.|no (default = false)|
 |useExplicitVersion|Boolean|Forces HadoopIndexTask to use version.|no (default = false)|
 |logParseExceptions|Boolean|If true, log an error message when a parsing exception occurs, containing information about the row where the error occurred.|false|no|
@@ -324,7 +324,7 @@ sized data segments relative to single-dimension partitioning.
 ```json
   "partitionsSpec": {
      "type": "hashed",
-     "targetPartitionSize": 5000000
+     "maxRowsPerSegment": 5000000
    }
 ```
 
@@ -337,16 +337,17 @@ The configuration options are:
 |Field|Description|Required|
 |--------|-----------|---------|
 |type|Type of partitionSpec to be used.|"hashed"|
-|targetPartitionSize|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|either this or numShards|
-|numShards|Specify the number of partitions directly, instead of a target partition size. Ingestion will run faster, since it can skip the step necessary to select a number of partitions automatically.|either this or targetPartitionSize|
-|partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions. Only used with numShards, will be ignored when targetPartitionSize is set|no|
+|maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment. Defaults to 5000000|no|
+|targetPartitionSize|Deprecated. Use `maxRowsPerSegment` instead. Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|either this or numShards|
+|numShards|Specify the number of partitions directly, instead of a target partition size. Ingestion will run faster, since it can skip the step necessary to select a number of partitions automatically.|either this or `maxRowsPerSegment`|
+|partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions. Only used with `numShards`, will be ignored when `maxRowsPerSegment` is set.|no|
 
 ### Single-dimension range partitioning
 
 ```json
   "partitionsSpec": {
      "type": "single_dim",
-     "targetPartitionSize": 5000000
+     "targetRowsPerSegment": 5000000
    }
 ```
 
@@ -361,8 +362,10 @@ The configuration options are:
 |Field|Description|Required|
 |--------|-----------|---------|
 |type|Type of partitionSpec to be used.|"single_dim"|
-|targetPartitionSize|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|yes|
-|maxPartitionSize|Maximum number of rows to include in a partition. Defaults to 50% larger than the targetPartitionSize.|no|
+|targetRowsPerSegment|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|yes|
+|targetPartitionSize|Deprecated. Use `targetRowsPerSegment` instead. Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|no|
+|maxRowsPerSegment|Maximum number of rows to include in a partition. Defaults to 50% larger than the `targetPartitionSize`.|no|
+|maxPartitionSize|Deprecated. Use `maxRowsPerSegment` instead. Maximum number of rows to include in a partition. Defaults to 50% larger than the `targetPartitionSize`.|no|
 |partitionDimension|The dimension to partition on. Leave blank to select a dimension automatically.|no|
 |assumeGrouped|Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.|no|
 
@@ -391,7 +394,7 @@ on your EMR master.
 
 ## Kerberized Hadoop clusters
 
-By default druid can use the exisiting TGT kerberos ticket available in local kerberos key cache.
+By default druid can use the existing TGT kerberos ticket available in local kerberos key cache.
 Although TGT ticket has a limited life cycle,
 therefore you need to call `kinit` command periodically to ensure validity of TGT ticket.
 To avoid this extra external cron job script calling `kinit` periodically,
