@@ -46,14 +46,14 @@ For a list of API endpoints supported by the Router, see [Router API](../operati
 org.apache.druid.cli.Main server router
 ```
 
-### Router as Management Proxy
+### Router as management proxy
 
 The Router can be configured to forward requests to the active Coordinator or Overlord process. This may be useful for
 setting up a highly available cluster in situations where the HTTP redirect mechanism of the inactive -> active
 Coordinator/Overlord does not function correctly (servers are behind a load balancer, the hostname used in the redirect
 is only resolvable internally, etc.).
 
-#### Enabling the Management Proxy
+#### Enabling the management proxy
 
 To enable this functionality, set the following in the Router's runtime.properties:
 
@@ -61,7 +61,7 @@ To enable this functionality, set the following in the Router's runtime.properti
 druid.router.managementProxy.enabled=true
 ```
 
-#### Management Proxy Routing
+#### Management proxy routing
 
 The management proxy supports implicit and explicit routes. Implicit routes are those where the destination can be
 determined from the original request path based on Druid API path conventions. For the Coordinator the convention is
@@ -83,7 +83,7 @@ This is summarized in the table below:
 |`/proxy/coordinator/*`|Coordinator|`/*`|`router:8888/proxy/coordinator/status` -> `coordinator:8081/status`|
 |`/proxy/overlord/*`|Overlord|`/*`|`router:8888/proxy/overlord/druid/indexer/v1/isLeader` -> `overlord:8090/druid/indexer/v1/isLeader`|
 
-### Router Strategies
+### Router strategies
 
 The Router has a configurable list of strategies for how it selects which Brokers to route queries to. The order of the strategies matter because as soon as a strategy condition is matched, a Broker is selected.
 
@@ -125,7 +125,7 @@ Allows defining arbitrary routing rules using a JavaScript function. The functio
 > JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 
 
-### Avatica Query Balancing
+### Avatica query balancing
 
 All Avatica JDBC requests with a given connection ID must be routed to the same Broker, since Druid Brokers do not share connection state with each other.
 
@@ -158,7 +158,7 @@ druid.router.avatica.balancer.type=consistentHash
 This is a non-default implementation that is provided for experimentation purposes. The consistent hasher has longer setup times on initialization and when the set of Brokers changes, but has a faster Broker assignment time than the rendezous hasher when tested with 5 Brokers. Benchmarks for both implementations have been provided in `ConsistentHasherBenchmark` and `RendezvousHasherBenchmark`. The consistent hasher also requires locking, while the rendezvous hasher does not.
 
 
-### Example Production Configuration
+### Example production configuration
 
 In this example, we have two tiers in our production cluster: `hot` and `_default_tier`. Queries for the `hot` tier are routed through the `broker-hot` set of Brokers, and queries for the `_default_tier` are routed through the `broker-cold` set of Brokers. If any exceptions or network problems occur, queries are routed to the `broker-cold` set of brokers. In our example, we are running with a c3.2xlarge EC2 instance. We assume a `common.runtime.properties` already exists.
 

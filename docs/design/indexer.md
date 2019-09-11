@@ -33,7 +33,7 @@ The Indexer is designed to be easier to configure and deploy compared to the Mid
 
 For Apache Druid (incubating) Indexer Process Configuration, see [Indexer Configuration](../configuration/index.html#indexer).
 
-### HTTP Endpoints
+### HTTP endpoints
 
 The Indexer process shares the same HTTP endpoints as the [MiddleManager](../operations/api-reference.html#middlemanager).
 
@@ -43,7 +43,7 @@ The Indexer process shares the same HTTP endpoints as the [MiddleManager](../ope
 org.apache.druid.cli.Main server indexer
 ```
 
-### Task Resource Sharing
+### Task resource sharing
 
 The following resources are shared across all tasks running inside an Indexer process.
 
@@ -63,7 +63,7 @@ The size of the pools are configured by the `druid.server.http.numThreads` confi
 
 In addition to these two pools, 2 separate threads are allocated for lookup handling. If lookups are not used, these threads will not be used.
 
-#### Memory Sharing
+#### Memory sharing
 
 The Indexer uses the `druid.worker.globalIngestionHeapLimitBytes` configuration to impose a global heap limit across all of the tasks it is running. 
 
@@ -79,13 +79,13 @@ This means that the peak in-heap usage for row data can be up to approximately `
 
 The remaining portion of the heap is reserved for query processing and segment persist/merge operations, and miscellaneous heap usage.
 
-#### Concurrent Segment Persist/Merge Limits
+#### Concurrent segment persist/merge limits
 
 To help reduce peak memory usage, the Indexer imposes a limit on the number of concurrent segment persist/merge operations across all running tasks.
 
 By default, the number of concurrent persist/merge operations is limited to (`druid.worker.capacity` / 2), rounded down. This limit can be configured with the `druid.worker.numConcurrentMerges` property.
 
-### Current Limitations
+### Current limitations
 
 Separate task logs are not currently supported when using the Indexer; all task log messages will instead be logged in the Indexer process log.
 
