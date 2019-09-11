@@ -166,6 +166,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     };
 
     this.segmentsSqlQueryManager = new QueryManager({
+      debounceIdle: 500,
       processQuery: async (query: SegmentsQuery, setIntermediateQuery) => {
         const totalQuerySize = (query.page + 1) * query.pageSize;
 
@@ -186,19 +187,25 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         }
 
         if (query.groupByInterval) {
+          const innerQuery = compact([
+            `SELECT "start" || '/' || "end" AS "interval"`,
+            `FROM sys.segments`,
+            whereClause ? `WHERE ${whereClause}` : '',
+            `GROUP BY 1`,
+            `LIMIT ${totalQuerySize}`,
+          ]).join('\n');
+
+          const intervals: string = (await queryDruidSql({ query: innerQuery }))
+            .map(row => `'${row.interval}'`)
+            .join(', ');
+
           queryParts = compact([
             `SELECT`,
             `  ("start" || '/' || "end") AS "interval",`,
             `  "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
             `FROM sys.segments`,
             `WHERE`,
-            `  ("start" || '/' || "end") IN (`,
-            `     SELECT "start" || '/' || "end"`,
-            `     FROM sys.segments`,
-            whereClause ? `     WHERE ${whereClause}` : '',
-            `     GROUP BY 1`,
-            `     LIMIT ${totalQuerySize}`,
-            `  )`,
+            `  ("start" || '/' || "end") IN (${intervals})`,
             whereClause ? `  AND ${whereClause}` : '',
           ]);
 
