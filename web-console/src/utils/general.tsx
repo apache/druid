@@ -261,7 +261,7 @@ export function validJson(json: string): boolean {
 }
 
 // stringify JSON to string; if JSON is null, parse empty string ""
-export function stringifyJSON(item: any): string {
+export function stringifyJson(item: any): string {
   if (item != null) {
     return JSON.stringify(item, null, 2);
   } else {
@@ -270,7 +270,7 @@ export function stringifyJSON(item: any): string {
 }
 
 // parse string to JSON object; if string is empty, return null
-export function parseStringToJSON(s: string): JSON | null {
+export function parseStringToJson(s: string): JSON | null {
   if (s === '') {
     return null;
   } else {

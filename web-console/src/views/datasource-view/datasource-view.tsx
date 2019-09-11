@@ -69,9 +69,10 @@ const tableColumns: string[] = [
   'Availability',
   'Segment load/drop',
   'Retention',
-  'Compaction',
-  'Size',
   'Replicated size',
+  'Size',
+  'Compaction',
+  'Avg. segment size',
   'Num rows',
   ActionCell.COLUMN_LABEL,
 ];
@@ -80,8 +81,9 @@ const tableColumnsNoSql: string[] = [
   'Availability',
   'Segment load/drop',
   'Retention',
-  'Compaction',
   'Size',
+  'Compaction',
+  'Avg. segment size',
   ActionCell.COLUMN_LABEL,
 ];
 
@@ -108,8 +110,9 @@ interface DatasourceQueryResultRow {
   num_available_segments: number;
   num_segments_to_load: number;
   num_segments_to_drop: number;
-  size: number;
   replicated_size: number;
+  size: number;
+  avg_segment_size: number;
   num_rows: number;
 }
 
@@ -171,8 +174,12 @@ export class DatasourcesView extends React.PureComponent<
   COUNT(*) FILTER (WHERE is_available = 1 AND ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_available_segments,
   COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load,
   COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop,
-  SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS size,
   SUM("size" * "num_replicas") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS replicated_size,
+  SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS size,
+  (
+    SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) /
+    COUNT(*) FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)
+  ) AS avg_segment_size,
   SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS num_rows
 FROM sys.segments
 GROUP BY 1`;
@@ -231,16 +238,19 @@ GROUP BY 1`;
           const loadstatus = loadstatusResp.data;
           datasources = datasourcesResp.data.map(
             (d: any): DatasourceQueryResultRow => {
+              const size = deepGet(d, 'properties.segments.size') || -1;
               const segmentsToLoad = Number(loadstatus[d.name] || 0);
               const availableSegments = Number(deepGet(d, 'properties.segments.count'));
+              const numSegments = availableSegments + segmentsToLoad;
               return {
                 datasource: d.name,
                 num_available_segments: availableSegments,
-                num_segments: availableSegments + segmentsToLoad,
+                num_segments: numSegments,
                 num_segments_to_load: segmentsToLoad,
                 num_segments_to_drop: 0,
-                size: d.properties.segments.size,
                 replicated_size: -1,
+                size,
+                avg_segment_size: size / numSegments,
                 num_rows: -1,
               };
             },
@@ -853,6 +863,22 @@ GROUP BY 1`;
               show: hiddenColumns.exists('Retention'),
             },
             {
+              Header: 'Replicated size',
+              accessor: 'replicated_size',
+              filterable: false,
+              width: 100,
+              Cell: row => formatBytes(row.value),
+              show: hiddenColumns.exists('Replicated size'),
+            },
+            {
+              Header: 'Size',
+              accessor: 'size',
+              filterable: false,
+              width: 100,
+              Cell: row => formatBytes(row.value),
+              show: hiddenColumns.exists('Size'),
+            },
+            {
               Header: 'Compaction',
               id: 'compaction',
               accessor: row => Boolean(row.compaction),
@@ -891,20 +917,12 @@ GROUP BY 1`;
               show: hiddenColumns.exists('Compaction'),
             },
             {
-              Header: 'Size',
-              accessor: 'size',
+              Header: 'Avg. segment size',
+              accessor: 'avg_segment_size',
               filterable: false,
               width: 100,
               Cell: row => formatBytes(row.value),
-              show: hiddenColumns.exists('Size'),
-            },
-            {
-              Header: 'Replicated size',
-              accessor: 'replicated_size',
-              filterable: false,
-              width: 100,
-              Cell: row => formatBytes(row.value),
-              show: hiddenColumns.exists('Replicated size'),
+              show: hiddenColumns.exists('Avg. segment size'),
             },
             {
               Header: 'Num rows',
@@ -1011,7 +1029,6 @@ GROUP BY 1`;
             datasourceId={datasourceTableActionDialogId}
             actions={actions}
             onClose={() => this.setState({ datasourceTableActionDialogId: undefined })}
-            isOpen
           />
         )}
       </div>

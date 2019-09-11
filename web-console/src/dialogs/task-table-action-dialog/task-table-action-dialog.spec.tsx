@@ -30,7 +30,6 @@ describe('task table action dialog', () => {
         taskId={'test'}
         actions={[basicAction]}
         onClose={() => {}}
-        isOpen
       />
     );
     render(taskTableActionDialog);

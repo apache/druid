@@ -39,6 +39,14 @@ $ git checkout origin/master
 $ git checkout -b 0.16.0-incubating
 ```
 
+Then push the branch to `origin`. If doing a quarterly release, it will also be necessary to bump the version in master to the next release snapshot:
+
+```
+$ mvn versions:set -DnewVersion=0.17.0-incubating-SNAPSHOT
+```
+
+and open a PR to the master branch. Bug fix releases should already have the correct snapshot version from the previous releases on the branch, so this step is not necessary.
+
 The only additions to the release branch after this branch should be bug fixes, which should be back-ported from the master branch, via a second PR, not with a direct PR to the release branch. Bug fix release branches may be initially populated via cherry-picking, but it is recommended to leave at least 1 commit to do as a backport PR in order to run through CI. (Note that CI is sometimes flaky for older branches).
 
 Once all issues and PRs that are still tagged with the release milestone have been merged, closed, or removed from the milestone, the next step is to put together a release candidate.
@@ -144,9 +152,9 @@ If the dependency requires it, copy any licenses to the `licenses/src` or `licen
 
 | tool | description |
 | --- | --- |
-| [generate_license](bin/generate_license.py) | This script is run _automatically_ when building the distribution package to generate a `LICENSE.BINARY` file from `licenses.yaml` which is renamed to `LICENSE` in the binary package. It can also be used to  verify that all dependencies are present and match the versions in `licenses.yaml` (and is run by travis for all PRs so it _should_ be up to date). |
-| [generate-notice-binary](bin/generate-notice-binary.py) | This script is run _automatically_ when building the distribution package, and generates a `NOTICE.BINARY` file by appending the notice content of `licenses.yaml` to the source `NOTICE` file. This script does _not_ currently verify that all notices that need to be are present and correct, this must currently be done manually at release time if not done in the PR that changed a dependency. |
- | [web-console/licenses](../web-console/scripts/licenses) | Updates `licenses.yaml` with all Druid of the licenses used by the Druid web-console 'binary'. |
+| [generate-binary-license](bin/generate-binary-license.py) | This script is run _automatically_ when building the distribution package to generate a `LICENSE.BINARY` file from `licenses.yaml` which is renamed to `LICENSE` in the binary package. |
+| [generate-binary-notice](bin/generate-binary-notice.py) | This script is run _automatically_ when building the distribution package, and generates a `NOTICE.BINARY` file by appending the notice content of `licenses.yaml` to the source `NOTICE` file. This script does _not_ currently verify that all notices that need to be are present and correct, this must currently be done manually at release time if not done in the PR that changed a dependency. |
+| [web-console/licenses](../web-console/script/licenses) | Updates `licenses.yaml` with all Druid of the licenses used by the Druid web-console 'binary'. |
 
 ### Additional tools
 
@@ -155,6 +163,7 @@ These additional tools were largely used to bootstrap the initial `LICENSE`, `LI
 | tool | description |
 | --- | --- |
 | [generate-license-dependency-reports](bin/generate-license-dependency-reports.py) | Point this to the Druid source root, and give it the location of a temp scratch directory, and it will output Maven dependency reports for Druid. (I believe I had to generate Maven dep report separately for hadoop-client) |
+| [check-licenses](bin/check-licenses.py) | Checks `licenses.yaml` against the output of `generate-license-dependency-reports.py`, used by travis and `-Papache-release` when building distribution, to verify that all dependencies are present and match the versions in `licenses.yaml`. |
 | [jar-notice-lister](bin/jar-notice-lister.py) | Point this to an extracted Druid binary distribution, and give it a temp scratch directory, and it will output NOTICE information for all the Druid JAR files. |
 
 

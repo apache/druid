@@ -40,6 +40,12 @@ import java.util.Map;
  * org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory}).
  * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
  * to extend {@link NullableAggregatorFactory}.
+ *
+ * Implementations are also expected to correctly handle single/multi value string type columns as it makes sense
+ * for them e.g. doubleSum aggregator tries to parse the string value as double and assumes it to be zero if parsing
+ * fails.
+ * If it is a multi value column then each individual value should be taken into account for aggregation e.g. if a row
+ * had value ["1","1","1"] , doubleSum aggregation would take each of them and sum them to 3.
  */
 @ExtensionPoint
 public abstract class AggregatorFactory implements Cacheable
