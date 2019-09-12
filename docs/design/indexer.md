@@ -51,7 +51,7 @@ The following resources are shared across all tasks running inside an Indexer pr
 
 The query processing threads and buffers are shared across all tasks. The Indexer will serve queries from a single endpoint shared by all tasks.
 
-If [query caching](#indexer-caching) is enabled, the query cache is also shared across all tasks.
+If [query caching](../configuration/index.html#indexer-caching) is enabled, the query cache is also shared across all tasks.
 
 #### Server HTTP threads
 
