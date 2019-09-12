@@ -250,7 +250,6 @@ export interface LoadDataViewState {
   showResetConfirm: boolean;
   newRollup?: boolean;
   newDimensionMode?: DimensionMode;
-  showViewValueModal: boolean;
 
   // welcome
   overlordModules?: string[];
@@ -315,7 +314,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       // dialogs / modals
       showResetConfirm: false,
-      showViewValueModal: false,
 
       // general
       sampleStrategy: 'start',
