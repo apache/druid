@@ -251,7 +251,6 @@ export interface LoadDataViewState {
   newRollup?: boolean;
   newDimensionMode?: DimensionMode;
   showViewValueModal: boolean;
-  str: string;
 
   // welcome
   overlordModules?: string[];
@@ -317,7 +316,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       // dialogs / modals
       showResetConfirm: false,
       showViewValueModal: false,
-      str: '',
 
       // general
       sampleStrategy: 'start',
@@ -1214,7 +1212,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             )}
           </div>
           <ParseDataTable
-            openModal={str => this.setState({ showViewValueModal: true, str: str })}
             sampleData={parserQueryState.data}
             columnFilter={columnFilter}
             canFlatten={canFlatten}
