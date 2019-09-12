@@ -101,9 +101,6 @@
       "development/extensions-contrib/distinctcount": {
         "title": "DistinctCount Aggregator"
       },
-      "development/extensions-contrib/google": {
-        "title": "Google Cloud Storage"
-      },
       "development/extensions-contrib/graphite": {
         "title": "Graphite Emitter"
       },
@@ -181,6 +178,9 @@
       },
       "development/extensions-core/examples": {
         "title": "Extension Examples"
+      },
+      "development/extensions-core/google": {
+        "title": "Google Cloud Storage"
       },
       "development/extensions-core/hdfs": {
         "title": "HDFS"
