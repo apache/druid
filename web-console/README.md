@@ -27,8 +27,8 @@ This is the unified Druid web console that servers as a data management layer fo
 2. Install the modules with `npm install`
 3. Run `npm start` will start in development mode and will proxy druid requests to `localhost:8888`
 
-**Note:** you can provide an environment variable to proxy to a different Druid host like so: `druid_host=1.2.3.4:8888 npm start` 
-
+**Note:** you can provide an environment variable to proxy to a different Druid host like so: `druid_host=1.2.3.4:8888 npm start`
+**Note:** you can provide an environment variable use webpack-bundle-analyzer as a plugin in the build script or like so: `BUNDLE_ANALYZER_PLUGIN='TRUE' npm start`
 
 ## Description of the directory structure
 
@@ -42,14 +42,13 @@ As part of this repo:
 - `public/` - The compiled destination of the file powering this console
 - `assets/` - The images (and other assets) used within the console
 - `script/` - Some helper bash scripts for running this console
-- `src/` - This directory (together with `lib`) constitutes all the source code for this console 
+- `src/` - This directory (together with `lib`) constitutes all the source code for this console
 
 Generated/copied dynamically
 
 - `index.html` - Entry file for the coordinator console
 - `pages/` - The files for the older coordinator console
 - `coordinator-console/` - Files for the coordinator console
-
 
 ## List of non SQL data reading APIs used
 

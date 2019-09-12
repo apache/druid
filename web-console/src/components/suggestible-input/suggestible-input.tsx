@@ -79,7 +79,7 @@ export class SuggestibleInput extends React.PureComponent<SuggestibleInputProps>
     );
   }
 
-  render() {
+  render(): JSX.Element {
     const { className, value, defaultValue, onValueChange, large, ...rest } = this.props;
     const suggestionsMenu = this.renderSuggestionsMenu();
 

@@ -57,9 +57,9 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskReport;
-import org.apache.druid.indexing.common.TaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -75,6 +75,7 @@ import org.apache.druid.indexing.common.task.IndexTaskTest;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisor;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -141,6 +142,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorImpl;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
@@ -231,6 +233,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
   private final Period intermediateHandoffPeriod = null;
   private int maxRecordsPerPoll;
 
+  private AppenderatorsManager appenderatorsManager;
   private TaskToolboxFactory toolboxFactory;
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private TaskStorage taskStorage;
@@ -315,6 +318,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     maxRecordsPerPoll = 1;
 
     recordSupplier = mock(KinesisRecordSupplier.class);
+
+    appenderatorsManager = new TestAppenderatorsManager();
 
     // sleep required because of kinesalite
     Thread.sleep(500);
@@ -614,8 +619,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             Objects.hash(
                 DATA_SCHEMA.getDataSource(),
                 0,
-                new KinesisDataSourceMetadata(startPartitions),
-                new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, currentOffsets))
+                new KinesisDataSourceMetadata(startPartitions)
             )
         )
     );
@@ -753,8 +757,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             Objects.hash(
                 DATA_SCHEMA.getDataSource(),
                 0,
-                new KinesisDataSourceMetadata(startPartitions),
-                new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, currentOffsets))
+                new KinesisDataSourceMetadata(startPartitions)
             )
         )
     );
@@ -764,9 +767,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                 DATA_SCHEMA.getDataSource(),
                 0,
                 new KinesisDataSourceMetadata(
-                    new SeekableStreamStartSequenceNumbers<>(STREAM, currentOffsets, currentOffsets.keySet())
-                ),
-                new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, nextOffsets))
+                    new SeekableStreamStartSequenceNumbers<>(STREAM, currentOffsets, currentOffsets.keySet()))
             )
         )
     );
@@ -2720,7 +2721,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         null,
         null,
         rowIngestionMetersFactory,
-        null
+        null,
+        appenderatorsManager
     );
   }
 
@@ -2826,8 +2828,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
               String supervisorId,
               @Nullable Integer taskGroupId,
               String baseSequenceName,
-              @Nullable DataSourceMetadata previousDataSourceMetadata,
-              @Nullable DataSourceMetadata currentDataSourceMetadata
+              @Nullable DataSourceMetadata checkpointMetadata
           )
           {
             LOG.info("Adding checkpoint hash to the set");
@@ -2835,8 +2836,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                 Objects.hash(
                     supervisorId,
                     taskGroupId,
-                    previousDataSourceMetadata,
-                    currentDataSourceMetadata
+                    checkpointMetadata
                 )
             );
             return true;
@@ -2880,8 +2880,10 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     final LocalDataSegmentPusherConfig dataSegmentPusherConfig = new LocalDataSegmentPusherConfig();
     dataSegmentPusherConfig.storageDirectory = getSegmentDirectory();
     final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig);
+
     toolboxFactory = new TaskToolboxFactory(
         taskConfig,
+        null, // taskExecutorNode
         taskActionClientFactory,
         emitter,
         dataSegmentPusher,
@@ -2905,7 +2907,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0),
-        new TaskReportFileWriter(reportsFile)
+        new SingleFileTaskReportFileWriter(reportsFile),
+        null
     );
   }
 
@@ -3088,7 +3091,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         @JacksonInject ChatHandlerProvider chatHandlerProvider,
         @JacksonInject AuthorizerMapper authorizerMapper,
         @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-        @JacksonInject AWSCredentialsConfig awsCredentialsConfig
+        @JacksonInject AWSCredentialsConfig awsCredentialsConfig,
+        @JacksonInject AppenderatorsManager appenderatorsManager
     )
     {
       super(
@@ -3101,7 +3105,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
           chatHandlerProvider,
           authorizerMapper,
           rowIngestionMetersFactory,
-          awsCredentialsConfig
+          awsCredentialsConfig,
+          appenderatorsManager
       );
     }
 

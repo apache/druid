@@ -58,6 +58,17 @@ $nav-width: 250px;
         bottom: 0;
         width: 100%;
 
+        & > * {
+          vertical-align: bottom;
+          margin-right: 15px;
+        }
+
+        .auto-run,
+        .smart-query-limit {
+          display: inline-block;
+          margin-bottom: 8px;
+        }
+
         .query-extra-info {
           position: absolute;
           right: 0;

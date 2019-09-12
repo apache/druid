@@ -257,13 +257,23 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     return classpathPrefix;
   }
 
-  public String getHadoopJobIdFileName()
+  private String getHadoopJobIdFileName()
   {
-    return new File(taskConfig.getTaskDir(getId()), HADOOP_JOB_ID_FILENAME).getAbsolutePath();
+    return getHadoopJobIdFile().getAbsolutePath();
+  }
+
+  private boolean hadoopJobIdFileExists()
+  {
+    return getHadoopJobIdFile().exists();
+  }
+
+  private File getHadoopJobIdFile()
+  {
+    return new File(taskConfig.getTaskDir(getId()), HADOOP_JOB_ID_FILENAME);
   }
 
   @Override
-  public TaskStatus run(TaskToolbox toolbox)
+  public TaskStatus runTask(TaskToolbox toolbox)
   {
     try {
       taskConfig = toolbox.getConfig();
@@ -288,7 +298,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       }
 
       errorMsg = Throwables.getStackTraceAsString(effectiveException);
-      toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+      toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
       return TaskStatus.failure(
           getId(),
           errorMsg
@@ -304,6 +314,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @SuppressWarnings("unchecked")
   private TaskStatus runInternal(TaskToolbox toolbox) throws Exception
   {
+    registerResourceCloserOnAbnormalExit(config -> killHadoopJob());
     String hadoopJobIdFile = getHadoopJobIdFileName();
     final ClassLoader loader = buildClassLoader(toolbox);
     boolean determineIntervals = !spec.getDataSchema().getGranularitySpec().bucketIntervals().isPresent();
@@ -352,7 +363,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       indexerSchema = determineConfigStatus.getSchema();
       if (indexerSchema == null) {
         errorMsg = determineConfigStatus.getErrorMsg();
-        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.failure(
             getId(),
             errorMsg
@@ -399,7 +410,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
             specVersion,
             version
         );
-        toolbox.getTaskReportFileWriter().write(null);
+        toolbox.getTaskReportFileWriter().write(getId(), null);
         return TaskStatus.failure(getId());
       }
     }
@@ -438,14 +449,14 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       if (buildSegmentsStatus.getDataSegments() != null) {
         ingestionState = IngestionState.COMPLETED;
         toolbox.publishSegments(buildSegmentsStatus.getDataSegments());
-        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.success(
             getId(),
             null
         );
       } else {
         errorMsg = buildSegmentsStatus.getErrorMsg();
-        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.failure(
             getId(),
             errorMsg
@@ -460,26 +471,25 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     }
   }
 
-  @Override
-  public void stopGracefully(TaskConfig taskConfig)
+  private void killHadoopJob()
   {
     // To avoid issue of kill command once the ingestion task is actually completed
-    if (!ingestionState.equals(IngestionState.COMPLETED)) {
+    if (hadoopJobIdFileExists() && !ingestionState.equals(IngestionState.COMPLETED)) {
       final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
       String hadoopJobIdFile = getHadoopJobIdFileName();
 
       try {
-        ClassLoader loader = HadoopTask.buildClassLoader(getHadoopDependencyCoordinates(),
-            taskConfig.getDefaultHadoopCoordinates());
+        ClassLoader loader = HadoopTask.buildClassLoader(
+            getHadoopDependencyCoordinates(),
+            taskConfig.getDefaultHadoopCoordinates()
+        );
 
         Object killMRJobInnerProcessingRunner = getForeignClassloaderObject(
             "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopKillMRJobIdProcessingRunner",
             loader
         );
 
-        String[] buildKillJobInput = new String[]{
-            hadoopJobIdFile
-        };
+        String[] buildKillJobInput = new String[]{hadoopJobIdFile};
 
         Class<?> buildKillJobRunnerClass = killMRJobInnerProcessingRunner.getClass();
         Method innerProcessingRunTask = buildKillJobRunnerClass.getMethod("runTask", buildKillJobInput.getClass());
@@ -499,7 +509,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         Thread.currentThread().setContextClassLoader(oldLoader);
       }
     }
-
   }
 
   @GET
@@ -694,7 +703,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       // can be injected based on the configuration given in config.getSchema().getIOConfig().getMetadataUpdateSpec()
       final MetadataStorageUpdaterJobHandler maybeHandler;
       if (config.isUpdaterJobSpecSet()) {
-        maybeHandler = injector.getInstance(MetadataStorageUpdaterJobHandler.class);
+        maybeHandler = INJECTOR.getInstance(MetadataStorageUpdaterJobHandler.class);
       } else {
         maybeHandler = null;
       }

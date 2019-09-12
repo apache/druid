@@ -75,6 +75,7 @@ import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -200,6 +201,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private final CircularBuffer<Throwable> savedParseExceptions;
   private final String stream;
   private final RowIngestionMeters rowIngestionMeters;
+  private final AppenderatorsManager appenderatorsManager;
 
   private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
   private final List<ListenableFuture<SegmentsAndMetadata>> publishWaitList = new ArrayList<>();
@@ -228,6 +230,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       final Optional<ChatHandlerProvider> chatHandlerProvider,
       final CircularBuffer<Throwable> savedParseExceptions,
       final RowIngestionMetersFactory rowIngestionMetersFactory,
+      final AppenderatorsManager appenderatorsManager,
       final LockGranularity lockGranularityToUse
   )
   {
@@ -241,6 +244,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.savedParseExceptions = savedParseExceptions;
     this.stream = ioConfig.getStartSequenceNumbers().getStream();
     this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
+    this.appenderatorsManager = appenderatorsManager;
     this.endOffsets = new ConcurrentHashMap<>(ioConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap());
     this.sequences = new CopyOnWriteArrayList<>();
     this.ingestionState = IngestionState.NOT_STARTED;
@@ -257,7 +261,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     catch (Exception e) {
       log.error(e, "Encountered exception while running task.");
       final String errorMsg = Throwables.getStackTraceAsString(e);
-      toolbox.getTaskReportFileWriter().write(getTaskCompletionReports(errorMsg));
+      toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(errorMsg));
       return TaskStatus.failure(
           task.getId(),
           errorMsg
@@ -385,9 +389,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     Throwable caughtExceptionOuter = null;
     try (final RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier = task.newTaskRecordSupplier()) {
-      toolbox.getDataSegmentServerAnnouncer().announce();
-      toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
 
+      if (appenderatorsManager.shouldTaskMakeNodeAnnouncements()) {
+        toolbox.getDataSegmentServerAnnouncer().announce();
+        toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
+      }
       appenderator = task.newAppenderator(fireDepartmentMetrics, toolbox);
       driver = task.newDriver(appenderator, toolbox, fireDepartmentMetrics);
 
@@ -630,7 +636,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                     if (addResult.isOk()) {
                       // If the number of rows in the segment exceeds the threshold after adding a row,
                       // move the segment out from the active segments of BaseAppenderatorDriver to make a new segment.
-                      if (addResult.isPushRequired(tuningConfig) && !sequenceToUse.isCheckpointed()) {
+                      final boolean isPushRequired = addResult.isPushRequired(
+                          tuningConfig.getPartitionsSpec().getMaxRowsPerSegment(),
+                          tuningConfig.getPartitionsSpec().getMaxTotalRows()
+                      );
+                      if (isPushRequired && !sequenceToUse.isCheckpointed()) {
                         sequenceToCheckpoint = sequenceToUse;
                       }
                       isPersistRequired |= addResult.isPersistRequired();
@@ -714,17 +724,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 task.getDataSource(),
                 ioConfig.getTaskGroupId(),
                 task.getIOConfig().getBaseSequenceName(),
+                null,
                 createDataSourceMetadata(
                     new SeekableStreamStartSequenceNumbers<>(
                         stream,
                         sequenceToCheckpoint.getStartOffsets(),
                         sequenceToCheckpoint.getExclusiveStartPartitions()
-                    )
-                ),
-                createDataSourceMetadata(
-                    new SeekableStreamEndSequenceNumbers<>(
-                        stream,
-                        currOffsets
                     )
                 )
             );
@@ -874,8 +879,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           chatHandlerProvider.get().unregister(task.getId());
         }
 
-        toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
-        toolbox.getDataSegmentServerAnnouncer().unannounce();
+        if (appenderatorsManager.shouldTaskMakeNodeAnnouncements()) {
+          toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
+          toolbox.getDataSegmentServerAnnouncer().unannounce();
+        }
       }
       catch (Throwable e) {
         if (caughtExceptionOuter != null) {
@@ -886,7 +893,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
     }
 
-    toolbox.getTaskReportFileWriter().write(getTaskCompletionReports(null));
+    toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null));
     return TaskStatus.success(task.getId());
   }
 
@@ -1155,7 +1162,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     // Actually do the add.
     sequences.add(sequenceMetadata);
   }
-  
+
   private SequenceMetadata<PartitionIdType, SequenceOffsetType> getLastSequenceMetadata()
   {
     Preconditions.checkState(!sequences.isEmpty(), "Empty sequences");
@@ -1321,11 +1328,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             new ResetDataSourceMetadataAction(
                 task.getDataSource(),
                 createDataSourceMetadata(
-                    new SeekableStreamStartSequenceNumbers<>(
+                    new SeekableStreamEndSequenceNumbers<>(
                         ioConfig.getStartSequenceNumbers().getStream(),
-                        partitionOffsetMap,
-                        // Clear all exclusive start offsets for automatic reset
-                        Collections.emptySet()
+                        partitionOffsetMap
                     )
                 )
             )
@@ -1363,6 +1368,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return rowIngestionMeters;
   }
 
+  public void stopForcefully()
+  {
+    log.info("Stopping forcefully (status: [%s])", status);
+    stopRequested.set(true);
+    runThread.interrupt();
+  }
 
   public void stopGracefully()
   {

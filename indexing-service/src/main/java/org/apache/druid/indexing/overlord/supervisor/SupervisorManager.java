@@ -115,8 +115,8 @@ public class SupervisorManager
 
     synchronized (lock) {
       Map<String, SupervisorSpec> supervisors = metadataSupervisorManager.getLatest();
-      for (String id : supervisors.keySet()) {
-        SupervisorSpec spec = supervisors.get(id);
+      for (Map.Entry<String, SupervisorSpec> supervisor : supervisors.entrySet()) {
+        final SupervisorSpec spec = supervisor.getValue();
         if (!(spec instanceof NoopSupervisorSpec)) {
           try {
             createAndStartSupervisorInternal(spec, false);
@@ -194,8 +194,7 @@ public class SupervisorManager
       String supervisorId,
       @Nullable Integer taskGroupId,
       String baseSequenceName,
-      DataSourceMetadata previousDataSourceMetadata,
-      DataSourceMetadata currentDataSourceMetadata
+      DataSourceMetadata previousDataSourceMetadata
   )
   {
     try {
@@ -206,7 +205,7 @@ public class SupervisorManager
 
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
 
-      supervisor.lhs.checkpoint(taskGroupId, baseSequenceName, previousDataSourceMetadata, currentDataSourceMetadata);
+      supervisor.lhs.checkpoint(taskGroupId, baseSequenceName, previousDataSourceMetadata);
       return true;
     }
     catch (Exception e) {

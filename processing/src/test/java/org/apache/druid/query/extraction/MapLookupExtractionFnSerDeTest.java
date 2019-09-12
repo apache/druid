@@ -40,7 +40,7 @@ import java.util.UUID;
 public class MapLookupExtractionFnSerDeTest
 {
   private static ObjectMapper mapper;
-  private static final Map<String, String> renames = ImmutableMap.of(
+  private static final Map<String, String> RENAMES = ImmutableMap.of(
       "foo", "bar",
       "bar", "baz"
   );
@@ -58,11 +58,11 @@ public class MapLookupExtractionFnSerDeTest
     final DimExtractionFn fn = mapper.readerFor(DimExtractionFn.class).readValue(
         StringUtils.format(
             "{\"type\":\"lookup\",\"lookup\":{\"type\":\"map\", \"map\":%s}}",
-            mapper.writeValueAsString(renames)
+            mapper.writeValueAsString(RENAMES)
         )
     );
-    for (String key : renames.keySet()) {
-      Assert.assertEquals(renames.get(key), fn.apply(key));
+    for (String key : RENAMES.keySet()) {
+      Assert.assertEquals(RENAMES.get(key), fn.apply(key));
     }
     final String crazyString = UUID.randomUUID().toString();
     Assert.assertEquals(null, fn.apply(crazyString));
@@ -74,7 +74,7 @@ public class MapLookupExtractionFnSerDeTest
             .<DimExtractionFn>readValue(
                 StringUtils.format(
                     "{\"type\":\"lookup\",\"lookup\":{\"type\":\"map\", \"map\":%s}, \"retainMissingValue\":true}",
-                    mapper.writeValueAsString(renames)
+                    mapper.writeValueAsString(RENAMES)
                 )
             )
             .apply(crazyString)

@@ -163,7 +163,7 @@ export class RetentionDialog extends React.PureComponent<
     });
   };
 
-  render() {
+  render(): JSX.Element {
     const { datasource, onCancel, onEditDefaults } = this.props;
     const { currentRules, historyRecords } = this.state;
 
@@ -171,8 +171,6 @@ export class RetentionDialog extends React.PureComponent<
       <SnitchDialog
         className="retention-dialog"
         saveDisabled={false}
-        canOutsideClickClose={false}
-        isOpen
         onClose={onCancel}
         title={`Edit retention rules: ${datasource}${
           datasource === '_default' ? ' (cluster defaults)' : ''

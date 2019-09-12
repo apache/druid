@@ -35,10 +35,10 @@ public class DefaultResponseContext extends ResponseContext
     return new DefaultResponseContext();
   }
 
-  private final HashMap<String, Object> delegate = new HashMap<>();
+  private final HashMap<BaseKey, Object> delegate = new HashMap<>();
 
   @Override
-  protected Map<String, Object> getDelegate()
+  protected Map<BaseKey, Object> getDelegate()
   {
     return delegate;
   }

@@ -37,7 +37,7 @@ public class CompressedPools
   private static final Logger log = new Logger(CompressedPools.class);
 
   public static final int BUFFER_SIZE = 0x10000;
-  private static final NonBlockingPool<BufferRecycler> bufferRecyclerPool = new StupidPool<>(
+  private static final NonBlockingPool<BufferRecycler> BUFFER_RECYCLER_POOL = new StupidPool<>(
       "bufferRecyclerPool",
       new Supplier<BufferRecycler>()
       {
@@ -54,10 +54,10 @@ public class CompressedPools
 
   public static ResourceHolder<BufferRecycler> getBufferRecycler()
   {
-    return bufferRecyclerPool.take();
+    return BUFFER_RECYCLER_POOL.take();
   }
 
-  private static final NonBlockingPool<byte[]> outputBytesPool = new StupidPool<byte[]>(
+  private static final NonBlockingPool<byte[]> OUTPUT_BYTES_POOL = new StupidPool<byte[]>(
       "outputBytesPool",
       new Supplier<byte[]>()
       {
@@ -74,10 +74,10 @@ public class CompressedPools
 
   public static ResourceHolder<byte[]> getOutputBytes()
   {
-    return outputBytesPool.take();
+    return OUTPUT_BYTES_POOL.take();
   }
 
-  private static final NonBlockingPool<ByteBuffer> bigEndByteBufPool = new StupidPool<ByteBuffer>(
+  private static final NonBlockingPool<ByteBuffer> BIG_ENDIAN_BYTE_BUF_POOL = new StupidPool<ByteBuffer>(
       "bigEndByteBufPool",
       new Supplier<ByteBuffer>()
       {
@@ -92,7 +92,7 @@ public class CompressedPools
       }
   );
 
-  private static final NonBlockingPool<ByteBuffer> littleEndByteBufPool = new StupidPool<ByteBuffer>(
+  private static final NonBlockingPool<ByteBuffer> LITTLE_ENDIAN_BYTE_BUF_POOL = new StupidPool<ByteBuffer>(
       "littleEndByteBufPool",
       new Supplier<ByteBuffer>()
       {
@@ -110,8 +110,8 @@ public class CompressedPools
   public static ResourceHolder<ByteBuffer> getByteBuf(ByteOrder order)
   {
     if (order == ByteOrder.LITTLE_ENDIAN) {
-      return littleEndByteBufPool.take();
+      return LITTLE_ENDIAN_BYTE_BUF_POOL.take();
     }
-    return bigEndByteBufPool.take();
+    return BIG_ENDIAN_BYTE_BUF_POOL.take();
   }
 }

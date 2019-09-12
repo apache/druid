@@ -53,6 +53,7 @@ import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
@@ -120,12 +121,13 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
   }
 
-  private static final RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory(new RetryPolicyConfig());
+  private static final RetryPolicyFactory RETRY_POLICY_FACTORY = new RetryPolicyFactory(new RetryPolicyConfig());
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
   private final CoordinatorClient coordinatorClient;
   private final SegmentLoaderFactory segmentLoaderFactory;
   private final LockGranularity lockGranularity;
   private ExecutorService exec;
+  private AppenderatorsManager appenderatorsManager;
 
   public CompactionTaskRunTest(LockGranularity lockGranularity)
   {
@@ -140,6 +142,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
       }
     };
     segmentLoaderFactory = new SegmentLoaderFactory(getIndexIO(), getObjectMapper());
+    appenderatorsManager = new TestAppenderatorsManager();
     this.lockGranularity = lockGranularity;
   }
 
@@ -168,7 +171,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY,
+        appenderatorsManager
     );
 
     final CompactionTask compactionTask = builder
@@ -211,7 +215,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY,
+        appenderatorsManager
     );
 
     final CompactionTask compactionTask1 = builder
@@ -286,7 +291,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY,
+        appenderatorsManager
     );
 
     final CompactionTask compactionTask = builder
@@ -326,7 +332,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     final Future<Pair<TaskStatus, List<DataSegment>>> compactionFuture = exec.submit(
@@ -381,7 +388,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY,
+        appenderatorsManager
     );
 
     // day segmentGranularity
@@ -433,7 +441,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY,
+        appenderatorsManager
     );
 
     final CompactionTask compactionTask = builder
@@ -479,7 +488,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY,
+        appenderatorsManager
     );
 
     final CompactionTask compactionTask = builder
@@ -536,7 +546,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         rowIngestionMetersFactory,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY,
+        appenderatorsManager
     );
 
     final CompactionTask compactionTask = builder
@@ -643,7 +654,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     );
 
     return runTask(indexTask, readyLatchToCountDown, latchToAwaitBeforeRun);
@@ -685,6 +697,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final TaskToolbox box = new TaskToolbox(
         null,
+        null,
         actionClient,
         null,
         new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()),
@@ -709,7 +722,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         null,
         null,
         null,
-        new NoopTestTaskFileWriter()
+        new NoopTestTaskReportFileWriter(),
+        null
     );
 
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);

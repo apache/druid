@@ -23,17 +23,18 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -42,9 +43,9 @@ import java.util.UUID;
 public class NoopTask extends AbstractTask
 {
   private static final Logger log = new Logger(NoopTask.class);
-  private static final int defaultRunTime = 2500;
-  private static final int defaultIsReadyTime = 0;
-  private static final IsReadyResult defaultIsReadyResult = IsReadyResult.YES;
+  private static final int DEFAULT_RUN_TIME = 2500;
+  private static final int DEFAULT_IS_READY_TIME = 0;
+  private static final IsReadyResult DEFAULT_IS_READY_RESULT = IsReadyResult.YES;
 
   enum IsReadyResult
   {
@@ -85,10 +86,10 @@ public class NoopTask extends AbstractTask
         context
     );
 
-    this.runTime = (runTime == 0) ? defaultRunTime : runTime;
-    this.isReadyTime = (isReadyTime == 0) ? defaultIsReadyTime : isReadyTime;
+    this.runTime = (runTime == 0) ? DEFAULT_RUN_TIME : runTime;
+    this.isReadyTime = (isReadyTime == 0) ? DEFAULT_IS_READY_TIME : isReadyTime;
     this.isReadyResult = (isReadyResult == null)
-                         ? defaultIsReadyResult
+                         ? DEFAULT_IS_READY_RESULT
                          : IsReadyResult.valueOf(StringUtils.toUpperCase(isReadyResult));
     this.firehoseFactory = firehoseFactory;
   }
@@ -139,6 +140,11 @@ public class NoopTask extends AbstractTask
   }
 
   @Override
+  public void stopGracefully(TaskConfig taskConfig)
+  {
+  }
+
+  @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     if (firehoseFactory != null) {
@@ -179,12 +185,16 @@ public class NoopTask extends AbstractTask
   @VisibleForTesting
   public static NoopTask create(int priority)
   {
-    return new NoopTask(null, null, null, 0, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, priority));
+    final Map<String, Object> context = new HashMap<>();
+    context.put(Tasks.PRIORITY_KEY, priority);
+    return new NoopTask(null, null, null, 0, 0, null, null, context);
   }
 
   @VisibleForTesting
   public static NoopTask create(String id, int priority)
   {
-    return new NoopTask(id, null, null, 0, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, priority));
+    final Map<String, Object> context = new HashMap<>();
+    context.put(Tasks.PRIORITY_KEY, priority);
+    return new NoopTask(id, null, null, 0, 0, null, null, context);
   }
 }

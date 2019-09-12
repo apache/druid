@@ -58,6 +58,6 @@ public class TDigestSketchObjectStrategy implements ObjectStrategy<MergingDigest
   @Override
   public int compare(MergingDigest o1, MergingDigest o2)
   {
-    return TDigestBuildSketchAggregatorFactory.COMPARATOR.compare(o1, o2);
+    return TDigestSketchAggregatorFactory.COMPARATOR.compare(o1, o2);
   }
 }

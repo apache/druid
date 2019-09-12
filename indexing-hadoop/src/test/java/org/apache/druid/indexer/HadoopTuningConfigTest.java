@@ -32,7 +32,7 @@ import java.util.List;
  */
 public class HadoopTuningConfigTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   @Test
   public void testSerde() throws Exception
@@ -64,7 +64,7 @@ public class HadoopTuningConfigTest
         null
     );
 
-    HadoopTuningConfig actual = jsonReadWriteRead(jsonMapper.writeValueAsString(expected), HadoopTuningConfig.class);
+    HadoopTuningConfig actual = jsonReadWriteRead(JSON_MAPPER.writeValueAsString(expected), HadoopTuningConfig.class);
 
     Assert.assertEquals("/tmp/workingpath", actual.getWorkingPath());
     Assert.assertEquals("version", actual.getVersion());
@@ -88,7 +88,7 @@ public class HadoopTuningConfigTest
   public static <T> T jsonReadWriteRead(String s, Class<T> klass)
   {
     try {
-      return jsonMapper.readValue(jsonMapper.writeValueAsBytes(jsonMapper.readValue(s, klass)), klass);
+      return JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsBytes(JSON_MAPPER.readValue(s, klass)), klass);
     }
     catch (Exception e) {
       throw new RuntimeException(e);

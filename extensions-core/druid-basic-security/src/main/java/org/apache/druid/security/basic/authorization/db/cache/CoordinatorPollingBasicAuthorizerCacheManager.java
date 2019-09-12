@@ -38,10 +38,10 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
 import org.apache.druid.security.basic.BasicAuthUtils;
-import org.apache.druid.security.basic.authentication.BytesFullResponseHandler;
-import org.apache.druid.security.basic.authentication.BytesFullResponseHolder;
 import org.apache.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
@@ -390,11 +390,11 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
         HttpMethod.GET,
         StringUtils.format("/druid-ext/basic-security/authorization/db/%s/cachedSerializedUserMap", prefix)
     );
-    BytesFullResponseHolder responseHolder = (BytesFullResponseHolder) druidLeaderClient.go(
+    BytesFullResponseHolder responseHolder = druidLeaderClient.go(
         req,
         new BytesFullResponseHandler()
     );
-    byte[] userRoleMapBytes = responseHolder.getBytes();
+    byte[] userRoleMapBytes = responseHolder.getContent();
 
     UserAndRoleMap userAndRoleMap = objectMapper.readValue(
         userRoleMapBytes,

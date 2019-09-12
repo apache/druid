@@ -83,8 +83,8 @@ public class GetDimensionRangeSetTest
       null
   );
 
-  private static final RangeSet all = rangeSet(ImmutableList.of(Range.all()));
-  private static final RangeSet empty = rangeSet(ImmutableList.of());
+  private static final RangeSet ALL = rangeSet(ImmutableList.of(Range.all()));
+  private static final RangeSet EMPTY = rangeSet(ImmutableList.of());
 
   @Test
   public void testSimpleFilter()
@@ -123,7 +123,7 @@ public class GetDimensionRangeSetTest
   public void testAndFilter()
   {
     DimFilter and1 = new AndDimFilter(ImmutableList.of(selector1, selector2, in1));
-    Assert.assertEquals(empty, and1.getDimensionRangeSet("dim1"));
+    Assert.assertEquals(EMPTY, and1.getDimensionRangeSet("dim1"));
     Assert.assertNull(and1.getDimensionRangeSet("dim2"));
 
     DimFilter and2 = new AndDimFilter(ImmutableList.of(selector3, bound1, other1));
@@ -133,7 +133,7 @@ public class GetDimensionRangeSetTest
     DimFilter and3 = new AndDimFilter(ImmutableList.of(in2, bound1, bound2, bound3, bound4));
     RangeSet expected3 = rangeSet(Range.openClosed("notincluded", "tillend"));
     Assert.assertEquals(expected3, and3.getDimensionRangeSet("dim1"));
-    Assert.assertEquals(empty, and3.getDimensionRangeSet("dim2"));
+    Assert.assertEquals(EMPTY, and3.getDimensionRangeSet("dim2"));
 
     DimFilter and4 = new AndDimFilter(ImmutableList.of(in3, bound3));
     RangeSet expected4 = rangeSet(point("null"));
@@ -158,7 +158,7 @@ public class GetDimensionRangeSetTest
     Assert.assertEquals(expected2, or2.getDimensionRangeSet("dim1"));
 
     DimFilter or3 = new OrDimFilter(ImmutableList.of(bound1, bound2, bound3));
-    Assert.assertEquals(all, or3.getDimensionRangeSet("dim1"));
+    Assert.assertEquals(ALL, or3.getDimensionRangeSet("dim1"));
 
     DimFilter or4 = new OrDimFilter(ImmutableList.of(selector1, selector2, selector3, selector4, selector5));
     Assert.assertNull(or4.getDimensionRangeSet("dim1"));

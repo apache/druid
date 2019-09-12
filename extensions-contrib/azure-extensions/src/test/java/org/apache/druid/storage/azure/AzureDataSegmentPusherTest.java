@@ -50,13 +50,13 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
-  private static final String containerName = "container";
-  private static final String blobPath = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
-  private static final DataSegment dataSegment = new DataSegment(
+  private static final String CONTAINER_NAME = "container";
+  private static final String BLOB_PATH = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
+  private static final DataSegment DATA_SEGMENT = new DataSegment(
       "test",
       Intervals.of("2015-04-12/2015-04-13"),
       "1",
-      ImmutableMap.of("containerName", containerName, "blobPath", blobPath),
+      ImmutableMap.of("containerName", CONTAINER_NAME, "blobPath", BLOB_PATH),
       null,
       null,
       NoneShardSpec.instance(),
@@ -129,8 +129,8 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   {
 
     AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
-    final String storageDir = pusher.getStorageDir(dataSegment, false);
-    final String azurePath = pusher.getAzurePath(dataSegment, false);
+    final String storageDir = pusher.getStorageDir(DATA_SEGMENT, false);
+    final String azurePath = pusher.getAzurePath(DATA_SEGMENT, false);
 
     Assert.assertEquals(
         StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME),
@@ -144,15 +144,15 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
     final int binaryVersion = 9;
     final File compressedSegmentData = new File("index.zip");
-    final String azurePath = pusher.getAzurePath(dataSegment, false);
+    final String azurePath = pusher.getAzurePath(DATA_SEGMENT, false);
 
-    azureStorage.uploadBlob(compressedSegmentData, containerName, azurePath);
+    azureStorage.uploadBlob(compressedSegmentData, CONTAINER_NAME, azurePath);
     EasyMock.expectLastCall();
 
     replayAll();
 
     DataSegment pushedDataSegment = pusher.uploadDataSegment(
-        dataSegment,
+        DATA_SEGMENT,
         binaryVersion,
         0, // empty file
         compressedSegmentData,
@@ -180,7 +180,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   public void storageDirContainsNoColonsTest()
   {
     AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
-    DataSegment withColons = dataSegment.withVersion("2018-01-05T14:54:09.295Z");
+    DataSegment withColons = DATA_SEGMENT.withVersion("2018-01-05T14:54:09.295Z");
     String segmentPath = pusher.getStorageDir(withColons, false);
     Assert.assertFalse("Path should not contain any columns", segmentPath.contains(":"));
   }

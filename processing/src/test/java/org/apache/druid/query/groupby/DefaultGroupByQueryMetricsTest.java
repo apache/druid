@@ -32,7 +32,6 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.lookup.LookupExtractionFn;
-import org.apache.druid.segment.TestHelper;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -53,10 +52,10 @@ public class DefaultGroupByQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultGroupByQueryMetrics queryMetrics = new DefaultGroupByQueryMetrics(TestHelper.makeJsonMapper());
+    DefaultGroupByQueryMetrics queryMetrics = new DefaultGroupByQueryMetrics();
     GroupByQuery.Builder builder = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setInterval("2011-04-02/2011-04-04").setDimensions(new ExtractionDimensionSpec(
             "quality",
             "alias",
@@ -67,7 +66,7 @@ public class DefaultGroupByQueryMetricsTest
                 true,
                 false
             )
-        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        )).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
         .setContext(ImmutableMap.of("bySegment", true));
@@ -81,7 +80,7 @@ public class DefaultGroupByQueryMetricsTest
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
     Assert.assertEquals("", actualEvent.get("host"));
     Assert.assertEquals("", actualEvent.get("service"));
-    Assert.assertEquals(QueryRunnerTestHelper.dataSource, actualEvent.get(DruidMetrics.DATASOURCE));
+    Assert.assertEquals(QueryRunnerTestHelper.DATA_SOURCE, actualEvent.get(DruidMetrics.DATASOURCE));
     Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
     Interval expectedInterval = Intervals.of("2011-04-02/2011-04-04");
     Assert.assertEquals(Collections.singletonList(expectedInterval.toString()), actualEvent.get(DruidMetrics.INTERVAL));
@@ -104,7 +103,7 @@ public class DefaultGroupByQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultGroupByQueryMetrics queryMetrics = new DefaultGroupByQueryMetrics(TestHelper.makeJsonMapper());
+    DefaultGroupByQueryMetrics queryMetrics = new DefaultGroupByQueryMetrics();
     DefaultQueryMetricsTest.testQueryMetricsDefaultMetricNamesAndUnits(cachingEmitter, serviceEmitter, queryMetrics);
   }
 }

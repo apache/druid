@@ -16,16 +16,15 @@
  * limitations under the License.
  */
 
-import { IDialogProps } from '@blueprintjs/core';
 import React from 'react';
 
 import { ShowJson } from '../../components';
-import { BasicAction, basicActionsToButtons } from '../../utils/basic-action';
+import { BasicAction } from '../../utils/basic-action';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
-interface SegmentTableActionDialogProps extends IDialogProps {
-  segmentId: string | null;
-  dataSourceId: string | null;
+interface SegmentTableActionDialogProps {
+  segmentId?: string;
+  datasourceId?: string;
   actions: BasicAction[];
   onClose: () => void;
 }
@@ -46,7 +45,7 @@ export class SegmentTableActionDialog extends React.PureComponent<
   }
 
   render(): React.ReactNode {
-    const { segmentId, onClose, dataSourceId, actions } = this.props;
+    const { segmentId, onClose, datasourceId, actions } = this.props;
     const { activeTab } = this.state;
 
     const taskTableSideButtonMetadata: SideButtonMetaData[] = [
@@ -60,15 +59,14 @@ export class SegmentTableActionDialog extends React.PureComponent<
 
     return (
       <TableActionDialog
-        isOpen
         sideButtonMetadata={taskTableSideButtonMetadata}
         onClose={onClose}
         title={`Segment: ${segmentId}`}
-        bottomButtons={basicActionsToButtons(actions)}
+        actions={actions}
       >
         {activeTab === 'metadata' && (
           <ShowJson
-            endpoint={`/druid/coordinator/v1/metadata/datasources/${dataSourceId}/segments/${segmentId}`}
+            endpoint={`/druid/coordinator/v1/metadata/datasources/${datasourceId}/segments/${segmentId}`}
             downloadFilename={`Segment-metadata-${segmentId}.json`}
           />
         )}

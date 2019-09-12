@@ -43,7 +43,7 @@ public class SQLMetadataConnectorTest
 
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
-  private static final ObjectMapper jsonMapper = new ObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
   @Before
   public void setUp()
@@ -205,7 +205,7 @@ public class SQLMetadataConnectorTest
       String pwd
   ) throws Exception
   {
-    return jsonMapper.readValue(
+    return JSON_MAPPER.readValue(
         "{" +
         "\"createTables\": \"" + createTables + "\"," +
         "\"host\": \"" + host + "\"," +

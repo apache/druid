@@ -92,11 +92,11 @@ import java.util.concurrent.ScheduledExecutorService;
 
 public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 {
-  private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+  private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final String DATASOURCE = "testDS";
   private static final String STREAM = "stream";
   private static final String SHARD_ID = "0";
-  private static final StreamPartition<String> shard0Partition = StreamPartition.of(STREAM, SHARD_ID);
+  private static final StreamPartition<String> SHARD0_PARTITION = StreamPartition.of(STREAM, SHARD_ID);
   private static final String EXCEPTION_MSG = "I had an exception";
 
   private TaskStorage taskStorage;
@@ -149,7 +149,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
 
     EasyMock.expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(null).anyTimes();
-    EasyMock.expect(recordSupplier.getAssignment()).andReturn(ImmutableSet.of(shard0Partition)).anyTimes();
+    EasyMock.expect(recordSupplier.getAssignment()).andReturn(ImmutableSet.of(SHARD0_PARTITION)).anyTimes();
     EasyMock.expect(recordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("10").anyTimes();
   }
 
@@ -561,7 +561,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     return new DataSchema(
         DATASOURCE,
-        objectMapper.convertValue(
+        OBJECT_MAPPER.convertValue(
             new StringInputRowParser(
                 new JSONParseSpec(
                     new TimestampSpec("timestamp", "iso", null),
@@ -584,7 +584,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             ImmutableList.of()
         ),
         null,
-        objectMapper
+        OBJECT_MAPPER
     );
   }
 
@@ -706,7 +706,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           chatHandlerProvider,
           authorizerMapper,
           rowIngestionMetersFactory,
-          groupId
+          groupId,
+          null
       );
     }
 
@@ -739,7 +740,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           taskMaster,
           indexerMetadataStorageCoordinator,
           taskClientFactory,
-          objectMapper,
+          OBJECT_MAPPER,
           spec,
           rowIngestionMetersFactory,
           false

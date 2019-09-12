@@ -53,6 +53,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
 {
   protected final String fieldName;
   protected final String name;
+  @Nullable
   protected final String estimator;
   private final String inputType;
 
@@ -62,8 +63,8 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   public VarianceAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
-      @JsonProperty("estimator") String estimator,
-      @JsonProperty("inputType") String inputType
+      @JsonProperty("estimator") @Nullable String estimator,
+      @JsonProperty("inputType") @Nullable String inputType
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -238,6 +239,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     return name;
   }
 
+  @Nullable
   @JsonProperty
   public String getEstimator()
   {

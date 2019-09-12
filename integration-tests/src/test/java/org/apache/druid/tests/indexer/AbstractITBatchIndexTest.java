@@ -21,6 +21,9 @@ package org.apache.druid.tests.indexer;
 
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialSegmentGenerateTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialSegmentMergeTask;
+import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -32,13 +35,15 @@ import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.junit.Assert;
+import org.testng.Assert;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.function.Function;
 
-public class AbstractITBatchIndexTest extends AbstractIndexerTest
+public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 {
   private static final Logger LOG = new Logger(AbstractITBatchIndexTest.class);
 
@@ -50,18 +55,31 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
   @Inject
   ClientInfoResourceTestClient clientInfoResourceTestClient;
 
-  void doIndexTestTest(
+  void doIndexTest(
       String dataSource,
       String indexTaskFilePath,
       String queryFilePath,
       boolean waitForNewVersion
   ) throws IOException
   {
+    doIndexTest(dataSource, indexTaskFilePath, Function.identity(), queryFilePath, waitForNewVersion);
+  }
+
+  void doIndexTest(
+      String dataSource,
+      String indexTaskFilePath,
+      Function<String, String> taskSpecTransform,
+      String queryFilePath,
+      boolean waitForNewVersion
+  ) throws IOException
+  {
     final String fullDatasourceName = dataSource + config.getExtraDatasourceNameSuffix();
-    final String taskSpec = StringUtils.replace(
-        getResourceAsString(indexTaskFilePath),
-        "%%DATASOURCE%%",
-        fullDatasourceName
+    final String taskSpec = taskSpecTransform.apply(
+        StringUtils.replace(
+            getResourceAsString(indexTaskFilePath),
+            "%%DATASOURCE%%",
+            fullDatasourceName
+        )
     );
 
     submitTaskAndWait(taskSpec, fullDatasourceName, waitForNewVersion);
@@ -70,7 +88,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
       String queryResponseTemplate;
       try {
         InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(queryFilePath);
-        queryResponseTemplate = IOUtils.toString(is, "UTF-8");
+        queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
       }
       catch (IOException e) {
         throw new ISE(e, "could not read query file: %s", queryFilePath);
@@ -97,6 +115,17 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
       String queryFilePath
   ) throws IOException
   {
+    doReindexTest(baseDataSource, reindexDataSource, Function.identity(), reindexTaskFilePath, queryFilePath);
+  }
+
+  void doReindexTest(
+      String baseDataSource,
+      String reindexDataSource,
+      Function<String, String> taskSpecTransform,
+      String reindexTaskFilePath,
+      String queryFilePath
+  ) throws IOException
+  {
     final String fullBaseDatasourceName = baseDataSource + config.getExtraDatasourceNameSuffix();
     final String fullReindexDatasourceName = reindexDataSource + config.getExtraDatasourceNameSuffix();
 
@@ -112,12 +141,14 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
         fullReindexDatasourceName
     );
 
+    taskSpec = taskSpecTransform.apply(taskSpec);
+
     submitTaskAndWait(taskSpec, fullReindexDatasourceName, false);
     try {
       String queryResponseTemplate;
       try {
         InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(queryFilePath);
-        queryResponseTemplate = IOUtils.toString(is, "UTF-8");
+        queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
       }
       catch (IOException e) {
         throw new ISE(e, "could not read query file: %s", queryFilePath);
@@ -135,7 +166,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
           fullReindexDatasourceName,
           "2013-08-31T00:00:00.000Z/2013-09-10T00:00:00.000Z"
       );
-      Assert.assertFalse("dimensions : " + dimensions, dimensions.contains("robot"));
+      Assert.assertFalse(dimensions.contains("robot"), "dimensions : " + dimensions);
     }
     catch (Exception e) {
       LOG.error(e, "Error while testing");
@@ -173,7 +204,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
     long startSubTaskCount = -1;
     final boolean assertRunsSubTasks = taskSpec.contains("index_parallel");
     if (assertRunsSubTasks) {
-      startSubTaskCount = countCompleteSubTasks(dataSourceName);
+      startSubTaskCount = countCompleteSubTasks(dataSourceName, !taskSpec.contains("dynamic"));
     }
 
     final String taskID = indexer.submitTask(taskSpec);
@@ -181,12 +212,15 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
     indexer.waitUntilTaskCompletes(taskID);
 
     if (assertRunsSubTasks) {
-      final long newSubTasks = countCompleteSubTasks(dataSourceName) - startSubTaskCount;
+      final boolean perfectRollup = !taskSpec.contains("dynamic");
+      final long newSubTasks = countCompleteSubTasks(dataSourceName, perfectRollup) - startSubTaskCount;
       Assert.assertTrue(
+          newSubTasks > 0,
           StringUtils.format(
               "The supervisor task[%s] didn't create any sub tasks. Was it executed in the parallel mode?",
               taskID
-          ), newSubTasks > 0);
+          )
+      );
     }
 
     // ITParallelIndexTest does a second round of ingestion to replace segements in an existing
@@ -217,11 +251,18 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
     );
   }
 
-  private long countCompleteSubTasks(final String dataSource)
+  private long countCompleteSubTasks(final String dataSource, final boolean perfectRollup)
   {
     return indexer.getCompleteTasksForDataSource(dataSource)
                   .stream()
-                  .filter(t -> t.getType().equals("index_sub"))
+                  .filter(t -> {
+                    if (!perfectRollup) {
+                      return t.getType().equals(SinglePhaseSubTask.TYPE);
+                    } else {
+                      return t.getType().equalsIgnoreCase(PartialSegmentGenerateTask.TYPE)
+                             || t.getType().equalsIgnoreCase(PartialSegmentMergeTask.TYPE);
+                    }
+                  })
                   .count();
   }
 }

@@ -26,7 +26,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.task.NoopTestTaskFileWriter;
+import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -41,6 +41,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.timeline.DataSegment;
@@ -96,6 +97,7 @@ public class TaskToolboxTest
 
     taskToolbox = new TaskToolboxFactory(
         new TaskConfig(temporaryFolder.newFile().toString(), null, null, 50000, null, false, null, null, null),
+        new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         mockTaskActionClientFactory,
         mockEmitter,
         mockSegmentPusher,
@@ -119,7 +121,8 @@ public class TaskToolboxTest
         null,
         null,
         null,
-        new NoopTestTaskFileWriter()
+        new NoopTestTaskReportFileWriter(),
+        null
     );
   }
 

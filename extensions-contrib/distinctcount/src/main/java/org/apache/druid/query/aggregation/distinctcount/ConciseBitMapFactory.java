@@ -25,7 +25,7 @@ import org.apache.druid.collections.bitmap.MutableBitmap;
 
 public class ConciseBitMapFactory implements BitMapFactory
 {
-  private static final BitmapFactory bitmapFactory = new ConciseBitmapFactory();
+  private static final BitmapFactory BITMAP_FACTORY = new ConciseBitmapFactory();
 
   public ConciseBitMapFactory()
   {
@@ -34,7 +34,7 @@ public class ConciseBitMapFactory implements BitMapFactory
   @Override
   public MutableBitmap makeEmptyMutableBitmap()
   {
-    return bitmapFactory.makeEmptyMutableBitmap();
+    return BITMAP_FACTORY.makeEmptyMutableBitmap();
   }
 
   @Override

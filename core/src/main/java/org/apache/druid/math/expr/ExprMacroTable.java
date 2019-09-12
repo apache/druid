@@ -19,6 +19,8 @@
 
 package org.apache.druid.math.expr;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
@@ -97,9 +99,13 @@ public class ExprMacroTable
   {
     protected final Expr arg;
 
+    // Use Supplier to memoize values as ExpressionSelectors#makeExprEvalSelector() can make repeated calls for them
+    private final Supplier<BindingDetails> analyzeInputsSupplier;
+
     public BaseScalarUnivariateMacroFunctionExpr(Expr arg)
     {
       this.arg = arg;
+      analyzeInputsSupplier = Suppliers.memoize(this::supplyAnalyzeInputs);
     }
 
     @Override
@@ -112,6 +118,11 @@ public class ExprMacroTable
     @Override
     public BindingDetails analyzeInputs()
     {
+      return analyzeInputsSupplier.get();
+    }
+
+    private BindingDetails supplyAnalyzeInputs()
+    {
       return arg.analyzeInputs().withScalarArguments(ImmutableSet.of(arg));
     }
   }
@@ -123,11 +134,14 @@ public class ExprMacroTable
   {
     protected final List<Expr> args;
 
+    // Use Supplier to memoize values as ExpressionSelectors#makeExprEvalSelector() can make repeated calls for them
+    private final Supplier<BindingDetails> analyzeInputsSupplier;
+
     public BaseScalarMacroFunctionExpr(final List<Expr> args)
     {
       this.args = args;
+      analyzeInputsSupplier = Suppliers.memoize(this::supplyAnalyzeInputs);
     }
-
 
     @Override
     public void visit(final Visitor visitor)
@@ -140,6 +154,11 @@ public class ExprMacroTable
 
     @Override
     public BindingDetails analyzeInputs()
+    {
+      return analyzeInputsSupplier.get();
+    }
+
+    private BindingDetails supplyAnalyzeInputs()
     {
       final Set<Expr> argSet = new HashSet<>(args.size());
       BindingDetails accumulator = new BindingDetails();

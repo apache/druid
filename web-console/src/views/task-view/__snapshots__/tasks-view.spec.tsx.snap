@@ -255,6 +255,14 @@ exports[`tasks view matches snapshot 1`] = `
           }
         }
         filterable={true}
+        filtered={
+          Array [
+            Object {
+              "id": "datasource",
+              "value": "datasource",
+            },
+          ]
+        }
         freezeWhenExpanded={false}
         getLoadingProps={[Function]}
         getNoDataProps={[Function]}
@@ -288,6 +296,7 @@ exports[`tasks view matches snapshot 1`] = `
         noDataText=""
         ofText="of"
         onFetchData={[Function]}
+        onFilteredChange={[Function]}
         originalKey="_original"
         pageJumpText="jump to page"
         pageSizeOptions={
@@ -339,6 +348,12 @@ exports[`tasks view matches snapshot 1`] = `
             active={false}
             onClick={[Function]}
           >
+            Group ID
+          </Blueprint3.Button>
+          <Blueprint3.Button
+            active={false}
+            onClick={[Function]}
+          >
             Type
           </Blueprint3.Button>
           <Blueprint3.Button
@@ -357,11 +372,6 @@ exports[`tasks view matches snapshot 1`] = `
         <RefreshButton
           localStorageKey="task-refresh-rate"
           onRefresh={[Function]}
-        />
-        <Blueprint3.Button
-          icon="application"
-          onClick={[Function]}
-          text="Go to SQL"
         />
         <Blueprint3.Popover
           boundary="scrollParent"
@@ -410,10 +420,48 @@ exports[`tasks view matches snapshot 1`] = `
             text="Submit task"
           />
         </Blueprint3.Popover>
+        <Blueprint3.Popover
+          boundary="scrollParent"
+          captureDismiss={false}
+          content={
+            <Blueprint3.Menu>
+              <Blueprint3.MenuItem
+                disabled={false}
+                icon="application"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={Object {}}
+                shouldDismissPopover={true}
+                text="View SQL query for table"
+              />
+            </Blueprint3.Menu>
+          }
+          defaultIsOpen={false}
+          disabled={false}
+          fill={false}
+          hasBackdrop={false}
+          hoverCloseDelay={300}
+          hoverOpenDelay={150}
+          inheritDarkTheme={true}
+          interactionKind="click"
+          minimal={false}
+          modifiers={Object {}}
+          openOnTargetFocus={true}
+          position="bottom-left"
+          targetTagName="span"
+          transitionDuration={300}
+          usePortal={true}
+          wrapperTagName="span"
+        >
+          <Blueprint3.Button
+            icon="more"
+          />
+        </Blueprint3.Popover>
         <TableColumnSelector
           columns={
             Array [
               "Task ID",
+              "Group ID",
               "Type",
               "Datasource",
               "Location",
@@ -488,6 +536,13 @@ exports[`tasks view matches snapshot 1`] = `
               "Aggregated": [Function],
               "Header": "Task ID",
               "accessor": "task_id",
+              "show": true,
+              "width": 300,
+            },
+            Object {
+              "Aggregated": [Function],
+              "Header": "Group ID",
+              "accessor": "group_id",
               "show": true,
               "width": 300,
             },
@@ -578,6 +633,10 @@ exports[`tasks view matches snapshot 1`] = `
             Object {
               "id": "task_id",
               "value": "test",
+            },
+            Object {
+              "id": "datasource",
+              "value": "datasource",
             },
           ]
         }

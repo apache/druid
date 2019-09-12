@@ -59,24 +59,6 @@ expectedOutput:
     trailing7DayAvgTotalPageViews: 2.142857142857143
 intermediateResults:
   groupBy:
-  - version: v1
-    timestamp: 2017-01-01T00:00Z
-    event:
-      gender: m
-      addPageViews: 5.0
-      pageViews: 10.0
-      totalPageViews: 15.0
-  - version: v1
-    timestamp: 2017-01-01T00:00Z
-    event:
-      gender: f
-      addPageViews: 6.0
-      pageViews: 12.0
-      totalPageViews: 18.0
-  - version: v1
-    timestamp: 2017-01-02T00:00Z
-    event:
-      gender: f
-      addPageViews: 1.0
-      pageViews: 2.0
-      totalPageViews: 3.0
+  - [1483228800000, m, 5.0, 10.0, 15.0]
+  - [1483228800000, f, 6.0, 12.0, 18.0]
+  - [1483315200000, f, 1.0, 2.0, 3.0]

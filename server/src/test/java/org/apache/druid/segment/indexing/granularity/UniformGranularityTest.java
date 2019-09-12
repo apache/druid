@@ -39,7 +39,7 @@ import java.util.SortedSet;
 
 public class UniformGranularityTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JOSN_MAPPER = new DefaultObjectMapper();
 
   @Test
   public void testSimple()
@@ -130,7 +130,7 @@ public class UniformGranularityTest
     );
 
     try {
-      final GranularitySpec rtSpec = jsonMapper.readValue(jsonMapper.writeValueAsString(spec), GranularitySpec.class);
+      final GranularitySpec rtSpec = JOSN_MAPPER.readValue(JOSN_MAPPER.writeValueAsString(spec), GranularitySpec.class);
       Assert.assertEquals(
           "Round-trip bucketIntervals",
           spec.bucketIntervals(),

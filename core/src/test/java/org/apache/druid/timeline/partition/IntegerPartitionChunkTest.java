@@ -19,7 +19,6 @@
 
 package org.apache.druid.timeline.partition;
 
-import org.apache.druid.timeline.Overshadowable;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -109,45 +108,5 @@ public class IntegerPartitionChunkTest
     Assert.assertEquals(make(null, 10, 0, 1), make(null, 10, 0, 1));
     Assert.assertEquals(make(10, null, 0, 1), make(10, null, 0, 1));
     Assert.assertEquals(make(10, 11, 0, 1), make(10, 11, 0, 1));
-  }
-
-  private static class OvershadowableInteger implements Overshadowable<OvershadowableInteger>
-  {
-    private final int val;
-
-    OvershadowableInteger(int val)
-    {
-      this.val = val;
-    }
-
-    @Override
-    public int getStartRootPartitionId()
-    {
-      return 0;
-    }
-
-    @Override
-    public int getEndRootPartitionId()
-    {
-      return 1;
-    }
-
-    @Override
-    public String getVersion()
-    {
-      return "";
-    }
-
-    @Override
-    public short getMinorVersion()
-    {
-      return 0;
-    }
-
-    @Override
-    public short getAtomicUpdateGroupSize()
-    {
-      return 1;
-    }
   }
 }

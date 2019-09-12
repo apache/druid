@@ -126,7 +126,10 @@ public class DeterminePartitionsJob implements Jobby
         );
       }
 
-      if (!config.getPartitionsSpec().isAssumeGrouped()) {
+      final SingleDimensionPartitionsSpec partitionsSpec =
+          (SingleDimensionPartitionsSpec) config.getPartitionsSpec();
+
+      if (!partitionsSpec.isAssumeGrouped()) {
         groupByJob = Job.getInstance(
             new Configuration(),
             StringUtils.format("%s-determine_partitions_groupby-%s", config.getDataSource(), config.getIntervals())
@@ -191,7 +194,7 @@ public class DeterminePartitionsJob implements Jobby
       JobHelper.injectSystemProperties(dimSelectionJob);
       config.addJobProperties(dimSelectionJob);
 
-      if (!config.getPartitionsSpec().isAssumeGrouped()) {
+      if (!partitionsSpec.isAssumeGrouped()) {
         // Read grouped data from the groupByJob.
         dimSelectionJob.setMapperClass(DeterminePartitionsDimSelectionPostGroupByMapper.class);
         dimSelectionJob.setInputFormatClass(SequenceFileInputFormat.class);
@@ -688,8 +691,9 @@ public class DeterminePartitionsJob implements Jobby
             // One more shard to go
             final ShardSpec shardSpec;
 
-            if (currentDimPartition.rows < config.getTargetPartitionSize() * SHARD_COMBINE_THRESHOLD) {
-              // Combine with previous shard
+            if (currentDimPartition.rows < config.getTargetPartitionSize() * SHARD_COMBINE_THRESHOLD &&
+                !currentDimPartitions.partitions.isEmpty()) {
+              // Combine with previous shard if it exists and the current shard is small enough
               final DimPartition previousDimPartition = currentDimPartitions.partitions.remove(
                   currentDimPartitions.partitions.size() - 1
               );
@@ -764,8 +768,10 @@ public class DeterminePartitionsJob implements Jobby
 
         // Make sure none of these shards are oversized
         boolean oversized = false;
+        final SingleDimensionPartitionsSpec partitionsSpec =
+            (SingleDimensionPartitionsSpec) config.getPartitionsSpec();
         for (final DimPartition partition : dimPartitions.partitions) {
-          if (partition.rows > config.getMaxPartitionSize()) {
+          if (partition.rows > partitionsSpec.getMaxPartitionSize()) {
             log.info("Dimension[%s] has an oversized shard: %s", dimPartitions.dim, partition.shardSpec);
             oversized = true;
           }

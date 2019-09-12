@@ -125,7 +125,7 @@ public class CachingClusteredClientFunctionalityTest
 
     ResponseContext responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
-    Assert.assertNull(responseContext.get("uncoveredIntervals"));
+    Assert.assertNull(responseContext.get(ResponseContext.Key.UNCOVERED_INTERVALS));
 
     builder.intervals("2015-01-01/2015-01-03");
     responseContext = ResponseContext.createEmpty();
@@ -174,8 +174,8 @@ public class CachingClusteredClientFunctionalityTest
     for (String interval : intervals) {
       expectedList.add(Intervals.of(interval));
     }
-    Assert.assertEquals((Object) expectedList, context.get("uncoveredIntervals"));
-    Assert.assertEquals(uncoveredIntervalsOverflowed, context.get("uncoveredIntervalsOverflowed"));
+    Assert.assertEquals((Object) expectedList, context.get(ResponseContext.Key.UNCOVERED_INTERVALS));
+    Assert.assertEquals(uncoveredIntervalsOverflowed, context.get(ResponseContext.Key.UNCOVERED_INTERVALS_OVERFLOWED));
   }
 
   private void addToTimeline(Interval interval, String version)

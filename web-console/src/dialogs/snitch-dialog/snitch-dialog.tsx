@@ -16,15 +16,7 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  Classes,
-  Dialog,
-  FormGroup,
-  IDialogProps,
-  InputGroup,
-  Intent,
-} from '@blueprintjs/core';
+import { Button, Classes, Dialog, FormGroup, InputGroup, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import React from 'react';
@@ -33,10 +25,13 @@ import { HistoryDialog } from '../history-dialog/history-dialog';
 
 import './snitch-dialog.scss';
 
-export interface SnitchDialogProps extends IDialogProps {
+export interface SnitchDialogProps {
+  title: string;
+  className?: string;
   onSave: (comment: string) => void;
   saveDisabled?: boolean;
   onReset?: () => void;
+  onClose: () => void;
   historyRecords?: any[];
 }
 
@@ -116,11 +111,12 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
     );
   }
 
-  renderHistoryDialog() {
+  renderHistoryDialog(): JSX.Element | null {
     const { historyRecords } = this.props;
-    if (!historyRecords) return;
+    if (!historyRecords) return null;
+
     return (
-      <HistoryDialog {...this.props} className="history-dialog" historyRecords={historyRecords}>
+      <HistoryDialog {...this.props} historyRecords={historyRecords}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
           <Button onClick={this.back} icon={IconNames.ARROW_LEFT}>
             Back
@@ -150,7 +146,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
             Back
           </Button>
         ) : onReset ? (
-          <Button onClick={this.reset} intent={'none' as any}>
+          <Button onClick={this.reset} intent={Intent.NONE}>
             Reset
           </Button>
         ) : null}
@@ -176,7 +172,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
     );
   }
 
-  render() {
+  render(): JSX.Element | null {
     const { children, saveDisabled } = this.props;
     const { showFinalStep, showHistory } = this.state;
 
@@ -186,7 +182,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
     const propsClone: any = Object.assign({}, this.props);
     propsClone.className = classNames('snitch-dialog', propsClone.className);
     return (
-      <Dialog isOpen {...propsClone}>
+      <Dialog isOpen {...propsClone} canOutsideClickClose={false}>
         <div className={Classes.DIALOG_BODY}>{children}</div>
         <div className={Classes.DIALOG_FOOTER}>{this.renderActions(saveDisabled)}</div>
       </Dialog>

@@ -130,7 +130,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       final boolean deserializeComplexMetrics
   )
   {
-    final RowBasedColumnSelectorFactory baseSelectorFactory = RowBasedColumnSelectorFactory.create(in, null);
+    final RowBasedColumnSelectorFactory baseSelectorFactory = RowBasedColumnSelectorFactory.create(in::get, null);
 
     class IncrementalIndexInputRowColumnSelectorFactory implements ColumnSelectorFactory
     {
@@ -726,6 +726,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return new IncrementalIndexRowResult(incrementalIndexRow, parseExceptionMessages);
   }
 
+  @Nullable
   public static ParseException getCombinedParseException(
       InputRow row,
       @Nullable List<String> dimParseExceptionMessages,
@@ -996,7 +997,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return iterableWithPostAggregations(null, false).iterator();
   }
 
-  public Iterable<Row> iterableWithPostAggregations(final List<PostAggregator> postAggs, final boolean descending)
+  public Iterable<Row> iterableWithPostAggregations(@Nullable final List<PostAggregator> postAggs, final boolean descending)
   {
     return () -> {
       final List<DimensionDesc> dimensions = getDimensions();

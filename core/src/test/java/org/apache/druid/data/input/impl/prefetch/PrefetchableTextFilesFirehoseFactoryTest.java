@@ -64,7 +64,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 {
   private static long FILE_SIZE = -1;
 
-  private static final StringInputRowParser parser = new StringInputRowParser(
+  private static final StringInputRowParser PARSER = new StringInputRowParser(
       new CSVParseSpec(
           new TimestampSpec(
               "timestamp",
@@ -163,7 +163,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
     final List<Row> rows = new ArrayList<>();
     final File firehoseTmpDir = createFirehoseTmpDir("testWithoutCacheAndFetch");
-    try (Firehose firehose = factory.connect(parser, firehoseTmpDir)) {
+    try (Firehose firehose = factory.connect(PARSER, firehoseTmpDir)) {
       while (firehose.hasMore()) {
         rows.add(firehose.nextRow());
       }
@@ -182,7 +182,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
     final List<Row> rows = new ArrayList<>();
     final File firehoseTmpDir = createFirehoseTmpDir("testWithoutCacheAndFetch");
-    try (Firehose firehose = factory.connect(parser, firehoseTmpDir)) {
+    try (Firehose firehose = factory.connect(PARSER, firehoseTmpDir)) {
       while (firehose.hasMore()) {
         rows.add(firehose.nextRow());
       }
@@ -201,7 +201,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
     final List<Row> rows = new ArrayList<>();
     final File firehoseTmpDir = createFirehoseTmpDir("testWithoutCache");
-    try (Firehose firehose = factory.connect(parser, firehoseTmpDir)) {
+    try (Firehose firehose = factory.connect(PARSER, firehoseTmpDir)) {
       while (firehose.hasMore()) {
         rows.add(firehose.nextRow());
       }
@@ -220,7 +220,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
     final List<Row> rows = new ArrayList<>();
     final File firehoseTmpDir = createFirehoseTmpDir("testWithZeroFetchCapacity");
-    try (Firehose firehose = factory.connect(parser, firehoseTmpDir)) {
+    try (Firehose firehose = factory.connect(PARSER, firehoseTmpDir)) {
       while (firehose.hasMore()) {
         rows.add(firehose.nextRow());
       }
@@ -238,7 +238,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
     final List<Row> rows = new ArrayList<>();
     final File firehoseTmpDir = createFirehoseTmpDir("testWithCacheAndFetch");
-    try (Firehose firehose = factory.connect(parser, firehoseTmpDir)) {
+    try (Firehose firehose = factory.connect(PARSER, firehoseTmpDir)) {
       while (firehose.hasMore()) {
         rows.add(firehose.nextRow());
       }
@@ -256,7 +256,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
     final List<Row> rows = new ArrayList<>();
     final File firehoseTmpDir = createFirehoseTmpDir("testWithLargeCacheAndSmallFetch");
-    try (Firehose firehose = factory.connect(parser, firehoseTmpDir)) {
+    try (Firehose firehose = factory.connect(PARSER, firehoseTmpDir)) {
       while (firehose.hasMore()) {
         rows.add(firehose.nextRow());
       }
@@ -274,7 +274,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
     final List<Row> rows = new ArrayList<>();
     final File firehoseTmpDir = createFirehoseTmpDir("testWithSmallCacheAndLargeFetch");
-    try (Firehose firehose = factory.connect(parser, firehoseTmpDir)) {
+    try (Firehose firehose = factory.connect(PARSER, firehoseTmpDir)) {
       while (firehose.hasMore()) {
         rows.add(firehose.nextRow());
       }
@@ -292,7 +292,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
     final List<Row> rows = new ArrayList<>();
     final File firehoseTmpDir = createFirehoseTmpDir("testRetry");
-    try (Firehose firehose = factory.connect(parser, firehoseTmpDir)) {
+    try (Firehose firehose = factory.connect(PARSER, firehoseTmpDir)) {
       while (firehose.hasMore()) {
         rows.add(firehose.nextRow());
       }
@@ -312,7 +312,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     final TestPrefetchableTextFilesFirehoseFactory factory =
         TestPrefetchableTextFilesFirehoseFactory.withOpenExceptions(TEST_DIR, 5);
 
-    try (Firehose firehose = factory.connect(parser, createFirehoseTmpDir("testMaxRetry"))) {
+    try (Firehose firehose = factory.connect(PARSER, createFirehoseTmpDir("testMaxRetry"))) {
       while (firehose.hasMore()) {
         firehose.nextRow();
       }
@@ -328,7 +328,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     final TestPrefetchableTextFilesFirehoseFactory factory =
         TestPrefetchableTextFilesFirehoseFactory.withSleepMillis(TEST_DIR, 1000);
 
-    try (Firehose firehose = factory.connect(parser, createFirehoseTmpDir("testTimeout"))) {
+    try (Firehose firehose = factory.connect(PARSER, createFirehoseTmpDir("testTimeout"))) {
       while (firehose.hasMore()) {
         firehose.nextRow();
       }
@@ -344,7 +344,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
     for (int i = 0; i < 5; i++) {
       final List<Row> rows = new ArrayList<>();
-      try (Firehose firehose = factory.connect(parser, firehoseTmpDir)) {
+      try (Firehose firehose = factory.connect(PARSER, firehoseTmpDir)) {
         if (i > 0) {
           Assert.assertEquals(FILE_SIZE * 2, factory.getCacheManager().getTotalCachedBytes());
         }
@@ -367,7 +367,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
     for (int i = 0; i < 5; i++) {
       final List<Row> rows = new ArrayList<>();
-      try (Firehose firehose = factory.connect(parser, firehoseTmpDir)) {
+      try (Firehose firehose = factory.connect(PARSER, firehoseTmpDir)) {
         if (i > 0) {
           Assert.assertEquals(FILE_SIZE * 2, factory.getCacheManager().getTotalCachedBytes());
         }

@@ -29,110 +29,84 @@ import org.junit.Test;
  */
 public class HashedPartitionsSpecTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   @Test
   public void testHashedPartitionsSpec()
   {
     {
-      final PartitionsSpec partitionsSpec;
-
-      try {
-        partitionsSpec = jsonReadWriteRead(
-            "{"
-            + "   \"targetPartitionSize\":100,"
-            + "   \"type\":\"hashed\""
-            + "}",
-            PartitionsSpec.class
-        );
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
+      final PartitionsSpec partitionsSpec = jsonReadWriteRead(
+          "{"
+          + "   \"targetPartitionSize\":100,"
+          + "   \"type\":\"hashed\""
+          + "}",
+          PartitionsSpec.class
+      );
+      Assert.assertTrue("partitionsSpec", partitionsSpec instanceof HashedPartitionsSpec);
+      final HashedPartitionsSpec hadoopHashedPartitionsSpec = (HashedPartitionsSpec) partitionsSpec;
 
       Assert.assertEquals(
           "isDeterminingPartitions",
-          partitionsSpec.isDeterminingPartitions(),
+          hadoopHashedPartitionsSpec.needsDeterminePartitions(true),
           true
       );
 
       Assert.assertEquals(
           "getTargetPartitionSize",
-          partitionsSpec.getTargetPartitionSize(),
+          hadoopHashedPartitionsSpec.getMaxRowsPerSegment().intValue(),
           100
       );
 
       Assert.assertEquals(
-          "getMaxPartitionSize",
-          partitionsSpec.getMaxPartitionSize(),
-          150
-      );
-
-      Assert.assertEquals(
           "getPartitionDimensions",
-          partitionsSpec.getPartitionDimensions(),
+          hadoopHashedPartitionsSpec.getPartitionDimensions(),
           ImmutableList.of()
       );
-
-      Assert.assertTrue("partitionsSpec", partitionsSpec instanceof HashedPartitionsSpec);
     }
   }
 
   @Test
   public void testHashedPartitionsSpecShardCount()
   {
-    final PartitionsSpec partitionsSpec;
-
-    try {
-      partitionsSpec = jsonReadWriteRead(
-          "{"
-          + "   \"type\":\"hashed\","
-          + "   \"numShards\":2"
-          + "}",
-          PartitionsSpec.class
-      );
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+    final PartitionsSpec partitionsSpec = jsonReadWriteRead(
+        "{"
+        + "   \"type\":\"hashed\","
+        + "   \"numShards\":2"
+        + "}",
+        PartitionsSpec.class
+    );
+    Assert.assertTrue("partitionsSpec", partitionsSpec instanceof HashedPartitionsSpec);
+    final HashedPartitionsSpec hadoopHashedPartitionsSpec = (HashedPartitionsSpec) partitionsSpec;
 
     Assert.assertEquals(
         "isDeterminingPartitions",
-        partitionsSpec.isDeterminingPartitions(),
+        hadoopHashedPartitionsSpec.needsDeterminePartitions(true),
         false
     );
 
-    Assert.assertEquals(
+    Assert.assertNull(
         "getTargetPartitionSize",
-        partitionsSpec.getTargetPartitionSize(),
-        -1
-    );
-
-    Assert.assertEquals(
-        "getMaxPartitionSize",
-        partitionsSpec.getMaxPartitionSize(),
-        -1
+        hadoopHashedPartitionsSpec.getMaxRowsPerSegment()
     );
 
     Assert.assertEquals(
         "shardCount",
-        partitionsSpec.getNumShards(),
+        hadoopHashedPartitionsSpec.getNumShards().intValue(),
         2
     );
 
     Assert.assertEquals(
         "getPartitionDimensions",
-        partitionsSpec.getPartitionDimensions(),
+        hadoopHashedPartitionsSpec.getPartitionDimensions(),
         ImmutableList.of()
     );
 
-    Assert.assertTrue("partitionsSpec", partitionsSpec instanceof HashedPartitionsSpec);
   }
   
   private <T> T jsonReadWriteRead(String s, Class<T> klass)
   {
     try {
-      return jsonMapper.readValue(jsonMapper.writeValueAsBytes(jsonMapper.readValue(s, klass)), klass);
+      return JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsBytes(JSON_MAPPER.readValue(s, klass)), klass);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
