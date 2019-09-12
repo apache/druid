@@ -50,7 +50,6 @@ import {
   Loader,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
-import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
 import {
@@ -507,7 +506,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         {step === 'loading' && this.renderLoading()}
 
         {this.renderResetConfirm()}
-        {this.renderViewValueModal()}
       </div>
     );
   }
@@ -648,15 +646,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
         </div>
       </>
-    );
-  }
-
-  renderViewValueModal(): JSX.Element | undefined {
-    const { showViewValueModal, str } = this.state;
-    if (!showViewValueModal) return;
-
-    return (
-      <ShowValueDialog onClose={() => this.setState({ showViewValueModal: false })} str={str} />
     );
   }
 
