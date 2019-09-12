@@ -414,11 +414,11 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
         HttpMethod.GET,
         StringUtils.format("/druid-ext/basic-security/authorization/db/%s/cachedSerializedGroupMappingMap", prefix)
     );
-    BytesFullResponseHolder responseHolder = (BytesFullResponseHolder) druidLeaderClient.go(
+    BytesFullResponseHolder responseHolder = druidLeaderClient.go(
         req,
         new BytesFullResponseHandler()
     );
-    byte[] groupRoleMapBytes = responseHolder.getBytes();
+    byte[] groupRoleMapBytes = responseHolder.getContent();
 
     GroupMappingAndRoleMap groupMappingAndRoleMap = objectMapper.readValue(
         groupRoleMapBytes,
