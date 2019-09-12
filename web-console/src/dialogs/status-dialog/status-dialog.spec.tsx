@@ -19,14 +19,12 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { SpecDialog } from '..';
+import { StatusDialog } from './status-dialog';
 
-describe('table action dialog', () => {
+describe('status dialog', () => {
   it('matches snapshot', () => {
-    const tableActionDialog = (
-      <SpecDialog onClose={() => null} title={'spec-dialog'} onSubmit={() => null} />
-    );
-    render(tableActionDialog);
+    const statusDialog = <StatusDialog onClose={() => {}} />;
+    render(statusDialog);
     expect(document.body.lastChild).toMatchSnapshot();
   });
 });

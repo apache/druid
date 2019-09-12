@@ -29,6 +29,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.TaskLock;
@@ -47,6 +48,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
@@ -55,9 +58,11 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.utils.CompressionUtils;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -73,6 +78,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -95,7 +101,8 @@ public class PartialSegmentMergeTask extends AbstractBatchIndexTask
   private final PartialSegmentMergeIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
   private final IndexingServiceClient indexingServiceClient;
-  private final IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory;
+  private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory;
+  private final HttpClient shuffleClient;
 
   @JsonCreator
   public PartialSegmentMergeTask(
@@ -108,7 +115,8 @@ public class PartialSegmentMergeTask extends AbstractBatchIndexTask
       @JsonProperty("spec") final PartialSegmentMergeIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context,
       @JacksonInject IndexingServiceClient indexingServiceClient,
-      @JacksonInject IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory
+      @JacksonInject IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
+      @JacksonInject @EscalatedClient HttpClient shuffleClient
   )
   {
     super(
@@ -138,6 +146,7 @@ public class PartialSegmentMergeTask extends AbstractBatchIndexTask
     this.supervisorTaskId = supervisorTaskId;
     this.indexingServiceClient = indexingServiceClient;
     this.taskClientFactory = taskClientFactory;
+    this.shuffleClient = shuffleClient;
   }
 
   @JsonProperty
@@ -233,8 +242,6 @@ public class PartialSegmentMergeTask extends AbstractBatchIndexTask
       }
     });
 
-    LOG.info("locks: [%s]", locks);
-
     final Stopwatch fetchStopwatch = Stopwatch.createStarted();
     final Map<Interval, Int2ObjectMap<List<File>>> intervalToUnzippedFiles = fetchSegmentFiles(
         toolbox,
@@ -244,7 +251,7 @@ public class PartialSegmentMergeTask extends AbstractBatchIndexTask
     fetchStopwatch.stop();
     LOG.info("Fetch took [%s] seconds", fetchTime);
 
-    final ParallelIndexTaskClient taskClient = taskClientFactory.build(
+    final ParallelIndexSupervisorTaskClient taskClient = taskClientFactory.build(
         new ClientBasedTaskInfoProvider(indexingServiceClient),
         getId(),
         1, // always use a single http thread
@@ -323,7 +330,15 @@ public class PartialSegmentMergeTask extends AbstractBatchIndexTask
     final URI uri = location.toIntermediaryDataServerURI(supervisorTaskId);
     org.apache.druid.java.util.common.FileUtils.copyLarge(
         uri,
-        u -> u.toURL().openStream(),
+        u -> {
+          try {
+            return shuffleClient.go(new Request(HttpMethod.GET, u.toURL()), new BytesAccumulatingResponseHandler())
+                                .get();
+          }
+          catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+          }
+        },
         zippedFile,
         buffer,
         t -> t instanceof IOException,

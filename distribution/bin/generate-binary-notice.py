@@ -51,13 +51,12 @@ def print_notice(dependency):
                 print_outfile("{} {}-{}.jar {}".format(dependencyHeaderLine, jar, dependency['version'], dependencyHeaderLine))
                 print_outfile("{}\n\n\n\n".format(notice))
 
-
 def generate_notice(source_notice, dependences_yaml):
     print_log_to_stderr("=== Generating the contents of NOTICE.BINARY file ===\n")
 
     # Print Apache license first.
     print_outfile(source_notice)
-    with open(dependences_yaml) as registry_file:
+    with open(dependences_yaml, encoding='utf-8') as registry_file:
         dependencies = list(yaml.load_all(registry_file))
 
     # Group dependencies by module
@@ -81,11 +80,11 @@ if __name__ == "__main__":
         parser.add_argument('out_path', metavar='<path to output file>', type=str)
         args = parser.parse_args()
 
-        with open(args.notice) as apache_notice_file:
+        with open(args.notice, encoding="ascii") as apache_notice_file:
             source_notice = apache_notice_file.read()
         dependencies_yaml = args.license_yaml
 
-        with open(args.out_path, "w") as outfile:
+        with open(args.out_path, "w", encoding="utf-8") as outfile:
             generate_notice(source_notice, dependencies_yaml)
 
     except KeyboardInterrupt:

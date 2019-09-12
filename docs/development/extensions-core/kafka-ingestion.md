@@ -28,15 +28,16 @@ The Kafka indexing service enables the configuration of *supervisors* on the Ove
 Kafka by managing the creation and lifetime of Kafka indexing tasks. These indexing tasks read events using Kafka's own
 partition and offset mechanism and are therefore able to provide guarantees of exactly-once ingestion. They are also
 able to read non-recent events from Kafka and are not subject to the window period considerations imposed on other
-ingestion mechanisms using Tranquility. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
-and ensure that the scalability and replication requirements are maintained.
+ingestion mechanisms using Tranquility. The supervisor oversees the state of the indexing tasks to coordinate handoffs,
+manage failures, and ensure that the scalability and replication requirements are maintained.
 
 This service is provided in the `druid-kafka-indexing-service` core Apache Druid (incubating) extension (see
 [Including Extensions](../../development/extensions.md#loading-extensions)).
 
-> The Kafka indexing service uses the Java consumer that was introduced in Kafka 0.10.x. As there were protocol changes
-> made in this version, Kafka 0.10.x consumers might not be compatible with older brokers. Ensure that your Kafka brokers are
-> version 0.10.x or better before using this functionality. Refer [Kafka upgrade guide](https://kafka.apache.org/documentation/#upgrade) if you are using older version of Kafka brokers.
+> The Kafka indexing service supports transactional topics which were introduced in Kafka 0.11.x. These changes make the
+> Kafka consumer that Druid uses incompatible with older brokers. Ensure that your Kafka brokers are version 0.11.x or
+> better before using this functionality. Refer [Kafka upgrade guide](https://kafka.apache.org/documentation/#upgrade)
+> if you are using older version of Kafka brokers.
 
 ## Tutorial
 

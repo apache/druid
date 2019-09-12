@@ -22,6 +22,7 @@ package org.apache.druid.segment.indexing;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -52,6 +53,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 
 public class DataSchemaTest
@@ -286,7 +288,7 @@ public class DataSchemaTest
     // Jackson creates a default type parser (StringInputRowParser) for an invalid type.
     schema.getParser();
   }
-  
+
   @Test
   public void testEmptyDatasource()
   {
@@ -323,6 +325,42 @@ public class DataSchemaTest
         jsonMapper
     );
   }
+
+
+  @Test
+  public void testInvalidWhitespaceDatasource()
+  {
+    Map<String, String> invalidCharToDataSourceName = ImmutableMap.of(
+        "\\t", "\tab\t",
+        "\\r", "\rcarriage\return\r",
+        "\\n", "\nnew\nline\n"
+    );
+
+    for (Map.Entry<String, String> entry : invalidCharToDataSourceName.entrySet()) {
+      testInvalidWhitespaceDatasourceHelper(entry.getValue(), entry.getKey());
+    }
+  }
+
+  private void testInvalidWhitespaceDatasourceHelper(String dataSource, String invalidChar)
+  {
+    String testFailMsg = "dataSource contain invalid whitespace character: " + invalidChar;
+    try {
+      DataSchema schema = new DataSchema(
+          dataSource,
+          Collections.emptyMap(),
+          null,
+          null,
+          null,
+          jsonMapper
+      );
+      Assert.fail(testFailMsg);
+    }
+    catch (IllegalArgumentException errorMsg) {
+      String expectedMsg = "dataSource cannot contain whitespace character except space.";
+      Assert.assertEquals(testFailMsg, expectedMsg, errorMsg.getMessage());
+    }
+  }
+
 
   @Test
   public void testSerde() throws Exception

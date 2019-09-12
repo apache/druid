@@ -19,18 +19,14 @@
 
 package org.apache.druid.query.groupby;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.jackson.DefaultObjectMapper;
 
 @LazySingleton
 public class DefaultGroupByQueryMetricsFactory implements GroupByQueryMetricsFactory
 {
   private static final GroupByQueryMetricsFactory INSTANCE =
-      new DefaultGroupByQueryMetricsFactory(new DefaultObjectMapper());
+      new DefaultGroupByQueryMetricsFactory();
 
   /**
    * Should be used only in tests, directly or indirectly (via {@link
@@ -42,17 +38,9 @@ public class DefaultGroupByQueryMetricsFactory implements GroupByQueryMetricsFac
     return INSTANCE;
   }
 
-  private final ObjectMapper jsonMapper;
-
-  @Inject
-  public DefaultGroupByQueryMetricsFactory(@Json ObjectMapper jsonMapper)
-  {
-    this.jsonMapper = jsonMapper;
-  }
-
   @Override
   public GroupByQueryMetrics makeMetrics()
   {
-    return new DefaultGroupByQueryMetrics(jsonMapper);
+    return new DefaultGroupByQueryMetrics();
   }
 }
