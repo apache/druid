@@ -2872,6 +2872,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     try {
       const resp = await axios.get(`/druid/indexer/v1/supervisor/${initSupervisorId}`);
       this.updateSpec(resp.data);
+      this.setState({ continueToSpec: true });
       this.updateStep('spec');
     } catch (e) {
       AppToaster.show({
@@ -2887,6 +2888,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     try {
       const resp = await axios.get(`/druid/indexer/v1/task/${initTaskId}`);
       this.updateSpec(resp.data.payload);
+      this.setState({ continueToSpec: true });
       this.updateStep('spec');
     } catch (e) {
       AppToaster.show({
