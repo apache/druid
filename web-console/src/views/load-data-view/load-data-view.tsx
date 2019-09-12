@@ -2649,6 +2649,25 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             model={tuningConfig}
             onChange={t => this.updateSpec(deepSet(spec, 'tuningConfig', t))}
           />
+          <AutoForm
+            fields={[
+              {
+                name: 'dataSchema.granularitySpec.intervals',
+                label: 'Time intervals',
+                type: 'string-array',
+                placeholder: 'ex: 2018-01-01/2018-06-01',
+                required: s => Boolean(deepGet(s, 'tuningConfig.forceGuaranteedRollup')),
+                info: (
+                  <>
+                    A comma separated list of intervals for the raw data being ingested. Ignored for
+                    real-time ingestion.
+                  </>
+                ),
+              },
+            ]}
+            model={spec}
+            onChange={s => this.updateSpec(s)}
+          />
         </div>
         <div className="control">
           <Callout className="intro">
@@ -2658,7 +2677,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderParallelPickerIfNeeded()}
         </div>
         {this.renderNextBar({
-          disabled: invalidTuningConfig(tuningConfig),
+          disabled: invalidTuningConfig(tuningConfig, granularitySpec.intervals),
         })}
       </>
     );
