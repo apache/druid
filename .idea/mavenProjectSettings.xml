@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="MavenProjectSettings">
+    <option name="testRunningSettings">
+      <MavenTestRunningSettings>
+        <option name="passArgLine" value="false" />
+      </MavenTestRunningSettings>
+    </option>
+  </component>
+</project>
