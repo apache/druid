@@ -765,3 +765,22 @@ The endpoint for submitting queries. Accepts an option `?pretty` that pretty pri
 
 Returns segment information lists including server locations for the given query..
 
+### Router
+
+#### GET
+
+* `/druid/v2/datasources`
+
+Returns a list of queryable datasources.
+
+* `/druid/v2/datasources/{dataSourceName}`
+
+Returns the dimensions and metrics of the datasource.
+
+* `/druid/v2/datasources/{dataSourceName}/dimensions`
+
+Returns the dimensions of the datasource.
+
+* `/druid/v2/datasources/{dataSourceName}/metrics`
+
+Returns the metrics of the datasource.
