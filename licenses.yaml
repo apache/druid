@@ -3059,7 +3059,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 2.1.0
+version: 2.2.1
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
