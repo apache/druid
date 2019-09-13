@@ -40,7 +40,9 @@ Below is a description of the high-level features and functionality of the Druid
 
 ## Home
 
-The home view provides a high level overview of the cluster. Each card is clickable and links to the appropriate view. The legacy menu allows you to go to the [legacy coordinator and overlord consoles](./management-uis.html#legacy-consoles) should you need them.
+The home view provides a high level overview of the cluster.
+Each card is clickable and links to the appropriate view.
+The legacy menu allows you to go to the [legacy coordinator and overlord consoles](./management-uis.html#legacy-consoles) should you need them.
 
 ![home-view](../assets/web-console-01-home-view.png)
 
@@ -50,7 +52,7 @@ The data loader view allows you to load data by building an ingestion spec with 
 
 ![data-loader-1](../assets/web-console-02-data-loader-1.png)
 
-After picking the source of your data just follow the series for steps that will show you incremental previews of the data as it will be ingested.
+After selecting the location of your data just follow the series for steps that will show you incremental previews of the data as it will be ingested.
 After filling in the required details on every step you can navigate to the next step by clicking the `Next` button.
 You can also freely navigate between the steps from the top navigation.
 
@@ -60,8 +62,10 @@ Navigating with the top navigation will leave the underlying spec unmodified whi
 
 ## Datasources
 
-The datasources view shows all the currently enabled datasources. From this view you can see the sizes and availability of the different datasources. You can edit the retention rules and drop data (as well as issue kill tasks).
-Like any view that is powered by a DruidSQL query you can click “Go to SQL” to run the underlying SQL query directly.
+The datasources view shows all the currently enabled datasources.
+From this view you can see the sizes and availability of the different datasources.
+You can edit the retention rules, configure automatic compaction, and drop data.
+Like any view that is powered by a DruidSQL query you can click `View SQL query for table` from the `...` menu to run the underlying SQL query directly.
 
 ![datasources](../assets/web-console-04-datasources.png)
 
@@ -71,20 +75,23 @@ You can view and edit retention rules to determine the general availability of a
 
 ## Segments
 
-The segment view shows every single segment in the cluster. Each segment can be expanded to provide more information. The Segment ID is also conveniently broken down into Datasource, Start, End, Version, and Partition columns for ease of filtering and sorting.
+The segment view shows all the segments in the cluster.
+Each segment can be has a detail view that provides more information.
+The Segment ID is also conveniently broken down into Datasource, Start, End, Version, and Partition columns for ease of filtering and sorting.
 
 ![segments](../assets/web-console-06-segments.png)
 
 ## Tasks and supervisors
 
-The task view is also the home of supervisors. From this view you can check the status of existing supervisors as well as suspend and resume them. You can also submit new supervisors by entering their JSON spec.
+From this view you can check the status of existing supervisors as well as suspend, resume, and reset them.
+The tasks table allows you see the currently running and recently completed tasks.
+To make managing a lot of tasks more accessible, you can group the tasks by their `Type`, `Datasource`, or `Status` to make navigation easier.
 
 ![supervisors](../assets/web-console-07-supervisors.png)
 
-The tasks table allows you see the currently running and recently completed tasks. From this table you can monitor individual tasks and also submit new tasks by entering their JSON spec.
-To make managing a lot of tasks more accessible, you can group the tasks by their type, datasource, or status to make navigation easier.
+Click on the magnifying glass for any supervisor to see detailed reports of its progress.
 
-![tasks](../assets/web-console-08-tasks.png)
+![supervisor-status](../assets/web-console-08-supervisor-status.png)
 
 Click on the magnifying glass for any task to see more detail about it.
 
@@ -92,13 +99,15 @@ Click on the magnifying glass for any task to see more detail about it.
 
 ## Servers
 
-The data servers tab lets you see the current status of the historical nodes and MiddleManager (indexer) processes. Note that currently only historical nodes that are actively serving segments will be shown in this view.
+The servers tab lets you see the current status of the nodes making up your cluster.
+You can group the nodes by type or by tier to get meaningful summary statistics. 
 
 ![servers](../assets/web-console-10-servers.png)
 
 ## Query
 
-The query view lets you issue [DruidSQL](../querying/sql.md) queries and display the results as a simple table.
+The query view lets you issue [DruidSQL](../querying/sql.md) queries and display the results as a table.
+The view will attempt to infer your query and let you modify via contextual actions such as adding filters and changing the sort order when possible.
 
 ![query-sql](../assets/web-console-11-query-sql.png)
 
