@@ -55,7 +55,6 @@
                 <exclude>web-console/node/**</exclude>
                 <exclude>web-console/resources/**</exclude>
                 <exclude>web-console/public/**</exclude>
-                <exclude>web-console/assets/**</exclude>
                 <exclude>web-console/lib/*.css</exclude>
                 <exclude>web-console/coordinator-console/**</exclude>
                 <exclude>web-console/pages/**</exclude>

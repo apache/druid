@@ -308,10 +308,14 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     // even though they are stored just once. It may overestimate the size by a bit, but we wanted to leave
     // more buffer to be safe
     long estimatedSize = key.length * Integer.BYTES;
-    estimatedSize += Arrays.stream(key)
-                           .filter(element -> dimLookup.getValue(element) != null)
-                           .mapToLong(element -> dimLookup.getValue(element).length() * Character.BYTES)
-                           .sum();
+    long totalChars = 0;
+    for (int element : key) {
+      String val = dimLookup.getValue(element);
+      if (val != null) {
+        totalChars += val.length();
+      }
+    }
+    estimatedSize += totalChars * Character.BYTES;
     return estimatedSize;
   }
 

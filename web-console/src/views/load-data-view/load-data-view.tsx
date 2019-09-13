@@ -29,6 +29,7 @@ import {
   H5,
   HTMLSelect,
   Icon,
+  IconName,
   Intent,
   Popover,
   Switch,
@@ -49,7 +50,6 @@ import {
   Loader,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
-import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
 import {
@@ -71,7 +71,7 @@ import {
   DruidFilter,
   EMPTY_ARRAY,
   EMPTY_OBJECT,
-  fillDataSourceName,
+  fillDataSourceNameIfNeeded,
   fillParser,
   FlattenField,
   getDimensionMode,
@@ -101,6 +101,7 @@ import {
   IoConfig,
   isColumnTimestampSpec,
   isEmptyIngestionSpec,
+  isIngestSegment,
   isParallel,
   issueWithIoConfig,
   issueWithParser,
@@ -132,10 +133,12 @@ import {
   sampleForTimestamp,
   sampleForTransform,
   SampleResponse,
+  SampleResponseWithExtraInfo,
   SampleStrategy,
 } from '../../utils/sampler';
 import { computeFlattenPathsForData } from '../../utils/spec-utils';
 
+import { ExamplePicker } from './example-picker/example-picker';
 import { FilterTable } from './filter-table/filter-table';
 import { ParseDataTable } from './parse-data-table/parse-data-table';
 import { ParseTimeTable } from './parse-time-table/parse-time-table';
@@ -247,8 +250,6 @@ export interface LoadDataViewState {
   showResetConfirm: boolean;
   newRollup?: boolean;
   newDimensionMode?: DimensionMode;
-  showViewValueModal: boolean;
-  str: string;
 
   // welcome
   overlordModules?: string[];
@@ -261,7 +262,7 @@ export interface LoadDataViewState {
   specialColumnsOnly: boolean;
 
   // for ioConfig
-  inputQueryState: QueryState<SampleEntry[]>;
+  inputQueryState: QueryState<SampleResponseWithExtraInfo>;
 
   // for parser
   parserQueryState: QueryState<HeaderAndRows>;
@@ -313,8 +314,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       // dialogs / modals
       showResetConfirm: false,
-      showViewValueModal: false,
-      str: '',
 
       // general
       sampleStrategy: 'start',
@@ -449,32 +448,36 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSON.stringify(newSpec));
   };
 
+  renderActionCard(icon: IconName, title: string, caption: string, onClick: () => void) {
+    return (
+      <Card className={'spec-card'} interactive onClick={onClick}>
+        <Icon className="spec-card-icon" icon={icon} iconSize={30} />
+        <div className={'spec-card-header'}>
+          {title}
+          <div className={'spec-card-caption'}>{caption}</div>
+        </div>
+      </Card>
+    );
+  }
+
   render(): JSX.Element {
     const { step, continueToSpec } = this.state;
+
     if (!continueToSpec) {
       return (
         <div className={classNames('load-data-continue-view load-data-view')}>
-          <Card className={'spec-card'} interactive onClick={this.handleResetSpec}>
-            <Icon className="spec-card-icon" icon={IconNames.ASTERISK} iconSize={30} />
-            <div className={'spec-card-header'}>
-              Start a new spec
-              <div className={'spec-card-caption'}>Start a new ingestion flow</div>
-            </div>
-          </Card>
-          <Card
-            className={'spec-card'}
-            interactive
-            onClick={() => this.setState({ continueToSpec: true })}
-          >
-            <Icon className="spec-card-icon" icon={IconNames.REPEAT} iconSize={30} />
-            <div className={'spec-card-header'}>
-              Continue from previous spec
-              <div className={'spec-card-caption'}>
-                Continue from most recent spec you were working on
-              </div>
-            </div>
-          </Card>
-          {this.renderResetConfirm()}
+          {this.renderActionCard(
+            IconNames.ASTERISK,
+            'Start a new spec',
+            'Begin a new ingestion flow',
+            this.handleResetSpec,
+          )}
+          {this.renderActionCard(
+            IconNames.REPEAT,
+            'Continue from previous spec',
+            'Go back to the most recent spec you were working on',
+            this.handleContinueSpec,
+          )}
         </div>
       );
     }
@@ -499,7 +502,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         {step === 'loading' && this.renderLoading()}
 
         {this.renderResetConfirm()}
-        {this.renderViewValueModal()}
       </div>
     );
   }
@@ -586,9 +588,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     });
   }
 
-  renderIngestionCard(comboType: IngestionComboTypeWithExtra, disabled?: boolean) {
+  renderIngestionCard(
+    comboType: IngestionComboTypeWithExtra,
+    disabled?: boolean,
+  ): JSX.Element | undefined {
     const { overlordModules, selectedComboType } = this.state;
-    if (!overlordModules) return null;
+    if (!overlordModules) return;
     const requiredModule = getRequiredModule(comboType);
     const goodToGo = !disabled && (!requiredModule || overlordModules.includes(requiredModule));
 
@@ -613,6 +618,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec, exampleManifests } = this.state;
     const noExamples = Boolean(!exampleManifests || !exampleManifests.length);
 
+    const welcomeMessage = this.renderWelcomeStepMessage();
     return (
       <>
         <div className="main bp3-input">
@@ -629,7 +635,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderIngestionCard('other')}
         </div>
         <div className="control">
-          <Callout className="intro">{this.renderWelcomeStepMessage()}</Callout>
+          {welcomeMessage && <Callout className="intro">{welcomeMessage}</Callout>}
           {this.renderWelcomeStepControls()}
           {!isEmptyIngestionSpec(spec) && (
             <Button icon={IconNames.RESET} text="Reset spec" onClick={this.handleResetConfirm} />
@@ -639,15 +645,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  renderViewValueModal() {
-    const { showViewValueModal, str } = this.state;
-    if (!showViewValueModal) return null;
-    return (
-      <ShowValueDialog onClose={() => this.setState({ showViewValueModal: false })} str={str} />
-    );
-  }
-
-  renderWelcomeStepMessage() {
+  renderWelcomeStepMessage(): JSX.Element | undefined {
     const { selectedComboType, exampleManifests } = this.state;
 
     if (!selectedComboType) {
@@ -735,9 +733,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       case 'example':
         if (exampleManifests && exampleManifests.length) {
-          return <p>Pick one of these examples to get you started.</p>;
+          return; // Yield to example picker controls
         } else {
-          return <p>Could not load example.</p>;
+          return <p>Could not load examples.</p>;
         }
 
       case 'other':
@@ -756,12 +754,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
   }
 
-  renderWelcomeStepControls() {
+  renderWelcomeStepControls(): JSX.Element | undefined {
     const { goToTask } = this.props;
     const { spec, selectedComboType, exampleManifests } = this.state;
 
     const issue = this.selectedIngestionTypeIssue();
-    if (issue) return null;
+    if (issue) return;
 
     switch (selectedComboType) {
       case 'index:http':
@@ -801,27 +799,17 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         );
 
       case 'example':
+        if (!exampleManifests) return;
         return (
-          <>
-            {exampleManifests &&
-              exampleManifests.map((exampleManifest, i) => (
-                <FormGroup key={i}>
-                  <Button
-                    text={exampleManifest.name}
-                    rightIcon={IconNames.ARROW_RIGHT}
-                    intent={Intent.PRIMARY}
-                    title={exampleManifest.description}
-                    fill
-                    onClick={() => {
-                      this.updateSpec(exampleManifest.spec);
-                      setTimeout(() => {
-                        this.updateStep('connect');
-                      }, 10);
-                    }}
-                  />
-                </FormGroup>
-              ))}
-          </>
+          <ExamplePicker
+            exampleManifests={exampleManifests}
+            onSelectExample={exampleManifest => {
+              this.updateSpec(exampleManifest.spec);
+              setTimeout(() => {
+                this.updateStep('connect');
+              }, 10);
+            }}
+          />
         );
 
       case 'other':
@@ -847,23 +835,36 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         );
 
       default:
-        return null;
+        return;
     }
   }
 
-  selectedIngestionTypeIssue(): JSX.Element | null {
+  selectedIngestionTypeIssue(): JSX.Element | undefined {
     const { selectedComboType, overlordModules } = this.state;
-    if (!selectedComboType || !overlordModules) return null;
+    if (!selectedComboType || !overlordModules) return;
 
     const requiredModule = getRequiredModule(selectedComboType);
-    if (!requiredModule || overlordModules.includes(requiredModule)) return null;
+    if (!requiredModule || overlordModules.includes(requiredModule)) return;
 
     return (
-      <p>
-        {`${getIngestionTitle(selectedComboType)} ingestion requires the `}
-        <strong>{requiredModule}</strong>
-        {` extension to be loaded.`}
-      </p>
+      <>
+        <p>
+          {`${getIngestionTitle(selectedComboType)} ingestion requires the `}
+          <strong>{requiredModule}</strong>
+          {` extension to be loaded.`}
+        </p>
+        <p>
+          Please make sure that the
+          <Code>"{requiredModule}"</Code> extension is included in the <Code>loadList</Code>.
+        </p>
+        <p>
+          For more information please refer to the{' '}
+          <ExternalLink href="https://druid.apache.org/docs/latest/operations/including-extensions">
+            documentation on loading extensions
+          </ExternalLink>
+          .
+        </p>
+      </>
     );
   }
 
@@ -872,13 +873,18 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   };
 
   private handleResetSpec = () => {
-    this.setState({ showResetConfirm: false, step: 'welcome', continueToSpec: true });
+    this.setState({ showResetConfirm: false, continueToSpec: true });
     this.updateSpec({} as any);
+    this.updateStep('welcome');
   };
 
-  renderResetConfirm() {
+  private handleContinueSpec = () => {
+    this.setState({ continueToSpec: true });
+  };
+
+  renderResetConfirm(): JSX.Element | undefined {
     const { showResetConfirm } = this.state;
-    if (!showResetConfirm) return null;
+    if (!showResetConfirm) return;
 
     return (
       <Alert
@@ -929,7 +935,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     this.setState({
       cacheKey: sampleResponse.cacheKey,
-      inputQueryState: new QueryState({ data: sampleResponse.data }),
+      inputQueryState: new QueryState({ data: sampleResponse }),
     });
   }
 
@@ -965,7 +971,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     } else if (inputQueryState.error) {
       mainFill = <CenterMessage>{`Error: ${inputQueryState.error}`}</CenterMessage>;
     } else if (inputQueryState.data) {
-      const inputData = inputQueryState.data;
+      const inputData = inputQueryState.data.data;
       mainFill = (
         <TextArea
           className="raw-lines"
@@ -1054,9 +1060,61 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           disabled: !inputQueryState.data,
           onNextStep: () => {
             if (!inputQueryState.data) return;
-            this.updateSpec(
-              fillDataSourceName(fillParser(spec, inputQueryState.data.map(l => l.raw))),
-            );
+            const inputData = inputQueryState.data;
+
+            if (isIngestSegment(spec)) {
+              let newSpec = fillParser(spec, []);
+
+              if (typeof inputData.rollup === 'boolean') {
+                newSpec = deepSet(newSpec, 'dataSchema.granularitySpec.rollup', inputData.rollup);
+              }
+
+              if (inputData.timestampSpec) {
+                newSpec = deepSet(
+                  newSpec,
+                  'dataSchema.parser.parseSpec.timestampSpec',
+                  inputData.timestampSpec,
+                );
+              }
+
+              if (inputData.queryGranularity) {
+                newSpec = deepSet(
+                  newSpec,
+                  'dataSchema.granularitySpec.queryGranularity',
+                  inputData.queryGranularity,
+                );
+              }
+
+              if (inputData.columns) {
+                const aggregators = inputData.aggregators || {};
+                newSpec = deepSet(
+                  newSpec,
+                  'dataSchema.parser.parseSpec.dimensionsSpec.dimensions',
+                  Object.keys(inputData.columns)
+                    .filter(k => k !== '__time' && !aggregators[k])
+                    .map(k => ({
+                      name: k,
+                      type: String(inputData.columns![k].type || 'string').toLowerCase(),
+                    })),
+                );
+              }
+
+              if (inputData.aggregators) {
+                newSpec = deepSet(
+                  newSpec,
+                  'dataSchema.metricsSpec',
+                  Object.values(inputData.aggregators),
+                );
+              }
+
+              this.updateSpec(fillDataSourceNameIfNeeded(newSpec));
+            } else {
+              this.updateSpec(
+                fillDataSourceNameIfNeeded(
+                  fillParser(spec, inputQueryState.data.data.map(l => l.raw)),
+                ),
+              );
+            }
           },
         })}
       </>
@@ -1152,7 +1210,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             )}
           </div>
           <ParseDataTable
-            openModal={str => this.setState({ showViewValueModal: true, str: str })}
             sampleData={parserQueryState.data}
             columnFilter={columnFilter}
             canFlatten={canFlatten}
@@ -1231,7 +1288,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           disabled: !parserQueryState.data,
           onNextStep: () => {
             if (!parserQueryState.data) return;
-            const possibleTimestampSpec = getTimestampSpec(parserQueryState.data);
+            let possibleTimestampSpec: TimestampSpec;
+            if (isIngestSegment(spec)) {
+              possibleTimestampSpec = {
+                column: '__time',
+                format: 'auto',
+              };
+            } else {
+              possibleTimestampSpec = getTimestampSpec(parserQueryState.data);
+            }
+
             if (possibleTimestampSpec) {
               const newSpec: IngestionSpec = deepSet(
                 spec,
@@ -1253,10 +1319,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     });
   };
 
-  renderFlattenControls() {
+  renderFlattenControls(): JSX.Element | undefined {
     const { spec, selectedFlattenField, selectedFlattenFieldIndex } = this.state;
     const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || EMPTY_OBJECT;
-    if (!parseSpecHasFlatten(parseSpec)) return null;
+    if (!parseSpecHasFlatten(parseSpec)) return;
 
     const close = () => {
       this.setState({
@@ -1640,9 +1706,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           disabled: !transformQueryState.data,
           onNextStep: () => {
             if (!transformQueryState.data) return;
-            this.updateSpec(
-              updateSchemaWithSample(spec, transformQueryState.data, 'specific', true),
-            );
+            if (!isIngestSegment(spec)) {
+              this.updateSpec(
+                updateSchemaWithSample(spec, transformQueryState.data, 'specific', true),
+              );
+            }
           },
         })}
       </>
@@ -2565,6 +2633,25 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             model={tuningConfig}
             onChange={t => this.updateSpec(deepSet(spec, 'tuningConfig', t))}
           />
+          <AutoForm
+            fields={[
+              {
+                name: 'dataSchema.granularitySpec.intervals',
+                label: 'Time intervals',
+                type: 'string-array',
+                placeholder: 'ex: 2018-01-01/2018-06-01',
+                required: s => Boolean(deepGet(s, 'tuningConfig.forceGuaranteedRollup')),
+                info: (
+                  <>
+                    A comma separated list of intervals for the raw data being ingested. Ignored for
+                    real-time ingestion.
+                  </>
+                ),
+              },
+            ]}
+            model={spec}
+            onChange={s => this.updateSpec(s)}
+          />
         </div>
         <div className="control">
           <Callout className="intro">
@@ -2574,7 +2661,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderParallelPickerIfNeeded()}
         </div>
         {this.renderNextBar({
-          disabled: invalidTuningConfig(tuningConfig),
+          disabled: invalidTuningConfig(tuningConfig, granularitySpec.intervals),
         })}
       </>
     );
@@ -2640,9 +2727,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  renderParallelPickerIfNeeded() {
+  renderParallelPickerIfNeeded(): JSX.Element | undefined {
     const { spec } = this.state;
-    if (!hasParallelAbility(spec)) return null;
+    if (!hasParallelAbility(spec)) return;
 
     return (
       <FormGroup>
@@ -2780,6 +2867,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     try {
       const resp = await axios.get(`/druid/indexer/v1/supervisor/${initSupervisorId}`);
       this.updateSpec(resp.data);
+      this.setState({ continueToSpec: true });
       this.updateStep('spec');
     } catch (e) {
       AppToaster.show({
@@ -2795,6 +2883,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     try {
       const resp = await axios.get(`/druid/indexer/v1/task/${initTaskId}`);
       this.updateSpec(resp.data.payload);
+      this.setState({ continueToSpec: true });
       this.updateStep('spec');
     } catch (e) {
       AppToaster.show({

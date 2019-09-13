@@ -171,8 +171,6 @@ export class RetentionDialog extends React.PureComponent<
       <SnitchDialog
         className="retention-dialog"
         saveDisabled={false}
-        canOutsideClickClose={false}
-        isOpen
         onClose={onCancel}
         title={`Edit retention rules: ${datasource}${
           datasource === '_default' ? ' (cluster defaults)' : ''

@@ -244,7 +244,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   }
 
   @Override
-  public boolean canSkipAggregate(boolean bucketWasUsed, int bucketOffset)
+  public boolean canSkipAggregate(int bucketOffset)
   {
     return false;
   }

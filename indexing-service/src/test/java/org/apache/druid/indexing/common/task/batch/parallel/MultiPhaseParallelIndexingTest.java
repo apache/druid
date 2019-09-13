@@ -22,10 +22,15 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -36,11 +41,27 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.ScanQueryConfig;
+import org.apache.druid.query.scan.ScanQueryEngine;
+import org.apache.druid.query.scan.ScanQueryQueryToolChest;
+import org.apache.druid.query.scan.ScanQueryRunnerFactory;
+import org.apache.druid.query.scan.ScanResultValue;
+import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -57,11 +78,14 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RunWith(Parameterized.class)
 public class MultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervisorTaskTest
@@ -91,18 +115,20 @@ public class MultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervi
   {
     inputDir = temporaryFolder.newFolder("data");
     // set up data
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 10; i++) {
       try (final Writer writer =
                Files.newBufferedWriter(new File(inputDir, "test_" + i).toPath(), StandardCharsets.UTF_8)) {
-        writer.write(StringUtils.format("2017-12-%d,%d th test file\n", 24 + i, i));
-        writer.write(StringUtils.format("2017-12-%d,%d th test file\n", 25 + i, i));
+        for (int j = 0; j < 10; j++) {
+          writer.write(StringUtils.format("2017-12-%d,%d,%d th test file\n", j + 1, i + 10, i));
+          writer.write(StringUtils.format("2017-12-%d,%d,%d th test file\n", j + 2, i + 11, i));
+        }
       }
     }
 
     for (int i = 0; i < 5; i++) {
       try (final Writer writer =
                Files.newBufferedWriter(new File(inputDir, "filtered_" + i).toPath(), StandardCharsets.UTF_8)) {
-        writer.write(StringUtils.format("2017-12-%d,%d th test file\n", 25 + i, i));
+        writer.write(StringUtils.format("2017-12-%d,%d,%d th test file\n", i + 1, i + 10, i));
       }
     }
 
@@ -121,18 +147,28 @@ public class MultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervi
   @Test
   public void testRun() throws Exception
   {
-    runTestTask(Intervals.of("2017/2018"), Granularities.DAY);
+    final Set<DataSegment> publishedSegments = runTestTask(
+        Intervals.of("2017/2018"),
+        new HashedPartitionsSpec(null, 2, ImmutableList.of("dim1", "dim2"))
+    );
+    assertHashedPartition(publishedSegments);
   }
 
   @Test
-  public void testMissingIntervals() throws Exception
+  public void testMissingIntervals()
   {
     expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage(
-        "forceGuaranteedRollup is set but numShards is missing in partitionsSpec "
-        + "or intervals is missing in granularitySpec"
+        "forceGuaranteedRollup is set but intervals is missing in granularitySpec"
     );
-    runTestTask(null, Granularities.DAY);
+    newTask(
+        null,
+        new ParallelIndexIOConfig(
+            new LocalFirehoseFactory(inputDir, "test_*", null),
+            false
+        ),
+        new HashedPartitionsSpec(null, 2, null)
+    );
   }
 
   @Test
@@ -140,8 +176,7 @@ public class MultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervi
   {
     expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage(
-        "forceGuaranteedRollup is set but numShards is missing in partitionsSpec "
-        + "or intervals is missing in granularitySpec"
+        "forceGuaranteedRollup is set but numShards is missing in partitionsSpec"
     );
     newTask(
         Intervals.of("2017/2018"),
@@ -177,15 +212,15 @@ public class MultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervi
     );
   }
 
-  private void runTestTask(Interval interval, Granularity segmentGranularity) throws Exception
+  private Set<DataSegment> runTestTask(Interval interval, HashedPartitionsSpec partitionsSpec) throws Exception
   {
     final ParallelIndexSupervisorTask task = newTask(
         interval,
-        segmentGranularity,
         new ParallelIndexIOConfig(
             new LocalFirehoseFactory(inputDir, "test_*", null),
             false
-        )
+        ),
+        partitionsSpec
     );
     actionClient = createActionClient(task);
     toolbox = createTaskToolbox(task);
@@ -195,17 +230,18 @@ public class MultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervi
     Assert.assertTrue(task.isReady(actionClient));
     Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
     shutdownTask(task);
+    return actionClient.getPublishedSegments();
   }
 
   private ParallelIndexSupervisorTask newTask(
       Interval interval,
-      Granularity segmentGranularity,
-      ParallelIndexIOConfig ioConfig
+      ParallelIndexIOConfig ioConfig,
+      HashedPartitionsSpec partitionsSpec
   )
   {
     return newTask(
         interval,
-        segmentGranularity,
+        Granularities.DAY,
         ioConfig,
         new ParallelIndexTuningConfig(
             null,
@@ -214,7 +250,7 @@ public class MultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervi
             null,
             null,
             null,
-            new HashedPartitionsSpec(null, 2, null),
+            partitionsSpec,
             null,
             null,
             null,
@@ -245,13 +281,30 @@ public class MultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervi
   )
   {
     // set up ingestion spec
+    final ParseSpec parseSpec = new CSVParseSpec(
+        new TimestampSpec(
+            "ts",
+            "auto",
+            null
+        ),
+        new DimensionsSpec(
+            DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim1", "dim2")),
+            new ArrayList<>(),
+            new ArrayList<>()
+        ),
+        null,
+        Arrays.asList("ts", "dim1", "dim2", "val"),
+        false,
+        0
+    );
+
     //noinspection unchecked
     final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
         new DataSchema(
             "dataSource",
             getObjectMapper().convertValue(
                 new StringInputRowParser(
-                    DEFAULT_PARSE_SPEC,
+                    parseSpec,
                     null
                 ),
                 Map.class
@@ -281,6 +334,60 @@ public class MultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervi
     );
   }
 
+  private void assertHashedPartition(Set<DataSegment> publishedSegments) throws IOException, SegmentLoadingException
+  {
+    final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
+    publishedSegments.forEach(
+        segment -> intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment)
+    );
+    final File tempSegmentDir = temporaryFolder.newFolder();
+    for (List<DataSegment> segmentsInInterval : intervalToSegments.values()) {
+      Assert.assertEquals(2, segmentsInInterval.size());
+      for (DataSegment segment : segmentsInInterval) {
+        final SegmentLoader loader = new SegmentLoaderFactory(getIndexIO(), getObjectMapper())
+            .manufacturate(tempSegmentDir);
+        ScanQueryRunnerFactory factory = new ScanQueryRunnerFactory(
+            new ScanQueryQueryToolChest(
+                new ScanQueryConfig().setLegacy(false),
+                DefaultGenericQueryMetricsFactory.instance()
+            ),
+            new ScanQueryEngine(),
+            new ScanQueryConfig()
+        );
+        final QueryRunner<ScanResultValue> runner = factory.createRunner(loader.getSegment(segment));
+        final List<ScanResultValue> results = runner.run(
+            QueryPlus.wrap(
+                new ScanQuery(
+                    new TableDataSource("dataSource"),
+                    new SpecificSegmentSpec(
+                        new SegmentDescriptor(
+                            segment.getInterval(),
+                            segment.getVersion(),
+                            segment.getShardSpec().getPartitionNum()
+                        )
+                    ),
+                    null,
+                    null,
+                    0,
+                    0,
+                    null,
+                    null,
+                    ImmutableList.of("dim1", "dim2"),
+                    false,
+                    null
+                )
+            )
+        ).toList();
+        final int hash = HashBasedNumberedShardSpec.hash(getObjectMapper(), (List<Object>) results.get(0).getEvents());
+        for (ScanResultValue value : results) {
+          Assert.assertEquals(
+              hash,
+              HashBasedNumberedShardSpec.hash(getObjectMapper(), (List<Object>) value.getEvents())
+          );
+        }
+      }
+    }
+  }
 
   private static class TestSupervisorTask extends TestParallelIndexSupervisorTask
   {
@@ -496,7 +603,7 @@ public class MultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervi
         PartialSegmentMergeIngestionSpec ingestionSchema,
         Map<String, Object> context,
         IndexingServiceClient indexingServiceClient,
-        IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory,
+        IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
         TaskToolbox toolboxo
     )
     {
@@ -509,7 +616,8 @@ public class MultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervi
           ingestionSchema,
           context,
           indexingServiceClient,
-          taskClientFactory
+          taskClientFactory,
+          null
       );
       this.toolbox = toolboxo;
     }
