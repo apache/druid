@@ -58,7 +58,7 @@ Some committers and users are present in the channel `#druid` on the Apache Slac
 
 Please note that JDK 8 is required to build Druid.
 
-For instructions on building Druid from source, see [docs/content/development/build.md](docs/content/development/build.md)
+For instructions on building Druid from source, see [docs/development/build.md](docs/development/build.md)
 
 ### Contributing
 
