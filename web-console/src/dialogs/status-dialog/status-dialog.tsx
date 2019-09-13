@@ -19,7 +19,7 @@
 import { Button, Classes, Dialog, FormGroup, InputGroup, Intent } from '@blueprintjs/core';
 import axios from 'axios';
 import React from 'react';
-import ReactTable from 'react-table';
+import ReactTable, { Filter } from 'react-table';
 
 import { Loader } from '../../components/loader/loader';
 import { UrlBaser } from '../../singletons/url-baser';
@@ -37,6 +37,10 @@ interface StatusDialogState {
 }
 
 export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusDialogState> {
+  static anywhereMatcher(filter: Filter, row: any) {
+    return String(row[filter.id]).includes(filter.value);
+  }
+
   private showStatusQueryManager: QueryManager<null, any>;
   constructor(props: StatusDialogProps, context: any) {
     super(props, context);
@@ -97,9 +101,7 @@ export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusD
             ]}
             loading={loading}
             filterable
-            defaultFilterMethod={(filter, row) => {
-              return String(row[filter.id]).includes(filter.value);
-            }}
+            defaultFilterMethod={StatusDialog.anywhereMatcher}
           />
         </div>
         <div className={Classes.DIALOG_FOOTER}>
