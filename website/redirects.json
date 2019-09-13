@@ -197,3 +197,4 @@
 {"source": "tutorials/tutorial-loading-streaming-data.html", "target": "tutorial-kafka.html"}
 {"source": "tutorials/tutorial-the-druid-cluster.html", "target": "cluster.html"}
 {"source": "tutorials/tutorial-tranquility.md", "target": "../ingestion/tranquility.html"}
+{"source": "development/extensions-contrib/google.html", "target": "../extensions-core/google.html"}

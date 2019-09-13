@@ -244,15 +244,21 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
   private renderStringArrayInput(field: Field<T>): JSX.Element {
     const { model, large } = this.props;
+    const modelValue = deepGet(model as any, field.name);
     return (
       <ArrayInput
-        values={deepGet(model as any, field.name) || []}
+        values={modelValue || []}
         onChange={(v: any) => {
           this.fieldChange(field, v);
         }}
         placeholder={field.placeholder}
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model)}
+        intent={
+          AutoForm.evaluateFunctor(field.required, model) && modelValue == null
+            ? Intent.PRIMARY
+            : undefined
+        }
       />
     );
   }

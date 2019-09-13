@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
-import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
@@ -55,12 +54,21 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   }
 
   @Override
-  protected BaseLongColumnValueSelector selector(ColumnSelectorFactory metricFactory)
+  protected long nullValue()
   {
-    return getLongColumnSelector(
-        metricFactory,
-        0L
-    );
+    return 0L;
+  }
+
+  @Override
+  protected Aggregator buildAggregator(BaseLongColumnValueSelector selector)
+  {
+    return new LongSumAggregator(selector);
+  }
+
+  @Override
+  protected BufferAggregator buildBufferAggregator(BaseLongColumnValueSelector selector)
+  {
+    return new LongSumBufferAggregator(selector);
   }
 
   @Override
@@ -70,27 +78,12 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   }
 
   @Override
-  protected BufferAggregator factorizeBuffered(
-      ColumnSelectorFactory metricFactory,
-      BaseLongColumnValueSelector selector
-  )
-  {
-    return new LongSumBufferAggregator(selector);
-  }
-
-  @Override
   protected VectorAggregator factorizeVector(
       VectorColumnSelectorFactory columnSelectorFactory,
       VectorValueSelector selector
   )
   {
     return new LongSumVectorAggregator(selector);
-  }
-
-  @Override
-  protected Aggregator factorize(ColumnSelectorFactory metricFactory, BaseLongColumnValueSelector selector)
-  {
-    return new LongSumAggregator(selector);
   }
 
   @Override

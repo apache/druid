@@ -159,7 +159,7 @@ In your Druid directory, run the following command:
 
 ```bash
 cd quickstart/tutorial
-gunzip -k wikiticker-2015-09-12-sampled.json.gz
+gunzip -c wikiticker-2015-09-12-sampled.json.gz > wikiticker-2015-09-12-sampled.json
 ```
 
 In your Kafka directory, run the following command, where {PATH_TO_DRUID} is replaced by the path to the Druid directory:

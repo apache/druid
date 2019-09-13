@@ -150,4 +150,10 @@ public class StandardDeviationPostAggregator implements PostAggregator
 
     return true;
   }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(name, fieldName, estimator, isVariancePop);
+  }
 }

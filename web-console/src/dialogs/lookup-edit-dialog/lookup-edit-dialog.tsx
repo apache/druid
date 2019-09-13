@@ -33,7 +33,6 @@ import { validJson } from '../../utils';
 import './lookup-edit-dialog.scss';
 
 export interface LookupEditDialogProps {
-  isOpen: boolean;
   onClose: () => void;
   onSubmit: () => void;
   onChange: (field: string, value: string) => void;
@@ -86,7 +85,6 @@ export class LookupEditDialog extends React.PureComponent<LookupEditDialogProps>
 
   render(): JSX.Element {
     const {
-      isOpen,
       onClose,
       onSubmit,
       lookupSpec,
@@ -103,7 +101,7 @@ export class LookupEditDialog extends React.PureComponent<LookupEditDialogProps>
     return (
       <Dialog
         className="lookup-edit-dialog"
-        isOpen={isOpen}
+        isOpen
         onClose={onClose}
         title={isEdit ? 'Edit lookup' : 'Add lookup'}
       >
