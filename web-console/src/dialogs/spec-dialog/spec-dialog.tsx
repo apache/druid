@@ -20,6 +20,8 @@ import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import React from 'react';
 import AceEditor from 'react-ace';
 
+import { validJson } from '../../utils';
+
 import './spec-dialog.scss';
 
 export interface SpecDialogProps {
@@ -34,15 +36,6 @@ export interface SpecDialogState {
 }
 
 export class SpecDialog extends React.PureComponent<SpecDialogProps, SpecDialogState> {
-  static validJson(json: string): boolean {
-    try {
-      JSON.parse(json);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
   constructor(props: SpecDialogProps) {
     super(props);
     this.state = {
@@ -53,7 +46,7 @@ export class SpecDialog extends React.PureComponent<SpecDialogProps, SpecDialogS
   private postSpec(): void {
     const { onClose, onSubmit } = this.props;
     const { spec } = this.state;
-    if (!SpecDialog.validJson(spec)) return;
+    if (!validJson(spec)) return;
     onSubmit(JSON.parse(spec));
     onClose();
   }
@@ -71,7 +64,7 @@ export class SpecDialog extends React.PureComponent<SpecDialogProps, SpecDialogS
         canOutsideClickClose={false}
       >
         <AceEditor
-          mode="json"
+          mode="hjson"
           theme="solarized_dark"
           className="spec-dialog-textarea"
           onChange={e => {
@@ -96,7 +89,7 @@ export class SpecDialog extends React.PureComponent<SpecDialogProps, SpecDialogS
               text="Submit"
               intent={Intent.PRIMARY}
               onClick={() => this.postSpec()}
-              disabled={!SpecDialog.validJson(spec)}
+              disabled={!validJson(spec)}
             />
           </div>
         </div>
