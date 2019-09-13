@@ -23,22 +23,19 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 /**
+ * This class is to hold data while receiving stream data via HTTP. Used with {@link HttpResponseHandler}.
+ *
+ * @param <T> data type
  */
-public class FullResponseHolder
+public abstract class FullResponseHolder<T>
 {
   private final HttpResponseStatus status;
   private final HttpResponse response;
-  private final StringBuilder builder;
 
-  public FullResponseHolder(
-      HttpResponseStatus status,
-      HttpResponse response,
-      StringBuilder builder
-  )
+  public FullResponseHolder(HttpResponseStatus status, HttpResponse response)
   {
     this.status = status;
     this.response = response;
-    this.builder = builder;
   }
 
   public HttpResponseStatus getStatus()
@@ -51,13 +48,13 @@ public class FullResponseHolder
     return response;
   }
 
-  public StringBuilder getBuilder()
-  {
-    return builder;
-  }
+  /**
+   * Append a new chunk of data.
+   */
+  public abstract FullResponseHolder addChunk(T chunk);
 
-  public String getContent()
-  {
-    return builder.toString();
-  }
+  /**
+   * Get the accumulated data via {@link #addChunk}.
+   */
+  public abstract T getContent();
 }

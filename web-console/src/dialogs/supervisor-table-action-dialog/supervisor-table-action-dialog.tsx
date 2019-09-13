@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import { IDialogProps } from '@blueprintjs/core';
 import React from 'react';
 
 import { ShowJson } from '../../components';
@@ -26,7 +25,7 @@ import { BasicAction } from '../../utils/basic-action';
 import { deepGet } from '../../utils/object-change';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
-interface SupervisorTableActionDialogProps extends IDialogProps {
+interface SupervisorTableActionDialogProps {
   supervisorId: string;
   actions: BasicAction[];
   onClose: () => void;
@@ -79,7 +78,6 @@ export class SupervisorTableActionDialog extends React.PureComponent<
 
     return (
       <TableActionDialog
-        isOpen
         sideButtonMetadata={supervisorTableSideButtonMetadata}
         onClose={onClose}
         title={`Supervisor: ${supervisorId}`}

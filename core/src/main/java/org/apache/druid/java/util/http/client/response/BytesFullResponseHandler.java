@@ -17,25 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.security.basic.authentication;
+package org.apache.druid.java.util.http.client.response;
 
-import org.apache.druid.java.util.http.client.response.ClientResponse;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
-import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
-public class BytesFullResponseHandler implements HttpResponseHandler<FullResponseHolder, FullResponseHolder>
+/**
+ * {@link HttpResponseHandler} for stream data of byte array type.
+ * The stream data is appended to {@link BytesFullResponseHolder} whenever {@link #handleChunk} is called.
+ */
+public class BytesFullResponseHandler implements HttpResponseHandler<BytesFullResponseHolder, BytesFullResponseHolder>
 {
   @Override
-  public ClientResponse<FullResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
+  public ClientResponse<BytesFullResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
-    BytesFullResponseHolder holder = new BytesFullResponseHolder(
-        response.getStatus(),
-        response,
-        null
-    );
+    BytesFullResponseHolder holder = new BytesFullResponseHolder(response.getStatus(), response);
 
     holder.addChunk(getContentBytes(response.getContent()));
 
@@ -45,13 +42,13 @@ public class BytesFullResponseHandler implements HttpResponseHandler<FullRespons
   }
 
   @Override
-  public ClientResponse<FullResponseHolder> handleChunk(
-      ClientResponse<FullResponseHolder> response,
+  public ClientResponse<BytesFullResponseHolder> handleChunk(
+      ClientResponse<BytesFullResponseHolder> response,
       HttpChunk chunk,
       long chunkNum
   )
   {
-    BytesFullResponseHolder holder = (BytesFullResponseHolder) response.getObj();
+    BytesFullResponseHolder holder = response.getObj();
 
     if (holder == null) {
       return ClientResponse.finished(null);
@@ -62,13 +59,13 @@ public class BytesFullResponseHandler implements HttpResponseHandler<FullRespons
   }
 
   @Override
-  public ClientResponse<FullResponseHolder> done(ClientResponse<FullResponseHolder> response)
+  public ClientResponse<BytesFullResponseHolder> done(ClientResponse<BytesFullResponseHolder> response)
   {
     return ClientResponse.finished(response.getObj());
   }
 
   @Override
-  public void exceptionCaught(ClientResponse<FullResponseHolder> clientResponse, Throwable e)
+  public void exceptionCaught(ClientResponse<BytesFullResponseHolder> clientResponse, Throwable e)
   {
     // Its safe to Ignore as the ClientResponse returned in handleChunk were unfinished
   }

@@ -377,7 +377,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    * the start partition ID of the set of perfectly rolled up segments is 0. Instead it might need to store an ordinal
    * in addition to the partition ID which represents the ordinal in the perfectly rolled up segment set.
    */
-  static boolean isGuaranteedRollup(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
+  public static boolean isGuaranteedRollup(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
   {
     Preconditions.checkState(
         !tuningConfig.isForceGuaranteedRollup() || !ioConfig.isAppendToExisting(),

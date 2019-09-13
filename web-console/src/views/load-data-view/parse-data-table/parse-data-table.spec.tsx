@@ -35,7 +35,6 @@ describe('parse data table', () => {
 
     const parseDataTable = (
       <ParseDataTable
-        openModal={() => {}}
         sampleData={sampleData}
         columnFilter=""
         canFlatten={false}
