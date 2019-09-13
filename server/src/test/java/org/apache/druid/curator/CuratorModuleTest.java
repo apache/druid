@@ -149,8 +149,9 @@ public final class CuratorModuleTest
     List<LogEvent> loggingEvents = logger.getLogEvents();
     Assert.assertFalse(loggingEvents.isEmpty());
     LogEvent logEvent = loggingEvents.get(0);
-    Assert.assertEquals(Level.ERROR, logEvent.getLevel());
-    Assert.assertEquals("Unhandled error in Curator Framework", logEvent.getMessage().getFormattedMessage());
+    String message = "Logging events: " + loggingEvents;
+    Assert.assertEquals(message, Level.ERROR, logEvent.getLevel());
+    Assert.assertEquals(message, "Unhandled error in Curator Framework", logEvent.getMessage().getFormattedMessage());
   }
 
   @Ignore("Verifies changes in https://github.com/apache/incubator-druid/pull/8458, but overkill for regular testing")
@@ -187,7 +188,7 @@ public final class CuratorModuleTest
     CuratorFramework curatorFramework = injector.getInstance(CuratorFramework.class);
     RetryPolicy retryPolicy = curatorFramework.getZookeeperClient().getRetryPolicy();
     Assert.assertThat(retryPolicy, CoreMatchers.instanceOf(ExponentialBackoffRetry.class));
-    RetryPolicy adjustedRetryPolicy = adjustRetryPolicy((BoundedExponentialBackoffRetry) retryPolicy, 0);
+    RetryPolicy adjustedRetryPolicy = adjustRetryPolicy((BoundedExponentialBackoffRetry) retryPolicy, maxRetries);
     curatorFramework.getZookeeperClient().setRetryPolicy(adjustedRetryPolicy);
     return curatorFramework;
   }
