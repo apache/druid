@@ -70,7 +70,7 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
     if (!parsedQuery.hasGroupByForColumn(columnName)) return;
     return (
       <MenuItem
-        icon={IconNames.FILTER_REMOVE}
+        icon={IconNames.UNGROUP_OBJECTS}
         text={'Remove group by'}
         onClick={() => {
           onQueryChange(parsedQuery.removeGroupBy(columnName), true);
