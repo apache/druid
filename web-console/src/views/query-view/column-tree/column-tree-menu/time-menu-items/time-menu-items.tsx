@@ -278,6 +278,19 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
       />
     );
   }
+  renderRemoveGroupBy(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = this.props;
+    if (!parsedQuery.hasGroupByForColumn(columnName)) return;
+    return (
+      <MenuItem
+        icon={IconNames.FILTER_REMOVE}
+        text={'Remove group by'}
+        onClick={() => {
+          onQueryChange(parsedQuery.removeGroupBy(columnName), true);
+        }}
+      />
+    );
+  }
 
   renderGroupByMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = this.props;
@@ -364,6 +377,7 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
       <>
         {this.renderFilterMenu()}
         {this.renderRemoveFilter()}
+        {this.renderRemoveGroupBy()}
         {this.renderGroupByMenu()}
         {this.renderAggregateMenu()}
       </>
