@@ -35,7 +35,7 @@ public class LongSumAverager extends BaseAverager<Number, Long>
       if (buckets[(i + startFrom) % numBuckets] != null) {
         result += (buckets[(i + startFrom) % numBuckets]).longValue();
       } else {
-        result += 0.0;
+        result += 0;
       }
     }
 
