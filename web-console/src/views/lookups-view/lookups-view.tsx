@@ -138,21 +138,21 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   }
 
   private async openLookupEditDialog(tier: string, id: string) {
-    const { lookups, allLookupTiers } = this.state;
+    const { lookups } = this.state;
     if (!lookups) return;
 
     const target: any = lookups.find((lookupEntry: any) => {
       return lookupEntry.tier === tier && lookupEntry.id === id;
     });
     if (id === '') {
-      this.setState({
+      this.setState(prevState => ({
         lookupEditName: '',
-        lookupEditTier: allLookupTiers[0],
+        lookupEditTier: prevState.allLookupTiers[0],
         lookupEditDialogOpen: true,
         lookupEditSpec: '',
         lookupEditVersion: new Date().toISOString(),
         isEdit: false,
-      });
+      }));
     } else {
       this.setState({
         lookupEditName: id,
@@ -180,26 +180,26 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       isEdit,
     } = this.state;
     let endpoint = '/druid/coordinator/v1/lookups/config';
-    const specJSON: any = JSON.parse(lookupEditSpec);
-    let dataJSON: any;
+    const specJson: any = JSON.parse(lookupEditSpec);
+    let dataJson: any;
     if (isEdit) {
       endpoint = `${endpoint}/${lookupEditTier}/${lookupEditName}`;
-      dataJSON = {
+      dataJson = {
         version: lookupEditVersion,
-        lookupExtractorFactory: specJSON,
+        lookupExtractorFactory: specJson,
       };
     } else {
-      dataJSON = {
+      dataJson = {
         [lookupEditTier]: {
           [lookupEditName]: {
             version: lookupEditVersion,
-            lookupExtractorFactory: specJSON,
+            lookupExtractorFactory: specJson,
           },
         },
       };
     }
     try {
-      await axios.post(endpoint, dataJSON);
+      await axios.post(endpoint, dataJson);
       this.setState({
         lookupEditDialogOpen: false,
       });
@@ -346,10 +346,10 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       lookupEditVersion,
       isEdit,
     } = this.state;
+    if (!lookupEditDialogOpen) return;
 
     return (
       <LookupEditDialog
-        isOpen={lookupEditDialogOpen}
         onClose={() => this.setState({ lookupEditDialogOpen: false })}
         onSubmit={() => this.submitLookupEdit()}
         onChange={this.handleChangeLookup}
@@ -382,7 +382,11 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           )}
           <TableColumnSelector
             columns={tableColumns}
-            onChange={column => this.setState({ hiddenColumns: hiddenColumns.toggle(column) })}
+            onChange={column =>
+              this.setState(prevState => ({
+                hiddenColumns: prevState.hiddenColumns.toggle(column),
+              }))
+            }
             tableColumnsHidden={hiddenColumns.storedArray}
           />
         </ViewControlBar>

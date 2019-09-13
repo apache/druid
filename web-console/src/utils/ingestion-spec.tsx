@@ -30,6 +30,8 @@ import {
 } from './druid-time';
 import { deepGet, deepSet } from './object-change';
 
+export const MAX_INLINE_DATA_LENGTH = 65536;
+
 // These constants are used to make sure that they are not constantly recreated thrashing the pure components
 export const EMPTY_OBJECT: any = {};
 export const EMPTY_ARRAY: any[] = [];
@@ -227,6 +229,10 @@ export function getSpecType(spec: Partial<IngestionSpec>): IngestionType | undef
   );
 }
 
+export function isIngestSegment(spec: IngestionSpec): boolean {
+  return deepGet(spec, 'ioConfig.firehose.type') === 'ingestSegment';
+}
+
 export function changeParallel(spec: IngestionSpec, parallel: boolean): IngestionSpec {
   if (!hasParallelAbility(spec)) return spec;
   const newType = parallel ? 'index_parallel' : 'index';
@@ -290,7 +296,7 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
   {
     name: 'hasHeaderRow',
     type: 'boolean',
-    defaultValue: true,
+    defaultValue: false,
     defined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
   },
   {
@@ -582,7 +588,7 @@ export interface GranularitySpec {
   queryGranularity?: string;
   segmentGranularity?: string;
   rollup?: boolean;
-  intervals?: string;
+  intervals?: string | string[];
 }
 
 export interface MetricSpec {
@@ -775,13 +781,25 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           placeholder:
             'https://example.com/path/to/file1.ext, https://example.com/path/to/file2.ext',
           info: (
-            <>
-              <p>
-                The full URI of your file. To ingest from multiple URIs, use commas to separate each
-                individual URI.
-              </p>
-            </>
+            <p>
+              The full URI of your file. To ingest from multiple URIs, use commas to separate each
+              individual URI.
+            </p>
           ),
+        },
+        {
+          name: 'firehose.httpAuthenticationUsername',
+          label: 'HTTP auth username',
+          type: 'string',
+          placeholder: '(optional)',
+          info: <p>Username to use for authentication with specified URIs</p>,
+        },
+        {
+          name: 'firehose.httpAuthenticationPassword',
+          label: 'HTTP auth password',
+          type: 'string',
+          placeholder: '(optional)',
+          info: <p>Password to use for authentication with specified URIs</p>,
         },
       ];
 
@@ -839,9 +857,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string',
           placeholder: `${CURRENT_YEAR}-01-01/${CURRENT_YEAR + 1}-01-01`,
           suggestions: [
-            `${CURRENT_YEAR}/${CURRENT_YEAR + 1}`,
-            `${CURRENT_YEAR}-01-01/${CURRENT_YEAR + 1}-01-01`,
             `${CURRENT_YEAR}-01-01T00:00:00/${CURRENT_YEAR + 1}-01-01T00:00:00`,
+            `${CURRENT_YEAR}-01-01/${CURRENT_YEAR + 1}-01-01`,
+            `${CURRENT_YEAR}/${CURRENT_YEAR + 1}`,
           ],
           info: (
             <p>
@@ -1437,15 +1455,16 @@ function basenameFromFilename(filename: string): string | undefined {
   return filename.split('.')[0];
 }
 
-export function fillDataSourceName(spec: IngestionSpec): IngestionSpec {
-  const ioConfig = deepGet(spec, 'ioConfig');
-  if (!ioConfig) return spec;
-  const possibleName = guessDataSourceName(ioConfig);
+export function fillDataSourceNameIfNeeded(spec: IngestionSpec): IngestionSpec {
+  const possibleName = guessDataSourceName(spec);
   if (!possibleName) return spec;
   return deepSet(spec, 'dataSchema.dataSource', possibleName);
 }
 
-export function guessDataSourceName(ioConfig: IoConfig): string | undefined {
+export function guessDataSourceName(spec: IngestionSpec): string | undefined {
+  const ioConfig = deepGet(spec, 'ioConfig');
+  if (!ioConfig) return;
+
   switch (ioConfig.type) {
     case 'index':
     case 'index_parallel':
@@ -1522,11 +1541,11 @@ export interface TuningConfig {
   fetchThreads?: number;
 }
 
-export function invalidTuningConfig(tuningConfig: TuningConfig): boolean {
+export function invalidTuningConfig(tuningConfig: TuningConfig, intervals: any): boolean {
   return Boolean(
     tuningConfig.type === 'index_parallel' &&
       tuningConfig.forceGuaranteedRollup &&
-      !tuningConfig.numShards,
+      (!tuningConfig.numShards || !intervals),
   );
 }
 
@@ -1542,27 +1561,12 @@ export function getPartitionRelatedTuningSpecFormFields(
           type: 'boolean',
           info: (
             <>
-              <p>Does not currently work with parallel ingestion</p>
               <p>
                 Forces guaranteeing the perfect rollup. The perfect rollup optimizes the total size
                 of generated segments and querying time while indexing time will be increased. If
                 this is set to true, the index task will read the entire input data twice: one for
                 finding the optimal number of partitions per time chunk and one for generating
                 segments.
-              </p>
-            </>
-          ),
-        },
-        {
-          name: 'partitionDimensions',
-          type: 'string-array',
-          defined: (t: TuningConfig) => Boolean(t.forceGuaranteedRollup),
-          info: (
-            <>
-              <p>Does not currently work with parallel ingestion</p>
-              <p>
-                The dimensions to partition on. Leave blank to select all dimensions. Only used with
-                forceGuaranteedRollup = true, will be ignored otherwise.
               </p>
             </>
           ),
@@ -1583,16 +1587,31 @@ export function getPartitionRelatedTuningSpecFormFields(
           ),
         },
         {
+          name: 'partitionDimensions',
+          type: 'string-array',
+          defined: (t: TuningConfig) => Boolean(t.forceGuaranteedRollup),
+          info: (
+            <>
+              <p>Does not currently work with parallel ingestion</p>
+              <p>
+                The dimensions to partition on. Leave blank to select all dimensions. Only used with
+                forceGuaranteedRollup = true, will be ignored otherwise.
+              </p>
+            </>
+          ),
+        },
+        {
           name: 'maxRowsPerSegment',
           type: 'number',
           defaultValue: 5000000,
-          defined: (t: TuningConfig) => t.numShards == null, // Can not be set if numShards is specified
+          defined: (t: TuningConfig) => !t.forceGuaranteedRollup && t.numShards == null, // Can not be set if numShards is specified
           info: <>Determines how many rows are in each segment.</>,
         },
         {
           name: 'maxTotalRows',
           type: 'number',
           defaultValue: 20000000,
+          defined: (t: TuningConfig) => !t.forceGuaranteedRollup,
           info: <>Total number of rows in segments waiting for being pushed.</>,
         },
       ];

@@ -64,8 +64,8 @@ import java.util.concurrent.ThreadLocalRandom;
 public class TestKafkaExtractionCluster
 {
   private static final Logger log = new Logger(TestKafkaExtractionCluster.class);
-  private static final String topicName = "testTopic";
-  private static final Map<String, String> kafkaProperties = new HashMap<>();
+  private static final String TOPIC_NAME = "testTopic";
+  private static final Map<String, String> KAFKA_PROPERTIES = new HashMap<>();
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -81,7 +81,7 @@ public class TestKafkaExtractionCluster
   private static List<ProducerRecord<byte[], byte[]>> generateRecords()
   {
     return ImmutableList.of(
-            new ProducerRecord<>(topicName, 0,
+            new ProducerRecord<>(TOPIC_NAME, 0,
                     StringUtils.toUtf8("abcdefg"),
                     StringUtils.toUtf8("abcdefg")));
   }
@@ -131,7 +131,7 @@ public class TestKafkaExtractionCluster
 
     final KafkaLookupExtractorFactory kafkaLookupExtractorFactory = new KafkaLookupExtractorFactory(
         null,
-        topicName,
+        TOPIC_NAME,
         consumerProperties
     );
 
@@ -149,7 +149,7 @@ public class TestKafkaExtractionCluster
   @Nonnull
   private Map<String, String> getConsumerProperties()
   {
-    final Map<String, String> props = new HashMap<>(kafkaProperties);
+    final Map<String, String> props = new HashMap<>(KAFKA_PROPERTIES);
     int port = kafkaServer.socketServer().config().port();
     props.put("bootstrap.servers", StringUtils.format("127.0.0.1:%d", port));
     return props;
@@ -168,7 +168,7 @@ public class TestKafkaExtractionCluster
   private KafkaConfig getBrokerProperties() throws IOException
   {
     final Properties serverProperties = new Properties();
-    serverProperties.putAll(kafkaProperties);
+    serverProperties.putAll(KAFKA_PROPERTIES);
     serverProperties.put("broker.id", "0");
     serverProperties.put("zookeeper.connect", zkServer.getConnectString());
     serverProperties.put("port", String.valueOf(ThreadLocalRandom.current().nextInt(9999) + 10000));
@@ -193,13 +193,13 @@ public class TestKafkaExtractionCluster
   private Properties makeProducerProperties()
   {
     final Properties kafkaProducerProperties = new Properties();
-    kafkaProducerProperties.putAll(kafkaProperties);
+    kafkaProducerProperties.putAll(KAFKA_PROPERTIES);
     int port = kafkaServer.socketServer().config().port();
     kafkaProducerProperties.put("bootstrap.servers", StringUtils.format("127.0.0.1:%d", port));
     kafkaProducerProperties.put("key.serializer", ByteArraySerializer.class.getName());
     kafkaProducerProperties.put("value.serializer", ByteArraySerializer.class.getName());
     kafkaProducerProperties.put("acks", "all");
-    kafkaProperties.put("request.required.acks", "1");
+    KAFKA_PROPERTIES.put("request.required.acks", "1");
     return kafkaProducerProperties;
   }
 
@@ -222,7 +222,7 @@ public class TestKafkaExtractionCluster
       long events = factory.getCompletedEventCount();
 
       log.info("-------------------------     Sending foo bar     -------------------------------");
-      producer.send(new ProducerRecord<>(topicName, StringUtils.toUtf8("foo"), StringUtils.toUtf8("bar")));
+      producer.send(new ProducerRecord<>(TOPIC_NAME, StringUtils.toUtf8("foo"), StringUtils.toUtf8("bar")));
 
       long start = System.currentTimeMillis();
       while (events == factory.getCompletedEventCount()) {
@@ -241,7 +241,7 @@ public class TestKafkaExtractionCluster
       events = factory.getCompletedEventCount();
 
       log.info("-------------------------     Sending baz bat     -------------------------------");
-      producer.send(new ProducerRecord<>(topicName, StringUtils.toUtf8("baz"), StringUtils.toUtf8("bat")));
+      producer.send(new ProducerRecord<>(TOPIC_NAME, StringUtils.toUtf8("baz"), StringUtils.toUtf8("bat")));
       while (events == factory.getCompletedEventCount()) {
         Thread.sleep(10);
         if (System.currentTimeMillis() > start + 60_000) {

@@ -16,31 +16,26 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, IDialogProps, Intent } from '@blueprintjs/core';
+import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import React from 'react';
 
 import { ShowJson } from '../../components';
+import { UrlBaser } from '../../singletons/url-baser';
 
 import './status-dialog.scss';
 
-interface StatusDialogProps extends IDialogProps {
+interface StatusDialogProps {
   onClose: () => void;
-  title: string;
 }
 
 export class StatusDialog extends React.PureComponent<StatusDialogProps> {
-  constructor(props: StatusDialogProps) {
-    super(props);
-    this.state = {};
-  }
-
   render(): JSX.Element {
-    const { onClose, title, isOpen } = this.props;
+    const { onClose } = this.props;
 
     return (
-      <Dialog className={'status-dialog'} onClose={onClose} isOpen={isOpen} title={title}>
+      <Dialog className={'status-dialog'} onClose={onClose} isOpen title="Status">
         <div className={'status-dialog-main-area'}>
-          <ShowJson endpoint={`/status`} downloadFilename={'status'} />
+          <ShowJson endpoint={UrlBaser.base(`/status`)} downloadFilename={'status'} />
         </div>
         <div className={Classes.DIALOG_FOOTER}>
           <div className={Classes.DIALOG_FOOTER_ACTIONS}>

@@ -18,123 +18,134 @@
 
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Alias, FilterClause, SqlQuery, StringType } from 'druid-query-toolkit';
+import { SqlQuery, StringType } from 'druid-query-toolkit';
 import { aliasFactory } from 'druid-query-toolkit/build/ast/sql-query/helpers';
 import React from 'react';
 
-import { RowFilter } from '../../../query-view';
-
 export interface NumberMenuItemsProps {
-  addFunctionToGroupBy: (
-    functionName: string,
-    spacing: string[],
-    argumentsArray: (StringType | number)[],
-    run: boolean,
-    alias: Alias,
-  ) => void;
-  addToGroupBy: (columnName: string, run: boolean) => void;
-  addAggregateColumn: (
-    columnName: string,
-    functionName: string,
-    run: boolean,
-    alias?: Alias,
-    distinct?: boolean,
-    filter?: FilterClause,
-  ) => void;
-  filterByRow: (filters: RowFilter[], preferablyRun: boolean) => void;
-  queryAst?: SqlQuery;
   columnName: string;
+  parsedQuery: SqlQuery;
+  onQueryChange: (queryString: SqlQuery, run?: boolean) => void;
 }
 
 export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
-  constructor(props: NumberMenuItemsProps, context: any) {
-    super(props, context);
-  }
-
   renderFilterMenu(): JSX.Element {
-    const { columnName, filterByRow } = this.props;
+    const { columnName, parsedQuery, onQueryChange } = this.props;
 
     return (
       <MenuItem icon={IconNames.FILTER} text={`Filter`}>
         <MenuItem
           text={`"${columnName}" > 100`}
-          onClick={() => filterByRow([{ row: 100, header: columnName, operator: '>' }], false)}
+          onClick={() => {
+            onQueryChange(parsedQuery.filterRow(columnName, 100, '>'));
+          }}
         />
         <MenuItem
           text={`"${columnName}" <= 100`}
-          onClick={() => filterByRow([{ row: 100, header: columnName, operator: '<=' }], false)}
+          onClick={() => {
+            onQueryChange(parsedQuery.filterRow(columnName, 100, '<='));
+          }}
         />
       </MenuItem>
     );
   }
 
-  renderGroupByMenu(): JSX.Element {
-    const { columnName, addFunctionToGroupBy, addToGroupBy } = this.props;
+  renderRemoveFilter(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = this.props;
+    if (!parsedQuery.hasFilterForColumn(columnName)) return;
+
+    return (
+      <MenuItem
+        icon={IconNames.FILTER_REMOVE}
+        text={`Remove filter`}
+        onClick={() => {
+          onQueryChange(parsedQuery.removeFilter(columnName), true);
+        }}
+      />
+    );
+  }
+
+  renderGroupByMenu(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = this.props;
+    if (!parsedQuery.groupByClause) return;
 
     return (
       <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by`}>
-        <MenuItem text={`"${columnName}"`} onClick={() => addToGroupBy(columnName, true)} />
         <MenuItem
-          text={`TRUNCATE("${columnName}", 1) AS "${columnName}_truncated"`}
-          onClick={() =>
-            addFunctionToGroupBy(
-              'TRUNCATE',
-              [' '],
-              [
-                new StringType({
-                  spacing: [],
-                  chars: columnName,
-                  quote: '"',
-                }),
-                1,
-              ],
+          text={`"${columnName}"`}
+          onClick={() => {
+            onQueryChange(parsedQuery.addToGroupBy(columnName), true);
+          }}
+        />
+        <MenuItem
+          text={`TRUNC("${columnName}", -1) AS "${columnName}_trunc"`}
+          onClick={() => {
+            onQueryChange(
+              parsedQuery.addFunctionToGroupBy(
+                'TRUNC',
+                [' '],
+                [
+                  new StringType({
+                    spacing: [],
+                    chars: columnName,
+                    quote: '"',
+                  }),
+                  -1,
+                ],
+                aliasFactory(`${columnName}_truncated`),
+              ),
               true,
-              aliasFactory(`${columnName}_truncated`),
-            )
-          }
+            );
+          }}
         />
       </MenuItem>
     );
   }
 
-  renderAggregateMenu(): JSX.Element {
-    const { columnName, addAggregateColumn } = this.props;
+  renderAggregateMenu(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = this.props;
+    if (!parsedQuery.groupByClause) return;
+
     return (
       <MenuItem icon={IconNames.FUNCTION} text={`Aggregate`}>
         <MenuItem
           text={`SUM(${columnName}) AS "sum_${columnName}"`}
-          onClick={() =>
-            addAggregateColumn(columnName, 'SUM', true, aliasFactory(`sum_${columnName}`))
-          }
+          onClick={() => {
+            onQueryChange(
+              parsedQuery.addAggregateColumn(columnName, 'SUM', aliasFactory(`sum_${columnName}`)),
+              true,
+            );
+          }}
         />
         <MenuItem
           text={`MAX(${columnName}) AS "max_${columnName}"`}
-          onClick={() =>
-            addAggregateColumn(columnName, 'MAX', true, aliasFactory(`max_${columnName}`))
-          }
+          onClick={() => {
+            onQueryChange(
+              parsedQuery.addAggregateColumn(columnName, 'MAX', aliasFactory(`max_${columnName}`)),
+              true,
+            );
+          }}
         />
         <MenuItem
           text={`MIN(${columnName}) AS "min_${columnName}"`}
-          onClick={() =>
-            addAggregateColumn(columnName, 'MIN', true, aliasFactory(`min_${columnName}`))
-          }
+          onClick={() => {
+            onQueryChange(
+              parsedQuery.addAggregateColumn(columnName, 'MIN', aliasFactory(`min_${columnName}`)),
+              true,
+            );
+          }}
         />
       </MenuItem>
     );
   }
 
   render(): JSX.Element {
-    const { queryAst } = this.props;
-    let hasGroupBy;
-    if (queryAst) {
-      hasGroupBy = queryAst.groupByClause;
-    }
-
     return (
       <>
-        {queryAst && this.renderFilterMenu()}
-        {hasGroupBy && this.renderGroupByMenu()}
-        {hasGroupBy && this.renderAggregateMenu()}
+        {this.renderFilterMenu()}
+        {this.renderRemoveFilter()}
+        {this.renderGroupByMenu()}
+        {this.renderAggregateMenu()}
       </>
     );
   }

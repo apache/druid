@@ -31,24 +31,24 @@ public class MapLookupExtractorFactoryTest
 {
   private static final String KEY = "foo";
   private static final String VALUE = "bar";
-  private static final MapLookupExtractorFactory factory = new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE), true);
+  private static final MapLookupExtractorFactory FACTORY = new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE), true);
 
   @Test
   public void testSimpleExtraction()
   {
-    Assert.assertEquals(factory.get().apply(KEY), VALUE);
-    Assert.assertTrue(factory.get().isOneToOne());
+    Assert.assertEquals(FACTORY.get().apply(KEY), VALUE);
+    Assert.assertTrue(FACTORY.get().isOneToOne());
   }
 
   @Test
   public void testReplaces()
   {
-    Assert.assertFalse(factory.replaces(factory));
-    Assert.assertFalse(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE), true)));
-    Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE), false)));
-    Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY + "1", VALUE), true)));
-    Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE + "1"), true)));
-    Assert.assertTrue(factory.replaces(null));
+    Assert.assertFalse(FACTORY.replaces(FACTORY));
+    Assert.assertFalse(FACTORY.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE), true)));
+    Assert.assertTrue(FACTORY.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE), false)));
+    Assert.assertTrue(FACTORY.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY + "1", VALUE), true)));
+    Assert.assertTrue(FACTORY.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE + "1"), true)));
+    Assert.assertTrue(FACTORY.replaces(null));
   }
 
   @Test

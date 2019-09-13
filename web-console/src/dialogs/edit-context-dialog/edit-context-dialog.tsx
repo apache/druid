@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import { Button, Callout, Classes, Dialog, Intent, TextArea } from '@blueprintjs/core';
 import Hjson from 'hjson';
 import React from 'react';
@@ -42,6 +43,7 @@ export class EditContextDialog extends React.PureComponent<
   constructor(props: EditContextDialogProps) {
     super(props);
     this.state = {
+      queryContext: props.queryContext,
       queryContextString: Object.keys(props.queryContext).length
         ? JSON.stringify(props.queryContext, undefined, 2)
         : '{\n\n}',
@@ -72,10 +74,12 @@ export class EditContextDialog extends React.PureComponent<
   };
 
   private handleSave = () => {
-    const { onQueryContextChange } = this.props;
+    const { onQueryContextChange, onClose } = this.props;
     const { queryContext } = this.state;
     if (!queryContext) return;
+
     onQueryContextChange(queryContext);
+    onClose();
   };
 
   render(): JSX.Element {
@@ -94,9 +98,9 @@ export class EditContextDialog extends React.PureComponent<
           <div className={'edit-context-dialog-buttons'}>
             <Button text={'Close'} onClick={onClose} />
             <Button
-              disabled={Boolean(error)}
               text={'Save'}
               intent={Intent.PRIMARY}
+              disabled={Boolean(error)}
               onClick={this.handleSave}
             />
           </div>

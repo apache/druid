@@ -32,6 +32,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.data.input.Firehose;
@@ -76,6 +77,7 @@ import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -114,6 +116,7 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentTest;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.DruidNode;
@@ -153,6 +156,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @RunWith(Parameterized.class)
 public class TaskLifecycleTest
@@ -188,7 +193,7 @@ public class TaskLifecycleTest
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private static final Ordering<DataSegment> byIntervalOrdering = new Ordering<DataSegment>()
+  private static final Ordering<DataSegment> BY_INTERVAL_ORDERING = new Ordering<DataSegment>()
   {
     @Override
     public int compare(DataSegment dataSegment, DataSegment dataSegment2)
@@ -198,13 +203,13 @@ public class TaskLifecycleTest
   };
   private static DateTime now = DateTimes.nowUtc();
 
-  private static final Iterable<InputRow> realtimeIdxTaskInputRows = ImmutableList.of(
+  private static final Iterable<InputRow> REALTIME_IDX_TASK_INPUT_ROWS = ImmutableList.of(
       ir(now.toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 1.0f),
       ir(now.plus(new Period(Hours.ONE)).toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 2.0f),
       ir(now.plus(new Period(Hours.TWO)).toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 3.0f)
   );
 
-  private static final Iterable<InputRow> IdxTaskInputRows = ImmutableList.of(
+  private static final Iterable<InputRow> IDX_TASK_INPUT_ROWS = ImmutableList.of(
       ir("2010-01-01T01", "x", "y", 1),
       ir("2010-01-01T01", "x", "z", 1),
       ir("2010-01-02T01", "a", "b", 2),
@@ -322,8 +327,8 @@ public class TaskLifecycleTest
     public Firehose connect(InputRowParser parser, File temporaryDirectory)
     {
       final Iterator<InputRow> inputRowIterator = usedByRealtimeIdxTask
-                                                  ? realtimeIdxTaskInputRows.iterator()
-                                                  : IdxTaskInputRows.iterator();
+                                                  ? REALTIME_IDX_TASK_INPUT_ROWS.iterator()
+                                                  : IDX_TASK_INPUT_ROWS.iterator();
 
       return new Firehose()
       {
@@ -734,8 +739,8 @@ public class TaskLifecycleTest
 
     final TaskStatus mergedStatus = runTask(indexTask);
     final TaskStatus status = taskStorage.getStatus(indexTask.getId()).get();
-    final List<DataSegment> publishedSegments = byIntervalOrdering.sortedCopy(mdc.getPublished());
-    final List<DataSegment> loggedSegments = byIntervalOrdering.sortedCopy(tsqa.getInsertedSegments(indexTask.getId()));
+    final List<DataSegment> publishedSegments = BY_INTERVAL_ORDERING.sortedCopy(mdc.getPublished());
+    final List<DataSegment> loggedSegments = BY_INTERVAL_ORDERING.sortedCopy(tsqa.getInsertedSegments(indexTask.getId()));
 
     Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
     Assert.assertEquals(taskLocation, status.getLocation());
@@ -1250,8 +1255,8 @@ public class TaskLifecycleTest
     }
 
     final TaskStatus status = taskStorage.getStatus(indexTask.getId()).get();
-    final List<DataSegment> publishedSegments = byIntervalOrdering.sortedCopy(mdc.getPublished());
-    final List<DataSegment> loggedSegments = byIntervalOrdering.sortedCopy(tsqa.getInsertedSegments(indexTask.getId()));
+    final List<DataSegment> publishedSegments = BY_INTERVAL_ORDERING.sortedCopy(mdc.getPublished());
+    final List<DataSegment> loggedSegments = BY_INTERVAL_ORDERING.sortedCopy(tsqa.getInsertedSegments(indexTask.getId()));
 
     Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
     Assert.assertEquals(taskLocation, status.getLocation());
@@ -1276,6 +1281,88 @@ public class TaskLifecycleTest
         publishedSegments.get(1).getDimensions()
     );
     Assert.assertEquals("segment2 metrics", ImmutableList.of("met"), publishedSegments.get(1).getMetrics());
+  }
+
+  @Test
+  public void testUnifiedAppenderatorsManagerCleanup() throws Exception
+  {
+    final ExecutorService exec = Executors.newFixedThreadPool(8);
+
+    UnifiedIndexerAppenderatorsManager unifiedIndexerAppenderatorsManager = new UnifiedIndexerAppenderatorsManager(
+        exec,
+        new WorkerConfig(),
+        MapCache.create(2048),
+        new CacheConfig(),
+        new CachePopulatorStats(),
+        MAPPER,
+        new NoopServiceEmitter(),
+        () -> queryRunnerFactoryConglomerate
+    );
+
+    final Task indexTask = new IndexTask(
+        null,
+        null,
+        new IndexIngestionSpec(
+            new DataSchema(
+                "foo",
+                null,
+                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    null,
+                    ImmutableList.of(Intervals.of("2010-01-01/P2D"))
+                ),
+                null,
+                mapper
+            ),
+            new IndexIOConfig(new MockFirehoseFactory(false), false),
+            new IndexTuningConfig(
+                null,
+                10000,
+                10,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                indexSpec,
+                null,
+                3,
+                false,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )
+        ),
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        null,
+        ROW_INGESTION_METERS_FACTORY,
+        unifiedIndexerAppenderatorsManager
+    );
+
+    final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());
+    Assert.assertTrue("pre run task status not present", !preRunTaskStatus.isPresent());
+
+    final TaskStatus mergedStatus = runTask(indexTask);
+    final TaskStatus status = taskStorage.getStatus(indexTask.getId()).get();
+
+    Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
+
+    Map<String, UnifiedIndexerAppenderatorsManager.DatasourceBundle> bundleMap =
+        unifiedIndexerAppenderatorsManager.getDatasourceBundles();
+
+    Assert.assertEquals(1, bundleMap.size());
+
+    unifiedIndexerAppenderatorsManager.removeAppenderatorsForTask(indexTask.getId(), "foo");
+
+    Assert.assertTrue(bundleMap.isEmpty());
+
   }
 
   private TaskStatus runTask(final Task task) throws Exception

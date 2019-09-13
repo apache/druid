@@ -28,12 +28,9 @@ describe('string menu', () => {
   it('matches snapshot', () => {
     const stringMenu = (
       <StringMenuItems
-        addFunctionToGroupBy={() => null}
-        addToGroupBy={() => null}
-        addAggregateColumn={() => null}
-        filterByRow={() => null}
         columnName={'channel'}
-        queryAst={parser(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
+        parsedQuery={parser(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
+        onQueryChange={() => {}}
       />
     );
 

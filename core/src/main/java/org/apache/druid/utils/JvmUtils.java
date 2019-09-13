@@ -21,9 +21,16 @@ package org.apache.druid.utils;
 
 import com.google.inject.Inject;
 
+import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.file.Paths;
+import java.util.List;
 import java.util.StringTokenizer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class JvmUtils
 {
@@ -78,5 +85,22 @@ public class JvmUtils
   public static long getCurrentThreadCpuTime()
   {
     return THREAD_MX_BEAN.getCurrentThreadCpuTime();
+  }
+
+  public static List<URL> systemClassPath()
+  {
+    List<URL> jobURLs;
+    String[] paths = System.getProperty("java.class.path").split(File.pathSeparator);
+    jobURLs = Stream.of(paths).map(
+        s -> {
+          try {
+            return Paths.get(s).toUri().toURL();
+          }
+          catch (MalformedURLException e) {
+            throw new UnsupportedOperationException("Unable to create URL classpath entry", e);
+          }
+        }
+    ).collect(Collectors.toList());
+    return jobURLs;
   }
 }

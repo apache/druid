@@ -16,7 +16,15 @@
  * limitations under the License.
  */
 
-import { FormGroup, HTMLSelect, Icon, Intent, NumericInput, Popover } from '@blueprintjs/core';
+import {
+  Button,
+  ButtonGroup,
+  FormGroup,
+  Icon,
+  Intent,
+  NumericInput,
+  Popover,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
@@ -190,19 +198,20 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     const { model, large } = this.props;
     let curValue = deepGet(model as any, field.name);
     if (curValue == null) curValue = field.defaultValue;
+    const disabled = AutoForm.evaluateFunctor(field.disabled, model);
     return (
-      <HTMLSelect
-        value={curValue === true ? 'True' : 'False'}
-        onChange={(e: any) => {
-          const v = e.currentTarget.value === 'True';
-          this.fieldChange(field, v);
-        }}
-        large={large}
-        disabled={AutoForm.evaluateFunctor(field.disabled, model)}
-      >
-        <option value="True">True</option>
-        <option value="False">False</option>
-      </HTMLSelect>
+      <ButtonGroup large={large}>
+        <Button
+          disabled={disabled}
+          active={!curValue}
+          onClick={() => this.fieldChange(field, false)}
+        >
+          False
+        </Button>
+        <Button disabled={disabled} active={curValue} onClick={() => this.fieldChange(field, true)}>
+          True
+        </Button>
+      </ButtonGroup>
     );
   }
 
@@ -235,15 +244,21 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
   private renderStringArrayInput(field: Field<T>): JSX.Element {
     const { model, large } = this.props;
+    const modelValue = deepGet(model as any, field.name);
     return (
       <ArrayInput
-        values={deepGet(model as any, field.name) || []}
+        values={modelValue || []}
         onChange={(v: any) => {
           this.fieldChange(field, v);
         }}
         placeholder={field.placeholder}
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model)}
+        intent={
+          AutoForm.evaluateFunctor(field.required, model) && modelValue == null
+            ? Intent.PRIMARY
+            : undefined
+        }
       />
     );
   }

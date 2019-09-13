@@ -82,7 +82,7 @@ import java.util.SortedSet;
  */
 public class HadoopDruidIndexerConfig
 {
-  private static final Injector injector;
+  private static final Injector INJECTOR;
 
   public static final String CONFIG_PROPERTY = "druid.indexer.config";
   public static final Charset JAVA_NATIVE_CHARSET = Charset.forName("Unicode");
@@ -98,7 +98,7 @@ public class HadoopDruidIndexerConfig
 
 
   static {
-    injector = Initialization.makeInjectorWithModules(
+    INJECTOR = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.of(
             (Module) binder -> {
@@ -112,11 +112,11 @@ public class HadoopDruidIndexerConfig
             new IndexingHadoopModule()
         )
     );
-    JSON_MAPPER = injector.getInstance(ObjectMapper.class);
-    INDEX_IO = injector.getInstance(IndexIO.class);
-    INDEX_MERGER_V9 = injector.getInstance(IndexMergerV9.class);
-    HADOOP_KERBEROS_CONFIG = injector.getInstance(HadoopKerberosConfig.class);
-    DATA_SEGMENT_PUSHER = injector.getInstance(DataSegmentPusher.class);
+    JSON_MAPPER = INJECTOR.getInstance(ObjectMapper.class);
+    INDEX_IO = INJECTOR.getInstance(IndexIO.class);
+    INDEX_MERGER_V9 = INJECTOR.getInstance(IndexMergerV9.class);
+    HADOOP_KERBEROS_CONFIG = INJECTOR.getInstance(HadoopKerberosConfig.class);
+    DATA_SEGMENT_PUSHER = INJECTOR.getInstance(DataSegmentPusher.class);
   }
 
   public enum IndexJobCounters

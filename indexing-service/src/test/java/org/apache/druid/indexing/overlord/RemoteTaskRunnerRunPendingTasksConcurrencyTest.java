@@ -157,8 +157,8 @@ public class RemoteTaskRunnerRunPendingTasksConcurrencyTest
     }
 
     ZooKeeper zk = rtrTestUtils.getCuratorFramework().getZookeeperClient().getZooKeeper();
-    while (zk.getChildren(rtrTestUtils.tasksPath + "/worker0", false).size() < 1
-           && zk.getChildren(rtrTestUtils.tasksPath + "/worker1", false).size() < 1) {
+    while (zk.getChildren(rtrTestUtils.TASKS_PATH + "/worker0", false).size() < 1
+           && zk.getChildren(rtrTestUtils.TASKS_PATH + "/worker1", false).size() < 1) {
       Thread.sleep(5);
     }
   }
@@ -170,8 +170,8 @@ public class RemoteTaskRunnerRunPendingTasksConcurrencyTest
     }
 
     ZooKeeper zk = rtrTestUtils.getCuratorFramework().getZookeeperClient().getZooKeeper();
-    while (zk.getChildren(rtrTestUtils.tasksPath + "/worker0", false).size() < 1
-           || zk.getChildren(rtrTestUtils.tasksPath + "/worker1", false).size() < 1) {
+    while (zk.getChildren(rtrTestUtils.TASKS_PATH + "/worker0", false).size() < 1
+           || zk.getChildren(rtrTestUtils.TASKS_PATH + "/worker1", false).size() < 1) {
       Thread.sleep(5);
     }
   }

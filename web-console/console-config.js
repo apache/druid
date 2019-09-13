@@ -16,4 +16,7 @@
  * limitations under the License.
  */
 
-window.consoleConfig = { /* future configs may go here */ };
+window.consoleConfig = {
+  "exampleManifestsUrl": "https://druid.apache.org/data/example-manifests.tsv"
+  /* future configs may go here */
+};

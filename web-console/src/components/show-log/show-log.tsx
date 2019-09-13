@@ -21,6 +21,7 @@ import axios from 'axios';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
+import { Loader } from '../../components';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
 import { QueryManager } from '../../utils';
@@ -34,8 +35,6 @@ function removeFirstPartialLine(log: string): string {
   }
   return lines.join('\n');
 }
-
-let interval: number | undefined;
 
 export interface ShowLogProps {
   endpoint: string;
@@ -52,8 +51,11 @@ export interface ShowLogState {
 }
 
 export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
+  static CHECK_INTERVAL = 2500;
+
   private showLogQueryManager: QueryManager<null, string>;
-  public log = React.createRef<HTMLTextAreaElement>();
+  private log = React.createRef<HTMLTextAreaElement>();
+  private interval: number | undefined;
 
   constructor(props: ShowLogProps, context: any) {
     super(props, context);
@@ -73,6 +75,13 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
         return logValue;
       },
       onStateChange: ({ result, loading, error }) => {
+        const { tail } = this.state;
+        if (result && tail) {
+          const { current } = this.log;
+          if (current) {
+            current.scrollTop = current.scrollHeight;
+          }
+        }
         this.setState({
           logValue: result,
           loading,
@@ -86,30 +95,46 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
     const { status } = this.props;
 
     if (status === 'RUNNING') {
-      interval = Number(setInterval(() => this.showLogQueryManager.runQuery(null), 2000));
+      this.addTailer();
     }
 
     this.showLogQueryManager.runQuery(null);
   }
 
   componentWillUnmount(): void {
-    if (interval) clearInterval(interval);
+    this.removeTailer();
+  }
+
+  addTailer() {
+    if (this.interval) return;
+    this.interval = Number(
+      setInterval(() => this.showLogQueryManager.rerunLastQuery(true), ShowLog.CHECK_INTERVAL),
+    );
+  }
+
+  removeTailer() {
+    if (!this.interval) return;
+    clearInterval(this.interval);
+    delete this.interval;
   }
 
   private handleCheckboxChange = () => {
+    const { tail } = this.state;
+
+    const nextTail = !tail;
     this.setState({
-      tail: !this.state.tail,
+      tail: nextTail,
     });
-    if (!this.state.tail) {
-      interval = Number(setInterval(() => this.showLogQueryManager.runQuery(null), 2000));
+    if (nextTail) {
+      this.addTailer();
     } else {
-      if (interval) clearInterval(interval);
+      this.removeTailer();
     }
   };
 
   render(): JSX.Element {
     const { endpoint, downloadFilename, status } = this.props;
-    const { logValue, error } = this.state;
+    const { logValue, error, loading } = this.state;
 
     return (
       <div className="show-log">
@@ -144,12 +169,16 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
           </ButtonGroup>
         </div>
         <div className="main-area">
-          <textarea
-            className="bp3-input"
-            readOnly
-            value={logValue ? logValue : error}
-            ref={this.log}
-          />
+          {loading ? (
+            <Loader loadingText="" loading />
+          ) : (
+            <textarea
+              className="bp3-input"
+              readOnly
+              value={logValue ? logValue : error}
+              ref={this.log}
+            />
+          )}
         </div>
       </div>
     );

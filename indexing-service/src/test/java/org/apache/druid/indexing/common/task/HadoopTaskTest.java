@@ -128,6 +128,7 @@ public class HadoopTaskTest
     final Class<?> druidHadoopConfigClazz = Class.forName("org.apache.druid.indexer.HadoopDruidIndexerConfig", false, classLoader);
     assertClassLoaderIsSingular(druidHadoopConfigClazz.getClassLoader());
   }
+
   public static void assertClassLoaderIsSingular(ClassLoader classLoader)
   {
     // This is a check against the current HadoopTask which creates a single URLClassLoader with null parent

@@ -2,7 +2,7 @@
 
 exports[`data source view matches snapshot 1`] = `
 <div
-  className="data-sources-view app-view"
+  className="datasource-view app-view no-chart"
 >
   <ViewControlBar
     label="Datasources"
@@ -65,9 +65,10 @@ exports[`data source view matches snapshot 1`] = `
           "Availability",
           "Segment load/drop",
           "Retention",
-          "Compaction",
-          "Size",
           "Replicated size",
+          "Size",
+          "Compaction",
+          "Avg. segment size",
           "Num rows",
           "Actions",
         ]
@@ -95,7 +96,7 @@ exports[`data source view matches snapshot 1`] = `
     TrComponent={[Function]}
     TrGroupComponent={[Function]}
     aggregatedKey="_aggregated"
-    className="-striped -highlight full-height"
+    className=""
     collapseOnDataChange={true}
     collapseOnPageChange={true}
     collapseOnSortingChange={true}
@@ -167,11 +168,11 @@ exports[`data source view matches snapshot 1`] = `
         },
         Object {
           "Cell": [Function],
-          "Header": "Compaction",
-          "accessor": [Function],
+          "Header": "Replicated size",
+          "accessor": "replicated_size",
           "filterable": false,
-          "id": "compaction",
           "show": true,
+          "width": 100,
         },
         Object {
           "Cell": [Function],
@@ -183,8 +184,16 @@ exports[`data source view matches snapshot 1`] = `
         },
         Object {
           "Cell": [Function],
-          "Header": "Replicated size",
-          "accessor": "replicated_size",
+          "Header": "Compaction",
+          "accessor": [Function],
+          "filterable": false,
+          "id": "compaction",
+          "show": true,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Avg. segment size",
+          "accessor": "avg_segment_size",
           "filterable": false,
           "show": true,
           "width": 100,

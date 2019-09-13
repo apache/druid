@@ -117,7 +117,7 @@ public class JsonIterator<T> implements Iterator<T>, Closeable
       }
       final JsonToken nextToken = jp.nextToken();
       if (nextToken != JsonToken.START_ARRAY) {
-        throw new IAE("First token should be START_ARRAY", jp.getCurrentToken());
+        throw new IAE("First token should be START_ARRAY, but it is actually [%s]", jp.getCurrentToken());
       } else {
         jp.nextToken();
         objectCodec = jp.getCodec();

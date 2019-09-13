@@ -173,6 +173,7 @@ public class VirtualColumns implements Cacheable
     }
   }
 
+  @Nullable
   public BitmapIndex getBitmapIndex(String columnName, ColumnSelector columnSelector)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
@@ -273,7 +274,7 @@ public class VirtualColumns implements Cacheable
     return new CacheKeyBuilder((byte) 0).appendCacheablesIgnoringOrder(virtualColumns).build();
   }
 
-  private void detectCycles(VirtualColumn virtualColumn, Set<String> columnNames)
+  private void detectCycles(VirtualColumn virtualColumn, @Nullable Set<String> columnNames)
   {
     // Copy columnNames to avoid modifying it
     final Set<String> nextSet = columnNames == null

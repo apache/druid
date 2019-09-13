@@ -48,7 +48,7 @@ import java.util.stream.IntStream;
 
 public class CostBalancerStrategyTest
 {
-  private static final Interval day = Intervals.of("2015-01-01T00/2015-01-01T01");
+  private static final Interval DAY = Intervals.of("2015-01-01T00/2015-01-01T01");
 
   /**
    * Create Druid cluster with serverCount servers having maxSegments segments each, and 1 server with 98 segment
@@ -111,7 +111,7 @@ public class CostBalancerStrategyTest
    */
   public static DataSegment getSegment(int index)
   {
-    return getSegment(index, "DUMMY", day);
+    return getSegment(index, "DUMMY", DAY);
   }
 
   public static DataSegment getSegment(int index, String dataSource, Interval interval)

@@ -42,7 +42,7 @@ import java.util.Map;
 
 public class SQLMetadataSupervisorManagerTest
 {
-  private static final ObjectMapper mapper = new DefaultObjectMapper();
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
@@ -54,7 +54,7 @@ public class SQLMetadataSupervisorManagerTest
   @BeforeClass
   public static void setupStatic()
   {
-    mapper.registerSubtypes(TestSupervisorSpec.class);
+    MAPPER.registerSubtypes(TestSupervisorSpec.class);
   }
 
   @After
@@ -81,7 +81,7 @@ public class SQLMetadataSupervisorManagerTest
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createSupervisorsTable();
 
-    supervisorManager = new SQLMetadataSupervisorManager(mapper, connector, Suppliers.ofInstance(tablesConfig));
+    supervisorManager = new SQLMetadataSupervisorManager(MAPPER, connector, Suppliers.ofInstance(tablesConfig));
   }
 
   @Test

@@ -606,6 +606,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           getId(),
           new TaskStatusPlus(
               subTask.getId(),
+              subTask.getGroupId(),
               subTask.getType(),
               DateTimes.EPOCH,
               DateTimes.EPOCH,
@@ -623,7 +624,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
 
   private class TestSubTask extends SinglePhaseSubTask
   {
-    private final IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory;
+    private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory;
     private volatile TaskState state = TaskState.RUNNING;
 
     TestSubTask(
@@ -632,7 +633,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
         int numAttempts,
         ParallelIndexIngestionSpec ingestionSchema,
         Map<String, Object> context,
-        IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory
+        IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory
     )
     {
       super(
@@ -658,7 +659,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
       }
 
       // build LocalParallelIndexTaskClient
-      final ParallelIndexTaskClient taskClient = taskClientFactory.build(null, getId(), 0, null, 0);
+      final ParallelIndexSupervisorTaskClient taskClient = taskClientFactory.build(null, getId(), 0, null, 0);
 
       final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient);
 
@@ -708,6 +709,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
       taskHistories.computeIfAbsent(specId, k -> new ArrayList<>()).add(
           new TaskStatusPlus(
               getId(),
+              getGroupId(),
               getType(),
               DateTimes.EPOCH,
               DateTimes.EPOCH,

@@ -16,16 +16,13 @@
  * limitations under the License.
  */
 
-import { IDialogProps } from '@blueprintjs/core';
 import React from 'react';
 
 import { DatasourceColumnsTable } from '../../components/datasource-columns-table/datasource-columns-table';
-import { queryDruidSql, QueryManager } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { ColumnMetadata } from '../../utils/column-metadata';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
-interface DatasourceTableActionDialogProps extends IDialogProps {
+interface DatasourceTableActionDialogProps {
   datasourceId?: string;
   actions: BasicAction[];
   onClose: () => void;
@@ -33,40 +30,17 @@ interface DatasourceTableActionDialogProps extends IDialogProps {
 
 interface DatasourceTableActionDialogState {
   activeTab: 'columns';
-  dimensions?: string;
-  error?: string;
 }
 
 export class DatasourceTableActionDialog extends React.PureComponent<
   DatasourceTableActionDialogProps,
   DatasourceTableActionDialogState
 > {
-  private dimensionsQueryManager: QueryManager<null, string>;
   constructor(props: DatasourceTableActionDialogProps) {
     super(props);
     this.state = {
       activeTab: 'columns',
     };
-
-    /// This should be a table
-    this.dimensionsQueryManager = new QueryManager({
-      processQuery: async () => {
-        const { datasourceId } = this.props;
-        const resp = await queryDruidSql<ColumnMetadata>({
-          query: `SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
-          WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = '${datasourceId}'`,
-        });
-        const dimensionArray = resp.map(object => object.COLUMN_NAME);
-        return JSON.stringify(dimensionArray, undefined, 2);
-      },
-      onStateChange: ({ result, error }) => {
-        this.setState({ dimensions: result, error });
-      },
-    });
-  }
-
-  componentDidMount(): void {
-    this.dimensionsQueryManager.runQuery(null);
   }
 
   render(): React.ReactNode {
@@ -84,7 +58,6 @@ export class DatasourceTableActionDialog extends React.PureComponent<
 
     return (
       <TableActionDialog
-        isOpen
         sideButtonMetadata={taskTableSideButtonMetadata}
         onClose={onClose}
         title={`Datasource: ${datasourceId}`}

@@ -66,11 +66,11 @@ public class DummyStringVirtualColumnTest
   {
     QueryableIndexSegment queryableIndexSegment = new QueryableIndexSegment(
         TestIndex.getMMappedTestIndex(),
-        SegmentId.dummy(QueryRunnerTestHelper.dataSource)
+        SegmentId.dummy(QueryRunnerTestHelper.DATA_SOURCE)
     );
     IncrementalIndexSegment incrementalIndexSegment = new IncrementalIndexSegment(
         TestIndex.getIncrementalTestIndex(),
-        SegmentId.dummy(QueryRunnerTestHelper.dataSource)
+        SegmentId.dummy(QueryRunnerTestHelper.DATA_SOURCE)
     );
 
     mmappedSegments = Lists.newArrayList(queryableIndexSegment, queryableIndexSegment);
@@ -242,10 +242,10 @@ public class DummyStringVirtualColumnTest
   private void testGroupBy(List<Segment> segments, boolean enableRowBasedMethods, boolean enableColumnBasedMethods)
   {
     GroupByQuery query = new GroupByQuery.Builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setGranularity(Granularities.ALL)
         .setVirtualColumns(
-            new DummyStringVirtualColumn(QueryRunnerTestHelper.marketDimension, VSTRING_DIM,
+            new DummyStringVirtualColumn(QueryRunnerTestHelper.MARKET_DIMENSION, VSTRING_DIM,
                                          enableRowBasedMethods, enableColumnBasedMethods,
                                          false, true
             )
@@ -276,11 +276,11 @@ public class DummyStringVirtualColumnTest
   )
   {
     GroupByQuery query = new GroupByQuery.Builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setGranularity(Granularities.ALL)
         .setVirtualColumns(
             new DummyStringVirtualColumn(
-                QueryRunnerTestHelper.marketDimension,
+                QueryRunnerTestHelper.MARKET_DIMENSION,
                 VSTRING_DIM,
                 enableRowBasedMethods,
                 enableColumnBasedMethods,
@@ -313,11 +313,11 @@ public class DummyStringVirtualColumnTest
   )
   {
     GroupByQuery query = new GroupByQuery.Builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setGranularity(Granularities.ALL)
         .setVirtualColumns(
             new DummyStringVirtualColumn(
-                QueryRunnerTestHelper.marketDimension,
+                QueryRunnerTestHelper.MARKET_DIMENSION,
                 VSTRING_DIM,
                 enableRowBasedMethods,
                 enableColumnBasedMethods,
@@ -349,14 +349,14 @@ public class DummyStringVirtualColumnTest
   )
   {
     TopNQuery query = new TopNQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.dataSource)
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(Granularities.ALL)
         .dimension(VSTRING_DIM)
         .metric(COUNT)
         .threshold(1)
         .aggregators(new CountAggregatorFactory(COUNT))
         .virtualColumns(new DummyStringVirtualColumn(
-            QueryRunnerTestHelper.marketDimension,
+            QueryRunnerTestHelper.MARKET_DIMENSION,
             VSTRING_DIM,
             enableRowBasedMethods,
             enableColumnBasedMethods,

@@ -95,28 +95,27 @@ public class LoggingEmitter implements Emitter
       }
     }
     try {
-      final String message = "Event [%s]";
       switch (level) {
         case TRACE:
           if (log.isTraceEnabled()) {
-            log.trace(message, jsonMapper.writeValueAsString(event));
+            log.trace(jsonMapper.writeValueAsString(event));
           }
           break;
         case DEBUG:
           if (log.isDebugEnabled()) {
-            log.debug(message, jsonMapper.writeValueAsString(event));
+            log.debug(jsonMapper.writeValueAsString(event));
           }
           break;
         case INFO:
           if (log.isInfoEnabled()) {
-            log.info(message, jsonMapper.writeValueAsString(event));
+            log.info(jsonMapper.writeValueAsString(event));
           }
           break;
         case WARN:
-          log.warn(message, jsonMapper.writeValueAsString(event));
+          log.warn(jsonMapper.writeValueAsString(event));
           break;
         case ERROR:
-          log.error(message, jsonMapper.writeValueAsString(event));
+          log.error(jsonMapper.writeValueAsString(event));
           break;
       }
     }

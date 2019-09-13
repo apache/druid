@@ -19,19 +19,12 @@
 
 package org.apache.druid.query.movingaverage;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidMetrics;
 
 public class DefaultMovingAverageQueryMetrics extends DefaultQueryMetrics<MovingAverageQuery> implements
     MovingAverageQueryMetrics
 {
-
-  public DefaultMovingAverageQueryMetrics(ObjectMapper jsonMapper)
-  {
-    super(jsonMapper);
-  }
-
   @Override
   public void query(MovingAverageQuery query)
   {

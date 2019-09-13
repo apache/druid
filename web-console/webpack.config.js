@@ -61,6 +61,7 @@ module.exports = env => {
       publicPath: '/public',
       index: './index.html',
       openPage: 'unified-console.html',
+      host: '0.0.0.0',
       port: 18081,
       proxy: {
         '/status': proxyTarget,
@@ -97,10 +98,10 @@ module.exports = env => {
           ],
         },
         {
-          test: (ALWAYS_BABEL || mode === 'production') ? /\.m?js$/ : /^xxx$/,
+          test: ALWAYS_BABEL || mode === 'production' ? /\.m?js$/ : /^xxx$/,
           use: {
-            loader: 'babel-loader'
-          }
+            loader: 'babel-loader',
+          },
         },
         {
           test: /\.s?css$/,
@@ -124,10 +125,8 @@ module.exports = env => {
       ],
     },
     performance: {
-      hints: false
+      hints: false,
     },
-    plugins: [
-      // new BundleAnalyzerPlugin()
-    ],
+    plugins: process.env.BUNDLE_ANALYZER_PLUGIN === 'TRUE' ? [new BundleAnalyzerPlugin()] : [],
   };
 };

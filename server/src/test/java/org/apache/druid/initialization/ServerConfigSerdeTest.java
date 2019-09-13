@@ -26,14 +26,14 @@ import org.junit.Test;
 
 public class ServerConfigSerdeTest
 {
-  private static final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
+  private static final DefaultObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
 
   @Test
   public void testSerde() throws Exception
   {
     ServerConfig defaultConfig = new ServerConfig();
-    String defaultConfigJson = objectMapper.writeValueAsString(defaultConfig);
-    ServerConfig defaultConfig2 = objectMapper.readValue(defaultConfigJson, ServerConfig.class);
+    String defaultConfigJson = OBJECT_MAPPER.writeValueAsString(defaultConfig);
+    ServerConfig defaultConfig2 = OBJECT_MAPPER.readValue(defaultConfigJson, ServerConfig.class);
     Assert.assertEquals(defaultConfig, defaultConfig2);
 
     ServerConfig modifiedConfig = new ServerConfig(
@@ -50,8 +50,8 @@ public class ServerConfigSerdeTest
         defaultConfig.getInflateBufferSize(),
         defaultConfig.getCompressionLevel()
     );
-    String modifiedConfigJson = objectMapper.writeValueAsString(modifiedConfig);
-    ServerConfig modifiedConfig2 = objectMapper.readValue(modifiedConfigJson, ServerConfig.class);
+    String modifiedConfigJson = OBJECT_MAPPER.writeValueAsString(modifiedConfig);
+    ServerConfig modifiedConfig2 = OBJECT_MAPPER.readValue(modifiedConfigJson, ServerConfig.class);
     Assert.assertEquals(modifiedConfig, modifiedConfig2);
     Assert.assertEquals(999, modifiedConfig2.getNumThreads());
     Assert.assertEquals(888, modifiedConfig2.getQueueSize());

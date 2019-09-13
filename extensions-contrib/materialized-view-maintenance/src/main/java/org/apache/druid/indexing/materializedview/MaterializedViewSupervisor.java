@@ -63,6 +63,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.IntSupplier;
 
 public class MaterializedViewSupervisor implements Supervisor
 {
@@ -280,8 +281,7 @@ public class MaterializedViewSupervisor implements Supervisor
   public void checkpoint(
       @Nullable Integer taskGroupId,
       String baseSequenceName,
-      DataSourceMetadata previousCheckPoint,
-      DataSourceMetadata currentCheckPoint
+      DataSourceMetadata checkpointMetadata
   )
   {
     // do nothing
@@ -369,6 +369,20 @@ public class MaterializedViewSupervisor implements Supervisor
     MapDifference<Interval, String> difference = Maps.difference(maxCreatedDate, derivativeVersion);
     Map<Interval, String> toBuildInterval = new HashMap<>(difference.entriesOnlyOnLeft());
     Map<Interval, String> toDropInterval = new HashMap<>(difference.entriesOnlyOnRight());
+    // update version of derived segments if isn't the max (created_date) of all base segments
+    // prevent user supplied segments list did not match with segments list obtained from db
+    Map<Interval, MapDifference.ValueDifference<String>> checkIfNewestVersion =
+            new HashMap<>(difference.entriesDiffering());
+    for (Map.Entry<Interval, MapDifference.ValueDifference<String>> entry : checkIfNewestVersion.entrySet()) {
+      final String versionOfBase = maxCreatedDate.get(entry.getKey());
+      final String versionOfDerivative = derivativeVersion.get(entry.getKey());
+      final int baseCount = baseSegments.get(entry.getKey()).size();
+      final IntSupplier usedCountSupplier = () ->
+              metadataStorageCoordinator.getUsedSegmentsForInterval(spec.getBaseDataSource(), entry.getKey()).size();
+      if (versionOfBase.compareTo(versionOfDerivative) > 0 && baseCount == usedCountSupplier.getAsInt()) {
+        toBuildInterval.put(entry.getKey(), versionOfBase);
+      }
+    }
     // if some intervals are in running tasks and the versions are the same, remove it from toBuildInterval
     // if some intervals are in running tasks, but the versions are different, stop the task. 
     for (Map.Entry<Interval, String> version : runningVersion.entrySet()) {

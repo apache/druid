@@ -726,6 +726,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return new IncrementalIndexRowResult(incrementalIndexRow, parseExceptionMessages);
   }
 
+  @Nullable
   public static ParseException getCombinedParseException(
       InputRow row,
       @Nullable List<String> dimParseExceptionMessages,

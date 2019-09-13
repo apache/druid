@@ -66,12 +66,12 @@ import java.util.Map;
 
 public class KinesisSamplerSpecTest extends EasyMockSupport
 {
-  private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+  private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final String STREAM = "sampling";
   private static final String SHARD_ID = "1";
   private static final DataSchema DATA_SCHEMA = new DataSchema(
       "test_ds",
-      objectMapper.convertValue(
+      OBJECT_MAPPER.convertValue(
           new StringInputRowParser(
               new JSONParseSpec(
                   new TimestampSpec("timestamp", "iso", null),
@@ -99,7 +99,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
       },
       new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
       null,
-      objectMapper
+      OBJECT_MAPPER
   );
 
   private final KinesisRecordSupplier recordSupplier = mock(KinesisRecordSupplier.class);
@@ -183,7 +183,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
     KinesisSamplerSpec samplerSpec = new TestableKinesisSamplerSpec(
         supervisorSpec,
         new SamplerConfig(5, null, null, null),
-        new FirehoseSampler(objectMapper, new SamplerCache(MapCache.create(100000))),
+        new FirehoseSampler(OBJECT_MAPPER, new SamplerCache(MapCache.create(100000))),
         null
     );
 

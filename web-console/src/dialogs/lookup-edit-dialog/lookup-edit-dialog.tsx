@@ -33,7 +33,6 @@ import { validJson } from '../../utils';
 import './lookup-edit-dialog.scss';
 
 export interface LookupEditDialogProps {
-  isOpen: boolean;
   onClose: () => void;
   onSubmit: () => void;
   onChange: (field: string, value: string) => void;
@@ -45,17 +44,7 @@ export interface LookupEditDialogProps {
   allLookupTiers: string[];
 }
 
-export interface LookupEditDialogState {}
-
-export class LookupEditDialog extends React.PureComponent<
-  LookupEditDialogProps,
-  LookupEditDialogState
-> {
-  constructor(props: LookupEditDialogProps) {
-    super(props);
-    this.state = {};
-  }
-
+export class LookupEditDialog extends React.PureComponent<LookupEditDialogProps> {
   private addISOVersion = () => {
     const { onChange } = this.props;
     const currentDate = new Date();
@@ -96,7 +85,6 @@ export class LookupEditDialog extends React.PureComponent<
 
   render(): JSX.Element {
     const {
-      isOpen,
       onClose,
       onSubmit,
       lookupSpec,
@@ -113,7 +101,7 @@ export class LookupEditDialog extends React.PureComponent<
     return (
       <Dialog
         className="lookup-edit-dialog"
-        isOpen={isOpen}
+        isOpen
         onClose={onClose}
         title={isEdit ? 'Edit lookup' : 'Add lookup'}
       >

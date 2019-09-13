@@ -34,7 +34,7 @@ import java.util.List;
 
 public class ArbitraryGranularityTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   @Test
   public void testDefaultQueryGranularity()
@@ -186,7 +186,7 @@ public class ArbitraryGranularityTest
     ));
 
     try {
-      final GranularitySpec rtSpec = jsonMapper.readValue(jsonMapper.writeValueAsString(spec), GranularitySpec.class);
+      final GranularitySpec rtSpec = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(spec), GranularitySpec.class);
       Assert.assertEquals("Round-trip", spec.bucketIntervals(), rtSpec.bucketIntervals());
     }
     catch (Exception e) {
