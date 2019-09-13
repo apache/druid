@@ -639,7 +639,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
               // Must convert generic Jackson-deserialized type into the proper type.
               resultRow.set(
-                  dimensionStart + dimPos,
+                  dimensionStart + dimPos++,
                   DimensionHandlerUtils.convertObjectToType(results.next(), dimensionSpec.getOutputType())
               );
             }
