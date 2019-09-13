@@ -1285,6 +1285,20 @@ notices:
 
 ---
 
+name: Apache HttpClient
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 4.5.2
+libraries:
+  - org.apache.httpcomponents: httpclient
+notices:
+  - httpclient: |
+      Apache HttpClient
+      Copyright 1999-2016 The Apache Software Foundation
+
+---
+
 name: Apache HttpCore
 license_category: binary
 module: java-core
