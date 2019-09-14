@@ -2625,14 +2625,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             model={granularitySpec}
             onChange={g => this.updateSpec(deepSet(spec, 'dataSchema.granularitySpec', g))}
           />
-        </div>
-        <div className="other">
-          <H5>Secondary partitioning</H5>
-          <AutoForm
-            fields={getPartitionRelatedTuningSpecFormFields(getSpecType(spec) || 'index')}
-            model={tuningConfig}
-            onChange={t => this.updateSpec(deepSet(spec, 'tuningConfig', t))}
-          />
           <AutoForm
             fields={[
               {
@@ -2651,6 +2643,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             ]}
             model={spec}
             onChange={s => this.updateSpec(s)}
+          />
+        </div>
+        <div className="other">
+          <H5>Secondary partitioning</H5>
+          <AutoForm
+            fields={getPartitionRelatedTuningSpecFormFields(getSpecType(spec) || 'index')}
+            model={tuningConfig}
+            onChange={t => this.updateSpec(deepSet(spec, 'tuningConfig', t))}
           />
         </div>
         <div className="control">
