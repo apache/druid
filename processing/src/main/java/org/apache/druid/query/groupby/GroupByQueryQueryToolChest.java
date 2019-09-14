@@ -633,8 +633,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
             }
 
             final Iterator<DimensionSpec> dimsIter = dims.iterator();
-            int dimPos = 0;
-            while (dimsIter.hasNext() && results.hasNext()) {
+            for (int dimPos = 0; dimsIter.hasNext() && results.hasNext(); dimPos++) {
               final DimensionSpec dimensionSpec = dimsIter.next();
 
               // Must convert generic Jackson-deserialized type into the proper type.
