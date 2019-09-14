@@ -59,6 +59,7 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -505,6 +506,53 @@ public class GroupByQueryQueryToolChestTest
     doTestCacheStrategy(ValueType.FLOAT, 2.1f);
     doTestCacheStrategy(ValueType.DOUBLE, 2.1d);
     doTestCacheStrategy(ValueType.LONG, 2L);
+  }
+
+  @Test
+  public void testMultiColumnCacheStrategy() throws Exception
+  {
+    final GroupByQuery query1 = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(ImmutableList.of(
+            new DefaultDimensionSpec("test", "test", ValueType.STRING),
+            new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+        ))
+        .setVirtualColumns(
+            new ExpressionVirtualColumn("v0", "concat('foo', test)", ValueType.STRING, TestExprMacroTable.INSTANCE)
+        )
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.ROWS_COUNT,
+                getComplexAggregatorFactoryForValueType(ValueType.STRING)
+            )
+        )
+        .setPostAggregatorSpecs(
+            ImmutableList.of(new ConstantPostAggregator("post", 10))
+        )
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    CacheStrategy<ResultRow, Object, GroupByQuery> strategy =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(
+            query1
+        );
+
+    // test timestamps that result in integer size millis
+    final ResultRow result1 = ResultRow.of(123L, "val1", "fooval1", 1, getIntermediateComplexValue(ValueType.STRING, "val1"));
+
+    Object preparedValue = strategy.prepareForSegmentLevelCache().apply(result1);
+
+    ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    Object fromCacheValue = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(preparedValue),
+        strategy.getCacheObjectClazz()
+    );
+
+    ResultRow fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
+
+    Assert.assertEquals(result1, fromCacheResult);
   }
 
   @Test

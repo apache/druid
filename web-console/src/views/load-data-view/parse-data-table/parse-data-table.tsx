@@ -34,7 +34,6 @@ export interface ParseDataTableProps {
   flattenedColumnsOnly: boolean;
   flattenFields: FlattenField[];
   onFlattenFieldSelect: (field: FlattenField, index: number) => void;
-  openModal: (str: string) => void;
 }
 
 export class ParseDataTable extends React.PureComponent<ParseDataTableProps> {
@@ -78,7 +77,7 @@ export class ParseDataTable extends React.PureComponent<ParseDataTableProps> {
               if (row.original.unparseable) {
                 return <TableCell unparseable />;
               }
-              return <TableCell value={row.value} openModal={str => this.props.openModal(str)} />;
+              return <TableCell value={row.value} />;
             },
             headerClassName: classNames({
               flattened: flattenField,
