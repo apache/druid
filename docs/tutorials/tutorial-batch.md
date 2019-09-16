@@ -76,7 +76,7 @@ You do not need to enter anything in these steps as applying ingestion time tran
 
 ![Data loader schema](../assets/tutorial-batch-data-loader-05.png "Data loader schema")
 
-In the `Configure schema` step, you can configure which dimensions (and metrics) will be ingested into Druid.
+In the `Configure schema` step, you can configure which [dimensions](../ingestion/index.md#dimensions) and [metrics](../ingestion/index.md#metrics) will be ingested into Druid.
 This is exactly what the data will appear like in Druid once it is ingested.
 Since our dataset is very small, go ahead and turn off [`Rollup`](../ingestion/index.md#rollup) by clicking on the switch and confirming the change.
 
