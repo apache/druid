@@ -158,7 +158,7 @@ public class SupervisorResource
                       theBuilder.withSpec(manager.getSupervisorSpec(x).get());
                     }
                   }
-                  if(includeFullStatus){
+                  if (includeFullStatus) {
                     Optional<SupervisorSpec> theSpec = manager.getSupervisorSpec(x);
                     if (theSpec.isPresent()) {
                       try {

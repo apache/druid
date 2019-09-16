@@ -54,8 +54,8 @@ import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeType;
-import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -812,6 +812,7 @@ public class SystemSchema extends AbstractSchema
       class SupervisorsEnumerable extends DefaultEnumerable<Object[]>
       {
         private final CloseableIterator<SupervisorStatus> it;
+
         public SupervisorsEnumerable(JsonParserIterator<SupervisorStatus> tasks)
         {
           this.it = getAuthorizedSupervisors(tasks, root);
