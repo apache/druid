@@ -148,15 +148,12 @@ public class CachingClusteredClientBenchmark
   private static final String DATA_SOURCE = "ds";
 
   public static final ObjectMapper JSON_MAPPER;
-  @Param({"8", "24", "64"})
+  @Param({"8", "32"})
   private int numServers;
 
 
-  @Param({"1", "7"})
+  @Param({"0", "1", "7"})
   private int parallelism;
-
-  @Param({"parallel", "serial"})
-  private String mergeCombineStyle;
 
   @Param({"75000"})
   private int rowsPerSegment;
@@ -171,7 +168,6 @@ public class CachingClusteredClientBenchmark
   private LifecycleForkJoinPool forkJoinPool;
 
   private boolean parallelCombine;
-  private boolean possiblyParallel;
 
   private Query query;
 
@@ -199,15 +195,7 @@ public class CachingClusteredClientBenchmark
   {
     final String schemaName = "basic";
 
-    switch (mergeCombineStyle) {
-      case "parallel":
-        parallelCombine = true;
-        break;
-      case "serial":
-      default:
-        parallelCombine = false;
-        break;
-    }
+    parallelCombine = parallelism > 0;
 
     BenchmarkSchemaInfo schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schemaName);
 

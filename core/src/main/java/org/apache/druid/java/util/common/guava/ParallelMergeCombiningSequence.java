@@ -306,7 +306,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           submissionCount,
           queuedTaskCount
       );
-      // max is minimum of either number of processors - 1 or user suggested parallelism
+      // max is minimum of either number of processors or user suggested parallelism
       final int maxParallelism = Math.min(numProcessors, parallelism);
       // adjust max to be no more than total pool parallelism less the number of active threads
       final int computedParallelism = Math.min(maxParallelism, poolParallelism - activeThreadCount);
