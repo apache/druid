@@ -62,6 +62,7 @@ import java.util.Set;
 public class MaterializedViewSupervisorSpec implements SupervisorSpec
 {
   private static final String TASK_PREFIX = "index_materialized_view";
+  private static final String TASK_TYPE = "materialized_view";
   private final String baseDataSource;
   private final DimensionsSpec dimensionsSpec;
   private final AggregatorFactory[] aggregators;
@@ -323,6 +324,20 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
   public boolean isSuspended()
   {
     return suspended;
+  }
+
+  @Override
+  @JsonProperty("type")
+  public String getType()
+  {
+    return TASK_TYPE;
+  }
+
+  @Override
+  @JsonProperty("source")
+  public String getSource()
+  {
+    return getBaseDataSource();
   }
 
   @Override

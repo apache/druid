@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -79,12 +81,14 @@ public class SupervisorResource
 
   private final TaskMaster taskMaster;
   private final AuthorizerMapper authorizerMapper;
+  private final ObjectMapper objectMapper;
 
   @Inject
-  public SupervisorResource(TaskMaster taskMaster, AuthorizerMapper authorizerMapper)
+  public SupervisorResource(TaskMaster taskMaster, AuthorizerMapper authorizerMapper, ObjectMapper objectMapper)
   {
     this.taskMaster = taskMaster;
     this.authorizerMapper = authorizerMapper;
+    this.objectMapper = objectMapper;
   }
 
   @POST
@@ -120,6 +124,7 @@ public class SupervisorResource
   public Response specGetAll(
       @QueryParam("full") String full,
       @QueryParam("state") Boolean state,
+      @QueryParam("fullStatus") String fullStatus,
       @Context final HttpServletRequest req
   )
   {
@@ -132,24 +137,39 @@ public class SupervisorResource
           );
           final boolean includeFull = full != null;
           final boolean includeState = state != null && state;
+          final boolean includeFullStatus = fullStatus != null;
 
-          if (includeFull || includeState) {
-            List<Map<String, ?>> allStates = authorizedSupervisorIds
+          if (includeFull || includeState || includeFullStatus) {
+            List<SupervisorStatus> allStates = authorizedSupervisorIds
                 .stream()
                 .map(x -> {
                   Optional<SupervisorStateManager.State> theState =
                       manager.getSupervisorState(x);
-                  ImmutableMap.Builder<String, Object> theBuilder = ImmutableMap.builder();
-                  theBuilder.put("id", x);
+                  SupervisorStatus.Builder theBuilder = new SupervisorStatus.Builder();
+                  theBuilder.withId(x);
                   if (theState.isPresent()) {
-                    theBuilder.put("state", theState.get().getBasicState());
-                    theBuilder.put("detailedState", theState.get());
-                    theBuilder.put("healthy", theState.get().isHealthy());
+                    theBuilder.withState(theState.get().getBasicState().toString())
+                              .withDetailedState(theState.get().toString())
+                              .withHealthy(theState.get().isHealthy());
                   }
                   if (includeFull) {
                     Optional<SupervisorSpec> theSpec = manager.getSupervisorSpec(x);
                     if (theSpec.isPresent()) {
-                      theBuilder.put("spec", theSpec.get());
+                      theBuilder.withSpec(manager.getSupervisorSpec(x).get());
+                    }
+                  }
+                  if(includeFullStatus){
+                    Optional<SupervisorSpec> theSpec = manager.getSupervisorSpec(x);
+                    if (theSpec.isPresent()) {
+                      try {
+                        theBuilder.withSpecString(objectMapper.writeValueAsString(manager.getSupervisorSpec(x).get()));
+                      }
+                      catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                      }
+                      theBuilder.withType(manager.getSupervisorSpec(x).get().getType())
+                                .withSource(manager.getSupervisorSpec(x).get().getSource())
+                                .withSuspended(manager.getSupervisorSpec(x).get().isSuspended());
                     }
                   }
                   return theBuilder.build();

@@ -453,10 +453,16 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testGetTableMap()
   {
-    Assert.assertEquals(ImmutableSet.of("segments", "servers", "server_segments", "tasks"), schema.getTableNames());
+    Assert.assertEquals(
+        ImmutableSet.of("segments", "servers", "server_segments", "tasks", "supervisors"),
+        schema.getTableNames()
+    );
 
     final Map<String, Table> tableMap = schema.getTableMap();
-    Assert.assertEquals(ImmutableSet.of("segments", "servers", "server_segments", "tasks"), tableMap.keySet());
+    Assert.assertEquals(
+        ImmutableSet.of("segments", "servers", "server_segments", "tasks", "supervisors"),
+        tableMap.keySet()
+    );
     final SystemSchema.SegmentsTable segmentsTable = (SystemSchema.SegmentsTable) schema.getTableMap().get("segments");
     final RelDataType rowType = segmentsTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
@@ -1111,6 +1117,90 @@ public class SystemSchemaTest extends CalciteTestBase
 
     // Verify value types.
     verifyTypes(rows, SystemSchema.TASKS_SIGNATURE);
+  }
+
+  @Test
+  public void testSupervisorTable() throws Exception
+  {
+
+    SystemSchema.SupervisorsTable supervisorTable = EasyMock.createMockBuilder(SystemSchema.SupervisorsTable.class)
+                                                            .withConstructor(client, mapper, responseHandler, authMapper)
+                                                            .createMock();
+    EasyMock.replay(supervisorTable);
+    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/supervisor/status?fullStatus", false))
+            .andReturn(request)
+            .anyTimes();
+    SettableFuture<InputStream> future = SettableFuture.create();
+    EasyMock.expect(client.goAsync(request, responseHandler)).andReturn(future).once();
+    final int ok = HttpServletResponse.SC_OK;
+    EasyMock.expect(responseHandler.getStatus()).andReturn(ok).anyTimes();
+    EasyMock.expect(request.getUrl())
+            .andReturn(new URL("http://test-host:1234/druid/indexer/v1/supervisor?fullStatus"))
+            .anyTimes();
+
+    AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
+
+    String json = "[{\n"
+                  + "\t\"id\": \"wikipedia\",\n"
+                  + "\t\"state\": \"UNHEALTHY_SUPERVISOR\",\n"
+                  + "\t\"detailedState\": \"UNABLE_TO_CONNECT_TO_STREAM\",\n"
+                  + "\t\"healthy\": false,\n"
+                  + "\t\"specString\": \"{\\\"type\\\":\\\"kafka\\\",\\\"dataSchema\\\":{\\\"dataSource\\\":\\\"wikipedia\\\"}"
+                  + ",\\\"context\\\":null,\\\"suspended\\\":false}\",\n"
+                  + "\t\"type\": \"kafka\",\n"
+                  + "\t\"source\": \"wikipedia\",\n"
+                  + "\t\"suspended\": false\n"
+                  + "}]";
+
+    byte[] bytesToWrite = json.getBytes(StandardCharsets.UTF_8);
+    in.add(bytesToWrite);
+    in.done();
+    future.set(in);
+
+    EasyMock.replay(client, request, responseHandler);
+    DataContext dataContext = new DataContext()
+    {
+      @Override
+      public SchemaPlus getRootSchema()
+      {
+        return null;
+      }
+
+      @Override
+      public JavaTypeFactory getTypeFactory()
+      {
+        return null;
+      }
+
+      @Override
+      public QueryProvider getQueryProvider()
+      {
+        return null;
+      }
+
+      @Override
+      public Object get(String name)
+      {
+        return CalciteTests.SUPER_USER_AUTH_RESULT;
+      }
+    };
+    final List<Object[]> rows = supervisorTable.scan(dataContext).toList();
+
+    Object[] row0 = rows.get(0);
+    Assert.assertEquals("wikipedia", row0[0].toString());
+    Assert.assertEquals("UNHEALTHY_SUPERVISOR", row0[1].toString());
+    Assert.assertEquals("UNABLE_TO_CONNECT_TO_STREAM", row0[2].toString());
+    Assert.assertEquals(0L, row0[3]);
+    Assert.assertEquals("kafka", row0[4].toString());
+    Assert.assertEquals("wikipedia", row0[5].toString());
+    Assert.assertEquals(0L, row0[6]);
+    Assert.assertEquals(
+        "{\"type\":\"kafka\",\"dataSchema\":{\"dataSource\":\"wikipedia\"},\"context\":null,\"suspended\":false}",
+        row0[7].toString()
+    );
+
+    // Verify value types.
+    verifyTypes(rows, SystemSchema.SUPERVISOR_SIGNATURE);
   }
 
   private static void verifyTypes(final List<Object[]> rows, final RowSignature signature)

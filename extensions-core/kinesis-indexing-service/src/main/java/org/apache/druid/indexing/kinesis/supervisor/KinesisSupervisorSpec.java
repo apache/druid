@@ -42,6 +42,7 @@ import java.util.Map;
 
 public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
 {
+  private static final String TASK_TYPE = "kinesis";
   private final AWSCredentialsConfig awsCredentialsConfig;
 
   @JsonCreator
@@ -129,6 +130,18 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
         rowIngestionMetersFactory,
         awsCredentialsConfig
     );
+  }
+
+  @Override
+  public String getType()
+  {
+    return TASK_TYPE;
+  }
+
+  @Override
+  public String getSource()
+  {
+    return getIoConfig() != null ? getIoConfig().getStream() : null;
   }
 
   @Override
