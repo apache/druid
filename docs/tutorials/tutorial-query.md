@@ -44,8 +44,9 @@ This query retrieves the 10 Wikipedia pages with the most page edits on 2015-09-
 ```sql
 SELECT page, COUNT(*) AS Edits
 FROM wikipedia
-WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00'
-GROUP BY page ORDER BY Edits DESC
+WHERE TIMESTAMP '2015-09-12 00:00:00' <= "__time" AND "__time" < TIMESTAMP '2015-09-13 00:00:00'
+GROUP BY page
+ORDER BY Edits DESC
 LIMIT 10
 ```
 
@@ -57,12 +58,17 @@ You can issue the above query from the console.
 
 ![Query autocomplete](../assets/tutorial-query-01.png "Query autocomplete")
 
-The console query view provides autocomplete together with inline function documentation.
-You can also configure extra context flags to be sent with the query from the more options menu.
+The console query view provides autocomplete functionality with inline documentation.
 
 ![Query options](../assets/tutorial-query-02.png "Query options")
 
-Note that the console will by default wrap your SQL queries in a limit so that you can issue queries like `SELECT * FROM wikipedia` without much hesitation - you can turn off this behavior.
+You can also configure extra context flags to be sent with the query from the more options menu.
+
+Note that the console will by default wrap your SQL queries in a limit where appropriate allowing you to issue queries like `SELECT * FROM wikipedia` without hesitation - you can turn off this behavior from the `Smart query limit` toggle.
+
+![Query actions](../assets/tutorial-query-03.png "Query actions")
+
+The query view provides contextual actions that can write and modify the query for you. 
 
 ### Query SQL via dsql
 
