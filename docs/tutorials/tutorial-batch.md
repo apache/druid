@@ -43,7 +43,7 @@ We've included a sample of Wikipedia edits from September 12, 2015 to get you st
 ## Loading data with the data loader
 
 Navigate to [localhost:8888](http://localhost:8888) and click `Load data` in the console header.
-Select `Local disk`.
+Select `Local disk` and click `Connect data`.
 
 ![Data loader init](../assets/tutorial-batch-data-loader-01.png "Data loader init")
 
