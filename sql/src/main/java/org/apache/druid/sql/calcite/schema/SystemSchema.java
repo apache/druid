@@ -184,7 +184,7 @@ public class SystemSchema extends AbstractSchema
 
   static final RowSignature SUPERVISOR_SIGNATURE = RowSignature
       .builder()
-      .add("id", ValueType.STRING)
+      .add("supervisor_id", ValueType.STRING)
       .add("state", ValueType.STRING)
       .add("detailed_state", ValueType.STRING)
       .add("healthy", ValueType.LONG)
@@ -907,7 +907,7 @@ public class SystemSchema extends AbstractSchema
     try {
       request = indexingServiceClient.makeRequest(
           HttpMethod.GET,
-          StringUtils.format("/druid/indexer/v1/supervisor/status?fullStatus"),
+          StringUtils.format("/druid/indexer/v1/supervisor?fullStatus"),
           false
       );
     }

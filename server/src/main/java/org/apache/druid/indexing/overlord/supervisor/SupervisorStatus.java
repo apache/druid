@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
+import com.google.common.base.Preconditions;
 
 import java.util.Objects;
 
@@ -51,7 +52,7 @@ public class SupervisorStatus
       Builder builder
   )
   {
-    this.id = builder.id;
+    this.id = Preconditions.checkNotNull(builder.id, "id");
     this.state = builder.state;
     this.detailedState = builder.detailedState;
     this.healthy = builder.healthy;
@@ -168,7 +169,7 @@ public class SupervisorStatus
     @JsonProperty
     public Builder withId(String id)
     {
-      this.id = id;
+      this.id = Preconditions.checkNotNull(id, "id");
       return this;
     }
 
