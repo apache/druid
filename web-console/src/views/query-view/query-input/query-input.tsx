@@ -106,11 +106,10 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
       },
       getDocTooltip: (item: any) => {
         if (item.meta === 'function') {
-          const functionName = item.caption.slice(0, -2);
           item.docHTML = `
 <div class="function-doc">
   <div class="function-doc-name">
-    <b>${escape(functionName)}</b>
+    <b>${escape(item.caption)}</b>
   </div>
   <hr />
   <div>
