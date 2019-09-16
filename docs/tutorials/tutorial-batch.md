@@ -53,7 +53,7 @@ Select `Local disk` and click `Connect data`.
 Enter `quickstart/tutorial/` as the base directory and `wikiticker-2015-09-12-sampled.json.gz` as a filter.
 The separation of base directory and [wildcard file filter](https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) is there if you need to ingest data from multiple files.
 
-Click `Preview` and make sure that the the data you are seeing is correct.
+Click `Preview` and make sure that the data you are seeing is correct.
 
 Once the data is located, you can click "Next: Parse data" to go to the next step.
 
@@ -78,13 +78,13 @@ You do not need to enter anything in these steps as applying ingestion time tran
 
 In the `Configure schema` step, you can configure which dimensions (and metrics) will be ingested into Druid.
 This is exactly what the data will appear like in Druid once it is ingested.
-Since our dataset is very small, go ahead and turn off `Rollup` by clicking on the switch and confirming the change.
+Since our dataset is very small, go ahead and turn off [`Rollup`](../ingestion/index.md#rollup) by clicking on the switch and confirming the change.
 
 Once you are satisfied with the schema, click `Next` to go to the `Partition` step where you can fine tune how the data will be partitioned into segments.
 
 ![Data loader partition](../assets/tutorial-batch-data-loader-06.png "Data loader partition")
 
-Here you can adjust how the data will be split up into segments in Druid.
+Here, you can adjust how the data will be split up into segments in Druid.
 Since this is a small dataset, there are no adjustments that need to be made in this step.
 
 Clicking past the `Tune` step, to get to the publish step.

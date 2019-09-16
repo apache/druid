@@ -87,9 +87,9 @@ Select `Apache Kafka` and click `Connect data`.
 
 ![Data loader sample](../assets/tutorial-kafka-data-loader-02.png "Data loader sample")
 
-Enter `localhost:9092` as the bootsrap server and `wikipedia` as the topic.
+Enter `localhost:9092` as the bootstrap server and `wikipedia` as the topic.
 
-Click `Preview` and make sure that the the data you are seeing is correct.
+Click `Preview` and make sure that the data you are seeing is correct.
 
 Once the data is located, you can click "Next: Parse data" to go to the next step.
 
@@ -114,13 +114,13 @@ You do not need to enter anything in these steps as applying ingestion time tran
 
 In the `Configure schema` step, you can configure which dimensions (and metrics) will be ingested into Druid.
 This is exactly what the data will appear like in Druid once it is ingested.
-Since our dataset is very small, go ahead and turn off `Rollup` by clicking on the switch and confirming the change.
+Since our dataset is very small, go ahead and turn off [`Rollup`](../ingestion/index.md#rollup) by clicking on the switch and confirming the change.
 
 Once you are satisfied with the schema, click `Next` to go to the `Partition` step where you can fine tune how the data will be partitioned into segments.
 
 ![Data loader partition](../assets/tutorial-kafka-data-loader-06.png "Data loader partition")
 
-Here you can adjust how the data will be split up into segments in Druid.
+Here, you can adjust how the data will be split up into segments in Druid.
 Since this is a small dataset, there are no adjustments that need to be made in this step.
 
 Click `Next: Tune` to go to the tuning step.
@@ -128,7 +128,7 @@ Click `Next: Tune` to go to the tuning step.
 ![Data loader tune](../assets/tutorial-kafka-data-loader-07.png "Data loader tune")
 
 In the `Tune` step is it *very important* to set `Use earliest offset` to `True` since we want to consume the data from the start of the stream.
-There are no other changes that need to be made hare so click `Next: Publish` we go to the publish step.
+There are no other changes that need to be made hear, so click `Next: Publish` to go to the `Publish` step.
 
 ![Data loader publish](../assets/tutorial-kafka-data-loader-08.png "Data loader publish")
 
@@ -150,7 +150,7 @@ You will be taken to the task view with the focus on the newly created superviso
 
 The task view is set to auto refresh, wait until your supervisor initialises and launches a task.
 
-When a tasks starts running it will also start serving the data that it is ingesting.
+When a tasks starts running, it will also start serving the data that it is ingesting.
 
 Navigate to the `Datasources` view from the header.
 

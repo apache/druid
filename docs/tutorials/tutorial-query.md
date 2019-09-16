@@ -62,9 +62,10 @@ The console query view provides autocomplete functionality with inline documenta
 
 ![Query options](../assets/tutorial-query-02.png "Query options")
 
-You can also configure extra context flags to be sent with the query from the more options menu.
+You can also configure extra [context flags](../querying/query-context.md) to be sent with the query from the `...` options menu.
 
-Note that the console will by default wrap your SQL queries in a limit where appropriate allowing you to issue queries like `SELECT * FROM wikipedia` without hesitation - you can turn off this behavior from the `Smart query limit` toggle.
+Note that the console will (by default) wrap your SQL queries in a limit where appropriate so that queries such as `SELECT * FROM wikipedia` can complete.
+You can turn off this behavior from the `Smart query limit` toggle.
 
 ![Query actions](../assets/tutorial-query-03.png "Query actions")
 
