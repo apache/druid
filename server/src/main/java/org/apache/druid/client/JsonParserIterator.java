@@ -40,6 +40,8 @@ import java.util.Iterator;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class JsonParserIterator<T> implements Iterator<T>, Closeable
 {
@@ -52,6 +54,8 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
   private final String host;
   private final ObjectMapper objectMapper;
   private final BytesAccumulatingResponseHandler responseHandler;
+  private final boolean hasTimeout;
+  private final long timeoutAt;
 
   public JsonParserIterator(
       JavaType typeRef,
@@ -71,6 +75,8 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
     this.host = host;
     this.objectMapper = objectMapper;
     this.responseHandler = responseHandler;
+    this.timeoutAt = query.<Long>getContextValue(DirectDruidClient.QUERY_FAIL_TIME, -1L);
+    this.hasTimeout = timeoutAt > -1;
   }
 
   @Override
@@ -114,7 +120,13 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
   {
     if (jp == null) {
       try {
-        InputStream is = future.get();
+        long timeLeftMillis = timeoutAt - System.currentTimeMillis();
+        if (timeLeftMillis < 0) {
+          throw new TimeoutException();
+        }
+        InputStream is = hasTimeout
+                         ? future.get(timeLeftMillis, TimeUnit.MILLISECONDS)
+                         : future.get();
         if (responseHandler != null && responseHandler.getStatus() != HttpServletResponse.SC_OK) {
           throw new RE(
               "Unexpected response status [%s] description [%s] from request url [%s]",
@@ -145,6 +157,16 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
           jp.nextToken();
           objectCodec = jp.getCodec();
         }
+      }
+      catch (TimeoutException tex) {
+        throw new QueryInterruptedException(
+            new ResourceLimitExceededException(
+                "query[%s] url[%s] timed out.",
+                query.getId(),
+                url
+            ),
+            host
+        );
       }
       catch (IOException | InterruptedException | ExecutionException e) {
         throw new RE(

@@ -349,4 +349,77 @@ public class DirectDruidClientTest
     Assert.assertEquals(hostName, actualException.getHost());
     EasyMock.verify(httpClient);
   }
+
+  @Test
+  public void testQueryTimeoutFromFuture()
+  {
+    HttpClient httpClient = EasyMock.createMock(HttpClient.class);
+    SettableFuture<Object> interruptionFuture = SettableFuture.create();
+    Capture<Request> capturedRequest = EasyMock.newCapture();
+    String hostName = "localhost:8080";
+    EasyMock.expect(
+        httpClient.go(
+            EasyMock.capture(capturedRequest),
+            EasyMock.<HttpResponseHandler>anyObject(),
+            EasyMock.anyObject(Duration.class)
+        )
+    )
+            .andReturn(interruptionFuture)
+            .anyTimes();
+
+    EasyMock.replay(httpClient);
+
+    DataSegment dataSegment = new DataSegment(
+        "test",
+        Intervals.of("2013-01-01/2013-01-02"),
+        DateTimes.of("2013-01-01").toString(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        NoneShardSpec.instance(),
+        0,
+        0L
+    );
+    final ServerSelector serverSelector = new ServerSelector(
+        dataSegment,
+        new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy())
+    );
+
+    DirectDruidClient client1 = new DirectDruidClient(
+        new ReflectionQueryToolChestWarehouse(),
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        new DefaultObjectMapper(),
+        httpClient,
+        "http",
+        hostName,
+        new NoopServiceEmitter()
+    );
+
+    QueryableDruidServer queryableDruidServer = new QueryableDruidServer(
+        new DruidServer("test1", hostName, null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
+        client1
+    );
+
+    serverSelector.addServerAndUpdateSegment(queryableDruidServer, dataSegment);
+
+    TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
+    query = query.withOverriddenContext(
+        ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 100)
+    );
+
+    Sequence results = client1.run(QueryPlus.wrap(query));
+
+    QueryInterruptedException actualException = null;
+    try {
+      results.toList();
+    }
+    catch (QueryInterruptedException e) {
+      actualException = e;
+    }
+    Assert.assertNotNull(actualException);
+    Assert.assertEquals("Resource limit exceeded", actualException.getErrorCode());
+    Assert.assertEquals("query[null] url[http://localhost:8080/druid/v2/] timed out.", actualException.getMessage());
+    Assert.assertEquals(hostName, actualException.getHost());
+    EasyMock.verify(httpClient);
+  }
 }
