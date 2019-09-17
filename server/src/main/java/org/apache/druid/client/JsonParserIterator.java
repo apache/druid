@@ -139,7 +139,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
           throw new QueryInterruptedException(
               new ResourceLimitExceededException(
                   "query[%s] url[%s] timed out or max bytes limit reached.",
-                  query.getId(),
+                  query != null ? query.getId() : null,
                   url
               ),
               host
@@ -162,7 +162,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
         throw new QueryInterruptedException(
             new ResourceLimitExceededException(
                 "query[%s] url[%s] timed out.",
-                query.getId(),
+                query != null ? query.getId() : null,
                 url
             ),
             host
