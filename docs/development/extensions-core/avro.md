@@ -72,7 +72,7 @@ If `type` is not included, the avroBytesDecoder defaults to `schema_repo`.
 > may need to migrate schemas in the future, consider one of the other decoders, all of which use a message header that
 > allows the parser to identify the proper Avro schema for reading records.
 
-This decoder can be used if all the input events can be read using the same schema. In that case schema can be specified in the input task json itself as described below.
+This decoder can be used if all the input events can be read using the same schema. In that case schema can be specified in the input task JSON itself as described below.
 
 ```
 ...
@@ -94,7 +94,7 @@ This decoder can be used if all the input events can be read using the same sche
 
 ##### Multiple Inline Schemas Based Avro Bytes Decoder
 
-This decoder can be used if different input events can have different read schema. In that case schema can be specified in the input task json itself as described below.
+This decoder can be used if different input events can have different read schema. In that case schema can be specified in the input task JSON itself as described below.
 
 ```
 ...
@@ -149,7 +149,7 @@ This section describes the format of the `subjectAndIdConverter` object for the 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | This should say `avro_1124`. | no |
-| topic | String | Specifies the topic of your kafka stream. | yes |
+| topic | String | Specifies the topic of your Kafka stream. | yes |
 
 
 ###### Avro-1124 Schema Repository
@@ -183,7 +183,7 @@ Details can be found in Schema Registry [documentation](http://docs.confluent.io
 
 ### Avro Hadoop Parser
 
-This is for batch ingestion using the `HadoopDruidIndexer`. The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"org.apache.druid.data.input.avro.AvroValueInputFormat"`. You may want to set Avro reader's schema in `jobProperties` in `tuningConfig`, eg: `"avro.schema.input.value.path": "/path/to/your/schema.avsc"` or `"avro.schema.input.value": "your_schema_JSON_object"`, if reader's schema is not set, the schema in Avro object container file will be used, see [Avro specification](http://avro.apache.org/docs/1.7.7/spec.html#Schema+Resolution). Make sure to include "org.apache.druid.extensions:druid-avro-extensions" as an extension.
+This is for batch ingestion using the `HadoopDruidIndexer`. The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"org.apache.druid.data.input.avro.AvroValueInputFormat"`. You may want to set Avro reader's schema in `jobProperties` in `tuningConfig`, e.g.: `"avro.schema.input.value.path": "/path/to/your/schema.avsc"` or `"avro.schema.input.value": "your_schema_JSON_object"`, if reader's schema is not set, the schema in Avro object container file will be used, see [Avro specification](http://avro.apache.org/docs/1.7.7/spec.html#Schema+Resolution). Make sure to include "org.apache.druid.extensions:druid-avro-extensions" as an extension.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|

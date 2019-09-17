@@ -38,7 +38,7 @@ In Apache Druid (incubating), it's important to optimize the segment size becaus
 
 It would be best if you can optimize the segment size at ingestion time, but sometimes it's not easy
 especially when it comes to stream ingestion because the amount of data ingested might vary over time. In this case,
-you can create segments with a sub-optimzed size first and optimize them later.
+you can create segments with a sub-optimized size first and optimize them later.
 
 You may need to consider the followings to optimize your segments.
 
