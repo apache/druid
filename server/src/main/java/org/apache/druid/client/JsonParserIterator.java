@@ -121,7 +121,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
     if (jp == null) {
       try {
         long timeLeftMillis = timeoutAt - System.currentTimeMillis();
-        if (timeLeftMillis < 1) {
+        if (hasTimeout && timeLeftMillis < 1) {
           throw new TimeoutException();
         }
         InputStream is = hasTimeout
