@@ -404,7 +404,7 @@ public class DirectDruidClientTest
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
     query = query.withOverriddenContext(
-        ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 100)
+        ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 100, "queryId", "never-ending-future")
     );
 
     Sequence results = client1.run(QueryPlus.wrap(query));
@@ -418,7 +418,7 @@ public class DirectDruidClientTest
     }
     Assert.assertNotNull(actualException);
     Assert.assertEquals("Resource limit exceeded", actualException.getErrorCode());
-    Assert.assertEquals("query[null] url[http://localhost:8080/druid/v2/] timed out.", actualException.getMessage());
+    Assert.assertEquals("query[never-ending-future] url[http://localhost:8080/druid/v2/] timed out.", actualException.getMessage());
     Assert.assertEquals(hostName, actualException.getHost());
     EasyMock.verify(httpClient);
   }
