@@ -75,7 +75,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
     this.host = host;
     this.objectMapper = objectMapper;
     this.responseHandler = responseHandler;
-    this.timeoutAt = query.<Long>getContextValue(DirectDruidClient.QUERY_FAIL_TIME, -1L);
+    this.timeoutAt = query != null ? query.<Long>getContextValue(DirectDruidClient.QUERY_FAIL_TIME, -1L) : -1L;
     this.hasTimeout = timeoutAt > -1;
   }
 
@@ -158,7 +158,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
           objectCodec = jp.getCodec();
         }
       }
-      catch (TimeoutException tex) {
+      catch (TimeoutException ignored) {
         throw new QueryInterruptedException(
             new ResourceLimitExceededException(
                 "query[%s] url[%s] timed out.",
