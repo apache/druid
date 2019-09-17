@@ -54,7 +54,7 @@ See [postgresql-metadata-storage](../development/extensions-core/postgresql.md).
 
 ## Adding custom dbcp properties
 
-NOTE: These properties are not settable through the druid.metadata.storage.connector.dbcp properties : username, password, connectURI, validationQuery, testOnBorrow. These must be set through druid.metadata.storage.connector properties.
+NOTE: These properties are not settable through the `druid.metadata.storage.connector.dbcp properties`: `username`, `password`, `connectURI`, `validationQuery`, `testOnBorrow`. These must be set through `druid.metadata.storage.connector` properties.
 
 Example supported properties:
 
@@ -78,7 +78,7 @@ system. The table has two main functional columns, the other columns are for
 indexing purposes.
 
 The `used` column is a boolean "tombstone". A 1 means that the segment should
-be "used" by the cluster (i.e. it should be loaded and available for requests).
+be "used" by the cluster (i.e., it should be loaded and available for requests).
 A 0 means that the segment should not be actively loaded into the cluster. We
 do this as a means of removing segments from the cluster without actually
 removing their metadata (which allows for simpler rolling back if that is ever
@@ -138,4 +138,4 @@ The Metadata Storage is accessed only by:
 2. Realtime Processes (if any)
 3. Coordinator Processes
 
-Thus you need to give permissions (eg in AWS Security Groups)  only for these machines to access the Metadata storage.
+Thus you need to give permissions (e.g., in AWS Security Groups) only for these machines to access the Metadata storage.

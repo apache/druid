@@ -52,16 +52,16 @@ JVM Flags:
 
 `ExitOnOutOfMemoryError` flag is only supported starting JDK 8u92 . For older versions, `-XX:OnOutOfMemoryError='kill -9 %p'` can be used.
 
-`MaxDirectMemorySize` restricts jvm from allocating more than specified limit, by setting it to unlimited jvm restriction is lifted and OS level memory limits would still be effective. It's still important to make sure that Druid is not configured to allocate more off-heap memory than your machine has available. Important settings here include druid.processing.numThreads, druid.processing.numMergeBuffers, and druid.processing.buffer.sizeBytes.
+`MaxDirectMemorySize` restricts JVM from allocating more than specified limit, by setting it to unlimited JVM restriction is lifted and OS level memory limits would still be effective. It's still important to make sure that Druid is not configured to allocate more off-heap memory than your machine has available. Important settings here include druid.processing.numThreads, druid.processing.numMergeBuffers, and druid.processing.buffer.sizeBytes.
 
 Please note that above flags are general guidelines only. Be cautious and feel free to change them if necessary for the specific deployment.
 
-Additionally, for large jvm heaps, here are a few Garbage Collection efficiency guidelines that have been known to help in some cases.
+Additionally, for large JVM heaps, here are a few Garbage Collection efficiency guidelines that have been known to help in some cases.
 
 - Mount /tmp on tmpfs ( See http://www.evanjones.ca/jvm-mmap-pause.html )
 - On Disk-IO intensive processes (e.g. Historical and MiddleManager), GC and Druid logs should be written to a different disk than where data is written.
 - Disable Transparent Huge Pages ( See https://blogs.oracle.com/linux/performance-issues-with-transparent-huge-pages-thp )
-- Try disabling biased locking by using `-XX:-UseBiasedLocking` jvm flag. ( See https://dzone.com/articles/logging-stop-world-pauses-jvm )
+- Try disabling biased locking by using `-XX:-UseBiasedLocking` JVM flag. ( See https://dzone.com/articles/logging-stop-world-pauses-jvm )
 
 ## Use UTC timezone
 
@@ -81,7 +81,7 @@ Timeseries and TopN queries are much more optimized and significantly faster tha
 
 ## Segment sizes matter
 
-Segments should generally be between 300MB-700MB in size. Too many small segments results in inefficient CPU utilizations and
+Segments should generally be between 300MB-700MB in size. Too many small segments results in inefficient CPU utilization and
 too many large segments impacts query performance, most notably with TopN queries.
 
 ## FAQs and Guides

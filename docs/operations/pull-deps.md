@@ -41,11 +41,11 @@ Don't pull down the default hadoop coordinate, i.e., org.apache.hadoop:hadoop-cl
 
 `--clean`
 
-Remove exisiting extension and hadoop dependencies directories before pulling down dependencies.
+Remove existing extension and hadoop dependencies directories before pulling down dependencies.
 
 `-l` or `--localRepository`
 
-A local repostiry that Maven will use to put downloaded files. Then pull-deps will lay these files out into the extensions directory as needed.
+A local repository that Maven will use to put downloaded files. Then pull-deps will lay these files out into the extensions directory as needed.
 
 `-r` or `--remoteRepository`
 
