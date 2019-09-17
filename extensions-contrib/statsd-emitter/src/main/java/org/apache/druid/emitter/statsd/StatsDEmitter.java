@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.timgroup.statsd.Event.AlertType;
 import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
 import com.timgroup.statsd.StatsDClientErrorHandler;
@@ -219,16 +220,16 @@ public class StatsDEmitter implements Emitter
                .toArray(String[]::new);
   }
 
-  private static com.timgroup.statsd.Event.AlertType alertType(AlertEvent.Severity severity)
+  private static AlertType alertType(AlertEvent.Severity severity)
   {
     switch (severity) {
       case ANOMALY:
-        return com.timgroup.statsd.Event.AlertType.WARNING;
+        return AlertType.WARNING;
       case COMPONENT_FAILURE:
       case SERVICE_FAILURE:
-        return com.timgroup.statsd.Event.AlertType.ERROR;
+        return AlertType.ERROR;
       default:
-        return com.timgroup.statsd.Event.AlertType.INFO;
+        return AlertType.INFO;
     }
   }
 
