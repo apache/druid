@@ -79,9 +79,11 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
 {
   private static final String DATA_SOURCE = "foo";
 
+  @SuppressWarnings("SSBasedInspection")
   private static QueryRunnerFactoryConglomerate conglomerate;
+  @SuppressWarnings("SSBasedInspection")
   private static Closer resourceCloser;
-  private static AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
+  private static final AuthenticationResult AUTHENTICATION_RESULT = CalciteTests.REGULAR_USER_AUTH_RESULT;
   private static final Map<String, Object> QUERY_CONTEXT_DEFAULT = ImmutableMap.of(
       PlannerContext.CTX_SQL_QUERY_ID, "dummy"
   );
@@ -186,7 +188,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
     final List<String[]> expectedResults = ImmutableList.of(
         new String[] {
             "\"AAAAAT/wAAAAAAAAQBgAAAAAAABAaQAAAAAAAAAAAAY/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAABAAAAAAAAAAD/wAAAAAAAAQAgAAAAAAAA/8AAAAAAAAEAQAAAAAAAAP/AAAAAAAABAFAAAAAAAAD/wAAAAAAAAQBgAAAAAAAA=\""
@@ -219,7 +221,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM foo";
 
     // Log query
-    sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
 
     // Verify query
     Assert.assertEquals(
@@ -248,7 +250,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
     final List<double[]> expectedResults = ImmutableList.of(
         new double[] {
             1.1,
@@ -297,7 +299,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM (SELECT dim1, TDIGEST_GENERATE_SKETCH(m1, 200) AS x FROM foo group by dim1)";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
     final List<double[]> expectedResults = ImmutableList.of(
         new double[] {
             1.0,
@@ -363,7 +365,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
     final List<double[]> expectedResults = ImmutableList.of(
         new double[] {
             1.0,
@@ -410,7 +412,7 @@ public class TDigestSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM foo";
 
     // Log query
-    sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
 
     // Verify query
     Assert.assertEquals(

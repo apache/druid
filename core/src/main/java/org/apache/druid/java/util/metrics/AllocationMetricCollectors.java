@@ -29,30 +29,33 @@ import java.lang.reflect.Method;
 
 class AllocationMetricCollectors
 {
-  private static final Logger log = new Logger(AllocationMetricCollectors.class);
-  private static Method getThreadAllocatedBytes;
-  private static ThreadMXBean threadMXBean;
-  private static boolean initialized = false;
+  private static final Logger LOG = new Logger(AllocationMetricCollectors.class);
+  @SuppressWarnings("SSBasedInspection")
+  private static Method GET_THREAD_ALLOCATED_BYTES;
+  @SuppressWarnings("SSBasedInspection")
+  private static ThreadMXBean THREAD_MX_BEAN;
+  @SuppressWarnings("SSBasedInspection")
+  private static boolean INITIALIZED = false;
 
   static {
     try {
       // classes in the sun.* packages are not part of the public/supported Java API and should not be used directly.
-      threadMXBean = ManagementFactory.getThreadMXBean();
-      getThreadAllocatedBytes = threadMXBean.getClass().getMethod("getThreadAllocatedBytes", long[].class);
-      getThreadAllocatedBytes.setAccessible(true);
-      getThreadAllocatedBytes.invoke(threadMXBean, (Object) threadMXBean.getAllThreadIds());
-      initialized = true;
+      THREAD_MX_BEAN = ManagementFactory.getThreadMXBean();
+      GET_THREAD_ALLOCATED_BYTES = THREAD_MX_BEAN.getClass().getMethod("getThreadAllocatedBytes", long[].class);
+      GET_THREAD_ALLOCATED_BYTES.setAccessible(true);
+      GET_THREAD_ALLOCATED_BYTES.invoke(THREAD_MX_BEAN, (Object) THREAD_MX_BEAN.getAllThreadIds());
+      INITIALIZED = true;
     }
     catch (Exception e) {
-      log.warn(e, "Cannot initialize %s", AllocationMetricCollector.class.getName());
+      LOG.warn(e, "Cannot initialize %s", AllocationMetricCollector.class.getName());
     }
   }
 
   @Nullable
   static AllocationMetricCollector getAllocationMetricCollector()
   {
-    if (initialized) {
-      return new AllocationMetricCollector(getThreadAllocatedBytes, threadMXBean);
+    if (INITIALIZED) {
+      return new AllocationMetricCollector(GET_THREAD_ALLOCATED_BYTES, THREAD_MX_BEAN);
     }
     return null;
   }

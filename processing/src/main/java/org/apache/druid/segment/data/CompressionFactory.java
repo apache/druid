@@ -95,10 +95,17 @@ public class CompressionFactory
    * clearEncodingFlag function.
    */
 
+  /*
+   * This is the flag mechanism for determine whether an encoding byte exist in the header. This is needed for
+   * backward compatibility, since segment created prior to the introduction of encoding formats does not have the
+   * encoding strategy byte. The flag is encoded in the compression strategy byte using the setEncodingFlag and
+   * clearEncodingFlag function.
+   */
+
   // 0xFE(-2) should be the smallest valid compression strategy id
-  private static byte FLAG_BOUND = (byte) 0xFE;
+  private static final byte FLAG_BOUND = (byte) 0xFE;
   // 126 is the value here since -2 - 126 = -128, which is the lowest byte value
-  private static int FLAG_VALUE = 126;
+  private static final int FLAG_VALUE = 126;
 
   public static boolean hasEncodingFlag(byte strategyId)
   {

@@ -163,25 +163,27 @@ public class TestIndex
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
   }
 
-  private static Supplier<IncrementalIndex> realtimeIndex = Suppliers.memoize(
+  @SuppressWarnings("SSBasedInspection")
+  private static Supplier<IncrementalIndex> REALTIME_INDEX = Suppliers.memoize(
       () -> makeRealtimeIndex("druid.sample.numeric.tsv")
   );
-  private static Supplier<IncrementalIndex> noRollupRealtimeIndex = Suppliers.memoize(
+  @SuppressWarnings("SSBasedInspection")
+  private static Supplier<IncrementalIndex> NO_ROLLUP_REALTIME_INDEX = Suppliers.memoize(
       () -> makeRealtimeIndex("druid.sample.numeric.tsv", false)
   );
-  private static Supplier<IncrementalIndex> noBitmapRealtimeIndex = Suppliers.memoize(
+  private static final Supplier<IncrementalIndex> NO_BITMAP_REALTIME_INDEX = Suppliers.memoize(
       () -> makeRealtimeIndex("druid.sample.numeric.tsv", false, false)
   );
-  private static Supplier<QueryableIndex> mmappedIndex = Suppliers.memoize(
-      () -> persistRealtimeAndLoadMMapped(realtimeIndex.get())
+  private static final Supplier<QueryableIndex> MMAPPED_INDEX = Suppliers.memoize(
+      () -> persistRealtimeAndLoadMMapped(REALTIME_INDEX.get())
   );
-  private static Supplier<QueryableIndex> noRollupMmappedIndex = Suppliers.memoize(
-      () -> persistRealtimeAndLoadMMapped(noRollupRealtimeIndex.get())
+  private static final Supplier<QueryableIndex> NO_ROLLUP_MMAPPED_INDEX = Suppliers.memoize(
+      () -> persistRealtimeAndLoadMMapped(NO_ROLLUP_REALTIME_INDEX.get())
   );
-  private static Supplier<QueryableIndex> noBitmapMmappedIndex = Suppliers.memoize(
-      () -> persistRealtimeAndLoadMMapped(noBitmapRealtimeIndex.get())
+  private static final Supplier<QueryableIndex> NO_BITMAP_MMAPPED_INDEX = Suppliers.memoize(
+      () -> persistRealtimeAndLoadMMapped(NO_BITMAP_REALTIME_INDEX.get())
   );
-  private static Supplier<QueryableIndex> mergedRealtime = Suppliers.memoize(() -> {
+  private static final Supplier<QueryableIndex> MERGED_REALTIME = Suppliers.memoize(() -> {
     try {
       IncrementalIndex top = makeRealtimeIndex("druid.sample.numeric.tsv.top");
       IncrementalIndex bottom = makeRealtimeIndex("druid.sample.numeric.tsv.bottom");
@@ -221,37 +223,37 @@ public class TestIndex
 
   public static IncrementalIndex getIncrementalTestIndex()
   {
-    return realtimeIndex.get();
+    return REALTIME_INDEX.get();
   }
 
   public static IncrementalIndex getNoRollupIncrementalTestIndex()
   {
-    return noRollupRealtimeIndex.get();
+    return NO_ROLLUP_REALTIME_INDEX.get();
   }
 
   public static IncrementalIndex getNoBitmapIncrementalTestIndex()
   {
-    return noBitmapRealtimeIndex.get();
+    return NO_BITMAP_REALTIME_INDEX.get();
   }
 
   public static QueryableIndex getMMappedTestIndex()
   {
-    return mmappedIndex.get();
+    return MMAPPED_INDEX.get();
   }
 
   public static QueryableIndex getNoRollupMMappedTestIndex()
   {
-    return noRollupMmappedIndex.get();
+    return NO_ROLLUP_MMAPPED_INDEX.get();
   }
 
   public static QueryableIndex getNoBitmapMMappedTestIndex()
   {
-    return noBitmapMmappedIndex.get();
+    return NO_BITMAP_MMAPPED_INDEX.get();
   }
 
   public static QueryableIndex mergedRealtimeIndex()
   {
-    return mergedRealtime.get();
+    return MERGED_REALTIME.get();
   }
 
   public static IncrementalIndex makeRealtimeIndex(final String resourceFilename)
@@ -300,9 +302,9 @@ public class TestIndex
     }
     catch (Exception e) {
       if (rollup) {
-        realtimeIndex = null;
+        REALTIME_INDEX = null;
       } else {
-        noRollupRealtimeIndex = null;
+        NO_ROLLUP_REALTIME_INDEX = null;
       }
       throw new RuntimeException(e);
     }

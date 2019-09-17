@@ -32,6 +32,7 @@ public class StaticMapExtractionNamespaceTest
 {
   private static final Map<String, String> MAP = ImmutableMap.<String, String>builder().put("foo", "bar").build();
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
+  @SuppressWarnings("SSBasedInspection")
   private static String MAP_STRING;
 
   @BeforeClass

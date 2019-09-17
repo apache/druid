@@ -42,7 +42,7 @@ import java.util.Objects;
 @JsonTypeName(FixedBucketsHistogramAggregator.TYPE_NAME)
 public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
 {
-  private static int DEFAULT_NUM_BUCKETS = 10;
+  private static final int DEFAULT_NUM_BUCKETS = 10;
 
   private final String name;
   private final String fieldName;

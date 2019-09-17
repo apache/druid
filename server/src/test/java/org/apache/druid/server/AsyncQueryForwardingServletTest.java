@@ -89,7 +89,9 @@ import java.util.zip.Deflater;
 
 public class AsyncQueryForwardingServletTest extends BaseJettyTest
 {
+  @SuppressWarnings("SSBasedInspection")
   private static int port1;
+  @SuppressWarnings("SSBasedInspection")
   private static int port2;
 
   @Override

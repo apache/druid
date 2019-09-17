@@ -92,46 +92,46 @@ public class BloomFilterAggregatorTest
 
   private static final int MAX_NUM_VALUES = 15;
 
-  private static BloomKFilter filter1;
-  private static BloomKFilter filter2;
+  private static final BloomKFilter FILTER1;
+  private static final BloomKFilter FILTER2;
 
-  private static String serializedFilter1;
-  private static String serializedFilter2;
-  private static String serializedCombinedFilter;
-  private static String serializedLongFilter;
-  private static String serializedDoubleFilter;
-  private static String serializedFloatFilter;
+  private static final String SERIALIZED_FILTER1;
+  private static final String SERIALIZED_FILTER2;
+  private static final String SERIALIZED_COMBINED_FILTER;
+  private static final String SERIALIZED_LONG_FILTER;
+  private static final String SERIALIZED_DOUBLE_FILTER;
+  private static final String SERIALIZED_FLOAT_FILTER;
 
   static {
     try {
-      filter1 = new BloomKFilter(MAX_NUM_VALUES);
-      filter2 = new BloomKFilter(MAX_NUM_VALUES);
+      FILTER1 = new BloomKFilter(MAX_NUM_VALUES);
+      FILTER2 = new BloomKFilter(MAX_NUM_VALUES);
       BloomKFilter combinedValuesFilter = new BloomKFilter(MAX_NUM_VALUES);
 
-      createStringFilter(VALUES1, filter1, combinedValuesFilter);
-      createStringFilter(VALUES2, filter2, combinedValuesFilter);
+      createStringFilter(VALUES1, FILTER1, combinedValuesFilter);
+      createStringFilter(VALUES2, FILTER2, combinedValuesFilter);
 
-      serializedFilter1 = filterToString(filter1);
-      serializedFilter2 = filterToString(filter2);
-      serializedCombinedFilter = filterToString(combinedValuesFilter);
+      SERIALIZED_FILTER1 = filterToString(FILTER1);
+      SERIALIZED_FILTER2 = filterToString(FILTER2);
+      SERIALIZED_COMBINED_FILTER = filterToString(combinedValuesFilter);
 
       BloomKFilter longFilter = new BloomKFilter(MAX_NUM_VALUES);
       for (long val : LONG_VALUES1) {
         longFilter.addLong(val);
       }
-      serializedLongFilter = filterToString(longFilter);
+      SERIALIZED_LONG_FILTER = filterToString(longFilter);
 
       BloomKFilter floatFilter = new BloomKFilter(MAX_NUM_VALUES);
       for (float val : FLOAT_VALUES1) {
         floatFilter.addFloat(val);
       }
-      serializedFloatFilter = filterToString(floatFilter);
+      SERIALIZED_FLOAT_FILTER = filterToString(floatFilter);
 
       BloomKFilter doubleFilter = new BloomKFilter(MAX_NUM_VALUES);
       for (double val : DOUBLE_VALUES1) {
         doubleFilter.addDouble(val);
       }
-      serializedDoubleFilter = filterToString(doubleFilter);
+      SERIALIZED_DOUBLE_FILTER = filterToString(doubleFilter);
 
     }
     catch (Exception ex) {
@@ -251,7 +251,7 @@ public class BloomFilterAggregatorTest
         (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get())
     );
     String serialized = filterToString(bloomKFilter);
-    Assert.assertEquals(serializedFilter1, serialized);
+    Assert.assertEquals(SERIALIZED_FILTER1, serialized);
   }
 
   @Test
@@ -268,7 +268,7 @@ public class BloomFilterAggregatorTest
         (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get())
     );
     String serialized = filterToString(bloomKFilter);
-    Assert.assertEquals(serializedLongFilter, serialized);
+    Assert.assertEquals(SERIALIZED_LONG_FILTER, serialized);
   }
 
   @Test
@@ -285,7 +285,7 @@ public class BloomFilterAggregatorTest
         (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get())
     );
     String serialized = filterToString(bloomKFilter);
-    Assert.assertEquals(serializedFloatFilter, serialized);
+    Assert.assertEquals(SERIALIZED_FLOAT_FILTER, serialized);
   }
 
   @Test
@@ -302,7 +302,7 @@ public class BloomFilterAggregatorTest
         (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get())
     );
     String serialized = filterToString(bloomKFilter);
-    Assert.assertEquals(serializedDoubleFilter, serialized);
+    Assert.assertEquals(SERIALIZED_DOUBLE_FILTER, serialized);
   }
 
   @Test
@@ -325,7 +325,7 @@ public class BloomFilterAggregatorTest
         (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos))
     );
     String serialized = filterToString(bloomKFilter);
-    Assert.assertEquals(serializedFilter2, serialized);
+    Assert.assertEquals(SERIALIZED_FILTER2, serialized);
   }
 
   @Test
@@ -347,7 +347,7 @@ public class BloomFilterAggregatorTest
         (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos))
     );
     String serialized = filterToString(bloomKFilter);
-    Assert.assertEquals(serializedLongFilter, serialized);
+    Assert.assertEquals(SERIALIZED_LONG_FILTER, serialized);
   }
 
   @Test
@@ -369,7 +369,7 @@ public class BloomFilterAggregatorTest
         (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos))
     );
     String serialized = filterToString(bloomKFilter);
-    Assert.assertEquals(serializedFloatFilter, serialized);
+    Assert.assertEquals(SERIALIZED_FLOAT_FILTER, serialized);
   }
 
   @Test
@@ -391,7 +391,7 @@ public class BloomFilterAggregatorTest
         (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos))
     );
     String serialized = filterToString(bloomKFilter);
-    Assert.assertEquals(serializedDoubleFilter, serialized);
+    Assert.assertEquals(SERIALIZED_DOUBLE_FILTER, serialized);
   }
 
   @Test
@@ -420,7 +420,7 @@ public class BloomFilterAggregatorTest
     );
 
     String serialized = filterToString(combined);
-    Assert.assertEquals(serializedCombinedFilter, serialized);
+    Assert.assertEquals(SERIALIZED_COMBINED_FILTER, serialized);
   }
 
   @Test
@@ -429,8 +429,8 @@ public class BloomFilterAggregatorTest
     final TestBloomFilterBufferColumnSelector mergeDim =
         new TestBloomFilterBufferColumnSelector(
             ImmutableList.of(
-                ByteBuffer.wrap(BloomFilterSerializersModule.bloomKFilterToBytes(filter1)),
-                ByteBuffer.wrap(BloomFilterSerializersModule.bloomKFilterToBytes(filter2))
+                ByteBuffer.wrap(BloomFilterSerializersModule.bloomKFilterToBytes(FILTER1)),
+                ByteBuffer.wrap(BloomFilterSerializersModule.bloomKFilterToBytes(FILTER2))
             )
         );
 
@@ -446,7 +446,7 @@ public class BloomFilterAggregatorTest
         (ByteBuffer) valueAggregatorFactory.getCombiningFactory().finalizeComputation(mergeAggregator.get())
     );
     String serialized = filterToString(merged);
-    Assert.assertEquals(serializedCombinedFilter, serialized);
+    Assert.assertEquals(SERIALIZED_COMBINED_FILTER, serialized);
   }
 
   @Test
@@ -455,8 +455,8 @@ public class BloomFilterAggregatorTest
     final TestBloomFilterBufferColumnSelector mergeDim =
         new TestBloomFilterBufferColumnSelector(
             ImmutableList.of(
-                ByteBuffer.wrap(BloomFilterSerializersModule.bloomKFilterToBytes(filter1)),
-                ByteBuffer.wrap(BloomFilterSerializersModule.bloomKFilterToBytes(filter2))
+                ByteBuffer.wrap(BloomFilterSerializersModule.bloomKFilterToBytes(FILTER1)),
+                ByteBuffer.wrap(BloomFilterSerializersModule.bloomKFilterToBytes(FILTER2))
             )
         );
 
@@ -472,7 +472,7 @@ public class BloomFilterAggregatorTest
         (ByteBuffer) valueAggregatorFactory.getCombiningFactory().finalizeComputation(mergeAggregator.get())
     );
     String serialized = filterToString(merged);
-    Assert.assertEquals(serializedCombinedFilter, serialized);
+    Assert.assertEquals(SERIALIZED_COMBINED_FILTER, serialized);
   }
 
   @Test
@@ -481,8 +481,8 @@ public class BloomFilterAggregatorTest
     final TestBloomFilterBufferColumnSelector mergeDim =
         new TestBloomFilterBufferColumnSelector(
             ImmutableList.of(
-                ByteBuffer.wrap(BloomFilterSerializersModule.bloomKFilterToBytes(filter1)),
-                ByteBuffer.wrap(BloomFilterSerializersModule.bloomKFilterToBytes(filter2))
+                ByteBuffer.wrap(BloomFilterSerializersModule.bloomKFilterToBytes(FILTER1)),
+                ByteBuffer.wrap(BloomFilterSerializersModule.bloomKFilterToBytes(FILTER2))
             )
         );
 
@@ -504,7 +504,7 @@ public class BloomFilterAggregatorTest
     );
     String serialized = filterToString(merged);
 
-    Assert.assertEquals(serializedCombinedFilter, serialized);
+    Assert.assertEquals(SERIALIZED_COMBINED_FILTER, serialized);
   }
 
   @Test

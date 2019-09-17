@@ -43,9 +43,13 @@ import java.util.Set;
 
 public class ScanQueryTest
 {
+  @SuppressWarnings("SSBasedInspection")
   private static QuerySegmentSpec intervalSpec;
+  @SuppressWarnings("SSBasedInspection")
   private static ScanResultValue s1;
+  @SuppressWarnings("SSBasedInspection")
   private static ScanResultValue s2;
+  @SuppressWarnings("SSBasedInspection")
   private static ScanResultValue s3;
 
   @BeforeClass

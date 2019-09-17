@@ -36,11 +36,11 @@ import java.util.Set;
 public class IntSetTestUtility
 {
 
-  private static Set<Integer> setBits = Sets.newTreeSet(Lists.newArrayList(1, 2, 3, 5, 8, 13, 21));
+  private static final Set<Integer> SET_BITS = Sets.newTreeSet(Lists.newArrayList(1, 2, 3, 5, 8, 13, 21));
 
   public static Set<Integer> getSetBits()
   {
-    return Sets.newTreeSet(setBits);
+    return Sets.newTreeSet(SET_BITS);
   }
 
   public static final BitSet createSimpleBitSet(Set<Integer> setBits)

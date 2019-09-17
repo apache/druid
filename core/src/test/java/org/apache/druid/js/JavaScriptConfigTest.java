@@ -25,16 +25,16 @@ import org.junit.Test;
 
 public class JavaScriptConfigTest
 {
-  private static ObjectMapper mapper = new ObjectMapper();
+  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   @Test
   public void testSerde() throws Exception
   {
     String json = "{\"enabled\":true}";
 
-    JavaScriptConfig config = mapper.readValue(
-        mapper.writeValueAsString(
-            mapper.readValue(
+    JavaScriptConfig config = MAPPER.readValue(
+        MAPPER.writeValueAsString(
+            MAPPER.readValue(
                 json,
                 JavaScriptConfig.class
             )
@@ -49,9 +49,9 @@ public class JavaScriptConfigTest
   {
     String json = "{}";
 
-    JavaScriptConfig config = mapper.readValue(
-        mapper.writeValueAsString(
-            mapper.readValue(
+    JavaScriptConfig config = MAPPER.readValue(
+        MAPPER.writeValueAsString(
+            MAPPER.readValue(
                 json,
                 JavaScriptConfig.class
             )

@@ -150,15 +150,18 @@ public class CompactionTaskTest
   private static final Map<Interval, DimensionSchema> MIXED_TYPE_COLUMN_MAP = new HashMap<>();
   private static final IndexTuningConfig TUNING_CONFIG = createTuningConfig();
 
+  @SuppressWarnings("SSBasedInspection")
   private static Map<String, DimensionSchema> DIMENSIONS;
+  @SuppressWarnings("SSBasedInspection")
   private static List<AggregatorFactory> AGGREGATORS;
+  @SuppressWarnings("SSBasedInspection")
   private static List<DataSegment> SEGMENTS;
-  private static RowIngestionMetersFactory rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
-  private static Map<DataSegment, File> segmentMap = new HashMap<>();
-  private static CoordinatorClient coordinatorClient = new TestCoordinatorClient(segmentMap);
-  private static AppenderatorsManager appenderatorsManager = new TestAppenderatorsManager();
-  private static ObjectMapper objectMapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
-  private static RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory(new RetryPolicyConfig());
+  private static final RowIngestionMetersFactory ROW_INGESTION_METERS_FACTORY = new TestUtils().getRowIngestionMetersFactory();
+  private static final Map<DataSegment, File> SEGMENT_MAP = new HashMap<>();
+  private static final CoordinatorClient COORDINATOR_CLIENT = new TestCoordinatorClient(SEGMENT_MAP);
+  private static final AppenderatorsManager APPENDERATORS_MANAGER = new TestAppenderatorsManager();
+  private static final ObjectMapper OBJECT_MAPPER = setupInjectablesInObjectMapper(new DefaultObjectMapper());
+  private static final RetryPolicyFactory RETRY_POLICY_FACTORY = new RetryPolicyFactory(new RetryPolicyConfig());
 
   private TaskToolbox toolbox;
   private SegmentLoaderFactory segmentLoaderFactory;
@@ -207,7 +210,7 @@ public class CompactionTaskTest
 
     for (int i = 0; i < SEGMENT_INTERVALS.size(); i++) {
       final Interval segmentInterval = Intervals.of(StringUtils.format("2017-0%d-01/2017-0%d-01", (i + 1), (i + 2)));
-      segmentMap.put(
+      SEGMENT_MAP.put(
           new DataSegment(
               DATA_SOURCE,
               segmentInterval,
@@ -222,7 +225,7 @@ public class CompactionTaskTest
           new File("file_" + i)
       );
     }
-    SEGMENTS = new ArrayList<>(segmentMap.keySet());
+    SEGMENTS = new ArrayList<>(SEGMENT_MAP.keySet());
   }
 
   private static ObjectMapper setupInjectablesInObjectMapper(ObjectMapper objectMapper)
@@ -244,10 +247,10 @@ public class CompactionTaskTest
                 binder -> {
                   binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
                   binder.bind(ChatHandlerProvider.class).toInstance(new NoopChatHandlerProvider());
-                  binder.bind(RowIngestionMetersFactory.class).toInstance(rowIngestionMetersFactory);
-                  binder.bind(CoordinatorClient.class).toInstance(coordinatorClient);
+                  binder.bind(RowIngestionMetersFactory.class).toInstance(ROW_INGESTION_METERS_FACTORY);
+                  binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
                   binder.bind(SegmentLoaderFactory.class).toInstance(new SegmentLoaderFactory(null, objectMapper));
-                  binder.bind(AppenderatorsManager.class).toInstance(appenderatorsManager);
+                  binder.bind(AppenderatorsManager.class).toInstance(APPENDERATORS_MANAGER);
                 }
             )
         )
@@ -312,13 +315,13 @@ public class CompactionTaskTest
   @Before
   public void setup()
   {
-    final IndexIO testIndexIO = new TestIndexIO(objectMapper, segmentMap);
+    final IndexIO testIndexIO = new TestIndexIO(OBJECT_MAPPER, SEGMENT_MAP);
     toolbox = new TestTaskToolbox(
-        new TestTaskActionClient(new ArrayList<>(segmentMap.keySet())),
+        new TestTaskActionClient(new ArrayList<>(SEGMENT_MAP.keySet())),
         testIndexIO,
-        segmentMap
+        SEGMENT_MAP
     );
-    segmentLoaderFactory = new SegmentLoaderFactory(testIndexIO, objectMapper);
+    segmentLoaderFactory = new SegmentLoaderFactory(testIndexIO, OBJECT_MAPPER);
   }
 
   @Test
@@ -326,14 +329,14 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        objectMapper,
+        OBJECT_MAPPER,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory,
-        coordinatorClient,
+        ROW_INGESTION_METERS_FACTORY,
+        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        retryPolicyFactory,
-        appenderatorsManager
+        RETRY_POLICY_FACTORY,
+        APPENDERATORS_MANAGER
     );
     final CompactionTask task = builder
         .interval(COMPACTION_INTERVAL)
@@ -341,8 +344,8 @@ public class CompactionTaskTest
         .context(ImmutableMap.of("testKey", "testContext"))
         .build();
 
-    final byte[] bytes = objectMapper.writeValueAsBytes(task);
-    final CompactionTask fromJson = objectMapper.readValue(bytes, CompactionTask.class);
+    final byte[] bytes = OBJECT_MAPPER.writeValueAsBytes(task);
+    final CompactionTask fromJson = OBJECT_MAPPER.readValue(bytes, CompactionTask.class);
     assertEquals(task, fromJson);
   }
 
@@ -351,14 +354,14 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        objectMapper,
+        OBJECT_MAPPER,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory,
-        coordinatorClient,
+        ROW_INGESTION_METERS_FACTORY,
+        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        retryPolicyFactory,
-        appenderatorsManager
+        RETRY_POLICY_FACTORY,
+        APPENDERATORS_MANAGER
     );
     final CompactionTask task = builder
         .segments(SEGMENTS)
@@ -366,8 +369,8 @@ public class CompactionTaskTest
         .context(ImmutableMap.of("testKey", "testContext"))
         .build();
 
-    final byte[] bytes = objectMapper.writeValueAsBytes(task);
-    final CompactionTask fromJson = objectMapper.readValue(bytes, CompactionTask.class);
+    final byte[] bytes = OBJECT_MAPPER.writeValueAsBytes(task);
+    final CompactionTask fromJson = OBJECT_MAPPER.readValue(bytes, CompactionTask.class);
     assertEquals(task, fromJson);
   }
 
@@ -376,14 +379,14 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        objectMapper,
+        OBJECT_MAPPER,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory,
-        coordinatorClient,
+        ROW_INGESTION_METERS_FACTORY,
+        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        retryPolicyFactory,
-        appenderatorsManager
+        RETRY_POLICY_FACTORY,
+        APPENDERATORS_MANAGER
     );
 
     final CompactionTask task = builder
@@ -401,8 +404,8 @@ public class CompactionTaskTest
         .context(ImmutableMap.of("testKey", "testVal"))
         .build();
 
-    final byte[] bytes = objectMapper.writeValueAsBytes(task);
-    final CompactionTask fromJson = objectMapper.readValue(bytes, CompactionTask.class);
+    final byte[] bytes = OBJECT_MAPPER.writeValueAsBytes(task);
+    final CompactionTask fromJson = OBJECT_MAPPER.readValue(bytes, CompactionTask.class);
     assertEquals(task, fromJson);
   }
 
@@ -429,10 +432,10 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        objectMapper,
-        coordinatorClient,
+        OBJECT_MAPPER,
+        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -489,10 +492,10 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        objectMapper,
-        coordinatorClient,
+        OBJECT_MAPPER,
+        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -550,10 +553,10 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        objectMapper,
-        coordinatorClient,
+        OBJECT_MAPPER,
+        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -611,10 +614,10 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        objectMapper,
-        coordinatorClient,
+        OBJECT_MAPPER,
+        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -672,10 +675,10 @@ public class CompactionTaskTest
         customSpec,
         null,
         null,
-        objectMapper,
-        coordinatorClient,
+        OBJECT_MAPPER,
+        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
 
     ingestionSpecs.sort(
@@ -713,10 +716,10 @@ public class CompactionTaskTest
         null,
         customMetricsSpec,
         null,
-        objectMapper,
-        coordinatorClient,
+        OBJECT_MAPPER,
+        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
 
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
@@ -747,10 +750,10 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        objectMapper,
-        coordinatorClient,
+        OBJECT_MAPPER,
+        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -787,10 +790,10 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        objectMapper,
-        coordinatorClient,
+        OBJECT_MAPPER,
+        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
   }
 
@@ -810,10 +813,10 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        objectMapper,
-        coordinatorClient,
+        OBJECT_MAPPER,
+        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
   }
 
@@ -825,14 +828,14 @@ public class CompactionTaskTest
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        objectMapper,
+        OBJECT_MAPPER,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory,
-        coordinatorClient,
+        ROW_INGESTION_METERS_FACTORY,
+        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        retryPolicyFactory,
-        appenderatorsManager
+        RETRY_POLICY_FACTORY,
+        APPENDERATORS_MANAGER
     );
 
     final CompactionTask task = builder
@@ -879,10 +882,10 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        objectMapper,
-        coordinatorClient,
+        OBJECT_MAPPER,
+        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
   }
 
@@ -896,10 +899,10 @@ public class CompactionTaskTest
         null,
         null,
         new PeriodGranularity(Period.months(3), null, null),
-        objectMapper,
-        coordinatorClient,
+        OBJECT_MAPPER,
+        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
     final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
@@ -931,10 +934,10 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        objectMapper,
-        coordinatorClient,
+        OBJECT_MAPPER,
+        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        retryPolicyFactory
+        RETRY_POLICY_FACTORY
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -962,7 +965,7 @@ public class CompactionTaskTest
     final Map<File, QueryableIndex> queryableIndexMap = indexIO.getQueryableIndexMap();
     final List<Pair<QueryableIndex, DataSegment>> segments = new ArrayList<>();
 
-    for (Entry<DataSegment, File> entry : segmentMap.entrySet()) {
+    for (Entry<DataSegment, File> entry : SEGMENT_MAP.entrySet()) {
       final DataSegment segment = entry.getKey();
       final File file = entry.getValue();
       segments.add(Pair.of(Preconditions.checkNotNull(queryableIndexMap.get(file)), segment));
@@ -1087,7 +1090,7 @@ public class CompactionTaskTest
       final DataSchema dataSchema = ingestionSchema.getDataSchema();
       Assert.assertEquals(DATA_SOURCE, dataSchema.getDataSource());
 
-      final InputRowParser parser = objectMapper.convertValue(dataSchema.getParser(), InputRowParser.class);
+      final InputRowParser parser = OBJECT_MAPPER.convertValue(dataSchema.getParser(), InputRowParser.class);
       Assert.assertTrue(parser instanceof TransformingInputRowParser);
       Assert.assertTrue(((TransformingInputRowParser) parser).getParser() instanceof NoopInputRowParser);
       Assert.assertTrue(parser.getParseSpec() instanceof TimeAndDimsParseSpec);
@@ -1181,7 +1184,7 @@ public class CompactionTaskTest
           null,
           null,
           null,
-          new IndexMergerV9(objectMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance()),
+          new IndexMergerV9(OBJECT_MAPPER, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance()),
           null,
           null,
           null,

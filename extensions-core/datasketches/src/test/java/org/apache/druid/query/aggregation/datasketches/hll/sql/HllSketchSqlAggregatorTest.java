@@ -90,9 +90,11 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
   private static final String DATA_SOURCE = "foo";
   private static final boolean ROUND = true;
 
+  @SuppressWarnings("SSBasedInspection")
   private static QueryRunnerFactoryConglomerate conglomerate;
+  @SuppressWarnings("SSBasedInspection")
   private static Closer resourceCloser;
-  private static AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
+  private static final AuthenticationResult AUTHENTICATION_RESULT = CalciteTests.REGULAR_USER_AUTH_RESULT;
   private static final Map<String, Object> QUERY_CONTEXT_DEFAULT = ImmutableMap.of(
       PlannerContext.CTX_SQL_QUERY_ID, "dummy"
   );
@@ -206,7 +208,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM druid.foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
     final List<Object[]> expectedResults;
 
     if (NullHandling.replaceWithDefault()) {
@@ -319,7 +321,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                        + ")";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1L
@@ -415,7 +417,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                        + " HAVING APPROX_COUNT_DISTINCT_DS_HLL(m1) = 2";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
     final int expected = NullHandling.replaceWithDefault() ? 1 : 2;
     Assert.assertEquals(expected, results.size());
   }

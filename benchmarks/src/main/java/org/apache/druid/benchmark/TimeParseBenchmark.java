@@ -53,7 +53,7 @@ public class TimeParseBenchmark
 
   static final String DATA_FORMAT = "MM/dd/yyyy HH:mm:ss Z";
 
-  static Function<String, DateTime> timeFn = TimestampParser.createTimestampParser(DATA_FORMAT);
+  static final Function<String, DateTime> TIME_FN = TimestampParser.createTimestampParser(DATA_FORMAT);
 
   private String[] rows;
 
@@ -81,7 +81,7 @@ public class TimeParseBenchmark
   public void parseNoContext(Blackhole blackhole)
   {
     for (String row : rows) {
-      blackhole.consume(timeFn.apply(row).getMillis());
+      blackhole.consume(TIME_FN.apply(row).getMillis());
     }
   }
 
@@ -95,7 +95,7 @@ public class TimeParseBenchmark
     for (String row : rows) {
       if (!row.equals(lastTimeString)) {
         lastTimeString = row;
-        lastTime = timeFn.apply(row).getMillis();
+        lastTime = TIME_FN.apply(row).getMillis();
       }
       blackhole.consume(lastTime);
     }

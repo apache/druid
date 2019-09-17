@@ -54,7 +54,7 @@ import java.util.Set;
 public class QueryJettyServerInitializer implements JettyServerInitializer
 {
   private static final Logger log = new Logger(QueryJettyServerInitializer.class);
-  private static List<String> UNSECURED_PATHS = Collections.singletonList("/status/health");
+  private static final List<String> UNSECURED_PATHS = Collections.singletonList("/status/health");
 
   private final List<Handler> extensionHandlers;
 

@@ -59,10 +59,13 @@ import java.util.concurrent.TimeoutException;
 
 public class HdfsClasspathSetupTest
 {
+  @SuppressWarnings("SSBasedInspection")
   private static MiniDFSCluster miniCluster;
+  @SuppressWarnings("SSBasedInspection")
   private static File hdfsTmpDir;
+  @SuppressWarnings("SSBasedInspection")
   private static Configuration conf;
-  private static String dummyJarString = "This is a test jar file.";
+  private static final String DUMMY_JAR_STRING = "This is a test jar file.";
   private File dummyJarFile;
   private Path finalClasspath;
   private Path intermediatePath;
@@ -89,7 +92,7 @@ public class HdfsClasspathSetupTest
     finalClasspath = new Path(StringUtils.format("/tmp/intermediate/%s", UUIDUtils.generateUuid()));
     dummyJarFile = tempFolder.newFile("dummy-test.jar");
     Files.copy(
-        new ByteArrayInputStream(StringUtils.toUtf8(dummyJarString)),
+        new ByteArrayInputStream(StringUtils.toUtf8(DUMMY_JAR_STRING)),
         dummyJarFile.toPath(),
         StandardCopyOption.REPLACE_EXISTING
     );
@@ -127,7 +130,7 @@ public class HdfsClasspathSetupTest
     Assert.assertTrue(fs.exists(expectedJarPath));
     // check file gets added to the classpath
     Assert.assertEquals(expectedJarPath.toString(), job.getConfiguration().get(MRJobConfig.CLASSPATH_FILES));
-    Assert.assertEquals(dummyJarString, StringUtils.fromUtf8(IOUtils.toByteArray(fs.open(expectedJarPath))));
+    Assert.assertEquals(DUMMY_JAR_STRING, StringUtils.fromUtf8(IOUtils.toByteArray(fs.open(expectedJarPath))));
   }
 
   @Test
@@ -143,7 +146,7 @@ public class HdfsClasspathSetupTest
     Assert.assertFalse(fs.exists(new Path(intermediatePath, dummyJarFile.getName())));
     // check file gets added to the classpath
     Assert.assertEquals(expectedJarPath.toString(), job.getConfiguration().get(MRJobConfig.CLASSPATH_FILES));
-    Assert.assertEquals(dummyJarString, StringUtils.fromUtf8(IOUtils.toByteArray(fs.open(expectedJarPath))));
+    Assert.assertEquals(DUMMY_JAR_STRING, StringUtils.fromUtf8(IOUtils.toByteArray(fs.open(expectedJarPath))));
   }
 
   @Test

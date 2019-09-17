@@ -37,7 +37,7 @@ import java.lang.reflect.Field;
  */
 public class NativeIO
 {
-  private static final Logger log = new Logger(NativeIO.class);
+  private static final Logger LOG = new Logger(NativeIO.class);
 
   private static final int POSIX_FADV_DONTNEED = 4; /* fadvise.h */
 
@@ -57,27 +57,30 @@ public class NativeIO
    */
   private static final int SYNC_FILE_RANGE_WAIT_AFTER = 4;
 
-  private static Field field;
+  private static final Field FIELD;
 
+  @SuppressWarnings("SSBasedInspection")
   private static volatile boolean initialized = false;
+  @SuppressWarnings("SSBasedInspection")
   private static volatile boolean fadvisePossible = true;
+  @SuppressWarnings("SSBasedInspection")
   private static volatile boolean syncFileRangePossible = true;
 
   static {
-    field = getFieldByReflection(FileDescriptor.class, "fd");
+    FIELD = getFieldByReflection(FileDescriptor.class, "fd");
 
     try {
       Native.register(Platform.C_LIBRARY_NAME);
       initialized = true;
     }
     catch (NoClassDefFoundError e) {
-      log.info("JNA not found. Native methods will be disabled.");
+      LOG.info("JNA not found. Native methods will be disabled.");
     }
     catch (UnsatisfiedLinkError e) {
-      log.info("Unable to link C library. Native methods will be disabled.");
+      LOG.info("Unable to link C library. Native methods will be disabled.");
     }
     catch (NoSuchMethodError e) {
-      log.warn("Obsolete version of JNA present; unable to register C library");
+      LOG.warn("Obsolete version of JNA present; unable to register C library");
     }
   }
 
@@ -98,7 +101,7 @@ public class NativeIO
       field.setAccessible(true);
     }
     catch (Exception e) {
-      log.warn("Unable to read [%s] field from [%s]", fieldName, cls.getName());
+      LOG.warn("Unable to read [%s] field from [%s]", fieldName, cls.getName());
     }
 
     return field;
@@ -112,10 +115,10 @@ public class NativeIO
   public static int getfd(FileDescriptor descriptor)
   {
     try {
-      return field.getInt(descriptor);
+      return FIELD.getInt(descriptor);
     }
     catch (IllegalArgumentException | IllegalAccessException e) {
-      log.warn("Unable to read fd field from java.io.FileDescriptor");
+      LOG.warn("Unable to read fd field from java.io.FileDescriptor");
     }
 
     return -1;
@@ -140,20 +143,20 @@ public class NativeIO
       posix_fadvise(fd, offset, len, POSIX_FADV_DONTNEED);
     }
     catch (UnsupportedOperationException uoe) {
-      log.warn(uoe, "posix_fadvise is not supported");
+      LOG.warn(uoe, "posix_fadvise is not supported");
       fadvisePossible = false;
     }
     catch (UnsatisfiedLinkError ule) {
       // if JNA is unavailable just skipping Direct I/O
       // instance of this class will act like normal RandomAccessFile
-      log.warn(ule, "Unsatisfied Link error: posix_fadvise failed on file descriptor [%d], offset [%d]",
+      LOG.warn(ule, "Unsatisfied Link error: posix_fadvise failed on file descriptor [%d], offset [%d]",
           fd, offset);
       fadvisePossible = false;
     }
     catch (Exception e) {
       // This is best effort anyway so lets just log that there was an
       // exception and forget
-      log.warn(e, "Unknown exception: posix_fadvise failed on file descriptor [%d], offset [%d]",
+      LOG.warn(e, "Unknown exception: posix_fadvise failed on file descriptor [%d], offset [%d]",
           fd, offset);
     }
   }
@@ -174,21 +177,21 @@ public class NativeIO
     try {
       int ret_code = sync_file_range(fd, offset, nbytes, flags);
       if (ret_code != 0) {
-        log.warn("failed on syncing fd [%d], offset [%d], bytes [%d], ret_code [%d], errno [%d]",
+        LOG.warn("failed on syncing fd [%d], offset [%d], bytes [%d], ret_code [%d], errno [%d]",
             fd, offset, nbytes, ret_code, Native.getLastError());
         return;
       }
     }
     catch (UnsupportedOperationException uoe) {
-      log.warn(uoe, "sync_file_range is not supported");
+      LOG.warn(uoe, "sync_file_range is not supported");
       syncFileRangePossible = false;
     }
     catch (UnsatisfiedLinkError nle) {
-      log.warn(nle, "sync_file_range failed on fd [%d], offset [%d], bytes [%d]", fd, offset, nbytes);
+      LOG.warn(nle, "sync_file_range failed on fd [%d], offset [%d], bytes [%d]", fd, offset, nbytes);
       syncFileRangePossible = false;
     }
     catch (Exception e) {
-      log.warn(e, "Unknown exception: sync_file_range failed on fd [%d], offset [%d], bytes [%d]",
+      LOG.warn(e, "Unknown exception: sync_file_range failed on fd [%d], offset [%d], bytes [%d]",
           fd, offset, nbytes);
       syncFileRangePossible = false;
     }

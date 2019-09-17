@@ -69,7 +69,9 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   private static final ExpectedRequest COORDINATOR_EXPECTED_REQUEST = new ExpectedRequest();
   private static final ExpectedRequest OVERLORD_EXPECTED_REQUEST = new ExpectedRequest();
 
+  @SuppressWarnings("SSBasedInspection")
   private static int coordinatorPort;
+  @SuppressWarnings("SSBasedInspection")
   private static int overlordPort;
 
   private Server coordinator;

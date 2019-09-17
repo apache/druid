@@ -36,7 +36,7 @@ import java.util.Set;
 
 public class MaterializedViewUtilsTest 
 {
-  private static ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+  private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
   
   @Test
   public void testGetRequiredFieldsFromGroupByQuery() throws Exception
@@ -80,7 +80,7 @@ public class MaterializedViewUtilsTest
         "    \"value\": 100\n" +
         "  }\n" +
         "}";
-    GroupByQuery query = jsonMapper.readValue(queryStr, GroupByQuery.class);
+    GroupByQuery query = JSON_MAPPER.readValue(queryStr, GroupByQuery.class);
     Set<String> fields = MaterializedViewUtils.getRequiredFields(query);
     Assert.assertEquals(
         Sets.newHashSet("country", "device", "carrier", "make", "user_count", "data_transfer"),
@@ -148,7 +148,7 @@ public class MaterializedViewUtilsTest
         "    \"2013-08-31T00:00:00.000/2013-09-03T00:00:00.000\"\n" +
         "  ]\n" +
         "}";
-    TopNQuery query = jsonMapper.readValue(queryStr, TopNQuery.class);
+    TopNQuery query = JSON_MAPPER.readValue(queryStr, TopNQuery.class);
     Set<String> fields = MaterializedViewUtils.getRequiredFields(query);
     Assert.assertEquals(
         Sets.newHashSet("sample_dim", "dim1", "dim2", "count", "some_metric"),
@@ -192,7 +192,7 @@ public class MaterializedViewUtilsTest
         "  ],\n" +
         "  \"intervals\": [ \"2012-01-01T00:00:00.000/2012-01-03T00:00:00.000\" ]\n" +
         "}";
-    TimeseriesQuery query = jsonMapper.readValue(queryStr, TimeseriesQuery.class);
+    TimeseriesQuery query = JSON_MAPPER.readValue(queryStr, TimeseriesQuery.class);
     Set<String> fields = MaterializedViewUtils.getRequiredFields(query);
     Assert.assertEquals(
         Sets.newHashSet("sample_dimension1", "sample_dimension2", "sample_dimension3", "sample_fieldName1",

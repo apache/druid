@@ -37,6 +37,7 @@ import java.util.Arrays;
 
 public class IntervalDimFilterTest
 {
+  @SuppressWarnings("SSBasedInspection")
   private static ObjectMapper mapper;
 
   @Before

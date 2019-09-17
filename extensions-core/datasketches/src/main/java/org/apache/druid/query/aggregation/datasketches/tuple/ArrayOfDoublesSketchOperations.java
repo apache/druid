@@ -90,7 +90,7 @@ public class ArrayOfDoublesSketchOperations
 
   // This is how to combine values for sketch intersection.
   // Might not fit all use cases.
-  private static ArrayOfDoublesCombiner COMBINER = new ArrayOfDoublesCombiner()
+  private static final ArrayOfDoublesCombiner COMBINER = new ArrayOfDoublesCombiner()
   {
     @Override
     public double[] combine(final double[] a, final double[] b)

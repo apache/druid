@@ -50,7 +50,7 @@ import java.util.Set;
 public class AuthorizerMapperModule implements DruidModule
 {
   private static final String AUTHORIZER_PROPERTIES_FORMAT_STRING = "druid.auth.authorizer.%s";
-  private static Logger log = new Logger(AuthorizerMapperModule.class);
+  private static final Logger log = new Logger(AuthorizerMapperModule.class);
 
   @Override
   public void configure(Binder binder)

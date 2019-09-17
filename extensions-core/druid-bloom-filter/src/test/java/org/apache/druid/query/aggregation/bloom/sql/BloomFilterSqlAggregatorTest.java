@@ -95,7 +95,7 @@ import java.util.List;
 public class BloomFilterSqlAggregatorTest
 {
   private static final int TEST_NUM_ENTRIES = 1000;
-  private static AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
+  private static final AuthenticationResult AUTHENTICATION_RESULT = CalciteTests.REGULAR_USER_AUTH_RESULT;
   private static final Injector INJECTOR = Guice.createInjector(
       binder -> {
         binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper());
@@ -110,14 +110,15 @@ public class BloomFilterSqlAggregatorTest
       }
   );
 
-  private static ObjectMapper jsonMapper =
-      INJECTOR
+  private static final ObjectMapper JSON_MAPPER = INJECTOR
           .getInstance(Key.get(ObjectMapper.class, Json.class))
           .registerModules(Collections.singletonList(new BloomFilterSerializersModule()));
 
   private static final String DATA_SOURCE = "numfoo";
 
+  @SuppressWarnings("SSBasedInspection")
   private static QueryRunnerFactoryConglomerate conglomerate;
+  @SuppressWarnings("SSBasedInspection")
   private static Closer resourceCloser;
 
   @BeforeClass
@@ -139,7 +140,7 @@ public class BloomFilterSqlAggregatorTest
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Rule
-  public QueryLogHook queryLogHook = QueryLogHook.create(jsonMapper);
+  public QueryLogHook queryLogHook = QueryLogHook.create(JSON_MAPPER);
 
   private SpecificSegmentsQuerySegmentWalker walker;
   private SqlLifecycleFactory sqlLifecycleFactory;
@@ -206,7 +207,7 @@ public class BloomFilterSqlAggregatorTest
             CalciteTests.createExprMacroTable(),
             plannerConfig,
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            jsonMapper
+            JSON_MAPPER
         )
     );
   }
@@ -227,7 +228,7 @@ public class BloomFilterSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
@@ -241,7 +242,7 @@ public class BloomFilterSqlAggregatorTest
 
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
-            jsonMapper.writeValueAsString(expected1)
+            JSON_MAPPER.writeValueAsString(expected1)
         }
     );
     Assert.assertEquals(expectedResults.size(), results.size());
@@ -279,7 +280,7 @@ public class BloomFilterSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     BloomKFilter expected2 = new BloomKFilter(TEST_NUM_ENTRIES);
@@ -306,8 +307,8 @@ public class BloomFilterSqlAggregatorTest
 
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
-            jsonMapper.writeValueAsString(expected1),
-            jsonMapper.writeValueAsString(expected2)
+            JSON_MAPPER.writeValueAsString(expected1),
+            JSON_MAPPER.writeValueAsString(expected2)
         }
     );
     Assert.assertEquals(expectedResults.size(), results.size());
@@ -349,7 +350,7 @@ public class BloomFilterSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
@@ -363,7 +364,7 @@ public class BloomFilterSqlAggregatorTest
     }
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
-            jsonMapper.writeValueAsString(expected1)
+            JSON_MAPPER.writeValueAsString(expected1)
         }
     );
     Assert.assertEquals(expectedResults.size(), results.size());
@@ -405,7 +406,7 @@ public class BloomFilterSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
 
 
     BloomKFilter expected3 = new BloomKFilter(TEST_NUM_ENTRIES);
@@ -423,7 +424,7 @@ public class BloomFilterSqlAggregatorTest
     }
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
-            jsonMapper.writeValueAsString(expected3)
+            JSON_MAPPER.writeValueAsString(expected3)
         }
     );
     Assert.assertEquals(expectedResults.size(), results.size());
@@ -460,7 +461,7 @@ public class BloomFilterSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
@@ -477,7 +478,7 @@ public class BloomFilterSqlAggregatorTest
     }
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
-            jsonMapper.writeValueAsString(expected1)
+            JSON_MAPPER.writeValueAsString(expected1)
         }
     );
     Assert.assertEquals(expectedResults.size(), results.size());
@@ -522,7 +523,7 @@ public class BloomFilterSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
@@ -539,7 +540,7 @@ public class BloomFilterSqlAggregatorTest
     }
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
-            jsonMapper.writeValueAsString(expected1)
+            JSON_MAPPER.writeValueAsString(expected1)
         }
     );
     Assert.assertEquals(expectedResults.size(), results.size());
@@ -585,7 +586,7 @@ public class BloomFilterSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
@@ -602,7 +603,7 @@ public class BloomFilterSqlAggregatorTest
     }
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
-            jsonMapper.writeValueAsString(expected1)
+            JSON_MAPPER.writeValueAsString(expected1)
         }
     );
     Assert.assertEquals(expectedResults.size(), results.size());

@@ -87,7 +87,9 @@ public class DruidSchemaTest extends CalciteTestBase
       CalciteTests.createRow(ImmutableMap.of("t", "2001-01-03", "m1", "6.0"))
   );
 
+  @SuppressWarnings("SSBasedInspection")
   private static QueryRunnerFactoryConglomerate conglomerate;
+  @SuppressWarnings("SSBasedInspection")
   private static Closer resourceCloser;
 
   private List<ImmutableDruidServer> druidServers;

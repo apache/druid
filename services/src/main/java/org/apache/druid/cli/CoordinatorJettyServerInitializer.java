@@ -52,7 +52,7 @@ import java.util.Properties;
  */
 class CoordinatorJettyServerInitializer implements JettyServerInitializer
 {
-  private static List<String> UNSECURED_PATHS = Lists.newArrayList(
+  private static final List<String> UNSECURED_PATHS = Lists.newArrayList(
       "/favicon.png",
       "/pages/*",
       "/coordinator-console/*",

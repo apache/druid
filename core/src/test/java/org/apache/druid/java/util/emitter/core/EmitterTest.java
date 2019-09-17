@@ -58,7 +58,7 @@ import java.util.stream.Stream;
 public class EmitterTest
 {
   private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
-  public static String TARGET_URL = "http://metrics.foo.bar/";
+  public static final String TARGET_URL = "http://metrics.foo.bar/";
   public static final Response OK_RESPONSE = Stream
       .of(responseBuilder(HttpVersion.HTTP_1_1, HttpResponseStatus.CREATED))
       .map(b -> {

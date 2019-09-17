@@ -63,6 +63,7 @@ public class LoadSpecTest
     this.expectedId = expectedId;
   }
 
+  @SuppressWarnings("SSBasedInspection")
   private static ObjectMapper mapper;
 
   @BeforeClass

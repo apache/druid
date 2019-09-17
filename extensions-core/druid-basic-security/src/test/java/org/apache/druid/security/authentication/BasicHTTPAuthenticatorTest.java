@@ -44,11 +44,11 @@ import java.util.Map;
 
 public class BasicHTTPAuthenticatorTest
 {
-  public static BasicAuthenticatorCredentials USER_A_CREDENTIALS = new BasicAuthenticatorCredentials(
+  public static final BasicAuthenticatorCredentials USER_A_CREDENTIALS = new BasicAuthenticatorCredentials(
       new BasicAuthenticatorCredentialUpdate("helloworld", 20)
   );
 
-  public static Provider<BasicAuthenticatorCacheManager> CACHE_MANAGER_PROVIDER = Providers.of(
+  public static final Provider<BasicAuthenticatorCacheManager> CACHE_MANAGER_PROVIDER = Providers.of(
       new BasicAuthenticatorCacheManager()
       {
         @Override
@@ -67,7 +67,7 @@ public class BasicHTTPAuthenticatorTest
       }
   );
 
-  public static BasicHTTPAuthenticator AUTHENTICATOR = new BasicHTTPAuthenticator(
+  public static final BasicHTTPAuthenticator AUTHENTICATOR = new BasicHTTPAuthenticator(
       CACHE_MANAGER_PROVIDER,
       "basic",
       "basic",

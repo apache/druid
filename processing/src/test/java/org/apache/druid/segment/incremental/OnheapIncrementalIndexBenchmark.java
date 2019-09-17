@@ -80,7 +80,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @RunWith(Parameterized.class)
 public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 {
-  private static AggregatorFactory[] factories;
+  private static final AggregatorFactory[] FACTORIES;
   static final int DIMENSION_COUNT = 5;
 
   static {
@@ -101,7 +101,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           )
       );
     }
-    factories = ingestAggregatorFactories.toArray(new AggregatorFactory[0]);
+    FACTORIES = ingestAggregatorFactories.toArray(new AggregatorFactory[0]);
   }
 
   private static final class MapIncrementalIndex extends OnheapIncrementalIndex
@@ -295,7 +295,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         boolean.class,
         int.class
     ).newInstance(
-        new IncrementalIndexSchema.Builder().withMetrics(factories).build(),
+        new IncrementalIndexSchema.Builder().withMetrics(FACTORIES).build(),
         true,
         true,
         false,

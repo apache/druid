@@ -66,7 +66,7 @@ import java.util.Map;
  */
 public class SchemalessIndexTest
 {
-  private static final Logger log = new Logger(SchemalessIndexTest.class);
+  private static final Logger LOG = new Logger(SchemalessIndexTest.class);
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   private static final String TEST_FILE = "druid.sample.json";
@@ -90,7 +90,9 @@ public class SchemalessIndexTest
   private static final Map<Integer, Map<Integer, QueryableIndex>> MERGED_INDEXES = new HashMap<>();
   private static final List<QueryableIndex> ROW_PERSISTED_INDEXES = new ArrayList<>();
 
+  @SuppressWarnings("SSBasedInspection")
   private static IncrementalIndex index = null;
+  @SuppressWarnings("SSBasedInspection")
   private static QueryableIndex mergedIndex = null;
 
   static {
@@ -108,7 +110,7 @@ public class SchemalessIndexTest
 
   public static IncrementalIndex getIncrementalIndex()
   {
-    synchronized (log) {
+    synchronized (LOG) {
       if (index != null) {
         return index;
       }
@@ -121,7 +123,7 @@ public class SchemalessIndexTest
 
   public static QueryableIndex getIncrementalIndex(int index1, int index2)
   {
-    synchronized (log) {
+    synchronized (LOG) {
       if (EVENTS.isEmpty()) {
         makeEvents();
       }
@@ -185,7 +187,7 @@ public class SchemalessIndexTest
 
   public QueryableIndex getMergedIncrementalIndex()
   {
-    synchronized (log) {
+    synchronized (LOG) {
       if (mergedIndex != null) {
         return mergedIndex;
       }
@@ -233,7 +235,7 @@ public class SchemalessIndexTest
 
   public QueryableIndex getMergedIncrementalIndex(int index1, int index2)
   {
-    synchronized (log) {
+    synchronized (LOG) {
       if (ROW_PERSISTED_INDEXES.isEmpty()) {
         makeRowPersistedIndexes();
       }
@@ -281,7 +283,7 @@ public class SchemalessIndexTest
 
   public QueryableIndex getMergedIncrementalIndex(int[] indexes)
   {
-    synchronized (log) {
+    synchronized (LOG) {
       if (ROW_PERSISTED_INDEXES.isEmpty()) {
         makeRowPersistedIndexes();
       }
@@ -337,7 +339,7 @@ public class SchemalessIndexTest
   {
     URL resource = TestIndex.class.getClassLoader().getResource(TEST_FILE);
     String filename = resource.getFile();
-    log.info("Realtime loading index file[%s]", filename);
+    LOG.info("Realtime loading index file[%s]", filename);
     try {
       for (Object obj : JSON_MAPPER.readValue(new File(filename), List.class)) {
         final Map<String, Object> event = JSON_MAPPER.convertValue(obj, Map.class);
@@ -351,7 +353,7 @@ public class SchemalessIndexTest
 
   private void makeRowPersistedIndexes()
   {
-    synchronized (log) {
+    synchronized (LOG) {
       try {
         if (EVENTS.isEmpty()) {
           makeEvents();
@@ -400,9 +402,9 @@ public class SchemalessIndexTest
   public static IncrementalIndex makeIncrementalIndex(final String resourceFilename, AggregatorFactory[] aggs)
   {
     URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
-    log.info("Realtime loading resource[%s]", resource);
+    LOG.info("Realtime loading resource[%s]", resource);
     String filename = resource.getFile();
-    log.info("Realtime loading index file[%s]", filename);
+    LOG.info("Realtime loading index file[%s]", filename);
 
     final IncrementalIndex retVal = new IncrementalIndex.Builder()
         .setIndexSchema(

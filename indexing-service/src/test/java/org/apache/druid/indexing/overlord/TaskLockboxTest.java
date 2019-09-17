@@ -1189,7 +1189,7 @@ public class TaskLockboxTest
     }
   }
 
-  private static String TASK_NAME = "myModuleIsntLoadedTask";
+  private static final String TASK_NAME = "myModuleIsntLoadedTask";
 
   private static class TheModule extends SimpleModule
   {

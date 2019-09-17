@@ -40,9 +40,13 @@ public class ScanResultValueTest
   private static final long TIME_2_LONG = 9876543210000L;
   private static final int TIME_3_INT = Integer.MAX_VALUE;
 
+  @SuppressWarnings("SSBasedInspection")
   private static ScanResultValue compactedListSRVLongTimestamp;
+  @SuppressWarnings("SSBasedInspection")
   private static ScanResultValue listSRVLongTimestamp;
+  @SuppressWarnings("SSBasedInspection")
   private static ScanResultValue compactedListSRVIntegerTimestamp;
+  @SuppressWarnings("SSBasedInspection")
   private static ScanResultValue listSRVIntegerTimestamp;
 
   @BeforeClass

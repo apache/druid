@@ -112,6 +112,7 @@ public class LookupCoordinatorManagerTest
   );
 
   private static final AtomicLong EVENT_EMITS = new AtomicLong(0L);
+  @SuppressWarnings("SSBasedInspection")
   private static ServiceEmitter SERVICE_EMITTER;
 
   @BeforeClass

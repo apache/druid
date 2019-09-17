@@ -48,7 +48,7 @@ import java.util.List;
 */
 class MiddleManagerJettyServerInitializer implements JettyServerInitializer
 {
-  private static Logger log = new Logger(MiddleManagerJettyServerInitializer.class);
+  private static final Logger log = new Logger(MiddleManagerJettyServerInitializer.class);
 
   private final ServerConfig serverConfig;
   private final AuthConfig authConfig;
@@ -60,7 +60,7 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
     this.authConfig = authConfig;
   }
 
-  private static List<String> UNSECURED_PATHS = Collections.singletonList("/status/health");
+  private static final List<String> UNSECURED_PATHS = Collections.singletonList("/status/health");
 
   @Override
   public void initialize(Server server, Injector injector)

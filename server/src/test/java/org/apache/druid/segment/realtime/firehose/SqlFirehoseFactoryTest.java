@@ -55,6 +55,7 @@ import java.util.List;
 public class SqlFirehoseFactoryTest
 {
   private static final List<File> FIREHOSE_TMP_DIRS = new ArrayList<>();
+  @SuppressWarnings("SSBasedInspection")
   private static File TEST_DIR;
   private final String TABLE_NAME_1 = "FOOS_TABLE_1";
   private final String TABLE_NAME_2 = "FOOS_TABLE_2";

@@ -101,9 +101,9 @@ public class FunctionalExtractionTest
       return PRESENT_KEY.equals(input) ? PRESENT_VALUE : null;
     }
   };
-  private static String PRESENT_KEY = "present";
-  private static String PRESENT_VALUE = "present_value";
-  private static String MISSING = "missing";
+  private static final String PRESENT_KEY = "present";
+  private static final String PRESENT_VALUE = "present_value";
+  private static final String MISSING = "missing";
 
 
   @Parameterized.Parameters(name = "{0}")

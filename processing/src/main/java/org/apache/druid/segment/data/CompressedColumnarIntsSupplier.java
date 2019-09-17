@@ -43,7 +43,7 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
   public static final byte VERSION = 0x2;
   public static final int MAX_INTS_IN_BUFFER = CompressedPools.BUFFER_SIZE / Integer.BYTES;
 
-  private static MetaSerdeHelper<CompressedColumnarIntsSupplier> META_SERDE_HELPER = MetaSerdeHelper
+  private static final MetaSerdeHelper<CompressedColumnarIntsSupplier> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((CompressedColumnarIntsSupplier x) -> VERSION)
       .writeInt(x -> x.totalSize)
       .writeInt(x -> x.sizePer)

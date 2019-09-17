@@ -216,7 +216,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final Map<String, Object> TIMESERIES_CONTEXT_LOS_ANGELES = new HashMap<>();
   public static final PagingSpec FIRST_PAGING_SPEC = new PagingSpec(null, 1000, true);
 
+  @SuppressWarnings("SSBasedInspection")
   public static QueryRunnerFactoryConglomerate conglomerate;
+  @SuppressWarnings("SSBasedInspection")
   public static Closer resourceCloser;
 
   @Rule

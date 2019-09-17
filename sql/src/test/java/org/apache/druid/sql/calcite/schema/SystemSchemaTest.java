@@ -141,7 +141,9 @@ public class SystemSchemaTest extends CalciteTestBase
   private Request request;
   private DruidSchema druidSchema;
   private AuthorizerMapper authMapper;
+  @SuppressWarnings("SSBasedInspection")
   private static QueryRunnerFactoryConglomerate conglomerate;
+  @SuppressWarnings("SSBasedInspection")
   private static Closer resourceCloser;
   private MetadataSegmentView metadataView;
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;

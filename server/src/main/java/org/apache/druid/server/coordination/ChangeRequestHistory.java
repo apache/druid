@@ -45,7 +45,7 @@ import java.util.concurrent.ExecutorService;
  */
 public class ChangeRequestHistory<T>
 {
-  private static int MAX_SIZE = 1000;
+  private static final int MAX_SIZE = 1000;
 
   private final int maxSize;
 

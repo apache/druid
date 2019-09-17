@@ -43,7 +43,7 @@ public class FixedBucketsHistogramSerde extends ComplexMetricSerde
 {
   private static final Logger LOG = new Logger(FixedBucketsHistogramSerde.class);
 
-  private static Ordering<FixedBucketsHistogram> comparator = new Ordering<FixedBucketsHistogram>()
+  private static final Ordering<FixedBucketsHistogram> COMPARATOR = new Ordering<FixedBucketsHistogram>()
   {
     @Override
     public int compare(
@@ -173,7 +173,7 @@ public class FixedBucketsHistogramSerde extends ComplexMetricSerde
       @Override
       public int compare(FixedBucketsHistogram o1, FixedBucketsHistogram o2)
       {
-        return comparator.compare(o1, o2);
+        return COMPARATOR.compare(o1, o2);
       }
     };
   }

@@ -47,7 +47,7 @@ import java.util.Map;
 public class LookupDimensionSpecTest
 {
   private static final Map<String, String> STRING_MAP = ImmutableMap.of("key", "value", "key2", "value2");
-  private static LookupExtractor MAP_LOOKUP_EXTRACTOR = new MapLookupExtractor(STRING_MAP, true);
+  private static final LookupExtractor MAP_LOOKUP_EXTRACTOR = new MapLookupExtractor(STRING_MAP, true);
 
   private static final LookupExtractorFactoryContainerProvider LOOKUP_REF_MANAGER =
       EasyMock.createMock(LookupExtractorFactoryContainerProvider.class);

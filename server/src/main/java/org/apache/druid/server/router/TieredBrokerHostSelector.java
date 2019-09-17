@@ -52,7 +52,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class TieredBrokerHostSelector<T>
 {
-  private static EmittingLogger log = new EmittingLogger(TieredBrokerHostSelector.class);
+  private static final EmittingLogger log = new EmittingLogger(TieredBrokerHostSelector.class);
 
   private final CoordinatorRuleManager ruleManager;
   private final TieredBrokerConfig tierConfig;

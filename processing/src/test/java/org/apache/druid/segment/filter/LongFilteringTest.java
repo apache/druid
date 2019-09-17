@@ -71,8 +71,8 @@ public class LongFilteringTest extends BaseFilterTest
 {
   private static final String LONG_COLUMN = "lng";
   private static final String TIMESTAMP_COLUMN = "ts";
-  private static int EXECUTOR_NUM_THREADS = 16;
-  private static int EXECUTOR_NUM_TASKS = 2000;
+  private static final int EXECUTOR_NUM_THREADS = 16;
+  private static final int EXECUTOR_NUM_TASKS = 2000;
 
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(

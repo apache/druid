@@ -86,9 +86,11 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
 {
   private static final String DATA_SOURCE = "foo";
 
+  @SuppressWarnings("SSBasedInspection")
   private static QueryRunnerFactoryConglomerate conglomerate;
+  @SuppressWarnings("SSBasedInspection")
   private static Closer resourceCloser;
-  private static AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
+  private static final AuthenticationResult AUTHENTICATION_RESULT = CalciteTests.REGULAR_USER_AUTH_RESULT;
   private static final Map<String, Object> QUERY_CONTEXT_DEFAULT = ImmutableMap.of(
       PlannerContext.CTX_SQL_QUERY_ID, "dummy"
   );
@@ -202,7 +204,7 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1.0,
@@ -282,7 +284,7 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM foo";
 
     // Verify results
-    final List<Object[]> results = lifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = lifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1.0,
@@ -341,7 +343,7 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM (SELECT dim2, SUM(m1) AS x FROM foo GROUP BY dim2)";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
     final List<Object[]> expectedResults;
     if (NullHandling.replaceWithDefault()) {
       expectedResults = ImmutableList.of(new Object[]{7.0, 11.0});
@@ -410,7 +412,7 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM (SELECT dim1, dim2, APPROX_QUANTILE_DS(m1, 0.5) AS x FROM foo GROUP BY dim1, dim2) GROUP BY dim1";
 
 
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
 
     ImmutableList.Builder<Object[]> builder = ImmutableList.builder();
     builder.add(new Object[]{"", 1.0});

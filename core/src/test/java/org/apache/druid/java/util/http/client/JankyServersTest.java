@@ -51,9 +51,13 @@ import java.util.concurrent.Executors;
  */
 public class JankyServersTest
 {
+  @SuppressWarnings("SSBasedInspection")
   static ExecutorService exec;
+  @SuppressWarnings("SSBasedInspection")
   static ServerSocket silentServerSocket;
+  @SuppressWarnings("SSBasedInspection")
   static ServerSocket echoServerSocket;
+  @SuppressWarnings("SSBasedInspection")
   static ServerSocket closingServerSocket;
 
   @Rule

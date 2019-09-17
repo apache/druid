@@ -131,11 +131,17 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private static final Period TEST_HTTP_TIMEOUT = new Period("PT10S");
   private static final Period TEST_SHUTDOWN_TIMEOUT = new Period("PT80S");
 
+  @SuppressWarnings("SSBasedInspection")
   private static TestingCluster zkServer;
+  @SuppressWarnings("SSBasedInspection")
   private static TestBroker kafkaServer;
+  @SuppressWarnings("SSBasedInspection")
   private static String kafkaHost;
+  @SuppressWarnings("SSBasedInspection")
   private static DataSchema dataSchema;
+  @SuppressWarnings("SSBasedInspection")
   private static int topicPostfix;
+  @SuppressWarnings("SSBasedInspection")
   private static ZkUtils zkUtils;
 
   private final int numThreads;

@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class BytesBoundedLinkedQueueTest
 {
-  private static int delayMS = 50;
+  private static final int DELAY_MS = 50;
   private ExecutorService exec = Executors.newCachedThreadPool();
 
   private static BlockingQueue<TestObject> getQueue(final int capacity)
@@ -60,15 +60,15 @@ public class BytesBoundedLinkedQueueTest
   {
     final BlockingQueue q = getQueue(10);
     long startTime = System.nanoTime();
-    Assert.assertNull(q.poll(delayMS, TimeUnit.MILLISECONDS));
-    Assert.assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) >= delayMS);
+    Assert.assertNull(q.poll(DELAY_MS, TimeUnit.MILLISECONDS));
+    Assert.assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) >= DELAY_MS);
     TestObject obj = new TestObject(2);
-    Assert.assertTrue(q.offer(obj, delayMS, TimeUnit.MILLISECONDS));
-    Assert.assertSame(obj, q.poll(delayMS, TimeUnit.MILLISECONDS));
+    Assert.assertTrue(q.offer(obj, DELAY_MS, TimeUnit.MILLISECONDS));
+    Assert.assertSame(obj, q.poll(DELAY_MS, TimeUnit.MILLISECONDS));
 
     Thread.currentThread().interrupt();
     try {
-      q.poll(delayMS, TimeUnit.MILLISECONDS);
+      q.poll(DELAY_MS, TimeUnit.MILLISECONDS);
       throw new ISE("FAIL");
     }
     catch (InterruptedException success) {
@@ -105,7 +105,7 @@ public class BytesBoundedLinkedQueueTest
     latch.await();
     // test take blocks on empty queue
     try {
-      future.get(delayMS, TimeUnit.MILLISECONDS);
+      future.get(DELAY_MS, TimeUnit.MILLISECONDS);
       Assert.fail();
     }
     catch (TimeoutException success) {
@@ -130,11 +130,11 @@ public class BytesBoundedLinkedQueueTest
 
     final TestObject obj = new TestObject(2);
     while (q.remainingCapacity() > 0) {
-      Assert.assertTrue(q.offer(obj, delayMS, TimeUnit.MILLISECONDS));
+      Assert.assertTrue(q.offer(obj, DELAY_MS, TimeUnit.MILLISECONDS));
     }
     // queue full
     Assert.assertEquals(0, q.remainingCapacity());
-    Assert.assertFalse(q.offer(obj, delayMS, TimeUnit.MILLISECONDS));
+    Assert.assertFalse(q.offer(obj, DELAY_MS, TimeUnit.MILLISECONDS));
     Assert.assertFalse(q.offer(obj));
     final CyclicBarrier barrier = new CyclicBarrier(2);
 
@@ -145,7 +145,7 @@ public class BytesBoundedLinkedQueueTest
           public Boolean call() throws Exception
           {
             barrier.await();
-            Assert.assertTrue(q.offer(obj, delayMS, TimeUnit.MILLISECONDS));
+            Assert.assertTrue(q.offer(obj, DELAY_MS, TimeUnit.MILLISECONDS));
             Assert.assertEquals(q.remainingCapacity(), 0);
             barrier.await();
             q.put(obj);
@@ -180,7 +180,7 @@ public class BytesBoundedLinkedQueueTest
     BlockingQueue<TestObject> q = getQueue(4);
     Assert.assertTrue(q.offer(new TestObject(3)));
     Assert.assertFalse(q.offer(new TestObject(2)));
-    Assert.assertFalse(q.offer(new TestObject(2), delayMS, TimeUnit.MILLISECONDS));
+    Assert.assertFalse(q.offer(new TestObject(2), DELAY_MS, TimeUnit.MILLISECONDS));
   }
 
   @Test

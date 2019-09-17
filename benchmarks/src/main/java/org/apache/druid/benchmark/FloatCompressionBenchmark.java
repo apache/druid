@@ -55,12 +55,15 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class FloatCompressionBenchmark
 {
+  @SuppressWarnings("SSBasedInspection")
   @Param("floatCompress/")
   private static String dirPath;
 
+  @SuppressWarnings("SSBasedInspection")
   @Param({"enumerate", "zipfLow", "zipfHigh", "sequential", "uniform"})
   private static String file;
 
+  @SuppressWarnings("SSBasedInspection")
   @Param({"lz4", "none"})
   private static String strategy;
 

@@ -47,7 +47,7 @@ import java.util.Random;
 @RunWith(Parameterized.class)
 public class BitmapCreationBenchmark extends AbstractBenchmark
 {
-  private static final Logger log = new Logger(BitmapCreationBenchmark.class);
+  private static final Logger LOG = new Logger(BitmapCreationBenchmark.class);
 
   @Parameterized.Parameters
   public static List<Class<? extends BitmapSerdeFactory>[]> factoryClasses()
@@ -74,15 +74,16 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   private static final int NUM_BITS = 100000;
 
 
+  @SuppressWarnings("SSBasedInspection")
   static Random random;
-  static int[] randIndex = new int[NUM_BITS];
+  static final int[] RAND_INDEX = new int[NUM_BITS];
 
   @AfterClass
   public static void cleanupAfterClass()
   {
     List<Class<? extends BitmapSerdeFactory>[]> classes = factoryClasses();
     for (int i = 0; i < classes.size(); ++i) {
-      log.info("Entry [%d] is %s", i, classes.get(i)[0].getName());
+      LOG.info("Entry [%d] is %s", i, classes.get(i)[0].getName());
     }
   }
 
@@ -90,15 +91,15 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   public static void setupBeforeClass()
   {
     for (int i = 0; i < NUM_BITS; ++i) {
-      randIndex[i] = i;
+      RAND_INDEX[i] = i;
     }
     // Random seed chosen by hitting keyboard with BOTH hands... multiple times!
     random = new Random(78591378);
     for (int i = 0; i < NUM_BITS; ++i) {
-      int idex = random.nextInt(randIndex.length);
-      int swap = randIndex[i];
-      randIndex[i] = randIndex[idex];
-      randIndex[idex] = swap;
+      int idex = random.nextInt(RAND_INDEX.length);
+      int swap = RAND_INDEX[i];
+      RAND_INDEX[i] = RAND_INDEX[idex];
+      RAND_INDEX[idex] = swap;
     }
   }
 
@@ -136,7 +137,7 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   public void testRandomAddition()
   {
     MutableBitmap mutableBitmap = factory.makeEmptyMutableBitmap();
-    for (int i : randIndex) {
+    for (int i : RAND_INDEX) {
       mutableBitmap.add(i);
     }
     Assert.assertEquals(NUM_BITS, mutableBitmap.size());

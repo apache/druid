@@ -35,6 +35,7 @@ import java.util.Collections;
 
 public class InDimFilterSerDesrTest
 {
+  @SuppressWarnings("SSBasedInspection")
   private static ObjectMapper mapper;
 
   private final String serializedFilter =

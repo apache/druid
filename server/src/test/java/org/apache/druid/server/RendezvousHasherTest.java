@@ -33,7 +33,7 @@ import java.util.UUID;
 
 public class RendezvousHasherTest
 {
-  private static int NUM_ITERATIONS = 10000;
+  private static final int NUM_ITERATIONS = 10000;
   private static final Logger log = new Logger(RendezvousHasherTest.class);
 
   @Test

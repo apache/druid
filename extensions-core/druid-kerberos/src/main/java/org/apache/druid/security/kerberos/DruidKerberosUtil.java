@@ -48,7 +48,7 @@ public class DruidKerberosUtil
   private static final Logger log = new Logger(DruidKerberosUtil.class);
 
   // A fair reentrant lock
-  private static ReentrantLock kerberosLock = new ReentrantLock(true);
+  private static final ReentrantLock KERBEROS_LOCK = new ReentrantLock(true);
 
   /**
    * This method always needs to be called within a doAs block so that the client's TGT credentials
@@ -61,7 +61,7 @@ public class DruidKerberosUtil
 
   public static String kerberosChallenge(String server) throws AuthenticationException
   {
-    kerberosLock.lock();
+    KERBEROS_LOCK.lock();
     try {
       // This Oid for Kerberos GSS-API mechanism.
       Oid mechOid = KerberosUtil.getOidInstance("GSS_KRB5_MECH_OID");
@@ -85,7 +85,7 @@ public class DruidKerberosUtil
       throw new AuthenticationException(e);
     }
     finally {
-      kerberosLock.unlock();
+      KERBEROS_LOCK.unlock();
     }
   }
 

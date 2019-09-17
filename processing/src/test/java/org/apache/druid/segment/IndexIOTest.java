@@ -63,7 +63,7 @@ import java.util.Objects;
 @RunWith(Parameterized.class)
 public class IndexIOTest
 {
-  private static Interval DEFAULT_INTERVAL = Intervals.of("1970-01-01/2000-01-01");
+  private static final Interval DEFAULT_INTERVAL = Intervals.of("1970-01-01/2000-01-01");
   private static final IndexSpec INDEX_SPEC = IndexMergerTestBase.makeIndexSpec(
       new ConciseBitmapSerdeFactory(),
       CompressionStrategy.LZ4,

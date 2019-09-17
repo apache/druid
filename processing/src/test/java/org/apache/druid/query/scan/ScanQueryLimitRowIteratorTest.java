@@ -41,9 +41,13 @@ import java.util.concurrent.ThreadLocalRandom;
 public class ScanQueryLimitRowIteratorTest
 {
   private static final int NUM_ELEMENTS = 1000;
-  private static int batchSize;
-  private static int limit;
+  @SuppressWarnings("SSBasedInspection")
+  private static int BATCH_SIZE;
+  @SuppressWarnings("SSBasedInspection")
+  private static int LIMIT;
+  @SuppressWarnings("SSBasedInspection")
   private static List<ScanResultValue> singleEventScanResultValues = new ArrayList<>();
+  @SuppressWarnings("SSBasedInspection")
   private static List<ScanResultValue> multiEventScanResultValues = new ArrayList<>();
   private static final ScanQuery.ResultFormat RESULT_FORMAT = ScanQuery.ResultFormat.RESULT_FORMAT_LIST;
 
@@ -52,8 +56,8 @@ public class ScanQueryLimitRowIteratorTest
       final int limit
   )
   {
-    this.batchSize = batchSize;
-    this.limit = limit;
+    this.BATCH_SIZE = batchSize;
+    this.LIMIT = limit;
   }
 
   @Parameterized.Parameters(name = "{0} {1}")
@@ -80,19 +84,19 @@ public class ScanQueryLimitRowIteratorTest
               1
           ));
     }
-    for (int i = 0; i < NUM_ELEMENTS / batchSize; i++) {
+    for (int i = 0; i < NUM_ELEMENTS / BATCH_SIZE; i++) {
       multiEventScanResultValues.add(
           ScanQueryTestHelper.generateScanResultValue(
               ThreadLocalRandom.current().nextLong(),
               RESULT_FORMAT,
-              batchSize
+              BATCH_SIZE
           ));
     }
     multiEventScanResultValues.add(
         ScanQueryTestHelper.generateScanResultValue(
             ThreadLocalRandom.current().nextLong(),
             RESULT_FORMAT,
-            NUM_ELEMENTS % batchSize
+            NUM_ELEMENTS % BATCH_SIZE
         ));
   }
 
@@ -103,10 +107,10 @@ public class ScanQueryLimitRowIteratorTest
   public void testNonOrderedScan()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
-                            .limit(limit)
+                            .limit(LIMIT)
                             .order(ScanQuery.Order.NONE)
                             .dataSource("some datasource")
-                            .batchSize(batchSize)
+                            .batchSize(BATCH_SIZE)
                             .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                             .resultFormat(RESULT_FORMAT)
                             .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
@@ -119,13 +123,13 @@ public class ScanQueryLimitRowIteratorTest
     );
 
     int count = 0;
-    int expectedNumRows = Math.min(limit, NUM_ELEMENTS);
+    int expectedNumRows = Math.min(LIMIT, NUM_ELEMENTS);
 
     while (itr.hasNext()) {
       ScanResultValue curr = itr.next();
       List<Map<String, Object>> events = ScanQueryTestHelper.getEventsListResultFormat(curr);
-      if (events.size() != batchSize) {
-        if (expectedNumRows - count > batchSize) {
+      if (events.size() != BATCH_SIZE) {
+        if (expectedNumRows - count > BATCH_SIZE) {
           Assert.fail("Batch size is incorrect");
         } else {
           Assert.assertEquals(expectedNumRows - count, events.size());
@@ -144,10 +148,10 @@ public class ScanQueryLimitRowIteratorTest
   public void testBrokerOrderedScan()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
-                            .limit(limit)
+                            .limit(LIMIT)
                             .order(ScanQuery.Order.DESCENDING)
                             .dataSource("some datasource")
-                            .batchSize(batchSize)
+                            .batchSize(BATCH_SIZE)
                             .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                             .resultFormat(RESULT_FORMAT)
                             .build();
@@ -159,12 +163,12 @@ public class ScanQueryLimitRowIteratorTest
     );
 
     int count = 0;
-    int expectedNumRows = Math.min(limit, NUM_ELEMENTS);
+    int expectedNumRows = Math.min(LIMIT, NUM_ELEMENTS);
     while (itr.hasNext()) {
       ScanResultValue curr = itr.next();
       List<Map<String, Object>> events = ScanQueryTestHelper.getEventsListResultFormat(curr);
-      if (events.size() != batchSize) {
-        if (expectedNumRows - count >= batchSize) {
+      if (events.size() != BATCH_SIZE) {
+        if (expectedNumRows - count >= BATCH_SIZE) {
           Assert.fail("Batch size is incorrect");
         } else {
           Assert.assertEquals(expectedNumRows - count, events.size());
@@ -183,10 +187,10 @@ public class ScanQueryLimitRowIteratorTest
   public void testHistoricalOrderedScan()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
-                            .limit(limit)
+                            .limit(LIMIT)
                             .order(ScanQuery.Order.DESCENDING)
                             .dataSource("some datasource")
-                            .batchSize(batchSize)
+                            .batchSize(BATCH_SIZE)
                             .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                             .resultFormat(RESULT_FORMAT)
                             .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
@@ -200,7 +204,7 @@ public class ScanQueryLimitRowIteratorTest
     );
 
     int count = 0;
-    int expectedNumRows = Math.min(limit, NUM_ELEMENTS);
+    int expectedNumRows = Math.min(LIMIT, NUM_ELEMENTS);
     while (itr.hasNext()) {
       ScanResultValue curr = itr.next();
       List<Map<String, Object>> events = ScanQueryTestHelper.getEventsListResultFormat(curr);

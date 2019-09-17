@@ -29,7 +29,7 @@ import java.util.Objects;
 
 public class LookupConfig
 {
-  static int DEFAULT_COORDINATOR_RETRY_DELAY = 60_000;
+  static final int DEFAULT_COORDINATOR_RETRY_DELAY = 60_000;
 
   @JsonProperty("snapshotWorkingDir")
   private String snapshotWorkingDir;

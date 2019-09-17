@@ -70,14 +70,14 @@ public class IndexMergerV9WithSpatialIndexTest
 {
 
   public static final int NUM_POINTS = 5000;
-  private static Interval DATA_INTERVAL = Intervals.of("2013-01-01/2013-01-07");
+  private static final Interval DATA_INTERVAL = Intervals.of("2013-01-01/2013-01-07");
 
-  private static AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
+  private static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
       new CountAggregatorFactory("rows"),
       new LongSumAggregatorFactory("val", "val")
   };
 
-  private static List<String> DIMS = Lists.newArrayList("dim", "lat", "long", "lat2", "long2");
+  private static final List<String> DIMS = Lists.newArrayList("dim", "lat", "long", "lat2", "long2");
 
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException

@@ -39,16 +39,14 @@ import java.net.URI;
 
 public class LookupIntrospectionResourceTest
 {
-  private static LookupExtractorFactory mockLookupExtractorFactory = EasyMock.createMock(LookupExtractorFactory.class);
+  private static final LookupExtractorFactory MOCK_LOOKUP_EXTRACTOR_FACTORY = EasyMock.createMock(LookupExtractorFactory.class);
 
-  private static LookupExtractorFactoryContainerProvider mockLookupExtractorFactoryContainerProvider =
-      EasyMock.createMock(LookupExtractorFactoryContainerProvider.class);
+  private static final LookupExtractorFactoryContainerProvider MOCK_LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER = EasyMock.createMock(LookupExtractorFactoryContainerProvider.class);
 
-  private static LookupIntrospectHandler mockLookupIntrospectHandler =
-      EasyMock.createMock(LookupIntrospectHandler.class);
+  private static final LookupIntrospectHandler MOCK_LOOKUP_INTROSPECT_HANDLER = EasyMock.createMock(LookupIntrospectHandler.class);
 
   private LookupIntrospectionResource lookupIntrospectionResource =
-      new LookupIntrospectionResource(mockLookupExtractorFactoryContainerProvider);
+      new LookupIntrospectionResource(MOCK_LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER);
 
   private URI baseUri;
   private HttpServer server;
@@ -61,24 +59,24 @@ public class LookupIntrospectionResourceTest
         false
     );
 
-    EasyMock.reset(mockLookupExtractorFactoryContainerProvider);
-    EasyMock.reset(mockLookupExtractorFactory);
-    EasyMock.reset(mockLookupIntrospectHandler);
-    EasyMock.expect(mockLookupExtractorFactoryContainerProvider.get("lookupId")).andReturn(
+    EasyMock.reset(MOCK_LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER);
+    EasyMock.reset(MOCK_LOOKUP_EXTRACTOR_FACTORY);
+    EasyMock.reset(MOCK_LOOKUP_INTROSPECT_HANDLER);
+    EasyMock.expect(MOCK_LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER.get("lookupId")).andReturn(
         new LookupExtractorFactoryContainer(
             "v0",
-            mockLookupExtractorFactory
+            MOCK_LOOKUP_EXTRACTOR_FACTORY
         )
     ).anyTimes();
-    EasyMock.expect(mockLookupExtractorFactoryContainerProvider.get("lookupId1")).andReturn(
+    EasyMock.expect(MOCK_LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER.get("lookupId1")).andReturn(
         new LookupExtractorFactoryContainer(
             "v0",
             actualLookupExtractorFactory
         )
     ).anyTimes();
 
-    EasyMock.expect(mockLookupExtractorFactoryContainerProvider.get(EasyMock.anyString())).andReturn(null).anyTimes();
-    EasyMock.replay(mockLookupExtractorFactoryContainerProvider);
+    EasyMock.expect(MOCK_LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER.get(EasyMock.anyString())).andReturn(null).anyTimes();
+    EasyMock.replay(MOCK_LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER);
 
     baseUri = WebserverTestUtils.createBaseUri();
     server = WebserverTestUtils.createServer(
@@ -87,7 +85,7 @@ public class LookupIntrospectionResourceTest
         LookupIntrospectionResource.class.getName(),
         binder -> {
           binder.bind(LookupExtractorFactoryContainerProvider.class)
-                .toInstance(mockLookupExtractorFactoryContainerProvider);
+                .toInstance(MOCK_LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER);
         }
     );
     server.start();
@@ -104,11 +102,11 @@ public class LookupIntrospectionResourceTest
   @Test
   public void testNotImplementedIntrospectLookup()
   {
-    EasyMock.expect(mockLookupExtractorFactory.getIntrospectHandler()).andReturn(null);
-    EasyMock.expect(mockLookupExtractorFactory.get())
+    EasyMock.expect(MOCK_LOOKUP_EXTRACTOR_FACTORY.getIntrospectHandler()).andReturn(null);
+    EasyMock.expect(MOCK_LOOKUP_EXTRACTOR_FACTORY.get())
             .andReturn(new MapLookupExtractor(ImmutableMap.of(), false))
             .anyTimes();
-    EasyMock.replay(mockLookupExtractorFactory);
+    EasyMock.replay(MOCK_LOOKUP_EXTRACTOR_FACTORY);
     Assert.assertEquals(
         Response.status(Response.Status.NOT_FOUND).build().getStatus(),
         ((Response) lookupIntrospectionResource.introspectLookup("lookupId")).getStatus()
@@ -126,12 +124,12 @@ public class LookupIntrospectionResourceTest
 
   @Test public void testExistingLookup()
   {
-    EasyMock.expect(mockLookupExtractorFactory.getIntrospectHandler()).andReturn(mockLookupIntrospectHandler);
-    EasyMock.expect(mockLookupExtractorFactory.get())
+    EasyMock.expect(MOCK_LOOKUP_EXTRACTOR_FACTORY.getIntrospectHandler()).andReturn(MOCK_LOOKUP_INTROSPECT_HANDLER);
+    EasyMock.expect(MOCK_LOOKUP_EXTRACTOR_FACTORY.get())
             .andReturn(new MapLookupExtractor(ImmutableMap.of(), false))
             .anyTimes();
-    EasyMock.replay(mockLookupExtractorFactory);
-    Assert.assertEquals(mockLookupIntrospectHandler, lookupIntrospectionResource.introspectLookup("lookupId"));
+    EasyMock.replay(MOCK_LOOKUP_EXTRACTOR_FACTORY);
+    Assert.assertEquals(MOCK_LOOKUP_INTROSPECT_HANDLER, lookupIntrospectionResource.introspectLookup("lookupId"));
   }
 
   @Test

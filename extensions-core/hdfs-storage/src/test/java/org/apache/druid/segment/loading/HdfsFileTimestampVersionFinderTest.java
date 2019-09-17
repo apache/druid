@@ -45,12 +45,15 @@ import java.util.regex.Pattern;
 public class HdfsFileTimestampVersionFinderTest
 {
 
+  @SuppressWarnings("SSBasedInspection")
   private static MiniDFSCluster miniCluster;
+  @SuppressWarnings("SSBasedInspection")
   private static File hdfsTmpDir;
-  private static Path filePath = new Path("/tmp/foo");
-  private static Path perTestPath = new Path("/tmp/tmp2");
-  private static String pathContents = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum";
-  private static byte[] pathByteContents = StringUtils.toUtf8(pathContents);
+  private static final Path FILE_PATH = new Path("/tmp/foo");
+  private static final Path PER_TEST_PATH = new Path("/tmp/tmp2");
+  private static final String PATH_CONTENTS = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum";
+  private static final byte[] PATH_BYTE_CONTENTS = StringUtils.toUtf8(PATH_CONTENTS);
+  @SuppressWarnings("SSBasedInspection")
   private static Configuration conf;
 
   @BeforeClass
@@ -67,8 +70,8 @@ public class HdfsFileTimestampVersionFinderTest
     final File tmpFile = File.createTempFile("hdfsHandlerTest", ".data");
     tmpFile.delete();
     try {
-      Files.copy(new ByteArrayInputStream(pathByteContents), tmpFile.toPath());
-      try (OutputStream stream = miniCluster.getFileSystem().create(filePath)) {
+      Files.copy(new ByteArrayInputStream(PATH_BYTE_CONTENTS), tmpFile.toPath());
+      try (OutputStream stream = miniCluster.getFileSystem().create(FILE_PATH)) {
         Files.copy(tmpFile.toPath(), stream);
       }
     }
@@ -98,26 +101,26 @@ public class HdfsFileTimestampVersionFinderTest
   @After
   public void tearDown() throws IOException
   {
-    miniCluster.getFileSystem().delete(perTestPath, true);
+    miniCluster.getFileSystem().delete(PER_TEST_PATH, true);
   }
 
 
   @Test
   public void testSimpleLatestVersion() throws IOException, InterruptedException
   {
-    final Path oldPath = new Path(perTestPath, "555test.txt");
+    final Path oldPath = new Path(PER_TEST_PATH, "555test.txt");
     Assert.assertFalse(miniCluster.getFileSystem().exists(oldPath));
     try (final OutputStream outputStream = miniCluster.getFileSystem().create(oldPath);
-         final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+         final InputStream inputStream = new ByteArrayInputStream(PATH_BYTE_CONTENTS)) {
       ByteStreams.copy(inputStream, outputStream);
     }
 
     Thread.sleep(10);
 
-    final Path newPath = new Path(perTestPath, "666test.txt");
+    final Path newPath = new Path(PER_TEST_PATH, "666test.txt");
     Assert.assertFalse(miniCluster.getFileSystem().exists(newPath));
     try (final OutputStream outputStream = miniCluster.getFileSystem().create(newPath);
-         final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+         final InputStream inputStream = new ByteArrayInputStream(PATH_BYTE_CONTENTS)) {
       ByteStreams.copy(inputStream, outputStream);
     }
 
@@ -127,19 +130,19 @@ public class HdfsFileTimestampVersionFinderTest
   @Test
   public void testAlreadyLatestVersion() throws IOException, InterruptedException
   {
-    final Path oldPath = new Path(perTestPath, "555test.txt");
+    final Path oldPath = new Path(PER_TEST_PATH, "555test.txt");
     Assert.assertFalse(miniCluster.getFileSystem().exists(oldPath));
     try (final OutputStream outputStream = miniCluster.getFileSystem().create(oldPath);
-         final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+         final InputStream inputStream = new ByteArrayInputStream(PATH_BYTE_CONTENTS)) {
       ByteStreams.copy(inputStream, outputStream);
     }
 
     Thread.sleep(10);
 
-    final Path newPath = new Path(perTestPath, "666test.txt");
+    final Path newPath = new Path(PER_TEST_PATH, "666test.txt");
     Assert.assertFalse(miniCluster.getFileSystem().exists(newPath));
     try (final OutputStream outputStream = miniCluster.getFileSystem().create(newPath);
-         final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+         final InputStream inputStream = new ByteArrayInputStream(PATH_BYTE_CONTENTS)) {
       ByteStreams.copy(inputStream, outputStream);
     }
 
@@ -149,7 +152,7 @@ public class HdfsFileTimestampVersionFinderTest
   @Test
   public void testNoLatestVersion() throws IOException
   {
-    final Path oldPath = new Path(perTestPath, "555test.txt");
+    final Path oldPath = new Path(PER_TEST_PATH, "555test.txt");
     Assert.assertFalse(miniCluster.getFileSystem().exists(oldPath));
     Assert.assertNull(finder.getLatestVersion(oldPath.toUri(), Pattern.compile(".*")));
   }
@@ -157,50 +160,50 @@ public class HdfsFileTimestampVersionFinderTest
   @Test
   public void testSimpleLatestVersionInDir() throws IOException, InterruptedException
   {
-    final Path oldPath = new Path(perTestPath, "555test.txt");
+    final Path oldPath = new Path(PER_TEST_PATH, "555test.txt");
     Assert.assertFalse(miniCluster.getFileSystem().exists(oldPath));
     try (final OutputStream outputStream = miniCluster.getFileSystem().create(oldPath);
-         final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+         final InputStream inputStream = new ByteArrayInputStream(PATH_BYTE_CONTENTS)) {
       ByteStreams.copy(inputStream, outputStream);
     }
 
     Thread.sleep(10);
 
-    final Path newPath = new Path(perTestPath, "666test.txt");
+    final Path newPath = new Path(PER_TEST_PATH, "666test.txt");
     Assert.assertFalse(miniCluster.getFileSystem().exists(newPath));
     try (final OutputStream outputStream = miniCluster.getFileSystem().create(newPath);
-         final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+         final InputStream inputStream = new ByteArrayInputStream(PATH_BYTE_CONTENTS)) {
       ByteStreams.copy(inputStream, outputStream);
     }
 
     Assert.assertEquals(
         newPath.toString(),
-        finder.getLatestVersion(perTestPath.toUri(), Pattern.compile(".*test\\.txt")).getPath()
+        finder.getLatestVersion(PER_TEST_PATH.toUri(), Pattern.compile(".*test\\.txt")).getPath()
     );
   }
 
   @Test
   public void testSkipMismatch() throws IOException, InterruptedException
   {
-    final Path oldPath = new Path(perTestPath, "555test.txt");
+    final Path oldPath = new Path(PER_TEST_PATH, "555test.txt");
     Assert.assertFalse(miniCluster.getFileSystem().exists(oldPath));
     try (final OutputStream outputStream = miniCluster.getFileSystem().create(oldPath);
-         final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+         final InputStream inputStream = new ByteArrayInputStream(PATH_BYTE_CONTENTS)) {
       ByteStreams.copy(inputStream, outputStream);
     }
 
     Thread.sleep(10);
 
-    final Path newPath = new Path(perTestPath, "666test.txt2");
+    final Path newPath = new Path(PER_TEST_PATH, "666test.txt2");
     Assert.assertFalse(miniCluster.getFileSystem().exists(newPath));
     try (final OutputStream outputStream = miniCluster.getFileSystem().create(newPath);
-         final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+         final InputStream inputStream = new ByteArrayInputStream(PATH_BYTE_CONTENTS)) {
       ByteStreams.copy(inputStream, outputStream);
     }
 
     Assert.assertEquals(
         oldPath.toString(),
-        finder.getLatestVersion(perTestPath.toUri(), Pattern.compile(".*test\\.txt")).getPath()
+        finder.getLatestVersion(PER_TEST_PATH.toUri(), Pattern.compile(".*test\\.txt")).getPath()
     );
   }
 }

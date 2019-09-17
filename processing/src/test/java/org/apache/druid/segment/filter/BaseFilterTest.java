@@ -114,8 +114,7 @@ public abstract class BaseFilterTest
   // For filter tests, the test setup creates a segment.
   // Creating a new segment for every test method call is pretty slow, so cache the StorageAdapters.
   // Each thread gets its own map.
-  private static ThreadLocal<Map<String, Map<String, Pair<StorageAdapter, Closeable>>>> adapterCache =
-      ThreadLocal.withInitial(HashMap::new);
+  private static final ThreadLocal<Map<String, Map<String, Pair<StorageAdapter, Closeable>>>> ADAPTER_CACHE = ThreadLocal.withInitial(HashMap::new);
 
   public BaseFilterTest(
       String testName,
@@ -138,10 +137,10 @@ public abstract class BaseFilterTest
   public void setUp() throws Exception
   {
     String className = getClass().getName();
-    Map<String, Pair<StorageAdapter, Closeable>> adaptersForClass = adapterCache.get().get(className);
+    Map<String, Pair<StorageAdapter, Closeable>> adaptersForClass = ADAPTER_CACHE.get().get(className);
     if (adaptersForClass == null) {
       adaptersForClass = new HashMap<>();
-      adapterCache.get().put(className, adaptersForClass);
+      ADAPTER_CACHE.get().put(className, adaptersForClass);
     }
 
     Pair<StorageAdapter, Closeable> pair = adaptersForClass.get(testName);
@@ -158,14 +157,14 @@ public abstract class BaseFilterTest
 
   public static void tearDown(String className) throws Exception
   {
-    Map<String, Pair<StorageAdapter, Closeable>> adaptersForClass = adapterCache.get().get(className);
+    Map<String, Pair<StorageAdapter, Closeable>> adaptersForClass = ADAPTER_CACHE.get().get(className);
 
     if (adaptersForClass != null) {
       for (Map.Entry<String, Pair<StorageAdapter, Closeable>> entry : adaptersForClass.entrySet()) {
         Closeable closeable = entry.getValue().rhs;
         closeable.close();
       }
-      adapterCache.get().put(className, null);
+      ADAPTER_CACHE.get().put(className, null);
     }
   }
 

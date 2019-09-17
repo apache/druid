@@ -29,7 +29,7 @@ import java.nio.ByteBuffer;
 
 public class ImmutableRTreeObjectStrategy implements ObjectStrategy<ImmutableRTree>
 {
-  private static Ordering<ImmutableRTree> comparator = new Ordering<ImmutableRTree>()
+  private static final Ordering<ImmutableRTree> COMPARATOR = new Ordering<ImmutableRTree>()
   {
     @Override
     public int compare(ImmutableRTree tree, ImmutableRTree tree1)
@@ -82,6 +82,6 @@ public class ImmutableRTreeObjectStrategy implements ObjectStrategy<ImmutableRTr
   @Override
   public int compare(ImmutableRTree o1, ImmutableRTree o2)
   {
-    return comparator.compare(o1, o2);
+    return COMPARATOR.compare(o1, o2);
   }
 }

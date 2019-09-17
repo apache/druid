@@ -65,6 +65,7 @@ public class LoggingRequestLoggerTest
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private static final ByteArrayOutputStream BAOS = new ByteArrayOutputStream();
+  @SuppressWarnings("SSBasedInspection")
   private static Appender appender;
 
   final DateTime timestamp = DateTimes.of("2016-01-01T00:00:00Z");

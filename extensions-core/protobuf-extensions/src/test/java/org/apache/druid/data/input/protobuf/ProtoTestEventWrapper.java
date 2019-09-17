@@ -3199,8 +3199,8 @@ public final class ProtoTestEventWrapper
     return descriptor;
   }
 
-  private static com.google.protobuf.Descriptors.FileDescriptor
-      descriptor;
+  @SuppressWarnings("SSBasedInspection")
+  private static com.google.protobuf.Descriptors.FileDescriptor descriptor;
 
   static {
     java.lang.String[] descriptorData = {

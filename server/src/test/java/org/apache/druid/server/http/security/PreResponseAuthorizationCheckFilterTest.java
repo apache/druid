@@ -42,7 +42,7 @@ import java.util.List;
 
 public class PreResponseAuthorizationCheckFilterTest
 {
-  private static List<Authenticator> authenticators = Collections.singletonList(new AllowAllAuthenticator());
+  private static final List<Authenticator> authenticators = Collections.singletonList(new AllowAllAuthenticator());
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();

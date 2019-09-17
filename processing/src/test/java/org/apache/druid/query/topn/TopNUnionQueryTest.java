@@ -107,7 +107,7 @@ public class TopNUnionQueryTest
         .dataSource(QueryRunnerTestHelper.UNION_DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
         .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
-        .metric(QueryRunnerTestHelper.dependentPostAggMetric)
+        .metric(QueryRunnerTestHelper.DEPENDENT_POST_AGG_METRIC)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .aggregators(
@@ -124,7 +124,7 @@ public class TopNUnionQueryTest
         .postAggregators(
             QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT,
             QueryRunnerTestHelper.DEPENDENT_POST_AGG,
-            QueryRunnerTestHelper.hyperUniqueFinalizingPostAgg
+            QueryRunnerTestHelper.HYPER_UNIQUE_FINALIZING_POST_AGG
         )
         .build();
 
@@ -138,7 +138,7 @@ public class TopNUnionQueryTest
                         .put("rows", 744L)
                         .put("index", 862719.3151855469D)
                         .put("addRowsIndexConstant", 863464.3151855469D)
-                        .put(QueryRunnerTestHelper.dependentPostAggMetric, 864209.3151855469D)
+                        .put(QueryRunnerTestHelper.DEPENDENT_POST_AGG_METRIC, 864209.3151855469D)
                         .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
                         .put("maxIndex", 1743.9217529296875D)
                         .put("minIndex", 792.3260498046875D)
@@ -152,7 +152,7 @@ public class TopNUnionQueryTest
                         .put("rows", 744L)
                         .put("index", 768184.4240722656D)
                         .put("addRowsIndexConstant", 768929.4240722656D)
-                        .put(QueryRunnerTestHelper.dependentPostAggMetric, 769674.4240722656D)
+                        .put(QueryRunnerTestHelper.DEPENDENT_POST_AGG_METRIC, 769674.4240722656D)
                         .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
                         .put("maxIndex", 1870.06103515625D)
                         .put("minIndex", 545.9906005859375D)
@@ -166,7 +166,7 @@ public class TopNUnionQueryTest
                         .put("rows", 3348L)
                         .put("index", 382426.28929138184D)
                         .put("addRowsIndexConstant", 385775.28929138184D)
-                        .put(QueryRunnerTestHelper.dependentPostAggMetric, 389124.28929138184D)
+                        .put(QueryRunnerTestHelper.DEPENDENT_POST_AGG_METRIC, 389124.28929138184D)
                         .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
                         .put(
                             QueryRunnerTestHelper.HYPER_UNIQUE_FINALIZING_POST_AGG_METRIC,

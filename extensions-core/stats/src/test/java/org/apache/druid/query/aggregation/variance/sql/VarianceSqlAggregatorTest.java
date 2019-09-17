@@ -79,10 +79,12 @@ import java.util.List;
 
 public class VarianceSqlAggregatorTest
 {
-  private static AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
+  private static final AuthenticationResult AUTHENTICATION_RESULT = CalciteTests.REGULAR_USER_AUTH_RESULT;
   private static final String DATA_SOURCE = "numfoo";
 
+  @SuppressWarnings("SSBasedInspection")
   private static QueryRunnerFactoryConglomerate conglomerate;
+  @SuppressWarnings("SSBasedInspection")
   private static Closer resourceCloser;
 
   @BeforeClass
@@ -229,7 +231,7 @@ public class VarianceSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
 
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();
@@ -284,7 +286,7 @@ public class VarianceSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
 
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();
@@ -339,7 +341,7 @@ public class VarianceSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
 
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();
@@ -401,7 +403,7 @@ public class VarianceSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
 
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();
@@ -462,7 +464,7 @@ public class VarianceSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
 
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();

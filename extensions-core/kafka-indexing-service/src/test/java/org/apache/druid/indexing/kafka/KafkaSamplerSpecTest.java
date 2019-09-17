@@ -97,7 +97,9 @@ public class KafkaSamplerSpecTest
       OBJECT_MAPPER
   );
 
+  @SuppressWarnings("SSBasedInspection")
   private static TestingCluster zkServer;
+  @SuppressWarnings("SSBasedInspection")
   private static TestBroker kafkaServer;
 
   private static List<ProducerRecord<byte[], byte[]>> generateRecords(String topic)

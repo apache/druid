@@ -62,6 +62,7 @@ import java.util.concurrent.TimeoutException;
 
 public class PrefetchableTextFilesFirehoseFactoryTest
 {
+  @SuppressWarnings("SSBasedInspection")
   private static long FILE_SIZE = -1;
 
   private static final StringInputRowParser PARSER = new StringInputRowParser(
@@ -85,7 +86,8 @@ public class PrefetchableTextFilesFirehoseFactoryTest
   );
 
   @ClassRule
-  public static TemporaryFolder tempDir = new TemporaryFolder();
+  public static final TemporaryFolder TEMP_DIR = new TemporaryFolder();
+  @SuppressWarnings("SSBasedInspection")
   private static File TEST_DIR;
 
   @Rule
@@ -94,7 +96,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
   @BeforeClass
   public static void setup() throws IOException
   {
-    TEST_DIR = tempDir.newFolder();
+    TEST_DIR = TEMP_DIR.newFolder();
     for (int i = 0; i < 100; i++) {
       try (
           CountingOutputStream cos = new CountingOutputStream(
@@ -152,7 +154,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
   private static File createFirehoseTmpDir(String dirPrefix) throws IOException
   {
-    return Files.createTempDirectory(tempDir.getRoot().toPath(), dirPrefix).toFile();
+    return Files.createTempDirectory(TEMP_DIR.getRoot().toPath(), dirPrefix).toFile();
   }
 
   @Test

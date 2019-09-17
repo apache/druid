@@ -128,7 +128,7 @@ public class AggregatorUtilTest
     Pair<List<AggregatorFactory>, List<PostAggregator>> aggregatorsPair = AggregatorUtil.condensedAggregators(
         aggregatorFactories,
         postAggregatorList,
-        QueryRunnerTestHelper.dependentPostAggMetric
+        QueryRunnerTestHelper.DEPENDENT_POST_AGG_METRIC
     );
     // verify aggregators
     Assert.assertEquals(

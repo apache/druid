@@ -42,7 +42,9 @@ import java.util.Properties;
  */
 public class CacheConfigTest
 {
+  @SuppressWarnings("SSBasedInspection")
   static Injector injector;
+  @SuppressWarnings("SSBasedInspection")
   static JsonConfigurator configurator;
   JsonConfigProvider<CacheConfig> configProvider;
   private static final String PROPERTY_PREFIX = "org.apache.druid.collections.test.cache";

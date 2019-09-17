@@ -201,12 +201,12 @@ public class TaskLifecycleTest
       return Comparators.intervalsByStartThenEnd().compare(dataSegment.getInterval(), dataSegment2.getInterval());
     }
   };
-  private static DateTime now = DateTimes.nowUtc();
+  private static final DateTime NOW = DateTimes.nowUtc();
 
   private static final Iterable<InputRow> REALTIME_IDX_TASK_INPUT_ROWS = ImmutableList.of(
-      ir(now.toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 1.0f),
-      ir(now.plus(new Period(Hours.ONE)).toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 2.0f),
-      ir(now.plus(new Period(Hours.TWO)).toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 3.0f)
+      ir(NOW.toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 1.0f),
+      ir(NOW.plus(new Period(Hours.ONE)).toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 2.0f),
+      ir(NOW.plus(new Period(Hours.TWO)).toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 3.0f)
   );
 
   private static final Iterable<InputRow> IDX_TASK_INPUT_ROWS = ImmutableList.of(
@@ -250,6 +250,7 @@ public class TaskLifecycleTest
   private SegmentHandoffNotifierFactory handoffNotifierFactory;
   private Map<SegmentDescriptor, Pair<Executor, Runnable>> handOffCallbacks;
 
+  @SuppressWarnings("SSBasedInspection")
   private static CountDownLatch publishCountDown;
 
   private static ServiceEmitter newMockEmitter()
@@ -1122,7 +1123,7 @@ public class TaskLifecycleTest
     Assert.assertEquals("test_ds", segment.getDataSource());
     Assert.assertEquals(ImmutableList.of("dim1", "dim2"), segment.getDimensions());
     Assert.assertEquals(
-        Intervals.of(now.toString("YYYY-MM-dd") + "/" + now.plusDays(1).toString("YYYY-MM-dd")),
+        Intervals.of(NOW.toString("YYYY-MM-dd") + "/" + NOW.plusDays(1).toString("YYYY-MM-dd")),
         segment.getInterval()
     );
     Assert.assertEquals(ImmutableList.of("count"), segment.getMetrics());

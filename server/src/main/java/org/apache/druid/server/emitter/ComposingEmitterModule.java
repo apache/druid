@@ -42,7 +42,7 @@ import java.util.List;
  */
 public class ComposingEmitterModule implements DruidModule
 {
-  private static Logger log = new Logger(ComposingEmitterModule.class);
+  private static final Logger log = new Logger(ComposingEmitterModule.class);
 
   @Override
   public void configure(Binder binder)

@@ -48,7 +48,7 @@ import java.util.regex.Pattern;
 
 public class GraphiteEmitter implements Emitter
 {
-  private static Logger log = new Logger(GraphiteEmitter.class);
+  private static final Logger log = new Logger(GraphiteEmitter.class);
 
   private final DruidToGraphiteEventConverter graphiteEventConverter;
   private final GraphiteEmitterConfig graphiteEmitterConfig;

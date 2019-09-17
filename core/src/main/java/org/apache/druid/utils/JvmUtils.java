@@ -50,11 +50,12 @@ public class JvmUtils
   }
 
   @Inject
-  private static RuntimeInfo runtimeInfo = new RuntimeInfo();
+  @SuppressWarnings("SSBasedInspection")
+  private static RuntimeInfo RUNTIME_INFO = new RuntimeInfo();
 
   public static RuntimeInfo getRuntimeInfo()
   {
-    return runtimeInfo;
+    return RUNTIME_INFO;
   }
 
   private static final ThreadMXBean THREAD_MX_BEAN = ManagementFactory.getThreadMXBean();

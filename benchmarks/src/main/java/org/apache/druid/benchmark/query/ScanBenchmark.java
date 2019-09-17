@@ -117,6 +117,7 @@ public class ScanBenchmark
   @Param({"1000", "99999"})
   private int limit;
 
+  @SuppressWarnings("SSBasedInspection")
   @Param({"NONE", "DESCENDING", "ASCENDING"})
   private static ScanQuery.Order ordering;
 

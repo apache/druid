@@ -56,7 +56,7 @@ public class InfluxdbEmitterConfig
   @JsonProperty
   private final ImmutableSet<String> dimensionWhitelist;
 
-  private static Logger log = new Logger(InfluxdbEmitterConfig.class);
+  private static final Logger log = new Logger(InfluxdbEmitterConfig.class);
 
   @JsonCreator
   public InfluxdbEmitterConfig(

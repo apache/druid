@@ -103,7 +103,7 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
 
   private static class ConcurrentExpandable<V> implements ConcurrentIndexible<V>
   {
-    private static Integer INIT_SIZE = 1 << 10;
+    private static final Integer INIT_SIZE = 1 << 10;
     private final AtomicReference<V[]> reference = new AtomicReference<>();
     private final AtomicLong resizeCount = new AtomicLong(0);
     private final Integer initSize;

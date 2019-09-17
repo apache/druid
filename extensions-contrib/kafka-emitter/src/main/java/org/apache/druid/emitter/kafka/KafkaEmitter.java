@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class KafkaEmitter implements Emitter
 {
-  private static Logger log = new Logger(KafkaEmitter.class);
+  private static final Logger log = new Logger(KafkaEmitter.class);
 
   private static final int DEFAULT_RETRIES = 3;
   private final AtomicLong metricLost;

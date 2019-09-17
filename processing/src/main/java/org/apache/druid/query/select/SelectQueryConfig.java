@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class SelectQueryConfig
 {
-  public static String ENABLE_FROM_NEXT_DEFAULT = "enableFromNextDefault";
+  public static final String ENABLE_FROM_NEXT_DEFAULT = "enableFromNextDefault";
 
   @JsonProperty
   private boolean enableFromNextDefault = true;

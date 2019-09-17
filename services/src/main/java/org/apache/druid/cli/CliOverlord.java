@@ -133,7 +133,7 @@ import java.util.List;
 )
 public class CliOverlord extends ServerRunnable
 {
-  private static Logger log = new Logger(CliOverlord.class);
+  private static final Logger log = new Logger(CliOverlord.class);
 
   protected static final List<String> UNSECURED_PATHS = ImmutableList.of(
       "/",

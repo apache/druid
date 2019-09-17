@@ -90,7 +90,7 @@ public class BloomDimFilterTest extends BaseFilterTest
       PARSER.parseBatch(ImmutableMap.of("dim0", "5", "dim1", "abc")).get(0)
   );
 
-  private static DefaultObjectMapper mapper = new DefaultObjectMapper();
+  private static final DefaultObjectMapper MAPPER = new DefaultObjectMapper();
 
   public BloomDimFilterTest(
       String testName,
@@ -116,7 +116,7 @@ public class BloomDimFilterTest extends BaseFilterTest
   @BeforeClass
   public static void beforeClass()
   {
-    mapper.registerModule(new BloomFilterSerializersModule());
+    MAPPER.registerModule(new BloomFilterSerializersModule());
   }
 
   @AfterClass
@@ -136,7 +136,7 @@ public class BloomDimFilterTest extends BaseFilterTest
         holder,
         new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)
     );
-    DimFilter filter = mapper.readValue(mapper.writeValueAsBytes(bloomDimFilter), DimFilter.class);
+    DimFilter filter = MAPPER.readValue(MAPPER.writeValueAsBytes(bloomDimFilter), DimFilter.class);
     Assert.assertTrue(filter instanceof BloomDimFilter);
     BloomDimFilter serde = (BloomDimFilter) filter;
     Assert.assertEquals(bloomDimFilter.getDimension(), serde.getDimension());

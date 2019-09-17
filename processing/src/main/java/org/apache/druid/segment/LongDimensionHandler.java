@@ -29,7 +29,7 @@ import java.util.Comparator;
 
 public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
 {
-  private static Comparator<ColumnValueSelector> LONG_COLUMN_COMPARATOR = (s1, s2) -> {
+  private static final Comparator<ColumnValueSelector> LONG_COLUMN_COMPARATOR = (s1, s2) -> {
     if (s1.isNull()) {
       return s2.isNull() ? 0 : -1;
     } else if (s2.isNull()) {

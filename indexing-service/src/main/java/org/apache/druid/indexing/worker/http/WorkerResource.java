@@ -56,7 +56,7 @@ import java.io.IOException;
 public class WorkerResource
 {
   private static final Logger log = new Logger(WorkerResource.class);
-  private static String DISABLED_VERSION = "";
+  private static final String DISABLED_VERSION = "";
 
   private final Worker enabledWorker;
   private final WorkerCuratorCoordinator curatorCoordinator;

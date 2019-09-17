@@ -74,8 +74,8 @@ public class FloatAndDoubleFilteringTest extends BaseFilterTest
   private static final String FLOAT_COLUMN = "flt";
   private static final String DOUBLE_COLUMN = "dbl";
   private static final String TIMESTAMP_COLUMN = "ts";
-  private static int EXECUTOR_NUM_THREADS = 16;
-  private static int EXECUTOR_NUM_TASKS = 2000;
+  private static final int EXECUTOR_NUM_THREADS = 16;
+  private static final int EXECUTOR_NUM_TASKS = 2000;
 
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(

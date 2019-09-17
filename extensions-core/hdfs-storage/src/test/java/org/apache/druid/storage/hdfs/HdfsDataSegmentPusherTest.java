@@ -73,14 +73,14 @@ import java.util.regex.Pattern;
  */
 public class HdfsDataSegmentPusherTest
 {
-  static TestObjectMapper objectMapper;
+  static final TestObjectMapper OBJECT_MAPPER;
 
   static {
-    objectMapper = new TestObjectMapper();
+    OBJECT_MAPPER = new TestObjectMapper();
     InjectableValues.Std injectableValues = new InjectableValues.Std();
-    injectableValues.addValue(ObjectMapper.class, objectMapper);
+    injectableValues.addValue(ObjectMapper.class, OBJECT_MAPPER);
     injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
-    objectMapper.setInjectableValues(injectableValues);
+    OBJECT_MAPPER.setInjectableValues(injectableValues);
   }
 
   @Rule
@@ -96,7 +96,7 @@ public class HdfsDataSegmentPusherTest
   {
     HdfsDataSegmentPusherConfig hdfsDataSegmentPusherConf = new HdfsDataSegmentPusherConfig();
     hdfsDataSegmentPusherConf.setStorageDirectory("path/to/");
-    hdfsDataSegmentPusher = new HdfsDataSegmentPusher(hdfsDataSegmentPusherConf, new Configuration(true), objectMapper);
+    hdfsDataSegmentPusher = new HdfsDataSegmentPusher(hdfsDataSegmentPusherConf, new Configuration(true), OBJECT_MAPPER);
   }
 
   @Test
@@ -401,7 +401,7 @@ public class HdfsDataSegmentPusherTest
     HadoopIngestionSpec schema;
 
     try {
-      schema = objectMapper.readValue(
+      schema = OBJECT_MAPPER.readValue(
       "{\n"
             + "    \"dataSchema\": {\n"
             + "        \"dataSource\": \"source\",\n"
@@ -490,7 +490,7 @@ public class HdfsDataSegmentPusherTest
     final HadoopIngestionSpec schema;
 
     try {
-      schema = objectMapper.readValue(
+      schema = OBJECT_MAPPER.readValue(
           "{\n"
           + "    \"dataSchema\": {\n"
           + "        \"dataSource\": \"the:data:source\",\n"

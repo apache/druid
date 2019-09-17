@@ -35,8 +35,8 @@ import java.util.UUID;
 
 public class ConsistentHasherTest
 {
-  private static HashFunction TEST_HASH_FN = Hashing.murmur3_128();
-  private static int NUM_ITERATIONS = 10000;
+  private static final HashFunction TEST_HASH_FN = Hashing.murmur3_128();
+  private static final int NUM_ITERATIONS = 10000;
   private static final Logger log = new Logger(ConsistentHasherTest.class);
 
   @Test

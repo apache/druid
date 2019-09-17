@@ -79,8 +79,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
       new BloomFilterExtensionModule()
   );
 
-  private static ObjectMapper jsonMapper =
-      INJECTOR
+  private static final ObjectMapper JSON_MAPPER = INJECTOR
           .getInstance(Key.get(ObjectMapper.class, Json.class))
           .registerModules(Collections.singletonList(new BloomFilterSerializersModule()));
 
@@ -99,7 +98,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   @Override
   public QueryLogHook getQueryLogHook()
   {
-    return queryLogHook = QueryLogHook.create(jsonMapper);
+    return queryLogHook = QueryLogHook.create(JSON_MAPPER);
   }
 
   @Test
@@ -288,7 +287,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
         operatorTable,
         createExprMacroTable(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        jsonMapper
+        JSON_MAPPER
     );
   }
 }

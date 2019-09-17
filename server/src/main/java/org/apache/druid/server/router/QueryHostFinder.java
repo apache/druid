@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
  */
 public class QueryHostFinder
 {
-  private static EmittingLogger log = new EmittingLogger(QueryHostFinder.class);
+  private static final EmittingLogger log = new EmittingLogger(QueryHostFinder.class);
 
   private final TieredBrokerHostSelector hostSelector;
   private final AvaticaConnectionBalancer avaticaConnectionBalancer;

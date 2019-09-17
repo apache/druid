@@ -88,9 +88,11 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
 {
   private static final String DATA_SOURCE = "foo";
 
+  @SuppressWarnings("SSBasedInspection")
   private static QueryRunnerFactoryConglomerate conglomerate;
+  @SuppressWarnings("SSBasedInspection")
   private static Closer resourceCloser;
-  private static AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
+  private static final AuthenticationResult AUTHENTICATION_RESULT = CalciteTests.REGULAR_USER_AUTH_RESULT;
   private static final Map<String, Object> QUERY_CONTEXT_DEFAULT = ImmutableMap.of(
       PlannerContext.CTX_SQL_QUERY_ID, "dummy"
   );
@@ -204,7 +206,7 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM druid.foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
     final List<Object[]> expectedResults;
 
     if (NullHandling.replaceWithDefault()) {
@@ -316,7 +318,7 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM (SELECT FLOOR(__time TO DAY), APPROX_COUNT_DISTINCT_DS_THETA(cnt) AS u FROM druid.foo GROUP BY 1)";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, AUTHENTICATION_RESULT).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1L

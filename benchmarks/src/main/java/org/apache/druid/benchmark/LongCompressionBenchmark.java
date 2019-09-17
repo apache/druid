@@ -55,15 +55,19 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class LongCompressionBenchmark
 {
+  @SuppressWarnings("SSBasedInspection")
   @Param("longCompress/")
   private static String dirPath;
 
+  @SuppressWarnings("SSBasedInspection")
   @Param({"enumerate", "zipfLow", "zipfHigh", "sequential", "uniform"})
   private static String file;
 
+  @SuppressWarnings("SSBasedInspection")
   @Param({"auto", "longs"})
   private static String format;
 
+  @SuppressWarnings("SSBasedInspection")
   @Param({"lz4", "none"})
   private static String strategy;
 

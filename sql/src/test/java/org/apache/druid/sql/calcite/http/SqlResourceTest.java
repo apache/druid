@@ -81,7 +81,9 @@ public class SqlResourceTest extends CalciteTestBase
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private static final String DUMMY_SQL_QUERY_ID = "dummy";
 
+  @SuppressWarnings("SSBasedInspection")
   private static QueryRunnerFactoryConglomerate conglomerate;
+  @SuppressWarnings("SSBasedInspection")
   private static Closer resourceCloser;
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();

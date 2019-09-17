@@ -51,7 +51,7 @@ public class IncrementalIndexRowTypeBenchmark
   private IncrementalIndex incIndex;
   private IncrementalIndex incFloatIndex;
   private IncrementalIndex incStrIndex;
-  private static AggregatorFactory[] aggs;
+  private static final AggregatorFactory[] AGGS;
   static final int DIMENSION_COUNT = 8;
   static final int MAX_ROWS = 250000;
 
@@ -77,7 +77,7 @@ public class IncrementalIndexRowTypeBenchmark
           )
       );
     }
-    aggs = ingestAggregatorFactories.toArray(new AggregatorFactory[0]);
+    AGGS = ingestAggregatorFactories.toArray(new AggregatorFactory[0]);
   }
 
   private MapBasedInputRow getLongRow(long timestamp, int dimensionCount)
@@ -122,7 +122,7 @@ public class IncrementalIndexRowTypeBenchmark
   private IncrementalIndex makeIncIndex()
   {
     return new IncrementalIndex.Builder()
-        .setSimpleTestingIndexSchema(aggs)
+        .setSimpleTestingIndexSchema(AGGS)
         .setDeserializeComplexMetrics(false)
         .setReportParseExceptions(false)
         .setMaxRowCount(MAX_ROWS)

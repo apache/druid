@@ -52,6 +52,7 @@ public class FloatCompressionBenchmarkFileGenerator
           CompressionStrategy.NONE
       );
 
+  @SuppressWarnings("SSBasedInspection")
   private static String dirPath = "floatCompress/";
 
   public static void main(String[] args) throws IOException

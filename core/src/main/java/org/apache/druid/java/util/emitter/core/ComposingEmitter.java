@@ -29,7 +29,7 @@ import java.util.List;
 
 public class ComposingEmitter implements Emitter
 {
-  private static Logger log = new Logger(ComposingEmitter.class);
+  private static final Logger log = new Logger(ComposingEmitter.class);
 
   private final List<Emitter> emitters;
 

@@ -48,7 +48,7 @@ import java.nio.channels.WritableByteChannel;
  */
 public class GenericIndexedWriter<T> implements Serializer
 {
-  private static int PAGE_SIZE = 4096;
+  private static final int PAGE_SIZE = 4096;
 
   private static final MetaSerdeHelper<GenericIndexedWriter> SINGLE_FILE_META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((GenericIndexedWriter x) -> GenericIndexed.VERSION_ONE)

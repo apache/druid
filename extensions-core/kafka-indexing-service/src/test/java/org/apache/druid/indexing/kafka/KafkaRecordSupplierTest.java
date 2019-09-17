@@ -50,13 +50,17 @@ import java.util.stream.Collectors;
 public class KafkaRecordSupplierTest
 {
 
+  @SuppressWarnings("SSBasedInspection")
   private static String topic = "topic";
-  private static long poll_timeout_millis = 1000;
-  private static int pollRetry = 5;
+  private static final long POLL_TIMEOUT_MILLIS = 1000;
+  private static final int POLL_RETRY = 5;
+  @SuppressWarnings("SSBasedInspection")
   private static int topicPosFix = 0;
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
 
+  @SuppressWarnings("SSBasedInspection")
   private static TestingCluster zkServer;
+  @SuppressWarnings("SSBasedInspection")
   private static TestBroker kafkaServer;
 
   private List<ProducerRecord<byte[], byte[]>> records;
@@ -263,9 +267,9 @@ public class KafkaRecordSupplierTest
 
     List<OrderedPartitionableRecord<Integer, Long>> initialRecords = new ArrayList<>(createOrderedPartitionableRecords());
 
-    List<OrderedPartitionableRecord<Integer, Long>> polledRecords = recordSupplier.poll(poll_timeout_millis);
-    for (int i = 0; polledRecords.size() != initialRecords.size() && i < pollRetry; i++) {
-      polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
+    List<OrderedPartitionableRecord<Integer, Long>> polledRecords = recordSupplier.poll(POLL_TIMEOUT_MILLIS);
+    for (int i = 0; polledRecords.size() != initialRecords.size() && i < POLL_RETRY; i++) {
+      polledRecords.addAll(recordSupplier.poll(POLL_TIMEOUT_MILLIS));
       Thread.sleep(200);
     }
 
@@ -296,9 +300,9 @@ public class KafkaRecordSupplierTest
 
     List<OrderedPartitionableRecord<Integer, Long>> initialRecords = new ArrayList<>(createOrderedPartitionableRecords());
 
-    List<OrderedPartitionableRecord<Integer, Long>> polledRecords = recordSupplier.poll(poll_timeout_millis);
-    for (int i = 0; polledRecords.size() != initialRecords.size() && i < pollRetry; i++) {
-      polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
+    List<OrderedPartitionableRecord<Integer, Long>> polledRecords = recordSupplier.poll(POLL_TIMEOUT_MILLIS);
+    for (int i = 0; polledRecords.size() != initialRecords.size() && i < POLL_RETRY; i++) {
+      polledRecords.addAll(recordSupplier.poll(POLL_TIMEOUT_MILLIS));
       Thread.sleep(200);
     }
 
@@ -335,9 +339,9 @@ public class KafkaRecordSupplierTest
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
 
-    List<OrderedPartitionableRecord<Integer, Long>> polledRecords = recordSupplier.poll(poll_timeout_millis);
-    for (int i = 0; polledRecords.size() != 13 && i < pollRetry; i++) {
-      polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
+    List<OrderedPartitionableRecord<Integer, Long>> polledRecords = recordSupplier.poll(POLL_TIMEOUT_MILLIS);
+    for (int i = 0; polledRecords.size() != 13 && i < POLL_RETRY; i++) {
+      polledRecords.addAll(recordSupplier.poll(POLL_TIMEOUT_MILLIS));
       Thread.sleep(200);
     }
 
@@ -352,8 +356,8 @@ public class KafkaRecordSupplierTest
     }
 
 
-    for (int i = 0; polledRecords.size() != records.size() && i < pollRetry; i++) {
-      polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
+    for (int i = 0; polledRecords.size() != records.size() && i < POLL_RETRY; i++) {
+      polledRecords.addAll(recordSupplier.poll(POLL_TIMEOUT_MILLIS));
       Thread.sleep(200);
     }
 
@@ -414,9 +418,9 @@ public class KafkaRecordSupplierTest
 
     List<OrderedPartitionableRecord<Integer, Long>> initialRecords = createOrderedPartitionableRecords();
 
-    List<OrderedPartitionableRecord<Integer, Long>> polledRecords = recordSupplier.poll(poll_timeout_millis);
-    for (int i = 0; polledRecords.size() != 11 && i < pollRetry; i++) {
-      polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
+    List<OrderedPartitionableRecord<Integer, Long>> polledRecords = recordSupplier.poll(POLL_TIMEOUT_MILLIS);
+    for (int i = 0; polledRecords.size() != 11 && i < POLL_RETRY; i++) {
+      polledRecords.addAll(recordSupplier.poll(POLL_TIMEOUT_MILLIS));
       Thread.sleep(200);
     }
 
@@ -453,7 +457,7 @@ public class KafkaRecordSupplierTest
     Assert.assertEquals(0L, (long) recordSupplier.getEarliestSequenceNumber(partition1));
 
     recordSupplier.seekToLatest(partitions);
-    List<OrderedPartitionableRecord<Integer, Long>> polledRecords = recordSupplier.poll(poll_timeout_millis);
+    List<OrderedPartitionableRecord<Integer, Long>> polledRecords = recordSupplier.poll(POLL_TIMEOUT_MILLIS);
 
     Assert.assertEquals(Collections.emptyList(), polledRecords);
     recordSupplier.close();
