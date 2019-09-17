@@ -177,7 +177,7 @@ public class StatsDEmitter implements Emitter
       } else {
         log.debug("Service=[%s], Metric=[%s] has no StatsD type mapping", service, metric);
       }
-    } else if (event instanceof AlertEvent && config.isDogstatsd()) {
+    } else if (event instanceof AlertEvent && config.isDogstatsd() && config.isDogstatsdEvents()) {
       AlertEvent alertEvent = (AlertEvent) event;
 
       ImmutableMap.Builder<String, String> tagBuilder = ImmutableMap.builder();
@@ -187,7 +187,7 @@ public class StatsDEmitter implements Emitter
           .put("service", alertEvent.getService())
           .put("severity", alertEvent.getSeverity().toString());
       if (config.getIncludeHost()) {
-        tagBuilder.put("hostname", alertEvent.getHost());
+        tagBuilder.put(TAG_HOSTNAME, alertEvent.getHost());
       }
 
       String text;
