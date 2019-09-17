@@ -33,7 +33,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = EasyMock.createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -52,7 +52,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = EasyMock.createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, true, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, true, null, null),
         new ObjectMapper(),
         client
     );
@@ -71,7 +71,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = EasyMock.createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -99,7 +99,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = EasyMock.createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -127,7 +127,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = EasyMock.createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null, true, null),
+        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null, true, null, null),
         new ObjectMapper(),
         client
     );
@@ -157,7 +157,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = EasyMock.createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, true, null, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, true, null, null, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -167,6 +167,28 @@ public class StatsDEmitterTest
                      .setDimension("gcName", "G1 GC")
                      .build(DateTimes.nowUtc(), "jvm/gc/count", 1)
                      .build("broker", "brokerHost1")
+    );
+    EasyMock.verify(client);
+  }
+
+  @Test
+  public void testServiceAsTagOption()
+  {
+    StatsDClient client = EasyMock.createMock(StatsDClient.class);
+    StatsDEmitter emitter = new StatsDEmitter(
+            new StatsDEmitterConfig("localhost", 8888, null, null, true, null, null, true, null, true),
+            new ObjectMapper(),
+            client
+    );
+    client.time("druid.query.time", 10,
+            "druid_service:druid/broker", "dataSource:data-source", "type:groupBy", "hostname:brokerHost1"
+    );
+    EasyMock.replay(client);
+    emitter.emit(new ServiceMetricEvent.Builder()
+            .setDimension("dataSource", "data-source")
+            .setDimension("type", "groupBy")
+            .build(DateTimes.nowUtc(), "query/time", 10)
+            .build("druid/broker", "brokerHost1")
     );
     EasyMock.verify(client);
   }

@@ -122,7 +122,7 @@ import java.util.concurrent.Executor;
 @RunWith(Parameterized.class)
 public class KafkaSupervisorTest extends EasyMockSupport
 {
-  private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+  private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final String TOPIC_PREFIX = "testTopic";
   private static final String DATASOURCE = "testDS";
   private static final int NUM_PARTITIONS = 3;
@@ -141,7 +141,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private final int numThreads;
 
   private TestableKafkaSupervisor supervisor;
-  private KafkaSupervisorTuningConfig tuningConfig;
   private TaskStorage taskStorage;
   private TaskMaster taskMaster;
   private TaskRunner taskRunner;
@@ -205,33 +204,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
     taskClient = createMock(KafkaIndexTaskClient.class);
     taskQueue = createMock(TaskQueue.class);
 
-    tuningConfig = new KafkaSupervisorTuningConfig(
-        1000,
-        null,
-        50000,
-        null,
-        new Period("P1Y"),
-        new File("/test"),
-        null,
-        null,
-        null,
-        true,
-        false,
-        null,
-        null,
-        null,
-        numThreads,
-        TEST_CHAT_THREADS,
-        TEST_CHAT_RETRIES,
-        TEST_HTTP_TIMEOUT,
-        TEST_SHUTDOWN_TIMEOUT,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
-
     topic = getTopic();
     rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
     serviceEmitter = new ExceptionCapturingServiceEmitter();
@@ -265,7 +237,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final Map<String, Object> contexts = supervisor.createIndexTasks(
         1,
         "seq",
-        objectMapper,
+        OBJECT_MAPPER,
         new TreeMap<>(),
         new KafkaIndexTaskIOConfig(
             0,
@@ -309,6 +281,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   public void testNoInitialState() throws Exception
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(1);
 
     Capture<KafkaIndexTask> captured = Capture.newInstance();
@@ -628,11 +601,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
     EasyMock.expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
-            new SeekableStreamStartSequenceNumbers<>(
-                topic,
-                ImmutableMap.of(0, 10L, 1, 20L, 2, 30L),
-                ImmutableSet.of(0, 1, 2)
-            )
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 20L, 2, 30L), ImmutableSet.of())
         )
     ).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
@@ -669,11 +638,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
     EasyMock.expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
-            new SeekableStreamStartSequenceNumbers<>(
-                topic,
-                ImmutableMap.of(0, 10L, 1, 20L, 2, 30L),
-                ImmutableSet.of(0, 1, 2)
-            )
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 20L, 2, 30L), ImmutableSet.of())
         )
     ).anyTimes();
     replayAll();
@@ -701,7 +666,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(0, 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(0, 10L)),
         null,
-        null
+        null,
+        supervisor.getTuningConfig()
     );
 
     // non KafkaIndexTask (don't kill)
@@ -749,6 +715,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   public void testKillBadPartitionAssignment() throws Exception
   {
     supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null);
+    final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(1);
 
     Task id1 = createKafkaIndexTask(
@@ -758,7 +725,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(0, 0L, 2, 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(0, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
         null,
-        null
+        null,
+        tuningConfig
     );
     Task id2 = createKafkaIndexTask(
         "id2",
@@ -767,7 +735,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(1, 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(1, Long.MAX_VALUE)),
         null,
-        null
+        null,
+        tuningConfig
     );
     Task id3 = createKafkaIndexTask(
         "id3",
@@ -779,7 +748,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
     Task id4 = createKafkaIndexTask(
         "id4",
@@ -788,7 +758,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(0, 0L, 1, 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE)),
         null,
-        null
+        null,
+        tuningConfig
     );
     Task id5 = createKafkaIndexTask(
         "id5",
@@ -797,7 +768,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(1, 0L, 2, 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     List<Task> existingTasks = ImmutableList.of(id1, id2, id3, id4, id5);
@@ -957,7 +929,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(0, 0L, 2, 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(0, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
         now,
-        maxi
+        maxi,
+        supervisor.getTuningConfig()
     );
 
     List<Task> existingTasks = ImmutableList.of(id1);
@@ -1149,6 +1122,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
     supervisor = getTestableSupervisor(2, 2, true, "PT1M", null, null);
+    final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(100);
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
@@ -1244,6 +1218,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(1);
 
     Task task = createKafkaIndexTask(
@@ -1256,7 +1231,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        supervisor.getTuningConfig()
     );
 
     Collection workItems = new ArrayList<>();
@@ -1361,6 +1337,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(1);
 
     Task task = createKafkaIndexTask(
@@ -1370,7 +1347,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(0, 0L, 2, 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(0, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
         null,
-        null
+        null,
+        supervisor.getTuningConfig()
     );
 
     Collection workItems = new ArrayList<>();
@@ -1471,6 +1449,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final DateTime startTime = DateTimes.nowUtc();
 
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(6);
 
     Task id1 = createKafkaIndexTask(
@@ -1483,7 +1462,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     Task id2 = createKafkaIndexTask(
@@ -1496,7 +1476,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     Collection workItems = new ArrayList<>();
@@ -1842,6 +1823,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final DateTime startTime = DateTimes.nowUtc();
 
     supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
+    final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(1);
 
     Task id1 = createKafkaIndexTask(
@@ -1854,7 +1836,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     Task id2 = createKafkaIndexTask(
@@ -1867,7 +1850,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     Task id3 = createKafkaIndexTask(
@@ -1880,7 +1864,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     Collection workItems = new ArrayList<>();
@@ -2056,6 +2041,44 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
+  public void testGetOffsetFromStorageForPartitionWithResetOffsetAutomatically() throws Exception
+  {
+    addSomeEvents(2);
+    supervisor = getTestableSupervisor(1, 1, true, true, "PT1H", null, null);
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+
+    EasyMock.reset(indexerMetadataStorageCoordinator);
+    // unknown DataSourceMetadata in metadata store
+    EasyMock.expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE))
+            .andReturn(
+                new KafkaDataSourceMetadata(
+                    new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(1, 100L, 2, 200L))
+                )
+            ).times(4);
+    // getOffsetFromStorageForPartition() throws an exception when the offsets are automatically reset.
+    // Since getOffsetFromStorageForPartition() is called per partition, all partitions can't be reset at the same time.
+    // Instead, subsequent partitions will be reset in the following supervisor runs.
+    EasyMock.expect(
+        indexerMetadataStorageCoordinator.resetDataSourceMetadata(
+            DATASOURCE,
+            new KafkaDataSourceMetadata(
+                // Only one partition is reset in a single supervisor run.
+                new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(2, 200L))
+            )
+        )
+    ).andReturn(true);
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+  }
+
+  @Test
   public void testResetRunningTasks() throws Exception
   {
     final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
@@ -2063,6 +2086,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final DateTime startTime = DateTimes.nowUtc();
 
     supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
+    final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(1);
 
     Task id1 = createKafkaIndexTask(
@@ -2075,7 +2099,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     Task id2 = createKafkaIndexTask(
@@ -2088,7 +2113,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     Task id3 = createKafkaIndexTask(
@@ -2101,7 +2127,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     Collection workItems = new ArrayList<>();
@@ -2161,6 +2188,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     final DateTime startTime = DateTimes.nowUtc();
     supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null);
+    final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     supervisor.getStateManager().markRunFinished();
 
     //not adding any events
@@ -2174,7 +2202,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     Task id2 = createKafkaIndexTask(
@@ -2187,7 +2216,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     Task id3 = createKafkaIndexTask(
@@ -2200,7 +2230,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -2259,6 +2290,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       throws InterruptedException
   {
     supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null);
+    final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     supervisor.getStateManager().markRunFinished();
 
     //not adding any events
@@ -2272,7 +2304,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     final Task id2 = createKafkaIndexTask(
@@ -2285,7 +2318,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     final Task id3 = createKafkaIndexTask(
@@ -2298,7 +2332,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
@@ -2348,21 +2383,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
 
-    final Map<Integer, Long> fakeCheckpoints = Collections.emptyMap();
     supervisor.moveTaskGroupToPendingCompletion(0);
     supervisor.checkpoint(
         0,
         id1.getIOConfig().getBaseSequenceName(),
-        new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(
-            topic,
-            checkpoints.get(0),
-            ImmutableSet.of()
-        )),
-        new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(
-            topic,
-            fakeCheckpoints,
-            fakeCheckpoints.keySet()
-        ))
+        new KafkaDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(topic, checkpoints.get(0), ImmutableSet.of())
+        )
     );
 
     while (supervisor.getNoticesQueueSize() > 0) {
@@ -2381,6 +2408,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       throws InterruptedException
   {
     supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null);
+    final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     //not adding any events
     final KafkaIndexTask id1 = createKafkaIndexTask(
         "id1",
@@ -2392,7 +2420,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     final Task id2 = createKafkaIndexTask(
@@ -2405,7 +2434,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     final Task id3 = createKafkaIndexTask(
@@ -2418,7 +2448,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -2441,16 +2472,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.checkpoint(
         0,
         id1.getIOConfig().getBaseSequenceName(),
-        new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(
-            topic,
-            Collections.emptyMap(),
-            ImmutableSet.of()
-        )),
-        new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(
-            topic,
-            Collections.emptyMap(),
-            ImmutableSet.of()
-        ))
+        new KafkaDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(topic, Collections.emptyMap(), ImmutableSet.of())
+        )
     );
 
     while (supervisor.getNoticesQueueSize() > 0) {
@@ -2478,6 +2502,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       throws InterruptedException
   {
     supervisor = getTestableSupervisor(1, 3, true, "PT1S", null, null);
+    final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     supervisor.getStateManager().markRunFinished();
 
     //not adding any events
@@ -2488,7 +2513,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, Long.MAX_VALUE)),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     final Task id2 = createKafkaIndexTask(
@@ -2498,7 +2524,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, Long.MAX_VALUE)),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     final Task id3 = createKafkaIndexTask(
@@ -2508,7 +2535,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 0L), ImmutableSet.of()),
         new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, Long.MAX_VALUE)),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -2552,18 +2580,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     supervisor.runInternal();
 
-    final TreeMap<Integer, Map<Integer, Long>> newCheckpoints = new TreeMap<>();
-    newCheckpoints.put(0, ImmutableMap.of(0, 10L));
     supervisor.checkpoint(
         null,
         id1.getIOConfig().getBaseSequenceName(),
-        new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(
-            topic,
-            checkpoints.get(0),
-            ImmutableSet.of()
-        )),
         new KafkaDataSourceMetadata(
-            new SeekableStreamStartSequenceNumbers<>(topic, newCheckpoints.get(0), newCheckpoints.get(0).keySet())
+            new SeekableStreamStartSequenceNumbers<>(topic, checkpoints.get(0), ImmutableSet.of())
         )
     );
 
@@ -2611,6 +2632,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final DateTime startTime = DateTimes.nowUtc();
 
     supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null, true, kafkaHost);
+    final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(1);
 
     Task id1 = createKafkaIndexTask(
@@ -2623,7 +2645,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     Task id2 = createKafkaIndexTask(
@@ -2636,7 +2659,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     Task id3 = createKafkaIndexTask(
@@ -2649,7 +2673,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        tuningConfig
     );
 
     Collection workItems = new ArrayList<>();
@@ -2745,6 +2770,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         false,
         StringUtils.format("badhostname:%d", kafkaServer.getPort())
     );
+    final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(1);
 
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -2915,7 +2941,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableMap.of(0, Long.MAX_VALUE, 2, Long.MAX_VALUE)
         ),
         null,
-        null
+        null,
+        supervisor.getTuningConfig()
     );
 
     List<Task> existingTasks = ImmutableList.of(task);
@@ -2984,7 +3011,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         ),
         new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(0, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
         null,
-        null
+        null,
+        supervisor.getTuningConfig()
     );
 
     List<Task> existingTasks = ImmutableList.of(task);
@@ -3031,7 +3059,32 @@ public class KafkaSupervisorTest extends EasyMockSupport
         false,
         kafkaHost,
         dataSchema,
-        tuningConfig
+        new KafkaSupervisorTuningConfig(
+            1000,
+            null,
+            50000,
+            null,
+            new Period("P1Y"),
+            new File("/test"),
+            null,
+            null,
+            null,
+            true,
+            false,
+            null,
+            false,
+            null,
+            numThreads,
+            TEST_CHAT_THREADS,
+            TEST_CHAT_RETRIES,
+            TEST_HTTP_TIMEOUT,
+            TEST_SHUTDOWN_TIMEOUT,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
     );
 
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
@@ -3086,7 +3139,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         ),
         minMessageTime,
         maxMessageTime,
-        dataSchema
+        dataSchema,
+        supervisor.getTuningConfig()
     );
 
     KafkaIndexTask taskFromStorageMismatchedDataSchema = createKafkaIndexTask(
@@ -3103,7 +3157,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         ),
         minMessageTime,
         maxMessageTime,
-        modifiedDataSchema
+        modifiedDataSchema,
+        supervisor.getTuningConfig()
     );
 
     KafkaIndexTask taskFromStorageMismatchedTuningConfig = createKafkaIndexTask(
@@ -3138,7 +3193,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         ),
         minMessageTime,
         maxMessageTime,
-        dataSchema
+        dataSchema,
+        supervisor.getTuningConfig()
     );
 
     EasyMock.expect(taskStorage.getTask("id1"))
@@ -3200,6 +3256,28 @@ public class KafkaSupervisorTest extends EasyMockSupport
         replicas,
         taskCount,
         useEarliestOffset,
+        false,
+        duration,
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod
+    );
+  }
+
+  private TestableKafkaSupervisor getTestableSupervisor(
+      int replicas,
+      int taskCount,
+      boolean useEarliestOffset,
+      boolean resetOffsetAutomatically,
+      String duration,
+      Period lateMessageRejectionPeriod,
+      Period earlyMessageRejectionPeriod
+  )
+  {
+    return getTestableSupervisor(
+        replicas,
+        taskCount,
+        useEarliestOffset,
+        resetOffsetAutomatically,
         duration,
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
@@ -3212,6 +3290,31 @@ public class KafkaSupervisorTest extends EasyMockSupport
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
+      String duration,
+      Period lateMessageRejectionPeriod,
+      Period earlyMessageRejectionPeriod,
+      boolean suspended,
+      String kafkaHost
+  )
+  {
+    return getTestableSupervisor(
+        replicas,
+        taskCount,
+        useEarliestOffset,
+        false,
+        duration,
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod,
+        suspended,
+        kafkaHost
+    );
+  }
+
+  private TestableKafkaSupervisor getTestableSupervisor(
+      int replicas,
+      int taskCount,
+      boolean useEarliestOffset,
+      boolean resetOffsetAutomatically,
       String duration,
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
@@ -3258,12 +3361,39 @@ public class KafkaSupervisorTest extends EasyMockSupport
       }
     };
 
+    final KafkaSupervisorTuningConfig tuningConfig = new KafkaSupervisorTuningConfig(
+        1000,
+        null,
+        50000,
+        null,
+        new Period("P1Y"),
+        new File("/test"),
+        null,
+        null,
+        null,
+        true,
+        false,
+        null,
+        resetOffsetAutomatically,
+        null,
+        numThreads,
+        TEST_CHAT_THREADS,
+        TEST_CHAT_RETRIES,
+        TEST_HTTP_TIMEOUT,
+        TEST_SHUTDOWN_TIMEOUT,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
     return new TestableKafkaSupervisor(
         taskStorage,
         taskMaster,
         indexerMetadataStorageCoordinator,
         taskClientFactory,
-        objectMapper,
+        OBJECT_MAPPER,
         new KafkaSupervisorSpec(
             dataSchema,
             tuningConfig,
@@ -3274,7 +3404,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             taskMaster,
             indexerMetadataStorageCoordinator,
             taskClientFactory,
-            objectMapper,
+            OBJECT_MAPPER,
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
@@ -3338,12 +3468,39 @@ public class KafkaSupervisorTest extends EasyMockSupport
       }
     };
 
+    final KafkaSupervisorTuningConfig tuningConfig = new KafkaSupervisorTuningConfig(
+        1000,
+        null,
+        50000,
+        null,
+        new Period("P1Y"),
+        new File("/test"),
+        null,
+        null,
+        null,
+        true,
+        false,
+        null,
+        false,
+        null,
+        numThreads,
+        TEST_CHAT_THREADS,
+        TEST_CHAT_RETRIES,
+        TEST_HTTP_TIMEOUT,
+        TEST_SHUTDOWN_TIMEOUT,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
     return new TestableKafkaSupervisorWithCustomIsTaskCurrent(
         taskStorage,
         taskMaster,
         indexerMetadataStorageCoordinator,
         taskClientFactory,
-        objectMapper,
+        OBJECT_MAPPER,
         new KafkaSupervisorSpec(
             dataSchema,
             tuningConfig,
@@ -3354,7 +3511,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             taskMaster,
             indexerMetadataStorageCoordinator,
             taskClientFactory,
-            objectMapper,
+            OBJECT_MAPPER,
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
@@ -3427,7 +3584,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskMaster,
         indexerMetadataStorageCoordinator,
         taskClientFactory,
-        objectMapper,
+        OBJECT_MAPPER,
         new KafkaSupervisorSpec(
             dataSchema,
             tuningConfig,
@@ -3438,7 +3595,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             taskMaster,
             indexerMetadataStorageCoordinator,
             taskClientFactory,
-            objectMapper,
+            OBJECT_MAPPER,
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
@@ -3456,7 +3613,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     return new DataSchema(
         dataSource,
-        objectMapper.convertValue(
+        OBJECT_MAPPER.convertValue(
             new StringInputRowParser(
                 new JSONParseSpec(
                     new TimestampSpec("timestamp", "iso", null),
@@ -3479,7 +3636,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             ImmutableList.of()
         ),
         null,
-        objectMapper
+        OBJECT_MAPPER
     );
   }
 
@@ -3490,7 +3647,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
       SeekableStreamStartSequenceNumbers<Integer, Long> startPartitions,
       SeekableStreamEndSequenceNumbers<Integer, Long> endPartitions,
       DateTime minimumMessageTime,
-      DateTime maximumMessageTime
+      DateTime maximumMessageTime,
+      KafkaSupervisorTuningConfig tuningConfig
   )
   {
     return createKafkaIndexTask(
@@ -3500,7 +3658,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         endPartitions,
         minimumMessageTime,
         maximumMessageTime,
-        getDataSchema(dataSource)
+        getDataSchema(dataSource),
+        tuningConfig
     );
   }
 
@@ -3511,7 +3670,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
       SeekableStreamEndSequenceNumbers<Integer, Long> endPartitions,
       DateTime minimumMessageTime,
       DateTime maximumMessageTime,
-      DataSchema schema
+      DataSchema schema,
+      KafkaSupervisorTuningConfig tuningConfig
   )
   {
     return createKafkaIndexTask(
@@ -3522,7 +3682,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         minimumMessageTime,
         maximumMessageTime,
         schema,
-        (KafkaIndexTaskTuningConfig) tuningConfig.convertToTaskTuningConfig()
+        tuningConfig.convertToTaskTuningConfig()
     );
   }
 
@@ -3557,7 +3717,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         rowIngestionMetersFactory,
-        objectMapper,
+        OBJECT_MAPPER,
         new DummyForInjectionAppenderatorsManager()
     );
   }

@@ -46,8 +46,6 @@ import org.joda.time.Years;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -801,17 +799,6 @@ public class QueryGranularityTest
     }
     Assert.assertFalse("actualIter not exhausted!?", actualIter.hasNext());
     Assert.assertFalse("expectedIter not exhausted!?", expectedIter.hasNext());
-  }
-
-  @Test(timeout = 60_000L)
-  public void testDeadLock() throws Exception
-  {
-    final URL[] urls = ((URLClassLoader) Granularity.class.getClassLoader()).getURLs();
-    final String className = Granularity.class.getName();
-    for (int i = 0; i < 1000; ++i) {
-      final ClassLoader loader = new URLClassLoader(urls, null);
-      Assert.assertNotNull(String.valueOf(i), Class.forName(className, true, loader));
-    }
   }
   
   @Test

@@ -323,7 +323,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     if (!Objects.equals(metricColumns, that.metricColumns)) {
       return false;
     }
-    return numberOfValues != that.numberOfValues;
+    return numberOfValues == that.numberOfValues;
   }
 
   @Override

@@ -203,7 +203,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
       final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
       for (final TaskStuff taskStuff : tasks.values()) {
         if (taskStuff.getStatus().isRunnable()) {
-          TaskInfo t = new TaskInfo(
+          TaskInfo t = new TaskInfo<>(
               taskStuff.getTask().getId(),
               taskStuff.getCreatedDate(),
               taskStuff.getStatus(),
@@ -267,7 +267,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
       final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
       for (final TaskStuff taskStuff : list) {
         String id = taskStuff.getTask().getId();
-        TaskInfo t = new TaskInfo(
+        TaskInfo t = new TaskInfo<>(
             id,
             taskStuff.getCreatedDate(),
             taskStuff.getStatus(),

@@ -32,13 +32,13 @@ import java.util.Map;
 
 public class JSONPathParserTest
 {
-  private static final String json =
+  private static final String JSON =
       "{\"one\": \"foo\", \"two\" : [\"bar\", \"baz\"], \"three\" : \"qux\", \"four\" : null}";
-  private static final String numbersJson =
+  private static final String NUMBERS_JSON =
       "{\"five\" : 5.0, \"six\" : 6, \"many\" : 1234567878900, \"toomany\" : 1234567890000000000000}";
-  private static final String whackyCharacterJson =
+  private static final String WHACKY_CHARACTER_JSON =
       "{\"one\": \"foo\\uD900\"}";
-  private static final String nestedJson =
+  private static final String NESTED_JSON =
       "{\"simpleVal\":\"text\", \"ignore_me\":[1, {\"x\":2}], \"blah\":[4,5,6], \"newmet\":5, " +
       "\"foo\":{\"bar1\":\"aaa\", \"bar2\":\"bbb\"}, " +
       "\"baz\":[1,2,3], \"timestamp\":\"2999\", \"foo.bar1\":\"Hello world!\", " +
@@ -47,7 +47,7 @@ public class JSONPathParserTest
       "\"testMapConvert\":{\"big\": 1234567890000000000000, \"big2\":{\"big2\":1234567890000000000000}}, " +
       "\"testEmptyList\": [], " +
       "\"hey\":[{\"barx\":\"asdf\"}], \"met\":{\"a\":[7,8,9]}}";
-  private static final String notJson = "***@#%R#*(TG@(*H(#@(#@((H#(@TH@(#TH(@SDHGKJDSKJFBSBJK";
+  private static final String NOT_JSON = "***@#%R#*(TG@(*H(#@(#@((H#(@TH@(#TH(@SDHGKJDSKJFBSBJK";
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
@@ -57,7 +57,7 @@ public class JSONPathParserTest
   {
     List<JSONPathFieldSpec> fields = new ArrayList<>();
     final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
-    final Map<String, Object> jsonMap = jsonParser.parseToMap(json);
+    final Map<String, Object> jsonMap = jsonParser.parseToMap(JSON);
     Assert.assertEquals(
         "jsonMap",
         ImmutableMap.of("one", "foo", "two", ImmutableList.of("bar", "baz"), "three", "qux"),
@@ -70,7 +70,7 @@ public class JSONPathParserTest
   {
     List<JSONPathFieldSpec> fields = new ArrayList<>();
     final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
-    final Map<String, Object> jsonMap = jsonParser.parseToMap(numbersJson);
+    final Map<String, Object> jsonMap = jsonParser.parseToMap(NUMBERS_JSON);
     Assert.assertEquals(
         "jsonMap",
         ImmutableMap.of("five", 5.0, "six", 6L, "many", 1234567878900L, "toomany", 1.23456789E21),
@@ -83,7 +83,7 @@ public class JSONPathParserTest
   {
     List<JSONPathFieldSpec> fields = new ArrayList<>();
     final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
-    final Map<String, Object> jsonMap = jsonParser.parseToMap(whackyCharacterJson);
+    final Map<String, Object> jsonMap = jsonParser.parseToMap(WHACKY_CHARACTER_JSON);
     Assert.assertEquals(
         "jsonMap",
         ImmutableMap.of("one", "foo?"),
@@ -113,7 +113,7 @@ public class JSONPathParserTest
 
 
     final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
-    final Map<String, Object> jsonMap = jsonParser.parseToMap(nestedJson);
+    final Map<String, Object> jsonMap = jsonParser.parseToMap(NESTED_JSON);
 
     // Root fields
     Assert.assertEquals(ImmutableList.of(1L, 2L, 3L), jsonMap.get("baz"));
@@ -174,7 +174,7 @@ public class JSONPathParserTest
     fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq-met-array", ".met.a"));
 
     final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null);
-    final Map<String, Object> jsonMap = jsonParser.parseToMap(nestedJson);
+    final Map<String, Object> jsonMap = jsonParser.parseToMap(NESTED_JSON);
 
     // Root fields
     Assert.assertEquals("text", jsonMap.get("simpleVal"));
@@ -211,7 +211,7 @@ public class JSONPathParserTest
     thrown.expectMessage("Cannot have duplicate field definition: met-array");
 
     final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null);
-    jsonParser.parseToMap(nestedJson);
+    jsonParser.parseToMap(NESTED_JSON);
   }
 
   @Test
@@ -225,7 +225,7 @@ public class JSONPathParserTest
     thrown.expectMessage("Cannot have duplicate field definition: met-array");
 
     final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null);
-    jsonParser.parseToMap(nestedJson);
+    jsonParser.parseToMap(NESTED_JSON);
   }
 
   @Test
@@ -234,9 +234,9 @@ public class JSONPathParserTest
     List<JSONPathFieldSpec> fields = new ArrayList<>();
 
     thrown.expect(ParseException.class);
-    thrown.expectMessage("Unable to parse row [" + notJson + "]");
+    thrown.expectMessage("Unable to parse row [" + NOT_JSON + "]");
 
     final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
-    jsonParser.parseToMap(notJson);
+    jsonParser.parseToMap(NOT_JSON);
   }
 }

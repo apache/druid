@@ -51,7 +51,7 @@ import java.util.TreeSet;
  */
 public class DataSegmentTest
 {
-  private static final ObjectMapper mapper = new TestObjectMapper();
+  private static final ObjectMapper MAPPER = new TestObjectMapper();
   private static final int TEST_VERSION = 0x9;
 
   private static ShardSpec getShardSpec(final int partitionNum)
@@ -107,7 +107,7 @@ public class DataSegmentTest
   {
     InjectableValues.Std injectableValues = new InjectableValues.Std();
     injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
-    mapper.setInjectableValues(injectableValues);
+    MAPPER.setInjectableValues(injectableValues);
   }
 
   @Test
@@ -129,8 +129,8 @@ public class DataSegmentTest
         1
     );
 
-    final Map<String, Object> objectMap = mapper.readValue(
-        mapper.writeValueAsString(segment),
+    final Map<String, Object> objectMap = MAPPER.readValue(
+        MAPPER.writeValueAsString(segment),
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
@@ -145,7 +145,7 @@ public class DataSegmentTest
     Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
     Assert.assertEquals(1, objectMap.get("size"));
 
-    DataSegment deserializedSegment = mapper.readValue(mapper.writeValueAsString(segment), DataSegment.class);
+    DataSegment deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
 
     Assert.assertEquals(segment.getDataSource(), deserializedSegment.getDataSource());
     Assert.assertEquals(segment.getInterval(), deserializedSegment.getInterval());
@@ -157,13 +157,13 @@ public class DataSegmentTest
     Assert.assertEquals(segment.getSize(), deserializedSegment.getSize());
     Assert.assertEquals(segment.getId(), deserializedSegment.getId());
 
-    deserializedSegment = mapper.readValue(mapper.writeValueAsString(segment), DataSegment.class);
+    deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
     Assert.assertEquals(0, segment.compareTo(deserializedSegment));
 
-    deserializedSegment = mapper.readValue(mapper.writeValueAsString(segment), DataSegment.class);
+    deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
     Assert.assertEquals(0, deserializedSegment.compareTo(segment));
 
-    deserializedSegment = mapper.readValue(mapper.writeValueAsString(segment), DataSegment.class);
+    deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
     Assert.assertEquals(segment.hashCode(), deserializedSegment.hashCode());
   }
 
@@ -224,7 +224,7 @@ public class DataSegmentTest
                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                            .build();
 
-    final DataSegment segment2 = mapper.readValue(mapper.writeValueAsString(segment), DataSegment.class);
+    final DataSegment segment2 = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
     Assert.assertEquals("empty dimensions", ImmutableList.of(), segment2.getDimensions());
     Assert.assertEquals("empty metrics", ImmutableList.of(), segment2.getMetrics());
   }

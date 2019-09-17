@@ -23,7 +23,10 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
+
+import javax.annotation.Nullable;
 
 import java.io.Closeable;
 import java.util.concurrent.Phaser;
@@ -70,9 +73,9 @@ public class ReferenceCountingSegment extends AbstractSegment implements Oversha
     }
   };
 
-  public ReferenceCountingSegment(Segment baseSegment)
+  public static ReferenceCountingSegment wrapRootGenerationSegment(Segment baseSegment)
   {
-    this(
+    return new ReferenceCountingSegment(
         Preconditions.checkNotNull(baseSegment, "baseSegment"),
         baseSegment.getId().getPartitionNum(),
         (baseSegment.getId().getPartitionNum() + 1),
@@ -81,7 +84,21 @@ public class ReferenceCountingSegment extends AbstractSegment implements Oversha
     );
   }
 
-  public ReferenceCountingSegment(
+  public static ReferenceCountingSegment wrapSegment(
+      Segment baseSegment,
+      ShardSpec shardSpec
+  )
+  {
+    return new ReferenceCountingSegment(
+        baseSegment,
+        shardSpec.getStartRootPartitionId(),
+        shardSpec.getEndRootPartitionId(),
+        shardSpec.getMinorVersion(),
+        shardSpec.getAtomicUpdateGroupSize()
+    );
+  }
+
+  private ReferenceCountingSegment(
       Segment baseSegment,
       int startRootPartitionId,
       int endRootPartitionId,
@@ -96,6 +113,7 @@ public class ReferenceCountingSegment extends AbstractSegment implements Oversha
     this.atomicUpdateGroupSize = atomicUpdateGroupSize;
   }
 
+  @Nullable
   public Segment getBaseSegment()
   {
     return !isClosed() ? baseSegment : null;
@@ -112,24 +130,28 @@ public class ReferenceCountingSegment extends AbstractSegment implements Oversha
   }
 
   @Override
+  @Nullable
   public SegmentId getId()
   {
     return !isClosed() ? baseSegment.getId() : null;
   }
 
   @Override
+  @Nullable
   public Interval getDataInterval()
   {
     return !isClosed() ? baseSegment.getDataInterval() : null;
   }
 
   @Override
+  @Nullable
   public QueryableIndex asQueryableIndex()
   {
     return !isClosed() ? baseSegment.asQueryableIndex() : null;
   }
 
   @Override
+  @Nullable
   public StorageAdapter asStorageAdapter()
   {
     return !isClosed() ? baseSegment.asStorageAdapter() : null;

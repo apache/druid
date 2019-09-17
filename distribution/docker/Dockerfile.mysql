@@ -17,12 +17,18 @@
 # under the License.
 #
 
-ARG DRUID_RELEASE=druid/druid:0.14.0
+ARG DRUID_RELEASE
 FROM $DRUID_RELEASE
 
-COPY sha256sums.txt /tmp
-RUN wget -O /opt/druid/extensions/mysql-metadata-storage/mysql-connector-java-5.1.38.jar https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.38/mysql-connector-java-5.1.38.jar \
- && sed -e '/^#/d' /tmp/sha256sums.txt > /tmp/sha256sums-stripped.txt \
- && sha256sum -c /tmp/sha256sums-stripped.txt \
- && rm -f /opt/druid/lib/mysql-connector-java-5.1.38.jar \
- && ln -s /opt/druid/extensions/mysql-metadata-storage/mysql-connector-java-5.1.38.jar /opt/druid/lib
+WORKDIR /opt/druid/extensions/mysql-metadata-storage
+
+ARG MYSQL_URL=https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.38/mysql-connector-java-5.1.38.jar
+ARG MYSQL_JAR=mysql-connector-java-5.1.38.jar
+# https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.38/mysql-connector-java-5.1.38.jar.sha1
+ARG MYSQL_SHA=dbbd7cd309ce167ec8367de4e41c63c2c8593cc5
+
+RUN wget -q ${MYSQL_URL} \
+ && echo "${MYSQL_SHA}  ${MYSQL_JAR}" | sha1sum -c \
+ && ln -s ../extensions/mysql-metadata-storage/${MYSQL_JAR} /opt/druid/lib
+
+WORKDIR /opt/druid

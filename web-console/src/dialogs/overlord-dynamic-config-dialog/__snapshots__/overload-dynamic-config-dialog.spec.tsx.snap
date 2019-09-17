@@ -9,7 +9,6 @@ exports[`overload dynamic config matches snapshot 1`] = `
   >
     <div
       class="bp3-overlay-backdrop bp3-overlay-appear bp3-overlay-appear-active"
-      tabindex="0"
     />
     <div
       class="bp3-dialog-container bp3-overlay-content bp3-overlay-appear bp3-overlay-appear-active"
@@ -60,6 +59,7 @@ exports[`overload dynamic config matches snapshot 1`] = `
              
             <a
               href="https://druid.apache.org/docs/latest/configuration/index.html#overlord-dynamic-configuration"
+              rel="noopener noreferrer"
               target="_blank"
             >
               documentation

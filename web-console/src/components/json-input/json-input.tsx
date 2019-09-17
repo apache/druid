@@ -19,7 +19,7 @@
 import React from 'react';
 import AceEditor from 'react-ace';
 
-import { parseStringToJSON, stringifyJSON, validJson } from '../../utils';
+import { parseStringToJson, stringifyJson, validJson } from '../../utils';
 
 interface JSONInputProps {
   onChange: (newJSONValue: any) => void;
@@ -45,7 +45,7 @@ export class JSONInput extends React.PureComponent<JSONInputProps, JSONInputStat
 
   componentDidMount(): void {
     const { value } = this.props;
-    const stringValue = stringifyJSON(value);
+    const stringValue = stringifyJson(value);
     this.setState({
       stringValue,
     });
@@ -54,7 +54,7 @@ export class JSONInput extends React.PureComponent<JSONInputProps, JSONInputStat
   componentWillReceiveProps(nextProps: JSONInputProps): void {
     if (JSON.stringify(nextProps.value) !== JSON.stringify(this.props.value)) {
       this.setState({
-        stringValue: stringifyJSON(nextProps.value),
+        stringValue: stringifyJson(nextProps.value),
       });
     }
   }
@@ -70,7 +70,7 @@ export class JSONInput extends React.PureComponent<JSONInputProps, JSONInputStat
         name="ace-editor"
         onChange={(e: string) => {
           this.setState({ stringValue: e });
-          if (validJson(e) || e === '') onChange(parseStringToJSON(e));
+          if (validJson(e) || e === '') onChange(parseStringToJson(e));
           if (updateInputValidity) updateInputValidity(validJson(e) || e === '');
         }}
         focus={focus}

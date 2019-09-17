@@ -179,9 +179,9 @@ export function mapRecord<T, Q>(
 }
 
 export function groupBy<T, Q>(
-  array: T[],
+  array: readonly T[],
   keyFn: (x: T, index: number) => string,
-  aggregateFn: (xs: T[], key: string) => Q,
+  aggregateFn: (xs: readonly T[], key: string) => Q,
 ): Q[] {
   const buckets: Record<string, T[]> = {};
   const n = array.length;
@@ -194,7 +194,7 @@ export function groupBy<T, Q>(
   return Object.keys(buckets).map(key => aggregateFn(buckets[key], key));
 }
 
-export function uniq(array: string[]): string[] {
+export function uniq(array: readonly string[]): string[] {
   const seen: Record<string, boolean> = {};
   return array.filter(s => {
     if (hasOwnProp(seen, s)) {
@@ -261,7 +261,7 @@ export function validJson(json: string): boolean {
 }
 
 // stringify JSON to string; if JSON is null, parse empty string ""
-export function stringifyJSON(item: any): string {
+export function stringifyJson(item: any): string {
   if (item != null) {
     return JSON.stringify(item, null, 2);
   } else {
@@ -270,7 +270,7 @@ export function stringifyJSON(item: any): string {
 }
 
 // parse string to JSON object; if string is empty, return null
-export function parseStringToJSON(s: string): JSON | null {
+export function parseStringToJson(s: string): JSON | null {
   if (s === '') {
     return null;
   } else {

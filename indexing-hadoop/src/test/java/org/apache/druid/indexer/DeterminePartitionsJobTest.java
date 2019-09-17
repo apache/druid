@@ -191,6 +191,30 @@ public class DeterminePartitionsJobTest
                     "2014102200,j.example.com,US,333",
                     "2014102200,k.example.com,US,555"
                 )
+            },
+            {
+                true,
+                1000,
+                "2014-10-22T00:00:00Z/P1D",
+                1,
+                new int[]{1},
+                new String[][][]{
+                    {
+                        {null, null}
+                    }
+                },
+                ImmutableList.of(
+                    "2014102200,a.example.com,CN,100",
+                    "2014102200,b.exmaple.com,US,50",
+                    "2014102200,c.example.com,US,200",
+                    "2014102200,d.example.com,US,250",
+                    "2014102200,e.example.com,US,123",
+                    "2014102200,f.example.com,US,567",
+                    "2014102200,g.example.com,US,11",
+                    "2014102200,h.example.com,US,251",
+                    "2014102200,i.example.com,US,963",
+                    "2014102200,j.example.com,US,333"
+                )
             }
         }
     );

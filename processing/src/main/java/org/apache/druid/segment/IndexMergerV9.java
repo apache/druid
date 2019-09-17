@@ -289,7 +289,7 @@ public class IndexMergerV9 implements IndexMerger
     final long numBytes = cols.getSerializedSize()
                           + dims.getSerializedSize()
                           + 16
-                          + serializerUtils.getSerializedStringByteSize(bitmapSerdeFactoryType);
+                          + SERIALIZER_UTILS.getSerializedStringByteSize(bitmapSerdeFactoryType);
 
     final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
     cols.writeTo(writer, v9Smoosher);
@@ -304,10 +304,10 @@ public class IndexMergerV9 implements IndexMerger
     }
     final Interval dataInterval = new Interval(minTime, maxTime);
 
-    serializerUtils.writeLong(writer, dataInterval.getStartMillis());
-    serializerUtils.writeLong(writer, dataInterval.getEndMillis());
+    SERIALIZER_UTILS.writeLong(writer, dataInterval.getStartMillis());
+    SERIALIZER_UTILS.writeLong(writer, dataInterval.getEndMillis());
 
-    serializerUtils.writeString(writer, bitmapSerdeFactoryType);
+    SERIALIZER_UTILS.writeString(writer, bitmapSerdeFactoryType);
     writer.close();
 
     IndexIO.checkFileSize(new File(outDir, "index.drd"));
@@ -450,7 +450,7 @@ public class IndexMergerV9 implements IndexMerger
   ) throws IOException
   {
     ZeroCopyByteArrayOutputStream specBytes = new ZeroCopyByteArrayOutputStream();
-    serializerUtils.writeString(specBytes, mapper.writeValueAsString(serdeficator));
+    SERIALIZER_UTILS.writeString(specBytes, mapper.writeValueAsString(serdeficator));
     try (SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
         columnName,
         specBytes.size() + serdeficator.getSerializedSize()

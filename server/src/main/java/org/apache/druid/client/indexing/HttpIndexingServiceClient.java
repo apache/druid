@@ -31,7 +31,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -106,7 +106,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   public String runTask(Object taskObject)
   {
     try {
-      final FullResponseHolder response = druidLeaderClient.go(
+      final StringFullResponseHolder response = druidLeaderClient.go(
           druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/task")
                            .setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(taskObject))
       );
@@ -139,7 +139,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   public String killTask(String taskId)
   {
     try {
-      final FullResponseHolder response = druidLeaderClient.go(
+      final StringFullResponseHolder response = druidLeaderClient.go(
           druidLeaderClient.makeRequest(
               HttpMethod.POST,
               StringUtils.format("/druid/indexer/v1/task/%s/shutdown", StringUtils.urlEncode(taskId))
@@ -173,7 +173,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   public int getTotalWorkerCapacity()
   {
     try {
-      final FullResponseHolder response = druidLeaderClient.go(
+      final StringFullResponseHolder response = druidLeaderClient.go(
           druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/indexer/v1/workers")
                            .setHeader("Content-Type", MediaType.APPLICATION_JSON)
       );
@@ -227,7 +227,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   private List<TaskStatusPlus> getTasks(String endpointSuffix)
   {
     try {
-      final FullResponseHolder responseHolder = druidLeaderClient.go(
+      final StringFullResponseHolder responseHolder = druidLeaderClient.go(
           druidLeaderClient.makeRequest(HttpMethod.GET, StringUtils.format("/druid/indexer/v1/%s", endpointSuffix))
       );
 
@@ -251,7 +251,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   public TaskStatusResponse getTaskStatus(String taskId)
   {
     try {
-      final FullResponseHolder responseHolder = druidLeaderClient.go(
+      final StringFullResponseHolder responseHolder = druidLeaderClient.go(
           druidLeaderClient.makeRequest(HttpMethod.GET, StringUtils.format(
               "/druid/indexer/v1/task/%s/status",
               StringUtils.urlEncode(taskId)
@@ -274,7 +274,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   public Map<String, TaskStatus> getTaskStatuses(Set<String> taskIds) throws InterruptedException
   {
     try {
-      final FullResponseHolder responseHolder = druidLeaderClient.go(
+      final StringFullResponseHolder responseHolder = druidLeaderClient.go(
           druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/taskStatus")
                            .setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(taskIds))
       );
@@ -303,7 +303,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   public TaskPayloadResponse getTaskPayload(String taskId)
   {
     try {
-      final FullResponseHolder responseHolder = druidLeaderClient.go(
+      final StringFullResponseHolder responseHolder = druidLeaderClient.go(
           druidLeaderClient.makeRequest(
               HttpMethod.GET,
               StringUtils.format("/druid/indexer/v1/task/%s", StringUtils.urlEncode(taskId))
@@ -331,7 +331,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
         new Interval(DateTimes.MIN, end)
     );
     try {
-      final FullResponseHolder responseHolder = druidLeaderClient.go(
+      final StringFullResponseHolder responseHolder = druidLeaderClient.go(
           druidLeaderClient.makeRequest(HttpMethod.DELETE, endPoint)
       );
 

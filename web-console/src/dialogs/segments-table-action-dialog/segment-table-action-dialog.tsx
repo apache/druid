@@ -16,14 +16,13 @@
  * limitations under the License.
  */
 
-import { IDialogProps } from '@blueprintjs/core';
 import React from 'react';
 
 import { ShowJson } from '../../components';
 import { BasicAction } from '../../utils/basic-action';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
-interface SegmentTableActionDialogProps extends IDialogProps {
+interface SegmentTableActionDialogProps {
   segmentId?: string;
   datasourceId?: string;
   actions: BasicAction[];
@@ -60,7 +59,6 @@ export class SegmentTableActionDialog extends React.PureComponent<
 
     return (
       <TableActionDialog
-        isOpen
         sideButtonMetadata={taskTableSideButtonMetadata}
         onClose={onClose}
         title={`Segment: ${segmentId}`}

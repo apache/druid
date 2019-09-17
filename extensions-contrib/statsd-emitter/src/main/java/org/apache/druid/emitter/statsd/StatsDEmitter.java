@@ -43,6 +43,7 @@ public class StatsDEmitter implements Emitter
 
   private static final Logger log = new Logger(StatsDEmitter.class);
   private static final char DRUID_METRIC_SEPARATOR = '/';
+  private static final String DRUID_DEFAULT_PREFIX = "druid";
   private static final Pattern STATSD_SEPARATOR = Pattern.compile("[:|]");
   private static final Pattern BLANK = Pattern.compile("\\s+");
   private static final String[] EMPTY_ARRAY = new String[0];
@@ -99,10 +100,16 @@ public class StatsDEmitter implements Emitter
       Number value = metricEvent.getValue();
 
       ImmutableList.Builder<String> nameBuilder = new ImmutableList.Builder<>();
-      nameBuilder.add(service);
+      ImmutableMap.Builder<String, String> dimsBuilder = new ImmutableMap.Builder<>();
+
+      if (config.isDogstatsd() && config.isDogstatsdServiceAsTag()) {
+        dimsBuilder.put("druid_service", service);
+        nameBuilder.add(DRUID_DEFAULT_PREFIX);
+      } else {
+        nameBuilder.add(service);
+      }
       nameBuilder.add(metric);
 
-      ImmutableMap.Builder<String, String> dimsBuilder = new ImmutableMap.Builder<>();
       StatsDMetric statsDMetric = converter.addFilteredUserDims(service, metric, userDims, dimsBuilder);
 
       if (statsDMetric != null) {

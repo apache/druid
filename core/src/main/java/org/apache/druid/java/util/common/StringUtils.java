@@ -166,7 +166,7 @@ public class StringUtils
    * @return application/x-www-form-urlencoded format encoded String, but with "+" replaced with "%20".
    */
   @Nullable
-  public static String urlEncode(String s)
+  public static String urlEncode(@Nullable String s)
   {
     if (s == null) {
       return null;

@@ -36,6 +36,9 @@ When submitting a pull request (PR), please use the following guidelines:
 - Do not use author tags/information in the code.
 - Try to keep pull requests short and submit separate ones for unrelated
   features, but feel free to combine simple bugfixes/tests into one pull request.
+- If you are adding or updating a dependency, be sure to update the version, license, or notice information in
+  [licenses.yaml](https://github.com/apache/incubator-druid/blob/master/licenses.yaml) as appropriate to help ease
+  LICENSE and NOTICE management for ASF releases.
 
 You can find more developers' resources in [`dev/`](dev) directory.
 
@@ -48,7 +51,7 @@ You can find more developers' resources in [`dev/`](dev) directory.
 1. Clone your fork of the GitHub repository
 
     ```sh
-    git clone git@github.com:<username>/druid.git
+    git clone git@github.com:<username>/incubator-druid.git
     ```
 
     replace `<username>` with your GitHub username.
@@ -97,7 +100,7 @@ You can find more developers' resources in [`dev/`](dev) directory.
     Go to your Druid fork main page
 
     ```
-    https://github.com/<username>/druid
+    https://github.com/<username>/incubator-druid
     ```
 
     If you recently pushed your changes GitHub will automatically pop up a

@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
@@ -64,7 +64,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     log.debug("Stop task[%s] publish[%s]", id, publish);
 
     try {
-      final FullResponseHolder response = submitRequestWithEmptyContent(
+      final StringFullResponseHolder response = submitRequestWithEmptyContent(
           id,
           HttpMethod.POST,
           "stop",
@@ -91,7 +91,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     log.debug("Resume task[%s]", id);
 
     try {
-      final FullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.POST, "resume", null, true);
+      final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.POST, "resume", null, true);
       return isSuccess(response);
     }
     catch (NoTaskLocationException | IOException e) {
@@ -105,7 +105,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     log.debug("Pause task[%s]", id);
 
     try {
-      final FullResponseHolder response = submitRequestWithEmptyContent(
+      final StringFullResponseHolder response = submitRequestWithEmptyContent(
           id,
           HttpMethod.POST,
           "pause",
@@ -169,7 +169,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     log.debug("GetStatus task[%s]", id);
 
     try {
-      final FullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "status", null, true);
+      final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "status", null, true);
       return deserialize(response.getContent(), SeekableStreamIndexTaskRunner.Status.class);
     }
     catch (NoTaskLocationException e) {
@@ -187,7 +187,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     log.debug("GetStartTime task[%s]", id);
 
     try {
-      final FullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "time/start", null, true);
+      final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "time/start", null, true);
       return response.getContent() == null || response.getContent().isEmpty()
              ? null
              : deserialize(response.getContent(), DateTime.class);
@@ -205,7 +205,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     log.debug("GetMovingAverages task[%s]", id);
 
     try {
-      final FullResponseHolder response = submitRequestWithEmptyContent(
+      final StringFullResponseHolder response = submitRequestWithEmptyContent(
           id,
           HttpMethod.GET,
           "rowStats",
@@ -229,7 +229,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     log.debug("GetCurrentOffsets task[%s] retry[%s]", id, retry);
 
     try {
-      final FullResponseHolder response = submitRequestWithEmptyContent(
+      final StringFullResponseHolder response = submitRequestWithEmptyContent(
           id,
           HttpMethod.GET,
           "offsets/current",
@@ -250,7 +250,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
   {
     log.debug("GetCheckpoints task[%s] retry[%s]", id, retry);
     try {
-      final FullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "checkpoints", null, retry);
+      final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "checkpoints", null, retry);
       return deserializeNestedValueMap(
           response.getContent(),
           TreeMap.class,
@@ -281,7 +281,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     log.debug("GetEndOffsets task[%s]", id);
 
     try {
-      final FullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "offsets/end", null, true);
+      final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "offsets/end", null, true);
       return deserializeMap(response.getContent(), Map.class, getPartitionType(), getSequenceType());
     }
     catch (NoTaskLocationException e) {
@@ -301,7 +301,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     log.debug("SetEndOffsets task[%s] endOffsets[%s] finalize[%s]", id, endOffsets, finalize);
 
     try {
-      final FullResponseHolder response = submitJsonRequest(
+      final StringFullResponseHolder response = submitJsonRequest(
           id,
           HttpMethod.POST,
           "offsets/end",

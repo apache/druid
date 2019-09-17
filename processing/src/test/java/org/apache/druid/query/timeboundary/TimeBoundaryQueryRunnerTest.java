@@ -73,7 +73,7 @@ public class TimeBoundaryQueryRunnerTest
   }
 
   private final QueryRunner runner;
-  private static final QueryRunnerFactory factory = new TimeBoundaryQueryRunnerFactory(
+  private static final QueryRunnerFactory FACTORY = new TimeBoundaryQueryRunnerFactory(
       QueryRunnerTestHelper.NOOP_QUERYWATCHER
   );
   private static Segment segment0;
@@ -130,7 +130,7 @@ public class TimeBoundaryQueryRunnerTest
 
   private static SegmentId makeIdentifier(Interval interval, String version)
   {
-    return SegmentId.of(QueryRunnerTestHelper.dataSource, interval, version, NoneShardSpec.instance());
+    return SegmentId.of(QueryRunnerTestHelper.DATA_SOURCE, interval, version, NoneShardSpec.instance());
   }
 
   private QueryRunner getCustomRunner() throws IOException
@@ -145,10 +145,18 @@ public class TimeBoundaryQueryRunnerTest
     segment1 = new IncrementalIndexSegment(index1, makeIdentifier(index1, "v1"));
 
     VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = new VersionedIntervalTimeline<>(StringComparators.LEXICOGRAPHIC);
-    timeline.add(index0.getInterval(), "v1", new SingleElementPartitionChunk<>(new ReferenceCountingSegment(segment0)));
-    timeline.add(index1.getInterval(), "v1", new SingleElementPartitionChunk<>(new ReferenceCountingSegment(segment1)));
+    timeline.add(
+        index0.getInterval(),
+        "v1",
+        new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment0))
+    );
+    timeline.add(
+        index1.getInterval(),
+        "v1",
+        new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment1))
+    );
 
-    return QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, factory);
+    return QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, FACTORY);
   }
 
   @Test

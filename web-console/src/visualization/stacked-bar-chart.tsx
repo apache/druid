@@ -27,7 +27,7 @@ import { ChartAxis } from './chart-axis';
 
 import './stacked-bar-chart.scss';
 
-interface StackedBarChartProps extends React.Props<any> {
+interface StackedBarChartProps {
   svgWidth: number;
   svgHeight: number;
   margin: BarChartMargin;
@@ -57,21 +57,16 @@ export interface HoveredBarInfo {
 }
 
 export class StackedBarChart extends React.Component<StackedBarChartProps, StackedBarChartState> {
-  constructor(props: StackedBarChartProps) {
-    super(props);
-    this.state = {
-      width: this.props.svgWidth - this.props.margin.left - this.props.margin.right,
-      height: this.props.svgHeight - this.props.margin.bottom - this.props.margin.top,
+  static getDerivedStateFromProps(props: StackedBarChartProps) {
+    const width = props.svgWidth - props.margin.left - props.margin.right;
+    const height = props.svgHeight - props.margin.bottom - props.margin.top;
+    return {
+      width,
+      height,
     };
   }
-
-  componentWillReceiveProps(nextProps: StackedBarChartProps): void {
-    if (nextProps !== this.props) {
-      this.setState({
-        width: nextProps.svgWidth - this.props.margin.left - this.props.margin.right,
-        height: nextProps.svgHeight - this.props.margin.bottom - this.props.margin.top,
-      });
-    }
+  constructor(props: StackedBarChartProps) {
+    super(props);
   }
 
   renderBarChart() {

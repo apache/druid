@@ -63,7 +63,7 @@ public class PathChildrenCacheFactory
 
   public static class Builder
   {
-    private static final ThreadFactory defaultThreadFactory = ThreadUtils.newThreadFactory("PathChildrenCache");
+    private static final ThreadFactory DEFAULT_THREAD_FACTORY = ThreadUtils.newThreadFactory("PathChildrenCache");
 
     private boolean cacheData;
     private boolean compressed;
@@ -110,7 +110,7 @@ public class PathChildrenCacheFactory
 
     public static ExecutorService createDefaultExecutor()
     {
-      return Executors.newSingleThreadExecutor(defaultThreadFactory);
+      return Executors.newSingleThreadExecutor(DEFAULT_THREAD_FACTORY);
     }
   }
 }

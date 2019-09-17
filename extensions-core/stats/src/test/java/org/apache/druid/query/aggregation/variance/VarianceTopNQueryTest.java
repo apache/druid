@@ -68,16 +68,16 @@ public class VarianceTopNQueryTest
   public void testFullOnTopNOverUniques()
   {
     TopNQuery query = new TopNQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(QueryRunnerTestHelper.uniqueMetric)
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .metric(QueryRunnerTestHelper.UNIQUE_METRIC)
         .threshold(3)
-        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
-                    VarianceTestHelper.commonPlusVarAggregators,
+                    VarianceTestHelper.COMMON_PLUS_VAR_AGGREGATORS,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -85,7 +85,7 @@ public class VarianceTopNQueryTest
                 )
             )
         )
-        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
+        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(

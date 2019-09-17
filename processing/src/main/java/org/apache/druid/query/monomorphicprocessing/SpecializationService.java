@@ -70,7 +70,7 @@ public final class SpecializationService
    * JITWatch shows only classes present in the loaded JAR (prototypeClass should be), not classes generated during
    * runtime.
    */
-  private static final boolean fakeSpecialize = Boolean.getBoolean("fakeSpecialize");
+  private static final boolean FAKE_SPECIALIZE = Boolean.getBoolean("fakeSpecialize");
 
   /**
    * Number of loop iterations, accounted via {@link SpecializationState#accountLoopIterations(long)} in
@@ -78,21 +78,21 @@ public final class SpecializationService
    * to specialize class for the specific runtimeShape. The default value is chosen to be so that the specialized
    * class will likely be compiled with C2 HotSpot compiler with the default values of *BackEdgeThreshold options.
    */
-  private static final int triggerSpecializationIterationsThreshold =
+  private static final int TRIGGER_SPECIALIZATION_ITERATIONS_THRESHOLD =
       Integer.getInteger("triggerSpecializationIterationsThreshold", 10_000);
 
   /**
    * The maximum number of specializations, that this service is allowed to make. It's not unlimited because each
    * specialization takes some JVM memory (machine code cache, byte code, etc.)
    */
-  private static final int maxSpecializations = Integer.getInteger("maxSpecializations", 1000);
-  private static final AtomicBoolean maxSpecializationsWarningEmitted = new AtomicBoolean(false);
+  private static final int MAX_SPECIALIZATIONS = Integer.getInteger("maxSpecializations", 1000);
+  private static final AtomicBoolean MAX_SPECIALIZATIONS_WARNING_EMITTED = new AtomicBoolean(false);
 
-  private static final ExecutorService classSpecializationExecutor = Execs.singleThreaded("class-specialization-%d");
+  private static final ExecutorService CLASS_SPECIALIZATION_EXECUTOR = Execs.singleThreaded("class-specialization-%d");
 
-  private static final AtomicLong specializedClassCounter = new AtomicLong();
+  private static final AtomicLong SPECIALIZED_CLASS_COUNTER = new AtomicLong();
 
-  private static final ClassValue<PerPrototypeClassState> perPrototypeClassState =
+  private static final ClassValue<PerPrototypeClassState> PER_PROTOTYPE_CLASS_STATE =
       new ClassValue<PerPrototypeClassState>()
       {
         @Override
@@ -125,7 +125,7 @@ public final class SpecializationService
       ImmutableMap<Class<?>, Class<?>> classRemapping
   )
   {
-    return perPrototypeClassState.get(prototypeClass).getSpecializationState(runtimeShape, classRemapping);
+    return PER_PROTOTYPE_CLASS_STATE.get(prototypeClass).getSpecializationState(runtimeShape, classRemapping);
   }
 
   static class PerPrototypeClassState<T>
@@ -160,7 +160,7 @@ public final class SpecializationService
 
     T specialize(ImmutableMap<Class<?>, Class<?>> classRemapping)
     {
-      String specializedClassName = specializedClassNamePrefix + specializedClassCounter.get();
+      String specializedClassName = specializedClassNamePrefix + SPECIALIZED_CLASS_COUNTER.get();
       ClassWriter specializedClassWriter = new ClassWriter(0);
       SimpleRemapper remapper = new SimpleRemapper(createRemapping(classRemapping, specializedClassName));
       ClassVisitor classTransformer = new ClassRemapper(specializedClassWriter, remapper);
@@ -174,7 +174,7 @@ public final class SpecializationService
             specializedClassBytecode,
             specializedClassName
         );
-        specializedClassCounter.incrementAndGet();
+        SPECIALIZED_CLASS_COUNTER.incrementAndGet();
         return specializedClass.newInstance();
       }
       catch (InstantiationException | IllegalAccessException | IOException e) {
@@ -198,7 +198,7 @@ public final class SpecializationService
     }
 
     /**
-     * No synchronization, because {@link #specialize} is called only from {@link #classSpecializationExecutor}, i. e.
+     * No synchronization, because {@link #specialize} is called only from {@link #CLASS_SPECIALIZATION_EXECUTOR}, i. e.
      * from a single thread.
      */
     byte[] getPrototypeClassBytecode() throws IOException
@@ -284,10 +284,10 @@ public final class SpecializationService
       if (specializationScheduled.get()) {
         return;
       }
-      if (loopIterations > triggerSpecializationIterationsThreshold ||
-          addAndGetTotalIterationsOverTheLastHour(loopIterations) > triggerSpecializationIterationsThreshold) {
+      if (loopIterations > TRIGGER_SPECIALIZATION_ITERATIONS_THRESHOLD ||
+          addAndGetTotalIterationsOverTheLastHour(loopIterations) > TRIGGER_SPECIALIZATION_ITERATIONS_THRESHOLD) {
         if (specializationScheduled.compareAndSet(false, true)) {
-          classSpecializationExecutor.submit(this);
+          CLASS_SPECIALIZATION_EXECUTOR.submit(this);
         }
       }
     }
@@ -323,23 +323,23 @@ public final class SpecializationService
     {
       try {
         T specialized;
-        if (specializedClassCounter.get() > maxSpecializations) {
+        if (SPECIALIZED_CLASS_COUNTER.get() > MAX_SPECIALIZATIONS) {
           // Don't specialize, just instantiate the prototype class and emit a warning.
           // The "better" approach is probably to implement some kind of cache eviction from
           // PerPrototypeClassState.specializationStates. But it might be that nobody ever hits even the current
           // maxSpecializations limit, so implementing cache eviction is an unnecessary complexity.
           specialized = perPrototypeClassState.prototypeClass.newInstance();
-          if (!maxSpecializationsWarningEmitted.get() && maxSpecializationsWarningEmitted.compareAndSet(false, true)) {
+          if (!MAX_SPECIALIZATIONS_WARNING_EMITTED.get() && MAX_SPECIALIZATIONS_WARNING_EMITTED.compareAndSet(false, true)) {
             LOG.warn(
                 "SpecializationService couldn't make more than [%d] specializations. " +
                 "Not doing specialization for runtime shape[%s] and class remapping[%s], using the prototype class[%s]",
-                maxSpecializations,
+                MAX_SPECIALIZATIONS,
                 specializationId.runtimeShape,
                 specializationId.classRemapping,
                 perPrototypeClassState.prototypeClass
             );
           }
-        } else if (fakeSpecialize) {
+        } else if (FAKE_SPECIALIZE) {
           specialized = perPrototypeClassState.prototypeClass.newInstance();
           LOG.info(
               "Not specializing prototype class[%s] for runtime shape[%s] and class remapping[%s] because "

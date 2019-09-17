@@ -44,10 +44,10 @@ type Capabilities = 'working-with-sql' | 'working-without-sql' | 'broken';
 
 export interface ConsoleApplicationProps {
   hideLegacy: boolean;
+  exampleManifestsUrl?: string;
 }
 
 export interface ConsoleApplicationState {
-  aboutDialogOpen: boolean;
   noSqlMode: boolean;
   capabilitiesLoading: boolean;
 }
@@ -123,7 +123,6 @@ export class ConsoleApplication extends React.PureComponent<
   constructor(props: ConsoleApplicationProps, context: any) {
     super(props, context);
     this.state = {
-      aboutDialogOpen: false,
       noSqlMode: false,
       capabilitiesLoading: true,
     };
@@ -232,11 +231,14 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private wrappedLoadDataView = () => {
+    const { exampleManifestsUrl } = this.props;
+
     return this.wrapInViewContainer(
       'load-data',
       <LoadDataView
         initSupervisorId={this.supervisorId}
         initTaskId={this.taskId}
+        exampleManifestsUrl={exampleManifestsUrl}
         goToTask={this.goToTaskWithTaskId}
       />,
       'narrow-pad',

@@ -65,7 +65,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
       @JsonProperty("numBuckets") Integer numBuckets,
       @JsonProperty("lowerLimit") Float lowerLimit,
       @JsonProperty("upperLimit") Float upperLimit,
-      @Nullable @JsonProperty("finalizeAsBase64Binary") Boolean finalizeAsBase64Binary
+      @JsonProperty("finalizeAsBase64Binary") @Nullable Boolean finalizeAsBase64Binary
 
   )
   {

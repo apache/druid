@@ -1,0 +1,18 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Visualization BarUnit 1`] = `
+<rect
+  class="bar-chart-unit"
+  height="10"
+  width="10"
+  x="10"
+  y="10"
+/>
+`;
+
+exports[`Visualization action barGroup 1`] = `
+<g
+  class="chart-axis undefined"
+  transform="value"
+/>
+`;

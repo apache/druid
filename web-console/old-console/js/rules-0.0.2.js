@@ -98,7 +98,7 @@ function makeRuleBody(rule) {
         break;
     }
   }
-  retVal += "</span>"
+  retVal += "</span>";
   return retVal;
 }
 
