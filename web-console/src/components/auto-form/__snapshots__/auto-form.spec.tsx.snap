@@ -220,6 +220,47 @@ exports[`auto-form snapshot matches snapshot 1`] = `
         class="bp3-button-group"
       >
         <button
+          class="bp3-button"
+          type="button"
+        >
+          <span
+            class="bp3-button-text"
+          >
+            False
+          </span>
+        </button>
+        <button
+          class="bp3-button"
+          type="button"
+        >
+          <span
+            class="bp3-button-text"
+          >
+            True
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp3-form-group"
+  >
+    <label
+      class="bp3-label"
+    >
+      Test four with default
+       
+      <span
+        class="bp3-text-muted"
+      />
+    </label>
+    <div
+      class="bp3-form-content"
+    >
+      <div
+        class="bp3-button-group"
+      >
+        <button
           class="bp3-button bp3-active"
           type="button"
         >
