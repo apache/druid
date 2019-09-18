@@ -23,12 +23,12 @@ title: "Materialized View"
   -->
 
 
-To use this Apache Druid (incubating) feature, make sure to only load `materialized-view-selection` on Broker and load `materialized-view-maintenance` on Overlord. In addtion, this feature currently requires a Hadoop cluster.
+To use this Apache Druid (incubating) feature, make sure to only load `materialized-view-selection` on Broker and load `materialized-view-maintenance` on Overlord. In addition, this feature currently requires a Hadoop cluster.
 
 This feature enables Druid to greatly improve the query performance, especially when the query dataSource has a very large number of dimensions but the query only required several dimensions. This feature includes two parts. One is `materialized-view-maintenance`, and the other is `materialized-view-selection`.
 
 ## Materialized-view-maintenance
-In materialized-view-maintenance, dataSouces user ingested are called "base-dataSource". For each base-dataSource, we can submit `derivativeDataSource` supervisors to create and maintain other dataSources which we called  "derived-dataSource". The deminsions and metrics of derived-dataSources are the subset of base-dataSource's.
+In materialized-view-maintenance, dataSources user ingested are called "base-dataSource". For each base-dataSource, we can submit `derivativeDataSource` supervisors to create and maintain other dataSources which we called  "derived-dataSource". The dimensions and metrics of derived-dataSources are the subset of base-dataSource's.
 The `derivativeDataSource` supervisor is used to keep the timeline of derived-dataSource consistent with base-dataSource. Each `derivativeDataSource` supervisor  is responsible for one derived-dataSource.
 
 A sample derivativeDataSource supervisor spec is shown below:
@@ -76,7 +76,7 @@ A sample derivativeDataSource supervisor spec is shown below:
 |tuningConfig	|TuningConfig must be HadoopTuningConfig. See [Hadoop tuning config](../../ingestion/hadoop.html#tuningconfig).|yes|
 |dataSource	|The name of this derived dataSource. 	|no(default=baseDataSource-hashCode of supervisor)|
 |hadoopDependencyCoordinates	|A JSON array of Hadoop dependency coordinates that Druid will use, this property will override the default Hadoop coordinates. Once specified, Druid will look for those Hadoop dependencies from the location specified by druid.extensions.hadoopDependenciesDir	|no|
-|classpathPrefix	|Classpath that will be pre-appended for the Peon process.	|no|
+|classpathPrefix	|Classpath that will be prepended for the Peon process.	|no|
 |context	|See below.	|no|
 
 **Context**

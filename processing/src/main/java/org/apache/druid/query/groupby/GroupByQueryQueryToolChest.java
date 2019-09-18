@@ -633,7 +633,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
             }
 
             final Iterator<DimensionSpec> dimsIter = dims.iterator();
-            for (int dimPos = 0; dimsIter.hasNext() && results.hasNext(); dimPos++) {
+            int dimPos = 0;
+            while (dimsIter.hasNext() && results.hasNext()) {
               final DimensionSpec dimensionSpec = dimsIter.next();
 
               // Must convert generic Jackson-deserialized type into the proper type.
@@ -641,6 +642,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
                   dimensionStart + dimPos,
                   DimensionHandlerUtils.convertObjectToType(results.next(), dimensionSpec.getOutputType())
               );
+
+              dimPos++;
             }
 
             CacheStrategy.fetchAggregatorsFromCache(
