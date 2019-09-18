@@ -101,118 +101,125 @@ public class StatsDEmitter implements Emitter
   public void emit(Event event)
   {
     if (event instanceof ServiceMetricEvent) {
-      ServiceMetricEvent metricEvent = (ServiceMetricEvent) event;
-      String host = metricEvent.getHost();
-      String service = metricEvent.getService();
-      String metric = metricEvent.getMetric();
-      Map<String, Object> userDims = metricEvent.getUserDims();
-      Number value = metricEvent.getValue();
-
-      ImmutableList.Builder<String> nameBuilder = new ImmutableList.Builder<>();
-      ImmutableMap.Builder<String, String> dimsBuilder = new ImmutableMap.Builder<>();
-
-      if (config.isDogstatsd() && config.isDogstatsdServiceAsTag()) {
-        dimsBuilder.put(TAG_SERVICE, service);
-        nameBuilder.add(DRUID_DEFAULT_PREFIX);
-      } else {
-        nameBuilder.add(service);
-      }
-      nameBuilder.add(metric);
-
-      StatsDMetric statsDMetric = converter.addFilteredUserDims(service, metric, userDims, dimsBuilder);
-
-      if (statsDMetric != null) {
-        List<String> fullNameList;
-        String[] tags;
-        if (config.isDogstatsd()) {
-          if (config.getIncludeHost()) {
-            dimsBuilder.put(TAG_HOSTNAME, host);
-          }
-
-          fullNameList = nameBuilder.build();
-          tags = tagsFromMap(dimsBuilder.build());
-        } else {
-          ImmutableList.Builder<String> fullNameBuilder = new ImmutableList.Builder<>();
-          if (config.getIncludeHost()) {
-            fullNameBuilder.add(host);
-          }
-          fullNameBuilder.addAll(nameBuilder.build());
-          fullNameBuilder.addAll(dimsBuilder.build().values());
-
-          fullNameList = fullNameBuilder.build();
-          tags = EMPTY_ARRAY;
-        }
-
-        String fullName = Joiner.on(config.getSeparator()).join(fullNameList);
-        fullName = StringUtils.replaceChar(fullName, DRUID_METRIC_SEPARATOR, config.getSeparator());
-        fullName = STATSD_SEPARATOR.matcher(fullName).replaceAll(config.getSeparator());
-        fullName = BLANK.matcher(fullName).replaceAll(config.getBlankHolder());
-
-        if (config.isDogstatsd() && (value instanceof Float || value instanceof Double)) {
-          switch (statsDMetric.type) {
-            case count:
-              statsd.count(fullName, value.doubleValue(), tags);
-              break;
-            case timer:
-              statsd.time(fullName, value.longValue(), tags);
-              break;
-            case gauge:
-              statsd.gauge(fullName, value.doubleValue(), tags);
-              break;
-          }
-        } else {
-          long val = statsDMetric.convertRange && !config.isDogstatsd() ?
-              Math.round(value.doubleValue() * 100) :
-              value.longValue();
-
-          switch (statsDMetric.type) {
-            case count:
-              statsd.count(fullName, val, tags);
-              break;
-            case timer:
-              statsd.time(fullName, val, tags);
-              break;
-            case gauge:
-              statsd.gauge(fullName, val, tags);
-              break;
-          }
-        }
-      } else {
-        log.debug("Service=[%s], Metric=[%s] has no StatsD type mapping", service, metric);
-      }
+      emitMetric((ServiceMetricEvent) event);
     } else if (event instanceof AlertEvent && config.isDogstatsd() && config.isDogstatsdEvents()) {
-      AlertEvent alertEvent = (AlertEvent) event;
-
-      ImmutableMap.Builder<String, String> tagBuilder = ImmutableMap.builder();
-
-      tagBuilder
-          .put(TAG_FEED, alertEvent.getFeed())
-          .put(TAG_SERVICE, alertEvent.getService())
-          .put(TAG_SEVERITY, alertEvent.getSeverity().toString());
-      if (config.getIncludeHost()) {
-        tagBuilder.put(TAG_HOSTNAME, alertEvent.getHost());
-      }
-
-      String text;
-      try {
-        text = mapper.writeValueAsString(alertEvent.getDataMap());
-      }
-      catch (JsonProcessingException e) {
-        log.error(e, "Unable to convert alert data to json");
-        text = "Unable to convert alert data to JSON: " + e.getMessage();
-      }
-      statsd.recordEvent(
-          com.timgroup.statsd.Event
-              .builder()
-              .withDate(alertEvent.getCreatedTime().getMillis())
-              .withAlertType(alertType(alertEvent.getSeverity()))
-              .withPriority(com.timgroup.statsd.Event.Priority.NORMAL)
-              .withTitle(alertEvent.getDescription())
-              .withText(text)
-              .build(),
-          tagsFromMap(tagBuilder.build())
-      );
+      emitAlert((AlertEvent) event);
     }
+  }
+
+  void emitMetric(ServiceMetricEvent metricEvent)
+  {
+    String host = metricEvent.getHost();
+    String service = metricEvent.getService();
+    String metric = metricEvent.getMetric();
+    Map<String, Object> userDims = metricEvent.getUserDims();
+    Number value = metricEvent.getValue();
+
+    ImmutableList.Builder<String> nameBuilder = new ImmutableList.Builder<>();
+    ImmutableMap.Builder<String, String> dimsBuilder = new ImmutableMap.Builder<>();
+
+    if (config.isDogstatsd() && config.isDogstatsdServiceAsTag()) {
+      dimsBuilder.put(TAG_SERVICE, service);
+      nameBuilder.add(DRUID_DEFAULT_PREFIX);
+    } else {
+      nameBuilder.add(service);
+    }
+    nameBuilder.add(metric);
+
+    StatsDMetric statsDMetric = converter.addFilteredUserDims(service, metric, userDims, dimsBuilder);
+
+    if (statsDMetric != null) {
+      List<String> fullNameList;
+      String[] tags;
+      if (config.isDogstatsd()) {
+        if (config.getIncludeHost()) {
+          dimsBuilder.put(TAG_HOSTNAME, host);
+        }
+
+        fullNameList = nameBuilder.build();
+        tags = tagsFromMap(dimsBuilder.build());
+      } else {
+        ImmutableList.Builder<String> fullNameBuilder = new ImmutableList.Builder<>();
+        if (config.getIncludeHost()) {
+          fullNameBuilder.add(host);
+        }
+        fullNameBuilder.addAll(nameBuilder.build());
+        fullNameBuilder.addAll(dimsBuilder.build().values());
+
+        fullNameList = fullNameBuilder.build();
+        tags = EMPTY_ARRAY;
+      }
+
+      String fullName = Joiner.on(config.getSeparator()).join(fullNameList);
+      fullName = StringUtils.replaceChar(fullName, DRUID_METRIC_SEPARATOR, config.getSeparator());
+      fullName = STATSD_SEPARATOR.matcher(fullName).replaceAll(config.getSeparator());
+      fullName = BLANK.matcher(fullName).replaceAll(config.getBlankHolder());
+
+      if (config.isDogstatsd() && (value instanceof Float || value instanceof Double)) {
+        switch (statsDMetric.type) {
+          case count:
+            statsd.count(fullName, value.doubleValue(), tags);
+            break;
+          case timer:
+            statsd.time(fullName, value.longValue(), tags);
+            break;
+          case gauge:
+            statsd.gauge(fullName, value.doubleValue(), tags);
+            break;
+        }
+      } else {
+        long val = statsDMetric.convertRange && !config.isDogstatsd() ?
+            Math.round(value.doubleValue() * 100) :
+            value.longValue();
+
+        switch (statsDMetric.type) {
+          case count:
+            statsd.count(fullName, val, tags);
+            break;
+          case timer:
+            statsd.time(fullName, val, tags);
+            break;
+          case gauge:
+            statsd.gauge(fullName, val, tags);
+            break;
+        }
+      }
+    } else {
+      log.debug("Service=[%s], Metric=[%s] has no StatsD type mapping", service, metric);
+    }
+  }
+
+  void emitAlert(AlertEvent alertEvent)
+  {
+    ImmutableMap.Builder<String, String> tagBuilder = ImmutableMap.builder();
+
+    tagBuilder
+        .put(TAG_FEED, alertEvent.getFeed())
+        .put(TAG_SERVICE, alertEvent.getService())
+        .put(TAG_SEVERITY, alertEvent.getSeverity().toString());
+    if (config.getIncludeHost()) {
+      tagBuilder.put(TAG_HOSTNAME, alertEvent.getHost());
+    }
+
+    String text;
+    try {
+      text = mapper.writeValueAsString(alertEvent.getDataMap());
+    }
+    catch (JsonProcessingException e) {
+      log.error(e, "Unable to convert alert data to json");
+      text = "Unable to convert alert data to JSON: " + e.getMessage();
+    }
+    statsd.recordEvent(
+        com.timgroup.statsd.Event
+            .builder()
+            .withDate(alertEvent.getCreatedTime().getMillis())
+            .withAlertType(alertType(alertEvent.getSeverity()))
+            .withPriority(com.timgroup.statsd.Event.Priority.NORMAL)
+            .withTitle(alertEvent.getDescription())
+            .withText(text)
+            .build(),
+        tagsFromMap(tagBuilder.build())
+    );
   }
 
   private static String[] tagsFromMap(Map<String, String> tags)
