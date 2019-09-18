@@ -534,7 +534,7 @@ Returns a list of objects of the currently active supervisors.
 |`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`|
 |`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details)|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
-|`specString`|String|a json string of supervisor spec|
+|`specString`|String|a JSON string of supervisor spec|
 |`type`|String|type of supervisor task, eg. `kafka` or `kinesis`|
 |`source`|String|source of supervisor task, eg. kafka topic or kinesis stream|
 |`suspended`|Boolean|true or false indicator of whether the supervisor is in suspended state|

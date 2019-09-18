@@ -1127,7 +1127,7 @@ public class SystemSchemaTest extends CalciteTestBase
                                                             .withConstructor(client, mapper, responseHandler, authMapper)
                                                             .createMock();
     EasyMock.replay(supervisorTable);
-    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/supervisor/status?fullStatus", false))
+    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/supervisor?fullStatus", false))
             .andReturn(request)
             .anyTimes();
     SettableFuture<InputStream> future = SettableFuture.create();

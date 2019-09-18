@@ -41,7 +41,7 @@ public class SupervisorStatus
   private final boolean healthy;
   private final SupervisorSpec spec;
   /**
-   * This is a stringified version of spec object
+   * This is a JSON representation of spec object
    */
   private final String specString;
   private final String type;
