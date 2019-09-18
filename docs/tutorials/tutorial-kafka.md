@@ -148,7 +148,7 @@ Once you are satisfied with the spec, click `Submit` and an ingestion task will 
 
 You will be taken to the task view with the focus on the newly created supervisor.
 
-The task view is set to auto refresh, wait until your supervisor initialises and launches a task.
+The task view is set to auto refresh, wait until your supervisor launches a task.
 
 When a tasks starts running, it will also start serving the data that it is ingesting.
 
