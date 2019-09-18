@@ -87,7 +87,7 @@ Timestamp column will have type `LONG`.
 If the `errorMessage` field is non-null, you should not trust the other fields in the response. Their contents are
 undefined.
 
-Only columns which are dimensions (ie, have type `STRING`) will have any cardinality. Rest of the columns (timestamp and metric columns) will show cardinality as `null`.
+Only columns which are dimensions (i.e., have type `STRING`) will have any cardinality. Rest of the columns (timestamp and metric columns) will show cardinality as `null`.
 
 ### intervals
 
@@ -184,5 +184,5 @@ with unknown aggregators, or any conflicts of any kind, the merged aggregators l
 merging, segments with unknown aggregators will be ignored, and conflicts between aggregators will only null out
 the aggregator for that particular column.
 
-In particular, with lenient merging, it is possible for an invidiual column's aggregator to be `null`. This will not
+In particular, with lenient merging, it is possible for an individual column's aggregator to be `null`. This will not
 occur with strict merging.

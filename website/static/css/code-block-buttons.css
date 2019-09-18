@@ -16,35 +16,40 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+pre {
+  position: relative;
+}
 
-import { ParseDataTable } from './parse-data-table';
+pre .copyCodeButton {
+  background: none;
+  border: none;
+  color: #9caeff;
+  cursor: pointer;
+  position: absolute;
+  right: 0px;
+  top: 4px;
+  z-index: 1;
+}
 
-describe('parse data table', () => {
-  it('matches snapshot', () => {
-    const sampleData = {
-      header: ['c1'],
-      rows: [
-        {
-          raw: `{"c1":"hello"}`,
-          parsed: { c1: 'hello' },
-        },
-      ],
-    };
+pre .copyCodeButton:focus {
+  outline: none;
+}
 
-    const parseDataTable = (
-      <ParseDataTable
-        sampleData={sampleData}
-        columnFilter=""
-        canFlatten={false}
-        flattenedColumnsOnly={false}
-        flattenFields={[]}
-        onFlattenFieldSelect={() => {}}
-      />
-    );
+pre .copyCodeButton::-moz-focus-inner {
+  border: none;
+}
 
-    const { container } = render(parseDataTable);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+pre .copyCodeButton:hover {
+  text-decoration: none;
+}
+
+pre .copyCodeButton svg {
+  fill: currentColor;
+  margin-right: 2px;
+}
+
+.copyCodeButtonText {
+  align-items: center;
+  display: flex;
+  font-size: 12px;
+}

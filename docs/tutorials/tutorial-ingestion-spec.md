@@ -146,7 +146,7 @@ When ingesting data, we must consider whether we wish to use rollup or not.
 
 For this tutorial, let's enable rollup. This is specified with a `granularitySpec` on the `dataSchema`.
 
-Note that the `granularitySpec` lies outside of the `parser`. We will revist the `parser` soon when we define our dimensions and metrics.
+Note that the `granularitySpec` lies outside of the `parser`. We will revisit the `parser` soon when we define our dimensions and metrics.
 
 ```json
 "dataSchema" : {

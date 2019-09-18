@@ -588,7 +588,7 @@ export interface GranularitySpec {
   queryGranularity?: string;
   segmentGranularity?: string;
   rollup?: boolean;
-  intervals?: string;
+  intervals?: string | string[];
 }
 
 export interface MetricSpec {
@@ -1541,11 +1541,11 @@ export interface TuningConfig {
   fetchThreads?: number;
 }
 
-export function invalidTuningConfig(tuningConfig: TuningConfig): boolean {
+export function invalidTuningConfig(tuningConfig: TuningConfig, intervals: any): boolean {
   return Boolean(
     tuningConfig.type === 'index_parallel' &&
       tuningConfig.forceGuaranteedRollup &&
-      !tuningConfig.numShards,
+      (!tuningConfig.numShards || !intervals),
   );
 }
 
@@ -1561,7 +1561,6 @@ export function getPartitionRelatedTuningSpecFormFields(
           type: 'boolean',
           info: (
             <>
-              <p>Does not currently work with parallel ingestion</p>
               <p>
                 Forces guaranteeing the perfect rollup. The perfect rollup optimizes the total size
                 of generated segments and querying time while indexing time will be increased. If

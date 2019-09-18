@@ -50,7 +50,6 @@ import {
   Loader,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
-import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
 import {
@@ -251,8 +250,6 @@ export interface LoadDataViewState {
   showResetConfirm: boolean;
   newRollup?: boolean;
   newDimensionMode?: DimensionMode;
-  showViewValueModal: boolean;
-  str: string;
 
   // welcome
   overlordModules?: string[];
@@ -317,8 +314,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       // dialogs / modals
       showResetConfirm: false,
-      showViewValueModal: false,
-      str: '',
 
       // general
       sampleStrategy: 'start',
@@ -507,7 +502,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         {step === 'loading' && this.renderLoading()}
 
         {this.renderResetConfirm()}
-        {this.renderViewValueModal()}
       </div>
     );
   }
@@ -648,15 +642,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
         </div>
       </>
-    );
-  }
-
-  renderViewValueModal(): JSX.Element | undefined {
-    const { showViewValueModal, str } = this.state;
-    if (!showViewValueModal) return;
-
-    return (
-      <ShowValueDialog onClose={() => this.setState({ showViewValueModal: false })} str={str} />
     );
   }
 
@@ -1225,7 +1210,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             )}
           </div>
           <ParseDataTable
-            openModal={str => this.setState({ showViewValueModal: true, str: str })}
             sampleData={parserQueryState.data}
             columnFilter={columnFilter}
             canFlatten={canFlatten}
@@ -2641,6 +2625,25 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             model={granularitySpec}
             onChange={g => this.updateSpec(deepSet(spec, 'dataSchema.granularitySpec', g))}
           />
+          <AutoForm
+            fields={[
+              {
+                name: 'dataSchema.granularitySpec.intervals',
+                label: 'Time intervals',
+                type: 'string-array',
+                placeholder: 'ex: 2018-01-01/2018-06-01',
+                required: s => Boolean(deepGet(s, 'tuningConfig.forceGuaranteedRollup')),
+                info: (
+                  <>
+                    A comma separated list of intervals for the raw data being ingested. Ignored for
+                    real-time ingestion.
+                  </>
+                ),
+              },
+            ]}
+            model={spec}
+            onChange={s => this.updateSpec(s)}
+          />
         </div>
         <div className="other">
           <H5>Secondary partitioning</H5>
@@ -2658,7 +2661,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderParallelPickerIfNeeded()}
         </div>
         {this.renderNextBar({
-          disabled: invalidTuningConfig(tuningConfig),
+          disabled: invalidTuningConfig(tuningConfig, granularitySpec.intervals),
         })}
       </>
     );
@@ -2864,6 +2867,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     try {
       const resp = await axios.get(`/druid/indexer/v1/supervisor/${initSupervisorId}`);
       this.updateSpec(resp.data);
+      this.setState({ continueToSpec: true });
       this.updateStep('spec');
     } catch (e) {
       AppToaster.show({
@@ -2879,6 +2883,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     try {
       const resp = await axios.get(`/druid/indexer/v1/task/${initTaskId}`);
       this.updateSpec(resp.data.payload);
+      this.setState({ continueToSpec: true });
       this.updateStep('spec');
     } catch (e) {
       AppToaster.show({

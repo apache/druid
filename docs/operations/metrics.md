@@ -265,8 +265,8 @@ These metrics are only available if the SysMonitor module is included.
 |`sys/swap/pageOut`|Paged out swap.||Varies.|
 |`sys/disk/write/count`|Writes to disk.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
 |`sys/disk/read/count`|Reads from disk.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
-|`sys/disk/write/size`|Bytes written to disk. Can we used to determine how much paging is occuring with regards to segments.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
-|`sys/disk/read/size`|Bytes read from disk. Can we used to determine how much paging is occuring with regards to segments.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
+|`sys/disk/write/size`|Bytes written to disk. Can we used to determine how much paging is occurring with regards to segments.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
+|`sys/disk/read/size`|Bytes read from disk. Can we used to determine how much paging is occurring with regards to segments.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
 |`sys/net/write/size`|Bytes written to the network.|netName, netAddress, netHwaddr|Varies.|
 |`sys/net/read/size`|Bytes read from the network.|netName, netAddress, netHwaddr|Varies.|
 |`sys/fs/used`|Filesystem bytes used.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|< max|
