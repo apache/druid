@@ -29,8 +29,10 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.ApproxCountDistinctSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.AvgSqlAggregator;
@@ -112,6 +114,8 @@ import java.util.stream.Collectors;
 
 public class DruidOperatorTable implements SqlOperatorTable
 {
+  private static final EmittingLogger log = new EmittingLogger(DruidOperatorTable.class);
+
   private static final List<SqlAggregator> STANDARD_AGGREGATORS =
       ImmutableList.<SqlAggregator>builder()
           .add(new ApproxCountDistinctSqlAggregator())
@@ -352,10 +356,11 @@ public class DruidOperatorTable implements SqlOperatorTable
 
   @Override
   public void lookupOperatorOverloads(
-      final SqlIdentifier opName,
-      final SqlFunctionCategory category,
-      final SqlSyntax syntax,
-      final List<SqlOperator> operatorList
+      SqlIdentifier opName,
+      SqlFunctionCategory category,
+      SqlSyntax syntax,
+      List<SqlOperator> operatorList,
+      SqlNameMatcher nameMatcher
   )
   {
     if (opName == null) {
