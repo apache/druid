@@ -417,7 +417,7 @@ public class DirectDruidClientTest
       actualException = e;
     }
     Assert.assertNotNull(actualException);
-    Assert.assertEquals("Resource limit exceeded", actualException.getErrorCode());
+    Assert.assertEquals("Query timeout", actualException.getErrorCode());
     Assert.assertEquals("query[never-ending-future] url[http://localhost:8080/druid/v2/] timed out.", actualException.getMessage());
     Assert.assertEquals(hostName, actualException.getHost());
     EasyMock.verify(httpClient);
