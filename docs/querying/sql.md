@@ -781,8 +781,8 @@ The supervisors table provides information about supervisor tasks.
 |state|STRING|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`|
 |detailed_state|STRING|supervisor specific state. (See documentation of specific supervisor for details)|
 |healthy|LONG|Boolean represented as long type where 1 = true, 0 = false. 1 indicates a healthy supervisor|
-|type|STRING|type of supervisor task, eg. `kafka`, `kinesis` or `materialized_view`|
-|source|STRING|source of the supervisor, eg kafka topic or kinesis stream|
+|type|STRING|type of supervisor task, e.g., `kafka`, `kinesis` or `materialized_view`|
+|source|STRING|source of the supervisor, e.g., Kafka topic or Kinesis stream|
 |suspended|LONG|Boolean represented as long type where 1 = true, 0 = false. 1 indicates supervisor is in suspended state|
 |spec|STRING|JSON-serialized supervisor spec|
 

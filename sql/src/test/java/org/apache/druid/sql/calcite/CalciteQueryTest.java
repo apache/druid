@@ -326,6 +326,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
           .add(new Object[]{"sys", "segments", "SYSTEM_TABLE"})
           .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE"})
           .add(new Object[]{"sys", "servers", "SYSTEM_TABLE"})
+          .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE"})
           .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE"})
           .build()
     );
@@ -351,6 +352,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"sys", "segments", "SYSTEM_TABLE"})
             .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE"})
             .add(new Object[]{"sys", "servers", "SYSTEM_TABLE"})
+            .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE"})
             .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE"})
             .build()
     );
