@@ -338,7 +338,7 @@ The configuration options are:
 |--------|-----------|---------|
 |type|Type of partitionSpec to be used.|"hashed"|
 |maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment. Defaults to 5000000|no|
-|targetPartitionSize|Deprecated. Use `maxRowsPerSegment` instead. Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|either this or numShards|
+|targetPartitionSize|Deprecated. Renamed to `maxRowsPerSegment`. Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|either this or numShards|
 |numShards|Specify the number of partitions directly, instead of a target partition size. Ingestion will run faster, since it can skip the step necessary to select a number of partitions automatically.|either this or `maxRowsPerSegment`|
 |partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions. Only used with `numShards`, will be ignored when `maxRowsPerSegment` is set.|no|
 
@@ -363,7 +363,7 @@ The configuration options are:
 |--------|-----------|---------|
 |type|Type of partitionSpec to be used.|"single_dim"|
 |targetRowsPerSegment|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|yes|
-|targetPartitionSize|Deprecated. Use `targetRowsPerSegment` instead. Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|no|
+|targetPartitionSize|Deprecated. Renamed to `targetRowsPerSegment`. Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|no|
 |maxRowsPerSegment|Maximum number of rows to include in a partition. Defaults to 50% larger than the `targetPartitionSize`.|no|
 |maxPartitionSize|Deprecated. Use `maxRowsPerSegment` instead. Maximum number of rows to include in a partition. Defaults to 50% larger than the `targetPartitionSize`.|no|
 |partitionDimension|The dimension to partition on. Leave blank to select a dimension automatically.|no|
