@@ -2613,6 +2613,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 type: 'string',
                 suggestions: ['HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR'],
                 defined: (g: GranularitySpec) => g.type === 'uniform',
+                required: true,
                 info: (
                   <>
                     The granularity to create time chunks at. Multiple segments can be created per
@@ -2662,7 +2663,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderParallelPickerIfNeeded()}
         </div>
         {this.renderNextBar({
-          disabled: invalidTuningConfig(tuningConfig, granularitySpec.intervals),
+          disabled:
+            !granularitySpec.segmentGranularity ||
+            invalidTuningConfig(tuningConfig, granularitySpec.intervals),
         })}
       </>
     );

@@ -1996,9 +1996,11 @@ export function updateIngestionType(
   if (!deepGet(spec, 'dataSchema.granularitySpec')) {
     const granularitySpec: GranularitySpec = {
       type: 'uniform',
-      segmentGranularity: ingestionType === 'index_parallel' ? 'DAY' : 'HOUR',
       queryGranularity: 'HOUR',
     };
+    if (ingestionType !== 'index_parallel') {
+      granularitySpec.segmentGranularity = 'HOUR';
+    }
 
     newSpec = deepSet(newSpec, 'dataSchema.granularitySpec', granularitySpec);
   }

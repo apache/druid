@@ -178,21 +178,26 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   private renderStringInput(field: Field<T>, sanitize?: (str: string) => string): JSX.Element {
     const { model, large } = this.props;
 
-    const modalValue = deepGet(model as any, field.name);
+    const modelValue = deepGet(model as any, field.name);
     return (
       <SuggestibleInput
-        value={modalValue != null ? modalValue : field.defaultValue || ''}
+        value={modelValue != null ? modelValue : field.defaultValue || ''}
         onValueChange={v => {
           if (sanitize) v = sanitize(v);
           this.fieldChange(field, v);
         }}
         onBlur={() => {
-          if (modalValue === '') this.fieldChange(field, undefined);
+          if (modelValue === '') this.fieldChange(field, undefined);
         }}
         placeholder={field.placeholder}
         suggestions={field.suggestions}
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model)}
+        intent={
+          AutoForm.evaluateFunctor(field.required, model) && modelValue == null
+            ? AutoForm.REQUIRED_INTENT
+            : undefined
+        }
       />
     );
   }
