@@ -66,6 +66,8 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   AutoFormProps<T>,
   AutoFormState
 > {
+  static REQUIRED_INTENT = Intent.PRIMARY;
+
   static makeLabelName(label: string): string {
     let newLabel = label
       .split(/(?=[A-Z])/)
@@ -148,7 +150,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         placeholder={field.placeholder}
         intent={
           AutoForm.evaluateFunctor(field.required, model) && modelValue == null
-            ? Intent.PRIMARY
+            ? AutoForm.REQUIRED_INTENT
             : undefined
         }
       />
@@ -202,7 +204,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     const disabled = AutoForm.evaluateFunctor(field.disabled, model);
     const intent =
       AutoForm.evaluateFunctor(field.required, model) && modelValue == null
-        ? Intent.PRIMARY
+        ? AutoForm.REQUIRED_INTENT
         : undefined;
 
     return (
@@ -268,7 +270,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         disabled={AutoForm.evaluateFunctor(field.disabled, model)}
         intent={
           AutoForm.evaluateFunctor(field.required, model) && modelValue == null
-            ? Intent.PRIMARY
+            ? AutoForm.REQUIRED_INTENT
             : undefined
         }
       />
