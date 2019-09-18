@@ -197,19 +197,30 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
   private renderBooleanInput(field: Field<T>): JSX.Element {
     const { model, large } = this.props;
-    let curValue = deepGet(model as any, field.name);
-    if (curValue == null) curValue = field.defaultValue;
+    const modelValue = deepGet(model as any, field.name);
+    const shownValue = modelValue == null ? field.defaultValue : modelValue;
     const disabled = AutoForm.evaluateFunctor(field.disabled, model);
+    const intent =
+      AutoForm.evaluateFunctor(field.required, model) && modelValue == null
+        ? Intent.PRIMARY
+        : undefined;
+
     return (
       <ButtonGroup large={large}>
         <Button
+          intent={intent}
           disabled={disabled}
-          active={!curValue}
+          active={shownValue === false}
           onClick={() => this.fieldChange(field, false)}
         >
           False
         </Button>
-        <Button disabled={disabled} active={curValue} onClick={() => this.fieldChange(field, true)}>
+        <Button
+          intent={intent}
+          disabled={disabled}
+          active={shownValue === true}
+          onClick={() => this.fieldChange(field, true)}
+        >
           True
         </Button>
       </ButtonGroup>

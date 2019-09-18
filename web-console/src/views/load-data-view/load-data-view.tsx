@@ -97,6 +97,7 @@ import {
   hasParallelAbility,
   IngestionComboTypeWithExtra,
   IngestionSpec,
+  invalidIoConfig,
   invalidTuningConfig,
   IoConfig,
   isColumnTimestampSpec,
@@ -2722,7 +2723,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           </Callout>
           {this.renderParallelPickerIfNeeded()}
         </div>
-        {this.renderNextBar({})}
+        {this.renderNextBar({
+          disabled: invalidIoConfig(ioConfig),
+        })}
       </>
     );
   }

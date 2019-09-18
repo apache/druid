@@ -733,6 +733,13 @@ export interface IoConfig {
   useEarliestSequenceNumber?: boolean;
 }
 
+export function invalidIoConfig(ioConfig: IoConfig): boolean {
+  return (
+    (ioConfig.type === 'kafka' && ioConfig.useEarliestOffset == null) ||
+    (ioConfig.type === 'kinesis' && ioConfig.useEarliestSequenceNumber == null)
+  );
+}
+
 export interface Firehose {
   type: string;
   baseDir?: string;
@@ -1239,8 +1246,8 @@ export function getIoConfigTuningFormFields(
         {
           name: 'useEarliestOffset',
           type: 'boolean',
-          defaultValue: false,
           defined: (i: IoConfig) => i.type === 'kafka',
+          required: true,
           info: (
             <>
               <p>
@@ -1255,8 +1262,8 @@ export function getIoConfigTuningFormFields(
         {
           name: 'useEarliestSequenceNumber',
           type: 'boolean',
-          defaultValue: false,
           defined: (i: IoConfig) => i.type === 'kinesis',
+          required: true,
           info: (
             <>
               If a supervisor is managing a dataSource for the first time, it will obtain a set of
@@ -1352,6 +1359,7 @@ export function getIoConfigTuningFormFields(
         {
           name: 'deaggregate',
           type: 'boolean',
+          defaultValue: false,
           defined: (i: IoConfig) => i.type === 'kinesis',
           info: <>Whether to use the de-aggregate function of the KCL.</>,
         },
@@ -1558,6 +1566,7 @@ export function getPartitionRelatedTuningSpecFormFields(
         {
           name: 'forceGuaranteedRollup',
           type: 'boolean',
+          defaultValue: false,
           info: (
             <>
               <p>
