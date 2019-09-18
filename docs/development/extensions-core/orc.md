@@ -264,7 +264,7 @@ setting `"mapreduce.job.user.classpath.first": "true"`, then this will not be an
 
 ### Migration from 'contrib' extension
 This extension, first available in version 0.15.0, replaces the previous 'contrib' extension which was available until
-0.14.0-incubating. While this extension can index any data the 'contrib' extension could, the json spec for the
+0.14.0-incubating. While this extension can index any data the 'contrib' extension could, the JSON spec for the
 ingestion task is *incompatible*, and will need modified to work with the newer 'core' extension.
 
 To migrate to 0.15.0+:

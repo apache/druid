@@ -31,7 +31,7 @@ This extension emits druid metrics to [OpenTSDB](https://github.com/OpenTSDB/ope
 
 ## Configuration
 
-All the configuration parameters for the opentsdb emitter are under `druid.emitter.opentsdb`.
+All the configuration parameters for the OpenTSDB emitter are under `druid.emitter.opentsdb`.
 
 |property|description|required?|default|
 |--------|-----------|---------|-------|
@@ -46,7 +46,7 @@ All the configuration parameters for the opentsdb emitter are under `druid.emitt
 
 ### Druid to OpenTSDB Event Converter
 
-The opentsdb emitter will send only the desired metrics and dimensions which is defined in a JSON file.
+The OpenTSDB emitter will send only the desired metrics and dimensions which is defined in a JSON file.
 If the user does not specify their own JSON file, a default file is used.  All metrics are expected to be configured in the JSON file. Metrics which are not configured will be logged.
 Desired metrics and dimensions is organized using the following schema:`<druid metric name> : [ <dimension list> ]`<br />
 e.g.

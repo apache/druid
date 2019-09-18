@@ -358,7 +358,7 @@ Returns a compaction config of a dataSource.
 * `/druid/coordinator/v1/config/compaction/taskslots?ratio={someRatio}&max={someMaxSlots}`
 
 Update the capacity for compaction tasks. `ratio` and `max` are used to limit the max number of compaction tasks.
-They mean the ratio of the total task slots to the copmaction task slots and the maximum number of task slots for compaction tasks, respectively.
+They mean the ratio of the total task slots to the compaction task slots and the maximum number of task slots for compaction tasks, respectively.
 The actual max number of compaction tasks is `min(max, ratio * total task slots)`.
 Note that `ratio` and `max` are optional and can be omitted. If they are omitted, default values (0.1 and unbounded)
 will be set for them.
