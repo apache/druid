@@ -29,6 +29,7 @@ import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -208,17 +209,18 @@ public class StatsDEmitterTest
         new ObjectMapper(),
         client
     );
-    Event expectedEvent = Event.builder()
-                       .withPriority(Event.Priority.NORMAL)
-                       .withAlertType(Event.AlertType.WARNING)
-                       .withTitle("something bad happened [exception]")
-                       .withText("{\"exception\":\"NPE\"}")
-                       .build();
+    Event expectedEvent = Event
+        .builder()
+        .withPriority(Event.Priority.NORMAL)
+        .withAlertType(Event.AlertType.WARNING)
+        .withTitle("something bad happened [exception]")
+        .withText("{\"exception\":\"NPE\"}")
+        .build();
 
     Capture<Event> eventCapture = EasyMock.newCapture();
     client.recordEvent(
         EasyMock.capture(eventCapture),
-        EasyMock.eq("feed:alerts"), EasyMock.eq("service:druid/broker"),
+        EasyMock.eq("feed:alerts"), EasyMock.eq("druid_service:druid/broker"),
         EasyMock.eq("severity:anomaly"), EasyMock.eq("hostname:brokerHost1")
     );
     EasyMock.replay(client);
@@ -229,7 +231,7 @@ public class StatsDEmitterTest
     );
     EasyMock.verify(client);
     Event actualEvent = eventCapture.getValue();
-
+    Assert.assertTrue(actualEvent.getMillisSinceEpoch() > 0);
     Assert.assertEquals(expectedEvent.getPriority(), actualEvent.getPriority());
     Assert.assertEquals(expectedEvent.getAlertType(), actualEvent.getAlertType());
     Assert.assertEquals(expectedEvent.getTitle(), actualEvent.getTitle());

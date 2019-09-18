@@ -51,6 +51,9 @@ public class StatsDEmitter implements Emitter
   private static final Pattern BLANK = Pattern.compile("\\s+");
   private static final String[] EMPTY_ARRAY = new String[0];
   private static final String TAG_HOSTNAME = "hostname";
+  private static final String TAG_SERVICE = "druid_service";
+  private static final String TAG_FEED = "feed";
+  private static final String TAG_SEVERITY = "severity";
 
   static StatsDEmitter of(StatsDEmitterConfig config, ObjectMapper mapper)
   {
@@ -109,7 +112,7 @@ public class StatsDEmitter implements Emitter
       ImmutableMap.Builder<String, String> dimsBuilder = new ImmutableMap.Builder<>();
 
       if (config.isDogstatsd() && config.isDogstatsdServiceAsTag()) {
-        dimsBuilder.put("druid_service", service);
+        dimsBuilder.put(TAG_SERVICE, service);
         nameBuilder.add(DRUID_DEFAULT_PREFIX);
       } else {
         nameBuilder.add(service);
@@ -183,9 +186,9 @@ public class StatsDEmitter implements Emitter
       ImmutableMap.Builder<String, String> tagBuilder = ImmutableMap.builder();
 
       tagBuilder
-          .put("feed", alertEvent.getFeed())
-          .put("service", alertEvent.getService())
-          .put("severity", alertEvent.getSeverity().toString());
+          .put(TAG_FEED, alertEvent.getFeed())
+          .put(TAG_SERVICE, alertEvent.getService())
+          .put(TAG_SEVERITY, alertEvent.getSeverity().toString());
       if (config.getIncludeHost()) {
         tagBuilder.put(TAG_HOSTNAME, alertEvent.getHost());
       }
