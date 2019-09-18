@@ -26,12 +26,14 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
 import java.io.Closeable;
 import java.io.IOException;
@@ -61,7 +63,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
       JavaType typeRef,
       Future<InputStream> future,
       String url,
-      Query<T> query,
+      @Nullable Query<T> query,
       String host,
       ObjectMapper objectMapper,
       BytesAccumulatingResponseHandler responseHandler
@@ -160,10 +162,12 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
       }
       catch (TimeoutException ignored) {
         throw new QueryInterruptedException(
-            new ResourceLimitExceededException(
-                "query[%s] url[%s] timed out.",
-                query != null ? query.getId() : null,
-                url
+            new TimeoutException(
+                StringUtils.nonStrictFormat(
+                    "query[%s] url[%s] timed out.",
+                    query != null ? query.getId() : null,
+                    url
+                )
             ),
             host
         );
