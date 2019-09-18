@@ -133,12 +133,13 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
       <NumericInput
         value={modelValue}
         onValueChange={(valueAsNumber: number, valueAsString: string) => {
-          if (valueAsString === '') {
-            this.fieldChange(field, undefined);
-            return;
-          }
-          if (isNaN(valueAsNumber)) return;
+          if (valueAsString === '' || isNaN(valueAsNumber)) return;
           this.fieldChange(field, valueAsNumber);
+        }}
+        onBlur={e => {
+          if (e.target.value === '') {
+            this.fieldChange(field, undefined);
+          }
         }}
         min={field.min || 0}
         fill
