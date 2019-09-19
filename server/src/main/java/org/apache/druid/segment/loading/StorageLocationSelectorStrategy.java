@@ -33,7 +33,6 @@ import java.util.Iterator;
  * concurrency issues and accesses to the underlying storage. Please see
  * https://github.com/apache/incubator-druid/pull/8038#discussion_r325520829 of PR https://github
  * .com/apache/incubator-druid/pull/8038 for more details.
- *
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "tier", defaultImpl = LeastBytesUsedStorageLocationSelectorStrategy.class)
 @JsonSubTypes(value = {
