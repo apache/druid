@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { TextArea } from '@blueprintjs/core';
+import { Intent, TextArea } from '@blueprintjs/core';
 import React from 'react';
 
 import { compact } from '../../utils';
@@ -28,6 +28,7 @@ export interface ArrayInputProps {
   placeholder?: string;
   large?: boolean;
   disabled?: boolean;
+  intent?: Intent;
 }
 
 export class ArrayInput extends React.PureComponent<ArrayInputProps, { stringValue: string }> {
@@ -51,7 +52,7 @@ export class ArrayInput extends React.PureComponent<ArrayInputProps, { stringVal
   };
 
   render(): JSX.Element {
-    const { className, placeholder, large, disabled } = this.props;
+    const { className, placeholder, large, disabled, intent } = this.props;
     const { stringValue } = this.state;
     return (
       <TextArea
@@ -61,6 +62,7 @@ export class ArrayInput extends React.PureComponent<ArrayInputProps, { stringVal
         placeholder={placeholder}
         large={large}
         disabled={disabled}
+        intent={intent}
         fill
       />
     );

@@ -95,7 +95,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
     const { comment } = this.state;
 
     return (
-      <Dialog {...this.props}>
+      <Dialog isOpen {...this.props}>
         <div className={`dialog-body ${Classes.DIALOG_BODY}`}>
           <FormGroup label="Why are you making this change?" className="comment">
             <InputGroup

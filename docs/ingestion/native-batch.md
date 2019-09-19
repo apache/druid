@@ -30,7 +30,7 @@ multiple tasks in parallel, and `index` which will run a single indexing task. P
 (simple), and native batch (parallel) ingestion.
 
 To run either kind of native batch indexing task, write an ingestion spec as specified below. Then POST it to the
-[`/druid/indexer/v1/task`](../operations/api-reference.html#tasks) endpoint on the Overlord, or use the
+[`/druid/indexer/v1/task`](../operations/api-reference.md#tasks) endpoint on the Overlord, or use the
 `bin/post-index-task` script included with Druid.
 
 ## Tutorial
@@ -57,19 +57,19 @@ In the first phase, each sub task partitions input data based on `segmentGranula
 and `partitionDimensions` (secondary partition key) in `partitionsSpec`. The partitioned data is served by
 the [middleManager](../design/middlemanager.md) or the [indexer](../design/indexer.md)
 where the first phase tasks ran. In the second phase, each sub task fetches
-partitioned data from middleManagers or indexers and merges them to create the final segments.
+partitioned data from MiddleManagers or indexers and merges them to create the final segments.
 As in the single phase execution, the created segments are reported to the supervisor task to publish at once.
 
 To use this task, the `firehose` in `ioConfig` should be _splittable_ and `maxNumConcurrentSubTasks` should be set something larger than 1 in `tuningConfig`.
-Otherwise, this task runs sequentially. Here is the list of currently splittable fireshoses.
+Otherwise, this task runs sequentially. Here is the list of currently splittable firehoses.
 
 - [`LocalFirehose`](#local-firehose)
 - [`IngestSegmentFirehose`](#segment-firehose)
 - [`HttpFirehose`](#http-firehose)
-- [`StaticS3Firehose`](../development/extensions-core/s3.html#firehose)
-- [`StaticAzureBlobStoreFirehose`](../development/extensions-contrib/azure.html#firehose)
-- [`StaticGoogleBlobStoreFirehose`](../development/extensions-contrib/google.html#firehose)
-- [`StaticCloudFilesFirehose`](../development/extensions-contrib/cloudfiles.html#firehose)
+- [`StaticS3Firehose`](../development/extensions-core/s3.md#firehose)
+- [`StaticAzureBlobStoreFirehose`](../development/extensions-contrib/azure.md#firehose)
+- [`StaticGoogleBlobStoreFirehose`](../development/extensions-core/google.md#firehose)
+- [`StaticCloudFilesFirehose`](../development/extensions-contrib/cloudfiles.md#firehose)
 
 The splittable firehose is responsible for generating _splits_. The supervisor task generates _worker task specs_ containing a split
 and submits worker tasks using those specs. As a result, the number of worker tasks depends on
@@ -178,7 +178,7 @@ See [Ingestion Spec DataSchema](../ingestion/index.md#dataschema)
 
 If you specify `intervals` explicitly in your dataSchema's granularitySpec, batch ingestion will lock the full intervals
 specified when it starts up, and you will learn quickly if the specified interval overlaps with locks held by other
-tasks (eg, Kafka ingestion). Otherwise, batch ingestion will lock each interval as it is discovered, so you may only
+tasks (e.g., Kafka ingestion). Otherwise, batch ingestion will lock each interval as it is discovered, so you may only
 learn that the task overlaps with a higher-priority task later in ingestion.  If you specify `intervals` explicitly, any
 rows outside the specified intervals will be thrown away. We recommend setting `intervals` explicitly if you know the
 time range of the data so that locking failure happens faster, and so that you don't accidentally replace data outside
@@ -205,10 +205,10 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |maxTotalRows|Deprecated. Use `partitionsSpec` instead. Total number of rows in segments waiting for being pushed. Used in determining when intermediate pushing should occur.|20000000|no|
 |numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
 |partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` if `forceGuaranteedRollup` = true|no|
-|indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](index.html#indexspec)|null|no|
-|indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](index.html#indexspec) for possible values.|same as indexSpec|no|
+|indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](index.md#indexspec)|null|no|
+|indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](index.md#indexspec) for possible values.|same as indexSpec|no|
 |maxPendingPersists|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|0 (meaning one persist can be running concurrently with ingestion, and none can be queued up)|no|
-|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../ingestion/index.html#rollup). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, `numShards` in `tuningConfig` and `intervals` in `granularitySpec` must be set. Note that the result segments would be hash-partitioned. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
+|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../ingestion/index.md#rollup). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, `numShards` in `tuningConfig` and `intervals` in `granularitySpec` must be set. Note that the result segments would be hash-partitioned. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
 |reportParseExceptions|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|false|no|
 |pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
 |segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](#segmentwriteoutmediumfactory).|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used|no|
@@ -216,14 +216,14 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |maxRetry|Maximum number of retries on task failures.|3|no|
 |maxNumSegmentsToMerge|Max limit for the number of segments that a single task can merge at the same time in the second phase. Used only `forceGuaranteedRollup` is set.|100|no|
 |totalNumMergeTasks|Total number of tasks to merge segments in the second phase when `forceGuaranteedRollup` is set.|10|no|
-|taskStatusCheckPeriodMs|Polling period in milleseconds to check running task statuses.|1000|no|
+|taskStatusCheckPeriodMs|Polling period in milliseconds to check running task statuses.|1000|no|
 |chatHandlerTimeout|Timeout for reporting the pushed segments in worker tasks.|PT10S|no|
 |chatHandlerNumRetries|Retries for reporting the pushed segments in worker tasks.|5|no|
 
 ### `partitionsSpec`
 
 PartitionsSpec is to describe the secondary partitioning method.
-You should use different partitionsSpec depending on the [rollup mode](../ingestion/index.html#rollup) you want.
+You should use different partitionsSpec depending on the [rollup mode](../ingestion/index.md#rollup) you want.
 For perfect rollup, you should use `hashed`.
 
 |property|description|default|required?|
@@ -608,10 +608,10 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
 |partitionDimensions|Deprecated. Use `partitionsSpec` instead. The dimensions to partition on. Leave blank to select all dimensions. Only used with `forceGuaranteedRollup` = true, will be ignored otherwise.|null|no|
 |partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` if `forceGuaranteedRollup` = true|no|
-|indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](index.html#indexspec)|null|no|
-|indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](index.html#indexspec) for possible values.|same as indexSpec|no|
+|indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](index.md#indexspec)|null|no|
+|indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](index.md#indexspec) for possible values.|same as indexSpec|no|
 |maxPendingPersists|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|0 (meaning one persist can be running concurrently with ingestion, and none can be queued up)|no|
-|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../ingestion/index.html#rollup). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, the index task will read the entire input data twice: one for finding the optimal number of partitions per time chunk and one for generating segments. Note that the result segments would be hash-partitioned. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
+|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../ingestion/index.md#rollup). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, the index task will read the entire input data twice: one for finding the optimal number of partitions per time chunk and one for generating segments. Note that the result segments would be hash-partitioned. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
 |reportParseExceptions|DEPRECATED. If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped. Setting `reportParseExceptions` to true will override existing configurations for `maxParseExceptions` and `maxSavedParseExceptions`, setting `maxParseExceptions` to 0 and limiting `maxSavedParseExceptions` to no more than 1.|false|no|
 |pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
 |segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](#segmentwriteoutmediumfactory).|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used|no|
@@ -622,7 +622,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 ### `partitionsSpec`
 
 PartitionsSpec is to describe the secondary partitioning method.
-You should use different partitionsSpec depending on the [rollup mode](../ingestion/index.html#rollup) you want.
+You should use different partitionsSpec depending on the [rollup mode](../ingestion/index.md#rollup) you want.
 For perfect rollup, you should use `hashed`.
 
 |property|description|default|required?|
@@ -644,7 +644,7 @@ For best-effort rollup, you should use `dynamic`.
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|type|String|See [Additional Peon Configuration: SegmentWriteOutMediumFactory](../configuration/index.html#segmentwriteoutmediumfactory) for explanation and available options.|yes|
+|type|String|See [Additional Peon Configuration: SegmentWriteOutMediumFactory](../configuration/index.md#segmentwriteoutmediumfactory) for explanation and available options.|yes|
 
 ### Segment pushing modes
 
@@ -783,7 +783,7 @@ This firehose will accept any type of parser, but will only utilize the list of 
 |interval|A String representing the ISO-8601 interval. This defines the time range to fetch the data over.|yes|
 |dimensions|The list of dimensions to select. If left empty, no dimensions are returned. If left null or not defined, all dimensions are returned. |no|
 |metrics|The list of metrics to select. If left empty, no metrics are returned. If left null or not defined, all metrics are selected.|no|
-|filter| See [Filters](../querying/filters.html)|no|
+|filter| See [Filters](../querying/filters.md)|no|
 |maxInputSegmentBytesPerTask|When used with the native parallel index task, the maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks). Defaults to 150MB.|no|
 
 <a name="sql-firehose"></a>
@@ -796,8 +796,8 @@ If there are multiple queries from which data needs to be indexed, queries are p
 This firehose will accept any type of parser, but will only utilize the list of dimensions and the timestamp specification. See the extension documentation for more detailed ingestion examples.
 
 Requires one of the following extensions:
- * [MySQL Metadata Store](../development/extensions-core/mysql.html).
- * [PostgreSQL Metadata Store](../development/extensions-core/postgresql.html).
+ * [MySQL Metadata Store](../development/extensions-core/mysql.md).
+ * [PostgreSQL Metadata Store](../development/extensions-core/postgresql.md).
 
 
 ```json

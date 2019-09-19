@@ -48,22 +48,35 @@ public class WorkerHolderTest
   {
     List<TaskAnnouncement> updates = new ArrayList<>();
 
+    Task task0 = NoopTask.create("task0", 0);
+    Task task1 = NoopTask.create("task1", 0);
+    Task task2 = NoopTask.create("task2", 0);
+    Task task3 = NoopTask.create("task3", 0);
+
     WorkerHolder workerHolder = new WorkerHolder(
         TestHelper.makeJsonMapper(),
         EasyMock.createNiceMock(HttpClient.class),
         new HttpRemoteTaskRunnerConfig(),
         EasyMock.createNiceMock(ScheduledExecutorService.class),
         (taskAnnouncement, holder) -> updates.add(taskAnnouncement),
-        new Worker("http", "localhost", "127.0.0.1", 5, "v0")
+        new Worker("http", "localhost", "127.0.0.1", 5, "v0"),
+        ImmutableList.of(
+            TaskAnnouncement.create(
+                task0,
+                TaskStatus.running(task0.getId()),
+                TaskLocation.unknown()
+            ),
+            TaskAnnouncement.create(
+                task1,
+                TaskStatus.running(task1.getId()),
+                TaskLocation.unknown()
+            )
+        )
     );
 
     ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> syncListener = workerHolder.createSyncListener();
 
     Assert.assertTrue(workerHolder.disabled.get());
-
-    Task task1 = NoopTask.create("task1", 0);
-    Task task2 = NoopTask.create("task2", 0);
-    Task task3 = NoopTask.create("task3", 0);
 
     syncListener.fullSync(
         ImmutableList.of(
@@ -88,7 +101,7 @@ public class WorkerHolderTest
 
     Assert.assertFalse(workerHolder.disabled.get());
 
-    Assert.assertEquals(3, updates.size());
+    Assert.assertEquals(4, updates.size());
 
     Assert.assertEquals(task1.getId(), updates.get(0).getTaskId());
     Assert.assertTrue(updates.get(0).getTaskStatus().isSuccess());
@@ -98,6 +111,9 @@ public class WorkerHolderTest
 
     Assert.assertEquals(task3.getId(), updates.get(2).getTaskId());
     Assert.assertTrue(updates.get(2).getTaskStatus().isRunnable());
+
+    Assert.assertEquals(task0.getId(), updates.get(3).getTaskId());
+    Assert.assertTrue(updates.get(3).getTaskStatus().isFailure());
 
     updates.clear();
 

@@ -93,7 +93,7 @@ druid.escalator.authorizerName=MyBasicAuthorizer
 #### Properties
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
-|`druid.escalator.internalClientUsername`|The escalator will use this username for requests made as the internal systerm user.|n/a|Yes|
+|`druid.escalator.internalClientUsername`|The escalator will use this username for requests made as the internal system user.|n/a|Yes|
 |`druid.escalator.internalClientPassword`|The escalator will use this [Password Provider](../../operations/password-provider.md) for requests made as the internal system user.|n/a|Yes|
 |`druid.escalator.authorizerName`|Authorizer that requests should be directed to.|n/a|Yes|
 

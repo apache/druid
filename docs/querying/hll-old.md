@@ -133,7 +133,7 @@ Uses [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf) to
 }
 ```
 
-"isInputHyperUnique" can be set to true to index pre-computed HLL (Base64 encoded output from druid-hll is expected).
+"isInputHyperUnique" can be set to true to index precomputed HLL (Base64 encoded output from druid-hll is expected).
 The "isInputHyperUnique" field only affects ingestion-time behavior, and is ignored at query-time.
 
 The HyperLogLog algorithm generates decimal estimates with some error. "round" can be set to true to round off estimated

@@ -78,10 +78,14 @@ const siteConfig = {
   docsSideNavCollapsible: true,
 
   // Add custom scripts here that would be placed in <script> tags.
-  scripts: [], // 'https://buttons.github.io/buttons.js'
+  scripts: [
+    'https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js',
+    '/js/code-block-buttons.js',
+  ],
 
   stylesheets: [
-    "https://use.fontawesome.com/releases/v5.7.2/css/all.css"
+    'https://use.fontawesome.com/releases/v5.7.2/css/all.css',
+    '/css/code-block-buttons.css'
   ],
 
   // On page navigation for the current documentation page.
@@ -95,6 +99,8 @@ const siteConfig = {
 
   gaGtag: true,
   gaTrackingId: 'UA-131010415-1',
+
+ editUrl: 'https://github.com/apache/incubator-druid/edit/master/docs/',
 
   // Show documentation's last contributor's name.
   // enableUpdateBy: true,

@@ -642,6 +642,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
                   dimensionStart + dimPos,
                   DimensionHandlerUtils.convertObjectToType(results.next(), dimensionSpec.getOutputType())
               );
+
+              dimPos++;
             }
 
             CacheStrategy.fetchAggregatorsFromCache(

@@ -159,8 +159,7 @@ public class MultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervi
   {
     expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage(
-        "forceGuaranteedRollup is set but numShards is missing in partitionsSpec "
-        + "or intervals is missing in granularitySpec"
+        "forceGuaranteedRollup is set but intervals is missing in granularitySpec"
     );
     newTask(
         null,
@@ -177,8 +176,7 @@ public class MultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervi
   {
     expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage(
-        "forceGuaranteedRollup is set but numShards is missing in partitionsSpec "
-        + "or intervals is missing in granularitySpec"
+        "forceGuaranteedRollup is set but numShards is missing in partitionsSpec"
     );
     newTask(
         Intervals.of("2017/2018"),
