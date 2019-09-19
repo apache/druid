@@ -51,13 +51,13 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
   private ObjectCodec objectCodec;
   private final JavaType typeRef;
   private final Future<InputStream> future;
-  private final Query<T> query;
   private final String url;
   private final String host;
   private final ObjectMapper objectMapper;
   private final BytesAccumulatingResponseHandler responseHandler;
   private final boolean hasTimeout;
   private final long timeoutAt;
+  private final String queryId;
 
   public JsonParserIterator(
       JavaType typeRef,
@@ -72,12 +72,17 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
     this.typeRef = typeRef;
     this.future = future;
     this.url = url;
-    this.query = query;
-    jp = null;
+    if (query != null) {
+      this.timeoutAt = query.<Long>getContextValue(DirectDruidClient.QUERY_FAIL_TIME, -1L);
+      this.queryId = query.getId();
+    } else {
+      this.timeoutAt = -1;
+      this.queryId = null;
+    }
+    this.jp = null;
     this.host = host;
     this.objectMapper = objectMapper;
     this.responseHandler = responseHandler;
-    this.timeoutAt = query != null ? query.<Long>getContextValue(DirectDruidClient.QUERY_FAIL_TIME, -1L) : -1L;
     this.hasTimeout = timeoutAt > -1;
   }
 
@@ -124,65 +129,45 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
       try {
         long timeLeftMillis = timeoutAt - System.currentTimeMillis();
         if (hasTimeout && timeLeftMillis < 1) {
-          throw new TimeoutException();
+          throw new TimeoutException(StringUtils.format("url[%s] timed out", url));
         }
         InputStream is = hasTimeout
                          ? future.get(timeLeftMillis, TimeUnit.MILLISECONDS)
                          : future.get();
         if (responseHandler != null && responseHandler.getStatus() != HttpServletResponse.SC_OK) {
-          throw new RE(
-              "Unexpected response status [%s] description [%s] from request url [%s]",
-              responseHandler.getStatus(),
-              responseHandler.getDescription(),
-              url
+          interruptQuery(
+              new RE(
+                  "Unexpected response status [%s] description [%s] from request url[%s]",
+                  responseHandler.getStatus(),
+                  responseHandler.getDescription(),
+                  url
+              )
           );
         }
-        if (is == null) {
-          throw new QueryInterruptedException(
-              new ResourceLimitExceededException(
-                  "query[%s] url[%s] timed out or max bytes limit reached.",
-                  query != null ? query.getId() : null,
-                  url
-              ),
-              host
-          );
-        } else {
+        if (is != null) {
           jp = objectMapper.getFactory().createParser(is);
+        } else {
+          interruptQuery(
+              new ResourceLimitExceededException(
+                  "url[%s] timed out or max bytes limit reached.",
+                  url
+              )
+          );
         }
         final JsonToken nextToken = jp.nextToken();
-        if (nextToken == JsonToken.START_OBJECT) {
-          QueryInterruptedException cause = jp.getCodec().readValue(jp, QueryInterruptedException.class);
-          throw new QueryInterruptedException(cause, host);
-        } else if (nextToken != JsonToken.START_ARRAY) {
-          throw new IAE("Next token wasn't a START_ARRAY, was[%s] from url [%s]", jp.getCurrentToken(), url);
-        } else {
+        if (nextToken == JsonToken.START_ARRAY) {
           jp.nextToken();
           objectCodec = jp.getCodec();
+        } else if (nextToken == JsonToken.START_OBJECT) {
+          interruptQuery(jp.getCodec().readValue(jp, QueryInterruptedException.class));
+        } else {
+          interruptQuery(
+              new IAE("Next token wasn't a START_ARRAY, was[%s] from url[%s]", jp.getCurrentToken(), url)
+          );
         }
       }
-      catch (TimeoutException ignored) {
-        throw new QueryInterruptedException(
-            new TimeoutException(
-                StringUtils.nonStrictFormat(
-                    "query[%s] url[%s] timed out.",
-                    query != null ? query.getId() : null,
-                    url
-                )
-            ),
-            host
-        );
-      }
-      catch (IOException | InterruptedException | ExecutionException e) {
-        throw new RE(
-            e,
-            "Failure getting results for query[%s] url[%s] because of [%s]",
-            query == null ? null : query.getId(),
-            url,
-            e.getMessage()
-        );
-      }
-      catch (CancellationException e) {
-        throw new QueryInterruptedException(e, host);
+      catch (IOException | InterruptedException | ExecutionException | CancellationException | TimeoutException e) {
+        interruptQuery(e);
       }
     }
   }
@@ -193,6 +178,11 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
     if (jp != null) {
       jp.close();
     }
+  }
+
+  private void interruptQuery(Exception cause)
+  {
+    throw new QueryInterruptedException(cause, host, queryId);
   }
 }
 

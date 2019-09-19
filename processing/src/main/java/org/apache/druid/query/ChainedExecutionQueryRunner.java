@@ -157,15 +157,15 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             catch (InterruptedException e) {
               log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
               futures.cancel(true);
-              throw new QueryInterruptedException(e);
+              throw new QueryInterruptedException(e, query.getId());
             }
             catch (CancellationException e) {
-              throw new QueryInterruptedException(e);
+              throw new QueryInterruptedException(e, query.getId());
             }
             catch (TimeoutException e) {
-              log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
+              log.warn("Query timeout, cancelling pending results for query id [%s]", query.getId());
               futures.cancel(true);
-              throw new QueryInterruptedException(e);
+              throw new QueryInterruptedException(e, query.getId());
             }
             catch (ExecutionException e) {
               Throwables.propagateIfPossible(e.getCause());

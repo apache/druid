@@ -50,7 +50,8 @@ public class SecuritySanityCheckFilter implements Filter
           QueryInterruptedException.UNAUTHORIZED,
           null,
           null,
-          DruidNode.getDefaultHost()
+          DruidNode.getDefaultHost(),
+          null
       );
       unauthorizedError.setStackTrace(new StackTraceElement[0]);
       this.unauthorizedMessage = jsonMapper.writeValueAsString(unauthorizedError);

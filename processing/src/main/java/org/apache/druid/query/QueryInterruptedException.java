@@ -37,6 +37,7 @@ import java.util.concurrent.TimeoutException;
  * - "errorMessage" is the toString of the wrapped exception
  * - "errorClass" is the class of the wrapped exception
  * - "host" is the host that the errorCode occurred on
+ * - "queryId" is the ... query id.
  *
  * The QueryResource is expected to emit the JSON form of this object when errors happen, and the DirectDruidClient
  * deserializes and wraps them.
@@ -54,19 +55,22 @@ public class QueryInterruptedException extends RuntimeException
   private final String errorCode;
   private final String errorClass;
   private final String host;
+  private final String queryId;
 
   @JsonCreator
   public QueryInterruptedException(
       @JsonProperty("error") String errorCode,
       @JsonProperty("errorMessage") String errorMessage,
       @JsonProperty("errorClass") String errorClass,
-      @JsonProperty("host") String host
+      @JsonProperty("host") String host,
+      @JsonProperty("queryId") String queryId
   )
   {
     super(errorMessage);
     this.errorCode = errorCode;
     this.errorClass = errorClass;
     this.host = host;
+    this.queryId = queryId;
   }
 
   /**
@@ -77,15 +81,25 @@ public class QueryInterruptedException extends RuntimeException
    */
   public QueryInterruptedException(Throwable cause)
   {
-    this(cause, getHostFromThrowable(cause));
+    this(cause, getHostFromThrowable(cause), getQueryIdFromThrowable(cause));
   }
 
-  public QueryInterruptedException(Throwable cause, String host)
+  public QueryInterruptedException(Throwable cause, String queryId)
+  {
+    super(cause == null ? null : cause.getMessage(), cause);
+    this.errorCode = getErrorCodeFromThrowable(cause);
+    this.errorClass = getErrorClassFromThrowable(cause);
+    this.host = getHostFromThrowable(cause);
+    this.queryId = queryId;
+  }
+
+  public QueryInterruptedException(Throwable cause, String host, String queryId)
   {
     super(cause == null ? null : cause.getMessage(), cause);
     this.errorCode = getErrorCodeFromThrowable(cause);
     this.errorClass = getErrorClassFromThrowable(cause);
     this.host = host;
+    this.queryId = queryId;
   }
 
   @JsonProperty("error")
@@ -113,14 +127,21 @@ public class QueryInterruptedException extends RuntimeException
     return host;
   }
 
+  @JsonProperty
+  public String getQueryId()
+  {
+    return queryId;
+  }
+
   @Override
   public String toString()
   {
     return StringUtils.format(
-        "QueryInterruptedException{msg=%s, code=%s, class=%s, host=%s}",
+        "QueryInterruptedException{msg=%s, code=%s, class=%s, queryId=%s, host=%s}",
         getMessage(),
         errorCode,
         errorClass,
+        queryId,
         host
     );
   }
@@ -159,6 +180,15 @@ public class QueryInterruptedException extends RuntimeException
   {
     if (e instanceof QueryInterruptedException) {
       return ((QueryInterruptedException) e).getHost();
+    } else {
+      return null;
+    }
+  }
+
+  private static String getQueryIdFromThrowable(Throwable e)
+  {
+    if (e instanceof QueryInterruptedException) {
+      return ((QueryInterruptedException) e).getQueryId();
     } else {
       return null;
     }

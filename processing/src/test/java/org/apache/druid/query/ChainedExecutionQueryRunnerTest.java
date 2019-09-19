@@ -337,7 +337,7 @@ public class ChainedExecutionQueryRunnerTest
           interrupted = true;
           interruptedRunners.offer(this);
           stop.countDown();
-          throw new QueryInterruptedException(e);
+          throw new QueryInterruptedException(e, queryPlus.getQuery().getId());
         }
       }
 
