@@ -177,14 +177,14 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
    *
    * Locations are fetched using {@link StorageLocationSelectorStrategy}.
    */
-  private StorageLocation loadSegmentWithRetry(DataSegment segment, String storageDirStr) throws SegmentLoadingException
+  private synchronized StorageLocation loadSegmentWithRetry(DataSegment segment, String storageDirStr) throws SegmentLoadingException
   {
-    Iterator<StorageLocation> locations = strategy.getLocations(segment, storageDirStr);
+    Iterator<StorageLocation> locationsIterator = strategy.getLocations();
     int numLocationsToTry = this.locations.size();
 
-    while (locations.hasNext() && numLocationsToTry > 0) {
+    while (locationsIterator.hasNext() && numLocationsToTry > 0) {
 
-      StorageLocation loc = locations.next();
+      StorageLocation loc = locationsIterator.next();
       numLocationsToTry--; // This is to avoid the cyclic iterator returned from Round Robin strategy to loop
       // indefinitely.
 

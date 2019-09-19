@@ -20,7 +20,6 @@
 package org.apache.druid.segment.loading;
 
 import com.google.common.collect.Iterators;
-import org.apache.druid.timeline.DataSegment;
 
 import java.util.Iterator;
 import java.util.List;
@@ -40,9 +39,9 @@ public class RoundRobinStorageLocationSelectorStrategy implements StorageLocatio
   }
 
   @Override
-  public Iterator<StorageLocation> getLocations(DataSegment dataSegment, String storageDirStr)
+  public Iterator getLocations()
   {
-    return cyclicIterator;
+    return this.cyclicIterator;
   }
 
   @Override

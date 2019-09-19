@@ -20,7 +20,6 @@
 package org.apache.druid.segment.loading;
 
 import com.google.common.collect.Ordering;
-import org.apache.druid.timeline.DataSegment;
 
 import java.util.Comparator;
 import java.util.Iterator;
@@ -32,8 +31,8 @@ import java.util.List;
  */
 public class LeastBytesUsedStorageLocationSelectorStrategy implements StorageLocationSelectorStrategy
 {
-  private static final Comparator<StorageLocation> COMPARATOR = Comparator
-      .comparingLong(StorageLocation::currSizeBytes);
+  private static final Ordering<StorageLocation> ORDERING = Ordering.from(Comparator
+    .comparingLong(StorageLocation::currSizeBytes));
 
   private List<StorageLocation> storageLocations;
 
@@ -43,16 +42,16 @@ public class LeastBytesUsedStorageLocationSelectorStrategy implements StorageLoc
   }
 
   @Override
-  public synchronized Iterator<StorageLocation> getLocations(DataSegment dataSegment, String storageDirStr)
+  public Iterator getLocations()
   {
-    return Ordering.from(COMPARATOR).sortedCopy(this.storageLocations).iterator();
+    return ORDERING.sortedCopy(this.storageLocations).iterator();
   }
 
   @Override
   public String toString()
   {
     return "LeastBytesUsedStorageLocationSelectorStrategy{" +
-           "comparator=" + COMPARATOR +
+           "ordering=" + ORDERING +
            ", storageLocations=" + storageLocations +
            '}';
   }

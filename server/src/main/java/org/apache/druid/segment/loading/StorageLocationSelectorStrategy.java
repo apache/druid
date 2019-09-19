@@ -37,7 +37,7 @@ import java.util.Iterator;
 public interface StorageLocationSelectorStrategy
 {
   /**
-   * Finds the best ordering of the {@link StorageLocation}s to load the given {@link DataSegment} into according to
+   * Finds the best ordering of the {@link StorageLocation}s to load a {@link DataSegment} according to
    * the location selector strategy. This method returns an iterator instead of a single best location. The
    * caller is responsible for iterating over the locations and calling {@link StorageLocation#reserve}
    * method. This is because a single location may be problematic like failed disk or might become unwritable for
@@ -45,5 +45,5 @@ public interface StorageLocationSelectorStrategy
    *
    * @return An iterator of {@link StorageLocation}s from which the callers can iterate and pick a location.
    */
-  Iterator<StorageLocation> getLocations(DataSegment dataSegment, String storageDirStr);
+  Iterator getLocations();
 }
