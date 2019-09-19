@@ -41,7 +41,9 @@ public class SupervisorStatus
   private final boolean healthy;
   private final SupervisorSpec spec;
   /**
-   * This is a JSON representation of spec object
+   * This is a JSON representation of {@code spec}
+   * The explicit serialization is present here so that users of  {@code SupervisorStatus} which cannot
+   * deserialize {@link SupervisorSpec} can use this attribute instead
    */
   private final String specString;
   private final String type;

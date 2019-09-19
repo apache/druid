@@ -162,6 +162,11 @@ public class SupervisorResource
                     Optional<SupervisorSpec> theSpec = manager.getSupervisorSpec(x);
                     if (theSpec.isPresent()) {
                       try {
+                        // serializing SupervisorSpec here, so that callers of `druid/indexer/v1/supervisor?fullStatus`
+                        // which are outside the overlord process can deserialize the response and get a json
+                        // payload of SupervisorSpec object when they don't have guice bindings for all the fields
+                        // for example, broker does not have bindings for all fields of `KafkaSupervisorSpec` or
+                        // `KinesisSupervisorSpec`
                         theBuilder.withSpecString(objectMapper.writeValueAsString(manager.getSupervisorSpec(x).get()));
                       }
                       catch (JsonProcessingException e) {
