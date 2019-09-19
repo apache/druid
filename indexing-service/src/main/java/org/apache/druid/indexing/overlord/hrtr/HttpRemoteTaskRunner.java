@@ -83,6 +83,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -105,7 +106,7 @@ import java.util.stream.Collectors;
 /**
  * A Remote TaskRunner to manage tasks on Middle Manager nodes using internal-discovery({@link DruidNodeDiscoveryProvider})
  * to discover them and Http.
- * Middle Managers expose 3 HTTP endpoints
+ * Middle Managers manages list of assigned/completed tasks on disk and exposes 3 HTTP endpoints
  * 1. POST request for assigning a task
  * 2. POST request for shutting down a task
  * 3. GET request for getting list of assigned, running, completed tasks on Middle Manager and its enable/disable status.
@@ -496,7 +497,35 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
       WorkerHolder holder = workers.get(worker.getHost());
       if (holder == null) {
-        holder = createWorkerHolder(smileMapper, httpClient, config, workersSyncExec, this::taskAddedOrUpdated, worker);
+        List<TaskAnnouncement> expectedAnnouncements = new ArrayList<>();
+        synchronized (statusLock) {
+          // It might be a worker that existed before, temporarily went away and came back. We might have a set of
+          // tasks that we think are running on this worker. Provide that information to WorkerHolder that
+          // manages the task syncing with that worker.
+          for (Map.Entry<String, HttpRemoteTaskRunnerWorkItem> e : tasks.entrySet()) {
+            if (e.getValue().getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
+              Worker w = e.getValue().getWorker();
+              if (w != null && w.getHost().equals(worker.getHost())) {
+                expectedAnnouncements.add(
+                    TaskAnnouncement.create(
+                        e.getValue().getTask(),
+                        TaskStatus.running(e.getKey()),
+                        e.getValue().getLocation()
+                    )
+                );
+              }
+            }
+          }
+        }
+        holder = createWorkerHolder(
+            smileMapper,
+            httpClient,
+            config,
+            workersSyncExec,
+            this::taskAddedOrUpdated,
+            worker,
+            expectedAnnouncements
+        );
         holder.start();
         workers.put(worker.getHost(), holder);
       } else {
@@ -515,10 +544,11 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       HttpRemoteTaskRunnerConfig config,
       ScheduledExecutorService workersSyncExec,
       WorkerHolder.Listener listener,
-      Worker worker
+      Worker worker,
+      List<TaskAnnouncement> knownAnnouncements
   )
   {
-    return new WorkerHolder(smileMapper, httpClient, config, workersSyncExec, listener, worker);
+    return new WorkerHolder(smileMapper, httpClient, config, workersSyncExec, listener, worker, knownAnnouncements);
   }
 
   private void removeWorker(final Worker worker)
