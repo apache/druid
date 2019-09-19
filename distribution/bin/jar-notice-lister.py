@@ -34,14 +34,14 @@ def main():
     tmp_lib_path = tmp_path + "/1-lib"
     os.mkdir(tmp_lib_path)
     command = "cp -r {}/* {}".format(lib_path, tmp_lib_path)
-    outstr = subprocess.check_output(command, shell=True).decode('UTF-8')
+    subprocess.check_output(command, shell=True).decode('UTF-8')
 
     # copy hadoop deps to the staging dir
     hdeps_path = druid_path + "/hadoop-dependencies"
     tmp_hdeps_path = tmp_path + "/2-hdeps"
     os.mkdir(tmp_hdeps_path)
     command = "cp -r {}/* {}".format(hdeps_path, tmp_hdeps_path)
-    outstr = subprocess.check_output(command, shell=True).decode('UTF-8')
+    subprocess.check_output(command, shell=True).decode('UTF-8')
 
 
     # copy all extension folders to the staging dir
@@ -49,7 +49,7 @@ def main():
     tmp_ext_path = tmp_path + "/3-ext"
     os.mkdir(tmp_ext_path)
     command = "cp -r {}/* {}".format(ext_path, tmp_ext_path)
-    outstr = subprocess.check_output(command, shell=True).decode('UTF-8')
+    subprocess.check_output(command, shell=True).decode('UTF-8')
 
 
     get_notices(tmp_path)

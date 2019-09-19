@@ -20,6 +20,7 @@ import {
   Button,
   HTMLInputProps,
   InputGroup,
+  Intent,
   Menu,
   MenuItem,
   Popover,
@@ -38,6 +39,7 @@ export interface SuggestibleInputProps extends HTMLInputProps {
   onValueChange: (newValue: string) => void;
   suggestions?: (string | SuggestionGroup)[];
   large?: boolean;
+  intent?: Intent;
 }
 
 export class SuggestibleInput extends React.PureComponent<SuggestibleInputProps> {
@@ -80,7 +82,7 @@ export class SuggestibleInput extends React.PureComponent<SuggestibleInputProps>
   }
 
   render(): JSX.Element {
-    const { className, value, defaultValue, onValueChange, large, ...rest } = this.props;
+    const { className, value, defaultValue, onValueChange, ...rest } = this.props;
     const suggestionsMenu = this.renderSuggestionsMenu();
 
     return (
@@ -98,7 +100,6 @@ export class SuggestibleInput extends React.PureComponent<SuggestibleInputProps>
             </Popover>
           )
         }
-        large={large}
         {...rest}
       />
     );

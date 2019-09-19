@@ -395,7 +395,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
         ParallelIndexIngestionSpec ingestionSchema,
         Map<String, Object> context,
         IndexingServiceClient indexingServiceClient,
-        IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory
+        IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory
     )
     {
       super(

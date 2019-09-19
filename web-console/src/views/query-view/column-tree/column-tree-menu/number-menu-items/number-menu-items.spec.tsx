@@ -28,14 +28,9 @@ describe('number menu', () => {
   it('matches snapshot', () => {
     const numberMenu = (
       <NumberMenuItems
-        hasFilter
-        clear={() => null}
-        addFunctionToGroupBy={() => null}
-        addToGroupBy={() => null}
-        addAggregateColumn={() => null}
-        filterByRow={() => null}
         columnName={'added'}
-        queryAst={parser(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
+        parsedQuery={parser(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
+        onQueryChange={() => {}}
       />
     );
 

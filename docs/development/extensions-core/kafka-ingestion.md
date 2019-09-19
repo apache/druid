@@ -28,15 +28,16 @@ The Kafka indexing service enables the configuration of *supervisors* on the Ove
 Kafka by managing the creation and lifetime of Kafka indexing tasks. These indexing tasks read events using Kafka's own
 partition and offset mechanism and are therefore able to provide guarantees of exactly-once ingestion. They are also
 able to read non-recent events from Kafka and are not subject to the window period considerations imposed on other
-ingestion mechanisms using Tranquility. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
-and ensure that the scalability and replication requirements are maintained.
+ingestion mechanisms using Tranquility. The supervisor oversees the state of the indexing tasks to coordinate handoffs,
+manage failures, and ensure that the scalability and replication requirements are maintained.
 
 This service is provided in the `druid-kafka-indexing-service` core Apache Druid (incubating) extension (see
 [Including Extensions](../../development/extensions.md#loading-extensions)).
 
-> The Kafka indexing service uses the Java consumer that was introduced in Kafka 0.10.x. As there were protocol changes
-> made in this version, Kafka 0.10.x consumers might not be compatible with older brokers. Ensure that your Kafka brokers are
-> version 0.10.x or better before using this functionality. Refer [Kafka upgrade guide](https://kafka.apache.org/documentation/#upgrade) if you are using older version of Kafka brokers.
+> The Kafka indexing service supports transactional topics which were introduced in Kafka 0.11.x. These changes make the
+> Kafka consumer that Druid uses incompatible with older brokers. Ensure that your Kafka brokers are version 0.11.x or
+> better before using this functionality. Refer [Kafka upgrade guide](https://kafka.apache.org/documentation/#upgrade)
+> if you are using older version of Kafka brokers.
 
 ## Tutorial
 
@@ -197,7 +198,7 @@ For Roaring bitmaps:
 |-----|----|-----------|--------|
 |`topic`|String|The Kafka topic to read from. This must be a specific topic as topic patterns are not supported.|yes|
 |`consumerProperties`|Map<String, Object>|A map of properties to be passed to the Kafka consumer. This must contain a property `bootstrap.servers` with a list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`. For SSL connections, the `keystore`, `truststore` and `key` passwords can be provided as a [Password Provider](../../operations/password-provider.md) or String password.|yes|
-|`pollTimeout`|Long|The length of time to wait for the kafka consumer to poll records, in milliseconds|no (default == 100)|
+|`pollTimeout`|Long|The length of time to wait for the Kafka consumer to poll records, in milliseconds|no (default == 100)|
 |`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against process failure.|no (default == 1)|
 |`taskCount`|Integer|The maximum number of *reading* tasks in a *replica set*. This means that the maximum number of reading tasks will be `taskCount * replicas` and the total number of tasks (*reading* + *publishing*) will be higher than this. See 'Capacity Planning' below for more details. The number of reading tasks will be less than `taskCount` if `taskCount > {numKafkaPartitions}`.|no (default == 1)|
 |`taskDuration`|ISO8601 Period|The length of time before tasks stop reading and begin publishing their segment.|no (default == PT1H)|
@@ -317,9 +318,9 @@ may cause some Kafka messages to be skipped or to be read twice.
 `POST /druid/indexer/v1/supervisor/<supervisorId>/terminate` terminates a supervisor and causes all associated indexing
 tasks managed by this supervisor to immediately stop and begin
 publishing their segments. This supervisor will still exist in the metadata store and it's history may be retrieved
-with the supervisor history api, but will not be listed in the 'get supervisors' api response nor can it's configuration
+with the supervisor history API, but will not be listed in the 'get supervisors' API response nor can it's configuration
 or status report be retrieved. The only way this supervisor can start again is by submitting a functioning supervisor
-spec to the create api.
+spec to the create API.
 
 ### Capacity Planning
 
@@ -369,7 +370,7 @@ A supervisor is stopped via the `POST /druid/indexer/v1/supervisor/<supervisorId
 tombstone marker in the database (to prevent the supervisor from being reloaded on a restart) and then gracefully
 shuts down the currently running supervisor. When a supervisor is shut down in this way, it will instruct its
 managed tasks to stop reading and begin publishing their segments immediately. The call to the shutdown endpoint will
-return after all tasks have been signalled to stop but before the tasks finish publishing their segments.
+return after all tasks have been signaled to stop but before the tasks finish publishing their segments.
 
 ### Schema/Configuration Changes
 

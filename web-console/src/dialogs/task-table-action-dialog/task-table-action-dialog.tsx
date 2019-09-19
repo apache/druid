@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import { IDialogProps } from '@blueprintjs/core';
 import React from 'react';
 
 import { ShowJson, ShowLog } from '../../components';
@@ -24,7 +23,7 @@ import { BasicAction } from '../../utils/basic-action';
 import { deepGet } from '../../utils/object-change';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
-interface TaskTableActionDialogProps extends IDialogProps {
+interface TaskTableActionDialogProps {
   taskId: string;
   actions: BasicAction[];
   onClose: () => void;
@@ -79,7 +78,6 @@ export class TaskTableActionDialog extends React.PureComponent<
 
     return (
       <TableActionDialog
-        isOpen
         sideButtonMetadata={taskTableSideButtonMetadata}
         onClose={onClose}
         title={`Task: ${taskId}`}

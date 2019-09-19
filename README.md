@@ -20,8 +20,9 @@
 [![Slack](https://img.shields.io/badge/slack-%23druid-72eff8?logo=slack)](https://druid.apache.org/community/join-slack)
 [![Build Status](https://travis-ci.org/apache/incubator-druid.svg?branch=master)](https://travis-ci.org/apache/incubator-druid)
 [![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/apache/incubator-druid.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/apache/incubator-druid/context:java)
+[![Coverage Status](https://img.shields.io/codecov/c/gh/apache/incubator-druid)](https://codecov.io/gh/apache/incubator-druid)
+[![Docker](https://img.shields.io/badge/container-docker-blue.svg)](https://hub.docker.com/r/apache/incubator-druid)
 <!--- Following badges are disabled until they can be fixed: -->
-<!--- [![Coverage Status](https://coveralls.io/repos/github/apache/incubator-druid/badge.svg?branch=master)](https://coveralls.io/github/apache/incubator-druid?branch=master) -->
 <!--- [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) -->
 
 ## Apache Druid (incubating)
@@ -57,7 +58,7 @@ Some committers and users are present in the channel `#druid` on the Apache Slac
 
 Please note that JDK 8 is required to build Druid.
 
-For instructions on building Druid from source, see [docs/content/development/build.md](docs/content/development/build.md)
+For instructions on building Druid from source, see [docs/development/build.md](docs/development/build.md)
 
 ### Contributing
 

@@ -308,7 +308,7 @@ Druid pushes down the `limit` spec in groupBy queries to the segments on Histori
 
 ##### Optimizing hash table
 
-The groupBy v2 engine uses an open addressing hash table for aggregation. The hash table is initalized with a given initial bucket number and gradually grows on buffer full. On hash collisions, the linear probing technique is used.
+The groupBy v2 engine uses an open addressing hash table for aggregation. The hash table is initialized with a given initial bucket number and gradually grows on buffer full. On hash collisions, the linear probing technique is used.
 
 The default number of initial buckets is 1024 and the default max load factor of the hash table is 0.7. If you can see too many collisions in the hash table, you can adjust these numbers. See `bufferGrouperInitialBuckets` and `bufferGrouperMaxLoadFactor` in [Advanced groupBy v2 configurations](#groupby-v2-configurations).
 
@@ -442,3 +442,19 @@ Supported query contexts:
 |`maxIntermediateRows`|Can be used to lower the value of `druid.query.groupBy.maxIntermediateRows` for this query.|None|
 |`maxResults`|Can be used to lower the value of `druid.query.groupBy.maxResults` for this query.|None|
 |`useOffheap`|Set to true to store aggregations off-heap when merging results.|false|
+
+##### Array based result rows
+
+Internally Druid always uses an array based representation of groupBy result rows, but by default this is translated
+into a map based result format at the Broker. To reduce the overhead of this translation, results may also be returned
+from the Broker directly in the array based format if `resultAsArray` is set to `true` on the query context.
+
+Each row is positional, and has the following fields, in order:
+
+* Timestamp (optional; only if granularity != ALL)
+* Dimensions (in order)
+* Aggregators (in order)
+* Post-aggregators (optional; in order, if present)
+
+This schema is not available on the response, so it must be computed from the issued query in order to properly read
+the results.

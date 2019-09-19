@@ -175,7 +175,7 @@ and Kinesis indexing services.
 ## Task lock system
 
 This section explains the task locking system in Druid. Druid's locking system
-and versioning system are tighly coupled with each other to guarantee the correctness of ingested data.
+and versioning system are tightly coupled with each other to guarantee the correctness of ingested data.
 
 ## "Overshadowing" between segments
 
@@ -247,7 +247,7 @@ then this task will _preempt_ the other task of a lower priority. The lock
 of the lower-prioritized task will be revoked and the higher-prioritized task will acquire a new lock.
 
 This lock preemption can happen at any time while a task is running except
-when it is _publishing segments_ in a critical section. Its locks become preemptable again once publishing segments is finished.
+when it is _publishing segments_ in a critical section. Its locks become preemptible again once publishing segments is finished.
 
 Note that locks are shared by the tasks of the same groupId.
 For example, Kafka indexing tasks of the same supervisor have the same groupId and share all locks with each other.

@@ -60,7 +60,7 @@ public class FilterTuning
   public FilterTuning(
       @JsonProperty("useBitmapIndex") @Nullable Boolean useBitmapIndex,
       @JsonProperty("minCardinalityToUseBitmapIndex") @Nullable Integer minCardinalityToUseBitmapIndex,
-      @JsonProperty("useIndexMaximumCardinalityThreshold") @Nullable Integer maxCardinalityToUseBitmapIndex
+      @JsonProperty("maxCardinalityToUseBitmapIndex") @Nullable Integer maxCardinalityToUseBitmapIndex
   )
   {
     this.useBitmapIndex = useBitmapIndex != null ? useBitmapIndex : true;

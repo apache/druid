@@ -348,6 +348,12 @@ exports[`tasks view matches snapshot 1`] = `
             active={false}
             onClick={[Function]}
           >
+            Group ID
+          </Blueprint3.Button>
+          <Blueprint3.Button
+            active={false}
+            onClick={[Function]}
+          >
             Type
           </Blueprint3.Button>
           <Blueprint3.Button
@@ -455,6 +461,7 @@ exports[`tasks view matches snapshot 1`] = `
           columns={
             Array [
               "Task ID",
+              "Group ID",
               "Type",
               "Datasource",
               "Location",
@@ -529,6 +536,13 @@ exports[`tasks view matches snapshot 1`] = `
               "Aggregated": [Function],
               "Header": "Task ID",
               "accessor": "task_id",
+              "show": true,
+              "width": 300,
+            },
+            Object {
+              "Aggregated": [Function],
+              "Header": "Group ID",
+              "accessor": "group_id",
               "show": true,
               "width": 300,
             },

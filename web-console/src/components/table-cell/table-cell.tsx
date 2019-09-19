@@ -19,15 +19,19 @@
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
+import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { ActionIcon } from '../action-icon/action-icon';
 
 import './table-cell.scss';
 
-export interface NullTableCellProps {
+export interface TableCellProps {
   value?: any;
   timestamp?: boolean;
   unparseable?: boolean;
-  openModal?: (str: string) => void;
+}
+
+export interface TableCellState {
+  showValue?: string;
 }
 
 interface ShortParts {
@@ -36,25 +40,8 @@ interface ShortParts {
   suffix: string;
 }
 
-export class TableCell extends React.PureComponent<NullTableCellProps> {
+export class TableCell extends React.PureComponent<TableCellProps, TableCellState> {
   static MAX_CHARS_TO_SHOW = 50;
-
-  possiblyTruncate(str: string): React.ReactNode {
-    if (str.length <= TableCell.MAX_CHARS_TO_SHOW) return str;
-
-    const { prefix, omitted, suffix } = TableCell.shortenString(str);
-    return (
-      <span className="table-cell truncated">
-        {prefix}
-        <span className="omitted">{omitted}</span>
-        {suffix}
-        <ActionIcon
-          icon={IconNames.MORE}
-          onClick={() => (this.props.openModal ? this.props.openModal(str) : null)}
-        />
-      </span>
-    );
-  }
 
   static shortenString(str: string): ShortParts {
     // Print something like:
@@ -69,6 +56,35 @@ export class TableCell extends React.PureComponent<NullTableCellProps> {
     };
   }
 
+  constructor(props: TableCellProps) {
+    super(props);
+    this.state = {};
+  }
+
+  private renderShowValueDialog(): JSX.Element | undefined {
+    const { showValue } = this.state;
+    if (!showValue) return;
+
+    return (
+      <ShowValueDialog onClose={() => this.setState({ showValue: undefined })} str={showValue} />
+    );
+  }
+
+  private renderTruncated(str: string): React.ReactNode {
+    if (str.length <= TableCell.MAX_CHARS_TO_SHOW) return str;
+
+    const { prefix, omitted, suffix } = TableCell.shortenString(str);
+    return (
+      <span className="table-cell truncated">
+        {prefix}
+        <span className="omitted">{omitted}</span>
+        {suffix}
+        <ActionIcon icon={IconNames.MORE} onClick={() => this.setState({ showValue: str })} />
+        {this.renderShowValueDialog()}
+      </span>
+    );
+  }
+
   render(): React.ReactNode {
     const { value, timestamp, unparseable } = this.props;
     if (unparseable) {
@@ -81,9 +97,9 @@ export class TableCell extends React.PureComponent<NullTableCellProps> {
           </span>
         );
       } else if (Array.isArray(value)) {
-        return this.possiblyTruncate(`[${value.join(', ')}]`);
+        return this.renderTruncated(`[${value.join(', ')}]`);
       } else {
-        return this.possiblyTruncate(String(value));
+        return this.renderTruncated(String(value));
       }
     } else {
       if (timestamp) {
