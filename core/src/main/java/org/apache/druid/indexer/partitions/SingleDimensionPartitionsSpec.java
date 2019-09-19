@@ -64,29 +64,29 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
           Integer maxPartitionSize  // prefer maxRowsPerSegment
   )
   {
-    Property<Integer> target = checkAtMostOneNotNull(
-        TARGET_ROWS_PER_SEGMENT,
+    Property<Integer> target = Checks.checkAtMostOneNotNull(
+        DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT,
         targetRowsPerSegment,
-        TARGET_PARTITION_SIZE,
+        DimensionBasedPartitionsSpec.TARGET_PARTITION_SIZE,
         targetPartitionSize
     );
 
-    Property<Integer> max = checkAtMostOneNotNull(
-        MAX_ROWS_PER_SEGMENT,
+    Property<Integer> max = Checks.checkAtMostOneNotNull(
+        PartitionsSpec.MAX_ROWS_PER_SEGMENT,
         maxRowsPerSegment,
         MAX_PARTITION_SIZE,
         maxPartitionSize
     );
 
     Preconditions.checkArgument(
-        (target.value == null) != (max.value == null),
-        "Exactly one of " + target.name + " or " + max.name + " must be present"
+        (target.getValue() == null) != (max.getValue() == null),
+        "Exactly one of " + target.getName() + " or " + max.getName() + " must be present"
     );
 
     this.partitionDimension = partitionDimension;
     this.assumeGrouped = assumeGrouped;
-    this.targetRowsPerSegment = target.value;
-    this.maxRowsPerSegment = max.value;
+    this.targetRowsPerSegment = target.getValue();
+    this.maxRowsPerSegment = max.getValue();
 
     this.resolvedMaxRowPerSegment = resolveMaxRowsPerSegment(target, max);
   }
@@ -102,56 +102,23 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
     this(targetRowsPerSegment, maxRowsPerSegment, partitionDimension, assumeGrouped, null, null);
   }
 
-  /**
-   * @return Non-null value, or first one if both are null
-   */
-  @SuppressWarnings("VariableNotUsedInsideIf")  // false positive: checked for 'null' not used inside 'if
-  private static Property<Integer> checkAtMostOneNotNull(String name1, Integer value1, String name2, Integer value2)
-  {
-    final Property<Integer> property;
-
-    if (value1 == null && value2 == null) {
-      property = new Property<>(name1, value1);
-    } else if (value1 == null) {
-      property = new Property<>(name2, value2);
-    } else if (value2 == null) {
-      property = new Property<>(name1, value1);
-    } else {
-      throw new IllegalArgumentException("At most one of " + name1 + " or " + name2 + " must be present");
-    }
-
-    return property;
-  }
-
   private static int resolveMaxRowsPerSegment(Property<Integer> target, Property<Integer> max)
   {
     final int resolvedValue;
 
-    if (target.value != null) {
-      Preconditions.checkArgument(target.value > 0, target.name + " must be greater than 0");
+    if (target.getValue() != null) {
+      Preconditions.checkArgument(target.getValue() > 0, target.getName() + " must be greater than 0");
       try {
-        resolvedValue = Math.addExact(target.value, (target.value / 2));
+        resolvedValue = Math.addExact(target.getValue(), (target.getValue() / 2));
       }
       catch (ArithmeticException e) {
-        throw new IllegalArgumentException(target.name + " is too large");
+        throw new IllegalArgumentException(target.getName() + " is too large");
       }
     } else {
-      Preconditions.checkArgument(max.value > 0, max.name + " must be greater than 0");
-      resolvedValue = max.value;
+      Preconditions.checkArgument(max.getValue() > 0, max.getName() + " must be greater than 0");
+      resolvedValue = max.getValue();
     }
     return resolvedValue;
-  }
-
-  private static class Property<T>
-  {
-    private final String name;
-    private final T value;
-
-    Property(String name, T value)
-    {
-      this.name = name;
-      this.value = value;
-    }
   }
 
   @JsonProperty
@@ -169,7 +136,7 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
     return resolvedMaxRowPerSegment;  // NOTE: This returns the *resolved* value
   }
 
-  @JsonProperty(MAX_ROWS_PER_SEGMENT)
+  @JsonProperty(PartitionsSpec.MAX_ROWS_PER_SEGMENT)
   private Integer getMaxRowsPerSegmentForJson()
   {
     return maxRowsPerSegment;
