@@ -21,6 +21,7 @@ import { sqlParserFactory } from 'druid-query-toolkit';
 import React from 'react';
 
 import { StringMenuItems } from './string-menu-items';
+import { TimeMenuItems } from '..';
 
 describe('string menu', () => {
   const parser = sqlParserFactory(['COUNT']);
@@ -36,5 +37,18 @@ describe('string menu', () => {
 
     const { container } = render(stringMenu);
     expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot containing remove group by button', () => {
+    const timeMenu = (
+      <TimeMenuItems
+        columnName={'channel'}
+        parsedQuery={parser(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
+        onQueryChange={() => {}}
+      />
+    );
+
+    const { container } = render(timeMenu);
+    expect(container).toMatchSnapshot();
   });
 });

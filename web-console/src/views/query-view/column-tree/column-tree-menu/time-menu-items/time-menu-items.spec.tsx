@@ -37,4 +37,17 @@ describe('time menu', () => {
     const { container } = render(timeMenu);
     expect(container.firstChild).toMatchSnapshot();
   });
+
+  it('matches snapshot containing remove group by button', () => {
+    const timeMenu = (
+      <TimeMenuItems
+        columnName={'__time'}
+        parsedQuery={parser(`SELECT __time, count(*) as cnt FROM wikipedia GROUP BY 1`)}
+        onQueryChange={() => {}}
+      />
+    );
+
+    const { container } = render(timeMenu);
+    expect(container).toMatchSnapshot();
+  });
 });
