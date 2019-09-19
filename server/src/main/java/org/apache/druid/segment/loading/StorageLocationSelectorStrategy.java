@@ -28,6 +28,12 @@ import java.util.Iterator;
 /**
  * This interface describes the storage location selection strategy which is responsible for ordering the
  * available multiple {@link StorageLocation}s for segment distribution.
+ *
+ * Only a snapshot of the locations is returned here. The implemntations currently do not handle all kinds of
+ * concurrency issues and accesses to the underlying storage. Please see
+ * https://github.com/apache/incubator-druid/pull/8038#discussion_r325520829 of PR https://github
+ * .com/apache/incubator-druid/pull/8038 for more details.
+ *
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "tier", defaultImpl = LeastBytesUsedStorageLocationSelectorStrategy.class)
 @JsonSubTypes(value = {
