@@ -32,7 +32,7 @@ import java.util.List;
 public class LeastBytesUsedStorageLocationSelectorStrategy implements StorageLocationSelectorStrategy
 {
   private static final Ordering<StorageLocation> ORDERING = Ordering.from(Comparator
-    .comparingLong(StorageLocation::currSizeBytes));
+      .comparingLong(StorageLocation::currSizeBytes));
 
   private List<StorageLocation> storageLocations;
 
