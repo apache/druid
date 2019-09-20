@@ -131,6 +131,11 @@ public class SingleDimensionPartitionsSpecTest
     new Tester()
         .maxRowsPerSegment(0)
         .testIllegalArgumentException("maxRowsPerSegment must be greater than 0");
+
+    // -1 was used for null in the past
+    new Tester()
+        .maxRowsPerSegment(-1)
+        .testIllegalArgumentException("maxRowsPerSegment must be greater than 0");
   }
 
   @Test
@@ -138,6 +143,11 @@ public class SingleDimensionPartitionsSpecTest
   {
     new Tester()
         .maxPartitionSize(0)
+        .testIllegalArgumentException("maxPartitionSize must be greater than 0");
+
+    // -1 was used for null in the past
+    new Tester()
+        .maxPartitionSize(-1)
         .testIllegalArgumentException("maxPartitionSize must be greater than 0");
   }
 

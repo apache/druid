@@ -151,6 +151,21 @@ public class HashedPartitionsSpecTest
   }
 
   @Test
+  public void handlesHistoricalNull()
+  {
+    String json = "{"
+                  + "\"type\":\"hashed\""
+                  + ",\"targetRowsPerSegment\":-1"
+                  + ",\"numShards\":-1"
+                  + "}";
+    final HashedPartitionsSpec spec = jsonReadWriteRead(json);
+    Assert.assertNotNull(spec.getMaxRowsPerSegment());
+    Assert.assertEquals(PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT, spec.getMaxRowsPerSegment().intValue());
+    Assert.assertNull(spec.getNumShards());
+    Assert.assertEquals(Collections.emptyList(), spec.getPartitionDimensions());
+  }
+
+  @Test
   public void failsIfNotPositive()
   {
     List<String> properties = ImmutableList.of(

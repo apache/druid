@@ -23,7 +23,12 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.util.Arrays;
+
+@RunWith(Parameterized.class)
 public class ChecksTest
 {
   private static final String NAME1 = "name1";
@@ -31,14 +36,24 @@ public class ChecksTest
   private static final String NAME2 = "name2";
   private static final Integer VALUE2 = 2;
   private static final Integer NULL = null;
+  private static final Integer HISTORICAL_NULL = -1;
+
+  @Parameterized.Parameter
+  public Integer nullValue;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
+  @Parameterized.Parameters(name = "{index}: nullValue={0}")
+  public static Iterable<? extends Object> nullValues()
+  {
+    return Arrays.asList(NULL, HISTORICAL_NULL);
+  }
+
   @Test
   public void checkAtMostOneNotNullFirstNull()
   {
-    Property<Integer> result = Checks.checkAtMostOneNotNull(NAME1, NULL, NAME2, VALUE2);
+    Property<Integer> result = Checks.checkAtMostOneNotNull(NAME1, nullValue, NAME2, VALUE2);
     Assert.assertEquals(NAME2, result.getName());
     Assert.assertEquals(VALUE2, result.getValue());
   }
@@ -46,7 +61,7 @@ public class ChecksTest
   @Test
   public void checkAtMostOneNotNullSecondNull()
   {
-    Property<Integer> result = Checks.checkAtMostOneNotNull(NAME1, VALUE1, NAME2, NULL);
+    Property<Integer> result = Checks.checkAtMostOneNotNull(NAME1, VALUE1, NAME2, nullValue);
     Assert.assertEquals(NAME1, result.getName());
     Assert.assertEquals(VALUE1, result.getValue());
   }
@@ -54,9 +69,9 @@ public class ChecksTest
   @Test
   public void checkAtMostOneNotNullBothNull()
   {
-    Property<Integer> result = Checks.checkAtMostOneNotNull(NAME1, NULL, NAME2, NULL);
+    Property<Integer> result = Checks.checkAtMostOneNotNull(NAME1, nullValue, NAME2, nullValue);
     Assert.assertEquals(NAME1, result.getName());
-    Assert.assertEquals(NULL, result.getValue());
+    Assert.assertEquals(nullValue, result.getValue());
   }
 
   @Test

@@ -25,18 +25,21 @@ package org.apache.druid.indexer.partitions;
 class Checks
 {
   /**
-   * @return Non-null value, or first one if both are null
+   * @return Non-null value, or first one if both are null. -1 is interpreted as null for historical reasons.
    */
   @SuppressWarnings("VariableNotUsedInsideIf")  // false positive: checked for 'null' not used inside 'if
   static Property<Integer> checkAtMostOneNotNull(Property<Integer> property1, Property<Integer> property2)
   {
     final Property<Integer> property;
 
-    if (property1.getValue() == null && property2.getValue() == null) {
+    boolean isNull1 = PartitionsSpec.isEffectivelyNull(property1.getValue());
+    boolean isNull2 = PartitionsSpec.isEffectivelyNull(property2.getValue());
+
+    if (isNull1 && isNull2) {
       property = property1;
-    } else if (property1.getValue() == null) {
+    } else if (isNull1) {
       property = property2;
-    } else if (property2.getValue() == null) {
+    } else if (isNull2) {
       property = property1;
     } else {
       throw new IllegalArgumentException(
@@ -48,7 +51,7 @@ class Checks
   }
 
   /**
-   * @return Non-null value, or first one if both are null
+   * @return Non-null value, or first one if both are null. -1 is interpreted as null for historical reasons.
    */
   static Property<Integer> checkAtMostOneNotNull(String name1, Integer value1, String name2, Integer value2)
   {
