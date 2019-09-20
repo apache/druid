@@ -864,6 +864,7 @@ segmentTable
 shardSpec
 single_dim
 targetPartitionSize
+targetRowsPerSegment
 useCombiner
 useExplicitVersion
 useNewAggs
