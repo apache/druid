@@ -46,6 +46,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
@@ -76,6 +77,7 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.MetadataTaskStorage;
 import org.apache.druid.indexing.overlord.TaskLockbox;
+import org.apache.druid.indexing.overlord.TaskRunnerUtils;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
@@ -85,6 +87,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbe
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.test.TestDataSegmentAnnouncer;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
+import org.apache.druid.indexing.common.stats.RowIngestionMetersTotals;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -174,6 +177,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -516,7 +520,7 @@ public class KafkaIndexTaskTest
             0,
             "sequence0",
             new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 2L), ImmutableSet.of()),
-            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 13L)),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 12L)),
             kafkaServer.consumerProperties(),
             KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
@@ -528,18 +532,34 @@ public class KafkaIndexTaskTest
     SeekableStreamIndexTaskRunner runner = task.getRunner();
     while (true) {
       runner.pause();
-      if (runner.getRowIngestionMeters().getProcessed() >= 4) {
+      Thread.sleep(1000);
+      if (runner.getStatus() == Status.PUBLISHING) {
         break;
       }
       runner.resume();
     }
+    Map rowStats = runner.doGetRowStats();
+    Map totals = (Map)rowStats.get("totals");
+    RowIngestionMetersTotals buildSegments = (RowIngestionMetersTotals)totals.get("buildSegments");
 
+    Map movingAverages = (Map)rowStats.get("movingAverages");
+    Map buildSegments2 = (Map)movingAverages.get("buildSegments");
+    HashMap avg_1min = (HashMap) buildSegments2.get("1m");
+    HashMap avg_5min = (HashMap) buildSegments2.get("5m");
+    HashMap avg_15min = (HashMap) buildSegments2.get("15m");
+
+    runner.resume();
+
+    // Check metrics
+    Assert.assertEquals(buildSegments.getProcessed(), task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(buildSegments.getUnparseable(), task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(buildSegments.getThrownAway(), task.getRunner().getRowIngestionMeters().getThrownAway());
+
+    Assert.assertEquals(avg_1min.get("processed"), 0.0);
+    Assert.assertEquals(avg_5min.get("processed"), 0.0);
+    Assert.assertEquals(avg_15min.get("processed"), 0.0);
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-    // Check metrics
-    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getThrownAway());
   }
 
   @Test(timeout = 60_000L)

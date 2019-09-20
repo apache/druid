@@ -1488,7 +1488,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return setEndOffsets(sequences, finish);
   }
 
-  private Map<String, Object> doGetRowStats()
+  public Map<String, Object> doGetRowStats()
   {
     Map<String, Object> returnMap = new HashMap<>();
     Map<String, Object> totalsMap = new HashMap<>();
@@ -1505,6 +1505,25 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     returnMap.put("movingAverages", averagesMap);
     returnMap.put("totals", totalsMap);
+    return returnMap;
+  }
+
+  public Map<String, Object> doGetLiveReports()
+  {
+    Map<String, Object> returnMap = new HashMap<>();
+    Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
+    Map<String, Object> payload = new HashMap<>();
+    Map<String, Object> events = getTaskCompletionUnparseableEvents();
+
+    payload.put("ingestionState", ingestionState);
+    payload.put("unparseableEvents", events);
+    payload.put("rowStats", doGetRowStats());
+
+    ingestionStatsAndErrors.put("taskId", task.getId());
+    ingestionStatsAndErrors.put("payload", payload);
+    ingestionStatsAndErrors.put("type", "ingestionStatsAndErrors");
+
+    returnMap.put("ingestionStatsAndErrors", ingestionStatsAndErrors);
     return returnMap;
   }
 
@@ -1527,22 +1546,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   )
   {
     authorizationCheck(req, Action.READ);
-    Map<String, Object> returnMap = new HashMap<>();
-    Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
-    Map<String, Object> payload = new HashMap<>();
-    Map<String, Object> events = getTaskCompletionUnparseableEvents();
-
-    payload.put("ingestionState", ingestionState);
-    payload.put("unparseableEvents", events);
-    payload.put("rowStats", doGetRowStats());
-
-    ingestionStatsAndErrors.put("taskId", task.getId());
-    ingestionStatsAndErrors.put("payload", payload);
-    ingestionStatsAndErrors.put("type", "ingestionStatsAndErrors");
-
-    returnMap.put("ingestionStatsAndErrors", ingestionStatsAndErrors);
-    return Response.ok(returnMap).build();
+    return Response.ok(doGetLiveReports()).build();
   }
+
 
   @GET
   @Path("/unparseableEvents")
