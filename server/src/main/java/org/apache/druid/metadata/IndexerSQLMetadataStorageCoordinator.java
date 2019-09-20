@@ -74,7 +74,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
@@ -125,14 +124,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               intervals
           );
 
-          return intervals
-              .stream()
-              .flatMap((Interval interval) -> timeline.lookup(interval).stream())
-              .flatMap(timelineObjectHolder -> {
-                return StreamSupport.stream(timelineObjectHolder.getObject().payloads().spliterator(), false);
-              })
-              .distinct()
-              .collect(Collectors.toList());
+          return new ArrayList<>(timeline.iterateAllObjects());
         }
     );
   }
@@ -186,7 +178,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     sb.append("SELECT payload FROM %s WHERE used = true AND dataSource = ? AND (");
     for (int i = 0; i < intervals.size(); i++) {
       sb.append(
-          StringUtils.format("(start <= ? AND %1$send%1$s >= ?)", connector.getQuoteString())
+          StringUtils.format("(start < ? AND %1$send%1$s > ?)", connector.getQuoteString())
       );
       if (i == intervals.size() - 1) {
         sb.append(")");
