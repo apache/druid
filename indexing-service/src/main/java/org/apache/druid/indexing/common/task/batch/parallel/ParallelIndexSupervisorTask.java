@@ -183,13 +183,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       throw new IAE("[%s] should implement FiniteFirehoseFactory", firehoseFactory.getClass().getSimpleName());
     }
 
-    if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()
-        && (ingestionSchema.getTuningConfig().getNumShards() == null
-            || ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals().isEmpty())) {
-      throw new ISE(
-          "forceGuaranteedRollup is set "
-          + "but numShards is missing in partitionsSpec or intervals is missing in granularitySpec"
-      );
+    if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()) {
+      if (ingestionSchema.getTuningConfig().getNumShards() == null) {
+        throw new ISE("forceGuaranteedRollup is set but numShards is missing in partitionsSpec");
+      }
+
+      if (ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals().isEmpty()) {
+        throw new ISE("forceGuaranteedRollup is set but intervals is missing in granularitySpec");
+      }
     }
 
     this.baseFirehoseFactory = (FiniteFirehoseFactory) firehoseFactory;

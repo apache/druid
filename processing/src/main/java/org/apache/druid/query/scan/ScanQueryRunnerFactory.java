@@ -295,7 +295,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       descriptorsOrdered = Collections.singletonList(((SpecificSegmentSpec) spec).getDescriptor().getInterval());
     } else {
       throw new UOE(
-          "Time-ordering on scan queries is only supported for queries with segment specs"
+          "Time-ordering on scan queries is only supported for queries with segment specs "
           + "of type MultipleSpecificSegmentSpec or SpecificSegmentSpec...a [%s] was received instead.",
           spec.getClass().getSimpleName()
       );

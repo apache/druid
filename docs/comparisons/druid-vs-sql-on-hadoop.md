@@ -37,7 +37,7 @@ Druid was designed to
 1. handle slice-n-dice style ad-hoc queries
 
 SQL-on-Hadoop engines generally sidestep Map/Reduce, instead querying data directly from HDFS or, in some cases, other storage systems.
-Some of these engines (including Impala and Presto) can be colocated with HDFS data nodes and coordinate with them to achieve data locality for queries.
+Some of these engines (including Impala and Presto) can be co-located with HDFS data nodes and coordinate with them to achieve data locality for queries.
 What does this mean?  We can talk about it in terms of three general areas
 
 1. Queries
@@ -53,7 +53,7 @@ are queries and results, and all computation is done internally as part of the D
 Most SQL-on-Hadoop engines are responsible for query planning and execution for underlying storage layers and storage formats.
 They are processes that stay on even if there is no query running (eliminating the JVM startup costs from Hadoop MapReduce).
 Some (Impala/Presto) SQL-on-Hadoop engines have daemon processes that can be run where the data is stored, virtually eliminating network transfer costs. There is still
-some latency overhead (e.g. serde time) associated with pulling data from the underlying storage layer into the computation layer. We are unaware of exactly
+some latency overhead (e.g. serialization/deserialization time) associated with pulling data from the underlying storage layer into the computation layer. We are unaware of exactly
 how much of a performance impact this makes.
 
 ### Data Ingestion
@@ -79,4 +79,4 @@ Parquet is a column storage format that is designed to work with SQL-on-Hadoop e
 relies on external sources to pull data out of it.
 
 Druid's storage format is highly optimized for linear scans. Although Druid has support for nested data, Parquet's storage format is much
-more hierachical, and is more designed for binary chunking. In theory, this should lead to faster scans in Druid.
+more hierarchical, and is more designed for binary chunking. In theory, this should lead to faster scans in Druid.
