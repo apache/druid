@@ -30,6 +30,7 @@ describe('auto-form snapshot', () => {
           { name: 'testTwo', type: 'size-bytes' },
           { name: 'testThree', type: 'string' },
           { name: 'testFour', type: 'boolean' },
+          { name: 'testFourWithDefault', type: 'boolean', defaultValue: false },
           { name: 'testFive', type: 'string-array' },
           { name: 'testSix', type: 'json' },
           { name: 'testSeven', type: 'json' },

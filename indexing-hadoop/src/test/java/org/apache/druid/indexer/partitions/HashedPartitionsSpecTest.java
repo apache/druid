@@ -23,90 +23,129 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
-/**
- */
 public class HashedPartitionsSpecTest
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
+
   @Test
   public void testHashedPartitionsSpec()
   {
-    {
-      final PartitionsSpec partitionsSpec = jsonReadWriteRead(
-          "{"
-          + "   \"targetPartitionSize\":100,"
-          + "   \"type\":\"hashed\""
-          + "}",
-          PartitionsSpec.class
-      );
-      Assert.assertTrue("partitionsSpec", partitionsSpec instanceof HashedPartitionsSpec);
-      final HashedPartitionsSpec hadoopHashedPartitionsSpec = (HashedPartitionsSpec) partitionsSpec;
+    final HashedPartitionsSpec hadoopHashedPartitionsSpec = jsonReadWriteRead(
+        "{"
+        + "   \"targetRowsPerSegment\":100,"
+        + "   \"type\":\"hashed\""
+        + "}"
+    );
 
-      Assert.assertEquals(
-          "isDeterminingPartitions",
-          hadoopHashedPartitionsSpec.needsDeterminePartitions(true),
-          true
-      );
+    Assert.assertTrue("isDeterminingPartitions", hadoopHashedPartitionsSpec.needsDeterminePartitions(true));
 
-      Assert.assertEquals(
-          "getTargetPartitionSize",
-          hadoopHashedPartitionsSpec.getMaxRowsPerSegment().intValue(),
-          100
-      );
+    Assert.assertNotNull(hadoopHashedPartitionsSpec.getMaxRowsPerSegment());
+    Assert.assertEquals(
+        "getMaxRowsPerSegment",
+        100,
+        hadoopHashedPartitionsSpec.getMaxRowsPerSegment().intValue()
+    );
 
-      Assert.assertEquals(
-          "getPartitionDimensions",
-          hadoopHashedPartitionsSpec.getPartitionDimensions(),
-          ImmutableList.of()
-      );
-    }
+    Assert.assertEquals(
+        "getPartitionDimensions",
+        ImmutableList.of(),
+        hadoopHashedPartitionsSpec.getPartitionDimensions()
+    );
   }
 
   @Test
   public void testHashedPartitionsSpecShardCount()
   {
-    final PartitionsSpec partitionsSpec = jsonReadWriteRead(
+    final HashedPartitionsSpec hadoopHashedPartitionsSpec = jsonReadWriteRead(
         "{"
         + "   \"type\":\"hashed\","
         + "   \"numShards\":2"
-        + "}",
-        PartitionsSpec.class
+        + "}"
     );
-    Assert.assertTrue("partitionsSpec", partitionsSpec instanceof HashedPartitionsSpec);
-    final HashedPartitionsSpec hadoopHashedPartitionsSpec = (HashedPartitionsSpec) partitionsSpec;
 
-    Assert.assertEquals(
-        "isDeterminingPartitions",
-        hadoopHashedPartitionsSpec.needsDeterminePartitions(true),
-        false
-    );
+    Assert.assertFalse("isDeterminingPartitions", hadoopHashedPartitionsSpec.needsDeterminePartitions(true));
 
     Assert.assertNull(
-        "getTargetPartitionSize",
+        "getMaxRowsPerSegment",
         hadoopHashedPartitionsSpec.getMaxRowsPerSegment()
     );
 
+    Assert.assertNotNull(hadoopHashedPartitionsSpec.getNumShards());
     Assert.assertEquals(
         "shardCount",
-        hadoopHashedPartitionsSpec.getNumShards().intValue(),
-        2
+        2,
+        hadoopHashedPartitionsSpec.getNumShards().intValue()
     );
 
     Assert.assertEquals(
         "getPartitionDimensions",
-        hadoopHashedPartitionsSpec.getPartitionDimensions(),
-        ImmutableList.of()
+        ImmutableList.of(),
+        hadoopHashedPartitionsSpec.getPartitionDimensions()
     );
-
   }
-  
-  private <T> T jsonReadWriteRead(String s, Class<T> klass)
+
+  @Test
+  public void testHashedPartitionsSpecBothTargetForbidden()
+  {
+    exception.expect(RuntimeException.class);
+    exception.expectMessage("At most one of targetRowsPerSegment or targetPartitionSize must be present");
+
+    String json = "{"
+                  + "\"type\":\"hashed\""
+                  + ",\"targetRowsPerSegment\":100"
+                  + ",\"targetPartitionSize\":100"
+                  + "}";
+    jsonReadWriteRead(json);
+  }
+
+  @Test
+  public void testHashedPartitionsSpecBackwardCompatibleTargetPartitionSize()
+  {
+    String json = "{"
+                  + "\"type\":\"hashed\""
+                  + ",\"targetPartitionSize\":100"
+                  + "}";
+    HashedPartitionsSpec hadoopHashedPartitionsSpec = jsonReadWriteRead(json);
+
+    Assert.assertNotNull(hadoopHashedPartitionsSpec.getMaxRowsPerSegment());
+    Assert.assertEquals(
+        "getMaxRowsPerSegment",
+        100,
+        hadoopHashedPartitionsSpec.getMaxRowsPerSegment().intValue()
+    );
+  }
+
+  @Test
+  public void testHashedPartitionsSpecBackwardCompatibleMaxRowsPerSegment()
+  {
+    String json = "{"
+                  + "\"type\":\"hashed\""
+                  + ",\"maxRowsPerSegment\":100"
+                  + "}";
+    HashedPartitionsSpec hadoopHashedPartitionsSpec = jsonReadWriteRead(json);
+
+    Assert.assertNotNull(hadoopHashedPartitionsSpec.getMaxRowsPerSegment());
+    Assert.assertEquals(
+        "getMaxRowsPerSegment",
+        100,
+        hadoopHashedPartitionsSpec.getMaxRowsPerSegment().intValue()
+    );
+  }
+
+  private static HashedPartitionsSpec jsonReadWriteRead(String s)
   {
     try {
-      return JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsBytes(JSON_MAPPER.readValue(s, klass)), klass);
+      byte[] jsonBytes = JSON_MAPPER.writeValueAsBytes(JSON_MAPPER.readValue(s, PartitionsSpec.class));
+      PartitionsSpec partitionsSpec = JSON_MAPPER.readValue(jsonBytes, PartitionsSpec.class);
+      Assert.assertTrue("partitionsSpec", partitionsSpec instanceof HashedPartitionsSpec);
+      return (HashedPartitionsSpec) partitionsSpec;
     }
     catch (Exception e) {
       throw new RuntimeException(e);

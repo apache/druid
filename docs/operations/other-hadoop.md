@@ -209,7 +209,7 @@ addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.13.0")
 
 **Alternate workaround - 3**
 
-If sbt is not your choice, you can also use `maven-shade-plugin` to make a fat jar: relocation all jackson packages will resolve it too. In this way, druid will not be affected by jackson library embedded in hadoop. Please follow the steps below:
+If sbt is not your choice, you can also use `maven-shade-plugin` to make a fat jar: relocation all Jackson packages will resolve it too. In this way, druid will not be affected by Jackson library embedded in hadoop. Please follow the steps below:
 
 (1) Add all extensions you needed to `services/pom.xml` like
 
@@ -239,7 +239,7 @@ If sbt is not your choice, you can also use `maven-shade-plugin` to make a fat j
   </dependency>
  ```
 
-(2) Shade jackson packages and assemble a fat jar.
+(2) Shade Jackson packages and assemble a fat jar.
 
 ```xml
 <plugin>

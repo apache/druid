@@ -42,7 +42,7 @@ All the configuration parameters for the influxdb emitter are under `druid.emitt
 |`druid.emitter.influxdb.hostname`|The hostname of the InfluxDB server.|Yes|N/A|
 |`druid.emitter.influxdb.port`|The port of the InfluxDB server.|No|8086|
 |`druid.emitter.influxdb.databaseName`|The name of the database in InfluxDB.|Yes|N/A|
-|`druid.emitter.influxdb.maxQueueSize`|The size of the queue that holds events.|No|Integer.Max_Value(=2^31-1)|
+|`druid.emitter.influxdb.maxQueueSize`|The size of the queue that holds events.|No|Integer.MAX_VALUE(=2^31-1)|
 |`druid.emitter.influxdb.flushPeriod`|How often (in milliseconds) the events queue is parsed into Line Protocol and POSTed to InfluxDB.|No|60000|
 |`druid.emitter.influxdb.flushDelay`|How long (in milliseconds) the scheduled method will wait until it first runs.|No|60000|
 |`druid.emitter.influxdb.influxdbUserName`|The username for authenticating with the InfluxDB database.|Yes|N/A|
@@ -57,7 +57,7 @@ The syntax of the line protocol is :
 
 `<measurement>[,<tag_key>=<tag_value>[,<tag_key>=<tag_value>]] <field_key>=<field_value>[,<field_key>=<field_value>] [<timestamp>]`
 
-where timestamp is in nano-seconds since epoch.
+where timestamp is in nanoseconds since epoch.
 
 A typical service metric event as recorded by Druid's logging emitter is: `Event [{"feed":"metrics","timestamp":"2017-10-31T09:09:06.857Z","service":"druid/historical","host":"historical001:8083","version":"0.11.0-SNAPSHOT","metric":"query/cache/total/hits","value":34787256}]`.
 
@@ -71,4 +71,4 @@ This gives the following String which can be POSTed to InfluxDB: `"druid_query,s
 
 The InfluxDB emitter has a white list of dimensions
 which will be added as a tag to the line protocol string if the metric has a dimension from the white list.
-The value of the dimension is sanitized such that every occurence of a dot or whitespace is replaced with a `_` .
+The value of the dimension is sanitized such that every occurrence of a dot or whitespace is replaced with a `_` .

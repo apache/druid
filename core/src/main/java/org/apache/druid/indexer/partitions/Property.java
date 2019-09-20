@@ -19,18 +19,49 @@
 
 package org.apache.druid.indexer.partitions;
 
-import java.util.List;
+import java.util.Objects;
 
 /**
- * PartitionsSpec based on dimension values.
+ * Convenience class for holding a pair of string key and templated value.
  */
-public interface DimensionBasedPartitionsSpec extends PartitionsSpec
+class Property<T>
 {
-  String TARGET_ROWS_PER_SEGMENT = "targetRowsPerSegment";
+  private final String name;
+  private final T value;
 
-  // Deprecated properties preserved for backward compatibility:
-  @Deprecated
-  String TARGET_PARTITION_SIZE = "targetPartitionSize";
+  Property(String name, T value)
+  {
+    this.name = name;
+    this.value = value;
+  }
 
-  List<String> getPartitionDimensions();
+  public String getName()
+  {
+    return name;
+  }
+
+  public T getValue()
+  {
+    return value;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    Property<?> property = (Property<?>) o;
+    return Objects.equals(name, property.name) &&
+           Objects.equals(value, property.value);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(name, value);
+  }
 }

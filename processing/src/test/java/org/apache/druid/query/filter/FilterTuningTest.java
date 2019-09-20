@@ -17,20 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.indexer.partitions;
+package org.apache.druid.query.filter;
 
-import java.util.List;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- * PartitionsSpec based on dimension values.
- */
-public interface DimensionBasedPartitionsSpec extends PartitionsSpec
+public class FilterTuningTest
 {
-  String TARGET_ROWS_PER_SEGMENT = "targetRowsPerSegment";
+  @Test
+  public void testSerde() throws Exception
+  {
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
 
-  // Deprecated properties preserved for backward compatibility:
-  @Deprecated
-  String TARGET_PARTITION_SIZE = "targetPartitionSize";
+    final FilterTuning filterTuning1 = new FilterTuning(false, 100, 200);
+    Assert.assertEquals(
+        filterTuning1,
+        objectMapper.readValue(objectMapper.writeValueAsString(filterTuning1), FilterTuning.class)
+    );
 
-  List<String> getPartitionDimensions();
+    final FilterTuning filterTuning2 = new FilterTuning(true, 100, 200);
+    Assert.assertEquals(
+        filterTuning2,
+        objectMapper.readValue(objectMapper.writeValueAsString(filterTuning2), FilterTuning.class)
+    );
+  }
 }
