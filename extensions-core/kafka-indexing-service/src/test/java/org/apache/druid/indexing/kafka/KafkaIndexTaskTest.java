@@ -46,7 +46,6 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
-import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
@@ -66,6 +65,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
+import org.apache.druid.indexing.common.stats.RowIngestionMetersTotals;
 import org.apache.druid.indexing.common.task.IndexTaskTest;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -77,7 +77,6 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.MetadataTaskStorage;
 import org.apache.druid.indexing.overlord.TaskLockbox;
-import org.apache.druid.indexing.overlord.TaskRunnerUtils;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
@@ -87,7 +86,6 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbe
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.test.TestDataSegmentAnnouncer;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersTotals;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -177,7 +175,6 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -539,11 +536,11 @@ public class KafkaIndexTaskTest
       runner.resume();
     }
     Map rowStats = runner.doGetRowStats();
-    Map totals = (Map)rowStats.get("totals");
-    RowIngestionMetersTotals buildSegments = (RowIngestionMetersTotals)totals.get("buildSegments");
+    Map totals = (Map) rowStats.get("totals");
+    RowIngestionMetersTotals buildSegments = (RowIngestionMetersTotals) totals.get("buildSegments");
 
-    Map movingAverages = (Map)rowStats.get("movingAverages");
-    Map buildSegments2 = (Map)movingAverages.get("buildSegments");
+    Map movingAverages = (Map) rowStats.get("movingAverages");
+    Map buildSegments2 = (Map) movingAverages.get("buildSegments");
     HashMap avg_1min = (HashMap) buildSegments2.get("1m");
     HashMap avg_5min = (HashMap) buildSegments2.get("5m");
     HashMap avg_15min = (HashMap) buildSegments2.get("15m");
@@ -642,7 +639,10 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc5 = sd("2011/P1D", 1);
     SegmentDescriptor desc6 = sd("2012/P1D", 0);
     SegmentDescriptor desc7 = sd("2013/P1D", 0);
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
+    assertEqualsExceptVersion(
+        ImmutableList.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 2L))
@@ -783,7 +783,10 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc5 = sd("2011/P1D", 1);
     SegmentDescriptor desc6 = sd("2012/P1D", 0);
     SegmentDescriptor desc7 = sd("2013/P1D", 0);
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
+    assertEqualsExceptVersion(
+        ImmutableList.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 2L))
@@ -791,7 +794,10 @@ public class KafkaIndexTaskTest
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
+    assertEqualsExceptVersion(
+        ImmutableList.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 2L))
@@ -2015,7 +2021,10 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc5 = sd("2010/P1D", 0);
     SegmentDescriptor desc6 = sd("2011/P1D", 0);
     SegmentDescriptor desc7 = sd("2012/P1D", 0);
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
+    assertEqualsExceptVersion(
+        ImmutableList.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
