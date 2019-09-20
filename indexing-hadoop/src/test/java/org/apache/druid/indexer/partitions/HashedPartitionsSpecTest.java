@@ -21,11 +21,18 @@ package org.apache.druid.indexer.partitions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Multimap;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 public class HashedPartitionsSpecTest
 {
@@ -35,7 +42,7 @@ public class HashedPartitionsSpecTest
   public ExpectedException exception = ExpectedException.none();
 
   @Test
-  public void testHashedPartitionsSpec()
+  public void havingTargetRowsPerSegmentOnly()
   {
     final HashedPartitionsSpec hadoopHashedPartitionsSpec = jsonReadWriteRead(
         "{"
@@ -52,7 +59,7 @@ public class HashedPartitionsSpecTest
         100,
         hadoopHashedPartitionsSpec.getMaxRowsPerSegment().intValue()
     );
-
+    Assert.assertNull(hadoopHashedPartitionsSpec.getNumShards());
     Assert.assertEquals(
         "getPartitionDimensions",
         ImmutableList.of(),
@@ -61,7 +68,7 @@ public class HashedPartitionsSpecTest
   }
 
   @Test
-  public void testHashedPartitionsSpecShardCount()
+  public void havingNumShardsOnly()
   {
     final HashedPartitionsSpec hadoopHashedPartitionsSpec = jsonReadWriteRead(
         "{"
@@ -92,21 +99,89 @@ public class HashedPartitionsSpecTest
   }
 
   @Test
-  public void testHashedPartitionsSpecBothTargetForbidden()
+  public void havingIncompatiblePropertiesIsForbidden()
   {
-    exception.expect(RuntimeException.class);
-    exception.expectMessage("At most one of targetRowsPerSegment or targetPartitionSize must be present");
+    final String targetRowsPerSegment = DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT;
+    final String targetPartitionSize = DimensionBasedPartitionsSpec.TARGET_PARTITION_SIZE;
+    final String maxRowsPerSegment = PartitionsSpec.MAX_ROWS_PER_SEGMENT;
+    final String numShards = HashedPartitionsSpec.NUM_SHARDS;
 
-    String json = "{"
-                  + "\"type\":\"hashed\""
-                  + ",\"targetRowsPerSegment\":100"
-                  + ",\"targetPartitionSize\":100"
-                  + "}";
-    jsonReadWriteRead(json);
+    Multimap<String, String> incompatiblePairs = ImmutableMultimap.<String, String>builder()
+        .put(targetRowsPerSegment, targetPartitionSize)
+        .put(targetRowsPerSegment, maxRowsPerSegment)
+        .put(targetRowsPerSegment, numShards)
+        .put(targetPartitionSize, maxRowsPerSegment)
+        .put(targetPartitionSize, numShards)
+        .put(maxRowsPerSegment, numShards)
+        .build();
+
+    for (Map.Entry<String, String> test : incompatiblePairs.entries()) {
+      String first = test.getKey();
+      String second = test.getValue();
+      String reasonPrefix = first + "/" + second;
+
+      String json = "{"
+                    + "\"type\":\"hashed\""
+                    + ",\"" + first + "\":100"
+                    + ",\"" + second + "\":100"
+                    + "}";
+      try {
+        jsonReadWriteRead(json);
+        Assert.fail(reasonPrefix + " did not throw exception");
+      }
+      catch (RuntimeException e) {
+        String expectedMessage = "At most one of " + first + " or " + second + " must be present";
+        Assert.assertThat(
+            reasonPrefix + " has wrong failure message",
+            e.getMessage(),
+            CoreMatchers.containsString(expectedMessage)
+        );
+      }
+    }
   }
 
   @Test
-  public void testHashedPartitionsSpecBackwardCompatibleTargetPartitionSize()
+  public void defaults()
+  {
+    final HashedPartitionsSpec spec = jsonReadWriteRead("{\"type\":\"hashed\"}");
+    Assert.assertNotNull(spec.getMaxRowsPerSegment());
+    Assert.assertEquals(PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT, spec.getMaxRowsPerSegment().intValue());
+    Assert.assertNull(spec.getNumShards());
+    Assert.assertEquals(Collections.emptyList(), spec.getPartitionDimensions());
+  }
+
+  @Test
+  public void failsIfNotPositive()
+  {
+    List<String> properties = ImmutableList.of(
+        DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT,
+        DimensionBasedPartitionsSpec.TARGET_PARTITION_SIZE,
+        PartitionsSpec.MAX_ROWS_PER_SEGMENT,
+        HashedPartitionsSpec.NUM_SHARDS
+    );
+
+    for (String property : properties) {
+      String json = "{"
+                    + "\"type\":\"hashed\""
+                    + ",\"" + property + "\":0"
+                    + "}";
+      try {
+        jsonReadWriteRead(json);
+        Assert.fail(property + " did not throw exception");
+      }
+      catch (RuntimeException e) {
+        String expectedMessage = property + "[0] should be positive";
+        Assert.assertThat(
+            property + " has wrong failure message",
+            e.getMessage(),
+            CoreMatchers.containsString(expectedMessage)
+        );
+      }
+    }
+  }
+
+  @Test
+  public void backwardCompatibleWithTargetPartitionSize()
   {
     String json = "{"
                   + "\"type\":\"hashed\""
@@ -123,7 +198,7 @@ public class HashedPartitionsSpecTest
   }
 
   @Test
-  public void testHashedPartitionsSpecBackwardCompatibleMaxRowsPerSegment()
+  public void backwardCompatibleWithMaxRowsPerSegment()
   {
     String json = "{"
                   + "\"type\":\"hashed\""
