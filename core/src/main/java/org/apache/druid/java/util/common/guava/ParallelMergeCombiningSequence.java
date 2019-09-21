@@ -332,9 +332,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         tasks.add(mergeAction);
       }
 
-//      for (RecursiveAction task : tasks) {
-//        getPool().execute(task);
-//      }
+      /*
+      for (RecursiveAction task : tasks) {
+        getPool().execute(task);
+      }*/
       invokeAll(tasks);
 
       QueuePusher<OrderedResultBatch<T>> outputPusher = new QueuePusher<>(out, hasTimeout, timeoutAt);
