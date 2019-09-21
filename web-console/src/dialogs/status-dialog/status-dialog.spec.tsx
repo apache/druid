@@ -27,4 +27,18 @@ describe('status dialog', () => {
     render(statusDialog);
     expect(document.body.lastChild).toMatchSnapshot();
   });
+
+  it('filters data that contains input', () => {
+    const data = [
+      'org.apache.druid.common.gcp.GcpModule',
+      'org.apache.druid.common.aws.AWSModule',
+      'io.imply.druid.UtilityBeltModule',
+    ];
+
+    expect(StatusDialog.anywhereMatcher({ id: '0', value: 'common' }, data)).toEqual(true);
+    expect(StatusDialog.anywhereMatcher({ id: '1', value: 'common' }, data)).toEqual(true);
+    expect(StatusDialog.anywhereMatcher({ id: '0', value: 'org' }, data)).toEqual(true);
+    expect(StatusDialog.anywhereMatcher({ id: '1', value: 'org' }, data)).toEqual(true);
+    expect(StatusDialog.anywhereMatcher({ id: '2', value: 'common' }, data)).toEqual(false);
+  });
 });

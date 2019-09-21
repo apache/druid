@@ -118,7 +118,7 @@ When choosing the Data server hardware, you can choose a split factor `N`, divid
 
 Instructions for adjusting the Historical/MiddleManager configs for the split are described in a later section in this guide.
 
-#### Query derver
+#### Query server
 
 The main considerations for the Query server are available CPUs and RAM for the Broker heap + direct memory, and Router heap.
 
@@ -478,7 +478,7 @@ tar -xzf tranquility-distribution-0.8.3.tgz
 mv tranquility-distribution-0.8.3 tranquility
 ```
 
-Afterwards, in `conf/supervise/cluster/data.conf`, uncomment out the `tranquility-server` line, and restart the Data server proceses.
+Afterwards, in `conf/supervise/cluster/data.conf`, uncomment out the `tranquility-server` line, and restart the Data server processes.
 
 ## Start Query Server
 

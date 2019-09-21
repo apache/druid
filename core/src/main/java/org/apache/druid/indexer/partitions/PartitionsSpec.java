@@ -29,14 +29,15 @@ import javax.annotation.Nullable;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = HashedPartitionsSpec.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "single_dim", value = SingleDimensionPartitionsSpec.class),
-    @JsonSubTypes.Type(name = "dimension", value = SingleDimensionPartitionsSpec.class), // for backward compatibility
-    @JsonSubTypes.Type(name = "hashed", value = HashedPartitionsSpec.class),
-    @JsonSubTypes.Type(name = "dynamic", value = DynamicPartitionsSpec.class)
+    @JsonSubTypes.Type(name = SingleDimensionPartitionsSpec.NAME, value = SingleDimensionPartitionsSpec.class),
+    @JsonSubTypes.Type(name = SingleDimensionPartitionsSpec.OLD_NAME, value = SingleDimensionPartitionsSpec.class),  // for backward compatibility
+    @JsonSubTypes.Type(name = HashedPartitionsSpec.NAME, value = HashedPartitionsSpec.class),
+    @JsonSubTypes.Type(name = DynamicPartitionsSpec.NAME, value = DynamicPartitionsSpec.class)
 })
 public interface PartitionsSpec
 {
   int DEFAULT_MAX_ROWS_PER_SEGMENT = 5_000_000;
+  String MAX_ROWS_PER_SEGMENT = "maxRowsPerSegment";
 
   /**
    * Returns the max number of rows per segment.

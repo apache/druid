@@ -57,11 +57,11 @@ In the first phase, each sub task partitions input data based on `segmentGranula
 and `partitionDimensions` (secondary partition key) in `partitionsSpec`. The partitioned data is served by
 the [middleManager](../design/middlemanager.md) or the [indexer](../design/indexer.md)
 where the first phase tasks ran. In the second phase, each sub task fetches
-partitioned data from middleManagers or indexers and merges them to create the final segments.
+partitioned data from MiddleManagers or indexers and merges them to create the final segments.
 As in the single phase execution, the created segments are reported to the supervisor task to publish at once.
 
 To use this task, the `firehose` in `ioConfig` should be _splittable_ and `maxNumConcurrentSubTasks` should be set something larger than 1 in `tuningConfig`.
-Otherwise, this task runs sequentially. Here is the list of currently splittable fireshoses.
+Otherwise, this task runs sequentially. Here is the list of currently splittable firehoses.
 
 - [`LocalFirehose`](#local-firehose)
 - [`IngestSegmentFirehose`](#segment-firehose)
@@ -178,7 +178,7 @@ See [Ingestion Spec DataSchema](../ingestion/index.md#dataschema)
 
 If you specify `intervals` explicitly in your dataSchema's granularitySpec, batch ingestion will lock the full intervals
 specified when it starts up, and you will learn quickly if the specified interval overlaps with locks held by other
-tasks (eg, Kafka ingestion). Otherwise, batch ingestion will lock each interval as it is discovered, so you may only
+tasks (e.g., Kafka ingestion). Otherwise, batch ingestion will lock each interval as it is discovered, so you may only
 learn that the task overlaps with a higher-priority task later in ingestion.  If you specify `intervals` explicitly, any
 rows outside the specified intervals will be thrown away. We recommend setting `intervals` explicitly if you know the
 time range of the data so that locking failure happens faster, and so that you don't accidentally replace data outside
@@ -216,7 +216,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |maxRetry|Maximum number of retries on task failures.|3|no|
 |maxNumSegmentsToMerge|Max limit for the number of segments that a single task can merge at the same time in the second phase. Used only `forceGuaranteedRollup` is set.|100|no|
 |totalNumMergeTasks|Total number of tasks to merge segments in the second phase when `forceGuaranteedRollup` is set.|10|no|
-|taskStatusCheckPeriodMs|Polling period in milleseconds to check running task statuses.|1000|no|
+|taskStatusCheckPeriodMs|Polling period in milliseconds to check running task statuses.|1000|no|
 |chatHandlerTimeout|Timeout for reporting the pushed segments in worker tasks.|PT10S|no|
 |chatHandlerNumRetries|Retries for reporting the pushed segments in worker tasks.|5|no|
 
@@ -229,8 +229,9 @@ For perfect rollup, you should use `hashed`.
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should always be `hashed`|none|yes|
-|numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
-|partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions.|null|no|
+|targetRowsPerSegment|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|null|either this or `numShards`|
+|numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `targetRowsPerSegment` is set.|null|no|
+|partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions. Only used with `numShards`, will be ignored when `targetRowsPerSegment` is set.|null|no|
 
 For best-effort rollup, you should use `dynamic`.
 
@@ -629,7 +630,7 @@ For perfect rollup, you should use `hashed`.
 |--------|-----------|-------|---------|
 |type|This should always be `hashed`|none|yes|
 |maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
-|numShards|Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data. numShards cannot be specified if maxRowsPerSegment is set.|null|no|
+|numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
 |partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions.|null|no|
 
 For best-effort rollup, you should use `dynamic`.
