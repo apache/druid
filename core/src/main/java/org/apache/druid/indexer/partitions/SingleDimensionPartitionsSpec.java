@@ -64,18 +64,23 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
           Integer maxPartitionSize  // prefer maxRowsPerSegment
   )
   {
+    Integer adjustedTargetRowsPerSegment = PartitionsSpec.resolveHistoricalNullIfNeeded(targetRowsPerSegment);
+    Integer adjustedMaxRowsPerSegment = PartitionsSpec.resolveHistoricalNullIfNeeded(maxRowsPerSegment);
+    Integer adjustedTargetPartitionSize = PartitionsSpec.resolveHistoricalNullIfNeeded(targetPartitionSize);
+    Integer adjustedMaxPartitionSize = PartitionsSpec.resolveHistoricalNullIfNeeded(maxPartitionSize);
+
     Property<Integer> target = Checks.checkAtMostOneNotNull(
         DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT,
-        targetRowsPerSegment,
+        adjustedTargetRowsPerSegment,
         DimensionBasedPartitionsSpec.TARGET_PARTITION_SIZE,
-        targetPartitionSize
+        adjustedTargetPartitionSize
     );
 
     Property<Integer> max = Checks.checkAtMostOneNotNull(
         PartitionsSpec.MAX_ROWS_PER_SEGMENT,
-        maxRowsPerSegment,
+        adjustedMaxRowsPerSegment,
         MAX_PARTITION_SIZE,
-        maxPartitionSize
+        adjustedMaxPartitionSize
     );
 
     Preconditions.checkArgument(

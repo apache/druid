@@ -59,26 +59,31 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
           Integer maxRowsPerSegment
   )
   {
+    Integer adjustedTargetRowsPerSegment = PartitionsSpec.resolveHistoricalNullIfNeeded(targetRowsPerSegment);
+    Integer adjustedNumShards = PartitionsSpec.resolveHistoricalNullIfNeeded(numShards);
+    Integer adjustedTargetPartitionSize = PartitionsSpec.resolveHistoricalNullIfNeeded(targetPartitionSize);
+    Integer adjustedMaxRowsPerSegment = PartitionsSpec.resolveHistoricalNullIfNeeded(maxRowsPerSegment);
+
     // targetRowsPerSegment, targetPartitionSize, and maxRowsPerSegment are aliases
     Property<Integer> target = Checks.checkAtMostOneNotNull(
         DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT,
-        targetRowsPerSegment,
+        adjustedTargetRowsPerSegment,
         DimensionBasedPartitionsSpec.TARGET_PARTITION_SIZE,
-        targetPartitionSize
+        adjustedTargetPartitionSize
     );
     target = Checks.checkAtMostOneNotNull(
         target,
-        new Property<>(PartitionsSpec.MAX_ROWS_PER_SEGMENT, maxRowsPerSegment)
+        new Property<>(PartitionsSpec.MAX_ROWS_PER_SEGMENT, adjustedMaxRowsPerSegment)
     );
 
     // targetRowsPerSegment/targetPartitionSize/maxRowsPerSegment and numShards are incompatible
-    Checks.checkAtMostOneNotNull(target, new Property<>(NUM_SHARDS, numShards));
+    Checks.checkAtMostOneNotNull(target, new Property<>(NUM_SHARDS, adjustedNumShards));
 
     this.partitionDimensions = partitionDimensions == null ? Collections.emptyList() : partitionDimensions;
-    this.numShards = PartitionsSpec.isEffectivelyNull(numShards) ? null : numShards;
+    this.numShards = adjustedNumShards;
 
     // Supply default for targetRowsPerSegment if needed
-    if (PartitionsSpec.isEffectivelyNull(target.getValue())) {
+    if (target.getValue() == null) {
       //noinspection VariableNotUsedInsideIf (false positive for this.numShards)
       this.maxRowsPerSegment = (this.numShards == null ? PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT : null);
     } else {

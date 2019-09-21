@@ -155,8 +155,8 @@ public class HashedPartitionsSpecTest
   {
     String json = "{"
                   + "\"type\":\"hashed\""
-                  + ",\"targetRowsPerSegment\":-1"
-                  + ",\"numShards\":-1"
+                  + ",\"targetRowsPerSegment\":" + PartitionsSpec.HISTORICAL_NULL
+                  + ",\"numShards\":" + PartitionsSpec.HISTORICAL_NULL
                   + "}";
     final HashedPartitionsSpec spec = jsonReadWriteRead(json);
     Assert.assertNotNull(spec.getMaxRowsPerSegment());

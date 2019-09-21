@@ -32,8 +32,8 @@ class Checks
   {
     final Property<Integer> property;
 
-    boolean isNull1 = PartitionsSpec.isEffectivelyNull(property1.getValue());
-    boolean isNull2 = PartitionsSpec.isEffectivelyNull(property2.getValue());
+    boolean isNull1 = property1.getValue() == null;
+    boolean isNull2 = property2.getValue() == null;
 
     if (isNull1 && isNull2) {
       property = property1;

@@ -32,7 +32,7 @@ public class SingleDimensionPartitionsSpecTest
 {
   private static final Integer TARGET_ROWS_PER_SEGMENT = 1;
   private static final Integer MAX_ROWS_PER_SEGMENT = null;
-  private static final Integer HISTORICAL_NULL = -1;
+  private static final Integer HISTORICAL_NULL = PartitionsSpec.HISTORICAL_NULL;
   private static final String PARTITION_DIMENSION = "a";
   private static final boolean ASSUME_GROUPED = false;
   private static final SingleDimensionPartitionsSpec SPEC = new SingleDimensionPartitionsSpec(
@@ -106,7 +106,7 @@ public class SingleDimensionPartitionsSpecTest
   {
     new Tester()
         .targetRowsPerSegment(HISTORICAL_NULL)
-        .testIllegalArgumentException("targetRowsPerSegment must be greater than 0");
+        .testIllegalArgumentException("Exactly one of targetRowsPerSegment or maxRowsPerSegment must be present");
   }
 
   @Test
@@ -146,7 +146,7 @@ public class SingleDimensionPartitionsSpecTest
   {
     new Tester()
         .maxRowsPerSegment(HISTORICAL_NULL)
-        .testIllegalArgumentException("maxRowsPerSegment must be greater than 0");
+        .testIllegalArgumentException("Exactly one of targetRowsPerSegment or maxRowsPerSegment must be present");
   }
 
   @Test
