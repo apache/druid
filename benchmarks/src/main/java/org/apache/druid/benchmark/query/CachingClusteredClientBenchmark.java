@@ -148,17 +148,20 @@ public class CachingClusteredClientBenchmark
   private static final String DATA_SOURCE = "ds";
 
   public static final ObjectMapper JSON_MAPPER;
-  @Param({"8", "32"})
+  @Param({"8", "32", "64"})
+//  @Param({"8"})
   private int numServers;
 
 
-  @Param({"0", "1", "7"})
+//  @Param({"0", "1", "3", "4", "5", "6", "7", "8"})
+  @Param({"0", "1", "4"})
   private int parallelism;
 
   @Param({"75000"})
   private int rowsPerSegment;
 
   @Param({"all", "minute"})
+//  @Param({"all"})
   private String queryGranularity;
 
   private QueryToolChestWarehouse toolChestWarehouse;
@@ -405,7 +408,7 @@ public class CachingClusteredClientBenchmark
     query = new TopNQueryBuilder()
         .dataSource(DATA_SOURCE)
         .intervals(basicSchemaIntervalSpec)
-        .dimension(new DefaultDimensionSpec("dimSequential", null))
+        .dimension(new DefaultDimensionSpec("dimZipf", null))
         .aggregators(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"))
         .granularity(Granularity.fromString(queryGranularity))
         .metric("sumLongSequential")
@@ -435,7 +438,7 @@ public class CachingClusteredClientBenchmark
         .setDataSource(DATA_SOURCE)
         .setQuerySegmentSpec(basicSchemaIntervalSpec)
         .setDimensions(
-            new DefaultDimensionSpec("dimSequentialHalfNull", null),
+            new DefaultDimensionSpec("dimZipf", null),
             new DefaultDimensionSpec("dimSequential", null)
         )
         .setAggregatorSpecs(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"))

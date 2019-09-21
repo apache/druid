@@ -42,7 +42,6 @@ import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BinaryOperator;
-import java.util.stream.Collectors;
 
 /**
  * Artisanal, locally-sourced, hand-crafted, gluten and GMO free, bespoke, small-batch parallel merge combinining sequence
@@ -95,15 +94,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   {
     final BlockingQueue<OrderedResultBatch<T>> outputQueue = new ArrayBlockingQueue<>(queueSize);
 
-    List<Yielder<OrderedResultBatch<T>>> yielders =
-        baseSequences.stream()
-                     .map(s -> OrderedResultBatch.fromSequence(s, batchSize))
-                     .filter(y -> !(y.get() == null || (y.get().isDrained() &&  y.isDone())))
-                     .collect(Collectors.toList());
-    if (yielders.size() > 0) {
+    if (baseSequences.size() > 0) {
       // 2 layer parallel merge done in fjp
       ParallelMergeCombineAction<T> finalMergeAction = new ParallelMergeCombineAction<>(
-          yielders,
+          baseSequences,
           orderingFn,
           combineFn,
           outputQueue,
@@ -206,13 +200,13 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   /**
    * This {@link RecursiveAction} is the initial task of the parallel merge-combine process, it will partition the
    * batched result yielders to do 2 layer parallel merge, spawning some number of {@link MergeCombineAction} directly
-   * for the yielders for the first layer, and spawning a single {@link FinalMergeCombineSeedAction} to wait for results
+   * for the yielders for the first layer, and spawning a single {@link BlockingQueueMergeCombineSeedAction} to wait for results
    * to be available in the 'output' {@link BlockingQueue} of the first layer to do a final merge combine of all the
    * parallel computed results.
    */
   private static class ParallelMergeCombineAction<T> extends RecursiveAction
   {
-    private final List<Yielder<OrderedResultBatch<T>>> yielders;
+    private final List<Sequence<T>> sequences;
     private final Ordering<T> orderingFn;
     private final BinaryOperator<T> combineFn;
     private final BlockingQueue<OrderedResultBatch<T>> out;
@@ -224,7 +218,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     private final long timeoutAt;
 
     private ParallelMergeCombineAction(
-        List<Yielder<OrderedResultBatch<T>>> yielders,
+        List<Sequence<T>> sequences,
         Ordering<T> orderingFn,
         BinaryOperator<T> combineFn,
         BlockingQueue<OrderedResultBatch<T>> out,
@@ -236,7 +230,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         long timeoutAt
     )
     {
-      this.yielders = yielders;
+      this.sequences = sequences;
       this.combineFn = combineFn;
       this.orderingFn = orderingFn;
       this.out = out;
@@ -255,36 +249,26 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
       // if we have a small number of sequences to merge, or computed paralellism is too low, do not run in parallel,
       // just serially perform the merge-combine with a single task
-      if (yielders.size() < 4 || parallelMergeTasks < 2) {
-        LOG.info(
+      if (sequences.size() < 4 || parallelMergeTasks < 2) {
+        LOG.debug(
             "Input sequence count: %s or available parallel merge task count: %s too small to perform parallel"
             + " merge-combine, performing serially with a single merge-combine task",
-            yielders.size(),
+            sequences.size(),
             parallelMergeTasks
         );
-        final PriorityQueue<BatchedResultsCursor<T>> mergeQueue = new PriorityQueue<>(yielders.size());
-
-        for (Yielder<OrderedResultBatch<T>> s : yielders) {
-          YielderBatchedResultsCursor<T> batchedSequenceYielder = new YielderBatchedResultsCursor<>(
-              s,
-              orderingFn
-          );
-          mergeQueue.offer(batchedSequenceYielder);
-        }
 
         QueuePusher<OrderedResultBatch<T>> resultsPusher = new QueuePusher<>(out, hasTimeout, timeoutAt);
-        MergeCombineAction<T> mergeAction = new MergeCombineAction<T>(
-            mergeQueue,
+        YielderMergeCombineSeedAction<T> mergeAction = new YielderMergeCombineSeedAction<>(
+            sequences,
             resultsPusher,
             orderingFn,
             combineFn,
-            null,
             yieldAfter,
             batchSize
         );
-        getPool().execute(mergeAction);
+        invokeAll(mergeAction);
       } else {
-        LOG.info("Spawning %s parallel merge-combine tasks", parallelMergeTasks);
+        LOG.debug("Spawning %s parallel merge-combine tasks", parallelMergeTasks);
         spawnParallelTasks(parallelMergeTasks);
       }
     }
@@ -297,7 +281,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       final int runningThreadCount = getPool().getRunningThreadCount();
       final int submissionCount = getPool().getQueuedSubmissionCount();
       final long queuedTaskCount = getPool().getQueuedTaskCount();
-      LOG.info(
+      LOG.debug(
           "processors: [%s] pool parallelism: [%s] active thread count: [%s] running thread count: [%s] submission count: [%s] queued task count: [%s]",
           numProcessors,
           poolParallelism,
@@ -311,7 +295,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       // adjust max to be no more than total pool parallelism less the number of active threads
       final int computedParallelism = Math.min(maxParallelism, poolParallelism - activeThreadCount);
       // compute total number of layer 1 'parallel' tasks, the final merge task will take the remaining slot, we need at least 2
-      final int computedOptimalParallelism = Math.min((int) Math.floor((double) yielders.size() / 2.0), computedParallelism - 1);
+      final int computedOptimalParallelism = Math.min((int) Math.floor((double) sequences.size() / 2.0), computedParallelism - 1);
       return computedOptimalParallelism;
 
 
@@ -327,38 +311,34 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       List<RecursiveAction> tasks = new ArrayList<>();
       List<BlockingQueue<OrderedResultBatch<T>>> intermediaryOutputs = new ArrayList<>(parallelMergeTasks);
 
-      List<? extends List<Yielder<OrderedResultBatch<T>>>> partitions =
-          Lists.partition(yielders, yielders.size() / parallelMergeTasks);
+      List<? extends List<Sequence<T>>> partitions =
+          Lists.partition(sequences, sequences.size() / parallelMergeTasks);
 
 
-      for (List<Yielder<OrderedResultBatch<T>>> partition : partitions) {
-        final PriorityQueue<BatchedResultsCursor<T>> mergeQueue = new PriorityQueue<>(yielders.size());
-        for (Yielder<OrderedResultBatch<T>> yielder : partition) {
-          mergeQueue.offer(new YielderBatchedResultsCursor<>(yielder, orderingFn));
-        }
+      for (List<Sequence<T>> partition : partitions) {
 
         BlockingQueue<OrderedResultBatch<T>> outputQueue = new ArrayBlockingQueue<>(queueSize);
         intermediaryOutputs.add(outputQueue);
         QueuePusher<OrderedResultBatch<T>> pusher = new QueuePusher<>(outputQueue, hasTimeout, timeoutAt);
 
-        MergeCombineAction<T> mergeAction = new MergeCombineAction<T>(
-            mergeQueue,
+        YielderMergeCombineSeedAction<T> mergeAction = new YielderMergeCombineSeedAction<T>(
+            partition,
             pusher,
             orderingFn,
             combineFn,
-            null,
             yieldAfter,
             batchSize
         );
         tasks.add(mergeAction);
       }
 
-      for (RecursiveAction task : tasks) {
-        getPool().execute(task);
-      }
+//      for (RecursiveAction task : tasks) {
+//        getPool().execute(task);
+//      }
+      invokeAll(tasks);
 
       QueuePusher<OrderedResultBatch<T>> outputPusher = new QueuePusher<>(out, hasTimeout, timeoutAt);
-      FinalMergeCombineSeedAction<T> finalMergeAction = new FinalMergeCombineSeedAction<>(
+      BlockingQueueMergeCombineSeedAction<T> finalMergeAction = new BlockingQueueMergeCombineSeedAction<>(
           intermediaryOutputs,
           outputPusher,
           orderingFn,
@@ -511,12 +491,74 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
   /**
    * This {@link RecursiveAction} waits for {@link OrderedResultBatch} to be available in a set of {@link BlockingQueue}
+   * in order to construct a set of {@link YielderBatchedResultsCursor} to feed to a {@link MergeCombineAction}
+   * which will do the actual work of merging and combining the result batches.
+   */
+  private static class YielderMergeCombineSeedAction<T> extends RecursiveAction
+  {
+    private final List<Sequence<T>> sequences;
+    private final Ordering<T> orderingFn;
+    private final BinaryOperator<T> combineFn;
+    private final QueuePusher<OrderedResultBatch<T>> outputQueue;
+    private final int yieldAfter;
+    private final int batchSize;
+
+    private YielderMergeCombineSeedAction(
+        List<Sequence<T>> sequences,
+        QueuePusher<OrderedResultBatch<T>> outputQueue,
+        Ordering<T> orderingFn,
+        BinaryOperator<T> combineFn,
+        int yieldAfter,
+        int batchSize
+    )
+    {
+      this.sequences = sequences;
+      this.orderingFn = orderingFn;
+      this.combineFn = combineFn;
+      this.outputQueue = outputQueue;
+      this.yieldAfter = yieldAfter;
+      this.batchSize = batchSize;
+    }
+
+    @Override
+    protected void compute()
+    {
+      PriorityQueue<BatchedResultsCursor<T>> cursors = new PriorityQueue<>(sequences.size());
+      for (Sequence<T> s : sequences) {
+        Yielder<OrderedResultBatch<T>> batchYielder = OrderedResultBatch.fromSequence(s, batchSize);
+        if (!(batchYielder.get() == null || (batchYielder.get().isDrained() && batchYielder.isDone()))) {
+          YielderBatchedResultsCursor<T> batchedSequenceYielder = new YielderBatchedResultsCursor<>(
+              batchYielder,
+              orderingFn
+          );
+          cursors.offer(batchedSequenceYielder);
+        }
+      }
+
+      if (cursors.isEmpty()) {
+        outputQueue.offer(new OrderedResultBatch<>());
+      } else {
+        invokeAll(new MergeCombineAction<T>(
+            cursors,
+            outputQueue,
+            orderingFn,
+            combineFn,
+            null,
+            yieldAfter,
+            batchSize
+        ));
+      }
+    }
+  }
+
+  /**
+   * This {@link RecursiveAction} waits for {@link OrderedResultBatch} to be available in a set of {@link BlockingQueue}
    * in order to construct a set of {@link BlockingQueueuBatchedResultsCursor} to feed to a {@link MergeCombineAction}
    * which will do the actual work of merging and combining the result batches. This is not needed for
    * {@link OrderedResultBatch} that are provided by a {@link Yielder} because they will have the initial result batch
    * available by virtue of translating the sequence.
    */
-  private static class FinalMergeCombineSeedAction<T> extends RecursiveAction
+  private static class BlockingQueueMergeCombineSeedAction<T> extends RecursiveAction
   {
     private final List<BlockingQueue<OrderedResultBatch<T>>> queues;
     private final Ordering<T> orderingFn;
@@ -527,7 +569,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     private final boolean hasTimeout;
     private final long timeoutAt;
 
-    private FinalMergeCombineSeedAction(
+    private BlockingQueueMergeCombineSeedAction(
         List<BlockingQueue<OrderedResultBatch<T>>> queues,
         QueuePusher<OrderedResultBatch<T>> outputQueue,
         Ordering<T> orderingFn,
@@ -559,8 +601,11 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         // a yielder starts with the first value
 
         outputCursor.initialize();
-        cursors.offer(outputCursor);
+        if (!outputCursor.isDone()) {
+          cursors.offer(outputCursor);
+        }
       }
+
 
       getPool().execute(new MergeCombineAction<T>(
           cursors,
@@ -869,7 +914,11 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     @Override
     public void initialize()
     {
-      nextBatch();
+      if (queue.isEmpty()) {
+        nextBatch();
+      } else {
+        resultBatch = queue.poll();
+      }
     }
 
     @Override
