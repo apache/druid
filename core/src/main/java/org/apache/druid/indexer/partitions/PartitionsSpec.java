@@ -74,6 +74,6 @@ public interface PartitionsSpec
   @Nullable
   static Integer resolveHistoricalNullIfNeeded(@Nullable Integer val)
   {
-    return (val == null || val == HISTORICAL_NULL) ? null : val;
+    return isEffectivelyNull(val) ? null : val;
   }
 }
