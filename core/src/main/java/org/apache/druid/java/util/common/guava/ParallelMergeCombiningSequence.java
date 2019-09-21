@@ -250,7 +250,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       // if we have a small number of sequences to merge, or computed paralellism is too low, do not run in parallel,
       // just serially perform the merge-combine with a single task
       if (sequences.size() < 4 || parallelMergeTasks < 2) {
-        LOG.debug(
+        LOG.info(
             "Input sequence count: %s or available parallel merge task count: %s too small to perform parallel"
             + " merge-combine, performing serially with a single merge-combine task",
             sequences.size(),
@@ -268,7 +268,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         );
         invokeAll(mergeAction);
       } else {
-        LOG.debug("Spawning %s parallel merge-combine tasks", parallelMergeTasks);
+        LOG.info("Spawning %s parallel merge-combine tasks for %s sequences", parallelMergeTasks, sequences.size());
         spawnParallelTasks(parallelMergeTasks);
       }
     }
@@ -281,7 +281,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       final int runningThreadCount = getPool().getRunningThreadCount();
       final int submissionCount = getPool().getQueuedSubmissionCount();
       final long queuedTaskCount = getPool().getQueuedTaskCount();
-      LOG.debug(
+      LOG.info(
           "processors: [%s] pool parallelism: [%s] active thread count: [%s] running thread count: [%s] submission count: [%s] queued task count: [%s]",
           numProcessors,
           poolParallelism,
@@ -465,7 +465,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
             1L
         );
         final int nextYieldAfter = Math.max(Ints.checkedCast(10 * (yieldAfter / elapsedMillis)), 1);
-        LOG.debug(
+        LOG.info(
             "%s yielded results ran for %s millis, next task yielding every %s operations",
             yieldAfter,
             elapsedMillis,
