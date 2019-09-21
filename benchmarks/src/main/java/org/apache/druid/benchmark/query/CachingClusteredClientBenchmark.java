@@ -149,11 +149,9 @@ public class CachingClusteredClientBenchmark
 
   public static final ObjectMapper JSON_MAPPER;
   @Param({"8", "32", "64"})
-//  @Param({"8"})
   private int numServers;
 
 
-//  @Param({"0", "1", "3", "4", "5", "6", "7", "8"})
   @Param({"0", "1", "4"})
   private int parallelism;
 
@@ -161,7 +159,6 @@ public class CachingClusteredClientBenchmark
   private int rowsPerSegment;
 
   @Param({"all", "minute"})
-//  @Param({"all"})
   private String queryGranularity;
 
   private QueryToolChestWarehouse toolChestWarehouse;
