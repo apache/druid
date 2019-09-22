@@ -179,6 +179,7 @@ final class DeadlockDetectingFailOnTimeout extends Statement
    * problem or if the thread cannot be determined.  The return value is never equal
    * to {@code mainThread}.
    */
+  @SuppressWarnings("SSBasedInspection") // Prohibit check on Thread.getState()
   private Thread getStuckThread(Thread mainThread)
   {
     List<Thread> threadsInGroup = getThreadsInGroup(mainThread.getThreadGroup());
