@@ -194,12 +194,16 @@ final class DeadlockDetectingFailOnTimeout extends Statement
     Thread stuckThread = null;
     long maxCpuTime = 0;
     for (Thread thread : threadsInGroup) {
-      if (thread.getState() == Thread.State.RUNNABLE) {
+      try {
+        thread.join();
         long threadCpuTime = cpuTime(thread);
         if (stuckThread == null || threadCpuTime > maxCpuTime) {
           stuckThread = thread;
           maxCpuTime = threadCpuTime;
         }
+      }
+      catch (InterruptedException e) {
+        e.printStackTrace();
       }
     }
     return (stuckThread == mainThread) ? null : stuckThread;
