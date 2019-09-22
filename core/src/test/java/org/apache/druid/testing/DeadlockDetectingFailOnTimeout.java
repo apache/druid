@@ -44,6 +44,7 @@ import java.util.stream.Stream;
  * This class is based on {@link org.junit.internal.runners.statements.FailOnTimeout}, additionally deadlocked
  * threads are detected.
  */
+@SuppressWarnings("SSBasedInspection") // Prohibit check on Thread.getState()
 final class DeadlockDetectingFailOnTimeout extends Statement
 {
   private final Statement originalStatement;
@@ -194,16 +195,12 @@ final class DeadlockDetectingFailOnTimeout extends Statement
     Thread stuckThread = null;
     long maxCpuTime = 0;
     for (Thread thread : threadsInGroup) {
-      try {
-        thread.join();
+      if (thread.getState() == Thread.State.RUNNABLE) {
         long threadCpuTime = cpuTime(thread);
         if (stuckThread == null || threadCpuTime > maxCpuTime) {
           stuckThread = thread;
           maxCpuTime = threadCpuTime;
         }
-      }
-      catch (InterruptedException e) {
-        e.printStackTrace();
       }
     }
     return (stuckThread == mainThread) ? null : stuckThread;
