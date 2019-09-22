@@ -44,7 +44,6 @@ import java.util.stream.Stream;
  * This class is based on {@link org.junit.internal.runners.statements.FailOnTimeout}, additionally deadlocked
  * threads are detected.
  */
-@SuppressWarnings("SSBasedInspection") // Prohibit check on Thread.getState()
 final class DeadlockDetectingFailOnTimeout extends Statement
 {
   private final Statement originalStatement;
@@ -180,6 +179,7 @@ final class DeadlockDetectingFailOnTimeout extends Statement
    * problem or if the thread cannot be determined.  The return value is never equal
    * to {@code mainThread}.
    */
+  @SuppressWarnings("SSBasedInspection") // Prohibit check on Thread.getState()
   private Thread getStuckThread(Thread mainThread)
   {
     List<Thread> threadsInGroup = getThreadsInGroup(mainThread.getThreadGroup());
