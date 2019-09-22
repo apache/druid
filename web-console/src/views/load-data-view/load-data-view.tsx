@@ -232,7 +232,7 @@ const VIEW_TITLE: Record<Step, string> = {
   partition: 'Partition',
   tuning: 'Tune',
   publish: 'Publish',
-  spec: 'Edit JSON spec',
+  spec: 'Edit spec',
   loading: 'Loading',
 };
 
@@ -2788,6 +2788,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'ioConfig.appendToExisting',
                 label: 'Append to existing',
                 type: 'boolean',
+                defaultValue: false,
                 defined: spec => !deepGet(spec, 'tuningConfig.forceGuaranteedRollup'),
                 info: (
                   <>
@@ -2809,8 +2810,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'tuningConfig.logParseExceptions',
                 label: 'Log parse exceptions',
                 type: 'boolean',
-                disabled: parallel,
                 defaultValue: false,
+                disabled: parallel,
                 info: (
                   <>
                     If true, log an error message when a parsing exception occurs, containing
