@@ -3199,7 +3199,6 @@ public final class ProtoTestEventWrapper
     return descriptor;
   }
 
-  @SuppressWarnings("SSBasedInspection")
   private static com.google.protobuf.Descriptors.FileDescriptor descriptor;
 
   static {

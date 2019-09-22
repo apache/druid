@@ -60,9 +60,9 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class PrefetchableTextFilesFirehoseFactoryTest
 {
-  @SuppressWarnings("SSBasedInspection")
   private static long FILE_SIZE = -1;
 
   private static final StringInputRowParser PARSER = new StringInputRowParser(
@@ -87,7 +87,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
   @ClassRule
   public static final TemporaryFolder TEMP_DIR = new TemporaryFolder();
-  @SuppressWarnings("SSBasedInspection")
+
   private static File TEST_DIR;
 
   @Rule

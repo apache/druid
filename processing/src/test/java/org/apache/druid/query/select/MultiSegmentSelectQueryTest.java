@@ -69,6 +69,7 @@ import java.util.Map;
 /**
  */
 @RunWith(Parameterized.class)
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class MultiSegmentSelectQueryTest
 {
   private static final Supplier<SelectQueryConfig> CONFIG_SUPPLIER = Suppliers.ofInstance(new SelectQueryConfig(true));
@@ -124,17 +125,12 @@ public class MultiSegmentSelectQueryTest
       "2011-01-12T07:00:00.000Z\tspot\thealth\t1300\t13000.0\t13000.0\t130000\tpreferred\thpreferred\t999.000000"
   };
 
-  @SuppressWarnings("SSBasedInspection")
   private static Segment segment0;
-  @SuppressWarnings("SSBasedInspection")
   private static Segment segment1;
-  @SuppressWarnings("SSBasedInspection")
   private static Segment segment_override;  // this makes segment0 split into three logical segments
 
-  @SuppressWarnings("SSBasedInspection")
   private static List<String> segmentIdentifiers;
 
-  @SuppressWarnings("SSBasedInspection")
   private static QueryRunner runner;
 
   @BeforeClass

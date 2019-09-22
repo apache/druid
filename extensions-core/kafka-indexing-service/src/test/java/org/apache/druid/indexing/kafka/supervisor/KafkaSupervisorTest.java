@@ -120,6 +120,7 @@ import java.util.TreeMap;
 import java.util.concurrent.Executor;
 
 @RunWith(Parameterized.class)
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class KafkaSupervisorTest extends EasyMockSupport
 {
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
@@ -130,18 +131,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private static final long TEST_CHAT_RETRIES = 9L;
   private static final Period TEST_HTTP_TIMEOUT = new Period("PT10S");
   private static final Period TEST_SHUTDOWN_TIMEOUT = new Period("PT80S");
-
-  @SuppressWarnings("SSBasedInspection")
   private static TestingCluster zkServer;
-  @SuppressWarnings("SSBasedInspection")
   private static TestBroker kafkaServer;
-  @SuppressWarnings("SSBasedInspection")
   private static String kafkaHost;
-  @SuppressWarnings("SSBasedInspection")
   private static DataSchema dataSchema;
-  @SuppressWarnings("SSBasedInspection")
   private static int topicPostfix;
-  @SuppressWarnings("SSBasedInspection")
   private static ZkUtils zkUtils;
 
   private final int numThreads;

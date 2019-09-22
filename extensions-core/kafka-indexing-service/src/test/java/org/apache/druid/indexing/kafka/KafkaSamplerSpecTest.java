@@ -60,6 +60,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class KafkaSamplerSpecTest
 {
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
@@ -97,9 +98,7 @@ public class KafkaSamplerSpecTest
       OBJECT_MAPPER
   );
 
-  @SuppressWarnings("SSBasedInspection")
   private static TestingCluster zkServer;
-  @SuppressWarnings("SSBasedInspection")
   private static TestBroker kafkaServer;
 
   private static List<ProducerRecord<byte[], byte[]>> generateRecords(String topic)

@@ -87,11 +87,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.Deflater;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class AsyncQueryForwardingServletTest extends BaseJettyTest
 {
-  @SuppressWarnings("SSBasedInspection")
   private static int port1;
-  @SuppressWarnings("SSBasedInspection")
   private static int port2;
 
   @Override

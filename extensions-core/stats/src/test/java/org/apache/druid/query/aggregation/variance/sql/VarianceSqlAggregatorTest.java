@@ -77,14 +77,13 @@ import org.junit.rules.TemporaryFolder;
 import java.io.IOException;
 import java.util.List;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class VarianceSqlAggregatorTest
 {
   private static final AuthenticationResult AUTHENTICATION_RESULT = CalciteTests.REGULAR_USER_AUTH_RESULT;
   private static final String DATA_SOURCE = "numfoo";
 
-  @SuppressWarnings("SSBasedInspection")
   private static QueryRunnerFactoryConglomerate conglomerate;
-  @SuppressWarnings("SSBasedInspection")
   private static Closer resourceCloser;
 
   @BeforeClass

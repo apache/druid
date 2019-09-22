@@ -71,6 +71,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class DruidSchemaTest extends CalciteTestBase
 {
   private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
@@ -87,9 +88,7 @@ public class DruidSchemaTest extends CalciteTestBase
       CalciteTests.createRow(ImmutableMap.of("t", "2001-01-03", "m1", "6.0"))
   );
 
-  @SuppressWarnings("SSBasedInspection")
   private static QueryRunnerFactoryConglomerate conglomerate;
-  @SuppressWarnings("SSBasedInspection")
   private static Closer resourceCloser;
 
   private List<ImmutableDruidServer> druidServers;

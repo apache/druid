@@ -28,11 +28,11 @@ import org.junit.Test;
 
 import java.util.Map;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class StaticMapExtractionNamespaceTest
 {
   private static final Map<String, String> MAP = ImmutableMap.<String, String>builder().put("foo", "bar").build();
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
-  @SuppressWarnings("SSBasedInspection")
   private static String MAP_STRING;
 
   @BeforeClass

@@ -50,16 +50,13 @@ import java.util.List;
 
 /**
  */
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class PooledTopNAlgorithm
     extends BaseTopNAlgorithm<int[], BufferAggregator[], PooledTopNAlgorithm.PooledTopNParams>
 {
-  @SuppressWarnings("SSBasedInspection")
   private static boolean SPECIALIZE_GENERIC_ONE_AGG_POOLED_TOPN = !Boolean.getBoolean("dontSpecializeGeneric1AggPooledTopN");
-  @SuppressWarnings("SSBasedInspection")
   private static boolean SPECIALIZE_GENERIC_TWO_AGG_POOLED_TOPN = !Boolean.getBoolean("dontSpecializeGeneric2AggPooledTopN");
-  @SuppressWarnings("SSBasedInspection")
   private static boolean SPECIALIZE_HISTORICAL_ONE_SIMPLE_DOUBLE_AGG_POOLED_TOPN = !Boolean.getBoolean("dontSpecializeHistorical1SimpleDoubleAggPooledTopN");
-  @SuppressWarnings("SSBasedInspection")
   private static boolean SPECIALIZE_HISTORICAL_SINGLE_VALUE_DIM_SELECTOR_ONE_SIMPLE_DOUBLE_AGG_POOLED_TOPN = !Boolean.getBoolean("dontSpecializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN");
 
   /**

@@ -27,14 +27,12 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.lang.reflect.Method;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 class AllocationMetricCollectors
 {
   private static final Logger LOG = new Logger(AllocationMetricCollectors.class);
-  @SuppressWarnings("SSBasedInspection")
   private static Method GET_THREAD_ALLOCATED_BYTES;
-  @SuppressWarnings("SSBasedInspection")
   private static ThreadMXBean THREAD_MX_BEAN;
-  @SuppressWarnings("SSBasedInspection")
   private static boolean INITIALIZED = false;
 
   static {

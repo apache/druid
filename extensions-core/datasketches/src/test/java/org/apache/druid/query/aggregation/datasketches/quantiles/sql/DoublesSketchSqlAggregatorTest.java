@@ -82,13 +82,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
 {
   private static final String DATA_SOURCE = "foo";
-
-  @SuppressWarnings("SSBasedInspection")
   private static QueryRunnerFactoryConglomerate conglomerate;
-  @SuppressWarnings("SSBasedInspection")
   private static Closer resourceCloser;
   private static final AuthenticationResult AUTHENTICATION_RESULT = CalciteTests.REGULAR_USER_AUTH_RESULT;
   private static final Map<String, Object> QUERY_CONTEXT_DEFAULT = ImmutableMap.of(

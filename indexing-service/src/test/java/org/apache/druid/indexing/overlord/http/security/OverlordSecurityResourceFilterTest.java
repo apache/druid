@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 @RunWith(Parameterized.class)
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
 {
   private static final Pattern WORD = Pattern.compile("\\w+");
@@ -80,9 +81,7 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
   private final Injector injector;
   private final Task noopTask = NoopTask.create();
 
-  @SuppressWarnings("SSBasedInspection")
   private static boolean mockedOnceTsqa;
-  @SuppressWarnings("SSBasedInspection")
   private static boolean mockedOnceSM;
   private TaskStorageQueryAdapter tsqa;
   private SupervisorManager supervisorManager;

@@ -44,6 +44,7 @@ import java.util.Collection;
  *
  */
 @RunWith(Parameterized.class)
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class LoadSpecTest
 {
   @Parameterized.Parameters
@@ -63,7 +64,6 @@ public class LoadSpecTest
     this.expectedId = expectedId;
   }
 
-  @SuppressWarnings("SSBasedInspection")
   private static ObjectMapper mapper;
 
   @BeforeClass

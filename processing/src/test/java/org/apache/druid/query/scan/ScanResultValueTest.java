@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class ScanResultValueTest
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
@@ -40,13 +41,9 @@ public class ScanResultValueTest
   private static final long TIME_2_LONG = 9876543210000L;
   private static final int TIME_3_INT = Integer.MAX_VALUE;
 
-  @SuppressWarnings("SSBasedInspection")
   private static ScanResultValue compactedListSRVLongTimestamp;
-  @SuppressWarnings("SSBasedInspection")
   private static ScanResultValue listSRVLongTimestamp;
-  @SuppressWarnings("SSBasedInspection")
   private static ScanResultValue compactedListSRVIntegerTimestamp;
-  @SuppressWarnings("SSBasedInspection")
   private static ScanResultValue listSRVIntegerTimestamp;
 
   @BeforeClass

@@ -196,6 +196,7 @@ import java.util.stream.Collectors;
 
 
 @RunWith(Parameterized.class)
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class KinesisIndexTaskTest extends EasyMockSupport
 {
   private static final Logger LOG = new Logger(KinesisIndexTaskTest.class);
@@ -203,14 +204,9 @@ public class KinesisIndexTaskTest extends EasyMockSupport
   private static final String STREAM = "stream";
   private static final String SHARD_ID1 = "1";
   private static final String SHARD_ID0 = "0";
-  @SuppressWarnings("SSBasedInspection")
   private static KinesisRecordSupplier recordSupplier;
-  @SuppressWarnings("SSBasedInspection")
   private static List<OrderedPartitionableRecord<String, String>> records;
-
-  @SuppressWarnings("SSBasedInspection")
   private static ServiceEmitter emitter;
-  @SuppressWarnings("SSBasedInspection")
   private static ListeningExecutorService taskExec;
 
   private final List<Task> runningTasks = new ArrayList<>();

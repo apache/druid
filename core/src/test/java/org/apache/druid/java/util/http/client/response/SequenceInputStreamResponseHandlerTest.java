@@ -38,13 +38,13 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class SequenceInputStreamResponseHandlerTest
 {
   private static final int TOTAL_BYTES = 1 << 10;
   private static final ArrayList<byte[]> BYTE_LIST = new ArrayList<>();
   private static final Random RANDOM = new Random(378134789L);
 
-  @SuppressWarnings("SSBasedInspection")
   private static byte[] allBytes = new byte[TOTAL_BYTES];
 
   @BeforeClass

@@ -113,6 +113,8 @@ public class FilterPartitionBenchmark
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER;
+  private static final String JS_FN = "function(str) { return 'super-' + str; }";
+  private static final ExtractionFn JS_EXTRACTION_FN = new JavaScriptExtractionFn(JS_FN, false, JavaScriptConfig.getEnabledInstance());
   private IncrementalIndex incIndex;
   private QueryableIndex qIndex;
   private File indexFile;
@@ -123,9 +125,6 @@ public class FilterPartitionBenchmark
   private Filter timeFilterAll;
 
   private BenchmarkSchemaInfo schemaInfo;
-
-  private static final String JS_FN = "function(str) { return 'super-' + str; }";
-  private static final ExtractionFn JS_EXTRACTION_FN = new JavaScriptExtractionFn(JS_FN, false, JavaScriptConfig.getEnabledInstance());
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();

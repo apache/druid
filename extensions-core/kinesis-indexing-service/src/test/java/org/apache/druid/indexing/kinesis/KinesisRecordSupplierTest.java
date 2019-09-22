@@ -51,6 +51,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class KinesisRecordSupplierTest extends EasyMockSupport
 {
   private static final String STREAM = "stream";
@@ -123,31 +124,18 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     }
   }
 
-  @SuppressWarnings("SSBasedInspection")
   private static int recordsPerFetch;
-  @SuppressWarnings("SSBasedInspection")
   private static AmazonKinesis kinesis;
-  @SuppressWarnings("SSBasedInspection")
   private static DescribeStreamResult describeStreamResult0;
-  @SuppressWarnings("SSBasedInspection")
   private static DescribeStreamResult describeStreamResult1;
-  @SuppressWarnings("SSBasedInspection")
   private static GetShardIteratorResult getShardIteratorResult0;
-  @SuppressWarnings("SSBasedInspection")
   private static GetShardIteratorResult getShardIteratorResult1;
-  @SuppressWarnings("SSBasedInspection")
   private static GetRecordsResult getRecordsResult0;
-  @SuppressWarnings("SSBasedInspection")
   private static GetRecordsResult getRecordsResult1;
-  @SuppressWarnings("SSBasedInspection")
   private static StreamDescription streamDescription0;
-  @SuppressWarnings("SSBasedInspection")
   private static StreamDescription streamDescription1;
-  @SuppressWarnings("SSBasedInspection")
   private static Shard shard0;
-  @SuppressWarnings("SSBasedInspection")
   private static Shard shard1;
-  @SuppressWarnings("SSBasedInspection")
   private static KinesisRecordSupplier recordSupplier;
 
   @Before

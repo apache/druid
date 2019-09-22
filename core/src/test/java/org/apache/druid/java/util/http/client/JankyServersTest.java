@@ -49,15 +49,12 @@ import java.util.concurrent.Executors;
 /**
  * Tests with a bunch of goofy not-actually-http servers.
  */
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class JankyServersTest
 {
-  @SuppressWarnings("SSBasedInspection")
   static ExecutorService exec;
-  @SuppressWarnings("SSBasedInspection")
   static ServerSocket silentServerSocket;
-  @SuppressWarnings("SSBasedInspection")
   static ServerSocket echoServerSocket;
-  @SuppressWarnings("SSBasedInspection")
   static ServerSocket closingServerSocket;
 
   @Rule

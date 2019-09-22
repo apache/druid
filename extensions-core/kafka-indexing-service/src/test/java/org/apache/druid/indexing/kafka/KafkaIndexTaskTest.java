@@ -192,21 +192,17 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class KafkaIndexTaskTest
 {
   private static final Logger log = new Logger(KafkaIndexTaskTest.class);
   private static final ObjectMapper OBJECT_MAPPER = new TestUtils().getTestObjectMapper();
   private static final long POLL_RETRY_MS = 100;
 
-  @SuppressWarnings("SSBasedInspection")
   private static TestingCluster zkServer;
-  @SuppressWarnings("SSBasedInspection")
   private static TestBroker kafkaServer;
-  @SuppressWarnings("SSBasedInspection")
   private static ServiceEmitter emitter;
-  @SuppressWarnings("SSBasedInspection")
   private static ListeningExecutorService taskExec;
-  @SuppressWarnings("SSBasedInspection")
   private static int topicPostfix;
 
   static {

@@ -100,6 +100,7 @@ import java.util.concurrent.TimeUnit;
 @Fork(value = 1)
 @Warmup(iterations = 10)
 @Measurement(iterations = 25)
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class ScanBenchmark
 {
   @Param({"2", "4"})
@@ -117,7 +118,6 @@ public class ScanBenchmark
   @Param({"1000", "99999"})
   private int limit;
 
-  @SuppressWarnings("SSBasedInspection")
   @Param({"NONE", "DESCENDING", "ASCENDING"})
   private static ScanQuery.Order ordering;
 

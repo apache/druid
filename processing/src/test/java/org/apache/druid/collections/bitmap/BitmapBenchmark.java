@@ -43,6 +43,7 @@ import java.util.Random;
  * TODO rewrite this benchmark to JMH
  */
 @BenchmarkOptions(clock = Clock.NANO_TIME, benchmarkRounds = 50)
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class BitmapBenchmark
 {
   public static final int LENGTH = 500_000;
@@ -57,31 +58,17 @@ public class BitmapBenchmark
   static final ConciseBitmapFactory CONCISE_FACTORY = new ConciseBitmapFactory();
   static final RoaringBitmapFactory ROARING_FACTORY = new RoaringBitmapFactory();
 
-  @SuppressWarnings("SSBasedInspection")
-
   static Random rand = new Random(0);
-
-  @SuppressWarnings("SSBasedInspection")
 
   static long totalConciseBytes = 0;
 
-  @SuppressWarnings("SSBasedInspection")
-
   static long totalRoaringBytes = 0;
-
-  @SuppressWarnings("SSBasedInspection")
 
   static long conciseCount = 0;
 
-  @SuppressWarnings("SSBasedInspection")
-
   static long roaringCount = 0;
 
-  @SuppressWarnings("SSBasedInspection")
-
   static long unionCount = 0;
-
-  @SuppressWarnings("SSBasedInspection")
 
   static long minIntersection = 0;
 

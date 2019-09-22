@@ -110,6 +110,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class SystemSchemaTest extends CalciteTestBase
 {
   private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
@@ -141,9 +142,7 @@ public class SystemSchemaTest extends CalciteTestBase
   private Request request;
   private DruidSchema druidSchema;
   private AuthorizerMapper authMapper;
-  @SuppressWarnings("SSBasedInspection")
   private static QueryRunnerFactoryConglomerate conglomerate;
-  @SuppressWarnings("SSBasedInspection")
   private static Closer resourceCloser;
   private MetadataSegmentView metadataView;
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;

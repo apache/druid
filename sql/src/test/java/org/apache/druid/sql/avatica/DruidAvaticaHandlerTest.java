@@ -96,6 +96,7 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class DruidAvaticaHandlerTest extends CalciteTestBase
 {
   private static final AvaticaServerConfig AVATICA_CONFIG = new AvaticaServerConfig()
@@ -115,9 +116,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   };
   private static final String DUMMY_SQL_QUERY_ID = "dummy";
 
-  @SuppressWarnings("SSBasedInspection")
   private static QueryRunnerFactoryConglomerate conglomerate;
-  @SuppressWarnings("SSBasedInspection")
   private static Closer resourceCloser;
 
   @BeforeClass

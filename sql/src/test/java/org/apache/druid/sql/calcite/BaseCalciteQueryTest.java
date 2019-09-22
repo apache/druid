@@ -96,6 +96,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class BaseCalciteQueryTest extends CalciteTestBase
 {
   public static final String NULL_VALUE = NullHandling.replaceWithDefault() ? "" : null;
@@ -216,9 +217,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final Map<String, Object> TIMESERIES_CONTEXT_LOS_ANGELES = new HashMap<>();
   public static final PagingSpec FIRST_PAGING_SPEC = new PagingSpec(null, 1000, true);
 
-  @SuppressWarnings("SSBasedInspection")
   public static QueryRunnerFactoryConglomerate conglomerate;
-  @SuppressWarnings("SSBasedInspection")
   public static Closer resourceCloser;
 
   @Rule

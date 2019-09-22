@@ -40,11 +40,10 @@ import java.util.Properties;
 /**
  *
  */
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class CacheConfigTest
 {
-  @SuppressWarnings("SSBasedInspection")
   static Injector injector;
-  @SuppressWarnings("SSBasedInspection")
   static JsonConfigurator configurator;
   JsonConfigProvider<CacheConfig> configProvider;
   private static final String PROPERTY_PREFIX = "org.apache.druid.collections.test.cache";

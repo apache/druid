@@ -32,6 +32,7 @@ import java.util.StringTokenizer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class JvmUtils
 {
   private static final boolean IS_JAVA9_COMPATIBLE = isJava9Compatible(System.getProperty("java.specification.version"));
@@ -50,7 +51,6 @@ public class JvmUtils
   }
 
   @Inject
-  @SuppressWarnings("SSBasedInspection")
   private static RuntimeInfo RUNTIME_INFO = new RuntimeInfo();
 
   public static RuntimeInfo getRuntimeInfo()

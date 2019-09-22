@@ -35,9 +35,9 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Arrays;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class IntervalDimFilterTest
 {
-  @SuppressWarnings("SSBasedInspection")
   private static ObjectMapper mapper;
 
   @Before

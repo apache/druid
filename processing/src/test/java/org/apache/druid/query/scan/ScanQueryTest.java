@@ -41,15 +41,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class ScanQueryTest
 {
-  @SuppressWarnings("SSBasedInspection")
   private static QuerySegmentSpec intervalSpec;
-  @SuppressWarnings("SSBasedInspection")
   private static ScanResultValue s1;
-  @SuppressWarnings("SSBasedInspection")
   private static ScanResultValue s2;
-  @SuppressWarnings("SSBasedInspection")
   private static ScanResultValue s3;
 
   @BeforeClass

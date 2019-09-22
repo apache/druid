@@ -64,6 +64,7 @@ import java.util.Map;
 
 /**
  */
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class SchemalessIndexTest
 {
   private static final Logger LOG = new Logger(SchemalessIndexTest.class);
@@ -90,9 +91,7 @@ public class SchemalessIndexTest
   private static final Map<Integer, Map<Integer, QueryableIndex>> MERGED_INDEXES = new HashMap<>();
   private static final List<QueryableIndex> ROW_PERSISTED_INDEXES = new ArrayList<>();
 
-  @SuppressWarnings("SSBasedInspection")
   private static IncrementalIndex index = null;
-  @SuppressWarnings("SSBasedInspection")
   private static QueryableIndex mergedIndex = null;
 
   static {

@@ -47,20 +47,17 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class KafkaRecordSupplierTest
 {
 
-  @SuppressWarnings("SSBasedInspection")
   private static String topic = "topic";
   private static final long POLL_TIMEOUT_MILLIS = 1000;
   private static final int POLL_RETRY = 5;
-  @SuppressWarnings("SSBasedInspection")
   private static int topicPosFix = 0;
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
 
-  @SuppressWarnings("SSBasedInspection")
   private static TestingCluster zkServer;
-  @SuppressWarnings("SSBasedInspection")
   private static TestBroker kafkaServer;
 
   private List<ProducerRecord<byte[], byte[]>> records;

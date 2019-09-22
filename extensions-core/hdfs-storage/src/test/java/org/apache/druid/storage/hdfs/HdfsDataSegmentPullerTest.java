@@ -48,19 +48,16 @@ import java.util.zip.GZIPOutputStream;
 /**
  *
  */
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class HdfsDataSegmentPullerTest
 {
-  @SuppressWarnings("SSBasedInspection")
   private static MiniDFSCluster miniCluster;
-  @SuppressWarnings("SSBasedInspection")
   private static File hdfsTmpDir;
-  @SuppressWarnings("SSBasedInspection")
   private static URI uriBase;
   private static final Path FILE_PATH = new Path("/tmp/foo");
   private static final Path PER_TEST_PATH = new Path("/tmp/tmp2");
   private static final String PATH_CONTENTS = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum";
   private static final byte[] PATH_BYTE_CONTENTS = StringUtils.toUtf8(PATH_CONTENTS);
-  @SuppressWarnings("SSBasedInspection")
   private static Configuration conf;
 
   @BeforeClass

@@ -131,6 +131,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class CompactionTaskTest
 {
   private static final long SEGMENT_SIZE_BYTES = 100;
@@ -150,11 +151,8 @@ public class CompactionTaskTest
   private static final Map<Interval, DimensionSchema> MIXED_TYPE_COLUMN_MAP = new HashMap<>();
   private static final IndexTuningConfig TUNING_CONFIG = createTuningConfig();
 
-  @SuppressWarnings("SSBasedInspection")
   private static Map<String, DimensionSchema> DIMENSIONS;
-  @SuppressWarnings("SSBasedInspection")
   private static List<AggregatorFactory> AGGREGATORS;
-  @SuppressWarnings("SSBasedInspection")
   private static List<DataSegment> SEGMENTS;
   private static final RowIngestionMetersFactory ROW_INGESTION_METERS_FACTORY = new TestUtils().getRowIngestionMetersFactory();
   private static final Map<DataSegment, File> SEGMENT_MAP = new HashMap<>();

@@ -76,10 +76,8 @@ public class TimeBoundaryQueryRunnerTest
   private static final QueryRunnerFactory FACTORY = new TimeBoundaryQueryRunnerFactory(
       QueryRunnerTestHelper.NOOP_QUERYWATCHER
   );
-  @SuppressWarnings("SSBasedInspection")
-  private static Segment segment0;
-  @SuppressWarnings("SSBasedInspection")
-  private static Segment segment1;
+  private Segment segment0;
+  private Segment segment1;
 
   public TimeBoundaryQueryRunnerTest(
       QueryRunner runner

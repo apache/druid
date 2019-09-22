@@ -65,6 +65,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class TestIndex
 {
   public static final String[] COLUMNS = new String[]{
@@ -163,11 +164,9 @@ public class TestIndex
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
   }
 
-  @SuppressWarnings("SSBasedInspection")
   private static Supplier<IncrementalIndex> REALTIME_INDEX = Suppliers.memoize(
       () -> makeRealtimeIndex("druid.sample.numeric.tsv")
   );
-  @SuppressWarnings("SSBasedInspection")
   private static Supplier<IncrementalIndex> NO_ROLLUP_REALTIME_INDEX = Suppliers.memoize(
       () -> makeRealtimeIndex("druid.sample.numeric.tsv", false)
   );

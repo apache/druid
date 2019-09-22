@@ -29,6 +29,7 @@ import javax.annotation.Nullable;
  * introduced as part of https://github.com/apache/incubator-druid/issues/4349 and the old druid behavior
  * where null values are replaced with default values e.g Null Strings are replaced with empty values.
  */
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class NullHandling
 {
   public static final String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
@@ -50,7 +51,6 @@ public class NullHandling
    * It does not take effect in all unit tests since we don't use Guice Injection.
    */
   @Inject
-  @SuppressWarnings("SSBasedInspection")
   private static NullValueHandlingConfig INSTANCE = new NullValueHandlingConfig(
       Boolean.valueOf(System.getProperty(NULL_HANDLING_CONFIG_STRING, "true"))
   );

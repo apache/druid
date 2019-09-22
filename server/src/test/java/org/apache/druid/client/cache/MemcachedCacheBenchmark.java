@@ -43,8 +43,7 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
 {
   public static final String NAMESPACE = "default";
   private static final String BASE_KEY = "test_2012-11-26T00:00:00.000Z_2012-11-27T00:00:00.000Z_2012-11-27T04:11:25.979Z_";
-  @SuppressWarnings("SSBasedInspection")
-  private static byte[] randBytes;
+  private byte[] randBytes;
   @Param({"localhost:11211"})
   String hosts;
   // object size in kB

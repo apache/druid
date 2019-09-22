@@ -35,6 +35,7 @@ import java.lang.reflect.Field;
 /**
  * Native I/O operations in order to minimize cache impact.
  */
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class NativeIO
 {
   private static final Logger LOG = new Logger(NativeIO.class);
@@ -59,11 +60,10 @@ public class NativeIO
 
   private static final Field FIELD;
 
-  @SuppressWarnings("SSBasedInspection")
   private static volatile boolean initialized = false;
-  @SuppressWarnings("SSBasedInspection")
+
   private static volatile boolean fadvisePossible = true;
-  @SuppressWarnings("SSBasedInspection")
+
   private static volatile boolean syncFileRangePossible = true;
 
   static {

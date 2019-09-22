@@ -57,13 +57,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class HdfsClasspathSetupTest
 {
-  @SuppressWarnings("SSBasedInspection")
   private static MiniDFSCluster miniCluster;
-  @SuppressWarnings("SSBasedInspection")
   private static File hdfsTmpDir;
-  @SuppressWarnings("SSBasedInspection")
   private static Configuration conf;
   private static final String DUMMY_JAR_STRING = "This is a test jar file.";
   private File dummyJarFile;
