@@ -19,18 +19,29 @@
 
 package org.apache.druid.indexer.partitions;
 
-import java.util.List;
-
 /**
- * PartitionsSpec based on dimension values.
+ * Various helper methods useful for checking the validity of arguments to spec constructors.
  */
-public interface DimensionBasedPartitionsSpec extends PartitionsSpec
+class Checks
 {
-  String TARGET_ROWS_PER_SEGMENT = "targetRowsPerSegment";
+  /**
+   * @return Non-null value, or first one if both are null
+   */
+  @SuppressWarnings("VariableNotUsedInsideIf")  // false positive: checked for 'null' not used inside 'if
+  static Property<Integer> checkAtMostOneNotNull(String name1, Integer value1, String name2, Integer value2)
+  {
+    final Property<Integer> property;
 
-  // Deprecated properties preserved for backward compatibility:
-  @Deprecated
-  String TARGET_PARTITION_SIZE = "targetPartitionSize";
+    if (value1 == null && value2 == null) {
+      property = new Property<>(name1, value1);
+    } else if (value1 == null) {
+      property = new Property<>(name2, value2);
+    } else if (value2 == null) {
+      property = new Property<>(name1, value1);
+    } else {
+      throw new IllegalArgumentException("At most one of " + name1 + " or " + name2 + " must be present");
+    }
 
-  List<String> getPartitionDimensions();
+    return property;
+  }
 }

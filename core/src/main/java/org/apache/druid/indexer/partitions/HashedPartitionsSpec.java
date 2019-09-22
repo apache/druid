@@ -31,6 +31,7 @@ import java.util.Objects;
 
 public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
 {
+  static final String NAME = "hashed";
   private static final Logger LOG = new Logger(HashedPartitionsSpec.class);
 
   @Nullable
@@ -41,34 +42,37 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
 
   public static HashedPartitionsSpec defaultSpec()
   {
-    return new HashedPartitionsSpec(null, null, null, null);
-  }
-
-  public HashedPartitionsSpec(
-      @Nullable Integer maxRowsPerSegment,
-      @Nullable Integer numShards,
-      @Nullable List<String> partitionDimensions
-  )
-  {
-    this(null, maxRowsPerSegment, numShards, partitionDimensions);
+    return new HashedPartitionsSpec(null, null, null, null, null);
   }
 
   @JsonCreator
   public HashedPartitionsSpec(
-      @JsonProperty("targetPartitionSize") @Deprecated @Nullable Integer targetPartitionSize,
-      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
+      @JsonProperty(DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT) @Nullable Integer targetRowsPerSegment,
       @JsonProperty("numShards") @Nullable Integer numShards,
-      @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions
+      @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
+
+      // Deprecated properties preserved for backward compatibility:
+      @Deprecated @JsonProperty(DimensionBasedPartitionsSpec.TARGET_PARTITION_SIZE) @Nullable
+          Integer targetPartitionSize,
+      @Deprecated @JsonProperty(PartitionsSpec.MAX_ROWS_PER_SEGMENT) @Nullable
+          Integer maxRowsPerSegment
   )
   {
-    Preconditions.checkArgument(
-        PartitionsSpec.isEffectivelyNull(targetPartitionSize) || PartitionsSpec.isEffectivelyNull(maxRowsPerSegment),
-        "Can't set both targetPartitionSize and maxRowsPerSegment"
+    Property<Integer> target = Checks.checkAtMostOneNotNull(
+        DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT,
+        targetRowsPerSegment,
+        DimensionBasedPartitionsSpec.TARGET_PARTITION_SIZE,
+        targetPartitionSize
     );
-    final Integer realMaxRowsPerSegment = targetPartitionSize == null ? maxRowsPerSegment : targetPartitionSize;
+
+    Preconditions.checkArgument(
+        PartitionsSpec.isEffectivelyNull(target.getValue()) || PartitionsSpec.isEffectivelyNull(maxRowsPerSegment),
+        "Can't set both " + target.getName() + " and maxRowsPerSegment"
+    );
+    final Integer realMaxRowsPerSegment = target.getValue() == null ? maxRowsPerSegment : target.getValue();
     Preconditions.checkArgument(
         PartitionsSpec.isEffectivelyNull(realMaxRowsPerSegment) || PartitionsSpec.isEffectivelyNull(numShards),
-        "Can't use maxRowsPerSegment or targetPartitionSize and numShards together"
+        "Can't use maxRowsPerSegment or " + target.getName() + " and numShards together"
     );
     // Needs to determine partitions if the _given_ numShards is null
     this.maxRowsPerSegment = getValidMaxRowsPerSegment(realMaxRowsPerSegment, numShards);
@@ -99,6 +103,16 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
       );
     }
   }
+
+  public HashedPartitionsSpec(
+      @Nullable Integer maxRowsPerSegment,
+      @Nullable Integer numShards,
+      @Nullable List<String> partitionDimensions
+  )
+  {
+    this(null, numShards, partitionDimensions, null, maxRowsPerSegment);
+  }
+
 
   private static boolean needsDeterminePartitions(@Nullable Integer numShards)
   {
