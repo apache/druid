@@ -169,7 +169,7 @@ name: Esri Geometry API for Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.0.0
+version: 2.2.0
 libraries:
   - com.esri.geometry: esri-geometry-api
 
@@ -1117,17 +1117,17 @@ name: Apache Calcite
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.17.0
+version: 1.21.0
 libraries:
   - org.apache.calcite: calcite-core
   - org.apache.calcite: calcite-linq4j
 notices:
   - calcite-core: |
       Calcite Core
-      Copyright 2012-2018 The Apache Software Foundation
+      Copyright 2012-2019 The Apache Software Foundation
   - calcite-linq4j: |
       Calcite Linq4j
-      Copyright 2012-2018 The Apache Software Foundation
+      Copyright 2012-2019 The Apache Software Foundation
 
 ---
 
@@ -3319,7 +3319,7 @@ name: Janino and Commons Compiler
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 2.7.6
+version: 3.0.11
 copyright: Arno Unkrig and TIBCO Software Inc.
 license_file_path: licenses/bin/janino.BSD3
 libraries:

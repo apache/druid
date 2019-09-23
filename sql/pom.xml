@@ -67,6 +67,17 @@
           <groupId>com.yahoo.datasketches</groupId>
           <artifactId>sketches-core</artifactId>
         </exclusion>
+        <!--
+          ~ We don't use Calcite's YAML features.
+          -->
+        <exclusion>
+          <groupId>com.fasterxml.jackson.dataformat</groupId>
+          <artifactId>jackson-dataformat-yaml</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.yaml</groupId>
+          <artifactId>snakeyaml</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
