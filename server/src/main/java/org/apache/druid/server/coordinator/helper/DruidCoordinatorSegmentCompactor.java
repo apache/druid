@@ -28,8 +28,6 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorStats;
@@ -39,7 +37,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -94,22 +91,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
           }
           if (COMPACT_TASK_TYPE.equals(response.getPayload().getType())) {
             final ClientCompactQuery compactQuery = (ClientCompactQuery) response.getPayload();
-            final Interval interval;
-
-            if (compactQuery.getSegments() != null) {
-              interval = JodaUtils.umbrellaInterval(
-                  compactQuery.getSegments()
-                              .stream()
-                              .map(DataSegment::getInterval)
-                              .sorted(Comparators.intervalsByStartThenEnd())
-                              .collect(Collectors.toList())
-              );
-            } else if (compactQuery.getInterval() != null) {
-              interval = compactQuery.getInterval();
-            } else {
-              throw new ISE("task[%s] has neither 'segments' nor 'interval'", status.getId());
-            }
-
+            final Interval interval = compactQuery.getIoConfig().getInputSpec().findInterval(status.getDataSource());
             compactTaskIntervals.computeIfAbsent(status.getDataSource(), k -> new ArrayList<>()).add(interval);
           } else {
             throw new ISE("WTH? task[%s] is not a compactTask?", status.getId());
@@ -218,7 +200,6 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
     return stats;
   }
 
-  @Nullable
   public long getRemainingSegmentSizeBytes(String dataSource)
   {
     return remainingSegmentSizeBytes.getLong(dataSource);

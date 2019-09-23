@@ -81,6 +81,7 @@ import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.SimpleQueryableIndex;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.BitmapIndex;
@@ -336,7 +337,9 @@ public class CompactionTaskTest
         appenderatorsManager
     );
     final CompactionTask task = builder
-        .interval(COMPACTION_INTERVAL)
+        .inputSpec(
+            new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS))
+        )
         .tuningConfig(createTuningConfig())
         .context(ImmutableMap.of("testKey", "testContext"))
         .build();
@@ -410,10 +413,9 @@ public class CompactionTaskTest
   {
     Assert.assertEquals(expected.getType(), actual.getType());
     Assert.assertEquals(expected.getDataSource(), actual.getDataSource());
-    Assert.assertEquals(expected.getInterval(), actual.getInterval());
-    Assert.assertEquals(expected.getSegments(), actual.getSegments());
+    Assert.assertEquals(expected.getIoConfig(), actual.getIoConfig());
     Assert.assertEquals(expected.getDimensionsSpec(), actual.getDimensionsSpec());
-    Assert.assertTrue(Arrays.equals(expected.getMetricsSpec(), actual.getMetricsSpec()));
+    Assert.assertArrayEquals(expected.getMetricsSpec(), actual.getMetricsSpec());
     Assert.assertEquals(expected.getTargetCompactionSizeBytes(), actual.getTargetCompactionSizeBytes());
     Assert.assertEquals(expected.getTuningConfig(), actual.getTuningConfig());
     Assert.assertEquals(expected.getContext(), actual.getContext());
@@ -424,7 +426,7 @@ public class CompactionTaskTest
   {
     final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
-        new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(null, TUNING_CONFIG),
         null,
         null,
@@ -484,7 +486,7 @@ public class CompactionTaskTest
     );
     final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
-        new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(null, tuningConfig),
         null,
         null,
@@ -545,7 +547,7 @@ public class CompactionTaskTest
     );
     final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
-        new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(null, tuningConfig),
         null,
         null,
@@ -606,7 +608,7 @@ public class CompactionTaskTest
     );
     final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
-        new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(null, tuningConfig),
         null,
         null,
@@ -667,7 +669,7 @@ public class CompactionTaskTest
 
     final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
-        new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(null, TUNING_CONFIG),
         customSpec,
         null,
@@ -708,7 +710,7 @@ public class CompactionTaskTest
 
     final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
-        new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(null, TUNING_CONFIG),
         null,
         customMetricsSpec,
@@ -742,7 +744,7 @@ public class CompactionTaskTest
   {
     final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
-        new SegmentProvider(SEGMENTS),
+        new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(SEGMENTS)),
         new PartitionConfigurationManager(null, TUNING_CONFIG),
         null,
         null,
@@ -782,7 +784,7 @@ public class CompactionTaskTest
     segments.remove(segments.size() / 2);
     CompactionTask.createIngestionSchema(
         toolbox,
-        new SegmentProvider(segments),
+        new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
         new PartitionConfigurationManager(null, TUNING_CONFIG),
         null,
         null,
@@ -805,7 +807,7 @@ public class CompactionTaskTest
     final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
     CompactionTask.createIngestionSchema(
         toolbox,
-        new SegmentProvider(segments),
+        new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
         new PartitionConfigurationManager(null, TUNING_CONFIG),
         null,
         null,
@@ -874,7 +876,7 @@ public class CompactionTaskTest
     expectedException.expectMessage("targetCompactionSizeBytes[6] cannot be used with");
     final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
-        new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(6L, tuningConfig),
         null,
         null,
@@ -891,7 +893,7 @@ public class CompactionTaskTest
   {
     final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
-        new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(null, TUNING_CONFIG),
         null,
         null,
@@ -926,7 +928,7 @@ public class CompactionTaskTest
   {
     final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
-        new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(null, TUNING_CONFIG),
         null,
         null,
