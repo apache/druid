@@ -40,7 +40,6 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
-import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -3375,9 +3374,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     catch (Throwable t) {
       // The root exception is not accessible by doing `getCause()`, it can only be retrieved through a chain of
       // InvocationTargetException.getTargetException() calls, hence the code below
-      Throwable t2 =  ((InvocationTargetException) t.getCause()).getTargetException();
-      Throwable t3 =  ((InvocationTargetException) t2.getCause()).getTargetException();
-      Throwable rootException =  ((InvocationTargetException) t3.getCause()).getTargetException();
+      Throwable t2 = ((InvocationTargetException) t.getCause()).getTargetException();
+      Throwable t3 = ((InvocationTargetException) t2.getCause()).getTargetException();
+      Throwable rootException = ((InvocationTargetException) t3.getCause()).getTargetException();
       Assert.assertEquals(IAE.class, rootException.getClass());
       Assert.assertEquals(
           "Illegal TIMESTAMP constant: CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL",

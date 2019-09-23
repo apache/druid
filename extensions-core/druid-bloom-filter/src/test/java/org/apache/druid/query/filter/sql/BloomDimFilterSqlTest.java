@@ -42,11 +42,11 @@ import org.apache.druid.query.expressions.BloomFilterExprMacro;
 import org.apache.druid.query.filter.BloomDimFilter;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.filter.BloomKFilterHolder;
-import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -133,6 +133,9 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   @Test
   public void testBloomFilterExprFilter() throws Exception
   {
+    // Cannot vectorize due to expression virtual columns.
+    cannotVectorize();
+
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("a-foo");
     filter.addString("-foo");
@@ -150,10 +153,19 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .filters(
-                      new ExpressionDimFilter(
-                          StringUtils.format("(bloom_filter_test(concat(\"dim2\",'-foo'),'%s') == 1)", base64),
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "concat(\"dim2\",'-foo')",
+                          ValueType.STRING,
                           createExprMacroTable()
+                      )
+                  )
+                  .filters(
+                      new BloomDimFilter(
+                          "v0",
+                          BloomKFilterHolder.fromBytes(bytes),
+                          null
                       )
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
