@@ -80,7 +80,7 @@ include "selector", "bound", "in", "like", "regex", "search", "and", "or", and "
 Other query types (like TopN, Scan, Select, and Search) ignore the "vectorize" parameter, and will execute without
 vectorization. These query types will ignore the "vectorize" parameter even if it is set to `"force"`.
 
-Vectorization is an alpha-quality feature as of Druid #{DRUIDVERSION}. We heartily welcome any feedback and testing
+Vectorization is an alpha-quality feature as of Druid {{DRUIDVERSION}}. We heartily welcome any feedback and testing
 from the community as we work to battle-test it.
 
 |property|default| description|
