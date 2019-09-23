@@ -30,6 +30,9 @@ import java.util.Objects;
  */
 public class DynamicPartitionsSpec implements PartitionsSpec
 {
+  /**
+   * Default maxTotalRows for most task types except compaction task.
+   */
   public static final long DEFAULT_MAX_TOTAL_ROWS = 20_000_000;
   static final String NAME = "dynamic";
 
@@ -63,6 +66,10 @@ public class DynamicPartitionsSpec implements PartitionsSpec
     return maxTotalRows;
   }
 
+  /**
+   * Get the given maxTotalRows or the default.
+   * The default can be different depending on the caller.
+   */
   public long getMaxTotalRowsOr(long defaultMaxTotalRows)
   {
     return PartitionsSpec.isEffectivelyNull(maxTotalRows) ? defaultMaxTotalRows : maxTotalRows;

@@ -122,7 +122,7 @@ export class CompactionDialog extends React.PureComponent<
             {
               name: 'maxRowsPerSegment',
               type: 'number',
-              defaultValue: CompactionDialog.DEFAULT_TARGET_COMPACTION_SIZE_BYTES,
+              defaultValue: CompactionDialog.DEFAULT_MAX_ROWS_PER_SEGMENT,
               info: (
                 <p>
                   The target segment size, for each segment, after compaction. The actual sizes of
