@@ -341,7 +341,7 @@ exports[`compaction dialog matches snapshot 1`] = `
             <label
               class="bp3-label"
             >
-              Target compaction size bytes
+              Max rows per segment
                
               <span
                 class="bp3-text-muted"

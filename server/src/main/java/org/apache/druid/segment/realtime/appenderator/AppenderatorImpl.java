@@ -38,8 +38,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.cache.Cache;
-import org.apache.druid.client.cache.CacheConfig;
-import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.common.guava.ThreadRenamingCallable;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
@@ -53,10 +51,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.IndexIO;
@@ -94,7 +90,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -113,6 +108,7 @@ public class AppenderatorImpl implements Appenderator
 
   private final DataSchema schema;
   private final AppenderatorConfig tuningConfig;
+  private final boolean reingestion;
   private final FireDepartmentMetrics metrics;
   private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper objectMapper;
@@ -154,50 +150,6 @@ public class AppenderatorImpl implements Appenderator
 
   private volatile Throwable persistError;
 
-  AppenderatorImpl(
-      DataSchema schema,
-      AppenderatorConfig tuningConfig,
-      FireDepartmentMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      QueryRunnerFactoryConglomerate conglomerate,
-      DataSegmentAnnouncer segmentAnnouncer,
-      ServiceEmitter emitter,
-      ExecutorService queryExecutorService,
-      IndexIO indexIO,
-      IndexMerger indexMerger,
-      Cache cache,
-      CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
-  )
-  {
-    this(
-        schema,
-        tuningConfig,
-        metrics,
-        dataSegmentPusher,
-        objectMapper,
-        segmentAnnouncer,
-        conglomerate == null ? null : new SinkQuerySegmentWalker(
-            schema.getDataSource(),
-            new VersionedIntervalTimeline<>(
-                String.CASE_INSENSITIVE_ORDER
-            ),
-            objectMapper,
-            emitter,
-            conglomerate,
-            queryExecutorService,
-            Preconditions.checkNotNull(cache, "cache"),
-            cacheConfig,
-            cachePopulatorStats
-        ),
-        indexIO,
-        indexMerger,
-        cache
-    );
-    log.info("Created Appenderator for dataSource[%s].", schema.getDataSource());
-  }
-
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
    *
@@ -210,11 +162,12 @@ public class AppenderatorImpl implements Appenderator
   AppenderatorImpl(
       DataSchema schema,
       AppenderatorConfig tuningConfig,
+      boolean reingestion,
       FireDepartmentMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       DataSegmentAnnouncer segmentAnnouncer,
-      SinkQuerySegmentWalker sinkQuerySegmentWalker,
+      @Nullable SinkQuerySegmentWalker sinkQuerySegmentWalker,
       IndexIO indexIO,
       IndexMerger indexMerger,
       Cache cache
@@ -222,6 +175,7 @@ public class AppenderatorImpl implements Appenderator
   {
     this.schema = Preconditions.checkNotNull(schema, "schema");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
+    this.reingestion = reingestion;
     this.metrics = Preconditions.checkNotNull(metrics, "metrics");
     this.dataSegmentPusher = Preconditions.checkNotNull(dataSegmentPusher, "dataSegmentPusher");
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
@@ -242,7 +196,6 @@ public class AppenderatorImpl implements Appenderator
     maxBytesTuningConfig = TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory());
     log.info("Created Appenderator for dataSource[%s].", schema.getDataSource());
   }
-
 
   @Override
   public String getDataSource()
@@ -433,6 +386,7 @@ public class AppenderatorImpl implements Appenderator
           identifier.getInterval(),
           schema,
           identifier.getShardSpec(),
+          reingestion ? tuningConfig.getPartitionsSpec() : null,
           identifier.getVersion(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
@@ -796,8 +750,7 @@ public class AppenderatorImpl implements Appenderator
           // semantics.
           () -> dataSegmentPusher.push(
               mergedFile,
-              sink.getSegment()
-                  .withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
+              sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
               useUniquePath
           ),
           exception -> exception instanceof Exception,
@@ -1104,6 +1057,7 @@ public class AppenderatorImpl implements Appenderator
             identifier.getInterval(),
             schema,
             identifier.getShardSpec(),
+            null,
             identifier.getVersion(),
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,

@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -41,6 +42,7 @@ import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -62,6 +64,8 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   private final Interval interval;
   private final DataSchema schema;
   private final ShardSpec shardSpec;
+  @Nullable
+  private final PartitionsSpec compactionPartitionsSpec;
   private final String version;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
@@ -85,22 +89,51 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       String dedupColumn
   )
   {
-    this.schema = schema;
-    this.shardSpec = shardSpec;
-    this.interval = interval;
-    this.version = version;
-    this.maxRowsInMemory = maxRowsInMemory;
-    this.maxBytesInMemory = maxBytesInMemory;
-    this.reportParseExceptions = reportParseExceptions;
-    this.dedupColumn = dedupColumn;
-
-    makeNewCurrIndex(interval.getStartMillis(), schema);
+    this(
+        interval,
+        schema,
+        shardSpec,
+        null,
+        version,
+        maxRowsInMemory,
+        maxBytesInMemory,
+        reportParseExceptions,
+        dedupColumn,
+        Collections.emptyList()
+    );
   }
 
   public Sink(
       Interval interval,
       DataSchema schema,
       ShardSpec shardSpec,
+      @Nullable PartitionsSpec compactionPartitionsSpec,
+      String version,
+      int maxRowsInMemory,
+      long maxBytesInMemory,
+      boolean reportParseExceptions,
+      String dedupColumn
+  )
+  {
+    this(
+        interval,
+        schema,
+        shardSpec,
+        compactionPartitionsSpec,
+        version,
+        maxRowsInMemory,
+        maxBytesInMemory,
+        reportParseExceptions,
+        dedupColumn,
+        Collections.emptyList()
+    );
+  }
+
+  public Sink(
+      Interval interval,
+      DataSchema schema,
+      ShardSpec shardSpec,
+      @Nullable PartitionsSpec compactionPartitionsSpec,
       String version,
       int maxRowsInMemory,
       long maxBytesInMemory,
@@ -111,6 +144,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   {
     this.schema = schema;
     this.shardSpec = shardSpec;
+    this.compactionPartitionsSpec = compactionPartitionsSpec;
     this.interval = interval;
     this.version = version;
     this.maxRowsInMemory = maxRowsInMemory;
@@ -244,6 +278,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         Collections.emptyList(),
         Lists.transform(Arrays.asList(schema.getAggregators()), AggregatorFactory::getName),
         shardSpec,
+        compactionPartitionsSpec,
         null,
         0
     );

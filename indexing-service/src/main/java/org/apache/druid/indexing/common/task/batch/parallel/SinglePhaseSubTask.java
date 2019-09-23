@@ -417,7 +417,8 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
         fireDepartmentMetrics,
         toolbox,
         dataSchema,
-        tuningConfig
+        tuningConfig,
+        firehoseFactory
     );
     boolean exceptionOccurred = false;
     try (
@@ -461,7 +462,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
           if (addResult.isOk()) {
             final boolean isPushRequired = addResult.isPushRequired(
                 partitionsSpec.getMaxRowsPerSegment(),
-                partitionsSpec.getMaxTotalRows()
+                partitionsSpec.getMaxTotalRowsOr(DynamicPartitionsSpec.DEFAULT_MAX_TOTAL_ROWS)
             );
             if (isPushRequired) {
               // There can be some segments waiting for being published even though any rows won't be added to them.

@@ -72,7 +72,7 @@ public class NewestSegmentFirstPolicyBenchmark
   private int numPartitionsPerDayInterval;
 
   @Param("800000000")
-  private long targetCompactionSizeBytes;
+  private long inputSegmentSizeBytes;
 
   @Param("1000000")
   private long segmentSizeBytes;
@@ -94,8 +94,7 @@ public class NewestSegmentFirstPolicyBenchmark
           new DataSourceCompactionConfig(
               dataSource,
               0,
-              targetCompactionSizeBytes,
-              targetCompactionSizeBytes,
+              inputSegmentSizeBytes,
               null,
               null,
               null,

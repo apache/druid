@@ -23,6 +23,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -45,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -84,7 +87,11 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSource);
 
       if (config != null && !timeline.isEmpty()) {
-        final List<Interval> searchIntervals = findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest(), skipIntervals.get(dataSource));
+        final List<Interval> searchIntervals = findInitialSearchInterval(
+            timeline,
+            config.getSkipOffsetFromLatest(),
+            skipIntervals.get(dataSource)
+        );
         if (!searchIntervals.isEmpty()) {
           timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals));
         }
@@ -175,14 +182,14 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         config
     );
 
-    if (segmentsToCompact.getNumSegments() > 1) {
+    if (!segmentsToCompact.isEmpty()) {
       queue.add(new QueueEntry(segmentsToCompact.segments));
     }
   }
 
   /**
    * Iterates the given {@link VersionedIntervalTimeline}. Only compactible {@link TimelineObjectHolder}s are returned,
-   * which means the holder always has at least two {@link DataSegment}s.
+   * which means the holder always has at least one {@link DataSegment}.
    */
   private static class CompactibleTimelineObjectHolderCursor implements Iterator<List<DataSegment>>
   {
@@ -201,7 +208,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
               .filter(holder -> {
                 final List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holder.getObject().iterator());
                 final long partitionBytes = chunks.stream().mapToLong(chunk -> chunk.getObject().getSize()).sum();
-                return chunks.size() > 1
+                return chunks.size() > 0
                        && partitionBytes > 0
                        && interval.contains(chunks.get(0).getObject().getInterval());
               })
@@ -229,14 +236,57 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     }
   }
 
+  private static boolean needsCompaction(DataSourceCompactionConfig config, SegmentsToCompact candidates)
+  {
+    Preconditions.checkState(!candidates.isEmpty(), "Empty candidates");
+    final int maxRowsPerSegment = config.getMaxRowsPerSegment() == null
+                                  ? PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT
+                                  : config.getMaxRowsPerSegment();
+    @Nullable Long maxTotalRows = config.getTuningConfig() == null
+                                        ? null
+                                        : config.getTuningConfig().getMaxTotalRows();
+    maxTotalRows = maxTotalRows == null ? Long.MAX_VALUE : maxTotalRows;
+
+    final PartitionsSpec segmentPartitionsSpec = candidates.segments.get(0).getCompactionPartitionsSpec();
+    if (!(segmentPartitionsSpec instanceof DynamicPartitionsSpec)) {
+      log.info(
+          "Candidate segment[%s] is not compacted yet or was compacted with a non dynamic partitions spec."
+          + " Needs compaction.",
+          candidates.segments.get(0)
+      );
+      return true;
+    }
+    final DynamicPartitionsSpec dynamicPartitionsSpec = (DynamicPartitionsSpec) segmentPartitionsSpec;
+    final boolean allCandidatesHaveSameCompactionPartitionsSpec = candidates
+        .segments
+        .stream()
+        .allMatch(segment -> dynamicPartitionsSpec.equals(segment.getCompactionPartitionsSpec()));
+
+    if (allCandidatesHaveSameCompactionPartitionsSpec) {
+      if (!Objects.equals(maxRowsPerSegment, dynamicPartitionsSpec.getMaxRowsPerSegment())
+          || !Objects.equals(maxTotalRows, dynamicPartitionsSpec.getMaxTotalRows())) {
+        log.info(
+            "Configured maxRowsPerSegment[%s] and maxTotalRows[%s] are differenet from "
+            + "the partitionsSpec[%s] of segments. Needs compaction.",
+            maxRowsPerSegment,
+            maxTotalRows,
+            dynamicPartitionsSpec
+        );
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      log.info("Candidates[%s] were compacted with different partitions spec. Needs compaction.", candidates.segments);
+      return true;
+    }
+  }
+
   /**
    * Find segments to compact together for the given intervalToSearch. It progressively searches the given
    * intervalToSearch in time order (latest first). The timeline lookup duration is one day. It means, the timeline is
    * looked up for the last one day of the given intervalToSearch, and the next day is searched again if the size of
    * found segments are not enough to compact. This is repeated until enough amount of segments are found.
-   *
-   * @param compactibleTimelineObjectHolderCursor timeline iterator
-   * @param config           compaction config
    *
    * @return segments to compact
    */
@@ -246,58 +296,47 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   )
   {
     final long inputSegmentSize = config.getInputSegmentSizeBytes();
-    final @Nullable Long targetCompactionSizeBytes = config.getTargetCompactionSizeBytes();
     final int maxNumSegmentsToCompact = config.getMaxNumSegmentsToCompact();
 
-    // Finds segments to compact together while iterating timeline from latest to oldest
     while (compactibleTimelineObjectHolderCursor.hasNext()) {
       final SegmentsToCompact candidates = new SegmentsToCompact(compactibleTimelineObjectHolderCursor.next());
-      final boolean isCompactibleSize = candidates.getTotalSize() <= inputSegmentSize;
-      final boolean isCompactibleNum = candidates.getNumSegments() <= maxNumSegmentsToCompact;
-      final boolean needsCompaction = SegmentCompactorUtil.needsCompaction(
-          targetCompactionSizeBytes,
-          candidates.segments
-      );
 
-      if (isCompactibleSize && isCompactibleNum && needsCompaction) {
-        return candidates;
+      if (candidates.getNumSegments() > 0) {
+        final boolean isCompactibleSize = candidates.getTotalSize() <= inputSegmentSize;
+        final boolean isCompactibleNum = candidates.getNumSegments() <= maxNumSegmentsToCompact;
+        final boolean needsCompaction = needsCompaction(config, candidates);
+
+        if (isCompactibleSize && isCompactibleNum && needsCompaction) {
+          return candidates;
+        } else {
+          if (!isCompactibleSize) {
+            log.warn(
+                "total segment size[%d] for datasource[%s] and interval[%s] is larger than inputSegmentSize[%d]."
+                + " Continue to the next interval.",
+                candidates.getTotalSize(),
+                candidates.segments.get(0).getDataSource(),
+                candidates.segments.get(0).getInterval(),
+                inputSegmentSize
+            );
+          }
+          if (!isCompactibleNum) {
+            log.warn(
+                "Number of segments[%d] for datasource[%s] and interval[%s] is larger than "
+                + "maxNumSegmentsToCompact[%d]. If you see lots of shards are being skipped due to too many "
+                + "segments, consider increasing 'numTargetCompactionSegments' and "
+                + "'druid.indexer.runner.maxZnodeBytes'. Continue to the next interval.",
+                candidates.getNumSegments(),
+                candidates.segments.get(0).getDataSource(),
+                candidates.segments.get(0).getInterval(),
+                maxNumSegmentsToCompact
+            );
+          }
+        }
       } else {
-        if (!isCompactibleSize) {
-          log.warn(
-              "total segment size[%d] for datasource[%s] and interval[%s] is larger than inputSegmentSize[%d]."
-              + " Continue to the next interval.",
-              candidates.getTotalSize(),
-              candidates.segments.get(0).getDataSource(),
-              candidates.segments.get(0).getInterval(),
-              inputSegmentSize
-          );
-        }
-        if (!isCompactibleNum) {
-          log.warn(
-              "Number of segments[%d] for datasource[%s] and interval[%s] is larger than "
-              + "maxNumSegmentsToCompact[%d]. If you see lots of shards are being skipped due to too many "
-              + "segments, consider increasing 'numTargetCompactionSegments' and "
-              + "'druid.indexer.runner.maxZnodeBytes'. Continue to the next interval.",
-              candidates.getNumSegments(),
-              candidates.segments.get(0).getDataSource(),
-              candidates.segments.get(0).getInterval(),
-              maxNumSegmentsToCompact
-          );
-        }
-        if (!needsCompaction) {
-          log.warn(
-              "Size of most of segments[%s] is larger than targetCompactionSizeBytes[%s] "
-              + "for datasource[%s] and interval[%s]. Skipping compaction for this interval.",
-              candidates.segments.stream().map(DataSegment::getSize).collect(Collectors.toList()),
-              targetCompactionSizeBytes,
-              candidates.segments.get(0).getDataSource(),
-              candidates.segments.get(0).getInterval()
-          );
-        }
+        throw new ISE("No segment is found?");
       }
     }
-
-    // Return an empty set if nothing is found
+    log.info("All segments look good! Nothing to compact");
     return new SegmentsToCompact();
   }
 
@@ -470,6 +509,11 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     {
       this.segments = segments;
       this.totalSize = segments.stream().mapToLong(DataSegment::getSize).sum();
+    }
+
+    private boolean isEmpty()
+    {
+      return segments.isEmpty();
     }
 
     private int getNumSegments()

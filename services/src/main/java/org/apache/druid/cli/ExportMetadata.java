@@ -43,6 +43,7 @@ import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegment.PruneSpecs;
 
 import javax.annotation.Nullable;
 import javax.xml.bind.DatatypeConverter;
@@ -190,7 +191,7 @@ public class ExportMetadata extends GuiceRunnable
   {
     InjectableValues.Std injectableValues = new InjectableValues.Std();
     injectableValues.addValue(ObjectMapper.class, JSON_MAPPER);
-    injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
+    injectableValues.addValue(PruneSpecs.class, PruneSpecs.DEFAULT);
     JSON_MAPPER.setInjectableValues(injectableValues);
 
     if (hadoopStorageDirectory != null && newLocalPath != null) {

@@ -26,9 +26,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.TestObjectMapper;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.jackson.CommaListJoinDeserializer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.timeline.DataSegment.PruneSpecs;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
@@ -50,7 +52,7 @@ public class SegmentWithOvershadowedStatusTest
   public void setUp()
   {
     InjectableValues.Std injectableValues = new InjectableValues.Std();
-    injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
+    injectableValues.addValue(PruneSpecs.class, PruneSpecs.DEFAULT);
     MAPPER.setInjectableValues(injectableValues);
   }
 
@@ -68,6 +70,7 @@ public class SegmentWithOvershadowedStatusTest
         Arrays.asList("dim1", "dim2"),
         Arrays.asList("met1", "met2"),
         NoneShardSpec.instance(),
+        null,
         TEST_VERSION,
         1
     );
@@ -79,7 +82,7 @@ public class SegmentWithOvershadowedStatusTest
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(11, objectMap.size());
+    Assert.assertEquals(12, objectMap.size());
     Assert.assertEquals("something", objectMap.get("dataSource"));
     Assert.assertEquals(interval.toString(), objectMap.get("interval"));
     Assert.assertEquals("1", objectMap.get("version"));
@@ -133,6 +136,7 @@ class TestSegmentWithOvershadowedStatus extends DataSegment
       @Nullable
           List<String> metrics,
       @JsonProperty("shardSpec") @Nullable ShardSpec shardSpec,
+      @JsonProperty("compactionPartitionsSpec") @Nullable PartitionsSpec compactionPartitionsSpec,
       @JsonProperty("binaryVersion") Integer binaryVersion,
       @JsonProperty("size") long size,
       @JsonProperty("overshadowed") boolean overshadowed
@@ -146,6 +150,7 @@ class TestSegmentWithOvershadowedStatus extends DataSegment
         dimensions,
         metrics,
         shardSpec,
+        compactionPartitionsSpec,
         binaryVersion,
         size
     );

@@ -45,7 +45,7 @@ import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegment.PruneSpecs;
 
 import java.util.concurrent.TimeUnit;
 
@@ -87,7 +87,7 @@ public class TestUtils
             .addValue(AuthConfig.class, new AuthConfig())
             .addValue(AuthorizerMapper.class, null)
             .addValue(RowIngestionMetersFactory.class, rowIngestionMetersFactory)
-            .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT)
+            .addValue(PruneSpecs.class, PruneSpecs.DEFAULT)
             .addValue(IndexingServiceClient.class, new NoopIndexingServiceClient())
             .addValue(AuthorizerMapper.class, new AuthorizerMapper(ImmutableMap.of()))
             .addValue(AppenderatorsManager.class, new TestAppenderatorsManager())

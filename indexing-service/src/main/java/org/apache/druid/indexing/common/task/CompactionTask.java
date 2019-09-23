@@ -42,7 +42,6 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
-import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -56,7 +55,6 @@ import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -78,7 +76,6 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
-import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
@@ -130,8 +127,6 @@ public class CompactionTask extends AbstractBatchIndexTask
   @Nullable
   private final Granularity segmentGranularity;
   @Nullable
-  private final Long targetCompactionSizeBytes;
-  @Nullable
   private final IndexTuningConfig tuningConfig;
   private final ObjectMapper jsonMapper;
   @JsonIgnore
@@ -182,7 +177,6 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JsonProperty("dimensionsSpec") @Nullable final DimensionsSpec dimensionsSpec,
       @JsonProperty("metricsSpec") @Nullable final AggregatorFactory[] metricsSpec,
       @JsonProperty("segmentGranularity") @Nullable final Granularity segmentGranularity,
-      @JsonProperty("targetCompactionSizeBytes") @Nullable final Long targetCompactionSizeBytes,
       @JsonProperty("tuningConfig") @Nullable final IndexTuningConfig tuningConfig,
       @JsonProperty("context") @Nullable final Map<String, Object> context,
       @JacksonInject ObjectMapper jsonMapper,
@@ -208,11 +202,10 @@ public class CompactionTask extends AbstractBatchIndexTask
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
     this.metricsSpec = metricsSpec;
     this.segmentGranularity = segmentGranularity;
-    this.targetCompactionSizeBytes = targetCompactionSizeBytes;
     this.tuningConfig = tuningConfig;
     this.jsonMapper = jsonMapper;
     this.segmentProvider = segments == null ? new SegmentProvider(dataSource, interval) : new SegmentProvider(segments);
-    this.partitionConfigurationManager = new PartitionConfigurationManager(targetCompactionSizeBytes, tuningConfig);
+    this.partitionConfigurationManager = new PartitionConfigurationManager(tuningConfig);
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = chatHandlerProvider;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
@@ -254,13 +247,6 @@ public class CompactionTask extends AbstractBatchIndexTask
   public Granularity getSegmentGranularity()
   {
     return segmentGranularity;
-  }
-
-  @Nullable
-  @JsonProperty
-  public Long getTargetCompactionSizeBytes()
-  {
-    return targetCompactionSizeBytes;
   }
 
   @Nullable
@@ -431,9 +417,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         toolbox.getIndexIO()
     );
 
-    final IndexTuningConfig compactionTuningConfig = partitionConfigurationManager.computeTuningConfig(
-        queryableIndexAndSegments
-    );
+    final IndexTuningConfig compactionTuningConfig = partitionConfigurationManager.computeTuningConfig();
 
     if (segmentGranularity == null) {
       // original granularity
@@ -831,111 +815,33 @@ public class CompactionTask extends AbstractBatchIndexTask
   static class PartitionConfigurationManager
   {
     @Nullable
-    private final Long targetCompactionSizeBytes;
-    @Nullable
     private final IndexTuningConfig tuningConfig;
 
-    PartitionConfigurationManager(@Nullable Long targetCompactionSizeBytes, @Nullable IndexTuningConfig tuningConfig)
+    PartitionConfigurationManager(@Nullable IndexTuningConfig tuningConfig)
     {
-      this.targetCompactionSizeBytes = getValidTargetCompactionSizeBytes(targetCompactionSizeBytes, tuningConfig);
       this.tuningConfig = tuningConfig;
     }
 
     @Nullable
-    IndexTuningConfig computeTuningConfig(List<Pair<QueryableIndex, DataSegment>> queryableIndexAndSegments)
+    IndexTuningConfig computeTuningConfig()
     {
-      if (!hasPartitionConfig(tuningConfig)) {
-        final long nonNullTargetCompactionSizeBytes = Preconditions.checkNotNull(
-            targetCompactionSizeBytes,
-            "targetCompactionSizeBytes"
-        );
-        // Find IndexTuningConfig.maxRowsPerSegment which is the number of rows per segment.
-        // Assume that the segment size is proportional to the number of rows. We can improve this later.
-        final long totalNumRows = queryableIndexAndSegments
-            .stream()
-            .mapToLong(queryableIndexAndDataSegment -> queryableIndexAndDataSegment.lhs.getNumRows())
-            .sum();
-        final long totalSizeBytes = queryableIndexAndSegments
-            .stream()
-            .mapToLong(queryableIndexAndDataSegment -> queryableIndexAndDataSegment.rhs.getSize())
-            .sum();
-
-        if (totalSizeBytes == 0L) {
-          throw new ISE("Total input segment size is 0 byte");
-        }
-
-        final double avgRowsPerByte = totalNumRows / (double) totalSizeBytes;
-        final long maxRowsPerSegmentLong = Math.round(avgRowsPerByte * nonNullTargetCompactionSizeBytes);
-        final int maxRowsPerSegment = Numbers.toIntExact(
-            maxRowsPerSegmentLong,
-            StringUtils.format(
-                "Estimated maxRowsPerSegment[%s] is out of integer value range. "
-                + "Please consider reducing targetCompactionSizeBytes[%s].",
-                maxRowsPerSegmentLong,
-                targetCompactionSizeBytes
+      // Setting maxTotalRows to Long.MAX_VALUE to respect the computed maxRowsPerSegment.
+      // If this is set to something too small, compactionTask can generate small segments
+      // which need to be compacted again, which in turn making auto compaction stuck in the same interval.
+      IndexTuningConfig newTuningConfig = tuningConfig == null
+                                          ? IndexTuningConfig.createDefault()
+                                          : tuningConfig;
+      newTuningConfig = newTuningConfig.withPartitionsSpec(newTuningConfig.getGivenOrDefaultPartitionsSpec());
+      if (newTuningConfig.getPartitionsSpec() instanceof DynamicPartitionsSpec) {
+        final DynamicPartitionsSpec dynamicPartitionsSpec = (DynamicPartitionsSpec) newTuningConfig.getPartitionsSpec();
+        return newTuningConfig.withPartitionsSpec(
+            new DynamicPartitionsSpec(
+                dynamicPartitionsSpec.getMaxRowsPerSegment(),
+                dynamicPartitionsSpec.getMaxTotalRowsOr(Long.MAX_VALUE)
             )
         );
-        Preconditions.checkState(maxRowsPerSegment > 0, "Negative maxRowsPerSegment[%s]", maxRowsPerSegment);
-
-        log.info(
-            "Estimated maxRowsPerSegment[%d] = avgRowsPerByte[%f] * targetCompactionSizeBytes[%d]",
-            maxRowsPerSegment,
-            avgRowsPerByte,
-            nonNullTargetCompactionSizeBytes
-        );
-        // Setting maxTotalRows to Long.MAX_VALUE to respect the computed maxRowsPerSegment.
-        // If this is set to something too small, compactionTask can generate small segments
-        // which need to be compacted again, which in turn making auto compaction stuck in the same interval.
-        final IndexTuningConfig newTuningConfig = tuningConfig == null
-                                                       ? IndexTuningConfig.createDefault()
-                                                       : tuningConfig;
-        if (newTuningConfig.isForceGuaranteedRollup()) {
-          return newTuningConfig.withPartitionsSpec(new HashedPartitionsSpec(maxRowsPerSegment, null, null));
-        } else {
-          return newTuningConfig.withPartitionsSpec(new DynamicPartitionsSpec(maxRowsPerSegment, Long.MAX_VALUE));
-        }
       } else {
-        return tuningConfig;
-      }
-    }
-
-    /**
-     * Check the validity of {@link #targetCompactionSizeBytes} and return a valid value. Note that
-     * targetCompactionSizeBytes cannot be used with {@link IndexTuningConfig#getPartitionsSpec} together.
-     * {@link #hasPartitionConfig} checks one of those configs is set.
-     * <p>
-     * This throws an {@link IllegalArgumentException} if targetCompactionSizeBytes is set and hasPartitionConfig
-     * returns true. If targetCompactionSizeBytes is not set, this returns null or
-     * {@link DataSourceCompactionConfig#DEFAULT_TARGET_COMPACTION_SIZE_BYTES} according to the result of
-     * hasPartitionConfig.
-     */
-    @Nullable
-    private static Long getValidTargetCompactionSizeBytes(
-        @Nullable Long targetCompactionSizeBytes,
-        @Nullable IndexTuningConfig tuningConfig
-    )
-    {
-      if (targetCompactionSizeBytes != null && tuningConfig != null) {
-        Preconditions.checkArgument(
-            !hasPartitionConfig(tuningConfig),
-            "targetCompactionSizeBytes[%s] cannot be used with partitionsSpec[%s]",
-            targetCompactionSizeBytes,
-            tuningConfig.getPartitionsSpec()
-        );
-        return targetCompactionSizeBytes;
-      } else {
-        return hasPartitionConfig(tuningConfig)
-               ? null
-               : DataSourceCompactionConfig.DEFAULT_TARGET_COMPACTION_SIZE_BYTES;
-      }
-    }
-
-    private static boolean hasPartitionConfig(@Nullable IndexTuningConfig tuningConfig)
-    {
-      if (tuningConfig != null) {
-        return tuningConfig.getPartitionsSpec() != null;
-      } else {
-        return false;
+        return newTuningConfig;
       }
     }
   }
@@ -962,8 +868,6 @@ public class CompactionTask extends AbstractBatchIndexTask
     private AggregatorFactory[] metricsSpec;
     @Nullable
     private Granularity segmentGranularity;
-    @Nullable
-    private Long targetCompactionSizeBytes;
     @Nullable
     private IndexTuningConfig tuningConfig;
     @Nullable
@@ -1022,12 +926,6 @@ public class CompactionTask extends AbstractBatchIndexTask
       return this;
     }
 
-    public Builder targetCompactionSizeBytes(long targetCompactionSizeBytes)
-    {
-      this.targetCompactionSizeBytes = targetCompactionSizeBytes;
-      return this;
-    }
-
     public Builder tuningConfig(IndexTuningConfig tuningConfig)
     {
       this.tuningConfig = tuningConfig;
@@ -1052,7 +950,6 @@ public class CompactionTask extends AbstractBatchIndexTask
           dimensionsSpec,
           metricsSpec,
           segmentGranularity,
-          targetCompactionSizeBytes,
           tuningConfig,
           context,
           jsonMapper,

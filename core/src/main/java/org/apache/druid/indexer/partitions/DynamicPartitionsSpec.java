@@ -34,7 +34,8 @@ public class DynamicPartitionsSpec implements PartitionsSpec
   static final String NAME = "dynamic";
 
   private final int maxRowsPerSegment;
-  private final long maxTotalRows;
+  @Nullable
+  private final Long maxTotalRows;
 
   @JsonCreator
   public DynamicPartitionsSpec(
@@ -45,7 +46,7 @@ public class DynamicPartitionsSpec implements PartitionsSpec
     this.maxRowsPerSegment = PartitionsSpec.isEffectivelyNull(maxRowsPerSegment)
                              ? DEFAULT_MAX_ROWS_PER_SEGMENT
                              : maxRowsPerSegment;
-    this.maxTotalRows = PartitionsSpec.isEffectivelyNull(maxTotalRows) ? DEFAULT_MAX_TOTAL_ROWS : maxTotalRows;
+    this.maxTotalRows = maxTotalRows;
   }
 
   @Override
@@ -55,10 +56,16 @@ public class DynamicPartitionsSpec implements PartitionsSpec
     return maxRowsPerSegment;
   }
 
+  @Nullable
   @JsonProperty
-  public long getMaxTotalRows()
+  public Long getMaxTotalRows()
   {
     return maxTotalRows;
+  }
+
+  public long getMaxTotalRowsOr(long defaultMaxTotalRows)
+  {
+    return PartitionsSpec.isEffectivelyNull(maxTotalRows) ? defaultMaxTotalRows : maxTotalRows;
   }
 
   @Override
@@ -78,7 +85,7 @@ public class DynamicPartitionsSpec implements PartitionsSpec
     }
     DynamicPartitionsSpec that = (DynamicPartitionsSpec) o;
     return maxRowsPerSegment == that.maxRowsPerSegment &&
-           maxTotalRows == that.maxTotalRows;
+           Objects.equals(maxTotalRows, that.maxTotalRows);
   }
 
   @Override

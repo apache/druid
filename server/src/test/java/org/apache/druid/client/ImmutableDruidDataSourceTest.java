@@ -28,7 +28,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.test.utils.ImmutableDruidDataSourceTestUtils;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegment.PruneLoadSpecHolder;
+import org.apache.druid.timeline.DataSegment.PruneSpecs;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -48,7 +48,7 @@ public class ImmutableDruidDataSourceTest
     final ImmutableDruidDataSource dataSource = getImmutableDruidDataSource(segment);
 
     final ObjectMapper objectMapper = new DefaultObjectMapper()
-        .setInjectableValues(new Std().addValue(PruneLoadSpecHolder.class, PruneLoadSpecHolder.DEFAULT));
+        .setInjectableValues(new Std().addValue(PruneSpecs.class, PruneSpecs.DEFAULT));
     final String json = objectMapper.writeValueAsString(dataSource);
 
     ImmutableDruidDataSourceTestUtils.assertEquals(dataSource, objectMapper.readValue(json,
@@ -84,16 +84,17 @@ public class ImmutableDruidDataSourceTest
   private DataSegment getTestSegment()
   {
     return new DataSegment(
-      "test",
-      Intervals.of("2017/2018"),
-      "version",
-      null,
-      ImmutableList.of("dim1", "dim2"),
-      ImmutableList.of("met1", "met2"),
-      null,
-      1,
-      100L,
-      PruneLoadSpecHolder.DEFAULT
+        "test",
+        Intervals.of("2017/2018"),
+        "version",
+        null,
+        ImmutableList.of("dim1", "dim2"),
+        ImmutableList.of("met1", "met2"),
+        null,
+        null,
+        1,
+        100L,
+        PruneSpecs.DEFAULT
     );
   }
 

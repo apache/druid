@@ -21,7 +21,6 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import org.apache.druid.indexing.kafka.test.TestModifiedKafkaIndexTaskTuningConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -63,7 +62,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertNotNull(config.getBasePersistDirectory());
     Assert.assertEquals(1000000, config.getMaxRowsInMemory());
     Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
-    Assert.assertEquals(DynamicPartitionsSpec.DEFAULT_MAX_TOTAL_ROWS, config.getMaxTotalRows().longValue());
+    Assert.assertNull(config.getMaxTotalRows());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
@@ -249,29 +248,5 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(base.isLogParseExceptions(), deserialized.isLogParseExceptions());
     Assert.assertEquals(base.getMaxParseExceptions(), deserialized.getMaxParseExceptions());
     Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
-  }
-
-  private static KafkaIndexTaskTuningConfig copy(KafkaIndexTaskTuningConfig config)
-  {
-    return new KafkaIndexTaskTuningConfig(
-        config.getMaxRowsInMemory(),
-        config.getMaxBytesInMemory(),
-        config.getMaxRowsPerSegment(),
-        config.getMaxTotalRows(),
-        config.getIntermediatePersistPeriod(),
-        config.getBasePersistDirectory(),
-        0,
-        config.getIndexSpec(),
-        config.getIndexSpecForIntermediatePersists(),
-        true,
-        config.isReportParseExceptions(),
-        config.getHandoffConditionTimeout(),
-        config.isResetOffsetAutomatically(),
-        config.getSegmentWriteOutMediumFactory(),
-        config.getIntermediateHandoffPeriod(),
-        config.isLogParseExceptions(),
-        config.getMaxParseExceptions(),
-        config.getMaxSavedParseExceptions()
-    );
   }
 }

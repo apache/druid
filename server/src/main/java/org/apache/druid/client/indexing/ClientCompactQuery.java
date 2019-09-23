@@ -38,8 +38,6 @@ public class ClientCompactQuery implements ClientQuery
   private final String dataSource;
   private final List<DataSegment> segments;
   private final Interval interval;
-  @Nullable
-  private final Long targetCompactionSizeBytes;
   private final ClientCompactQueryTuningConfig tuningConfig;
   private final Map<String, Object> context;
 
@@ -48,7 +46,6 @@ public class ClientCompactQuery implements ClientQuery
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") @Nullable final Interval interval,
       @JsonProperty("segments") @Nullable final List<DataSegment> segments,
-      @JsonProperty("targetCompactionSizeBytes") @Nullable Long targetCompactionSizeBytes,
       @JsonProperty("tuningConfig") ClientCompactQueryTuningConfig tuningConfig,
       @JsonProperty("context") Map<String, Object> context
   )
@@ -56,7 +53,6 @@ public class ClientCompactQuery implements ClientQuery
     this.dataSource = dataSource;
     this.segments = segments;
     this.interval = interval;
-    this.targetCompactionSizeBytes = targetCompactionSizeBytes;
     this.tuningConfig = tuningConfig;
     this.context = context;
   }
@@ -88,13 +84,6 @@ public class ClientCompactQuery implements ClientQuery
   }
 
   @JsonProperty
-  @Nullable
-  public Long getTargetCompactionSizeBytes()
-  {
-    return targetCompactionSizeBytes;
-  }
-
-  @JsonProperty
   public ClientCompactQueryTuningConfig getTuningConfig()
   {
     return tuningConfig;
@@ -119,7 +108,6 @@ public class ClientCompactQuery implements ClientQuery
     return Objects.equals(dataSource, that.dataSource) &&
            Objects.equals(segments, that.segments) &&
            Objects.equals(interval, that.interval) &&
-           Objects.equals(targetCompactionSizeBytes, that.targetCompactionSizeBytes) &&
            Objects.equals(tuningConfig, that.tuningConfig) &&
            Objects.equals(context, that.context);
   }
@@ -131,7 +119,6 @@ public class ClientCompactQuery implements ClientQuery
         dataSource,
         segments,
         interval,
-        targetCompactionSizeBytes,
         tuningConfig,
         context
     );
@@ -144,7 +131,6 @@ public class ClientCompactQuery implements ClientQuery
            "dataSource='" + dataSource + '\'' +
            ", segments=" + segments +
            ", interval=" + interval +
-           ", targetCompactionSizeBytes=" + targetCompactionSizeBytes +
            ", tuningConfig=" + tuningConfig +
            ", context=" + context +
            '}';

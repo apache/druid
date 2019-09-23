@@ -53,6 +53,7 @@ import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegment.PruneSpecs;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -178,9 +179,10 @@ public class DruidSchemaTest extends CalciteTestBase
         ImmutableList.of("dim1", "dim2"),
         ImmutableList.of("met1", "met2"),
         new NumberedShardSpec(2, 3),
+        null,
         1,
         100L,
-        DataSegment.PruneLoadSpecHolder.DEFAULT
+        PruneSpecs.DEFAULT
     );
     final List<DataSegment> realtimeSegments = ImmutableList.of(segment1);
     final TimelineServerView serverView = new TestServerInventoryView(walker.getSegments(), realtimeSegments);

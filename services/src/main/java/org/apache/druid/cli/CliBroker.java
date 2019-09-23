@@ -57,6 +57,7 @@ import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.router.TieredBrokerConfig;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.timeline.PruneLoadSpec;
+import org.apache.druid.timeline.PrunePartitionsSpec;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -90,6 +91,7 @@ public class CliBroker extends ServerRunnable
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8082);
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8282);
           binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(true);
+          binder.bindConstant().annotatedWith(PrunePartitionsSpec.class).to(true);
 
           binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
           LifecycleModule.register(binder, BrokerServerView.class);

@@ -19,8 +19,10 @@
 
 package org.apache.druid.indexing.common.task;
 
+import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
@@ -38,7 +40,8 @@ public final class BatchAppenderators
       FireDepartmentMetrics metrics,
       TaskToolbox toolbox,
       DataSchema dataSchema,
-      AppenderatorConfig appenderatorConfig
+      AppenderatorConfig appenderatorConfig,
+      FirehoseFactory firehoseFactory
   )
   {
     return newAppenderator(
@@ -48,6 +51,7 @@ public final class BatchAppenderators
         toolbox,
         dataSchema,
         appenderatorConfig,
+        firehoseFactory,
         toolbox.getSegmentPusher()
     );
   }
@@ -59,6 +63,7 @@ public final class BatchAppenderators
       TaskToolbox toolbox,
       DataSchema dataSchema,
       AppenderatorConfig appenderatorConfig,
+      FirehoseFactory firehoseFactory,
       DataSegmentPusher segmentPusher
   )
   {
@@ -66,6 +71,7 @@ public final class BatchAppenderators
         taskId,
         dataSchema,
         appenderatorConfig.withBasePersistDirectory(toolbox.getPersistDir()),
+        firehoseFactory instanceof IngestSegmentFirehoseFactory,
         metrics,
         segmentPusher,
         toolbox.getObjectMapper(),

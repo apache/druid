@@ -288,6 +288,7 @@ public class PartialSegmentGenerateTask extends AbstractBatchIndexTask
         toolbox,
         dataSchema,
         tuningConfig,
+        firehoseFactory,
         new ShuffleDataSegmentPusher(supervisorTaskId, getId(), toolbox.getIntermediaryDataManager())
     );
     boolean exceptionOccurred = false;
