@@ -21,23 +21,29 @@ package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 
 import java.util.Objects;
 
-@JsonTypeName("compact")
-public class ClientCompactionIOConfig implements IOConfig
+public class ClientCompactionIOConfig
 {
-  private final ClientCompactionInputSpec inputSpec;
+  private static final String TYPE = "compact";
+
+  private final ClientCompactionIntervalSpec inputSpec;
 
   @JsonCreator
-  public ClientCompactionIOConfig(@JsonProperty("inputSpec") ClientCompactionInputSpec inputSpec)
+  public ClientCompactionIOConfig(@JsonProperty("inputSpec") ClientCompactionIntervalSpec inputSpec)
   {
     this.inputSpec = inputSpec;
   }
 
   @JsonProperty
-  public ClientCompactionInputSpec getInputSpec()
+  public String getType()
+  {
+    return TYPE;
+  }
+
+  @JsonProperty
+  public ClientCompactionIntervalSpec getInputSpec()
   {
     return inputSpec;
   }

@@ -27,6 +27,9 @@ import org.joda.time.Interval;
 
 import java.util.List;
 
+/**
+ * Input specification for compaction task.
+ */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @Type(name = CompactionIntervalSpec.TYPE, value = CompactionIntervalSpec.class),
@@ -34,7 +37,16 @@ import java.util.List;
 })
 public interface CompactionInputSpec
 {
+  /**
+   * Find the umbrella interval containing the specified input.
+   */
   Interval findInterval(String dataSource);
 
-  boolean validateSegments(List<DataSegment> segments);
+  /**
+   * Validate the specified input against the most recent published segments.
+   * This method is used to check whether the specified input has gone stale.
+   *
+   * @param latestSegments most recent published segments in the interval returned by {@link #findInterval}
+   */
+  boolean validateSegments(List<DataSegment> latestSegments);
 }

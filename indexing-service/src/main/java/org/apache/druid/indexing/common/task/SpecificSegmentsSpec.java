@@ -71,9 +71,9 @@ public class SpecificSegmentsSpec implements CompactionInputSpec
   }
 
   @Override
-  public boolean validateSegments(List<DataSegment> segments)
+  public boolean validateSegments(List<DataSegment> latestSegments)
   {
-    final List<String> thoseSegments = segments
+    final List<String> thoseSegments = latestSegments
         .stream()
         .map(segment -> segment.getId().toString())
         .collect(Collectors.toList());

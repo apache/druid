@@ -91,7 +91,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
           }
           if (COMPACT_TASK_TYPE.equals(response.getPayload().getType())) {
             final ClientCompactQuery compactQuery = (ClientCompactQuery) response.getPayload();
-            final Interval interval = compactQuery.getIoConfig().getInputSpec().findInterval(status.getDataSource());
+            final Interval interval = compactQuery.getIoConfig().getInputSpec().getInterval();
             compactTaskIntervals.computeIfAbsent(status.getDataSource(), k -> new ArrayList<>()).add(interval);
           } else {
             throw new ISE("WTH? task[%s] is not a compactTask?", status.getId());

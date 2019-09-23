@@ -32,6 +32,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * Specifying an interval to compact. A hash of the segment IDs can be optionally provided for segment validation.
+ */
 public class CompactionIntervalSpec implements CompactionInputSpec
 {
   public static final String TYPE = "interval";
@@ -73,14 +76,14 @@ public class CompactionIntervalSpec implements CompactionInputSpec
   }
 
   @Override
-  public boolean validateSegments(List<DataSegment> segments)
+  public boolean validateSegments(List<DataSegment> latestSegments)
   {
     final Interval segmentsInterval = JodaUtils.umbrellaInterval(
-        segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
+        latestSegments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
     );
     if (interval.overlaps(segmentsInterval)) {
       if (sha256OfSortedSegmentIds != null) {
-        final String hashOfThem = SegmentUtils.hashIds(segments);
+        final String hashOfThem = SegmentUtils.hashIds(latestSegments);
         return hashOfThem.equals(sha256OfSortedSegmentIds);
       } else {
         return true;

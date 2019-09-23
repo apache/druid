@@ -45,6 +45,9 @@ public class SegmentUtils
 {
   private static final HashFunction HASH_FUNCTION = Hashing.sha256();
 
+  /**
+   * Hash the IDs of the given segments based on SHA-256 algorithm.
+   */
   public static String hashIds(List<DataSegment> segments)
   {
     Collections.sort(segments);

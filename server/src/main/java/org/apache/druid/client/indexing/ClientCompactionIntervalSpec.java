@@ -32,10 +32,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class ClientCompactionIntervalSpec implements ClientCompactionInputSpec
+public class ClientCompactionIntervalSpec
 {
-  public static final String TYPE = "interval";
-
+  private static final String TYPE = "interval";
 
   private final Interval interval;
   @Nullable
@@ -65,6 +64,12 @@ public class ClientCompactionIntervalSpec implements ClientCompactionInputSpec
   }
 
   @JsonProperty
+  public String getType()
+  {
+    return TYPE;
+  }
+
+  @JsonProperty
   public Interval getInterval()
   {
     return interval;
@@ -75,12 +80,6 @@ public class ClientCompactionIntervalSpec implements ClientCompactionInputSpec
   public String getSha256OfSortedSegmentIds()
   {
     return sha256OfSortedSegmentIds;
-  }
-
-  @Override
-  public Interval findInterval(String dataSource)
-  {
-    return interval;
   }
 
   @Override
