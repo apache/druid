@@ -62,7 +62,7 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
       @JsonProperty("fetchTimeout") Long fetchTimeout,
       @JsonProperty("maxFetchRetry") Integer maxFetchRetry,
-      @JsonProperty("httpAuthenticationUsername") @Nullable  String httpAuthenticationUsername,
+      @JsonProperty("httpAuthenticationUsername") @Nullable String httpAuthenticationUsername,
       @JsonProperty("httpAuthenticationPassword") @Nullable PasswordProvider httpAuthenticationPasswordProvider
   )
   {
