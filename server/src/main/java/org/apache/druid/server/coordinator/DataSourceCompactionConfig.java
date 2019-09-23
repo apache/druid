@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.client.indexing.ClientCompactQueryTuningConfig;
+import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.segment.IndexSpec;
 import org.joda.time.Period;
 
@@ -239,9 +240,11 @@ public class DataSourceCompactionConfig
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
         @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
         @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
+        @JsonProperty("splitHintSpec") @Nullable SplitHintSpec splitHintSpec,
         @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
         @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
-        @JsonProperty("pushTimeout") @Nullable Long pushTimeout
+        @JsonProperty("pushTimeout") @Nullable Long pushTimeout,
+        @JsonProperty("maxNumConcurrentSubTasks") @Nullable Integer maxNumConcurrentSubTasks
     )
     {
       super(
@@ -249,9 +252,11 @@ public class DataSourceCompactionConfig
           maxRowsInMemory,
           maxBytesInMemory,
           maxTotalRows,
+          splitHintSpec,
           indexSpec,
           maxPendingPersists,
-          pushTimeout
+          pushTimeout,
+          maxNumConcurrentSubTasks
       );
     }
 

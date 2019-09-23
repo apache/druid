@@ -158,6 +158,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @JsonCreator
   public ParallelIndexSupervisorTask(
       @JsonProperty("id") String id,
+      @JsonProperty("groupId") @Nullable String groupId,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("spec") ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") Map<String, Object> context,
@@ -170,7 +171,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     super(
         getOrMakeId(id, TYPE, ingestionSchema.getDataSchema().getDataSource()),
-        null,
+        groupId,
         taskResource,
         ingestionSchema.getDataSchema().getDataSource(),
         context

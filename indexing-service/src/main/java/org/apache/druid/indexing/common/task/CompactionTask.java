@@ -30,6 +30,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -49,9 +50,10 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
-import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
-import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
-import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngestionSpec;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -132,7 +134,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   @Nullable
   private final Long targetCompactionSizeBytes;
   @Nullable
-  private final IndexTuningConfig tuningConfig;
+  private final ParallelIndexTuningConfig tuningConfig;
   private final ObjectMapper jsonMapper;
   @JsonIgnore
   private final SegmentProvider segmentProvider;
@@ -151,6 +153,8 @@ public class CompactionTask extends AbstractBatchIndexTask
   @JsonIgnore
   private final CoordinatorClient coordinatorClient;
 
+  private final IndexingServiceClient indexingServiceClient;
+
   @JsonIgnore
   private final SegmentLoaderFactory segmentLoaderFactory;
 
@@ -163,13 +167,10 @@ public class CompactionTask extends AbstractBatchIndexTask
   @JsonIgnore
   private final CurrentSubTaskHolder currentSubTaskHolder = new CurrentSubTaskHolder(
       (taskObject, config) -> {
-        final IndexTask indexTask = (IndexTask) taskObject;
+        final ParallelIndexSupervisorTask indexTask = (ParallelIndexSupervisorTask) taskObject;
         indexTask.stopGracefully(config);
       }
   );
-
-  @JsonIgnore
-  private List<IndexTask> indexTaskSpecs;
 
   @JsonCreator
   public CompactionTask(
@@ -183,13 +184,14 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JsonProperty("metricsSpec") @Nullable final AggregatorFactory[] metricsSpec,
       @JsonProperty("segmentGranularity") @Nullable final Granularity segmentGranularity,
       @JsonProperty("targetCompactionSizeBytes") @Nullable final Long targetCompactionSizeBytes,
-      @JsonProperty("tuningConfig") @Nullable final IndexTuningConfig tuningConfig,
+      @JsonProperty("tuningConfig") @Nullable final ParallelIndexTuningConfig tuningConfig,
       @JsonProperty("context") @Nullable final Map<String, Object> context,
       @JacksonInject ObjectMapper jsonMapper,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
       @JacksonInject CoordinatorClient coordinatorClient,
+      @JacksonInject @Nullable IndexingServiceClient indexingServiceClient,
       @JacksonInject SegmentLoaderFactory segmentLoaderFactory,
       @JacksonInject RetryPolicyFactory retryPolicyFactory,
       @JacksonInject AppenderatorsManager appenderatorsManager
@@ -216,6 +218,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = chatHandlerProvider;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
+    this.indexingServiceClient = indexingServiceClient;
     this.coordinatorClient = coordinatorClient;
     this.segmentLoaderFactory = segmentLoaderFactory;
     this.retryPolicyFactory = retryPolicyFactory;
@@ -265,7 +268,7 @@ public class CompactionTask extends AbstractBatchIndexTask
 
   @Nullable
   @JsonProperty
-  public IndexTuningConfig getTuningConfig()
+  public ParallelIndexTuningConfig getTuningConfig()
   {
     return tuningConfig;
   }
@@ -311,36 +314,28 @@ public class CompactionTask extends AbstractBatchIndexTask
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
-    if (indexTaskSpecs == null) {
-      final List<IndexIngestionSpec> ingestionSpecs = createIngestionSchema(
-          toolbox,
-          segmentProvider,
-          partitionConfigurationManager,
-          dimensionsSpec,
-          metricsSpec,
-          segmentGranularity,
-          jsonMapper,
-          coordinatorClient,
-          segmentLoaderFactory,
-          retryPolicyFactory
-      );
-      indexTaskSpecs = IntStream
-          .range(0, ingestionSpecs.size())
-          .mapToObj(i -> new IndexTask(
-              createIndexTaskSpecId(i),
-              getGroupId(),
-              getTaskResource(),
-              getDataSource(),
-              ingestionSpecs.get(i),
-              createContextForSubtask(),
-              authorizerMapper,
-              chatHandlerProvider,
-              rowIngestionMetersFactory,
-              appenderatorsManager
-
-          ))
-          .collect(Collectors.toList());
-    }
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSchema(
+        toolbox,
+        segmentProvider,
+        partitionConfigurationManager,
+        dimensionsSpec,
+        metricsSpec,
+        segmentGranularity,
+        jsonMapper,
+        coordinatorClient,
+        segmentLoaderFactory,
+        retryPolicyFactory
+    );
+    final List<ParallelIndexSupervisorTask> indexTaskSpecs = IntStream
+        .range(0, ingestionSpecs.size())
+        .mapToObj(i -> {
+          // TODO: comment
+          final String subtaskId = tuningConfig == null || tuningConfig.getMaxNumConcurrentSubTasks() == 1
+                                   ? createIndexTaskSpecId(i)
+                                   : getId();
+          return newTask(subtaskId, ingestionSpecs.get(i));
+        })
+        .collect(Collectors.toList());
 
     if (indexTaskSpecs.isEmpty()) {
       log.warn("Interval[%s] has no segments, nothing to do.", interval);
@@ -351,7 +346,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       log.info("Generated [%d] compaction task specs", totalNumSpecs);
 
       int failCnt = 0;
-      for (IndexTask eachSpec : indexTaskSpecs) {
+      for (ParallelIndexSupervisorTask eachSpec : indexTaskSpecs) {
         final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
         if (!currentSubTaskHolder.setTask(eachSpec)) {
           log.info("Task is asked to stop. Finish as failed.");
@@ -381,10 +376,29 @@ public class CompactionTask extends AbstractBatchIndexTask
     }
   }
 
-  private Map<String, Object> createContextForSubtask()
+  @VisibleForTesting
+  ParallelIndexSupervisorTask newTask(String taskId, ParallelIndexIngestionSpec ingestionSpec)
+  {
+    return new ParallelIndexSupervisorTask(
+        taskId,
+        getGroupId(),
+        getTaskResource(),
+        ingestionSpec,
+        createContextForSubtask(),
+        indexingServiceClient,
+        chatHandlerProvider,
+        authorizerMapper,
+        rowIngestionMetersFactory,
+        appenderatorsManager
+    );
+  }
+
+  @VisibleForTesting
+  Map<String, Object> createContextForSubtask()
   {
     final Map<String, Object> newContext = new HashMap<>(getContext());
     newContext.put(CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, getId());
+    newContext.put(Tasks.PRIORITY_KEY, getPriority());
     return newContext;
   }
 
@@ -394,12 +408,12 @@ public class CompactionTask extends AbstractBatchIndexTask
   }
 
   /**
-   * Generate {@link IndexIngestionSpec} from input segments.
+   * Generate {@link ParallelIndexIngestionSpec} from input segments.
    *
    * @return an empty list if input segments don't exist. Otherwise, a generated ingestionSpec.
    */
   @VisibleForTesting
-  static List<IndexIngestionSpec> createIngestionSchema(
+  static List<ParallelIndexIngestionSpec> createIngestionSchema(
       final TaskToolbox toolbox,
       final SegmentProvider segmentProvider,
       final PartitionConfigurationManager partitionConfigurationManager,
@@ -431,7 +445,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         toolbox.getIndexIO()
     );
 
-    final IndexTuningConfig compactionTuningConfig = partitionConfigurationManager.computeTuningConfig(
+    final ParallelIndexTuningConfig compactionTuningConfig = partitionConfigurationManager.computeTuningConfig(
         queryableIndexAndSegments
     );
 
@@ -446,7 +460,7 @@ public class CompactionTask extends AbstractBatchIndexTask
                                  .add(p)
       );
 
-      final List<IndexIngestionSpec> specs = new ArrayList<>(intervalToSegments.size());
+      final List<ParallelIndexIngestionSpec> specs = new ArrayList<>(intervalToSegments.size());
       for (Entry<Interval, List<Pair<QueryableIndex, DataSegment>>> entry : intervalToSegments.entrySet()) {
         final Interval interval = entry.getKey();
         final List<Pair<QueryableIndex, DataSegment>> segmentsToCompact = entry.getValue();
@@ -460,7 +474,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         );
 
         specs.add(
-            new IndexIngestionSpec(
+            new ParallelIndexIngestionSpec(
                 dataSchema,
                 createIoConfig(
                     toolbox,
@@ -488,7 +502,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       );
 
       return Collections.singletonList(
-          new IndexIngestionSpec(
+          new ParallelIndexIngestionSpec(
               dataSchema,
               createIoConfig(
                   toolbox,
@@ -504,7 +518,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     }
   }
 
-  private static IndexIOConfig createIoConfig(
+  private static ParallelIndexIOConfig createIoConfig(
       TaskToolbox toolbox,
       DataSchema dataSchema,
       Interval interval,
@@ -513,7 +527,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       RetryPolicyFactory retryPolicyFactory
   )
   {
-    return new IndexIOConfig(
+    return new ParallelIndexIOConfig(
         new IngestSegmentFirehoseFactory(
             dataSchema.getDataSource(),
             interval,
@@ -833,16 +847,16 @@ public class CompactionTask extends AbstractBatchIndexTask
     @Nullable
     private final Long targetCompactionSizeBytes;
     @Nullable
-    private final IndexTuningConfig tuningConfig;
+    private final ParallelIndexTuningConfig tuningConfig;
 
-    PartitionConfigurationManager(@Nullable Long targetCompactionSizeBytes, @Nullable IndexTuningConfig tuningConfig)
+    PartitionConfigurationManager(@Nullable Long targetCompactionSizeBytes, @Nullable ParallelIndexTuningConfig tuningConfig)
     {
       this.targetCompactionSizeBytes = getValidTargetCompactionSizeBytes(targetCompactionSizeBytes, tuningConfig);
       this.tuningConfig = tuningConfig;
     }
 
     @Nullable
-    IndexTuningConfig computeTuningConfig(List<Pair<QueryableIndex, DataSegment>> queryableIndexAndSegments)
+    ParallelIndexTuningConfig computeTuningConfig(List<Pair<QueryableIndex, DataSegment>> queryableIndexAndSegments)
     {
       if (!hasPartitionConfig(tuningConfig)) {
         final long nonNullTargetCompactionSizeBytes = Preconditions.checkNotNull(
@@ -886,8 +900,8 @@ public class CompactionTask extends AbstractBatchIndexTask
         // Setting maxTotalRows to Long.MAX_VALUE to respect the computed maxRowsPerSegment.
         // If this is set to something too small, compactionTask can generate small segments
         // which need to be compacted again, which in turn making auto compaction stuck in the same interval.
-        final IndexTuningConfig newTuningConfig = tuningConfig == null
-                                                       ? IndexTuningConfig.createDefault()
+        final ParallelIndexTuningConfig newTuningConfig = tuningConfig == null
+                                                       ? ParallelIndexTuningConfig.defaultConfig()
                                                        : tuningConfig;
         if (newTuningConfig.isForceGuaranteedRollup()) {
           return newTuningConfig.withPartitionsSpec(new HashedPartitionsSpec(maxRowsPerSegment, null, null));
@@ -901,7 +915,7 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     /**
      * Check the validity of {@link #targetCompactionSizeBytes} and return a valid value. Note that
-     * targetCompactionSizeBytes cannot be used with {@link IndexTuningConfig#getPartitionsSpec} together.
+     * targetCompactionSizeBytes cannot be used with {@link ParallelIndexTuningConfig#getPartitionsSpec} together.
      * {@link #hasPartitionConfig} checks one of those configs is set.
      * <p>
      * This throws an {@link IllegalArgumentException} if targetCompactionSizeBytes is set and hasPartitionConfig
@@ -912,7 +926,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     @Nullable
     private static Long getValidTargetCompactionSizeBytes(
         @Nullable Long targetCompactionSizeBytes,
-        @Nullable IndexTuningConfig tuningConfig
+        @Nullable ParallelIndexTuningConfig tuningConfig
     )
     {
       if (targetCompactionSizeBytes != null && tuningConfig != null) {
@@ -930,7 +944,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       }
     }
 
-    private static boolean hasPartitionConfig(@Nullable IndexTuningConfig tuningConfig)
+    private static boolean hasPartitionConfig(@Nullable ParallelIndexTuningConfig tuningConfig)
     {
       if (tuningConfig != null) {
         return tuningConfig.getPartitionsSpec() != null;
@@ -947,6 +961,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     private final AuthorizerMapper authorizerMapper;
     private final ChatHandlerProvider chatHandlerProvider;
     private final RowIngestionMetersFactory rowIngestionMetersFactory;
+    private final IndexingServiceClient indexingServiceClient;
     private final CoordinatorClient coordinatorClient;
     private final SegmentLoaderFactory segmentLoaderFactory;
     private final RetryPolicyFactory retryPolicyFactory;
@@ -965,7 +980,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     @Nullable
     private Long targetCompactionSizeBytes;
     @Nullable
-    private IndexTuningConfig tuningConfig;
+    private ParallelIndexTuningConfig tuningConfig;
     @Nullable
     private Map<String, Object> context;
 
@@ -975,6 +990,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         AuthorizerMapper authorizerMapper,
         ChatHandlerProvider chatHandlerProvider,
         RowIngestionMetersFactory rowIngestionMetersFactory,
+        IndexingServiceClient indexingServiceClient,
         CoordinatorClient coordinatorClient,
         SegmentLoaderFactory segmentLoaderFactory,
         RetryPolicyFactory retryPolicyFactory,
@@ -986,6 +1002,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       this.authorizerMapper = authorizerMapper;
       this.chatHandlerProvider = chatHandlerProvider;
       this.rowIngestionMetersFactory = rowIngestionMetersFactory;
+      this.indexingServiceClient = indexingServiceClient;
       this.coordinatorClient = coordinatorClient;
       this.segmentLoaderFactory = segmentLoaderFactory;
       this.retryPolicyFactory = retryPolicyFactory;
@@ -1028,7 +1045,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       return this;
     }
 
-    public Builder tuningConfig(IndexTuningConfig tuningConfig)
+    public Builder tuningConfig(ParallelIndexTuningConfig tuningConfig)
     {
       this.tuningConfig = tuningConfig;
       return this;
@@ -1060,6 +1077,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           chatHandlerProvider,
           rowIngestionMetersFactory,
           coordinatorClient,
+          indexingServiceClient,
           segmentLoaderFactory,
           retryPolicyFactory,
           appenderatorsManager

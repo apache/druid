@@ -189,6 +189,7 @@ public class MultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervi
             null,
             null,
             null,
+            null,
             new HashedPartitionsSpec(null, null, null),
             null,
             null,
@@ -244,6 +245,7 @@ public class MultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervi
         Granularities.DAY,
         ioConfig,
         new ParallelIndexTuningConfig(
+            null,
             null,
             null,
             null,
