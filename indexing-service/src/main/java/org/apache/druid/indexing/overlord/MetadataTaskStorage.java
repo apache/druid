@@ -201,11 +201,14 @@ public class MetadataTaskStorage implements TaskStorage
   @Override
   public List<Task> getActiveTasksByDatasource(String datasource)
   {
-    return handler.getActiveTaskInfo(datasource)
-                  .stream()
-                  .filter(taskInfo -> taskInfo.getStatus().isRunnable() && taskInfo.getTask() != null)
-                  .map(TaskInfo::getTask)
-                  .collect(Collectors.toList());
+    List<TaskInfo<Task, TaskStatus>> activeTaskInfos = handler.getActiveTaskInfo(datasource);
+    ImmutableList.Builder<Task> tasksBuilder = ImmutableList.builder();
+    for (TaskInfo<Task, TaskStatus> taskInfo : activeTaskInfos) {
+      if (taskInfo.getStatus().isRunnable() && taskInfo.getTask() != null) {
+        tasksBuilder.add(taskInfo.getTask());
+      }
+    }
+    return tasksBuilder.build();
   }
 
   @Override
