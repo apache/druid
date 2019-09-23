@@ -35,7 +35,7 @@ For a list of API endpoints supported by the Coordinator, see [Coordinator API](
 
 The Druid Coordinator process is primarily responsible for segment management and distribution. More specifically, the Druid Coordinator process communicates to Historical processes to load or drop segments based on configurations. The Druid Coordinator is responsible for loading new segments, dropping outdated segments, managing segment replication, and balancing segment load.
 
-The Druid Coordinator runs periodically and the time between each run is a configurable parameter. Each time the Druid Coordinator runs, it assesses the current state of the cluster before deciding on the appropriate actions to take. Similar to the Broker and Historical processses, the Druid Coordinator maintains a connection to a Zookeeper cluster for current cluster information. The Coordinator also maintains a connection to a database containing information about available segments and rules. Available segments are stored in a segment table and list all segments that should be loaded in the cluster. Rules are stored in a rule table and indicate how segments should be handled.
+The Druid Coordinator runs periodically and the time between each run is a configurable parameter. Each time the Druid Coordinator runs, it assesses the current state of the cluster before deciding on the appropriate actions to take. Similar to the Broker and Historical processes, the Druid Coordinator maintains a connection to a Zookeeper cluster for current cluster information. The Coordinator also maintains a connection to a database containing information about available segments and rules. Available segments are stored in a segment table and list all segments that should be loaded in the cluster. Rules are stored in a rule table and indicate how segments should be handled.
 
 Before any unassigned segments are serviced by Historical processes, the available Historical processes for each tier are first sorted in terms of capacity, with least capacity servers having the highest priority. Unassigned segments are always assigned to the processes with least capacity to maintain a level of balance between processes. The Coordinator does not directly communicate with a historical process when assigning it a new segment; instead the Coordinator creates some temporary information about the new segment under load queue path of the historical process. Once this request is seen, the historical process will load the segment and begin servicing it.
 
@@ -85,8 +85,8 @@ Once a compaction task fails, the Coordinator simply finds the segments for the 
 #### Newest segment first policy
 
 At every coordinator run, this policy searches for segments to compact by iterating segments from the latest to the oldest.
-Once it finds the latest segment among all dataSources, it checks if the segment is _compactible_ with other segments of the same dataSource which have the same or abutting intervals.
-Note that segments are compactible if their total size is smaller than or equal to the configured `inputSegmentSizeBytes`.
+Once it finds the latest segment among all dataSources, it checks if the segment is _compactable_ with other segments of the same dataSource which have the same or abutting intervals.
+Note that segments are compactable if their total size is smaller than or equal to the configured `inputSegmentSizeBytes`.
 
 Here are some details with an example. Let us assume we have two dataSources (`foo`, `bar`)
 and 5 segments (`foo_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION`, `foo_2017-11-01T00:00:00.000Z_2017-12-01T00:00:00.000Z_VERSION`, `bar_2017-08-01T00:00:00.000Z_2017-09-01T00:00:00.000Z_VERSION`, `bar_2017-09-01T00:00:00.000Z_2017-10-01T00:00:00.000Z_VERSION`, `bar_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION`).

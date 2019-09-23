@@ -232,7 +232,20 @@ jobs:
 
     - name: "docs"
       install: (cd website && npm install)
-      script: (cd website && npm run lint)
+      script: (cd website && npm run lint && npm run spellcheck)
+      after_failure: |-
+        echo "FAILURE EXPLANATION:
+
+        If there are spell check errors:
+
+        1) Suppressing False Positives: Edit website/.spelling to add suppressions. Instructions
+        are at the top of the file and explain how to suppress false positives either globally or
+        within a particular file.
+
+        2) Running Spell Check Locally: cd website && npm install && npm run spellcheck
+
+        For more information, refer to: https://www.npmjs.com/package/markdown-spellcheck
+        "
 
     - &integration_batch_index
       name: "batch index integration test"

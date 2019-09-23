@@ -62,7 +62,7 @@ You can also configure extra context flags to be sent with the query from the mo
 
 ![Query options](../assets/tutorial-query-02.png "Query options")
 
-Note that the console will by default wrap your SQL queries in a limit so that you can issue queries like `SELECT * FROM wikipedia` without much hesitation - you can turn off this behaviour.
+Note that the console will by default wrap your SQL queries in a limit so that you can issue queries like `SELECT * FROM wikipedia` without much hesitation - you can turn off this behavior.
 
 ### Query SQL via dsql
 

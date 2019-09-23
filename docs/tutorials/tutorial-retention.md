@@ -47,7 +47,7 @@ This view shows the available datasources and a summary of the retention rules f
 
 ![Summary](../assets/tutorial-retention-01.png "Summary")
 
-Currently there are no rules set for the `retention-tutorial` datasource. Note that there are default rules for the cluster: load forever with 2 replicants in `_default_tier`.
+Currently there are no rules set for the `retention-tutorial` datasource. Note that there are default rules for the cluster: load forever with 2 replicas in `_default_tier`.
 
 This means that all data will be loaded regardless of timestamp, and each segment will be replicated to two Historical processes in the default tier.
 
@@ -71,7 +71,7 @@ A rule configuration window will appear:
 
 Now click the `+ New rule` button twice.
 
-In the upper rule box, select `Load` and `by interval`, and then enter `2015-09-12T12:00:00.000Z/2015-09-13T00:00:00.000Z` in field next to `by interval`. Replicants can remain at 2 in the `_default_tier`.
+In the upper rule box, select `Load` and `by interval`, and then enter `2015-09-12T12:00:00.000Z/2015-09-13T00:00:00.000Z` in field next to `by interval`. Replicas can remain at 2 in the `_default_tier`.
 
 In the lower rule box, select `Drop` and `forever`.
 

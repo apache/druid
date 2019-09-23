@@ -69,7 +69,7 @@ To use this Apache Druid (incubating) extension, make sure to [include](../../de
 
 ## Configuration
 
-In most cases, the configuration options map directly to the [postgres jdbc connection options](https://jdbc.postgresql.org/documentation/head/connect.html).
+In most cases, the configuration options map directly to the [postgres JDBC connection options](https://jdbc.postgresql.org/documentation/head/connect.html).
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|

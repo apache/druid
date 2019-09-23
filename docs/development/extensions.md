@@ -78,7 +78,7 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |druid-distinctcount|DistinctCount aggregator|[link](../development/extensions-contrib/distinctcount.md)|
 |druid-redis-cache|A cache implementation for Druid based on Redis.|[link](../development/extensions-contrib/redis-cache.md)|
 |druid-time-min-max|Min/Max aggregator for timestamp.|[link](../development/extensions-contrib/time-min-max.md)|
-|sqlserver-metadata-storage|Microsoft SqlServer deep storage.|[link](../development/extensions-contrib/sqlserver.md)|
+|sqlserver-metadata-storage|Microsoft SQLServer deep storage.|[link](../development/extensions-contrib/sqlserver.md)|
 |graphite-emitter|Graphite metrics emitter|[link](../development/extensions-contrib/graphite.md)|
 |statsd-emitter|StatsD metrics emitter|[link](../development/extensions-contrib/statsd.md)|
 |kafka-emitter|Kafka metrics emitter|[link](../development/extensions-contrib/kafka-emitter.md)|
