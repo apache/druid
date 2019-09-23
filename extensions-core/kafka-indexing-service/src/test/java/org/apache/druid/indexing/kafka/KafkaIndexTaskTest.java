@@ -528,12 +528,10 @@ public class KafkaIndexTaskTest
     final ListenableFuture<TaskStatus> future = runTask(task);
     SeekableStreamIndexTaskRunner runner = task.getRunner();
     while (true) {
-      runner.pause();
       Thread.sleep(1000);
       if (runner.getStatus() == Status.PUBLISHING) {
         break;
       }
-      runner.resume();
     }
     Map rowStats = runner.doGetRowStats();
     Map totals = (Map) rowStats.get("totals");
