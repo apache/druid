@@ -117,16 +117,16 @@ All persistent state such as the cluster metadata store and segments for the ser
 Later on, if you'd like to stop the services, CTRL-C to exit the `bin/start-micro-quickstart` script, which will terminate the Druid processes.
 
 Once the cluster has started, you can navigate to [http://localhost:8888](http://localhost:8888).
-The [Druid router process](../design/router.md), which serves the Druid console, resides at this address.
+The [Druid router process](../design/router.md), which serves the [Druid console](../operations/druid-console.md), resides at this address.
 
 ![Druid console](../assets/tutorial-quickstart-01.png "Druid console")
 
 It takes a few seconds for all the Druid processes to fully start up. If you open the console immediately after starting the services, you may see some errors that you can safely ignore.
 
 
-## Loading Data
+## Loading data
 
-### Tutorial Dataset
+### Tutorial dataset
 
 For the following data loading tutorials, we have included a sample data file containing Wikipedia page edit events that occurred on 2015-09-12.
 
