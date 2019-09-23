@@ -49,7 +49,6 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
 {
   private static final Logger log = new Logger(HttpFirehoseFactory.class);
   private final List<URI> uris;
-  private final boolean supportContentRange;
   @Nullable
   private final String httpAuthenticationUsername;
   @Nullable
@@ -63,29 +62,25 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
       @JsonProperty("fetchTimeout") Long fetchTimeout,
       @JsonProperty("maxFetchRetry") Integer maxFetchRetry,
-      @Nullable
-      @JsonProperty("httpAuthenticationUsername") String httpAuthenticationUsername,
-      @Nullable
-      @JsonProperty("httpAuthenticationPassword") PasswordProvider httpAuthenticationPasswordProvider
-  ) throws IOException
+      @JsonProperty("httpAuthenticationUsername") @Nullable  String httpAuthenticationUsername,
+      @JsonProperty("httpAuthenticationPassword") @Nullable PasswordProvider httpAuthenticationPasswordProvider
+  )
   {
     super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
-    this.uris = uris;
-
     Preconditions.checkArgument(uris.size() > 0, "Empty URIs");
-    final URLConnection connection = uris.get(0).toURL().openConnection();
-    final String acceptRanges = connection.getHeaderField(HttpHeaders.ACCEPT_RANGES);
-    this.supportContentRange = acceptRanges != null && "bytes".equalsIgnoreCase(acceptRanges);
+    this.uris = uris;
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
   }
 
+  @Nullable
   @JsonProperty
   public String getHttpAuthenticationUsername()
   {
     return httpAuthenticationUsername;
   }
 
+  @Nullable
   @JsonProperty("httpAuthenticationPassword")
   public PasswordProvider getHttpAuthenticationPasswordProvider()
   {
@@ -115,14 +110,16 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   protected InputStream openObjectStream(URI object, long start) throws IOException
   {
     URLConnection urlConnection = openURLConnection(object);
-    if (supportContentRange && start > 0) {
+    final String acceptRanges = urlConnection.getHeaderField(HttpHeaders.ACCEPT_RANGES);
+    final boolean withRanges = "bytes".equalsIgnoreCase(acceptRanges);
+    if (withRanges && start > 0) {
       // Set header for range request.
       // Since we need to set only the start offset, the header is "bytes=<range-start>-".
       // See https://tools.ietf.org/html/rfc7233#section-2.1
       urlConnection.addRequestProperty(HttpHeaders.RANGE, StringUtils.format("bytes=%d-", start));
       return urlConnection.getInputStream();
     } else {
-      if (!supportContentRange && start > 0) {
+      if (!withRanges && start > 0) {
         log.warn(
                 "Since the input source doesn't support range requests, the object input stream is opened from the start and "
                         + "then skipped. This may make the ingestion speed slower. Consider enabling prefetch if you see this message"
@@ -159,8 +156,8 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
            getPrefetchTriggerBytes() == that.getPrefetchTriggerBytes() &&
            getFetchTimeout() == that.getFetchTimeout() &&
            getMaxFetchRetry() == that.getMaxFetchRetry() &&
-           httpAuthenticationUsername.equals(that.getHttpAuthenticationUsername()) &&
-           httpAuthenticationPasswordProvider.equals(that.getHttpAuthenticationPasswordProvider());
+           Objects.equals(httpAuthenticationUsername, that.getHttpAuthenticationUsername()) &&
+           Objects.equals(httpAuthenticationPasswordProvider, that.getHttpAuthenticationPasswordProvider());
   }
 
   @Override
@@ -187,21 +184,16 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   @Override
   public FiniteFirehoseFactory<StringInputRowParser, URI> withSplit(InputSplit<URI> split)
   {
-    try {
-      return new HttpFirehoseFactory(
-          Collections.singletonList(split.get()),
-          getMaxCacheCapacityBytes(),
-          getMaxFetchCapacityBytes(),
-          getPrefetchTriggerBytes(),
-          getFetchTimeout(),
-          getMaxFetchRetry(),
-          getHttpAuthenticationUsername(),
-          httpAuthenticationPasswordProvider
-      );
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    return new HttpFirehoseFactory(
+        Collections.singletonList(split.get()),
+        getMaxCacheCapacityBytes(),
+        getMaxFetchCapacityBytes(),
+        getPrefetchTriggerBytes(),
+        getFetchTimeout(),
+        getMaxFetchRetry(),
+        getHttpAuthenticationUsername(),
+        httpAuthenticationPasswordProvider
+    );
   }
 
   private URLConnection openURLConnection(URI object) throws IOException
