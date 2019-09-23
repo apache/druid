@@ -29,15 +29,13 @@ import org.apache.druid.query.lookup.namespace.CacheGenerator;
 import org.apache.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 import org.joda.time.Period;
-import org.joda.time.format.PeriodFormatter;
-import org.joda.time.format.PeriodFormatterBuilder;
+import org.joda.time.format.PeriodFormat;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 import org.skife.jdbi.v2.util.TimestampMapper;
 
 import javax.annotation.Nullable;
 import java.sql.Timestamp;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,14 +49,6 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
   private static final Logger LOG = new Logger(JdbcCacheGenerator.class);
   private final ConcurrentMap<CacheScheduler.EntryImpl<JdbcExtractionNamespace>, DBI> dbiCache =
       new ConcurrentHashMap<>();
-
-  PeriodFormatter formatter = new PeriodFormatterBuilder()
-      .appendDays().appendSuffix(" day, ", " days, ")
-      .appendHours().appendSuffix(" hour, ", " hours, ")
-      .appendMinutes().appendSuffix(" minute, ", " minutes, ")
-      .appendSeconds().appendSuffix(" second", " seconds")
-      .printZeroNever()
-      .toFormatter();
 
   @Override
   @Nullable
@@ -100,21 +90,19 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
 
     final String newVersion;
     CacheScheduler.VersionedCache versionedCache = null;
-    try {
-      if (doIncrementalLoad) {
-        newVersion = StringUtils.format("%d", lastDBUpdate);
-        Map<String, String> newCachedEntries = new HashMap<>();
-        for (Pair<String, String> pair : pairs) {
-          newCachedEntries.put(pair.lhs, pair.rhs);
-        }
-        versionedCache = entryId.createFromExistingCache(entryId, newVersion, newCachedEntries);
-        LOG.info("Finished loading %d new incremental values in last %s for %s ",
-            newCachedEntries.size(),
-            formatter.print(new Period(lastCheck, lastDBUpdate)),
-            entryId
-        );
-        return versionedCache;
-      } else {
+    if (doIncrementalLoad) {
+      newVersion = StringUtils.format("%d", lastDBUpdate);
+      versionedCache = entryId.createFromExistingCache(entryId, newVersion, pairs);
+      LOG.info("Finished loading %d new incremental values in last %s for %s ",
+          pairs.size(),
+          PeriodFormat.getDefault().print(new Period(lastCheck, lastDBUpdate)),
+          entryId
+      );
+      // In case of exceptions while loading, we do not close versionedCache here,
+      // its preferable to have stale entries for incremental load rather than closing the cache altogether.
+      return versionedCache;
+    } else {
+      try {
         LOG.debug("Not doing incremental load because either " +
                 "namespace.getTsColumn() is not set or this is the first load." +
                 " lastDBUpdate: %s, namespace.getTsColumn(): %s, lastVersion: %s",
@@ -137,17 +125,17 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
         LOG.info("Finished loading %d values for %s", cache.size(), entryId);
         return versionedCache;
       }
-    }
-    catch (Throwable t) {
-      try {
-        if (versionedCache != null) {
-          versionedCache.close();
+      catch (Throwable t) {
+        try {
+          if (versionedCache != null) {
+            versionedCache.close();
+          }
         }
+        catch (Exception e) {
+          t.addSuppressed(e);
+        }
+        throw t;
       }
-      catch (Exception e) {
-        t.addSuppressed(e);
-      }
-      throw t;
     }
   }
 
@@ -171,7 +159,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
 
     return dbi.withHandle(
         handle -> handle
-            .createQuery(buildLookupQuery(table, filter, keyColumn, valueColumn))
+            .createQuery(sqlQuery)
             .map((index, r, ctx) -> new Pair<>(r.getString(keyColumn), r.getString(valueColumn)))
             .list()
     );

@@ -26,6 +26,7 @@ import org.apache.druid.concurrent.ConcurrentAwaitableCounter;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.Cleaners;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -35,8 +36,10 @@ import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
 
 import javax.annotation.Nullable;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -197,14 +200,28 @@ public final class CacheScheduler
       }
     }
 
-    public VersionedCache createFromExistingCache(
+    /**
+     *
+     *
+     * @param entryId an object uniquely corresponding to the {@link CacheScheduler.Entry},
+     *                to create Cache from
+     * @param version version, associated with the cache
+     * @param pairs  List of Pairs consisting of new cache entries to be added to current Cache.
+     * @return a new {@link VersionedCache} by adding pairs to existing cache, This operation is
+     * non atomic and for Off-Heap caches there's possibility this will lead to a crash, in case
+     * of use-after-free.
+     */
+    public @Nullable VersionedCache createFromExistingCache(
         @Nullable EntryImpl<? extends ExtractionNamespace> entryId,
         String version,
-        Map<String, String> newCacheEntries
+        List<Pair<String, String>> pairs
     )
     {
       VersionedCache state = (VersionedCache) cacheStateHolder.get();
-      state.cacheHandler.getCache().putAll(newCacheEntries);
+      ConcurrentMap<String, String> cache = state.cacheHandler.getCache();
+      for (Pair<String, String> pair : pairs) {
+        cache.put(pair.lhs, pair.rhs);
+      }
       return createVersionedCache(entryId, version, state.cacheHandler);
     }
 
@@ -243,7 +260,7 @@ public final class CacheScheduler
           CacheState previousCacheState = swapCacheState(newVersionedCache);
           if (previousCacheState != NoCache.ENTRY_CLOSED) {
             updatedCacheSuccessfully = true;
-            if (previousCacheState instanceof VersionedCache && !(newVersionedCache).incremental) {
+            if (previousCacheState instanceof VersionedCache) {
               ((VersionedCache) previousCacheState).close();
             }
             log.debug("%s: the cache was successfully updated", this);
@@ -398,8 +415,13 @@ public final class CacheScheduler
     final String entryId;
     final CacheHandler cacheHandler;
     final String version;
-    boolean incremental;
+    final boolean incremental;
 
+    /**
+     * If {@link CacheHandler} cacheHandler is not null,
+     * new VersionedCache would reference the cacheHandler, cacheHandler object would never be closed
+     * and stay in memory forever. This way, we can support addition of new cache entries to same cacheHandler object.
+     */
     private VersionedCache(String entryId, String version, @Nullable CacheHandler cacheHandler)
     {
       this.entryId = entryId;
@@ -421,9 +443,16 @@ public final class CacheScheduler
     @Override
     public void close()
     {
-      cacheHandler.close();
-      // Log statement after cacheHandler.close(), because logging may fail (e. g. in shutdown hooks)
-      log.debug("Closed version [%s] of %s", version, entryId);
+      // ideally, close shouldn't be called by users of VersionedCache in case of a incremental load,
+      // we do not close cacheHandler for such case.
+      if (this.incremental) {
+        log.debug("VersionedCache is of type incremental load, thus not closing cacheHandler " +
+            "version [%s] of %s", version, entryId);
+      } else {
+        cacheHandler.close();
+        // Log statement after cacheHandler.close(), because logging may fail (e. g. in shutdown hooks)
+        log.debug("Closed version [%s] of %s", version, entryId);
+      }
     }
   }
 
@@ -479,6 +508,8 @@ public final class CacheScheduler
    * @param entryId an object uniquely corresponding to the {@link CacheScheduler.Entry}, for which VersionedCache is
    *                created
    * @param version version, associated with the cache
+   * @param cacheHandler, {@link CacheHandler} object to create {@link VersionedCache} from,
+   *                used for incremental load.
    */
   public VersionedCache createVersionedCache(
       @Nullable EntryImpl<? extends ExtractionNamespace> entryId,
