@@ -329,7 +329,15 @@ public class CompactionTask extends AbstractBatchIndexTask
     final List<ParallelIndexSupervisorTask> indexTaskSpecs = IntStream
         .range(0, ingestionSpecs.size())
         .mapToObj(i -> {
-          // TODO: comment
+          // taskId is used for different purposes in parallel indexing and local indexing.
+          // In parallel indexing, it's the taskId of the supervisor task. This supervisor taskId must be
+          // a valid taskId to communicate with sub tasks properly. We use the ID of the compaction task in this case.
+          //
+          // In local indexing, it's used as the sequence name for Appenderator. Even though a compaction task can run
+          // multiple index tasks (one per interval), the appenderator is not shared by those tasks. Each task creates
+          // a new Appenderator on its own instead. As a result, they should use different sequence names to allocate
+          // new segmentIds properly. See IndexerSQLMetadataStorageCoordinator.allocatePendingSegments() for details.
+          // In this case, we use different fake IDs for each created index task.
           final String subtaskId = tuningConfig == null || tuningConfig.getMaxNumConcurrentSubTasks() == 1
                                    ? createIndexTaskSpecId(i)
                                    : getId();
@@ -398,6 +406,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   {
     final Map<String, Object> newContext = new HashMap<>(getContext());
     newContext.put(CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, getId());
+    // Set the priority of the compaction task.
     newContext.put(Tasks.PRIORITY_KEY, getPriority());
     return newContext;
   }

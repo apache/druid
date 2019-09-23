@@ -23,6 +23,15 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
+/**
+ * In native parallel indexing, the supervisor task partitions input data into splits and assigns each of them
+ * to a single sub task. How to create splits could mainly depend on the input file format, but sometimes druid users
+ * want to give some hints to control the amount of data each sub task will read. SplitHintSpec can be used for this
+ * purpose. Implementations can ignore the given hint.
+ *
+ * @see FiniteFirehoseFactory#getSplits(SplitHintSpec)
+ * @see FiniteFirehoseFactory#getNumSplits(SplitHintSpec)
+ */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @Type(name = SegmentsSplitHintSpec.TYPE, value = SegmentsSplitHintSpec.class)

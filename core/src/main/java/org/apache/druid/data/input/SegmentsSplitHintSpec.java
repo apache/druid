@@ -25,11 +25,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
+/**
+ * {@link SplitHintSpec} for IngestSegmentFirehoseFactory.
+ */
 public class SegmentsSplitHintSpec implements SplitHintSpec
 {
   public static final String TYPE = "segments";
   public static final long DEFAULT_MAX_INPUT_SEGMENT_BYTES_PER_TASK = 150 * 1024 * 1024;
 
+  /**
+   * Maximum number of bytes of input segments to process in a single task.
+   * If a single segment is larger than this number, it will be processed by itself in a single task.
+   */
   private final long maxInputSegmentBytesPerTask;
 
   @JsonCreator

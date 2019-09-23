@@ -160,6 +160,15 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
                  .build();
   }
 
+  /**
+   * Each compaction task can run a parallel indexing task. When we count the number of current running
+   * compaction tasks, we should count the sub tasks of parallel indexing task as well. However, we currently
+   * don't have a way to get the number of current running sub tasks except poking each supervisor task,
+   * which is complex to handle all kinds of failures.
+   * Here, instead, we compute a rough number of running sub tasks by summing maxNumConcurrentSubTasks
+   * in tuningConfig of each supervisor task. The result will be a conservatively estimated number of sub tasks
+   * which should be ok since it won't affect to the performance of other ingestion types.
+   */
   private int findNumMaxConcurrentSubTasks(@Nullable ClientCompactQueryTuningConfig tuningConfig)
   {
     if (tuningConfig != null && tuningConfig.getMaxNumConcurrentSubTasks() != null) {

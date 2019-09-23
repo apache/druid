@@ -396,13 +396,13 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     }
 
     final SegmentsSplitHintSpec nonNullSplitHintSpec;
-    if (splitHintSpec != null) {
-      if (!(splitHintSpec instanceof SegmentsSplitHintSpec)) {
-        throw new ISE("splitHintSpec should be SegmentsSplitHintSpec");
+    if (!(splitHintSpec instanceof SegmentsSplitHintSpec)) {
+      if (splitHintSpec != null) {
+        log.warn("Given splitHintSpec[%s] is not a SegmentsSplitHintSpec. Ingoring it.", splitHintSpec);
       }
-      nonNullSplitHintSpec = (SegmentsSplitHintSpec) splitHintSpec;
-    } else {
       nonNullSplitHintSpec = new SegmentsSplitHintSpec(null);
+    } else {
+      nonNullSplitHintSpec = (SegmentsSplitHintSpec) splitHintSpec;
     }
 
     final long maxInputSegmentBytesPerTask = this.maxInputSegmentBytesPerTask == null
