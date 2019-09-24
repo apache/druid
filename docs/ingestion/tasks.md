@@ -43,7 +43,7 @@ the Overlord APIs.
 
 ## Task reports
 
-A report containing information about the number of rows ingested and any parse exceptions that occurred is available for both completed tasks and running tasks.
+A report containing information about the number of rows ingested, and any parse exceptions that occurred is available for both completed tasks and running tasks.
 
 The reporting feature is supported by the [simple native batch task](../ingestion/native-batch.md#simple-task), the Hadoop batch task, and Kafka and Kinesis ingestion tasks.
 
@@ -87,7 +87,7 @@ An example output is shown below:
 
 ### Live report
 
-When a task is running, a live report containing moving average for number of events processed for 1 min, 5 min, 15 min time window can be retrieved at:
+When a task is running, a live report containing ingestion state, unparseable events and moving average for number of events processed for 1 min, 5 min, 15 min time window can be retrieved at:
 
 ```
 http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/task/<task-id>/reports
