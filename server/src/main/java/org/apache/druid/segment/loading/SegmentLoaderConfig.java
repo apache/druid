@@ -95,7 +95,6 @@ public class SegmentLoaderConfig
   public StorageLocationSelectorStrategy getStorageLocationSelectorStrategy(List<StorageLocation> storageLocations)
   {
     if (locationSelectorStrategy == null) {
-      checkLocationConfigForNull();
       // default strategy if no strategy is specified in the config
       locationSelectorStrategy = new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations);
     }
@@ -105,17 +104,9 @@ public class SegmentLoaderConfig
   public File getInfoDir()
   {
     if (infoDir == null) {
-      checkLocationConfigForNull();
       infoDir = new File(locations.get(0).getPath(), "info_dir");
     }
     return infoDir;
-  }
-
-  private void checkLocationConfigForNull()
-  {
-    if (getLocations() == null || getLocations().size() == 0) {
-      throw new ISE("You have no segment cache locations defined. Please configure druid.segmentCache.locations to use one or more locations.");
-    }
   }
 
   public int getStatusQueueMaxSize()
