@@ -26,7 +26,7 @@ title: "Sorting Orders"
 These sorting orders are used by the [TopNMetricSpec](./topnmetricspec.md), [SearchQuery](./searchquery.md), GroupByQuery's [LimitSpec](./limitspec.md), and [BoundFilter](./filters.html#bound-filter).
 
 ## Lexicographic
-Sorts values by converting Strings to their UTF-8 byte array representations and comparing lexicgraphically, byte-by-byte.
+Sorts values by converting Strings to their UTF-8 byte array representations and comparing lexicographically, byte-by-byte.
 
 ## Alphanumeric
 Suitable for strings with both numeric and non-numeric content, e.g.: "file12 sorts after file2"

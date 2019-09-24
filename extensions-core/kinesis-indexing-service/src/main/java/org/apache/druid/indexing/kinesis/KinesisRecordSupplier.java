@@ -319,7 +319,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         catch (RejectedExecutionException e) {
           log.warn(
               e,
-              "Caught RejectedExecutionException, KinesisRecordSupplier for partition[%s] has likely temporarily shutdown the ExecutorService."
+              "Caught RejectedExecutionException, KinesisRecordSupplier for partition[%s] has likely temporarily shutdown the ExecutorService. "
               + "This is expected behavior after calling seek(), seekToEarliest() and seekToLatest()",
               streamPartition.getPartitionId()
           );

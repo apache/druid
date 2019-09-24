@@ -261,7 +261,7 @@ public class SchemaEvolutionTest
     // Only string(1)
     // Note: Expressions implicitly cast strings to numbers, leading to the a/b vs c/d difference.
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 0L, "b", THIRTY_ONE_POINT_ONE, "c", 31L, "d", THIRTY_ONE_POINT_ONE)),
+        timeseriesResult(ImmutableMap.of("a", 31L, "b", THIRTY_ONE_POINT_ONE, "c", 31L, "d", THIRTY_ONE_POINT_ONE)),
         runQuery(query, factory, ImmutableList.of(index1))
     );
 
@@ -292,7 +292,7 @@ public class SchemaEvolutionTest
     // Note: Expressions implicitly cast strings to numbers, leading to the a/b vs c/d difference.
     Assert.assertEquals(
         timeseriesResult(ImmutableMap.of(
-            "a", 31L * 2,
+            "a", 31L * 3,
             "b", THIRTY_ONE_POINT_ONE * 2 + 31,
             "c", 31L * 3,
             "d", THIRTY_ONE_POINT_ONE * 2 + 31
@@ -335,7 +335,7 @@ public class SchemaEvolutionTest
 
     // Only string(1) -- which we can filter but not aggregate
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 0L, "b", 19.1, "c", 2L)),
+        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.1, "c", 2L)),
         runQuery(query, factory, ImmutableList.of(index1))
     );
 
@@ -367,7 +367,7 @@ public class SchemaEvolutionTest
     // string(1) + long(2) + float(3) + nonexistent(4)
     Assert.assertEquals(
         timeseriesResult(ImmutableMap.of(
-            "a", 38L,
+            "a", 57L,
             "b", 57.2,
             "c", 6L
         )),

@@ -25,8 +25,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.BaseFloatColumnValueSelector;
-import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
@@ -177,7 +175,7 @@ public class AggregatorUtil
   /**
    * Only one of fieldName and fieldExpression should be non-null
    */
-  static BaseFloatColumnValueSelector makeColumnValueSelectorWithFloatDefault(
+  static ColumnValueSelector makeColumnValueSelectorWithFloatDefault(
       final ColumnSelectorFactory metricFactory,
       @Nullable final String fieldName,
       @Nullable final Expr fieldExpression,
@@ -222,7 +220,7 @@ public class AggregatorUtil
   /**
    * Only one of fieldName and fieldExpression should be non-null
    */
-  static BaseLongColumnValueSelector makeColumnValueSelectorWithLongDefault(
+  static ColumnValueSelector makeColumnValueSelectorWithLongDefault(
       final ColumnSelectorFactory metricFactory,
       @Nullable final String fieldName,
       @Nullable final Expr fieldExpression,

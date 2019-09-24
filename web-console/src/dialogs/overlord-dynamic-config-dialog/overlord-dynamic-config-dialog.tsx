@@ -34,7 +34,7 @@ export interface OverlordDynamicConfigDialogProps {
 
 export interface OverlordDynamicConfigDialogState {
   dynamicConfig?: Record<string, any>;
-  allJSONValid: boolean;
+  allJsonValid: boolean;
   historyRecords: any[];
 }
 
@@ -47,7 +47,7 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<
   constructor(props: OverlordDynamicConfigDialogProps) {
     super(props);
     this.state = {
-      allJSONValid: true,
+      allJsonValid: true,
       historyRecords: [],
     };
 
@@ -115,16 +115,15 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<
 
   render(): JSX.Element {
     const { onClose } = this.props;
-    const { dynamicConfig, allJSONValid, historyRecords } = this.state;
+    const { dynamicConfig, allJsonValid, historyRecords } = this.state;
 
     return (
       <SnitchDialog
         className="overlord-dynamic-config-dialog"
-        isOpen
         onSave={this.saveConfig}
         onClose={onClose}
         title="Overlord dynamic config"
-        saveDisabled={!allJSONValid}
+        saveDisabled={!allJsonValid}
         historyRecords={historyRecords}
       >
         <p>
@@ -148,7 +147,7 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<
           ]}
           model={dynamicConfig}
           onChange={m => this.setState({ dynamicConfig: m })}
-          updateJSONValidity={e => this.setState({ allJSONValid: e })}
+          updateJsonValidity={e => this.setState({ allJsonValid: e })}
         />
       </SnitchDialog>
     );

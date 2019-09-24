@@ -77,7 +77,7 @@ public class WorkerHolder
   protected final AtomicBoolean disabled;
 
   // Known list of tasks running/completed on this worker.
-  protected final AtomicReference<Map<String, TaskAnnouncement>> tasksSnapshotRef = new AtomicReference<>(new ConcurrentHashMap<>());
+  protected final AtomicReference<Map<String, TaskAnnouncement>> tasksSnapshotRef;
 
   private final AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<>(DateTimes.nowUtc());
   private final AtomicReference<DateTime> blacklistedUntil = new AtomicReference<>();
@@ -97,7 +97,8 @@ public class WorkerHolder
       HttpRemoteTaskRunnerConfig config,
       ScheduledExecutorService workersSyncExec,
       Listener listener,
-      Worker worker
+      Worker worker,
+      List<TaskAnnouncement> knownAnnouncements
   )
   {
     this.smileMapper = smileMapper;
@@ -119,6 +120,12 @@ public class WorkerHolder
         config.getServerUnstabilityTimeout().toStandardDuration().getMillis(),
         createSyncListener()
     );
+
+    ConcurrentMap<String, TaskAnnouncement> announcements = new ConcurrentHashMap<>();
+    if (knownAnnouncements != null) {
+      knownAnnouncements.forEach(e -> announcements.put(e.getTaskId(), e));
+    }
+    tasksSnapshotRef = new AtomicReference<>(announcements);
   }
 
   public Worker getWorker()

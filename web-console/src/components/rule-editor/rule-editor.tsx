@@ -295,6 +295,7 @@ export class RuleEditor extends React.PureComponent<RuleEditorProps, RuleEditorS
                     onChange={(e: any) =>
                       onChange(RuleEditor.changePeriod(rule, e.target.value as any))
                     }
+                    placeholder="P1D"
                   />
                 )}
                 {ruleTimeType === 'ByInterval' && (
@@ -303,6 +304,7 @@ export class RuleEditor extends React.PureComponent<RuleEditorProps, RuleEditorS
                     onChange={(e: any) =>
                       onChange(RuleEditor.changeInterval(rule, e.target.value as any))
                     }
+                    placeholder="2010-01-01/2020-01-01"
                   />
                 )}
               </ControlGroup>

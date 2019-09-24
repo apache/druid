@@ -638,6 +638,47 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     }
   }
 
+  @Override
+  public Optional<ByteSource> streamTaskReports(final String taskId)
+  {
+    final ZkWorker zkWorker = findWorkerRunningTask(taskId);
+
+    if (zkWorker == null) {
+      // Worker is not running this task, it might be available in deep storage
+      return Optional.absent();
+    } else {
+      TaskLocation taskLocation = runningTasks.get(taskId).getLocation();
+      final URL url = TaskRunnerUtils.makeTaskLocationURL(
+          taskLocation,
+          "/druid/worker/v1/chat/%s/liveReports",
+          taskId
+      );
+      return Optional.of(
+          new ByteSource()
+          {
+            @Override
+            public InputStream openStream() throws IOException
+            {
+              try {
+                return httpClient.go(
+                    new Request(HttpMethod.GET, url),
+                    new InputStreamResponseHandler()
+                ).get();
+              }
+              catch (InterruptedException e) {
+                throw new RuntimeException(e);
+              }
+              catch (ExecutionException e) {
+                // Unwrap if possible
+                Throwables.propagateIfPossible(e.getCause(), IOException.class);
+                throw new RuntimeException(e);
+              }
+            }
+          }
+      );
+    }
+  }
+
   /**
    * Adds a task to the pending queue
    */
@@ -753,7 +794,6 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
    * needs to bootstrap after a restart.
    *
    * @param taskRunnerWorkItem - the task to assign
-   *
    * @return true iff the task is now assigned
    */
   private boolean tryAssignTask(final Task task, final RemoteTaskRunnerWorkItem taskRunnerWorkItem) throws Exception
@@ -787,8 +827,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                       Maps.filterEntries(
                           zkWorkers,
                           input -> !lazyWorkers.containsKey(input.getKey()) &&
-                                 !workersWithUnacknowledgedTask.containsKey(input.getKey()) &&
-                                 !blackListedWorkers.contains(input.getValue())
+                                   !workersWithUnacknowledgedTask.containsKey(input.getKey()) &&
+                                   !blackListedWorkers.contains(input.getValue())
                       ),
                       (String key, ZkWorker value) -> value.toImmutable()
                   )
@@ -832,7 +872,6 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
    *
    * @param theZkWorker        The worker the task is assigned to
    * @param taskRunnerWorkItem The task to be assigned
-   *
    * @return boolean indicating whether the task was successfully assigned or not
    */
   private boolean announceTask(
@@ -911,7 +950,6 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
    * The RemoteTaskRunner updates state according to these changes.
    *
    * @param worker contains metadata for a worker that has appeared in ZK
-   *
    * @return future that will contain a fully initialized worker
    */
   private ListenableFuture<ZkWorker> addWorker(final Worker worker)

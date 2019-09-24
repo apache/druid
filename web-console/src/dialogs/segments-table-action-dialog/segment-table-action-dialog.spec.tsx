@@ -29,7 +29,6 @@ describe('task table action dialog', () => {
         segmentId="test"
         actions={[{ title: 'test', onAction: () => null }]}
         onClose={() => {}}
-        isOpen
       />
     );
     render(taskTableActionDialog);

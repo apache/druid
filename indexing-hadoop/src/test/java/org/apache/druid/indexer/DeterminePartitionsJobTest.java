@@ -51,16 +51,15 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class DeterminePartitionsJobTest
 {
-
-  private HadoopDruidIndexerConfig config;
-  private int expectedNumOfSegments;
-  private int[] expectedNumOfShardsForEachSegment;
-  private String[][][] expectedStartEndForEachShard;
-  private File dataFile;
-  private File tmpDir;
+  private final HadoopDruidIndexerConfig config;
+  private final int expectedNumOfSegments;
+  private final int[] expectedNumOfShardsForEachSegment;
+  private final String[][][] expectedStartEndForEachShard;
+  private final File dataFile;
+  private final File tmpDir;
 
   @Parameterized.Parameters(name = "assumeGrouped={0}, "
-                                   + "targetPartitionSize={1}, "
+                                   + "maxRowsPerSegment={1}, "
                                    + "interval={2}"
                                    + "expectedNumOfSegments={3}, "
                                    + "expectedNumOfShardsForEachSegment={4}, "
@@ -82,7 +81,7 @@ public class DeterminePartitionsJobTest
                         {"c.example.com", "e.example.com"},
                         {"e.example.com", "g.example.com"},
                         {"g.example.com", "i.example.com"},
-                        {"i.example.com", null }
+                        {"i.example.com", null}
                     }
                 },
                 ImmutableList.of(
@@ -222,7 +221,7 @@ public class DeterminePartitionsJobTest
 
   public DeterminePartitionsJobTest(
       boolean assumeGrouped,
-      Integer targetPartitionSize,
+      Integer maxRowsPerSegment,
       String interval,
       int expectedNumOfSegments,
       int[] expectedNumOfShardsForEachSegment,
@@ -249,7 +248,11 @@ public class DeterminePartitionsJobTest
                     new StringInputRowParser(
                         new CSVParseSpec(
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "country")), null, null),
+                            new DimensionsSpec(
+                                DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "country")),
+                                null,
+                                null
+                            ),
                             null,
                             ImmutableList.of("timestamp", "host", "country", "visited_num"),
                             false,
@@ -281,7 +284,7 @@ public class DeterminePartitionsJobTest
             new HadoopTuningConfig(
                 tmpDir.getCanonicalPath(),
                 null,
-                new SingleDimensionPartitionsSpec(targetPartitionSize, null, null, assumeGrouped),
+                new SingleDimensionPartitionsSpec(null, maxRowsPerSegment, null, assumeGrouped),
                 null,
                 null,
                 null,
@@ -319,9 +322,9 @@ public class DeterminePartitionsJobTest
     Assert.assertEquals(expectedNumOfSegments, config.getSchema().getTuningConfig().getShardSpecs().size());
 
     for (Map.Entry<Long, List<HadoopyShardSpec>> entry : config.getSchema()
-                                                                   .getTuningConfig()
-                                                                   .getShardSpecs()
-                                                                   .entrySet()) {
+                                                               .getTuningConfig()
+                                                               .getShardSpecs()
+                                                               .entrySet()) {
       int partitionNum = 0;
       List<HadoopyShardSpec> specs = entry.getValue();
       Assert.assertEquals(expectedNumOfShardsForEachSegment[segmentNum], specs.size());

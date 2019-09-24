@@ -180,26 +180,26 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       isEdit,
     } = this.state;
     let endpoint = '/druid/coordinator/v1/lookups/config';
-    const specJSON: any = JSON.parse(lookupEditSpec);
-    let dataJSON: any;
+    const specJson: any = JSON.parse(lookupEditSpec);
+    let dataJson: any;
     if (isEdit) {
       endpoint = `${endpoint}/${lookupEditTier}/${lookupEditName}`;
-      dataJSON = {
+      dataJson = {
         version: lookupEditVersion,
-        lookupExtractorFactory: specJSON,
+        lookupExtractorFactory: specJson,
       };
     } else {
-      dataJSON = {
+      dataJson = {
         [lookupEditTier]: {
           [lookupEditName]: {
             version: lookupEditVersion,
-            lookupExtractorFactory: specJSON,
+            lookupExtractorFactory: specJson,
           },
         },
       };
     }
     try {
-      await axios.post(endpoint, dataJSON);
+      await axios.post(endpoint, dataJson);
       this.setState({
         lookupEditDialogOpen: false,
       });
@@ -346,10 +346,10 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       lookupEditVersion,
       isEdit,
     } = this.state;
+    if (!lookupEditDialogOpen) return;
 
     return (
       <LookupEditDialog
-        isOpen={lookupEditDialogOpen}
         onClose={() => this.setState({ lookupEditDialogOpen: false })}
         onSubmit={() => this.submitLookupEdit()}
         onChange={this.handleChangeLookup}
