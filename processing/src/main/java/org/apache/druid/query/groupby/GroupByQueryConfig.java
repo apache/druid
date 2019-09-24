@@ -229,7 +229,7 @@ public class GroupByQueryConfig
         getMaxMergingDictionarySize()
     );
     newConfig.forcePushDownLimit = query.getContextBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
-    newConfig.forcePushDownLimit = query.getContextBoolean(
+    newConfig.applyLimitPushDownToSegment = query.getContextBoolean(
         CTX_KEY_APPLY_LIMIT_PUSH_DOWN_TO_SEGMENT,
         isApplyLimitPushDownToSegment()
     );
