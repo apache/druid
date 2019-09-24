@@ -60,6 +60,7 @@ import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -364,9 +365,9 @@ public class JobHelper
   public static void writeJobIdToFile(String hadoopJobIdFileName, String hadoopJobId)
   {
     if (hadoopJobId != null && hadoopJobIdFileName != null) {
-      try {
+      try (final OutputStream out = java.nio.file.Files.newOutputStream(Paths.get(hadoopJobIdFileName))) {
         HadoopDruidIndexerConfig.JSON_MAPPER.writeValue(
-            new OutputStreamWriter(new FileOutputStream(new File(hadoopJobIdFileName)), StandardCharsets.UTF_8),
+            new OutputStreamWriter(out, StandardCharsets.UTF_8),
             hadoopJobId
         );
         log.info("MR job id [%s] is written to the file [%s]", hadoopJobId, hadoopJobIdFileName);
