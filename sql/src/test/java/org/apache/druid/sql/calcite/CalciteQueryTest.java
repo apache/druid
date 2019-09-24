@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import org.aopalliance.intercept.Invocation;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.common.config.NullHandling;
@@ -3372,11 +3373,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
     }
     catch (Throwable t) {
-      // The root exception is not accessible by doing `getCause()`, it can only be retrieved through a chain of
-      // InvocationTargetException.getTargetException() calls, hence the code below
-      Throwable t2 = ((InvocationTargetException) t.getCause()).getTargetException();
-      Throwable t3 = ((InvocationTargetException) t2.getCause()).getTargetException();
-      Throwable rootException = ((InvocationTargetException) t3.getCause()).getTargetException();
+      Throwable rootException = CalciteTests.getRootCauseFromInvocationTargetExceptionChain(t);
       Assert.assertEquals(IAE.class, rootException.getClass());
       Assert.assertEquals(
           "Illegal TIMESTAMP constant: CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL",
