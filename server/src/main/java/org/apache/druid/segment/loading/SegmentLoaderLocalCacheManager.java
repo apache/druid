@@ -177,7 +177,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
    *
    * Locations are fetched using {@link StorageLocationSelectorStrategy}.
    */
-  private synchronized StorageLocation loadSegmentWithRetry(DataSegment segment, String storageDirStr) throws SegmentLoadingException
+  private StorageLocation loadSegmentWithRetry(DataSegment segment, String storageDirStr) throws SegmentLoadingException
   {
     Iterator<StorageLocation> locationsIterator = strategy.getLocations();
     int numLocationsToTry = this.locations.size();

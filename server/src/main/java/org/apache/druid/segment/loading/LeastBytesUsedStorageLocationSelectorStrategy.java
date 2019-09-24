@@ -51,8 +51,7 @@ public class LeastBytesUsedStorageLocationSelectorStrategy implements StorageLoc
   public String toString()
   {
     return "LeastBytesUsedStorageLocationSelectorStrategy{" +
-           "ordering=" + ORDERING +
-           ", storageLocations=" + storageLocations +
+           "storageLocations=" + storageLocations +
            '}';
   }
 }
