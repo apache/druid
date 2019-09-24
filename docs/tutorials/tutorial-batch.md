@@ -244,7 +244,7 @@ Once the spec is submitted, you can follow the same instructions as above to wai
 
 Let's briefly discuss how we would've submitted the ingestion task without using the script. You do not need to run these commands.
 
-To submit the task, POST it to Druid in a new terminal window from the apache-druid-#{DRUIDVERSION} directory:
+To submit the task, POST it to Druid in a new terminal window from the apache-druid-{{DRUIDVERSION}} directory:
 
 ```bash
 curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/wikipedia-index.json http://localhost:8081/druid/indexer/v1/task
