@@ -97,6 +97,7 @@ import {
   hasParallelAbility,
   IngestionComboTypeWithExtra,
   IngestionSpec,
+  invalidIoConfig,
   invalidTuningConfig,
   IoConfig,
   isColumnTimestampSpec,
@@ -231,7 +232,7 @@ const VIEW_TITLE: Record<Step, string> = {
   partition: 'Partition',
   tuning: 'Tune',
   publish: 'Publish',
-  spec: 'Edit JSON spec',
+  spec: 'Edit spec',
   loading: 'Loading',
 };
 
@@ -1988,6 +1989,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             fields={getFilterFormFields()}
             model={selectedFilter}
             onChange={f => this.setState({ selectedFilter: f })}
+            showCustom={f => !['selector', 'in', 'regex', 'like', 'not'].includes(f.type)}
           />
           <div className="controls-buttons">
             <Button
@@ -2612,6 +2614,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 type: 'string',
                 suggestions: ['HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR'],
                 defined: (g: GranularitySpec) => g.type === 'uniform',
+                required: true,
                 info: (
                   <>
                     The granularity to create time chunks at. Multiple segments can be created per
@@ -2661,7 +2664,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderParallelPickerIfNeeded()}
         </div>
         {this.renderNextBar({
-          disabled: invalidTuningConfig(tuningConfig, granularitySpec.intervals),
+          disabled:
+            !granularitySpec.segmentGranularity ||
+            invalidTuningConfig(tuningConfig, granularitySpec.intervals),
         })}
       </>
     );
@@ -2722,7 +2727,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           </Callout>
           {this.renderParallelPickerIfNeeded()}
         </div>
-        {this.renderNextBar({})}
+        {this.renderNextBar({
+          disabled: invalidIoConfig(ioConfig),
+        })}
       </>
     );
   }
@@ -2782,6 +2789,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'ioConfig.appendToExisting',
                 label: 'Append to existing',
                 type: 'boolean',
+                defaultValue: false,
                 defined: spec => !deepGet(spec, 'tuningConfig.forceGuaranteedRollup'),
                 info: (
                   <>
@@ -2803,8 +2811,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'tuningConfig.logParseExceptions',
                 label: 'Log parse exceptions',
                 type: 'boolean',
-                disabled: parallel,
                 defaultValue: false,
+                disabled: parallel,
                 info: (
                   <>
                     If true, log an error message when a parsing exception occurs, containing

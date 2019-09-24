@@ -54,6 +54,8 @@ public class StatsDEmitterConfig
   private final List<String> dogstatsdConstantTags;
   @JsonProperty
   private final Boolean dogstatsdServiceAsTag;
+  @JsonProperty
+  private final Boolean dogstatsdEvents;
 
   @JsonCreator
   public StatsDEmitterConfig(
@@ -66,7 +68,8 @@ public class StatsDEmitterConfig
       @JsonProperty("blankHolder") @Nullable String blankHolder,
       @JsonProperty("dogstatsd") @Nullable Boolean dogstatsd,
       @JsonProperty("dogstatsdConstantTags") @Nullable List<String> dogstatsdConstantTags,
-      @JsonProperty("dogstatsdServiceAsTag") @Nullable Boolean dogstatsdServiceAsTag
+      @JsonProperty("dogstatsdServiceAsTag") @Nullable Boolean dogstatsdServiceAsTag,
+      @JsonProperty("dogstatsdEvents") @Nullable Boolean dogstatsdEvents
   )
   {
     this.hostname = Preconditions.checkNotNull(hostname, "StatsD hostname cannot be null.");
@@ -79,6 +82,7 @@ public class StatsDEmitterConfig
     this.dogstatsd = dogstatsd != null ? dogstatsd : false;
     this.dogstatsdConstantTags = dogstatsdConstantTags != null ? dogstatsdConstantTags : Collections.emptyList();
     this.dogstatsdServiceAsTag = dogstatsdServiceAsTag != null ? dogstatsdServiceAsTag : false;
+    this.dogstatsdEvents = dogstatsdEvents != null ? dogstatsdEvents : false;
   }
 
   @Override
@@ -186,5 +190,11 @@ public class StatsDEmitterConfig
   public Boolean isDogstatsdServiceAsTag()
   {
     return dogstatsdServiceAsTag;
+  }
+
+  @JsonProperty
+  public Boolean isDogstatsdEvents()
+  {
+    return dogstatsdEvents;
   }
 }
