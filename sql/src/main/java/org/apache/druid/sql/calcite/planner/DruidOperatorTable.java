@@ -356,11 +356,11 @@ public class DruidOperatorTable implements SqlOperatorTable
 
   @Override
   public void lookupOperatorOverloads(
-      SqlIdentifier opName,
-      SqlFunctionCategory category,
-      SqlSyntax syntax,
-      List<SqlOperator> operatorList,
-      SqlNameMatcher nameMatcher
+      final SqlIdentifier opName,
+      final SqlFunctionCategory category,
+      final SqlSyntax syntax,
+      final List<SqlOperator> operatorList,
+      final SqlNameMatcher nameMatcher
   )
   {
     if (opName == null) {

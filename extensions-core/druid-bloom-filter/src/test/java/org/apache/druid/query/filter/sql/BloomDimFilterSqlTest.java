@@ -42,6 +42,7 @@ import org.apache.druid.query.expressions.BloomFilterExprMacro;
 import org.apache.druid.query.filter.BloomDimFilter;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.filter.BloomKFilterHolder;
+import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.TestHelper;
@@ -133,9 +134,6 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   @Test
   public void testBloomFilterExprFilter() throws Exception
   {
-    // Cannot vectorize due to expression virtual columns.
-    cannotVectorize();
-
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("a-foo");
     filter.addString("-foo");
@@ -147,25 +145,21 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 
     // fool the planner to make an expression virtual column to test bloom filter Druid expression
     testQuery(
-        StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(concat(dim2, '-foo'), '%s') = TRUE", base64),
+        StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE nullif(bloom_filter_test(concat(dim2, '-foo'), '%s'), 1) is null", base64),
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .virtualColumns(
-                      new ExpressionVirtualColumn(
-                          "v0",
-                          "concat(\"dim2\",'-foo')",
-                          ValueType.STRING,
-                          createExprMacroTable()
-                      )
-                  )
                   .filters(
-                      new BloomDimFilter(
-                          "v0",
-                          BloomKFilterHolder.fromBytes(bytes),
-                          null
+                      new ExpressionDimFilter(
+                          StringUtils.format(
+                              "case_searched(bloom_filter_test(concat(\"dim2\",'-foo'),'%s'),1,isnull(bloom_filter_test(concat(\"dim2\",'-foo'),'%s')))",
+                              base64,
+                              base64
+                          ),
+                          null,
+                          createExprMacroTable()
                       )
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))

@@ -72,6 +72,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
@@ -87,7 +88,9 @@ import org.junit.internal.matchers.ThrowableMessageMatcher;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
@@ -802,9 +805,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     // Regression test for https://github.com/apache/incubator-druid/issues/7768.
 
-    // After upgrading to Calcite 1.21, the results return in the wrong order, the ORDER BY __time DESC
-    // in the inner query is not being applied.
-
+    // After upgrading to Calcite 1.21, Calcite no longer respects the ORDER BY __time DESC
+    // in the inner query.
     testQuery(
         "SELECT 'beep ' || dim1 FROM (SELECT dim1 FROM druid.foo ORDER BY __time DESC)",
         ImmutableList.of(
@@ -1807,7 +1809,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  //.filters(expressionFilter("case_searched((\"dim2\" == 'a'),1,isnull(\"dim2\"))"))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
@@ -1884,8 +1885,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
     /*
     The SQL query in this test planned to the following Druid query in Calcite 1.17.
-    After upgrading to Calcite 1.21, it seems like there is an optimization based on the NULLIF() == null,
-    and no query is generated.
+    After upgrading to Calcite 1.21, Calcite applies an optimization based on the NULLIF() == null,
+    which is valid assuming standard SQL null handling, and no query is generated.
 
     testQuery(
         "SELECT COUNT(*)\n"
@@ -1981,7 +1982,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnplannableQueries()
+  public void testUnplannableQueries() throws Exception
   {
     // All of these queries are unplannable because they rely on features Druid doesn't support.
     // This test is here to confirm that we don't fall back to Calcite's interpreter or enumerable implementation.
@@ -3151,7 +3152,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.sqlCompatible() ? 2L : 2L}
+            new Object[]{2L}
         )
     );
   }
@@ -8034,8 +8035,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                .aggregators(aggregators(
                                    new CountAggregatorFactory("a0")
                                ))
-                               // after upgrading to Calcite 1.21, the sin(pi/6)-type expressions with no references
-                               // to columns are optimized into constant values
+                               // after upgrading to Calcite 1.21, expressions like sin(pi/6) that only reference
+                               // literals are optimized into literals
                                .postAggregators(
                                    expressionPostAgg("p0", "(exp(\"a0\") + 10)"),
                                    expressionPostAgg("p1", "0.49999999999999994"),
@@ -9093,7 +9094,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-
   @Test
   public void testLeftRightStringOperators() throws Exception
   {
@@ -9124,6 +9124,78 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"2", "2", "2"},
             new Object[]{"abc", "ab", "bc"},
             new Object[]{"def", "de", "ef"}
+        )
+    );
+  }
+
+  @Test
+  public void testQueryContextOuterLimit() throws Exception
+  {
+    Map<String, Object> outerLimitContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    outerLimitContext.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 4);
+
+    TopNQueryBuilder baseBuilder = new TopNQueryBuilder()
+        .dataSource(CalciteTests.DATASOURCE1)
+        .intervals(querySegmentSpec(Filtration.eternity()))
+        .granularity(Granularities.ALL)
+        .dimension(new DefaultDimensionSpec("dim1", "d0"))
+        .metric(
+            new InvertedTopNMetricSpec(
+                new DimensionTopNMetricSpec(
+                    null,
+                    StringComparators.LEXICOGRAPHIC
+                )
+            )
+        )
+        .context(outerLimitContext);
+
+    // no existing limit
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        outerLimitContext,
+        "SELECT dim1 FROM druid.foo GROUP BY dim1 ORDER BY dim1 DESC",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            baseBuilder.threshold(4).build()
+        ),
+        ImmutableList.of(
+            new Object[]{""},
+            new Object[]{"def"},
+            new Object[]{"abc"},
+            new Object[]{"2"}
+        )
+    );
+
+    // existing limit greater than context limit, override existing limit
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        outerLimitContext,
+        "SELECT dim1 FROM druid.foo GROUP BY dim1 ORDER BY dim1 DESC LIMIT 9",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            baseBuilder.threshold(4).build()
+        ),
+        ImmutableList.of(
+            new Object[]{""},
+            new Object[]{"def"},
+            new Object[]{"abc"},
+            new Object[]{"2"}
+        )
+    );
+
+    // existing limit less than context limit, keep existing limit
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        outerLimitContext,
+        "SELECT dim1 FROM druid.foo GROUP BY dim1 ORDER BY dim1 DESC LIMIT 2",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            baseBuilder.threshold(2).build()
+
+        ),
+        ImmutableList.of(
+            new Object[]{""},
+            new Object[]{"def"}
         )
     );
   }
