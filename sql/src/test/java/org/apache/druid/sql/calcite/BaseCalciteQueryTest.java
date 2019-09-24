@@ -96,7 +96,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class BaseCalciteQueryTest extends CalciteTestBase
 {
   public static final String NULL_VALUE = NullHandling.replaceWithDefault() ? "" : null;

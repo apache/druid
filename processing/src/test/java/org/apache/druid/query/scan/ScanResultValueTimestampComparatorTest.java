@@ -34,7 +34,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class ScanResultValueTimestampComparatorTest
 {
   private static QuerySegmentSpec intervalSpec;

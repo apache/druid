@@ -57,7 +57,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class HdfsClasspathSetupTest
 {
   private static MiniDFSCluster miniCluster;

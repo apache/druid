@@ -64,7 +64,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.zip.Deflater;
 
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because not set in an constructor
 public class AsyncManagementForwardingServletTest extends BaseJettyTest
 {
   private static final ExpectedRequest COORDINATOR_EXPECTED_REQUEST = new ExpectedRequest();

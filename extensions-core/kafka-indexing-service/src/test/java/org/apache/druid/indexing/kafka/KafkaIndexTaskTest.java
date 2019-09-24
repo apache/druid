@@ -192,7 +192,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because as they are set in multiple class's
 public class KafkaIndexTaskTest
 {
   private static final Logger log = new Logger(KafkaIndexTaskTest.class);

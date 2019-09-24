@@ -120,7 +120,7 @@ import java.util.TreeMap;
 import java.util.concurrent.Executor;
 
 @RunWith(Parameterized.class)
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class KafkaSupervisorTest extends EasyMockSupport
 {
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();

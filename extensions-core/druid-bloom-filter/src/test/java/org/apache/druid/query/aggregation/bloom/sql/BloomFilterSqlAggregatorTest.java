@@ -92,7 +92,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method.
 public class BloomFilterSqlAggregatorTest
 {
   private static final int TEST_NUM_ENTRIES = 1000;

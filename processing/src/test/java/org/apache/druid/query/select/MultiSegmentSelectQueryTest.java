@@ -69,7 +69,7 @@ import java.util.Map;
 /**
  */
 @RunWith(Parameterized.class)
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class MultiSegmentSelectQueryTest
 {
   private static final Supplier<SelectQueryConfig> CONFIG_SUPPLIER = Suppliers.ofInstance(new SelectQueryConfig(true));

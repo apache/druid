@@ -51,7 +51,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because not initialized in constructor
 public class KinesisRecordSupplierTest extends EasyMockSupport
 {
   private static final String STREAM = "stream";

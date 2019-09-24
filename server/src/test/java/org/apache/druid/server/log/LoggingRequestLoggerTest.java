@@ -61,7 +61,7 @@ import java.util.List;
 import java.util.Map;
 
 // Mostly just test that it doesn't crash
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class LoggingRequestLoggerTest
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();

@@ -42,7 +42,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class FloatCompressionBenchmarkFileGenerator
 {
   private static final Logger log = new Logger(FloatCompressionBenchmarkFileGenerator.class);

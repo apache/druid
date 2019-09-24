@@ -34,7 +34,7 @@ import java.io.StringWriter;
 
 /**
  */
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class EmittingLogger extends Logger
 {
   public static final String EXCEPTION_TYPE_KEY = "exceptionType";

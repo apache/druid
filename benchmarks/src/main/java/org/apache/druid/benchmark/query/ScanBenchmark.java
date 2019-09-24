@@ -100,7 +100,7 @@ import java.util.concurrent.TimeUnit;
 @Fork(value = 1)
 @Warmup(iterations = 10)
 @Measurement(iterations = 25)
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because variable is not initilized.
 public class ScanBenchmark
 {
   @Param({"2", "4"})

@@ -48,7 +48,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 @RunWith(Parameterized.class)
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because not initialized in constructor.
 public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
 {
   private static final Pattern WORD = Pattern.compile("\\w+");

@@ -28,7 +28,7 @@ import org.junit.Test;
 
 import java.util.Map;
 
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class StaticMapExtractionNamespaceTest
 {
   private static final Map<String, String> MAP = ImmutableMap.<String, String>builder().put("foo", "bar").build();

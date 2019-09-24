@@ -65,7 +65,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class TestIndex
 {
   public static final String[] COLUMNS = new String[]{

@@ -60,7 +60,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because as they are set in multiple class's
 public class KafkaSamplerSpecTest
 {
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();

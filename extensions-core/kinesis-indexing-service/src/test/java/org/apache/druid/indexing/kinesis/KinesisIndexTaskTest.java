@@ -196,7 +196,7 @@ import java.util.stream.Collectors;
 
 
 @RunWith(Parameterized.class)
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class KinesisIndexTaskTest extends EasyMockSupport
 {
   private static final Logger LOG = new Logger(KinesisIndexTaskTest.class);

@@ -37,7 +37,7 @@ import java.util.UUID;
 /**
  *
  */
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class MapLookupExtractionFnSerDeTest
 {
   private static ObjectMapper mapper;

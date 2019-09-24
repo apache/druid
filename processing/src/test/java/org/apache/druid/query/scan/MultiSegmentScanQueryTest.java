@@ -63,7 +63,7 @@ import java.util.List;
  *
  */
 @RunWith(Parameterized.class)
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class MultiSegmentScanQueryTest
 {
   private static final ScanQueryQueryToolChest TOOL_CHEST = new ScanQueryQueryToolChest(

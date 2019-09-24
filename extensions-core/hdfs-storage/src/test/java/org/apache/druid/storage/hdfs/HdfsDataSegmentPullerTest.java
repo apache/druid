@@ -48,7 +48,7 @@ import java.util.zip.GZIPOutputStream;
 /**
  *
  */
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class HdfsDataSegmentPullerTest
 {
   private static MiniDFSCluster miniCluster;
