@@ -25,7 +25,7 @@ import { TimeMenuItems } from './time-menu-items';
 describe('time menu', () => {
   const parser = sqlParserFactory(['COUNT']);
 
-  it('matches snapshot', () => {
+  it('matches snapshot when menu is opened for column not inside group by', () => {
     const timeMenu = (
       <TimeMenuItems
         columnName={'__time'}
@@ -35,10 +35,10 @@ describe('time menu', () => {
     );
 
     const { container } = render(timeMenu);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
-  it('matches snapshot containing remove group by button', () => {
+  it('matches snapshot when menu is opened for column inside group by', () => {
     const timeMenu = (
       <TimeMenuItems
         columnName={'__time'}

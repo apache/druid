@@ -25,7 +25,7 @@ import { NumberMenuItems } from './number-menu-items';
 describe('number menu', () => {
   const parser = sqlParserFactory(['COUNT']);
 
-  it('matches snapshot', () => {
+  it('matches snapshot when menu is opened for column not inside group by', () => {
     const numberMenu = (
       <NumberMenuItems
         columnName={'added'}
@@ -35,10 +35,10 @@ describe('number menu', () => {
     );
 
     const { container } = render(numberMenu);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
-  it('matches snapshot containing remove group by button', () => {
+  it('matches snapshot when menu is opened for column inside group by', () => {
     const numberMenu = (
       <NumberMenuItems
         columnName={'added'}
