@@ -59,7 +59,7 @@ public interface SupervisorSpec
 
   /**
    * This API is only used for informational purposes in
-   * {@link org.apache.druid.sql.calcite.schema.SystemSchema.SupervisorsTable}
+   * org.apache.druid.sql.calcite.schema.SystemSchema.SupervisorsTable
    *
    * @return supervisor task type
    */
@@ -67,7 +67,7 @@ public interface SupervisorSpec
 
   /**
    * This API is only used for informational purposes in
-   * {@link org.apache.druid.sql.calcite.schema.SystemSchema.SupervisorsTable}
+   * org.apache.druid.sql.calcite.schema.SystemSchema.SupervisorsTable
    *
    * @return source like stream or topic name
    */

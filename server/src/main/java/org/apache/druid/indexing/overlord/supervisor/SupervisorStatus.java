@@ -28,8 +28,9 @@ import com.google.common.base.Preconditions;
 import java.util.Objects;
 
 /**
- * This class contains the attributes of a supervisor task which are returned by the API's in {@link SupervisorResource}
- * and used by {@link org.apache.druid.sql.calcite.schema.SystemSchema.SupervisorsTable}
+ * This class contains the attributes of a supervisor task which are returned by the API's in
+ * org.apache.druid.indexing.overlord.supervisor.SupervisorResource
+ * and used by org.apache.druid.sql.calcite.schema.SystemSchema.SupervisorsTable
  */
 @JsonDeserialize(builder = SupervisorStatus.Builder.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
