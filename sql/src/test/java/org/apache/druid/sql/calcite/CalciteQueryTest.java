@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import org.aopalliance.intercept.Invocation;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.common.config.NullHandling;
@@ -85,7 +84,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
