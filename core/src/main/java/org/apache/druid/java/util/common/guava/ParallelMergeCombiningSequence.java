@@ -332,11 +332,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         tasks.add(mergeAction);
       }
 
-      /*
       for (RecursiveAction task : tasks) {
         getPool().execute(task);
-      }*/
-      invokeAll(tasks);
+      }
 
       QueuePusher<OrderedResultBatch<T>> outputPusher = new QueuePusher<>(out, hasTimeout, timeoutAt);
       BlockingQueueMergeCombineSeedAction<T> finalMergeAction = new BlockingQueueMergeCombineSeedAction<>(
@@ -491,9 +489,11 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   }
 
   /**
-   * This {@link RecursiveAction} waits for {@link OrderedResultBatch} to be available in a set of {@link BlockingQueue}
+   * This {@link RecursiveAction} waits for {@link OrderedResultBatch} to be available in a set of {@link Yielder}
    * in order to construct a set of {@link YielderBatchedResultsCursor} to feed to a {@link MergeCombineAction}
    * which will do the actual work of merging and combining the result batches.
+   *
+   *
    */
   private static class YielderMergeCombineSeedAction<T> extends RecursiveAction
   {
@@ -555,9 +555,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   /**
    * This {@link RecursiveAction} waits for {@link OrderedResultBatch} to be available in a set of {@link BlockingQueue}
    * in order to construct a set of {@link BlockingQueueuBatchedResultsCursor} to feed to a {@link MergeCombineAction}
-   * which will do the actual work of merging and combining the result batches. This is not needed for
-   * {@link OrderedResultBatch} that are provided by a {@link Yielder} because they will have the initial result batch
-   * available by virtue of translating the sequence.
+   * which will do the actual work of merging and combining the result batches.
    */
   private static class BlockingQueueMergeCombineSeedAction<T> extends RecursiveAction
   {
