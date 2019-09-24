@@ -26,10 +26,18 @@ if (process.argv.length !== 3) {
 var version = process.argv[2];
 
 try {
+  // Fix doc paths
   replace.sync({
     files: './build/ApacheDruid/docs/**/*.html',
     from: /\/docs\//g,
     to: '/docs/' + version + '/',
+  });
+
+  // Interpolate {{DRUIDVERSION}}
+  replace.sync({
+    files: './build/ApacheDruid/docs/**/*.html',
+    from: /\{\{DRUIDVERSION\}\}/g,
+    to: version,
   });
   console.log('Fixed versions');
 } catch (error) {

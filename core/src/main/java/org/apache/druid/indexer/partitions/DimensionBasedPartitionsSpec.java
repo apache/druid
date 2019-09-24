@@ -26,5 +26,11 @@ import java.util.List;
  */
 public interface DimensionBasedPartitionsSpec extends PartitionsSpec
 {
+  String TARGET_ROWS_PER_SEGMENT = "targetRowsPerSegment";
+
+  // Deprecated properties preserved for backward compatibility:
+  @Deprecated
+  String TARGET_PARTITION_SIZE = "targetPartitionSize";
+
   List<String> getPartitionDimensions();
 }

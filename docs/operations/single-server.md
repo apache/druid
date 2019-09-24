@@ -44,35 +44,35 @@ The example configurations run the Druid Coordinator and Overlord together in a 
 
 While example configurations are provided for very large single machines, at higher scales we recommend running Druid in a [clustered deployment](../tutorials/cluster.md), for fault-tolerance and reduced resource contention.
 
-## Single Server Reference Configurations
+## Single server reference configurations
 
-Nano-Quickstart: 1 CPU, 4GB RAM
-------------
-Launch command: `bin/start-nano-quickstart`
-Configuration directory: `conf/druid/single-server/nano-quickstart`
+### Nano-Quickstart: 1 CPU, 4GB RAM
 
-Micro-Quickstart: 4 CPU, 16GB RAM
-------------
-Launch command: `bin/start-micro-quickstart`
-Configuration directory: `conf/druid/single-server/micro-quickstart`
+- Launch command: `bin/start-nano-quickstart`
+- Configuration directory: `conf/druid/single-server/nano-quickstart`
 
-Small: 8 CPU, 64GB RAM (~i3.2xlarge)
-------------
-Launch command: `bin/start-small`
-Configuration directory: `conf/druid/single-server/small`
+### Micro-Quickstart: 4 CPU, 16GB RAM
 
-Medium: 16 CPU, 128GB RAM (~i3.4xlarge)
-------------
-Launch command: `bin/start-medium`
-Configuration directory: `conf/druid/single-server/medium`
+- Launch command: `bin/start-micro-quickstart`
+- Configuration directory: `conf/druid/single-server/micro-quickstart`
 
-Large: 32 CPU, 256GB RAM (~i3.8xlarge)
-------------
-Launch command: `bin/start-large`
-Configuration directory: `conf/druid/single-server/large`
+### Small: 8 CPU, 64GB RAM (~i3.2xlarge)
 
-X-Large: 64 CPU, 512GB RAM (~i3.16xlarge)
-------------
-Launch command: `bin/start-xlarge`
-Configuration directory: `conf/druid/single-server/xlarge`
+- Launch command: `bin/start-small`
+- Configuration directory: `conf/druid/single-server/small`
+
+### Medium: 16 CPU, 128GB RAM (~i3.4xlarge)
+
+- Launch command: `bin/start-medium`
+- Configuration directory: `conf/druid/single-server/medium`
+
+### Large: 32 CPU, 256GB RAM (~i3.8xlarge)
+
+- Launch command: `bin/start-large`
+- Configuration directory: `conf/druid/single-server/large`
+
+### X-Large: 64 CPU, 512GB RAM (~i3.16xlarge)
+
+- Launch command: `bin/start-xlarge`
+- Configuration directory: `conf/druid/single-server/xlarge`
 
