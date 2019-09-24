@@ -113,4 +113,25 @@ public class TaskRunnerUtils
       throw new RuntimeException(e);
     }
   }
+
+  public static URL makeTaskLocationURL(TaskLocation taskLocation, String pathFormat, String... pathParams)
+  {
+    Preconditions.checkArgument(pathFormat.startsWith("/"), "path must start with '/': %s", pathFormat);
+    final String path = StringUtils.format(
+        pathFormat,
+        Arrays.stream(pathParams).map(StringUtils::urlEncode).toArray()
+    );
+
+    try {
+      return new URI(StringUtils.format(
+          "http://%s:%s%s",
+          taskLocation.getHost(),
+          taskLocation.getPort(),
+          path
+      )).toURL();
+    }
+    catch (URISyntaxException | MalformedURLException e) {
+      throw new RuntimeException(e);
+    }
+  }
 }

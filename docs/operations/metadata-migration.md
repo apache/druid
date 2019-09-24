@@ -61,7 +61,7 @@ Druid provides a `metadata-init` tool for creating Druid's metadata tables. Afte
 
 In the example commands below:
 
-- `lib` is the the Druid lib directory
+- `lib` is the Druid lib directory
 - `extensions` is the Druid extensions directory
 - `base` corresponds to the value of `druid.metadata.storage.tables.base` in the configuration, `druid` by default.
 - The `--connectURI` parameter corresponds to the value of `druid.metadata.storage.connector.connectURI`.

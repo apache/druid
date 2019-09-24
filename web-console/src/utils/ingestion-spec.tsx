@@ -787,6 +787,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string-array',
           placeholder:
             'https://example.com/path/to/file1.ext, https://example.com/path/to/file2.ext',
+          required: true,
           info: (
             <p>
               The full URI of your file. To ingest from multiple URIs, use commas to separate each
@@ -818,6 +819,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Base directory',
           type: 'string',
           placeholder: '/path/to/files/',
+          required: true,
           info: (
             <>
               <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html#localfirehose">
@@ -831,7 +833,8 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'firehose.filter',
           label: 'File filter',
           type: 'string',
-          defaultValue: '*.*',
+          required: true,
+          suggestions: ['*', '*.json', '*.json.gz', '*.csv', '*.tsv'],
           info: (
             <>
               <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html#localfirehose">
@@ -856,6 +859,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'firehose.dataSource',
           label: 'Datasource',
           type: 'string',
+          required: true,
           info: <p>The datasource to fetch rows from.</p>,
         },
         {
@@ -868,6 +872,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             `${CURRENT_YEAR}-01-01/${CURRENT_YEAR + 1}-01-01`,
             `${CURRENT_YEAR}/${CURRENT_YEAR + 1}`,
           ],
+          required: true,
           info: (
             <p>
               A String representing ISO-8601 Interval. This defines the time range to fetch the data
@@ -930,6 +935,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'S3 URIs',
           type: 'string-array',
           placeholder: 's3://your-bucket/some-file1.ext, s3://your-bucket/some-file2.ext',
+          required: true,
           defined: ioConfig => !deepGet(ioConfig, 'firehose.prefixes'),
           info: (
             <>
@@ -946,6 +952,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'S3 prefixes',
           type: 'string-array',
           placeholder: 's3://your-bucket/some-path1, s3://your-bucket/some-path2',
+          required: true,
           defined: ioConfig => !deepGet(ioConfig, 'firehose.uris'),
           info: (
             <>
@@ -963,6 +970,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'firehose.blobs',
           label: 'Google blobs',
           type: 'json',
+          required: true,
           info: (
             <>
               <p>
@@ -983,6 +991,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'consumerProperties.{bootstrap.servers}',
           label: 'Bootstrap servers',
           type: 'string',
+          required: true,
           info: (
             <>
               <ExternalLink href="https://druid.apache.org/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig">
@@ -998,6 +1007,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         {
           name: 'topic',
           type: 'string',
+          required: true,
           defined: (i: IoConfig) => i.type === 'kafka',
         },
         {
@@ -1021,6 +1031,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'stream',
           type: 'string',
           placeholder: 'your-kinesis-stream',
+          required: true,
           info: <>The Kinesis stream to read.</>,
         },
         {
@@ -1051,6 +1062,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             'kinesis.us-gov-east-1.amazonaws.com',
             'kinesis.us-gov-west-1.amazonaws.com',
           ],
+          required: true,
           info: (
             <>
               The Amazon Kinesis stream endpoint for a region. You can find a list of endpoints{' '}
@@ -1987,6 +1999,10 @@ export function updateIngestionType(
 
   if (firehoseType) {
     newSpec = deepSet(newSpec, 'ioConfig.firehose', { type: firehoseType });
+
+    if (firehoseType === 'local') {
+      newSpec = deepSet(newSpec, 'ioConfig.firehose.filter', '*');
+    }
   }
 
   if (!deepGet(spec, 'dataSchema.dataSource')) {
