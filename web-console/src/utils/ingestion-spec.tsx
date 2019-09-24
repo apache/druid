@@ -286,11 +286,13 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
   {
     name: 'pattern',
     type: 'string',
+    required: true,
     defined: (p: ParseSpec) => p.format === 'regex',
   },
   {
     name: 'function',
     type: 'string',
+    required: true,
     defined: (p: ParseSpec) => p.format === 'javascript',
   },
   {
@@ -513,11 +515,13 @@ const FLATTEN_FIELD_FORM_FIELDS: Field<FlattenField>[] = [
     name: 'name',
     type: 'string',
     placeholder: 'column_name',
+    required: true,
   },
   {
     name: 'type',
     type: 'string',
     suggestions: ['path', 'jq', 'root'],
+    required: true,
   },
   {
     name: 'expr',
@@ -525,6 +529,7 @@ const FLATTEN_FIELD_FORM_FIELDS: Field<FlattenField>[] = [
     placeholder: '$.thing',
     defined: (flattenField: FlattenField) =>
       flattenField.type === 'path' || flattenField.type === 'jq',
+    required: true,
     info: (
       <>
         Specify a flatten{' '}
@@ -557,16 +562,19 @@ const TRANSFORM_FORM_FIELDS: Field<Transform>[] = [
     name: 'name',
     type: 'string',
     placeholder: 'output_name',
+    required: true,
   },
   {
     name: 'type',
     type: 'string',
     suggestions: ['expression'],
+    required: true,
   },
   {
     name: 'expression',
     type: 'string',
     placeholder: '"foo" + "bar"',
+    required: true,
     info: (
       <>
         A valid Druid{' '}
@@ -2126,21 +2134,60 @@ const FILTER_FORM_FIELDS: Field<DruidFilter>[] = [
   {
     name: 'type',
     type: 'string',
-    suggestions: ['selector', 'in'],
+    suggestions: ['selector', 'in', 'regex', 'like', 'not'],
   },
   {
     name: 'dimension',
     type: 'string',
+    defined: (df: DruidFilter) => ['selector', 'in', 'regex', 'like'].includes(df.type),
   },
   {
     name: 'value',
     type: 'string',
-    defined: (druidFilter: DruidFilter) => druidFilter.type === 'selector',
+    defined: (df: DruidFilter) => df.type === 'selector',
   },
   {
     name: 'values',
     type: 'string-array',
-    defined: (druidFilter: DruidFilter) => druidFilter.type === 'in',
+    defined: (df: DruidFilter) => df.type === 'in',
+  },
+  {
+    name: 'pattern',
+    type: 'string',
+    defined: (df: DruidFilter) => ['regex', 'like'].includes(df.type),
+  },
+
+  {
+    name: 'field.type',
+    label: 'Sub-filter type',
+    type: 'string',
+    suggestions: ['selector', 'in', 'regex', 'like'],
+    defined: (df: DruidFilter) => df.type === 'not',
+  },
+  {
+    name: 'field.dimension',
+    label: 'Sub-filter dimension',
+    type: 'string',
+    defined: (df: DruidFilter) => df.type === 'not',
+  },
+  {
+    name: 'field.value',
+    label: 'Sub-filter value',
+    type: 'string',
+    defined: (df: DruidFilter) => df.type === 'not' && deepGet(df, 'field.type') === 'selector',
+  },
+  {
+    name: 'field.values',
+    label: 'Sub-filter values',
+    type: 'string-array',
+    defined: (df: DruidFilter) => df.type === 'not' && deepGet(df, 'field.type') === 'in',
+  },
+  {
+    name: 'field.pattern',
+    label: 'Sub-filter pattern',
+    type: 'string',
+    defined: (df: DruidFilter) =>
+      df.type === 'not' && ['regex', 'like'].includes(deepGet(df, 'field.type')),
   },
 ];
 

@@ -1989,6 +1989,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             fields={getFilterFormFields()}
             model={selectedFilter}
             onChange={f => this.setState({ selectedFilter: f })}
+            showCustom={f => !['selector', 'in', 'regex', 'like', 'not'].includes(f.type)}
           />
           <div className="controls-buttons">
             <Button
