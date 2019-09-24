@@ -182,7 +182,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
 
   private void interruptQuery(Exception cause)
   {
-    throw new QueryInterruptedException(cause, host, queryId);
+    throw new QueryInterruptedException(cause, host);
   }
 }
 

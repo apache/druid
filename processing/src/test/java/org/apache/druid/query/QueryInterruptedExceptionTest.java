@@ -135,16 +135,7 @@ public class QueryInterruptedExceptionTest
   {
     Assert.assertEquals(
         "myhost",
-        new QueryInterruptedException(new QueryInterruptedException(new CancellationException(), "myhost", "myid")).getHost()
-    );
-  }
-
-  @Test
-  public void testQueryId()
-  {
-    Assert.assertEquals(
-        "myid",
-        new QueryInterruptedException(new QueryInterruptedException(new CancellationException(), "myhost", "myid")).getQueryId()
+        new QueryInterruptedException(new QueryInterruptedException(new CancellationException(), "myhost")).getHost()
     );
   }
 

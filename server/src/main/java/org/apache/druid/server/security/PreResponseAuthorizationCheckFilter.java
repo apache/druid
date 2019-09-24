@@ -129,8 +129,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
         QueryInterruptedException.UNAUTHORIZED,
         null,
         null,
-        DruidNode.getDefaultHost(),
-        null
+        DruidNode.getDefaultHost()
     );
     unauthorizedError.setStackTrace(new StackTraceElement[0]);
     OutputStream out = response.getOutputStream();

@@ -174,7 +174,7 @@ public class ScanQueryEngine
                               throw new NoSuchElementException();
                             }
                             if (hasTimeout && System.currentTimeMillis() >= timeoutAt) {
-                              throw new QueryInterruptedException(new TimeoutException(), query.getId());
+                              throw new QueryInterruptedException(new TimeoutException());
                             }
                             final long lastOffset = offset;
                             final Object events;

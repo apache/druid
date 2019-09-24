@@ -369,7 +369,6 @@ public class DirectDruidClientTest
     Assert.assertEquals("Query timeout", actualException.getErrorCode());
     Assert.assertEquals("url[http://localhost:8080/druid/v2/] timed out", actualException.getMessage());
     Assert.assertEquals(hostName, actualException.getHost());
-    Assert.assertEquals(queryId, actualException.getQueryId());
     EasyMock.verify(httpClient);
   }
 
@@ -395,7 +394,7 @@ public class DirectDruidClientTest
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
     query = query.withOverriddenContext(
-        ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 250, "queryId", queryId)
+        ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 500, "queryId", queryId)
     );
 
     Sequence results = client.run(QueryPlus.wrap(query));
@@ -411,7 +410,6 @@ public class DirectDruidClientTest
     Assert.assertEquals("Query timeout", actualException.getErrorCode());
     Assert.assertEquals("Timeout waiting for task.", actualException.getMessage());
     Assert.assertEquals(hostName, actualException.getHost());
-    Assert.assertEquals(queryId, actualException.getQueryId());
     EasyMock.verify(httpClient);
   }
 }
