@@ -158,8 +158,8 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
       <>
         {this.renderFilterMenu()}
         {this.renderRemoveFilter()}
-        {this.renderRemoveGroupBy()}
         {this.renderGroupByMenu()}
+        {this.renderRemoveGroupBy()}
         {this.renderAggregateMenu()}
       </>
     );

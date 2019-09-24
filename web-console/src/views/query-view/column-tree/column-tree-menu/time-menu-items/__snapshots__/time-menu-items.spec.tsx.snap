@@ -63,38 +63,6 @@ exports[`time menu matches snapshot when menu is opened for column inside group 
     </span>
   </li>
   <li
-    class=""
-  >
-    <a
-      class="bp3-menu-item bp3-popover-dismiss"
-    >
-      <span
-        class="bp3-icon bp3-icon-ungroup-objects"
-        icon="ungroup-objects"
-      >
-        <svg
-          data-icon="ungroup-objects"
-          height="16"
-          viewBox="0 0 16 16"
-          width="16"
-        >
-          <desc>
-            ungroup-objects
-          </desc>
-          <path
-            d="M3.5 5C1.57 5 0 6.57 0 8.5S1.57 12 3.5 12 7 10.43 7 8.5 5.43 5 3.5 5zm9 0C10.57 5 9 6.57 9 8.5s1.57 3.5 3.5 3.5S16 10.43 16 8.5 14.43 5 12.5 5z"
-            fill-rule="evenodd"
-          />
-        </svg>
-      </span>
-      <div
-        class="bp3-text-overflow-ellipsis bp3-fill"
-      >
-        Remove group by
-      </div>
-    </a>
-  </li>
-  <li
     class="bp3-submenu"
   >
     <span
@@ -153,6 +121,38 @@ exports[`time menu matches snapshot when menu is opened for column inside group 
         </a>
       </span>
     </span>
+  </li>
+  <li
+    class=""
+  >
+    <a
+      class="bp3-menu-item bp3-popover-dismiss"
+    >
+      <span
+        class="bp3-icon bp3-icon-ungroup-objects"
+        icon="ungroup-objects"
+      >
+        <svg
+          data-icon="ungroup-objects"
+          height="16"
+          viewBox="0 0 16 16"
+          width="16"
+        >
+          <desc>
+            ungroup-objects
+          </desc>
+          <path
+            d="M3.5 5C1.57 5 0 6.57 0 8.5S1.57 12 3.5 12 7 10.43 7 8.5 5.43 5 3.5 5zm9 0C10.57 5 9 6.57 9 8.5s1.57 3.5 3.5 3.5S16 10.43 16 8.5 14.43 5 12.5 5z"
+            fill-rule="evenodd"
+          />
+        </svg>
+      </span>
+      <div
+        class="bp3-text-overflow-ellipsis bp3-fill"
+      >
+        Remove group by
+      </div>
+    </a>
   </li>
   <li
     class="bp3-submenu"

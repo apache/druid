@@ -176,8 +176,8 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
       <>
         {this.renderFilterMenu()}
         {this.renderRemoveFilter()}
-        {this.renderRemoveGroupBy()}
         {this.renderGroupByMenu()}
+        {this.renderRemoveGroupBy()}
         {this.renderAggregateMenu()}
       </>
     );

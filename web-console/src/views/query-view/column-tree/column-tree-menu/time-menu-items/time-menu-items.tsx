@@ -377,8 +377,8 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
       <>
         {this.renderFilterMenu()}
         {this.renderRemoveFilter()}
-        {this.renderRemoveGroupBy()}
         {this.renderGroupByMenu()}
+        {this.renderRemoveGroupBy()}
         {this.renderAggregateMenu()}
       </>
     );
