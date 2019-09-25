@@ -16,19 +16,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [ "$#" -ne 1 ] && [ "$#" -ne 2 ]; then
+if [ "$#" -ne 2 ] && [ "$#" -ne 3 ]; then
   echo "Illegal number of parameters, should one or two: the version, or the version and website-src directory";
   exit 1;
 fi
 
-VERSION=$1
+URL_VERSION=$1
+DRUID_VERSION=$2
 WEBSRC="../../incubator-druid-website-src"
 
-if [ "$#" -gt 1 ]; then
-  WEBSRC=$2
+if [ "$#" -gt 2 ]; then
+  WEBSRC=$3
 fi
 
-echo "Building to docs for '$VERSION' to $WEBSRC ..."
+echo "Building to docs for '$URL_VERSION' to $WEBSRC ..."
 
 npm run compile-scss
 
@@ -42,13 +43,13 @@ else
   rm build-log.txt
 fi
 
-node script/fix-path.js $VERSION
+node script/fix-path.js $URL_VERSION $DRUID_VERSION
 
 echo "Cleaning..."
-rm -rf $WEBSRC/docs/$VERSION/
-mkdir -p $WEBSRC/docs/$VERSION/
+rm -rf $WEBSRC/docs/$URL_VERSION/
+mkdir -p $WEBSRC/docs/$URL_VERSION/
 
-cp -r ./build/ApacheDruid/docs/* $WEBSRC/docs/$VERSION/
+cp -r ./build/ApacheDruid/docs/* $WEBSRC/docs/$URL_VERSION/
 
 mkdir -p $WEBSRC/css
 cp ./build/ApacheDruid/css/* $WEBSRC/css
