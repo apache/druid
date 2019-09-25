@@ -30,8 +30,8 @@ try {
   // Fix doc paths
   replace.sync({
     files: './build/ApacheDruid/docs/**/*.html',
-    from: /\/docs\/([^">]+\.html)/g,
-    to: '/docs/' + urlVersion + '/$1',
+    from: /"\/docs\//g,
+    to: '"/docs/' + urlVersion + '/',
   });
 
   // Interpolate {{DRUIDVERSION}}
