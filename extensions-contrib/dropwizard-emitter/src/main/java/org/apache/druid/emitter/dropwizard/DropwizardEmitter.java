@@ -193,7 +193,7 @@ public class DropwizardEmitter implements Emitter
     @Override
     public Number getValue()
     {
-      return null;
+      return value;
     }
   }
 
