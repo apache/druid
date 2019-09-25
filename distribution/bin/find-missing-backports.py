@@ -20,7 +20,6 @@ import re
 import requests
 import subprocess
 import sys
-import time
 
 
 def extract_pr_title_from_commit_message(commit_msg):
@@ -48,7 +47,7 @@ def extract_pr_title(pr_json):
 def find_missing_backports(pr_jsons, release_pr_subjects):
     for pr in pr_jsons:
         if pr['milestone'] is not None:
-            if pr['milestone']['number'] is milestone_number:
+            if pr['milestone']['number'] == milestone_number:
                 for pr_title_candidate in extract_pr_title(pr):
                     if pr_title_candidate in release_pr_subjects:
                         return
@@ -65,8 +64,7 @@ def find_next_url(links):
             else:
                 url_holder = match_result.group(0)
                 return url_holder[1:-1]
-    else:
-        return None
+    return None
 
 
 if len(sys.argv) != 5:

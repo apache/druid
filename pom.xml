@@ -75,15 +75,17 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <java.version>8</java.version>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
+        <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>4.1.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
         <avatica.version>1.12.0</avatica.version>
+        <avro.version>1.9.0</avro.version>
         <calcite.version>1.17.0</calcite.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
-        <fastutil.version>8.2.3</fastutil.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
+        <hamcrest.version>1.3</hamcrest.version>
         <jetty.version>9.4.10.v20180503</jetty.version>
         <jersey.version>1.19.3</jersey.version>
         <!-- jackson 2.7.x causes injection error and 2.8.x can't be used because avatica is using 2.6.3 -->
@@ -105,7 +107,6 @@
         <zookeeper.version>3.4.14</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
         <com.google.apis.client.version>1.22.0</com.google.apis.client.version>
-
         <repoOrgId>apache.snapshots</repoOrgId>
         <repoOrgName>Apache Snapshot Repository</repoOrgName>
         <repoOrgUrl>https://repository.apache.org/snapshots</repoOrgUrl>
@@ -227,6 +228,16 @@
                <version>3.6</version>
            </dependency>
             <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.8.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-core</artifactId>
+                <version>${aws.sdk.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk-ec2</artifactId>
                 <version>${aws.sdk.version}</version>
@@ -331,13 +342,28 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite.avatica</groupId>
+                <artifactId>avatica</artifactId>
+                <version>${avatica.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.calcite.avatica</groupId>
                 <artifactId>avatica-core</artifactId>
+                <version>${avatica.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.calcite.avatica</groupId>
+                <artifactId>avatica-metrics</artifactId>
                 <version>${avatica.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite.avatica</groupId>
                 <artifactId>avatica-server</artifactId>
                 <version>${avatica.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hive</groupId>
+                <artifactId>hive-storage-api</artifactId>
+                <version>2.6.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
@@ -450,6 +476,12 @@
                 <version>3.0.0</version>
             </dependency>
             <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+                <version>2.5</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
                 <groupId>javax.xml.bind</groupId>
                 <artifactId>jaxb-api</artifactId>
                 <version>2.3.1</version>
@@ -458,6 +490,11 @@
                 <groupId>org.glassfish</groupId>
                 <artifactId>javax.el</artifactId>
                 <version>3.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.grizzly</groupId>
+                <artifactId>grizzly-http-server</artifactId>
+                <version>2.2.16</version>
             </dependency>
             <dependency>
                 <groupId>org.glassfish.jaxb</groupId>
@@ -471,7 +508,17 @@
             </dependency>
             <dependency>
                 <groupId>com.sun.jersey</groupId>
+                <artifactId>jersey-client</artifactId>
+                <version>${jersey.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.jersey</groupId>
                 <artifactId>jersey-core</artifactId>
+                <version>${jersey.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.jersey</groupId>
+                <artifactId>jersey-grizzly2</artifactId>
                 <version>${jersey.version}</version>
             </dependency>
             <dependency>
@@ -496,8 +543,28 @@
             </dependency>
             <dependency>
                 <groupId>com.sun.jersey</groupId>
+                <artifactId>jersey-servlet</artifactId>
+                <version>${jersey.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.jersey</groupId>
                 <artifactId>jersey-json</artifactId>
                 <version>${jersey.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-client</artifactId>
+                <version>${jetty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-http</artifactId>
+                <version>${jetty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-io</artifactId>
+                <version>${jetty.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
@@ -536,7 +603,58 @@
             </dependency>
             <dependency>
                 <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
+                <artifactId>netty-buffer</artifactId>
+                <version>${netty4.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-common</artifactId>
+                <version>${netty4.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-codec-dns</artifactId>
+                <version>${netty4.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-codec-http</artifactId>
+                <version>${netty4.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-codec-socks</artifactId>
+                <version>${netty4.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-handler</artifactId>
+                <version>${netty4.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-handler-proxy</artifactId>
+                <version>${netty4.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-resolver</artifactId>
+                <version>${netty4.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-resolver-dns</artifactId>
+                <version>${netty4.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-transport-native-epoll</artifactId>
+                <classifier>linux-x86_64</classifier>
+                <version>${netty4.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-transport-native-unix-common</artifactId>
                 <version>${netty4.version}</version>
             </dependency>
             <dependency>
@@ -642,7 +760,12 @@
             <dependency>
                 <groupId>org.eclipse.aether</groupId>
                 <artifactId>aether-api</artifactId>
-                <version>0.9.0.M2</version>
+                <version>${aether.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.aether</groupId>
+                <artifactId>aether-util</artifactId>
+                <version>${aether.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
@@ -653,6 +776,11 @@
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
                 <version>4.4.11</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-auth</artifactId>
+                <version>${hadoop.compile.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
@@ -673,9 +801,38 @@
                 <scope>provided</scope>
             </dependency>
             <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-hdfs-client</artifactId>
+                <version>${hadoop.compile.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-yarn-common</artifactId>
+                <version>${hadoop.compile.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+              <groupId>org.apache.hadoop</groupId>
+              <artifactId>hadoop-mapreduce-client-core</artifactId>
+              <version>${hadoop.compile.version}</version>
+              <scope>provided</scope>
+              <exclusions>
+                <exclusion>
+                  <groupId>javax.servlet</groupId>
+                  <artifactId>servlet-api</artifactId>
+                </exclusion>
+              </exclusions>
+            </dependency>
+            <dependency>
                 <groupId>org.mapdb</groupId>
                 <artifactId>mapdb</artifactId>
                 <version>1.0.8</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.derby</groupId>
+                <artifactId>derby</artifactId>
+                <version>${derby.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.derby</groupId>
@@ -695,7 +852,7 @@
             <dependency>
                 <groupId>it.unimi.dsi</groupId>
                 <artifactId>fastutil</artifactId>
-                <version>8.1.0</version>
+                <version>8.2.3</version>
             </dependency>
             <dependency>
                 <groupId>com.opencsv</groupId>
@@ -720,7 +877,7 @@
             <dependency>
                 <groupId>org.roaringbitmap</groupId>
                 <artifactId>RoaringBitmap</artifactId>
-                <version>0.8.6</version>
+                <version>0.8.11</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
@@ -793,6 +950,31 @@
                 <artifactId>maven-artifact</artifactId>
                 <version>3.6.0</version>
             </dependency>
+            <dependency>
+                <groupId>javax.ws.rs</groupId>
+                <artifactId>jsr311-api</artifactId>
+                <version>1.1.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.schemarepo</groupId>
+                <artifactId>schema-repo-common</artifactId>
+                <version>0.1.3</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.avro</groupId>
+                <artifactId>avro</artifactId>
+                <version>${avro.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.directory.api</groupId>
+                <artifactId>api-util</artifactId>
+                <version>1.0.0-M20</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yahoo.datasketches</groupId>
+                <artifactId>sketches-core</artifactId>
+                <version>0.13.4</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.apache.calcite</groupId>
@@ -811,6 +993,12 @@
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
                 <version>4.12</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.powermock</groupId>
+                <artifactId>powermock-core</artifactId>
+                <version>${powermock.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -915,6 +1103,11 @@
             </dependency>
             <dependency>
                 <groupId>com.google.http-client</groupId>
+                <artifactId>google-http-client</artifactId>
+                <version>${com.google.apis.client.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.http-client</groupId>
                 <artifactId>google-http-client-jackson2</artifactId>
                 <version>${com.google.apis.client.version}</version>
                 <exclusions>
@@ -952,7 +1145,13 @@
             <dependency>
                 <groupId>org.hamcrest</groupId>
                 <artifactId>hamcrest-all</artifactId>
-                <version>1.3</version>
+                <version>${hamcrest.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.hamcrest</groupId>
+                <artifactId>hamcrest-core</artifactId>
+                <version>${hamcrest.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -965,6 +1164,12 @@
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava-testlib</artifactId>
                 <version>${guava.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.github.stefanbirkner</groupId>
+                <artifactId>system-rules</artifactId>
+                <version>1.19.0</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>
@@ -1296,7 +1501,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
-                    <version>2.8</version>
+                    <version>3.1.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

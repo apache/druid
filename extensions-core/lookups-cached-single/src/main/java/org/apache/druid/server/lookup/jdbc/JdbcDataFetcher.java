@@ -38,6 +38,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class JdbcDataFetcher implements DataFetcher<String, String>
 {
@@ -181,6 +182,12 @@ public class JdbcDataFetcher implements DataFetcher<String, String>
     }
     return valueColumn.equals(that.valueColumn);
 
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(connectorConfig, table, keyColumn, valueColumn);
   }
 
   @Override

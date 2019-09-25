@@ -1016,7 +1016,6 @@ GROUP BY 1`;
             datasourceId={datasourceTableActionDialogId}
             actions={actions}
             onClose={() => this.setState({ datasourceTableActionDialogId: undefined })}
-            isOpen
           />
         )}
       </div>

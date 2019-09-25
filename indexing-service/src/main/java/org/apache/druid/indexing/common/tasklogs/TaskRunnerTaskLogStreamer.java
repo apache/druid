@@ -50,4 +50,15 @@ public class TaskRunnerTaskLogStreamer implements TaskLogStreamer
       return Optional.absent();
     }
   }
+
+  @Override
+  public Optional<ByteSource> streamTaskReports(String taskId) throws IOException
+  {
+    final TaskRunner runner = taskMaster.getTaskRunner().orNull();
+    if (runner instanceof TaskLogStreamer) {
+      return ((TaskLogStreamer) runner).streamTaskReports(taskId);
+    } else {
+      return Optional.absent();
+    }
+  }
 }

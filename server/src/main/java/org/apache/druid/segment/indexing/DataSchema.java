@@ -41,13 +41,17 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 
 /**
+ *
  */
 public class DataSchema
 {
   private static final Logger log = new Logger(DataSchema.class);
-
+  private static final Pattern INVALIDCHARS = Pattern.compile("(?s).*[^\\S ].*");
   private final String dataSource;
   private final Map<String, Object> parser;
   private final AggregatorFactory[] aggregators;
@@ -72,8 +76,7 @@ public class DataSchema
     this.parser = parser;
     this.transformSpec = transformSpec == null ? TransformSpec.NONE : transformSpec;
 
-    Preconditions.checkArgument(!Strings.isNullOrEmpty(dataSource), "dataSource cannot be null or empty. Please provide a dataSource.");
-    Preconditions.checkArgument(!dataSource.contains("/"), "dataSource cannot contain the '/' character.");
+    validateDatasourceName(dataSource);
     this.dataSource = dataSource;
 
     if (granularitySpec == null) {
@@ -96,6 +99,20 @@ public class DataSchema
     }
 
     this.aggregators = aggregators == null ? new AggregatorFactory[]{} : aggregators;
+  }
+
+  static void validateDatasourceName(String dataSource)
+  {
+    Preconditions.checkArgument(
+        !Strings.isNullOrEmpty(dataSource),
+        "dataSource cannot be null or empty. Please provide a dataSource."
+    );
+    Matcher m = INVALIDCHARS.matcher(dataSource);
+    Preconditions.checkArgument(
+        !m.matches(),
+        "dataSource cannot contain whitespace character except space."
+    );
+    Preconditions.checkArgument(!dataSource.contains("/"), "dataSource cannot contain the '/' character.");
   }
 
   @JsonProperty

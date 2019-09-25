@@ -18,18 +18,27 @@
 
 const replace = require('replace-in-file');
 
-if (process.argv.length !== 3) {
-  console.log('Usage: node fix-path.js 0.16.0');
+if (process.argv.length !== 4) {
+  console.log('Usage: node fix-path.js latest 0.16.0-incubating');
   process.exit(1);
 }
 
-var version = process.argv[2];
+var urlVersion = process.argv[2];
+var druidVersion = process.argv[3];
 
 try {
+  // Fix doc paths
   replace.sync({
     files: './build/ApacheDruid/docs/**/*.html',
     from: /\/docs\//g,
-    to: '/docs/' + version + '/',
+    to: '/docs/' + urlVersion + '/',
+  });
+
+  // Interpolate {{DRUIDVERSION}}
+  replace.sync({
+    files: './build/ApacheDruid/docs/**/*.html',
+    from: /\{\{DRUIDVERSION\}\}/g,
+    to: druidVersion,
   });
   console.log('Fixed versions');
 } catch (error) {

@@ -101,9 +101,6 @@
       "development/extensions-contrib/distinctcount": {
         "title": "DistinctCount Aggregator"
       },
-      "development/extensions-contrib/google": {
-        "title": "Google Cloud Storage"
-      },
       "development/extensions-contrib/graphite": {
         "title": "Graphite Emitter"
       },
@@ -182,6 +179,9 @@
       "development/extensions-core/examples": {
         "title": "Extension Examples"
       },
+      "development/extensions-core/google": {
+        "title": "Google Cloud Storage"
+      },
       "development/extensions-core/hdfs": {
         "title": "HDFS"
       },
@@ -231,10 +231,6 @@
       },
       "development/geo": {
         "title": "Spatial filters"
-      },
-      "development/integrating-druid-with-other-technologies": {
-        "title": "Integrating Apache Druid with other technologies",
-        "sidebar_label": "Integrating with other technologies"
       },
       "development/javascript": {
         "title": "JavaScript programming guide",

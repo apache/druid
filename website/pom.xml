@@ -32,7 +32,13 @@
   </parent>
 
   <properties>
+    <!-- src repo of druid website, the artifacts of this build will be placed here -->
     <website.src>../../incubator-druid-website-src</website.src>
+    <!--
+    'version' of website to build, by default it is the Druid version we are building, but can be set explicitly
+    to stage documentation for an unreleased version
+    -->
+    <website.version>${project.parent.version}</website.version>
   </properties>
 
   <build>
@@ -78,7 +84,8 @@
             <configuration>
               <executable>script/build-to-docs</executable>
               <arguments>
-                <argument>${project.parent.version}</argument>
+                <argument>${website.version}</argument>
+                <argument>${website.version}</argument>
                 <argument>${website.src}</argument>
               </arguments>
             </configuration>
@@ -93,6 +100,7 @@
               <executable>script/build-to-docs</executable>
               <arguments>
                 <argument>latest</argument>
+                <argument>${website.version}</argument>
                 <argument>${website.src}</argument>
               </arguments>
             </configuration>

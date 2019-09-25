@@ -121,6 +121,14 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       @Override
       public int getValueCardinality()
       {
+        /*
+         This is technically wrong if
+         extractionFn != null && (extractionFn.getExtractionType() != ExtractionFn.ExtractionType.ONE_TO_ONE ||
+                                    !extractionFn.preservesOrdering())
+         However current behavior allows some GroupBy-V1 queries to work that wouldn't work otherwise and doesn't
+         cause any problems due to special handling of extractionFn everywhere.
+         See https://github.com/apache/incubator-druid/pull/8433
+         */
         return getCardinality();
       }
 

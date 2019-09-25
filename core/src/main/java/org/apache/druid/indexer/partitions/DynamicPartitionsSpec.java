@@ -31,13 +31,14 @@ import java.util.Objects;
 public class DynamicPartitionsSpec implements PartitionsSpec
 {
   public static final long DEFAULT_MAX_TOTAL_ROWS = 20_000_000;
+  static final String NAME = "dynamic";
 
   private final int maxRowsPerSegment;
   private final long maxTotalRows;
 
   @JsonCreator
   public DynamicPartitionsSpec(
-      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
+      @JsonProperty(PartitionsSpec.MAX_ROWS_PER_SEGMENT) @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows
   )
   {
