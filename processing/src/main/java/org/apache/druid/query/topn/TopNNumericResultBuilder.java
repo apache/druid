@@ -48,7 +48,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
   private final List<PostAggregator> postAggs;
   private final PriorityQueue<DimValHolder> pQueue;
   private final String[] aggFactoryNames;
-  private static final Comparator<Comparable> dimValueComparator = new Comparator<Comparable>()
+  private static final Comparator<Comparable> DIM_VALUE_COMPARATOR = new Comparator<Comparable>()
   {
     @Override
     public int compare(Comparable o1, Comparable o2)
@@ -96,7 +96,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
       int retVal = metricComparator.compare(d1.getTopNMetricVal(), d2.getTopNMetricVal());
 
       if (retVal == 0) {
-        retVal = dimValueComparator.compare(d1.getDimValue(), d2.getDimValue());
+        retVal = DIM_VALUE_COMPARATOR.compare(d1.getDimValue(), d2.getDimValue());
       }
 
       return retVal;
@@ -150,13 +150,15 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     }
     for (int i = extra; i < metricVals.length; i += LOOP_UNROLL_COUNT) {
       metricValues.put(aggFactoryNames[i + 0], metricVals[i + 0]);
-      metricValues.put(aggFactoryNames[i + 1], metricVals[i + 1]);
-      metricValues.put(aggFactoryNames[i + 2], metricVals[i + 2]);
-      metricValues.put(aggFactoryNames[i + 3], metricVals[i + 3]);
-      metricValues.put(aggFactoryNames[i + 4], metricVals[i + 4]);
-      metricValues.put(aggFactoryNames[i + 5], metricVals[i + 5]);
-      metricValues.put(aggFactoryNames[i + 6], metricVals[i + 6]);
-      metricValues.put(aggFactoryNames[i + 7], metricVals[i + 7]);
+      // LGTM.com flags this, but it's safe
+      // because we know "metricVals.length - extra" is a multiple of LOOP_UNROLL_COUNT.
+      metricValues.put(aggFactoryNames[i + 1], metricVals[i + 1]); // lgtm [java/index-out-of-bounds]
+      metricValues.put(aggFactoryNames[i + 2], metricVals[i + 2]); // lgtm [java/index-out-of-bounds]
+      metricValues.put(aggFactoryNames[i + 3], metricVals[i + 3]); // lgtm [java/index-out-of-bounds]
+      metricValues.put(aggFactoryNames[i + 4], metricVals[i + 4]); // lgtm [java/index-out-of-bounds]
+      metricValues.put(aggFactoryNames[i + 5], metricVals[i + 5]); // lgtm [java/index-out-of-bounds]
+      metricValues.put(aggFactoryNames[i + 6], metricVals[i + 6]); // lgtm [java/index-out-of-bounds]
+      metricValues.put(aggFactoryNames[i + 7], metricVals[i + 7]); // lgtm [java/index-out-of-bounds]
     }
 
     // Order matters here, do not unroll
@@ -169,7 +171,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     if (shouldAdd(topNMetricVal)) {
       DimValHolder dimValHolder = new DimValHolder.Builder()
           .withTopNMetricVal(topNMetricVal)
-          .withDimValue(dimValueObj)
+          .withDimValue(dimValueObj, dimSpec.getOutputType())
           .withDimValIndex(dimValIndex)
           .withMetricValues(metricValues)
           .build();
@@ -198,7 +200,10 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     if (shouldAdd(dimValue)) {
       final DimValHolder valHolder = new DimValHolder.Builder()
           .withTopNMetricVal(dimValue)
-          .withDimValue((Comparable) dimensionAndMetricValueExtractor.getDimensionValue(dimSpec.getOutputName()))
+          .withDimValue(
+              (Comparable) dimensionAndMetricValueExtractor.getDimensionValue(dimSpec.getOutputName()),
+              dimSpec.getOutputType()
+          )
           .withMetricValues(dimensionAndMetricValueExtractor.getBaseObject())
           .build();
       pQueue.add(valHolder);
@@ -228,7 +233,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
           int retVal = metricComparator.compare(d2.getTopNMetricVal(), d1.getTopNMetricVal());
 
           if (retVal == 0) {
-            retVal = dimValueComparator.compare(d1.getDimValue(), d2.getDimValue());
+            retVal = DIM_VALUE_COMPARATOR.compare(d1.getDimValue(), d2.getDimValue());
           }
 
           return retVal;

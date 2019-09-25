@@ -31,10 +31,15 @@ import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
 
 /**
+ * Completely removes information about unused segments whose end time is older than {@link #retainDuration} from now
+ * from the metadata store. This action is called "to kill a segment".
+ *
+ * See org.apache.druid.indexing.common.task.KillTask
  */
 public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
 {
@@ -46,12 +51,12 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
   private long lastKillTime = 0;
 
 
-  private final MetadataSegmentManager segmentManager;
+  private final MetadataSegmentManager segmentsMetadata;
   private final IndexingServiceClient indexingServiceClient;
 
   @Inject
   public DruidCoordinatorSegmentKiller(
-      MetadataSegmentManager segmentManager,
+      MetadataSegmentManager segmentsMetadata,
       IndexingServiceClient indexingServiceClient,
       DruidCoordinatorConfig config
   )
@@ -75,30 +80,36 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
         this.maxSegmentsToKill
     );
 
-    this.segmentManager = segmentManager;
+    this.segmentsMetadata = segmentsMetadata;
     this.indexingServiceClient = indexingServiceClient;
   }
 
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    boolean killAllDataSources = params.getCoordinatorDynamicConfig().isKillAllDataSources();
-    Collection<String> whitelist = params.getCoordinatorDynamicConfig().getKillDataSourceWhitelist();
+    boolean killAllDataSources = params.getCoordinatorDynamicConfig().isKillUnusedSegmentsInAllDataSources();
+    Collection<String> specificDataSourcesToKill =
+        params.getCoordinatorDynamicConfig().getSpecificDataSourcesToKillUnusedSegmentsIn();
 
-    if (killAllDataSources && whitelist != null && !whitelist.isEmpty()) {
-      log.error("killAllDataSources can't be true when killDataSourceWhitelist is non-empty, No kill tasks are scheduled.");
+    if (killAllDataSources && specificDataSourcesToKill != null && !specificDataSourcesToKill.isEmpty()) {
+      log.error(
+          "killAllDataSources can't be true when specificDataSourcesToKill is non-empty. No kill tasks are scheduled."
+      );
       return params;
     }
 
+    Collection<String> dataSourcesToKill = specificDataSourcesToKill;
     if (killAllDataSources) {
-      whitelist = segmentManager.getAllDataSourceNames();
+      dataSourcesToKill = segmentsMetadata.retrieveAllDataSourceNames();
     }
 
-    if (whitelist != null && whitelist.size() > 0 && (lastKillTime + period) < System.currentTimeMillis()) {
+    if (dataSourcesToKill != null &&
+        dataSourcesToKill.size() > 0 &&
+        (lastKillTime + period) < System.currentTimeMillis()) {
       lastKillTime = System.currentTimeMillis();
 
-      for (String dataSource : whitelist) {
-        final Interval intervalToKill = findIntervalForKillTask(dataSource, maxSegmentsToKill);
+      for (String dataSource : dataSourcesToKill) {
+        final Interval intervalToKill = findIntervalForKill(dataSource, maxSegmentsToKill);
         if (intervalToKill != null) {
           try {
             indexingServiceClient.killSegments(dataSource, intervalToKill);
@@ -117,13 +128,11 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
   }
 
   @VisibleForTesting
-  Interval findIntervalForKillTask(String dataSource, int limit)
+  @Nullable
+  Interval findIntervalForKill(String dataSource, int limit)
   {
-    List<Interval> unusedSegmentIntervals = segmentManager.getUnusedSegmentIntervals(
-        dataSource,
-        new Interval(DateTimes.EPOCH, DateTimes.nowUtc().minus(retainDuration)),
-        limit
-    );
+    List<Interval> unusedSegmentIntervals =
+        segmentsMetadata.getUnusedSegmentIntervals(dataSource, DateTimes.nowUtc().minus(retainDuration), limit);
 
     if (unusedSegmentIntervals != null && unusedSegmentIntervals.size() > 0) {
       return JodaUtils.umbrellaInterval(unusedSegmentIntervals);

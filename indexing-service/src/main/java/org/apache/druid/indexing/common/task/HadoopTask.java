@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.task;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Injector;
@@ -30,6 +29,7 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -45,15 +45,15 @@ import java.util.List;
 import java.util.Map;
 
 
-public abstract class HadoopTask extends AbstractTask
+public abstract class HadoopTask extends AbstractBatchIndexTask
 {
   private static final Logger log = new Logger(HadoopTask.class);
-  private static final ExtensionsConfig extensionsConfig;
+  private static final ExtensionsConfig EXTENSIONS_CONFIG;
 
-  static final Injector injector = GuiceInjectors.makeStartupInjector();
+  static final Injector INJECTOR = GuiceInjectors.makeStartupInjector();
 
   static {
-    extensionsConfig = injector.getInstance(ExtensionsConfig.class);
+    EXTENSIONS_CONFIG = INJECTOR.getInstance(ExtensionsConfig.class);
   }
 
   private final List<String> hadoopDependencyCoordinates;
@@ -92,7 +92,7 @@ public abstract class HadoopTask extends AbstractTask
         return fName.startsWith("druid") && fName.endsWith(".jar") && !fName.endsWith("selfcontained.jar");
       }
       catch (URISyntaxException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
   };
@@ -139,14 +139,22 @@ public abstract class HadoopTask extends AbstractTask
                                                           ? hadoopDependencyCoordinates
                                                           : defaultHadoopCoordinates;
 
-    final List<URL> jobURLs = Lists.newArrayList(
-        Arrays.asList(((URLClassLoader) HadoopIndexTask.class.getClassLoader()).getURLs())
-    );
+    ClassLoader taskClassLoader = HadoopIndexTask.class.getClassLoader();
+    final List<URL> jobURLs;
+    if (taskClassLoader instanceof URLClassLoader) {
+      // this only works with Java 8
+      jobURLs = Lists.newArrayList(
+          Arrays.asList(((URLClassLoader) taskClassLoader).getURLs())
+      );
+    } else {
+      // fallback to parsing system classpath
+      jobURLs = JvmUtils.systemClassPath();
+    }
 
     final List<URL> extensionURLs = new ArrayList<>();
-    for (final File extension : Initialization.getExtensionFilesToLoad(extensionsConfig)) {
-      final ClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension, false);
-      extensionURLs.addAll(Arrays.asList(((URLClassLoader) extensionLoader).getURLs()));
+    for (final File extension : Initialization.getExtensionFilesToLoad(EXTENSIONS_CONFIG)) {
+      final URLClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension, false);
+      extensionURLs.addAll(Arrays.asList(extensionLoader.getURLs()));
     }
 
     jobURLs.addAll(extensionURLs);
@@ -157,10 +165,10 @@ public abstract class HadoopTask extends AbstractTask
     for (final File hadoopDependency :
         Initialization.getHadoopDependencyFilesToLoad(
             finalHadoopDependencyCoordinates,
-            extensionsConfig
+            EXTENSIONS_CONFIG
         )) {
-      final ClassLoader hadoopLoader = Initialization.getClassLoaderForExtension(hadoopDependency, false);
-      localClassLoaderURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
+      final URLClassLoader hadoopLoader = Initialization.getClassLoaderForExtension(hadoopDependency, false);
+      localClassLoaderURLs.addAll(Arrays.asList(hadoopLoader.getURLs()));
     }
 
     final ClassLoader classLoader = new URLClassLoader(
@@ -169,15 +177,15 @@ public abstract class HadoopTask extends AbstractTask
     );
 
     final String hadoopContainerDruidClasspathJars;
-    if (extensionsConfig.getHadoopContainerDruidClasspath() == null) {
+    if (EXTENSIONS_CONFIG.getHadoopContainerDruidClasspath() == null) {
       hadoopContainerDruidClasspathJars = Joiner.on(File.pathSeparator).join(jobURLs);
 
     } else {
       List<URL> hadoopContainerURLs = Lists.newArrayList(
-          Initialization.getURLsForClasspath(extensionsConfig.getHadoopContainerDruidClasspath())
+          Initialization.getURLsForClasspath(EXTENSIONS_CONFIG.getHadoopContainerDruidClasspath())
       );
 
-      if (extensionsConfig.getAddExtensionsToHadoopContainer()) {
+      if (EXTENSIONS_CONFIG.getAddExtensionsToHadoopContainer()) {
         hadoopContainerURLs.addAll(extensionURLs);
       }
 
@@ -217,7 +225,7 @@ public abstract class HadoopTask extends AbstractTask
       return (OutputType) method.invoke(null, input);
     }
     catch (IllegalAccessException | InvocationTargetException | ClassNotFoundException | NoSuchMethodException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     finally {
       Thread.currentThread().setContextClassLoader(oldLoader);
@@ -245,7 +253,7 @@ public abstract class HadoopTask extends AbstractTask
       return clazz.newInstance();
     }
     catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     finally {
       Thread.currentThread().setContextClassLoader(oldLoader);

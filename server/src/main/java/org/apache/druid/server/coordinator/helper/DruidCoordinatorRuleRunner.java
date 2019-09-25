@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator.helper;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataRuleManager;
@@ -32,14 +31,9 @@ import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.DateTime;
 
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -47,7 +41,7 @@ import java.util.Set;
 public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
 {
   private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorRuleRunner.class);
-  private static int MAX_MISSING_RULES = 10;
+  private static final int MAX_MISSING_RULES = 10;
 
   private final ReplicationThrottler replicatorThrottler;
 
@@ -86,54 +80,32 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
       return params;
     }
 
-    // find available segments which are not overshadowed by other segments in DB
-    // only those would need to be loaded/dropped
-    // anything overshadowed by served segments is dropped automatically by DruidCoordinatorCleanupOvershadowed
-    Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
-    for (DataSegment segment : params.getAvailableSegments()) {
-      VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(segment.getDataSource());
-      if (timeline == null) {
-        timeline = new VersionedIntervalTimeline<>(Ordering.natural());
-        timelines.put(segment.getDataSource(), timeline);
-      }
-
-      timeline.add(
-          segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment)
-      );
-    }
-
-    Set<DataSegment> overshadowed = new HashSet<>();
-    for (VersionedIntervalTimeline<String, DataSegment> timeline : timelines.values()) {
-      for (TimelineObjectHolder<String, DataSegment> holder : timeline.findOvershadowed()) {
-        for (DataSegment dataSegment : holder.getObject().payloads()) {
-          overshadowed.add(dataSegment);
-        }
-      }
-    }
-
-    Set<DataSegment> nonOvershadowed = new HashSet<>();
-    for (DataSegment dataSegment : params.getAvailableSegments()) {
-      if (!overshadowed.contains(dataSegment)) {
-        nonOvershadowed.add(dataSegment);
-      }
-    }
+    // Get used segments which are overshadowed by other used segments. Those would not need to be loaded and
+    // eventually will be unloaded from Historical servers. Segments overshadowed by *served* used segments are marked
+    // as unused in DruidCoordinatorMarkAsUnusedOvershadowedSegments, and then eventually Coordinator sends commands to
+    // Historical nodes to unload such segments in DruidCoordinatorUnloadUnusedSegments.
+    Set<SegmentId> overshadowed = params.getDataSourcesSnapshot().getOvershadowedSegments();
 
     for (String tier : cluster.getTierNames()) {
       replicatorThrottler.updateReplicationState(tier);
     }
 
-    DruidCoordinatorRuntimeParams paramsWithReplicationManager = params.buildFromExistingWithoutAvailableSegments()
-                                                                       .withReplicationManager(replicatorThrottler)
-                                                                       .withAvailableSegments(nonOvershadowed)
-                                                                       .build();
+    DruidCoordinatorRuntimeParams paramsWithReplicationManager = params
+        .buildFromExistingWithoutSegmentsMetadata()
+        .withReplicationManager(replicatorThrottler)
+        .build();
 
-    // Run through all matched rules for available segments
+    // Run through all matched rules for used segments
     DateTime now = DateTimes.nowUtc();
     MetadataRuleManager databaseRuleManager = paramsWithReplicationManager.getDatabaseRuleManager();
 
     final List<SegmentId> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
     int missingRules = 0;
-    for (DataSegment segment : paramsWithReplicationManager.getAvailableSegments()) {
+    for (DataSegment segment : params.getUsedSegments()) {
+      if (overshadowed.contains(segment.getId())) {
+        // Skipping overshadowed segments
+        continue;
+      }
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
@@ -159,9 +131,6 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
          .emit();
     }
 
-    return paramsWithReplicationManager.buildFromExistingWithoutAvailableSegments()
-                                       .withCoordinatorStats(stats)
-                                       .withAvailableSegments(params.getAvailableSegments())
-                                       .build();
+    return params.buildFromExisting().withCoordinatorStats(stats).build();
   }
 }

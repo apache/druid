@@ -22,7 +22,6 @@ package org.apache.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CharSource;
 import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -70,8 +69,7 @@ public class MapVirtualColumnSelectTest
     SelectQueryRunnerFactory factory = new SelectQueryRunnerFactory(
         new SelectQueryQueryToolChest(
             new DefaultObjectMapper(),
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
-            selectConfigSupplier
+            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
         ),
         new SelectQueryEngine(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
@@ -135,9 +133,9 @@ public class MapVirtualColumnSelectTest
   private Druids.SelectQueryBuilder testBuilder()
   {
     return Druids.newSelectQueryBuilder()
-                 .dataSource(QueryRunnerTestHelper.dataSource)
-                 .granularity(QueryRunnerTestHelper.allGran)
-                 .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+                 .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                 .granularity(QueryRunnerTestHelper.ALL_GRAN)
+                 .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                  .pagingSpec(new PagingSpec(null, 3));
   }
 
@@ -191,7 +189,7 @@ public class MapVirtualColumnSelectTest
 
   private void checkSelectQuery(SelectQuery searchQuery, List<Map> expected)
   {
-    List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(searchQuery), ImmutableMap.of()).toList();
+    List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(searchQuery)).toList();
     Assert.assertEquals(1, results.size());
 
     List<EventHolder> events = results.get(0).getValue().getEvents();
@@ -199,7 +197,7 @@ public class MapVirtualColumnSelectTest
     Assert.assertEquals(expected.size(), events.size());
     for (int i = 0; i < events.size(); i++) {
       Map event = events.get(i).getEvent();
-      event.remove(EventHolder.timestampKey);
+      event.remove(EventHolder.TIMESTAMP_KEY);
       Assert.assertEquals(expected.get(i), event);
     }
   }

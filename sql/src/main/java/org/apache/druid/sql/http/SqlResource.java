@@ -21,7 +21,6 @@ package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -153,7 +152,7 @@ public class SqlResource
                   catch (Exception ex) {
                     e = ex;
                     log.error(ex, "Unable to send sql response [%s]", sqlQueryId);
-                    throw Throwables.propagate(ex);
+                    throw new RuntimeException(ex);
                   }
                   finally {
                     yielder.close();
@@ -167,7 +166,7 @@ public class SqlResource
       catch (Throwable e) {
         // make sure to close yielder if anything happened before starting to serialize the response.
         yielder0.close();
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
     catch (ForbiddenException e) {

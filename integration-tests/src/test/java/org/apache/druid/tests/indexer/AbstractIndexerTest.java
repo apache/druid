@@ -112,7 +112,7 @@ public abstract class AbstractIndexerTest
     );
   }
 
-  protected String getTaskAsString(String file) throws IOException
+  protected String getResourceAsString(String file) throws IOException
   {
     final InputStream inputStream = ITRealtimeIndexTaskTest.class.getResourceAsStream(file);
     try {

@@ -1,0 +1,519 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`auto-form snapshot matches snapshot 1`] = `
+<div
+  class="auto-form"
+>
+  <div
+    class="bp3-form-group"
+  >
+    <label
+      class="bp3-label"
+    >
+      Test one
+       
+      <span
+        class="bp3-text-muted"
+      />
+    </label>
+    <div
+      class="bp3-form-content"
+    >
+      <div
+        class="bp3-control-group bp3-fill bp3-numeric-input"
+      >
+        <div
+          class="bp3-input-group"
+        >
+          <input
+            autocomplete="off"
+            class="bp3-input"
+            min="0"
+            style="padding-right: 10px;"
+            type="text"
+            value=""
+          />
+        </div>
+        <div
+          class="bp3-button-group bp3-vertical bp3-fixed"
+        >
+          <button
+            class="bp3-button"
+            type="button"
+          >
+            <span
+              class="bp3-icon bp3-icon-chevron-up"
+              icon="chevron-up"
+            >
+              <svg
+                data-icon="chevron-up"
+                height="16"
+                viewBox="0 0 16 16"
+                width="16"
+              >
+                <desc>
+                  chevron-up
+                </desc>
+                <path
+                  d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
+                  fill-rule="evenodd"
+                />
+              </svg>
+            </span>
+          </button>
+          <button
+            class="bp3-button"
+            type="button"
+          >
+            <span
+              class="bp3-icon bp3-icon-chevron-down"
+              icon="chevron-down"
+            >
+              <svg
+                data-icon="chevron-down"
+                height="16"
+                viewBox="0 0 16 16"
+                width="16"
+              >
+                <desc>
+                  chevron-down
+                </desc>
+                <path
+                  d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
+                  fill-rule="evenodd"
+                />
+              </svg>
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp3-form-group"
+  >
+    <label
+      class="bp3-label"
+    >
+      Test two
+       
+      <span
+        class="bp3-text-muted"
+      />
+    </label>
+    <div
+      class="bp3-form-content"
+    >
+      <div
+        class="bp3-control-group bp3-fill bp3-numeric-input"
+      >
+        <div
+          class="bp3-input-group"
+        >
+          <input
+            autocomplete="off"
+            class="bp3-input"
+            min="0"
+            style="padding-right: 10px;"
+            type="text"
+            value=""
+          />
+        </div>
+        <div
+          class="bp3-button-group bp3-vertical bp3-fixed"
+        >
+          <button
+            class="bp3-button"
+            type="button"
+          >
+            <span
+              class="bp3-icon bp3-icon-chevron-up"
+              icon="chevron-up"
+            >
+              <svg
+                data-icon="chevron-up"
+                height="16"
+                viewBox="0 0 16 16"
+                width="16"
+              >
+                <desc>
+                  chevron-up
+                </desc>
+                <path
+                  d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
+                  fill-rule="evenodd"
+                />
+              </svg>
+            </span>
+          </button>
+          <button
+            class="bp3-button"
+            type="button"
+          >
+            <span
+              class="bp3-icon bp3-icon-chevron-down"
+              icon="chevron-down"
+            >
+              <svg
+                data-icon="chevron-down"
+                height="16"
+                viewBox="0 0 16 16"
+                width="16"
+              >
+                <desc>
+                  chevron-down
+                </desc>
+                <path
+                  d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
+                  fill-rule="evenodd"
+                />
+              </svg>
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp3-form-group"
+  >
+    <label
+      class="bp3-label"
+    >
+      Test three
+       
+      <span
+        class="bp3-text-muted"
+      />
+    </label>
+    <div
+      class="bp3-form-content"
+    >
+      <div
+        class="bp3-input-group suggestible-input"
+      >
+        <input
+          class="bp3-input"
+          style="padding-right: 10px;"
+          type="text"
+          value=""
+        />
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp3-form-group"
+  >
+    <label
+      class="bp3-label"
+    >
+      Test four
+       
+      <span
+        class="bp3-text-muted"
+      />
+    </label>
+    <div
+      class="bp3-form-content"
+    >
+      <div
+        class="bp3-button-group"
+      >
+        <button
+          class="bp3-button"
+          type="button"
+        >
+          <span
+            class="bp3-button-text"
+          >
+            False
+          </span>
+        </button>
+        <button
+          class="bp3-button"
+          type="button"
+        >
+          <span
+            class="bp3-button-text"
+          >
+            True
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp3-form-group"
+  >
+    <label
+      class="bp3-label"
+    >
+      Test four with default
+       
+      <span
+        class="bp3-text-muted"
+      />
+    </label>
+    <div
+      class="bp3-form-content"
+    >
+      <div
+        class="bp3-button-group"
+      >
+        <button
+          class="bp3-button bp3-active"
+          type="button"
+        >
+          <span
+            class="bp3-button-text"
+          >
+            False
+          </span>
+        </button>
+        <button
+          class="bp3-button"
+          type="button"
+        >
+          <span
+            class="bp3-button-text"
+          >
+            True
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp3-form-group"
+  >
+    <label
+      class="bp3-label"
+    >
+      Test five
+       
+      <span
+        class="bp3-text-muted"
+      />
+    </label>
+    <div
+      class="bp3-form-content"
+    >
+      <textarea
+        class="bp3-input bp3-fill"
+      />
+    </div>
+  </div>
+  <div
+    class="bp3-form-group"
+  >
+    <label
+      class="bp3-label"
+    >
+      Test six
+       
+      <span
+        class="bp3-text-muted"
+      />
+    </label>
+    <div
+      class="bp3-form-content"
+    >
+      <div
+        class=" ace_editor ace-tm"
+        id="ace-editor"
+        style="width: 100%; height: 8vh;"
+      >
+        <textarea
+          autocapitalize="off"
+          autocorrect="off"
+          class="ace_text-input"
+          spellcheck="false"
+          style="opacity: 0;"
+          wrap="off"
+        />
+        <div
+          aria-hidden="true"
+          class="ace_gutter"
+          style="display: none;"
+        >
+          <div
+            class="ace_layer ace_gutter-layer ace_folding-enabled"
+          />
+          <div
+            class="ace_gutter-active-line"
+          />
+        </div>
+        <div
+          class="ace_scroller"
+        >
+          <div
+            class="ace_content"
+          >
+            <div
+              class="ace_layer ace_print-margin-layer"
+            >
+              <div
+                class="ace_print-margin"
+                style="left: 4px; visibility: hidden;"
+              />
+            </div>
+            <div
+              class="ace_layer ace_marker-layer"
+            />
+            <div
+              class="ace_layer ace_text-layer"
+              style="padding: 0px 4px;"
+            />
+            <div
+              class="ace_layer ace_marker-layer"
+            />
+            <div
+              class="ace_layer ace_cursor-layer ace_hidden-cursors"
+            >
+              <div
+                class="ace_cursor"
+              />
+            </div>
+          </div>
+        </div>
+        <div
+          class="ace_scrollbar ace_scrollbar-v"
+          style="display: none; width: 20px;"
+        >
+          <div
+            class="ace_scrollbar-inner"
+            style="width: 20px;"
+          />
+        </div>
+        <div
+          class="ace_scrollbar ace_scrollbar-h"
+          style="display: none; height: 20px;"
+        >
+          <div
+            class="ace_scrollbar-inner"
+            style="height: 20px;"
+          />
+        </div>
+        <div
+          style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: hidden;"
+        >
+          <div
+            style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
+          />
+          <div
+            style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
+          >
+            XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp3-form-group"
+  >
+    <label
+      class="bp3-label"
+    >
+      Test seven
+       
+      <span
+        class="bp3-text-muted"
+      />
+    </label>
+    <div
+      class="bp3-form-content"
+    >
+      <div
+        class=" ace_editor ace-tm"
+        id="ace-editor"
+        style="width: 100%; height: 8vh;"
+      >
+        <textarea
+          autocapitalize="off"
+          autocorrect="off"
+          class="ace_text-input"
+          spellcheck="false"
+          style="opacity: 0;"
+          wrap="off"
+        />
+        <div
+          aria-hidden="true"
+          class="ace_gutter"
+          style="display: none;"
+        >
+          <div
+            class="ace_layer ace_gutter-layer ace_folding-enabled"
+          />
+          <div
+            class="ace_gutter-active-line"
+          />
+        </div>
+        <div
+          class="ace_scroller"
+        >
+          <div
+            class="ace_content"
+          >
+            <div
+              class="ace_layer ace_print-margin-layer"
+            >
+              <div
+                class="ace_print-margin"
+                style="left: 4px; visibility: hidden;"
+              />
+            </div>
+            <div
+              class="ace_layer ace_marker-layer"
+            />
+            <div
+              class="ace_layer ace_text-layer"
+              style="padding: 0px 4px;"
+            />
+            <div
+              class="ace_layer ace_marker-layer"
+            />
+            <div
+              class="ace_layer ace_cursor-layer ace_hidden-cursors"
+            >
+              <div
+                class="ace_cursor"
+              />
+            </div>
+          </div>
+        </div>
+        <div
+          class="ace_scrollbar ace_scrollbar-v"
+          style="display: none; width: 20px;"
+        >
+          <div
+            class="ace_scrollbar-inner"
+            style="width: 20px;"
+          />
+        </div>
+        <div
+          class="ace_scrollbar ace_scrollbar-h"
+          style="display: none; height: 20px;"
+        >
+          <div
+            class="ace_scrollbar-inner"
+            style="height: 20px;"
+          />
+        </div>
+        <div
+          style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: hidden;"
+        >
+          <div
+            style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
+          />
+          <div
+            style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
+          >
+            XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

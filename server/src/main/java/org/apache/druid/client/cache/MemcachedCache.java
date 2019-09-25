@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
@@ -377,7 +376,7 @@ public class MemcachedCache implements Cache
                 }
                 catch (IOException e) {
                   log.error(e, "Unable to create memcached client");
-                  throw Throwables.propagate(e);
+                  throw new RuntimeException(e);
                 }
               }
             }
@@ -391,7 +390,7 @@ public class MemcachedCache implements Cache
       return new MemcachedCache(clientSupplier, config, monitor);
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -471,7 +470,7 @@ public class MemcachedCache implements Cache
       }
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       catch (ExecutionException e) {
         errorCount.incrementAndGet();
@@ -581,7 +580,7 @@ public class MemcachedCache implements Cache
       }
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       catch (ExecutionException e) {
         errorCount.incrementAndGet();
@@ -599,7 +598,7 @@ public class MemcachedCache implements Cache
 
   @Override
   @LifecycleStop
-  public void close() throws IOException
+  public void close()
   {
     monitor.stop();
   }

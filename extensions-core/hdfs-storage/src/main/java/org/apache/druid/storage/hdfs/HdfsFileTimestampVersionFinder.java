@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.hdfs;
 
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -94,7 +93,7 @@ public class HdfsFileTimestampVersionFinder extends HdfsDataSegmentPuller implem
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

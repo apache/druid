@@ -47,19 +47,19 @@ public class TimestampSpec
 
   private final String timestampColumn;
   private final String timestampFormat;
-  // this value should never be set for production data
+  // this value should never be set for production data; the data loader uses it before a timestamp column is chosen
   private final DateTime missingValue;
   /** This field is a derivative of {@link #timestampFormat}; not checked in {@link #equals} and {@link #hashCode} */
   private final Function<Object, DateTime> timestampConverter;
 
   // remember last value parsed
-  private static final ThreadLocal<ParseCtx> parseCtx = ThreadLocal.withInitial(ParseCtx::new);
+  private static final ThreadLocal<ParseCtx> PARSE_CTX = ThreadLocal.withInitial(ParseCtx::new);
 
   @JsonCreator
   public TimestampSpec(
       @JsonProperty("column") String timestampColumn,
       @JsonProperty("format") String format,
-      // this value should never be set for production data
+      // this value should never be set for production data; the data loader uses it before a timestamp column is chosen
       @JsonProperty("missingValue") DateTime missingValue
   )
   {
@@ -98,7 +98,7 @@ public class TimestampSpec
   {
     DateTime extracted = missingValue;
     if (input != null) {
-      ParseCtx ctx = parseCtx.get();
+      ParseCtx ctx = PARSE_CTX.get();
       // Check if the input is equal to the last input, so we don't need to parse it again
       if (input.equals(ctx.lastTimeObject)) {
         extracted = ctx.lastDateTime;
@@ -107,7 +107,7 @@ public class TimestampSpec
         ParseCtx newCtx = new ParseCtx();
         newCtx.lastTimeObject = input;
         newCtx.lastDateTime = extracted;
-        parseCtx.set(newCtx);
+        PARSE_CTX.set(newCtx);
       }
     }
     return extracted;

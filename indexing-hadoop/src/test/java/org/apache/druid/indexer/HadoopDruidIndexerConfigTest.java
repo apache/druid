@@ -45,11 +45,11 @@ import java.util.List;
  */
 public class HadoopDruidIndexerConfigTest
 {
-  private static final ObjectMapper jsonMapper;
+  private static final ObjectMapper JSON_MAPPER;
 
   static {
-    jsonMapper = new DefaultObjectMapper();
-    jsonMapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, jsonMapper));
+    JSON_MAPPER = new DefaultObjectMapper();
+    JSON_MAPPER.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, JSON_MAPPER));
   }
 
   @Test
@@ -75,7 +75,7 @@ public class HadoopDruidIndexerConfigTest
                 ImmutableList.of(Intervals.of("2010-01-01/P1D"))
             ),
             null,
-            jsonMapper
+            JSON_MAPPER
         ),
         new HadoopIOConfig(ImmutableMap.of("paths", "bar", "type", "static"), null, null),
         new HadoopTuningConfig(
@@ -86,6 +86,7 @@ public class HadoopDruidIndexerConfigTest
             null,
             null,
             null,
+            null,
             false,
             false,
             false,
@@ -98,6 +99,7 @@ public class HadoopDruidIndexerConfigTest
             null,
             false,
             false,
+            null,
             null,
             null,
             null
@@ -142,7 +144,7 @@ public class HadoopDruidIndexerConfigTest
                 ImmutableList.of(Intervals.of("2010-01-01/P1D"))
             ),
             null,
-            jsonMapper
+            JSON_MAPPER
         ),
         new HadoopIOConfig(ImmutableMap.of("paths", "bar", "type", "static"), null, null),
         new HadoopTuningConfig(
@@ -163,6 +165,7 @@ public class HadoopDruidIndexerConfigTest
             null,
             null,
             null,
+            null,
             false,
             false,
             false,
@@ -175,6 +178,7 @@ public class HadoopDruidIndexerConfigTest
             null,
             false,
             false,
+            null,
             null,
             null,
             null

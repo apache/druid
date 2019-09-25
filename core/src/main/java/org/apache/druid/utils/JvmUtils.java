@@ -21,11 +21,34 @@ package org.apache.druid.utils;
 
 import com.google.inject.Inject;
 
+import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.StringTokenizer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class JvmUtils
 {
+  private static final boolean IS_JAVA9_COMPATIBLE = isJava9Compatible(System.getProperty("java.specification.version"));
+
+  private static boolean isJava9Compatible(String versionString)
+  {
+    final StringTokenizer st = new StringTokenizer(versionString, ".");
+    int majorVersion = Integer.parseInt(st.nextToken());
+
+    return majorVersion >= 9;
+  }
+
+  public static boolean isIsJava9Compatible()
+  {
+    return IS_JAVA9_COMPATIBLE;
+  }
+
   @Inject
   private static RuntimeInfo runtimeInfo = new RuntimeInfo();
 
@@ -62,5 +85,22 @@ public class JvmUtils
   public static long getCurrentThreadCpuTime()
   {
     return THREAD_MX_BEAN.getCurrentThreadCpuTime();
+  }
+
+  public static List<URL> systemClassPath()
+  {
+    List<URL> jobURLs;
+    String[] paths = System.getProperty("java.class.path").split(File.pathSeparator);
+    jobURLs = Stream.of(paths).map(
+        s -> {
+          try {
+            return Paths.get(s).toUri().toURL();
+          }
+          catch (MalformedURLException e) {
+            throw new UnsupportedOperationException("Unable to create URL classpath entry", e);
+          }
+        }
+    ).collect(Collectors.toList());
+    return jobURLs;
   }
 }

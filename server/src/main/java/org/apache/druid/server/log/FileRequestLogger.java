@@ -20,7 +20,6 @@
 package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
@@ -99,7 +98,7 @@ public class FileRequestLogger implements RequestLogger
                 }
               }
               catch (Exception e) {
-                Throwables.propagate(e);
+                throw new RuntimeException(e);
               }
 
               return ScheduledExecutors.Signal.REPEAT;
@@ -108,7 +107,7 @@ public class FileRequestLogger implements RequestLogger
       );
     }
     catch (IOException e) {
-      Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

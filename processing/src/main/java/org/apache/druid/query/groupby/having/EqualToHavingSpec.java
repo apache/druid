@@ -21,8 +21,11 @@ package org.apache.druid.query.groupby.having;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.ResultRow;
 
 import java.util.Map;
 
@@ -30,12 +33,13 @@ import java.util.Map;
  * The "=" operator in a "having" clause. This is similar to SQL's "having aggregation = value",
  * except that in SQL an aggregation is an expression instead of an aggregation name as in Druid.
  */
-public class EqualToHavingSpec extends BaseHavingSpec
+public class EqualToHavingSpec implements HavingSpec
 {
   private final String aggregationName;
   private final Number value;
 
   private volatile Map<String, AggregatorFactory> aggregators;
+  private volatile int columnNumber;
 
   @JsonCreator
   public EqualToHavingSpec(
@@ -60,15 +64,20 @@ public class EqualToHavingSpec extends BaseHavingSpec
   }
 
   @Override
-  public void setAggregators(Map<String, AggregatorFactory> aggregators)
+  public void setQuery(GroupByQuery query)
   {
-    this.aggregators = aggregators;
+    columnNumber = query.getResultRowPositionLookup().getInt(aggregationName);
+    aggregators = HavingSpecUtil.computeAggregatorsMap(query.getAggregatorSpecs());
   }
 
   @Override
-  public boolean eval(Row row)
+  public boolean eval(ResultRow row)
   {
-    Object metricVal = row.getRaw(aggregationName);
+    if (columnNumber < 0) {
+      return value == null;
+    }
+
+    Object metricVal = row.get(columnNumber);
     if (metricVal == null || value == null) {
       return metricVal == null && value == null;
     }
@@ -122,5 +131,14 @@ public class EqualToHavingSpec extends BaseHavingSpec
     sb.append(", value=").append(value);
     sb.append('}');
     return sb.toString();
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_EQUAL)
+        .appendString(aggregationName)
+        .appendByteArray(StringUtils.toUtf8(String.valueOf(value)))
+        .build();
   }
 }

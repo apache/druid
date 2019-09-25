@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Assert;
 import org.junit.Before;
@@ -44,21 +45,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import static org.easymock.EasyMock.expectLastCall;
-import static org.junit.Assert.assertEquals;
-
 public class AzureDataSegmentPusherTest extends EasyMockSupport
 {
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
-  private static final String containerName = "container";
-  private static final String blobPath = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
-  private static final DataSegment dataSegment = new DataSegment(
+  private static final String CONTAINER_NAME = "container";
+  private static final String BLOB_PATH = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
+  private static final DataSegment DATA_SEGMENT = new DataSegment(
       "test",
       Intervals.of("2015-04-12/2015-04-13"),
       "1",
-      ImmutableMap.of("containerName", containerName, "blobPath", blobPath),
+      ImmutableMap.of("containerName", CONTAINER_NAME, "blobPath", BLOB_PATH),
       null,
       null,
       NoneShardSpec.instance(),
@@ -95,7 +93,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
 
   private void testPushInternal(boolean useUniquePath, String matcher) throws Exception
   {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
 
     // Create a mock segment on disk
     File tmp = tempFolder.newFile("version.bin");
@@ -130,50 +128,42 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   public void getAzurePathsTest()
   {
 
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
-    final String storageDir = pusher.getStorageDir(dataSegment, false);
-    Map<String, String> paths = pusher.getAzurePaths(dataSegment, false);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
+    final String storageDir = pusher.getStorageDir(DATA_SEGMENT, false);
+    final String azurePath = pusher.getAzurePath(DATA_SEGMENT, false);
 
-    assertEquals(
+    Assert.assertEquals(
         StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME),
-        paths.get("index")
-    );
-    assertEquals(
-        StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.DESCRIPTOR_FILE_NAME),
-        paths.get("descriptor")
+        azurePath
     );
   }
 
   @Test
   public void uploadDataSegmentTest() throws StorageException, IOException, URISyntaxException
   {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
     final int binaryVersion = 9;
     final File compressedSegmentData = new File("index.zip");
-    final File descriptorFile = new File("descriptor.json");
-    final Map<String, String> azurePaths = pusher.getAzurePaths(dataSegment, false);
+    final String azurePath = pusher.getAzurePath(DATA_SEGMENT, false);
 
-    azureStorage.uploadBlob(compressedSegmentData, containerName, azurePaths.get("index"));
-    expectLastCall();
-    azureStorage.uploadBlob(descriptorFile, containerName, azurePaths.get("descriptor"));
-    expectLastCall();
+    azureStorage.uploadBlob(compressedSegmentData, CONTAINER_NAME, azurePath);
+    EasyMock.expectLastCall();
 
     replayAll();
 
     DataSegment pushedDataSegment = pusher.uploadDataSegment(
-        dataSegment,
+        DATA_SEGMENT,
         binaryVersion,
         0, // empty file
         compressedSegmentData,
-        descriptorFile,
-        azurePaths
+        azurePath
     );
 
-    assertEquals(compressedSegmentData.length(), pushedDataSegment.getSize());
-    assertEquals(binaryVersion, (int) pushedDataSegment.getBinaryVersion());
+    Assert.assertEquals(compressedSegmentData.length(), pushedDataSegment.getSize());
+    Assert.assertEquals(binaryVersion, (int) pushedDataSegment.getBinaryVersion());
     Map<String, Object> loadSpec = pushedDataSegment.getLoadSpec();
-    assertEquals(AzureStorageDruidModule.SCHEME, MapUtils.getString(loadSpec, "type"));
-    assertEquals(azurePaths.get("index"), MapUtils.getString(loadSpec, "blobPath"));
+    Assert.assertEquals(AzureStorageDruidModule.SCHEME, MapUtils.getString(loadSpec, "type"));
+    Assert.assertEquals(azurePath, MapUtils.getString(loadSpec, "blobPath"));
 
     verifyAll();
   }
@@ -181,7 +171,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   @Test
   public void getPathForHadoopTest()
   {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
     String hadoopPath = pusher.getPathForHadoop();
     Assert.assertEquals("wasbs://container@account.blob.core.windows.net/", hadoopPath);
   }
@@ -189,8 +179,8 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   @Test
   public void storageDirContainsNoColonsTest()
   {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
-    DataSegment withColons = dataSegment.withVersion("2018-01-05T14:54:09.295Z");
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
+    DataSegment withColons = DATA_SEGMENT.withVersion("2018-01-05T14:54:09.295Z");
     String segmentPath = pusher.getStorageDir(withColons, false);
     Assert.assertFalse("Path should not contain any columns", segmentPath.contains(":"));
   }

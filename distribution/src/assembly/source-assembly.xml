@@ -37,23 +37,38 @@
                 <!-- IDE -->
                 <exclude>%regex[(?!((?!${project.build.directory}/)[^/]+/)*src/)(.*/)?\.idea(/.*)?]</exclude>
                 <exclude>%regex[(?!((?!${project.build.directory}/)[^/]+/)*src/)(.*/)?[^/]*\.iml]</exclude>
-                <exclude>eclipse_formatting.xml</exclude>
-                <exclude>eclipse.importorder</exclude>
+                <exclude>dev/eclipse_formatting.xml</exclude>
+                <exclude>dev/eclipse.importorder</exclude>
     
                 <!-- release-plugin temp files -->
                 <exclude>%regex[(?!((?!${project.build.directory}/)[^/]+/)*src/)(.*/)?pom\.xml\.releaseBackup]</exclude>
                 <exclude>%regex[(?!((?!${project.build.directory}/)[^/]+/)*src/)(.*/)?release\.properties]</exclude>
 
                 <exclude>.gitignore</exclude>
+                <exclude>.dockerignore</exclude>
                 <exclude>.travis.yml</exclude>
+                <exclude>README.md</exclude>
+                <exclude>README.BINARY</exclude>
                 <exclude>publications/**</exclude>
                 <exclude>upload.sh</exclude>
+                <exclude>web-console/node_modules/**</exclude>
+                <exclude>web-console/node/**</exclude>
+                <exclude>web-console/resources/**</exclude>
+                <exclude>web-console/public/**</exclude>
+                <exclude>web-console/lib/*.css</exclude>
+                <exclude>web-console/coordinator-console/**</exclude>
+                <exclude>web-console/pages/**</exclude>
+                <exclude>web-console/index.html</exclude>
+                <exclude>web-console/.tscache/**</exclude>
+                <exclude>web-console/tscommand-*.tmp.txt</exclude>
+                <exclude>web-console/licenses.json</exclude>
           </excludes>
         </fileSet>
         <fileSet>
             <directory>${project.build.directory}</directory>
             <includes>
                 <include>git.version</include>
+                <include>README</include>
             </includes>
             <outputDirectory/>
         </fileSet>

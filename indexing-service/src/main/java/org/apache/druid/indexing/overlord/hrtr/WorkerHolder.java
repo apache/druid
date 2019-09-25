@@ -45,7 +45,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -71,7 +70,6 @@ public class WorkerHolder
   {
   };
 
-  private static final StatusResponseHandler RESPONSE_HANDLER = new StatusResponseHandler(StandardCharsets.UTF_8);
 
   private final Worker worker;
   private Worker disabledWorker;
@@ -79,7 +77,7 @@ public class WorkerHolder
   protected final AtomicBoolean disabled;
 
   // Known list of tasks running/completed on this worker.
-  protected final AtomicReference<Map<String, TaskAnnouncement>> tasksSnapshotRef = new AtomicReference<>(new ConcurrentHashMap<>());
+  protected final AtomicReference<Map<String, TaskAnnouncement>> tasksSnapshotRef;
 
   private final AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<>(DateTimes.nowUtc());
   private final AtomicReference<DateTime> blacklistedUntil = new AtomicReference<>();
@@ -99,7 +97,8 @@ public class WorkerHolder
       HttpRemoteTaskRunnerConfig config,
       ScheduledExecutorService workersSyncExec,
       Listener listener,
-      Worker worker
+      Worker worker,
+      List<TaskAnnouncement> knownAnnouncements
   )
   {
     this.smileMapper = smileMapper;
@@ -121,6 +120,12 @@ public class WorkerHolder
         config.getServerUnstabilityTimeout().toStandardDuration().getMillis(),
         createSyncListener()
     );
+
+    ConcurrentMap<String, TaskAnnouncement> announcements = new ConcurrentHashMap<>();
+    if (knownAnnouncements != null) {
+      knownAnnouncements.forEach(e -> announcements.put(e.getTaskId(), e));
+    }
+    tasksSnapshotRef = new AtomicReference<>(announcements);
   }
 
   public Worker getWorker()
@@ -231,7 +236,7 @@ public class WorkerHolder
                   new Request(HttpMethod.POST, url)
                       .addHeader(HttpHeaders.Names.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
                       .setContent(smileMapper.writeValueAsBytes(task)),
-                  RESPONSE_HANDLER,
+                  StatusResponseHandler.getInstance(),
                   config.getAssignRequestHttpTimeout().toStandardDuration()
               ).get();
 
@@ -276,7 +281,7 @@ public class WorkerHolder
             try {
               final StatusResponseHolder response = httpClient.go(
                   new Request(HttpMethod.POST, url),
-                  RESPONSE_HANDLER,
+                  StatusResponseHandler.getInstance(),
                   config.getShutdownRequestHttpTimeout().toStandardDuration()
               ).get();
 

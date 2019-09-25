@@ -31,8 +31,10 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -171,6 +173,37 @@ public class VirtualColumns implements Cacheable
     }
   }
 
+  @Nullable
+  public BitmapIndex getBitmapIndex(String columnName, ColumnSelector columnSelector)
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
+    if (virtualColumn == null) {
+      throw new IAE("No such virtual column[%s]", columnName);
+    } else {
+      return virtualColumn.capabilities(columnName).hasBitmapIndexes() ? virtualColumn.getBitmapIndex(columnName, columnSelector) : null;
+    }
+  }
+
+  public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelector columnSelector, ReadableOffset offset)
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(dimensionSpec.getDimension());
+    if (virtualColumn == null) {
+      throw new IAE("No such virtual column[%s]", dimensionSpec.getDimension());
+    } else {
+      return virtualColumn.makeDimensionSelector(dimensionSpec, columnSelector, offset);
+    }
+  }
+
+  public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelector columnSelector, ReadableOffset offset)
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
+    if (virtualColumn == null) {
+      throw new IAE("No such virtual column[%s]", columnName);
+    } else {
+      return virtualColumn.makeColumnValueSelector(columnName, columnSelector, offset);
+    }
+  }
+
   /**
    * Create a column value selector.
    *
@@ -224,6 +257,11 @@ public class VirtualColumns implements Cacheable
     return virtualColumns.toArray(new VirtualColumn[0]);
   }
 
+  public int size()
+  {
+    return virtualColumns.size();
+  }
+
   public ColumnSelectorFactory wrap(final ColumnSelectorFactory baseFactory)
   {
     return new VirtualizedColumnSelectorFactory(baseFactory, this);
@@ -236,7 +274,7 @@ public class VirtualColumns implements Cacheable
     return new CacheKeyBuilder((byte) 0).appendCacheablesIgnoringOrder(virtualColumns).build();
   }
 
-  private void detectCycles(VirtualColumn virtualColumn, Set<String> columnNames)
+  private void detectCycles(VirtualColumn virtualColumn, @Nullable Set<String> columnNames)
   {
     // Copy columnNames to avoid modifying it
     final Set<String> nextSet = columnNames == null

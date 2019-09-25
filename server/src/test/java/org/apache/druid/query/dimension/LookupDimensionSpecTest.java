@@ -31,7 +31,7 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
-import org.apache.druid.query.lookup.LookupReferencesManager;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.MapLookupExtractorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.easymock.EasyMock;
@@ -49,7 +49,8 @@ public class LookupDimensionSpecTest
   private static final Map<String, String> STRING_MAP = ImmutableMap.of("key", "value", "key2", "value2");
   private static LookupExtractor MAP_LOOKUP_EXTRACTOR = new MapLookupExtractor(STRING_MAP, true);
 
-  private static final LookupReferencesManager LOOKUP_REF_MANAGER = EasyMock.createMock(LookupReferencesManager.class);
+  private static final LookupExtractorFactoryContainerProvider LOOKUP_REF_MANAGER =
+      EasyMock.createMock(LookupExtractorFactoryContainerProvider.class);
 
   static {
     EasyMock
@@ -60,7 +61,7 @@ public class LookupDimensionSpecTest
   }
 
   private final DimensionSpec lookupDimSpec =
-      new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, null, true);
+      new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, true, null);
 
 
   @Parameters
@@ -70,7 +71,7 @@ public class LookupDimensionSpecTest
     ObjectMapper mapper = new DefaultObjectMapper();
     mapper.registerSubtypes(new NamedType(LookupDimensionSpec.class, "lookup"));
     InjectableValues injectableValues = new InjectableValues.Std().addValue(
-        LookupReferencesManager.class,
+        LookupExtractorFactoryContainerProvider.class,
         LOOKUP_REF_MANAGER
     );
     String serLookup = mapper.writeValueAsString(lookupDimSpec);
@@ -80,23 +81,23 @@ public class LookupDimensionSpecTest
   private Object[] parametersForTestSerDesr()
   {
     return new Object[]{
-        new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, true, null, null, null, true),
-        new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, "Missing_value", null, null, true),
-        new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, null, true),
-        new LookupDimensionSpec("dimName", "outputName", null, false, null, "name", LOOKUP_REF_MANAGER, true)
+        new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, true, null, null, true, null),
+        new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, "Missing_value", null, true, null),
+        new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, true, null),
+        new LookupDimensionSpec("dimName", "outputName", null, false, null, "name", true, LOOKUP_REF_MANAGER)
     };
   }
 
   @Test(expected = Exception.class)
   public void testExceptionWhenNameAndLookupNotNull()
   {
-    new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, "replace", "name", null, true);
+    new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, "replace", "name", true, null);
   }
 
   @Test(expected = Exception.class)
   public void testExceptionWhenNameAndLookupNull()
   {
-    new LookupDimensionSpec("dimName", "outputName", null, false, "replace", "", null, true);
+    new LookupDimensionSpec("dimName", "outputName", null, false, "replace", "", true, null);
   }
 
   @Test
@@ -115,39 +116,41 @@ public class LookupDimensionSpecTest
   {
     return new Object[]{
         new Object[]{
-            new LookupDimensionSpec("dimName", "outputName", null, true, null, "lookupName", LOOKUP_REF_MANAGER, true),
+            new LookupDimensionSpec("dimName", "outputName", null, true, null, "lookupName", true, LOOKUP_REF_MANAGER),
             STRING_MAP
         },
         new Object[]{
-            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, true, null, null, null, true),
+            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, true, null, null, true, null),
             STRING_MAP
         },
         new Object[]{
-            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, null, true),
+            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, true, null),
             TestHelper.createExpectedMap("not there", null)
         },
         new Object[]{
-            new LookupDimensionSpec("dimName", "outputName", null, false, null, "lookupName", LOOKUP_REF_MANAGER, true),
+            new LookupDimensionSpec("dimName", "outputName", null, false, null, "lookupName", true, LOOKUP_REF_MANAGER),
             TestHelper.createExpectedMap("not there", null)
         },
         new Object[]{
-            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, "Missing_value", null, null,
-                                    true
+            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, "Missing_value", null,
+                                    true,
+                                    null
             ),
             ImmutableMap.of("not there", "Missing_value")
         },
         new Object[]{
-            new LookupDimensionSpec("dimName", "outputName", null, false, "Missing_value", "lookupName", LOOKUP_REF_MANAGER,
-                                    true
+            new LookupDimensionSpec("dimName", "outputName", null, false, "Missing_value", "lookupName",
+                                    true,
+                                    LOOKUP_REF_MANAGER
             ),
             ImmutableMap.of("not there", "Missing_value")
         },
         new Object[]{
-            new LookupDimensionSpec("dimName", "outputName", null, true, null, "lookupName", LOOKUP_REF_MANAGER, true),
+            new LookupDimensionSpec("dimName", "outputName", null, true, null, "lookupName", true, LOOKUP_REF_MANAGER),
             ImmutableMap.of("not there", "not there")
         },
         new Object[]{
-            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, true, null, "", null, true),
+            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, true, null, "", true, null),
             ImmutableMap.of("not there", "not there")
         }
 
@@ -170,29 +173,30 @@ public class LookupDimensionSpecTest
   {
     return new Object[]{
         new Object[]{
-            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, true, null, null, null, true),
+            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, true, null, null, true, null),
             false
         },
         new Object[]{
-            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, "Missing_value", null, null,
-                                    true
+            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, "Missing_value", null,
+                                    true,
+                                    null
             ),
             false
         },
         new Object[]{
-            new LookupDimensionSpec("dimName", "outputName2", MAP_LOOKUP_EXTRACTOR, false, null, null, null, true),
+            new LookupDimensionSpec("dimName", "outputName2", MAP_LOOKUP_EXTRACTOR, false, null, null, true, null),
             false
         },
         new Object[]{
-            new LookupDimensionSpec("dimName2", "outputName2", MAP_LOOKUP_EXTRACTOR, false, null, null, null, true),
+            new LookupDimensionSpec("dimName2", "outputName2", MAP_LOOKUP_EXTRACTOR, false, null, null, true, null),
             false
         },
         new Object[]{
-            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, null, true),
+            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, true, null),
             true
         },
         new Object[]{
-            new LookupDimensionSpec("dimName", "outputName", null, false, null, "name", LOOKUP_REF_MANAGER, true),
+            new LookupDimensionSpec("dimName", "outputName", null, false, null, "name", true, LOOKUP_REF_MANAGER),
             false
         }
     };

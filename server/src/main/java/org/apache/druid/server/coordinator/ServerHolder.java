@@ -32,11 +32,18 @@ public class ServerHolder implements Comparable<ServerHolder>
   private static final Logger log = new Logger(ServerHolder.class);
   private final ImmutableDruidServer server;
   private final LoadQueuePeon peon;
+  private final boolean isDecommissioning;
 
   public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon)
   {
+    this(server, peon, false);
+  }
+
+  public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon, boolean isDecommissioning)
+  {
     this.server = server;
     this.peon = peon;
+    this.isDecommissioning = isDecommissioning;
   }
 
   public ImmutableDruidServer getServer()
@@ -72,6 +79,18 @@ public class ServerHolder implements Comparable<ServerHolder>
   public double getPercentUsed()
   {
     return (100.0 * getSizeUsed()) / getMaxSize();
+  }
+
+  /**
+   * Historical nodes can be 'decommissioned', which instructs Coordinator to move segments from them according to
+   * the percent of move operations diverted from normal balancer moves for this purpose by
+   * {@link CoordinatorDynamicConfig#getDecommissioningMaxPercentOfMaxSegmentsToMove()}. The mechanism allows draining
+   * segments from nodes which are planned for replacement.
+   * @return true if the node is decommissioning
+   */
+  public boolean isDecommissioning()
+  {
+    return isDecommissioning;
   }
 
   public long getAvailableSize()

@@ -91,11 +91,11 @@ public class CoordinatorResource
   )
   {
     if (simple != null) {
-      return Response.ok(coordinator.getSegmentAvailability()).build();
+      return Response.ok(coordinator.computeNumsUnavailableUsedSegmentsPerDataSource()).build();
     }
 
     if (full != null) {
-      return Response.ok(coordinator.getReplicationStatus()).build();
+      return Response.ok(coordinator.computeUnderReplicationCountsPerDataSourcePerTier()).build();
     }
     return Response.ok(coordinator.getLoadStatus()).build();
   }

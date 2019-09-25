@@ -56,6 +56,7 @@ cp target/druid-integration-tests*.jar $SHARED_DIR/docker/lib
 # one of the integration tests needs the wikiticker sample data
 mkdir -p $SHARED_DIR/wikiticker-it
 cp ../examples/quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz $SHARED_DIR/wikiticker-it/wikiticker-2015-09-12-sampled.json.gz
+cp docker/wiki-simple-lookup.json $SHARED_DIR/wikiticker-it/wiki-simple-lookup.json
 
 docker network create --subnet=172.172.172.0/24 druid-it-net
 

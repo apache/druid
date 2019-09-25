@@ -25,6 +25,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 
@@ -38,10 +39,10 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   public SketchMergeAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
-      @JsonProperty("size") Integer size,
-      @JsonProperty("shouldFinalize") Boolean shouldFinalize,
-      @JsonProperty("isInputThetaSketch") Boolean isInputThetaSketch,
-      @JsonProperty("errorBoundsStdDev") Integer errorBoundsStdDev
+      @JsonProperty("size") @Nullable Integer size,
+      @JsonProperty("shouldFinalize") @Nullable Boolean shouldFinalize,
+      @JsonProperty("isInputThetaSketch") @Nullable Boolean isInputThetaSketch,
+      @JsonProperty("errorBoundsStdDev") @Nullable Integer errorBoundsStdDev
   )
   {
     super(name, fieldName, size, AggregatorUtil.SKETCH_MERGE_CACHE_TYPE_ID);
@@ -116,9 +117,14 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
    *
    * @return sketch object
    */
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
+    if (object == null) {
+      return null;
+    }
+
     if (shouldFinalize) {
       SketchHolder holder = (SketchHolder) object;
       if (errorBoundsStdDev != null) {

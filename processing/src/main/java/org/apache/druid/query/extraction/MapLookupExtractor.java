@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
@@ -119,7 +118,7 @@ public class MapLookupExtractor extends LookupExtractor
     }
     catch (IOException ex) {
       // If ByteArrayOutputStream.write has problems, that is a very bad thing
-      throw Throwables.propagate(ex);
+      throw new RuntimeException(ex);
     }
   }
 

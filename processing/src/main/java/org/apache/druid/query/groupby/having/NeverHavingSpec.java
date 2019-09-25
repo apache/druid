@@ -19,16 +19,30 @@
 
 package org.apache.druid.query.groupby.having;
 
-import org.apache.druid.data.input.Row;
+import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.ResultRow;
 
 /**
  * A "having" spec that always evaluates to false
  */
-public class NeverHavingSpec extends BaseHavingSpec
+public class NeverHavingSpec implements HavingSpec
 {
   @Override
-  public boolean eval(Row row)
+  public void setQuery(GroupByQuery query)
+  {
+    // Do nothing.
+  }
+
+  @Override
+  public boolean eval(ResultRow row)
   {
     return false;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_NEVER).build();
   }
 }

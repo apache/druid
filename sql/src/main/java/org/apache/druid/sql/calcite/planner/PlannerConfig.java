@@ -31,7 +31,6 @@ public class PlannerConfig
 {
   public static final String CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT = "useApproximateCountDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
-  public static final String CTX_KEY_USE_FALLBACK = "useFallback";
 
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
@@ -46,16 +45,10 @@ public class PlannerConfig
   private int maxQueryCount = 8;
 
   @JsonProperty
-  private int selectThreshold = 1000;
-
-  @JsonProperty
   private boolean useApproximateCountDistinct = true;
 
   @JsonProperty
   private boolean useApproximateTopN = true;
-
-  @JsonProperty
-  private boolean useFallback = false;
 
   @JsonProperty
   private boolean requireTimeCondition = false;
@@ -65,6 +58,24 @@ public class PlannerConfig
 
   @JsonProperty
   private DateTimeZone sqlTimeZone = DateTimeZone.UTC;
+
+  @JsonProperty
+  private boolean metadataSegmentCacheEnable = false;
+
+  @JsonProperty
+  private long metadataSegmentPollPeriod = 60000;
+
+  public long getMetadataSegmentPollPeriod()
+  {
+    return metadataSegmentPollPeriod;
+  }
+
+  public boolean isMetadataSegmentCacheEnable()
+  {
+    return metadataSegmentCacheEnable;
+  }
+
+  private boolean serializeComplexValues = true;
 
   public Period getMetadataRefreshPeriod()
   {
@@ -86,11 +97,6 @@ public class PlannerConfig
     return maxQueryCount;
   }
 
-  public int getSelectThreshold()
-  {
-    return selectThreshold;
-  }
-
   public boolean isUseApproximateCountDistinct()
   {
     return useApproximateCountDistinct;
@@ -99,11 +105,6 @@ public class PlannerConfig
   public boolean isUseApproximateTopN()
   {
     return useApproximateTopN;
-  }
-
-  public boolean isUseFallback()
-  {
-    return useFallback;
   }
 
   public boolean isRequireTimeCondition()
@@ -121,6 +122,11 @@ public class PlannerConfig
     return awaitInitializationOnStart;
   }
 
+  public boolean shouldSerializeComplexValues()
+  {
+    return serializeComplexValues;
+  }
+
   public PlannerConfig withOverrides(final Map<String, Object> context)
   {
     if (context == null) {
@@ -132,7 +138,6 @@ public class PlannerConfig
     newConfig.maxSemiJoinRowsInMemory = getMaxSemiJoinRowsInMemory();
     newConfig.maxTopNLimit = getMaxTopNLimit();
     newConfig.maxQueryCount = getMaxQueryCount();
-    newConfig.selectThreshold = getSelectThreshold();
     newConfig.useApproximateCountDistinct = getContextBoolean(
         context,
         CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT,
@@ -143,14 +148,12 @@ public class PlannerConfig
         CTX_KEY_USE_APPROXIMATE_TOPN,
         isUseApproximateTopN()
     );
-    newConfig.useFallback = getContextBoolean(
-        context,
-        CTX_KEY_USE_FALLBACK,
-        isUseFallback()
-    );
     newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
     newConfig.awaitInitializationOnStart = isAwaitInitializationOnStart();
+    newConfig.metadataSegmentCacheEnable = isMetadataSegmentCacheEnable();
+    newConfig.metadataSegmentPollPeriod = getMetadataSegmentPollPeriod();
+    newConfig.serializeComplexValues = shouldSerializeComplexValues();
     return newConfig;
   }
 
@@ -185,12 +188,13 @@ public class PlannerConfig
     return maxSemiJoinRowsInMemory == that.maxSemiJoinRowsInMemory &&
            maxTopNLimit == that.maxTopNLimit &&
            maxQueryCount == that.maxQueryCount &&
-           selectThreshold == that.selectThreshold &&
            useApproximateCountDistinct == that.useApproximateCountDistinct &&
            useApproximateTopN == that.useApproximateTopN &&
-           useFallback == that.useFallback &&
            requireTimeCondition == that.requireTimeCondition &&
            awaitInitializationOnStart == that.awaitInitializationOnStart &&
+           metadataSegmentCacheEnable == that.metadataSegmentCacheEnable &&
+           metadataSegmentPollPeriod == that.metadataSegmentPollPeriod &&
+           serializeComplexValues == that.serializeComplexValues &&
            Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
            Objects.equals(sqlTimeZone, that.sqlTimeZone);
   }
@@ -204,13 +208,14 @@ public class PlannerConfig
         maxSemiJoinRowsInMemory,
         maxTopNLimit,
         maxQueryCount,
-        selectThreshold,
         useApproximateCountDistinct,
         useApproximateTopN,
-        useFallback,
         requireTimeCondition,
         awaitInitializationOnStart,
-        sqlTimeZone
+        sqlTimeZone,
+        metadataSegmentCacheEnable,
+        metadataSegmentPollPeriod,
+        serializeComplexValues
     );
   }
 
@@ -222,13 +227,14 @@ public class PlannerConfig
            ", maxSemiJoinRowsInMemory=" + maxSemiJoinRowsInMemory +
            ", maxTopNLimit=" + maxTopNLimit +
            ", maxQueryCount=" + maxQueryCount +
-           ", selectThreshold=" + selectThreshold +
            ", useApproximateCountDistinct=" + useApproximateCountDistinct +
            ", useApproximateTopN=" + useApproximateTopN +
-           ", useFallback=" + useFallback +
            ", requireTimeCondition=" + requireTimeCondition +
            ", awaitInitializationOnStart=" + awaitInitializationOnStart +
+           ", metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
+           ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
            ", sqlTimeZone=" + sqlTimeZone +
+           ", serializeComplexValues=" + serializeComplexValues +
            '}';
   }
 }

@@ -24,6 +24,8 @@ import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -34,7 +36,7 @@ import java.nio.channels.WritableByteChannel;
  */
 public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializer
 {
-  private static final MetaSerdeHelper<BlockLayoutColumnarLongsSerializer> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<BlockLayoutColumnarLongsSerializer> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((BlockLayoutColumnarLongsSerializer x) -> CompressedColumnarLongsSupplier.VERSION)
       .writeInt(x -> x.numInserted)
       .writeInt(x -> x.sizePer)
@@ -47,6 +49,7 @@ public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializ
   private int numInserted = 0;
   private int numInsertedForNextFlush;
 
+  @Nullable
   private ByteBuffer endBuffer;
 
   BlockLayoutColumnarLongsSerializer(
@@ -103,14 +106,14 @@ public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializ
   public long getSerializedSize() throws IOException
   {
     writeEndBuffer();
-    return metaSerdeHelper.size(this) + flattener.getSerializedSize();
+    return META_SERDE_HELPER.size(this) + flattener.getSerializedSize();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     writeEndBuffer();
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     flattener.writeTo(channel, smoosher);
   }
 

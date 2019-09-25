@@ -21,13 +21,15 @@ package org.apache.druid.indexer;
 
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -42,9 +44,7 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
   private String hadoopJobIdFile;
 
   @Inject
-  public HadoopDruidDetermineConfigurationJob(
-      HadoopDruidIndexerConfig config
-  )
+  public HadoopDruidDetermineConfigurationJob(HadoopDruidIndexerConfig config)
   {
     this.config = config;
   }
@@ -55,40 +55,56 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
     JobHelper.ensurePaths(config);
 
     if (config.isDeterminingPartitions()) {
-      job = config.getPartitionsSpec().getPartitionJob(config);
+      job = createPartitionJob(config);
       config.setHadoopJobIdFileName(hadoopJobIdFile);
       return JobHelper.runSingleJob(job, config);
     } else {
-      int shardsPerInterval = config.getPartitionsSpec().getNumShards();
+      final PartitionsSpec partitionsSpec = config.getPartitionsSpec();
+      final int shardsPerInterval;
+      if (partitionsSpec instanceof HashedPartitionsSpec) {
+        final HashedPartitionsSpec hashedPartitionsSpec = (HashedPartitionsSpec) partitionsSpec;
+        shardsPerInterval = PartitionsSpec.isEffectivelyNull(hashedPartitionsSpec.getNumShards())
+                            ? 1
+                            : hashedPartitionsSpec.getNumShards();
+      } else {
+        shardsPerInterval = 1;
+      }
       Map<Long, List<HadoopyShardSpec>> shardSpecs = new TreeMap<>();
       int shardCount = 0;
       for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
         DateTime bucket = segmentGranularity.getStart();
-        if (shardsPerInterval > 0) {
-          List<HadoopyShardSpec> specs = Lists.newArrayListWithCapacity(shardsPerInterval);
-          for (int i = 0; i < shardsPerInterval; i++) {
-            specs.add(
-                new HadoopyShardSpec(
-                    new HashBasedNumberedShardSpec(
-                        i,
-                        shardsPerInterval,
-                        config.getPartitionsSpec().getPartitionDimensions(),
-                        HadoopDruidIndexerConfig.JSON_MAPPER
-                    ),
-                    shardCount++
-                )
-            );
-          }
-          shardSpecs.put(bucket.getMillis(), specs);
-          log.info("DateTime[%s], spec[%s]", bucket, specs);
-        } else {
-          final HadoopyShardSpec spec = new HadoopyShardSpec(NoneShardSpec.instance(), shardCount++);
-          shardSpecs.put(bucket.getMillis(), Collections.singletonList(spec));
-          log.info("DateTime[%s], spec[%s]", bucket, spec);
+        // negative shardsPerInterval means a single shard
+        List<HadoopyShardSpec> specs = Lists.newArrayListWithCapacity(shardsPerInterval);
+        for (int i = 0; i < shardsPerInterval; i++) {
+          specs.add(
+              new HadoopyShardSpec(
+                  new HashBasedNumberedShardSpec(
+                      i,
+                      shardsPerInterval,
+                      config.getPartitionsSpec().getPartitionDimensions(),
+                      HadoopDruidIndexerConfig.JSON_MAPPER
+                  ),
+                  shardCount++
+              )
+          );
         }
+        shardSpecs.put(bucket.getMillis(), specs);
+        log.info("DateTime[%s], spec[%s]", bucket, specs);
       }
       config.setShardSpecs(shardSpecs);
       return true;
+    }
+  }
+
+  private static Jobby createPartitionJob(HadoopDruidIndexerConfig config)
+  {
+    final PartitionsSpec partitionsSpec = config.getPartitionsSpec();
+    if (partitionsSpec instanceof HashedPartitionsSpec) {
+      return new DetermineHashedPartitionsJob(config);
+    } else if (partitionsSpec instanceof SingleDimensionPartitionsSpec) {
+      return new DeterminePartitionsJob(config);
+    } else {
+      throw new ISE("Unknown partitionsSpec[%s]", partitionsSpec);
     }
   }
 

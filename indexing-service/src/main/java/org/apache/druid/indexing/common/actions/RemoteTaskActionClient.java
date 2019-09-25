@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexing.common.RetryPolicy;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
@@ -28,7 +27,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
@@ -72,7 +71,7 @@ public class RemoteTaskActionClient implements TaskActionClient
     while (true) {
       try {
 
-        final FullResponseHolder fullResponseHolder;
+        final StringFullResponseHolder fullResponseHolder;
 
         log.info("Submitting action for task[%s] to overlord: [%s].", task.getId(), taskAction);
 
@@ -109,7 +108,7 @@ public class RemoteTaskActionClient implements TaskActionClient
             Thread.sleep(sleepTime);
           }
           catch (InterruptedException e2) {
-            throw Throwables.propagate(e2);
+            throw new RuntimeException(e2);
           }
         }
       }

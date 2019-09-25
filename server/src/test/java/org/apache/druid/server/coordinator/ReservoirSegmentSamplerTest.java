@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.Lists;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.client.ImmutableDruidServerTests;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -138,7 +139,7 @@ public class ReservoirSegmentSamplerTest
     EasyMock.expect(druidServer1.getName()).andReturn("1").atLeastOnce();
     EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer1.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer1.getSegments()).andReturn(segments1).anyTimes();
+    ImmutableDruidServerTests.expectSegments(druidServer1, segments1);
     EasyMock.expect(druidServer1.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer1);
 
@@ -146,7 +147,7 @@ public class ReservoirSegmentSamplerTest
     EasyMock.expect(druidServer2.getTier()).andReturn("normal").anyTimes();
     EasyMock.expect(druidServer2.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer2.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer2.getSegments()).andReturn(segments2).anyTimes();
+    ImmutableDruidServerTests.expectSegments(druidServer2, segments2);
     EasyMock.expect(druidServer2.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer2);
 
@@ -154,7 +155,7 @@ public class ReservoirSegmentSamplerTest
     EasyMock.expect(druidServer3.getTier()).andReturn("normal").anyTimes();
     EasyMock.expect(druidServer3.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer3.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer3.getSegments()).andReturn(segments3).anyTimes();
+    ImmutableDruidServerTests.expectSegments(druidServer3, segments3);
     EasyMock.expect(druidServer3.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer3);
 
@@ -162,7 +163,7 @@ public class ReservoirSegmentSamplerTest
     EasyMock.expect(druidServer4.getTier()).andReturn("normal").anyTimes();
     EasyMock.expect(druidServer4.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer4.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer4.getSegments()).andReturn(segments4).anyTimes();
+    ImmutableDruidServerTests.expectSegments(druidServer4, segments4);
     EasyMock.expect(druidServer4.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer4);
 

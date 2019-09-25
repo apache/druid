@@ -36,7 +36,7 @@ public class LookupConfigTest
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
-  public void TestSerDesr() throws IOException
+  public void testSerDesr() throws IOException
   {
     LookupConfig lookupConfig = new LookupConfig(temporaryFolder.newFile().getAbsolutePath());
     Assert.assertEquals(

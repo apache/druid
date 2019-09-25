@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.lookup;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -26,7 +27,6 @@ import org.apache.druid.query.lookup.LookupExtractorFactory;
 import org.apache.druid.server.lookup.cache.polling.OffHeapPollingCache;
 import org.apache.druid.server.lookup.cache.polling.OnHeapPollingCache;
 import org.apache.druid.server.lookup.cache.polling.PollingCacheFactory;
-import org.codehaus.jackson.annotate.JsonCreator;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
@@ -53,7 +53,7 @@ public class PollingLookupSerDeserTest
   }
 
   private final PollingCacheFactory cacheFactory;
-  private DataFetcher dataFetcher = new MockDataFetcher();
+  private final DataFetcher dataFetcher = new MockDataFetcher();
 
   public PollingLookupSerDeserTest(PollingCacheFactory cacheFactory)
   {

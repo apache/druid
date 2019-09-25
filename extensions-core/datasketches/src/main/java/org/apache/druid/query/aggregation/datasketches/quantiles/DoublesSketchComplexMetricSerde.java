@@ -39,7 +39,7 @@ import java.nio.ByteBuffer;
 public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
 {
 
-  private static final DoublesSketchObjectStrategy strategy = new DoublesSketchObjectStrategy();
+  private static final DoublesSketchObjectStrategy STRATEGY = new DoublesSketchObjectStrategy();
 
   @Override
   public String getTypeName()
@@ -50,7 +50,7 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
   @Override
   public ObjectStrategy<DoublesSketch> getObjectStrategy()
   {
-    return strategy;
+    return STRATEGY;
   }
 
   @Override
@@ -72,12 +72,14 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
         final Object object = inputRow.getRaw(metricName);
         if (object instanceof String) { // everything is a string during ingestion
           String objectString = (String) object;
-          // Autodetection of the input format: a number or base64 encoded sketch
+          // Autodetection of the input format: empty string, number, or base64 encoded sketch
           // A serialized DoublesSketch, as currently implemented, always has 0 in the first 6 bits.
           // This corresponds to "A" in base64, so it is not a digit
-          if (Character.isDigit((objectString).charAt(0))) {
+          if (objectString.isEmpty()) {
+            return DoublesSketchOperations.EMPTY_SKETCH;
+          } else if (Character.isDigit(objectString.charAt(0))) {
             try {
-              Double doubleValue = Double.parseDouble(objectString);
+              double doubleValue = Double.parseDouble(objectString);
               UpdateDoublesSketch sketch = DoublesSketch.builder().setK(MIN_K).build();
               sketch.update(doubleValue);
               return sketch;
@@ -103,7 +105,7 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
   @Override
   public void deserializeColumn(final ByteBuffer buffer, final ColumnBuilder builder)
   {
-    final GenericIndexed<DoublesSketch> column = GenericIndexed.read(buffer, strategy, builder.getFileMapper());
+    final GenericIndexed<DoublesSketch> column = GenericIndexed.read(buffer, STRATEGY, builder.getFileMapper());
     builder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
   }
 

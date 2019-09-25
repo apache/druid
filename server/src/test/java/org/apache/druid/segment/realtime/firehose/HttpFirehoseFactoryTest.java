@@ -22,6 +22,7 @@ package org.apache.druid.segment.realtime.firehose;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -34,13 +35,16 @@ public class HttpFirehoseFactoryTest
   public void testSerde() throws IOException
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
+    final DefaultPasswordProvider pwProvider = new DefaultPasswordProvider("testPassword");
     final HttpFirehoseFactory factory = new HttpFirehoseFactory(
         ImmutableList.of(URI.create("http://foo/bar"), URI.create("http://foo/bar2")),
         2048L,
         1024L,
         512L,
         100L,
-        5
+        5,
+        "testUser",
+        pwProvider
     );
 
     final HttpFirehoseFactory outputFact = mapper.readValue(

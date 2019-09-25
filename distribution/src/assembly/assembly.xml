@@ -41,7 +41,17 @@
             </includes>
             <outputDirectory>hadoop-dependencies</outputDirectory>
         </fileSet>
-
+        <fileSet>
+            <directory>../examples/conf</directory>
+            <includes>
+                <include>*</include>
+                <include>*/*</include>
+                <include>*/*/*</include>
+                <include>*/*/*/*</include>
+                <include>*/*/*/*/*</include>
+            </includes>
+            <outputDirectory>conf</outputDirectory>
+        </fileSet>
         <fileSet>
             <directory>../examples/quickstart/</directory>
             <includes>
@@ -57,76 +67,6 @@
             <outputDirectory>quickstart/tutorial</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/quickstart/tutorial/conf</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>quickstart/tutorial/conf</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/quickstart/tutorial/conf/druid</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>quickstart/tutorial/conf/druid</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/quickstart/tutorial/conf/druid/_common</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>quickstart/tutorial/conf/druid/_common/</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/quickstart/tutorial/conf/druid/broker</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>quickstart/tutorial/conf/druid/broker</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/quickstart/tutorial/conf/druid/coordinator</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>quickstart/tutorial/conf/druid/coordinator</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/quickstart/tutorial/conf/druid/historical</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>quickstart/tutorial/conf/druid/historical</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/quickstart/tutorial/conf/druid/overlord</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>quickstart/tutorial/conf/druid/overlord</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/quickstart/tutorial/conf/druid/middleManager</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>quickstart/tutorial/conf/druid/middleManager</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/quickstart/tutorial/conf/tranquility</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>quickstart/tutorial/conf/tranquility</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/quickstart/tutorial/conf/zk</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>quickstart/tutorial/conf/zk</outputDirectory>
-        </fileSet>
-        <fileSet>
             <directory>../examples/quickstart/tutorial/hadoop</directory>
             <includes>
                 <include>*</include>
@@ -140,71 +80,12 @@
             </includes>
             <outputDirectory>quickstart/tutorial/hadoop/docker</outputDirectory>
         </fileSet>
-
-
         <fileSet>
             <directory>../examples/quickstart/protobuf</directory>
             <includes>
                 <include>*</include>
             </includes>
             <outputDirectory>quickstart/protobuf</outputDirectory>
-        </fileSet>
-
-        <fileSet>
-            <directory>../examples/conf</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>conf</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/conf/druid/_common</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>conf/druid/_common</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/conf/druid/broker</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>conf/druid/broker</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/conf/druid/coordinator</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>conf/druid/coordinator</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/conf/druid/historical</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>conf/druid/historical</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/conf/druid/overlord</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>conf/druid/overlord</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/conf/druid/middleManager</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>conf/druid/middleManager</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/conf/tranquility</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>conf/tranquility</outputDirectory>
         </fileSet>
         <fileSet>
             <directory>../examples/bin</directory>
@@ -214,16 +95,34 @@
             <fileMode>744</fileMode>
             <outputDirectory>bin</outputDirectory>
         </fileSet>
-
         <fileSet>
             <directory>../</directory>
             <includes>
-                <include>LICENSE</include>
-                <include>NOTICE</include>
                 <include>DISCLAIMER</include>
+                <include>licenses/**</include>
             </includes>
         </fileSet>
     </fileSets>
+    <files>
+        <file>
+            <source>../LICENSE.BINARY</source>
+            <outputDirectory>.</outputDirectory>
+            <destName>LICENSE</destName>
+            <lineEnding>keep</lineEnding>
+        </file>
+        <file>
+            <source>../NOTICE.BINARY</source>
+            <outputDirectory>.</outputDirectory>
+            <destName>NOTICE</destName>
+            <lineEnding>keep</lineEnding>
+        </file>
+        <file>
+            <source>../README.BINARY</source>
+            <outputDirectory>.</outputDirectory>
+            <destName>README</destName>
+            <lineEnding>keep</lineEnding>
+        </file>
+    </files>
     <dependencySets>
         <dependencySet>
             <useProjectArtifact>false</useProjectArtifact>

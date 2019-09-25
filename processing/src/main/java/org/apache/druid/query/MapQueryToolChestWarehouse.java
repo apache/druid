@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import com.google.inject.Inject;
 
+import java.util.IdentityHashMap;
 import java.util.Map;
 
 /**
@@ -30,11 +31,11 @@ public class MapQueryToolChestWarehouse implements QueryToolChestWarehouse
   private final Map<Class<? extends Query>, QueryToolChest> toolchests;
 
   @Inject
-  public MapQueryToolChestWarehouse(
-      Map<Class<? extends Query>, QueryToolChest> toolchests
-  )
+  public MapQueryToolChestWarehouse(Map<Class<? extends Query>, QueryToolChest> toolchests)
   {
-    this.toolchests = toolchests;
+    // Accesses to IdentityHashMap should be faster than to HashMap or ImmutableMap.
+    // Class doesn't override Object.equals().
+    this.toolchests = new IdentityHashMap<>(toolchests);
   }
 
   @Override

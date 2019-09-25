@@ -30,6 +30,7 @@ import java.util.Map;
 
 /**
  */
+@Deprecated
 public class NoneShardSpec implements ShardSpec
 {
   private static final NoneShardSpec INSTANCE = new NoneShardSpec();
@@ -40,11 +41,7 @@ public class NoneShardSpec implements ShardSpec
     return INSTANCE;
   }
 
-  /**
-   * @deprecated use {@link #instance()} instead
-   */
-  @Deprecated
-  public NoneShardSpec()
+  private NoneShardSpec()
   {
     // empty
   }
@@ -52,7 +49,7 @@ public class NoneShardSpec implements ShardSpec
   @Override
   public <T> PartitionChunk<T> createChunk(T obj)
   {
-    return new SingleElementPartitionChunk<T>(obj);
+    return new SingleElementPartitionChunk<>(obj);
   }
 
   @Override
@@ -84,6 +81,12 @@ public class NoneShardSpec implements ShardSpec
   public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
   {
     return true;
+  }
+
+  @Override
+  public boolean isCompatible(Class<? extends ShardSpec> other)
+  {
+    return other == NoneShardSpec.class;
   }
 
   @Override

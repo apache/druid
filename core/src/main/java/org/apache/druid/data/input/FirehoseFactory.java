@@ -73,6 +73,18 @@ public interface FirehoseFactory<T extends InputRowParser>
     return connect(parser);
   }
 
+  /**
+   * Initialization method that connects up the firehose. This method is intended for use by the sampler, and allows
+   * implementors to return a more efficient firehose, knowing that only a small number of rows will be read.
+   *
+   * @param parser             an input row parser
+   * @param temporaryDirectory a directory where temporary files are stored
+   */
+  default Firehose connectForSampler(T parser, @Nullable File temporaryDirectory) throws IOException, ParseException
+  {
+    return connect(parser, temporaryDirectory);
+  }
+
   default boolean isSplittable()
   {
     return false;

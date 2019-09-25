@@ -54,6 +54,8 @@ public class LimitedTemporaryStorage implements Closeable
 
   private volatile boolean closed = false;
 
+  private boolean createdStorageDirectory = false;
+
   public LimitedTemporaryStorage(File storageDirectory, long maxBytesUsed)
   {
     this.storageDirectory = storageDirectory;
@@ -81,6 +83,9 @@ public class LimitedTemporaryStorage implements Closeable
       }
 
       FileUtils.forceMkdir(storageDirectory);
+      if (!createdStorageDirectory) {
+        createdStorageDirectory = true;
+      }
 
       final File theFile = new File(storageDirectory, StringUtils.format("%08d.tmp", files.size()));
       final EnumSet<StandardOpenOption> openOptions = EnumSet.of(
@@ -126,7 +131,7 @@ public class LimitedTemporaryStorage implements Closeable
         delete(file);
       }
       files.clear();
-      if (storageDirectory.exists() && !storageDirectory.delete()) {
+      if (createdStorageDirectory && storageDirectory.exists() && !storageDirectory.delete()) {
         log.warn("Cannot delete storageDirectory: %s", storageDirectory);
       }
     }

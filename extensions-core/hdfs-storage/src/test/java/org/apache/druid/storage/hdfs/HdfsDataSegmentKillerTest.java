@@ -131,7 +131,6 @@ public class HdfsDataSegmentKillerTest
 
     Assert.assertTrue(fs.mkdirs(version11Dir));
     fs.createNewFile(new Path(version11Dir, StringUtils.format("%s_index.zip", 3)));
-    fs.createNewFile(new Path(version11Dir, StringUtils.format("%s_descriptor.json", 3)));
 
     killer.kill(getSegmentWithPath(new Path(version11Dir, "3_index.zip").toString()));
 
@@ -168,7 +167,6 @@ public class HdfsDataSegmentKillerTest
 
     Assert.assertTrue(fs.mkdirs(version11Dir));
     fs.createNewFile(new Path(version11Dir, StringUtils.format("%s_%s_index.zip", 3, uuid)));
-    fs.createNewFile(new Path(version11Dir, StringUtils.format("%s_%s_descriptor.json", 3, uuid)));
 
     killer.kill(getSegmentWithPath(new Path(version11Dir, StringUtils.format("%s_%s_index.zip", 3, uuid)).toString()));
 
@@ -202,7 +200,6 @@ public class HdfsDataSegmentKillerTest
   {
     Assert.assertTrue(fs.mkdirs(path));
     fs.createNewFile(new Path(path, "index.zip"));
-    fs.createNewFile(new Path(path, "descriptor.json"));
   }
 
   private DataSegment getSegmentWithPath(String path)

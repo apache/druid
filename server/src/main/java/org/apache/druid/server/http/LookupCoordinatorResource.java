@@ -61,9 +61,11 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Contains information about lookups exposed through the coordinator
@@ -97,10 +99,16 @@ public class LookupCoordinatorResource
   )
   {
     try {
+      final Map<String, Map<String, LookupExtractorFactoryMapContainer>> knownLookups =
+          lookupCoordinatorManager.getKnownLookups();
       if (discover) {
-        return Response.ok().entity(lookupCoordinatorManager.discoverTiers()).build();
+        final Set<String> discovered = new HashSet<>(lookupCoordinatorManager.discoverTiers());
+        if (knownLookups != null) {
+          discovered.addAll(knownLookups.keySet());
+        }
+        return Response.ok().entity(discovered).build();
       }
-      final Map<String, Map<String, LookupExtractorFactoryMapContainer>> knownLookups = lookupCoordinatorManager.getKnownLookups();
+
       if (knownLookups == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       } else {
@@ -110,6 +118,26 @@ public class LookupCoordinatorResource
     catch (Exception e) {
       LOG.error(e, "Error getting list of lookups");
       return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+    }
+  }
+
+  @GET
+  @Produces({MediaType.APPLICATION_JSON})
+  @Path("/config/all")
+  public Response getAllLookupSpecs()
+  {
+    try {
+      final Map<String, Map<String, LookupExtractorFactoryMapContainer>> knownLookups = lookupCoordinatorManager
+          .getKnownLookups();
+      if (knownLookups == null) {
+        return Response.status(Response.Status.NOT_FOUND).build();
+      } else {
+        return Response.ok().entity(knownLookups).build();
+      }
+    }
+    catch (Exception ex) {
+      LOG.error(ex, "Error getting lookups status");
+      return Response.serverError().entity(ServletResourceUtils.sanitizeException(ex)).build();
     }
   }
 
@@ -144,6 +172,35 @@ public class LookupCoordinatorResource
     }
     catch (Exception e) {
       LOG.error(e, "Error creating new lookups");
+      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+    }
+  }
+
+  @DELETE
+  @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
+  @Path("/config/{tier}")
+  public Response deleteTier(
+      @PathParam("tier") String tier,
+      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
+      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
+      @Context HttpServletRequest req
+  )
+  {
+    try {
+      if (Strings.isNullOrEmpty(tier)) {
+        return Response.status(Response.Status.BAD_REQUEST)
+                       .entity(ServletResourceUtils.sanitizeException(new NullPointerException("`tier` required")))
+                       .build();
+      }
+
+      if (lookupCoordinatorManager.deleteTier(tier, new AuditInfo(author, comment, req.getRemoteAddr()))) {
+        return Response.status(Response.Status.ACCEPTED).build();
+      } else {
+        return Response.status(Response.Status.NOT_FOUND).build();
+      }
+    }
+    catch (Exception e) {
+      LOG.error(e, "Error deleting tier [%s]", tier);
       return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
     }
   }
@@ -314,14 +371,16 @@ public class LookupCoordinatorResource
   )
   {
     try {
-      Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = lookupCoordinatorManager.getKnownLookups();
+      Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = lookupCoordinatorManager
+          .getKnownLookups();
       if (configuredLookups == null) {
         return Response.status(Response.Status.NOT_FOUND)
                        .entity(ServletResourceUtils.jsonize("No lookups found"))
                        .build();
       }
 
-      Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> lookupsStateOnNodes = lookupCoordinatorManager.getLastKnownLookupsStateOnNodes();
+      Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> lookupsStateOnNodes = lookupCoordinatorManager
+          .getLastKnownLookupsStateOnNodes();
 
       Map<String, Map<String, LookupStatus>> result = new HashMap<>();
 
@@ -362,7 +421,8 @@ public class LookupCoordinatorResource
   )
   {
     try {
-      Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = lookupCoordinatorManager.getKnownLookups();
+      Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = lookupCoordinatorManager
+          .getKnownLookups();
       if (configuredLookups == null) {
         return Response.status(Response.Status.NOT_FOUND)
                        .entity(ServletResourceUtils.jsonize("No lookups found"))
@@ -380,7 +440,8 @@ public class LookupCoordinatorResource
       Map<String, LookupStatus> lookupStatusMap = new HashMap<>();
       Collection<HostAndPort> hosts = lookupCoordinatorManager.discoverNodesInTier(tier);
 
-      Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> lookupsStateOnNodes = lookupCoordinatorManager.getLastKnownLookupsStateOnNodes();
+      Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> lookupsStateOnNodes = lookupCoordinatorManager
+          .getLastKnownLookupsStateOnNodes();
 
       for (Map.Entry<String, LookupExtractorFactoryMapContainer> lookupsEntry : tierLookups.entrySet()) {
         lookupStatusMap.put(
@@ -407,7 +468,8 @@ public class LookupCoordinatorResource
   )
   {
     try {
-      Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = lookupCoordinatorManager.getKnownLookups();
+      Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = lookupCoordinatorManager
+          .getKnownLookups();
       if (configuredLookups == null) {
         return Response.status(Response.Status.NOT_FOUND)
                        .entity(ServletResourceUtils.jsonize("No lookups found"))
@@ -486,7 +548,8 @@ public class LookupCoordinatorResource
       if (discover) {
         tiers = lookupCoordinatorManager.discoverTiers();
       } else {
-        Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = lookupCoordinatorManager.getKnownLookups();
+        Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = lookupCoordinatorManager
+            .getKnownLookups();
         if (configuredLookups == null) {
           return Response.status(Response.Status.NOT_FOUND)
                          .entity(ServletResourceUtils.jsonize("No lookups configured."))
@@ -495,7 +558,8 @@ public class LookupCoordinatorResource
         tiers = configuredLookups.keySet();
       }
 
-      Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> lookupsStateOnHosts = lookupCoordinatorManager.getLastKnownLookupsStateOnNodes();
+      Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> lookupsStateOnHosts = lookupCoordinatorManager
+          .getLastKnownLookupsStateOnNodes();
 
       Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>> result = new HashMap<>();
 
@@ -531,7 +595,8 @@ public class LookupCoordinatorResource
   )
   {
     try {
-      Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> lookupsStateOnHosts = lookupCoordinatorManager.getLastKnownLookupsStateOnNodes();
+      Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> lookupsStateOnHosts = lookupCoordinatorManager
+          .getLastKnownLookupsStateOnNodes();
 
       Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> tierNodesStatus = new HashMap<>();
 
@@ -563,7 +628,8 @@ public class LookupCoordinatorResource
   )
   {
     try {
-      Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> lookupsStateOnHosts = lookupCoordinatorManager.getLastKnownLookupsStateOnNodes();
+      Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> lookupsStateOnHosts = lookupCoordinatorManager
+          .getLastKnownLookupsStateOnNodes();
 
       LookupsState<LookupExtractorFactoryMapContainer> lookupsState = lookupsStateOnHosts.get(hostAndPort);
       if (lookupsState == null) {

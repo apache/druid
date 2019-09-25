@@ -71,7 +71,7 @@ public class SqlModule implements Module
       // Add empty SqlAggregator binder.
       Multibinder.newSetBinder(binder, SqlAggregator.class);
 
-      // QueryLookupOperatorConversion isn't in DruidOperatorTable since it needs a LookupReferencesManager injected.
+      // QueryLookupOperatorConversion isn't in DruidOperatorTable since it needs a LookupExtractorFactoryContainerProvider injected.
       SqlBindings.addOperatorConversion(binder, QueryLookupOperatorConversion.class);
 
       if (isJsonOverHttpEnabled()) {
@@ -89,7 +89,7 @@ public class SqlModule implements Module
   private boolean isEnabled()
   {
     Preconditions.checkNotNull(props, "props");
-    return Boolean.valueOf(props.getProperty(PROPERTY_SQL_ENABLE, "false"));
+    return Boolean.valueOf(props.getProperty(PROPERTY_SQL_ENABLE, "true"));
   }
 
   private boolean isJsonOverHttpEnabled()

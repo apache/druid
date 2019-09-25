@@ -51,16 +51,15 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class DeterminePartitionsJobTest
 {
-
-  private HadoopDruidIndexerConfig config;
-  private int expectedNumOfSegments;
-  private int[] expectedNumOfShardsForEachSegment;
-  private String[][][] expectedStartEndForEachShard;
-  private File dataFile;
-  private File tmpDir;
+  private final HadoopDruidIndexerConfig config;
+  private final int expectedNumOfSegments;
+  private final int[] expectedNumOfShardsForEachSegment;
+  private final String[][][] expectedStartEndForEachShard;
+  private final File dataFile;
+  private final File tmpDir;
 
   @Parameterized.Parameters(name = "assumeGrouped={0}, "
-                                   + "targetPartitionSize={1}, "
+                                   + "maxRowsPerSegment={1}, "
                                    + "interval={2}"
                                    + "expectedNumOfSegments={3}, "
                                    + "expectedNumOfShardsForEachSegment={4}, "
@@ -72,7 +71,7 @@ public class DeterminePartitionsJobTest
         new Object[][]{
             {
                 true,
-                3L,
+                3,
                 "2014-10-22T00:00:00Z/P1D",
                 1,
                 new int[]{5},
@@ -82,7 +81,7 @@ public class DeterminePartitionsJobTest
                         {"c.example.com", "e.example.com"},
                         {"e.example.com", "g.example.com"},
                         {"g.example.com", "i.example.com"},
-                        {"i.example.com", null }
+                        {"i.example.com", null}
                     }
                 },
                 ImmutableList.of(
@@ -100,7 +99,7 @@ public class DeterminePartitionsJobTest
             },
             {
                 false,
-                3L,
+                3,
                 "2014-10-20T00:00:00Z/P1D",
                 1,
                 new int[]{5},
@@ -138,7 +137,7 @@ public class DeterminePartitionsJobTest
             },
             {
                 true,
-                6L,
+                6,
                 "2014-10-20T00:00:00Z/P3D",
                 3,
                 new int[]{2, 2, 2},
@@ -191,6 +190,30 @@ public class DeterminePartitionsJobTest
                     "2014102200,j.example.com,US,333",
                     "2014102200,k.example.com,US,555"
                 )
+            },
+            {
+                true,
+                1000,
+                "2014-10-22T00:00:00Z/P1D",
+                1,
+                new int[]{1},
+                new String[][][]{
+                    {
+                        {null, null}
+                    }
+                },
+                ImmutableList.of(
+                    "2014102200,a.example.com,CN,100",
+                    "2014102200,b.exmaple.com,US,50",
+                    "2014102200,c.example.com,US,200",
+                    "2014102200,d.example.com,US,250",
+                    "2014102200,e.example.com,US,123",
+                    "2014102200,f.example.com,US,567",
+                    "2014102200,g.example.com,US,11",
+                    "2014102200,h.example.com,US,251",
+                    "2014102200,i.example.com,US,963",
+                    "2014102200,j.example.com,US,333"
+                )
             }
         }
     );
@@ -198,7 +221,7 @@ public class DeterminePartitionsJobTest
 
   public DeterminePartitionsJobTest(
       boolean assumeGrouped,
-      Long targetPartitionSize,
+      Integer maxRowsPerSegment,
       String interval,
       int expectedNumOfSegments,
       int[] expectedNumOfShardsForEachSegment,
@@ -225,7 +248,11 @@ public class DeterminePartitionsJobTest
                     new StringInputRowParser(
                         new CSVParseSpec(
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "country")), null, null),
+                            new DimensionsSpec(
+                                DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "country")),
+                                null,
+                                null
+                            ),
                             null,
                             ImmutableList.of("timestamp", "host", "country", "visited_num"),
                             false,
@@ -257,23 +284,25 @@ public class DeterminePartitionsJobTest
             new HadoopTuningConfig(
                 tmpDir.getCanonicalPath(),
                 null,
-                new SingleDimensionPartitionsSpec(null, targetPartitionSize, null, assumeGrouped),
+                new SingleDimensionPartitionsSpec(null, maxRowsPerSegment, null, assumeGrouped),
                 null,
                 null,
-                null,
-                null,
-                false,
-                false,
-                false,
-                false,
-                null,
-                false,
-                false,
                 null,
                 null,
                 null,
                 false,
                 false,
+                false,
+                false,
+                null,
+                false,
+                false,
+                null,
+                null,
+                null,
+                false,
+                false,
+                null,
                 null,
                 null,
                 null
@@ -293,9 +322,9 @@ public class DeterminePartitionsJobTest
     Assert.assertEquals(expectedNumOfSegments, config.getSchema().getTuningConfig().getShardSpecs().size());
 
     for (Map.Entry<Long, List<HadoopyShardSpec>> entry : config.getSchema()
-                                                                   .getTuningConfig()
-                                                                   .getShardSpecs()
-                                                                   .entrySet()) {
+                                                               .getTuningConfig()
+                                                               .getShardSpecs()
+                                                               .entrySet()) {
       int partitionNum = 0;
       List<HadoopyShardSpec> specs = entry.getValue();
       Assert.assertEquals(expectedNumOfShardsForEachSegment[segmentNum], specs.size());

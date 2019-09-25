@@ -50,6 +50,12 @@ public final class NoopAggregator implements Aggregator
   }
 
   @Override
+  public long getLong()
+  {
+    return 0;
+  }
+
+  @Override
   public double getDouble()
   {
     return 0;
@@ -58,11 +64,5 @@ public final class NoopAggregator implements Aggregator
   @Override
   public void close()
   {
-  }
-
-  @Override
-  public long getLong()
-  {
-    return 0;
   }
 }

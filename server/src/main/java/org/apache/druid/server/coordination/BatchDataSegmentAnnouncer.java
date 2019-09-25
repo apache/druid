@@ -22,7 +22,6 @@ package org.apache.druid.server.coordination;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -45,9 +44,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -67,10 +66,11 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   private final AtomicLong counter = new AtomicLong(0);
 
   private final Set<SegmentZNode> availableZNodes = new ConcurrentSkipListSet<SegmentZNode>();
-  private final Map<DataSegment, SegmentZNode> segmentLookup = new ConcurrentHashMap<>();
+  private final ConcurrentMap<DataSegment, SegmentZNode> segmentLookup = new ConcurrentHashMap<>();
   private final Function<DataSegment, DataSegment> segmentTransformer;
 
-  private final ChangeRequestHistory<DataSegmentChangeRequest> changes = new ChangeRequestHistory();
+  private final ChangeRequestHistory<DataSegmentChangeRequest> changes = new ChangeRequestHistory<>();
+  @Nullable
   private final SegmentZNode dummyZnode;
 
   @Inject
@@ -88,20 +88,15 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
     this.server = server;
 
     this.liveSegmentLocation = ZKPaths.makePath(zkPaths.getLiveSegmentsPath(), server.getName());
-    segmentTransformer = new Function<DataSegment, DataSegment>()
-    {
-      @Override
-      public DataSegment apply(DataSegment input)
-      {
-        DataSegment rv = input;
-        if (config.isSkipDimensionsAndMetrics()) {
-          rv = rv.withDimensions(null).withMetrics(null);
-        }
-        if (config.isSkipLoadSpec()) {
-          rv = rv.withLoadSpec(null);
-        }
-        return rv;
+    segmentTransformer = input -> {
+      DataSegment rv = input;
+      if (config.isSkipDimensionsAndMetrics()) {
+        rv = rv.withDimensions(null).withMetrics(null);
       }
+      if (config.isSkipLoadSpec()) {
+        rv = rv.withLoadSpec(null);
+      }
+      return rv;
     };
 
     if (this.config.isSkipSegmentAnnouncementOnZk()) {
@@ -119,9 +114,14 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       return;
     }
 
-    DataSegment toAnnounce = segmentTransformer.apply(segment);
-
     synchronized (lock) {
+      if (segmentLookup.containsKey(segment)) {
+        log.info("Skipping announcement of segment [%s]. Announcement exists already.", segment.getId());
+        return;
+      }
+
+      DataSegment toAnnounce = segmentTransformer.apply(segment);
+
       changes.addChangeRequest(new SegmentChangeRequestLoad(toAnnounce));
 
       if (config.isSkipSegmentAnnouncementOnZk()) {
@@ -364,7 +364,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
         );
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 
@@ -378,7 +378,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       }
       catch (Exception e) {
         zkSegments.remove(segment);
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
 
       count++;
@@ -394,7 +394,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       }
       catch (Exception e) {
         zkSegments.removeAll(segments);
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
 
       count += segments.size();
@@ -410,7 +410,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       }
       catch (Exception e) {
         zkSegments.add(segment);
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
 
       count--;

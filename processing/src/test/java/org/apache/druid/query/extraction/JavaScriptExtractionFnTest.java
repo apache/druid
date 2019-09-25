@@ -39,7 +39,7 @@ public class JavaScriptExtractionFnTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  private static final String[] testStrings = {
+  private static final String[] TEST_STRINGS = {
       "Quito",
       "Calgary",
       "Tokyo",
@@ -56,7 +56,7 @@ public class JavaScriptExtractionFnTest
     String function = "function(str) { return str.substring(0,3); }";
     ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false, JavaScriptConfig.getEnabledInstance());
 
-    for (String str : testStrings) {
+    for (String str : TEST_STRINGS) {
       String res = extractionFn.apply(str);
       Assert.assertEquals(str.substring(0, 3), res);
     }
@@ -118,7 +118,7 @@ public class JavaScriptExtractionFnTest
     ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false, JavaScriptConfig.getEnabledInstance());
 
     Iterator it = Iterators.forArray("Qt", "Clgry", "Tky", "Stckhlm", "Vncvr", "Prtr", "Wllngtn", "Ontr");
-    for (String str : testStrings) {
+    for (String str : TEST_STRINGS) {
       String res = extractionFn.apply(str);
       Assert.assertEquals(it.next(), res);
     }

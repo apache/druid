@@ -22,7 +22,8 @@ package org.apache.druid.segment.indexing;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
@@ -87,8 +88,9 @@ public class RealtimeTuningConfigTest
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
     Assert.assertEquals(0, config.getAlertTimeout());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
+    Assert.assertEquals(new IndexSpec(), config.getIndexSpecForIntermediatePersists());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
-    Assert.assertEquals(NoneShardSpec.instance(), config.getShardSpec());
+    Assert.assertEquals(new NumberedShardSpec(0, 1), config.getShardSpec());
     Assert.assertEquals(0, config.getMaxPendingPersists());
     Assert.assertEquals(1000000, config.getMaxRowsInMemory());
     Assert.assertEquals(0, config.getMergeThreadPriority());
@@ -111,7 +113,9 @@ public class RealtimeTuningConfigTest
                      + "  \"mergeThreadPriority\": 100,\n"
                      + "  \"reportParseExceptions\": true,\n"
                      + "  \"handoffConditionTimeout\": 100,\n"
-                     + "  \"alertTimeout\": 70\n"
+                     + "  \"alertTimeout\": 70,\n"
+                     + "  \"indexSpec\": { \"metricCompression\" : \"NONE\" },\n"
+                     + "  \"indexSpecForIntermediatePersists\": { \"dimensionCompression\" : \"uncompressed\" }\n"
                      + "}";
 
     ObjectMapper mapper = TestHelper.makeJsonMapper();
@@ -128,14 +132,16 @@ public class RealtimeTuningConfigTest
     Assert.assertEquals("/tmp/xxx", config.getBasePersistDirectory().toString());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
     Assert.assertEquals(70, config.getAlertTimeout());
-    Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
     Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
-    Assert.assertEquals(NoneShardSpec.instance(), config.getShardSpec());
+    Assert.assertEquals(new NumberedShardSpec(0, 1), config.getShardSpec());
     Assert.assertEquals(100, config.getMaxPendingPersists());
     Assert.assertEquals(100, config.getMaxRowsInMemory());
     Assert.assertEquals(100, config.getMergeThreadPriority());
     Assert.assertEquals(100, config.getPersistThreadPriority());
     Assert.assertEquals(new Period("PT1H"), config.getWindowPeriod());
     Assert.assertEquals(true, config.isReportParseExceptions());
+    Assert.assertEquals(new IndexSpec(null, null, CompressionStrategy.NONE, null), config.getIndexSpec());
+    Assert.assertEquals(new IndexSpec(null, CompressionStrategy.UNCOMPRESSED, null, null), config.getIndexSpecForIntermediatePersists());
+
   }
 }

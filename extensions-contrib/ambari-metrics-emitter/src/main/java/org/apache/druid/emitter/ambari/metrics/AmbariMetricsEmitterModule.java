@@ -20,8 +20,6 @@
 package org.apache.druid.emitter.ambari.metrics;
 
 import com.fasterxml.jackson.databind.Module;
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -35,6 +33,7 @@ import org.apache.druid.java.util.emitter.core.Emitter;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class AmbariMetricsEmitterModule implements DruidModule
 {
@@ -57,17 +56,11 @@ public class AmbariMetricsEmitterModule implements DruidModule
   @Named(EMITTER_TYPE)
   public Emitter getEmitter(AmbariMetricsEmitterConfig emitterConfig, final Injector injector)
   {
-    List<Emitter> emitters = Lists.transform(
-        emitterConfig.getAlertEmitters(),
-        new Function<String, Emitter>()
-        {
-          @Override
-          public Emitter apply(String s)
-          {
-            return injector.getInstance(Key.get(Emitter.class, Names.named(s)));
-          }
-        }
-    );
+    List<Emitter> emitters = emitterConfig
+        .getAlertEmitters()
+        .stream()
+        .map((String name) -> injector.getInstance(Key.get(Emitter.class, Names.named(name))))
+        .collect(Collectors.toList());
     return new AmbariMetricsEmitter(emitterConfig, emitters);
   }
 }

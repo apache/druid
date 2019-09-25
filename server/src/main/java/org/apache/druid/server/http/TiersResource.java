@@ -101,11 +101,11 @@ public class TiersResource
   public Response getTierDataSources(@PathParam("tierName") String tierName, @QueryParam("simple") String simple)
   {
     if (simple != null) {
-      Map<String, Map<Interval, Map<IntervalProperties, Object>>> retVal = new HashMap<>();
+      Map<String, Map<Interval, Map<IntervalProperties, Object>>> tierToStatsPerInterval = new HashMap<>();
       for (DruidServer druidServer : serverInventoryView.getInventory()) {
         if (druidServer.getTier().equalsIgnoreCase(tierName)) {
-          for (DataSegment dataSegment : druidServer.getSegments()) {
-            Map<IntervalProperties, Object> properties = retVal
+          for (DataSegment dataSegment : druidServer.iterateAllSegments()) {
+            Map<IntervalProperties, Object> properties = tierToStatsPerInterval
                 .computeIfAbsent(dataSegment.getDataSource(), dsName -> new HashMap<>())
                 .computeIfAbsent(dataSegment.getInterval(), interval -> new EnumMap<>(IntervalProperties.class));
             properties.merge(IntervalProperties.size, dataSegment.getSize(), (a, b) -> (Long) a + (Long) b);
@@ -114,7 +114,7 @@ public class TiersResource
         }
       }
 
-      return Response.ok(retVal).build();
+      return Response.ok(tierToStatsPerInterval).build();
     }
 
     Set<String> retVal = serverInventoryView

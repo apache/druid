@@ -31,7 +31,11 @@ public interface RequestLogger
 
   void logSqlQuery(RequestLogLine requestLogLine) throws IOException;
 
-  default void start() throws Exception {}
+  default void start() throws Exception
+  {
+  }
 
-  default void stop() {}
+  default void stop()
+  {
+  }
 }

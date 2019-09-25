@@ -19,9 +19,7 @@
 
 package org.apache.druid.query.groupby;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
@@ -36,6 +34,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.segment.CloserRule;
@@ -51,11 +50,10 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
+ *
  */
 public class GroupByQueryRunnerFactoryTest
 {
@@ -98,13 +96,13 @@ public class GroupByQueryRunnerFactoryTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(QueryPlus queryPlus, Map responseContext)
+          public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
           {
             return factory.getToolchest().mergeResults(
                 new QueryRunner()
                 {
                   @Override
-                  public Sequence run(QueryPlus queryPlus, Map responseContext)
+                  public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
                   {
                     final Query query = queryPlus.getQuery();
                     try {
@@ -119,8 +117,7 @@ public class GroupByQueryRunnerFactoryTest
                       );
                     }
                     catch (Exception e) {
-                      Throwables.propagate(e);
-                      return null;
+                      throw new RuntimeException(e);
                     }
                   }
                 }
@@ -129,11 +126,11 @@ public class GroupByQueryRunnerFactoryTest
         }
     );
 
-    Sequence<Row> result = mergedRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    Sequence<ResultRow> result = mergedRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
 
-    List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t1", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t2", "count", 4L)
+    List<ResultRow> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", "t1", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", "t2", "count", 4L)
     );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
@@ -163,7 +160,7 @@ public class GroupByQueryRunnerFactoryTest
         "2011-01-12T00:00:00.000Z,product_1,t1",
         "2011-01-13T00:00:00.000Z,product_2,t2",
         "2011-01-14T00:00:00.000Z,product_3,t2",
-    };
+        };
 
     for (String row : rows) {
       incrementalIndex.add(parser.parse(row));

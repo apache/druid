@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.common;
 
+import java.util.Objects;
 
 /**
  * Represents a Kafka/Kinesis stream sequence number. Mainly used to do
@@ -50,5 +51,34 @@ public abstract class OrderedSequenceNumber<SequenceOffsetType>
   public boolean isExclusive()
   {
     return isExclusive;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    OrderedSequenceNumber<?> that = (OrderedSequenceNumber<?>) o;
+    return isExclusive == that.isExclusive &&
+           Objects.equals(sequenceNumber, that.sequenceNumber);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(sequenceNumber, isExclusive);
+  }
+
+  @Override
+  public String toString()
+  {
+    return getClass().getSimpleName() + "{" +
+           "sequenceNumber=" + sequenceNumber +
+           ", isExclusive=" + isExclusive +
+           '}';
   }
 }

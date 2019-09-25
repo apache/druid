@@ -1,0 +1,78 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`run button matches snapshot 1`] = `
+<div
+  class="bp3-button-group run-button"
+>
+  <span
+    class="bp3-popover-wrapper"
+  >
+    <span
+      class="bp3-popover-target"
+    >
+      <button
+        class="bp3-button bp3-intent-primary"
+        tabindex="0"
+        type="button"
+      >
+        <span
+          class="bp3-icon bp3-icon-caret-right"
+          icon="caret-right"
+        >
+          <svg
+            data-icon="caret-right"
+            height="16"
+            viewBox="0 0 16 16"
+            width="16"
+          >
+            <desc>
+              caret-right
+            </desc>
+            <path
+              d="M11 8c0-.15-.07-.28-.17-.37l-4-3.5A.495.495 0 006 4.5v7a.495.495 0 00.83.37l4-3.5c.1-.09.17-.22.17-.37z"
+              fill-rule="evenodd"
+            />
+          </svg>
+        </span>
+        <span
+          class="bp3-button-text"
+        >
+          Run
+        </span>
+      </button>
+    </span>
+  </span>
+  <span
+    class="bp3-popover-wrapper"
+  >
+    <span
+      class="bp3-popover-target"
+    >
+      <button
+        class="bp3-button bp3-intent-primary"
+        type="button"
+      >
+        <span
+          class="bp3-icon bp3-icon-more"
+          icon="more"
+        >
+          <svg
+            data-icon="more"
+            height="16"
+            viewBox="0 0 16 16"
+            width="16"
+          >
+            <desc>
+              more
+            </desc>
+            <path
+              d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
+              fill-rule="evenodd"
+            />
+          </svg>
+        </span>
+      </button>
+    </span>
+  </span>
+</div>
+`;

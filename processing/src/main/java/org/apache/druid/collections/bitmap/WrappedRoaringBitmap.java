@@ -19,16 +19,11 @@
 
 package org.apache.druid.collections.bitmap;
 
-import com.google.common.base.Throwables;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.RoaringBitmap;
 import org.roaringbitmap.RoaringBitmapWriter;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 public class WrappedRoaringBitmap implements MutableBitmap
@@ -74,16 +69,16 @@ public class WrappedRoaringBitmap implements MutableBitmap
   public byte[] toBytes()
   {
     try {
-      final ByteArrayOutputStream out = new ByteArrayOutputStream();
       MutableRoaringBitmap bitmap = writer.get();
       if (compressRunOnSerialization) {
         bitmap.runOptimize();
       }
-      bitmap.serialize(new DataOutputStream(out));
-      return out.toByteArray();
+      ByteBuffer buffer = ByteBuffer.allocate(bitmap.serializedSizeInBytes());
+      bitmap.serialize(buffer);
+      return buffer.array();
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -126,59 +121,11 @@ public class WrappedRoaringBitmap implements MutableBitmap
 
   public void serialize(ByteBuffer buffer)
   {
-    try {
-      MutableRoaringBitmap bitmap = writer.get();
-      if (compressRunOnSerialization) {
-        bitmap.runOptimize();
-      }
-      bitmap.serialize(
-          new DataOutputStream(
-              new OutputStream()
-              {
-                ByteBuffer mBB;
-
-                OutputStream init(ByteBuffer mbb)
-                {
-                  mBB = mbb;
-                  return this;
-                }
-
-                @Override
-                public void close()
-                {
-                  // unnecessary
-                }
-
-                @Override
-                public void flush()
-                {
-                  // unnecessary
-                }
-
-                @Override
-                public void write(int b)
-                {
-                  mBB.put((byte) b);
-                }
-
-                @Override
-                public void write(byte[] b)
-                {
-                  mBB.put(b);
-                }
-
-                @Override
-                public void write(byte[] b, int off, int l)
-                {
-                  mBB.put(b, off, l);
-                }
-              }.init(buffer)
-          )
-      );
+    MutableRoaringBitmap bitmap = writer.get();
+    if (compressRunOnSerialization) {
+      bitmap.runOptimize();
     }
-    catch (IOException e) {
-      throw new RuntimeException(e); // impossible in theory
-    }
+    bitmap.serialize(buffer);
   }
 
   @Override

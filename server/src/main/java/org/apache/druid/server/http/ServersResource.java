@@ -80,8 +80,8 @@ public class ServersResource
    * *and* values, but is done so for compatibility with the existing HTTP JSON API.
    *
    * Returns a lazy map suitable for serialization (i. e. entrySet iteration) only, relying on the fact that the
-   * segments returned from {@link DruidServer#getSegments()} are unique. This is not a part of the {@link DruidServer}
-   * API to not let abuse this map (like trying to get() from it).
+   * segments returned from {@link DruidServer#iterateAllSegments()} are unique. This is not a part of the {@link
+   * DruidServer} API to not let abuse this map (like trying to get() from it).
    */
   private static Map<SegmentId, DataSegment> createLazySegmentsMap(DruidServer server)
   {
@@ -96,7 +96,7 @@ public class ServersResource
           public Iterator<Entry<SegmentId, DataSegment>> iterator()
           {
             return Iterators.transform(
-                server.getSegments().iterator(),
+                server.iterateAllSegments().iterator(),
                 segment -> new AbstractMap.SimpleImmutableEntry<>(segment.getId(), segment)
             );
           }
@@ -173,11 +173,11 @@ public class ServersResource
     }
 
     if (full != null) {
-      return builder.entity(Iterables.toString(server.getSegments())).build();
+      return builder.entity(Iterables.toString(server.iterateAllSegments())).build();
     }
 
     return builder
-        .entity(Iterables.toString(Iterables.transform(server.getSegments(), DataSegment::getId)))
+        .entity(Iterables.toString(Iterables.transform(server.iterateAllSegments(), DataSegment::getId)))
         .build();
   }
 

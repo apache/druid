@@ -21,10 +21,9 @@ package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.context.ResponseContext;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.Collections;
 
 /**
  */
@@ -38,15 +37,9 @@ public class ReportTimelineMissingSegmentQueryRunner<T> implements QueryRunner<T
   }
 
   @Override
-  public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+  public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
-    List<SegmentDescriptor> missingSegments =
-        (List<SegmentDescriptor>) responseContext.get(Result.MISSING_SEGMENTS_KEY);
-    if (missingSegments == null) {
-      missingSegments = new ArrayList<>();
-      responseContext.put(Result.MISSING_SEGMENTS_KEY, missingSegments);
-    }
-    missingSegments.add(descriptor);
+    responseContext.add(ResponseContext.Key.MISSING_SEGMENTS, Collections.singletonList(descriptor));
     return Sequences.empty();
   }
 }

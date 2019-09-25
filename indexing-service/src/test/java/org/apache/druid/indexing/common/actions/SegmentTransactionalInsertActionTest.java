@@ -25,8 +25,10 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -86,14 +88,20 @@ public class SegmentTransactionalInsertActionTest
       1024
   );
 
+  private LockResult acquireTimeChunkLock(TaskLockType lockType, Task task, Interval interval, long timeoutMs)
+      throws InterruptedException
+  {
+    return actionTestKit.getTaskLockbox().lock(task, new TimeChunkLockRequest(lockType, task, interval, null), timeoutMs);
+  }
+
   @Test
   public void testTransactional() throws Exception
   {
-    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
+    final Task task = NoopTask.create();
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
+    acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
-    SegmentPublishResult result1 = new SegmentTransactionalInsertAction(
+    SegmentPublishResult result1 = SegmentTransactionalInsertAction.appendAction(
         ImmutableSet.of(SEGMENT1),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableList.of(1))
@@ -101,9 +109,9 @@ public class SegmentTransactionalInsertActionTest
         task,
         actionTestKit.getTaskActionToolbox()
     );
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(SEGMENT1), true), result1);
+    Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT1)), result1);
 
-    SegmentPublishResult result2 = new SegmentTransactionalInsertAction(
+    SegmentPublishResult result2 = SegmentTransactionalInsertAction.appendAction(
         ImmutableSet.of(SEGMENT2),
         new ObjectMetadata(ImmutableList.of(1)),
         new ObjectMetadata(ImmutableList.of(2))
@@ -111,7 +119,7 @@ public class SegmentTransactionalInsertActionTest
         task,
         actionTestKit.getTaskActionToolbox()
     );
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(SEGMENT2), true), result2);
+    Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT2)), result2);
 
     Assert.assertEquals(
         ImmutableSet.of(SEGMENT1, SEGMENT2),
@@ -130,11 +138,11 @@ public class SegmentTransactionalInsertActionTest
   @Test
   public void testFailTransactional() throws Exception
   {
-    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
+    final Task task = NoopTask.create();
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
+    acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
-    SegmentPublishResult result = new SegmentTransactionalInsertAction(
+    SegmentPublishResult result = SegmentTransactionalInsertAction.appendAction(
         ImmutableSet.of(SEGMENT1),
         new ObjectMetadata(ImmutableList.of(1)),
         new ObjectMetadata(ImmutableList.of(2))
@@ -143,20 +151,23 @@ public class SegmentTransactionalInsertActionTest
         actionTestKit.getTaskActionToolbox()
     );
 
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(), false), result);
+    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Aborting transaction!"), result);
   }
 
   @Test
   public void testFailBadVersion() throws Exception
   {
-    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
-    final SegmentTransactionalInsertAction action = new SegmentTransactionalInsertAction(ImmutableSet.of(SEGMENT3));
+    final Task task = NoopTask.create();
+    final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.overwriteAction(
+        null,
+        ImmutableSet.of(SEGMENT3)
+    );
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
+    acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
     thrown.expect(IllegalStateException.class);
     thrown.expectMessage(CoreMatchers.containsString("are not covered by locks"));
     SegmentPublishResult result = action.perform(task, actionTestKit.getTaskActionToolbox());
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(SEGMENT3), true), result);
+    Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT3)), result);
   }
 }

@@ -19,8 +19,6 @@
 
 package org.apache.druid.query;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.StringUtils;
@@ -41,17 +39,11 @@ import java.util.concurrent.TimeUnit;
  */
 public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMetrics<QueryType>
 {
-  protected final ObjectMapper jsonMapper;
   protected final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
   protected final Map<String, Number> metrics = new HashMap<>();
 
   /** Non final to give subclasses ability to reassign it. */
   protected Thread ownerThread = Thread.currentThread();
-
-  public DefaultQueryMetrics(ObjectMapper jsonMapper)
-  {
-    this.jsonMapper = jsonMapper;
-  }
 
   protected void checkModifiedFromOwnerThread()
   {
@@ -64,7 +56,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     }
   }
 
-  protected void setDimension(String dimension, String value)
+  protected void setDimension(String dimension, Object value)
   {
     checkModifiedFromOwnerThread();
     builder.setDimension(dimension, value);
@@ -131,15 +123,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void context(QueryType query)
   {
-    try {
-      setDimension(
-          "context",
-          jsonMapper.writeValueAsString(query.getContext() == null ? ImmutableMap.of() : query.getContext())
-      );
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
+    setDimension("context", query.getContext() == null ? ImmutableMap.of() : query.getContext());
   }
 
   @Override
@@ -192,6 +176,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
 
   @Override
   public void identity(String identity)
+  {
+    // Emit nothing by default.
+  }
+
+  @Override
+  public void vectorized(final boolean vectorized)
   {
     // Emit nothing by default.
   }

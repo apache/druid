@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
@@ -68,7 +67,7 @@ public class JavaScriptWorkerSelectStrategy implements WorkerSelectStrategy
       return ((Invocable) engine).getInterface(SelectorFunction.class);
     }
     catch (ScriptException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

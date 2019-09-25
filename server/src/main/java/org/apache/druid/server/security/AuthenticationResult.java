@@ -76,11 +76,13 @@ public class AuthenticationResult
     return authorizerName;
   }
 
+  @Nullable
   public Map<String, Object> getContext()
   {
     return context;
   }
 
+  @Nullable
   public String getAuthenticatedBy()
   {
     return authenticatedBy;

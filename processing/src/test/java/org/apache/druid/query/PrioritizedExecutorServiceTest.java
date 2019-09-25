@@ -19,7 +19,6 @@
 
 package org.apache.druid.query;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -243,12 +242,12 @@ public class PrioritizedExecutorServiceTest
   @Test
   public void testOrderedExecutionMultiplePriorityMix() throws ExecutionException, InterruptedException
   {
-    final int DEFAULT = 0;
-    final int MIN = -1;
-    final int MAX = 1;
-    exec = new PrioritizedExecutorService(exec.threadPoolExecutor, true, DEFAULT, config);
+    final int _default = 0;
+    final int min = -1;
+    final int max = 1;
+    exec = new PrioritizedExecutorService(exec.threadPoolExecutor, true, _default, config);
     final int numTasks = 999;
-    final int[] priorities = new int[]{MAX, DEFAULT, MIN};
+    final int[] priorities = new int[]{max, _default, min};
     final int tasksPerPriority = numTasks / priorities.length;
     final int[] priorityOffsets = new int[]{0, tasksPerPriority, tasksPerPriority * 2};
     final List<ListenableFuture<?>> futures = Lists.newArrayListWithExpectedSize(numTasks);
@@ -356,7 +355,7 @@ public class PrioritizedExecutorServiceTest
         }
         catch (InterruptedException e) {
           Thread.currentThread().interrupt();
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
         if (useFifo) {
           Assert.assertEquals(myOrder, hasRun.getAndIncrement());

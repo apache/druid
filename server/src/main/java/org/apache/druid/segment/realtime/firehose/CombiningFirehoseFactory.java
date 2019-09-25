@@ -22,7 +22,6 @@ package org.apache.druid.segment.realtime.firehose;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
@@ -97,23 +96,23 @@ public class CombiningFirehoseFactory implements FirehoseFactory<InputRowParser>
             }
             catch (IOException e2) {
               log.error(e, "Unable to close currentFirehose!");
-              throw Throwables.propagate(e2);
+              throw new RuntimeException(e2);
             }
           }
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       }
     }
 
     @Override
-    public boolean hasMore()
+    public boolean hasMore() throws IOException
     {
       return currentFirehose.hasMore();
     }
 
     @Nullable
     @Override
-    public InputRow nextRow()
+    public InputRow nextRow() throws IOException
     {
       InputRow rv = currentFirehose.nextRow();
       if (!currentFirehose.hasMore()) {

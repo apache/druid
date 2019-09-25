@@ -22,13 +22,13 @@ package org.apache.druid.segment.loading;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.io.Files;
-import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CompressionUtils;
 
 import javax.tools.FileObject;
 import java.io.File;

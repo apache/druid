@@ -92,10 +92,10 @@ public class ByteCountingLRUMapTest
     final ByteBuffer k = ByteBuffer.allocate(1);
 
     assertMapValues(0, 0, 0);
-    map.put(k, new byte[1]);
-    map.put(k, new byte[2]);
-    map.put(k, new byte[5]);
-    map.put(k, new byte[3]);
+    map.put(k, new byte[1]); //-V6033: suppress "An item with the same key has already been added"
+    map.put(k, new byte[2]); //-V6033
+    map.put(k, new byte[5]); //-V6033
+    map.put(k, new byte[3]); //-V6033
     assertMapValues(1, 4, 0);
   }
 

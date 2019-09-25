@@ -144,7 +144,7 @@ public class CompressedFloatsSerdeTest
   private void tryFill(ColumnarFloats indexed, float[] vals, final int startIndex, final int size)
   {
     float[] filled = new float[size];
-    indexed.fill(startIndex, filled);
+    indexed.get(filled, startIndex, filled.length);
 
     for (int i = startIndex; i < filled.length; i++) {
       Assert.assertEquals(vals[i + startIndex], filled[i], DELTA);

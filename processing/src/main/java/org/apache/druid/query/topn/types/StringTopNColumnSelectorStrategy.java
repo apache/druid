@@ -25,6 +25,7 @@ import org.apache.druid.query.topn.TopNParams;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNResultBuilder;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
@@ -87,7 +88,7 @@ public class StringTopNColumnSelectorStrategy
       Map<Comparable<?>, Aggregator[]> aggregatesStore
   )
   {
-    if (selector.getValueCardinality() != DimensionSelector.CARDINALITY_UNKNOWN) {
+    if (selector.getValueCardinality() != DimensionDictionarySelector.CARDINALITY_UNKNOWN) {
       return dimExtractionScanAndAggregateWithCardinalityKnown(query, cursor, selector, rowSelector, aggregatesStore);
     } else {
       return dimExtractionScanAndAggregateWithCardinalityUnknown(query, cursor, selector, aggregatesStore);

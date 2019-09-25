@@ -73,13 +73,17 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
 
     final long thrownAway = rowIngestionMetersTotals.getThrownAway() - previousRowIngestionMetersTotals.getThrownAway();
     if (thrownAway > 0) {
-      log.warn("[%,d] events thrown away because they are outside the window period!", thrownAway);
+      log.warn(
+          "[%,d] events thrown away. Possible causes: null events, events filtered out by transformSpec, or events outside earlyMessageRejectionPeriod / lateMessageRejectionPeriod.",
+          thrownAway
+      );
     }
     emitter.emit(builder.build("ingest/events/thrownAway", thrownAway));
 
-    final long unparseable = rowIngestionMetersTotals.getUnparseable() - previousRowIngestionMetersTotals.getUnparseable();
+    final long unparseable = rowIngestionMetersTotals.getUnparseable()
+                             - previousRowIngestionMetersTotals.getUnparseable();
     if (unparseable > 0) {
-      log.error("[%,d] Unparseable events! Turn on debug logging to see exception stack trace.", unparseable);
+      log.error("[%,d] unparseable events discarded. Turn on debug logging to see exception stack trace.", unparseable);
     }
     emitter.emit(builder.build("ingest/events/unparseable", unparseable));
 

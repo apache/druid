@@ -20,7 +20,9 @@
 package org.apache.druid.query.lookup;
 
 import com.google.inject.Inject;
+import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.http.security.ConfigResourceFilter;
 
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -28,22 +30,25 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
 @Path("/druid/v1/lookups/introspect")
+@ResourceFilters(ConfigResourceFilter.class)
 public class LookupIntrospectionResource
 {
   private static final Logger LOGGER = new Logger(LookupIntrospectionResource.class);
 
-  private final LookupReferencesManager lookupReferencesManager;
+  private final LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider;
 
   @Inject
-  public LookupIntrospectionResource(@Context LookupReferencesManager lookupReferencesManager)
+  public LookupIntrospectionResource(
+      @Context LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider
+  )
   {
-    this.lookupReferencesManager = lookupReferencesManager;
+    this.lookupExtractorFactoryContainerProvider = lookupExtractorFactoryContainerProvider;
   }
 
   @Path("/{lookupId}")
   public Object introspectLookup(@PathParam("lookupId") final String lookupId)
   {
-    final LookupExtractorFactoryContainer container = lookupReferencesManager.get(lookupId);
+    final LookupExtractorFactoryContainer container = lookupExtractorFactoryContainerProvider.get(lookupId);
 
     if (container == null) {
       LOGGER.error("trying to introspect non existing lookup [%s]", lookupId);

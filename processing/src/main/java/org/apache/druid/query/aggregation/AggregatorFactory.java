@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -39,6 +40,12 @@ import java.util.Map;
  * org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory}).
  * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
  * to extend {@link NullableAggregatorFactory}.
+ *
+ * Implementations are also expected to correctly handle single/multi value string type columns as it makes sense
+ * for them e.g. doubleSum aggregator tries to parse the string value as double and assumes it to be zero if parsing
+ * fails.
+ * If it is a multi value column then each individual value should be taken into account for aggregation e.g. if a row
+ * had value ["1","1","1"] , doubleSum aggregation would take each of them and sum them to 3.
  */
 @ExtensionPoint
 public abstract class AggregatorFactory implements Cacheable
@@ -48,6 +55,23 @@ public abstract class AggregatorFactory implements Cacheable
   public abstract Aggregator factorize(ColumnSelectorFactory metricFactory);
 
   public abstract BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory);
+
+  /**
+   * Create a VectorAggregator based on the provided column selector factory. Will throw an exception if
+   * this aggregation class does not support vectorization: check "canVectorize" first.
+   */
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+  {
+    throw new UOE("Aggregator[%s] cannot vectorize", getClass().getName());
+  }
+
+  /**
+   * Returns whether or not this aggregation class supports vectorization. The default implementation returns false.
+   */
+  public boolean canVectorize()
+  {
+    return false;
+  }
 
   public abstract Comparator getComparator();
 
@@ -94,20 +118,45 @@ public abstract class AggregatorFactory implements Cacheable
   }
 
   /**
-   * Returns an AggregatorFactory that can be used to combine the output of aggregators from this factory.  This
-   * generally amounts to simply creating a new factory that is the same as the current except with its input
-   * column renamed to the same as the output column.
+   * Returns an AggregatorFactory that can be used to combine the output of aggregators from this factory. It is used
+   * when we know we have some values that were produced with this aggregator factory, and want to do some additional
+   * combining of them. This happens, for example, when merging query results from two different segments, or two
+   * different servers.
+   *
+   * For simple aggregators, the combining factory may be computed by simply creating a new factory that is the same as
+   * the current, except with its input column renamed to the same as the output column. For example, this aggregator:
+   *
+   *   {"type": "longSum", "fieldName": "foo", "name": "bar"}
+   *
+   * Would become:
+   *
+   *   {"type": "longSum", "fieldName": "bar", "name": "bar"}
+   *
+   * Sometimes, the type or other parameters of the combining aggregator will be different from the original aggregator.
+   * For example, the {@link CountAggregatorFactory} getCombiningFactory method will return a
+   * {@link LongSumAggregatorFactory}, because counts are combined by summing.
+   *
+   * No matter what, `foo.getCombiningFactory()` and `foo.getCombiningFactory().getCombiningFactory()` should return
+   * the same result.
    *
    * @return a new Factory that can be used for operations on top of data output from the current factory.
    */
   public abstract AggregatorFactory getCombiningFactory();
 
   /**
-   * Returns an AggregatorFactory that can be used to merge the output of aggregators from this factory and
-   * other factory.
-   * This method is relevant only for AggregatorFactory which can be used at ingestion time.
+   * Returns an AggregatorFactory that can be used to combine the output of aggregators from this factory and
+   * another factory. It is used when we have some values produced by this aggregator factory, and some values produced
+   * by the "other" aggregator factory, and we want to do some additional combining of them. This happens, for example,
+   * when compacting two segments together that both have a metric column with the same name. (Even though the name of
+   * the column is the same, the aggregator factory used to create it may be different from segment to segment.)
+   *
+   * This method may throw {@link AggregatorFactoryNotMergeableException}, meaning that "this" and "other" are not
+   * compatible and values from one cannot sensibly be combined with values from the other.
    *
    * @return a new Factory that can be used for merging the output of aggregators from this factory and other.
+   *
+   * @see #getCombiningFactory() which is equivalent to {@code foo.getMergingFactory(foo)} (when "this" and "other"
+   * are the same instance).
    */
   public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
   {
@@ -120,9 +169,15 @@ public abstract class AggregatorFactory implements Cacheable
   }
 
   /**
-   * Gets a list of all columns that this AggregatorFactory will scan
+   * Used by {@link org.apache.druid.query.groupby.strategy.GroupByStrategyV1} when running nested groupBys, to
+   * "transfer" values from this aggreagtor to an incremental index that the outer query will run on. This method
+   * only exists due to the design of GroupByStrategyV1, and should probably not be used for anything else. If you are
+   * here because you are looking for a way to get the input fields required by this aggregator, and thought
+   * "getRequiredColumns" sounded right, please use {@link #requiredFields()} instead.
    *
-   * @return AggregatorFactories for the columns to scan of the parent AggregatorFactory
+   * @return AggregatorFactories that can be used to "transfer" values from this aggregator into an incremental index
+   *
+   * @see #requiredFields() a similarly-named method that is perhaps the one you want instead.
    */
   public abstract List<AggregatorFactory> getRequiredColumns();
 
@@ -149,6 +204,9 @@ public abstract class AggregatorFactory implements Cacheable
 
   public abstract String getName();
 
+  /**
+   * Get a list of fields that aggregators built by this factory will need to read.
+   */
   public abstract List<String> requiredFields();
 
   public abstract String getTypeName();

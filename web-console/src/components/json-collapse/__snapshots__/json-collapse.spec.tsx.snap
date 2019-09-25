@@ -1,0 +1,29 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`json collapse matches snapshot 1`] = `
+<div
+  class="json-collapse"
+>
+  <button
+    class="bp3-button bp3-minimal"
+    type="button"
+  >
+    <span
+      class="bp3-button-text"
+    >
+      test
+    </span>
+  </button>
+  <div>
+    <div
+      class="bp3-collapse"
+    >
+      <div
+        aria-hidden="false"
+        class="bp3-collapse-body"
+        style="transform: translateY(-0px);"
+      />
+    </div>
+  </div>
+</div>
+`;

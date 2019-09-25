@@ -34,7 +34,9 @@ public class OffHeapMemorySegmentWriteOutMediumFactory implements SegmentWriteOu
     return INSTANCE;
   }
 
-  private OffHeapMemorySegmentWriteOutMediumFactory() {}
+  private OffHeapMemorySegmentWriteOutMediumFactory()
+  {
+  }
 
   @Override
   public SegmentWriteOutMedium makeSegmentWriteOutMedium(File outDir)

@@ -26,9 +26,8 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.initialization.ServerConfig;
-
-import java.util.Map;
 
 /**
  * Use this QueryRunner to set and verify Query contexts.
@@ -47,7 +46,7 @@ public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+  public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
     return baseRunner.run(
         QueryPlus.wrap(withTimeoutAndMaxScatterGatherBytes(queryPlus.getQuery(), serverConfig)),

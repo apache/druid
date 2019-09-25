@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
-import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
@@ -76,7 +75,6 @@ public class TaskActionTestKit extends ExternalResource
   public void before()
   {
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(new Period("PT24H")));
-    taskLockbox = new TaskLockbox(taskStorage);
     testDerbyConnector = new TestDerbyConnector(
         Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
         Suppliers.ofInstance(metadataStorageTablesConfig)
@@ -87,6 +85,7 @@ public class TaskActionTestKit extends ExternalResource
         metadataStorageTablesConfig,
         testDerbyConnector
     );
+    taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
     metadataSegmentManager = new SQLMetadataSegmentManager(
         objectMapper,
         Suppliers.ofInstance(new MetadataSegmentManagerConfig()),
@@ -98,8 +97,7 @@ public class TaskActionTestKit extends ExternalResource
         taskStorage,
         metadataStorageCoordinator,
         new NoopServiceEmitter(),
-        EasyMock.createMock(SupervisorManager.class),
-        new Counters()
+        EasyMock.createMock(SupervisorManager.class)
     );
     testDerbyConnector.createDataSourceTable();
     testDerbyConnector.createPendingSegmentsTable();

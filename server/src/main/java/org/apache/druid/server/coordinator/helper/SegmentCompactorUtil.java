@@ -20,21 +20,36 @@
 package org.apache.druid.server.coordinator.helper;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * Util class used by {@link DruidCoordinatorSegmentCompactor} and {@link CompactionSegmentSearchPolicy}.
  */
 class SegmentCompactorUtil
 {
-  static boolean isCompactibleSize(long targetBytes, long currentTotalBytes, long additionalBytes)
-  {
-    return currentTotalBytes + additionalBytes <= targetBytes;
-  }
+  /**
+   * The allowed error rate of the segment size after compaction.
+   * Its value is determined experimentally.
+   */
+  private static final double ALLOWED_ERROR_OF_SEGMENT_SIZE = .2;
 
-  static boolean isCompactibleNum(int numTargetSegments, int numCurrentSegments, int numAdditionalSegments)
+  static boolean needsCompaction(@Nullable Long targetCompactionSizeBytes, List<DataSegment> candidates)
   {
-    return numCurrentSegments + numAdditionalSegments <= numTargetSegments;
+    if (targetCompactionSizeBytes == null) {
+      // If targetCompactionSizeBytes is null, we have no way to check that the given segments need compaction or not.
+      return true;
+    }
+    final double minTargetThreshold = targetCompactionSizeBytes * (1 - ALLOWED_ERROR_OF_SEGMENT_SIZE);
+    final double maxTargetThreshold = targetCompactionSizeBytes * (1 + ALLOWED_ERROR_OF_SEGMENT_SIZE);
+
+    return candidates
+        .stream()
+        .filter(segment -> segment.getSize() < minTargetThreshold || segment.getSize() > maxTargetThreshold)
+        .count() > 1;
   }
 
   /**
@@ -53,5 +68,7 @@ class SegmentCompactorUtil
     return new Interval(largeInterval.getStart(), smallInterval.getStart());
   }
 
-  private SegmentCompactorUtil() {}
+  private SegmentCompactorUtil()
+  {
+  }
 }

@@ -21,24 +21,39 @@ package org.apache.druid.indexing.kinesis;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
-import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
-
-import java.util.Map;
+import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 
 public class KinesisDataSourceMetadata extends SeekableStreamDataSourceMetadata<String, String>
 {
   @JsonCreator
   public KinesisDataSourceMetadata(
-      @JsonProperty("partitions") SeekableStreamPartitions<String, String> kinesisPartitions
+      @JsonProperty("partitions") SeekableStreamSequenceNumbers<String, String> kinesisPartitions
   )
   {
     super(kinesisPartitions);
   }
 
   @Override
-  protected KinesisDataSourceMetadata createConcreteDataSourceMetaData(String streamName, Map<String, String> newMap)
+  public DataSourceMetadata asStartMetadata()
   {
-    return new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(streamName, newMap));
+    final SeekableStreamSequenceNumbers<String, String> sequenceNumbers = getSeekableStreamSequenceNumbers();
+    if (sequenceNumbers instanceof SeekableStreamEndSequenceNumbers) {
+      return createConcreteDataSourceMetaData(
+          ((SeekableStreamEndSequenceNumbers<String, String>) sequenceNumbers).asStartPartitions(false)
+      );
+    } else {
+      return this;
+    }
+  }
+
+  @Override
+  protected KinesisDataSourceMetadata createConcreteDataSourceMetaData(
+      SeekableStreamSequenceNumbers<String, String> seekableStreamSequenceNumbers
+  )
+  {
+    return new KinesisDataSourceMetadata(seekableStreamSequenceNumbers);
   }
 }

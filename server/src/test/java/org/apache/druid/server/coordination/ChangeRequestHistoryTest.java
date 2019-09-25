@@ -22,7 +22,6 @@ package org.apache.druid.server.coordination;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.utils.CircularBuffer;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -31,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
+ *
  */
 public class ChangeRequestHistoryTest
 {
@@ -43,7 +43,8 @@ public class ChangeRequestHistoryTest
     history.addChangeRequest(new SegmentChangeRequestNoop());
     Assert.assertEquals(1, history.getLastCounter().getCounter());
 
-    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = history.getRequestsSince(ChangeRequestHistory.Counter.ZERO).get();
+    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = history.getRequestsSince(ChangeRequestHistory.Counter.ZERO)
+                                                                       .get();
     Assert.assertEquals(1, snapshot.getRequests().size());
     Assert.assertEquals(1, snapshot.getCounter().getCounter());
 
@@ -169,58 +170,5 @@ public class ChangeRequestHistoryTest
     ChangeRequestsSnapshot snapshot = future.get(1, TimeUnit.MINUTES);
     Assert.assertEquals(1, snapshot.getCounter().getCounter());
     Assert.assertEquals(1, snapshot.getRequests().size());
-  }
-
-  @Test
-  public void testCircularBuffer()
-  {
-    CircularBuffer<Integer> circularBuffer = new CircularBuffer<>(
-        3);
-
-    circularBuffer.add(1);
-    Assert.assertEquals(1, circularBuffer.size());
-    Assert.assertEquals(1, (int) circularBuffer.get(0));
-
-    circularBuffer.add(2);
-    Assert.assertEquals(2, circularBuffer.size());
-    for (int i = 0; i < circularBuffer.size(); i++) {
-      Assert.assertEquals(i + 1, (int) circularBuffer.get(i));
-    }
-
-    circularBuffer.add(3);
-    Assert.assertEquals(3, circularBuffer.size());
-    for (int i = 0; i < circularBuffer.size(); i++) {
-      Assert.assertEquals(i + 1, (int) circularBuffer.get(i));
-    }
-
-    circularBuffer.add(4);
-    Assert.assertEquals(3, circularBuffer.size());
-    for (int i = 0; i < circularBuffer.size(); i++) {
-      Assert.assertEquals(i + 2, (int) circularBuffer.get(i));
-    }
-
-    circularBuffer.add(5);
-    Assert.assertEquals(3, circularBuffer.size());
-    for (int i = 0; i < circularBuffer.size(); i++) {
-      Assert.assertEquals(i + 3, (int) circularBuffer.get(i));
-    }
-
-    circularBuffer.add(6);
-    Assert.assertEquals(3, circularBuffer.size());
-    for (int i = 0; i < circularBuffer.size(); i++) {
-      Assert.assertEquals(i + 4, (int) circularBuffer.get(i));
-    }
-
-    circularBuffer.add(7);
-    Assert.assertEquals(3, circularBuffer.size());
-    for (int i = 0; i < circularBuffer.size(); i++) {
-      Assert.assertEquals(i + 5, (int) circularBuffer.get(i));
-    }
-
-    circularBuffer.add(8);
-    Assert.assertEquals(3, circularBuffer.size());
-    for (int i = 0; i < circularBuffer.size(); i++) {
-      Assert.assertEquals(i + 6, (int) circularBuffer.get(i));
-    }
   }
 }

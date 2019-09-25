@@ -22,8 +22,7 @@ package org.apache.druid.query.groupby.epinephelinae;
 import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.AggregatorAdapters;
 
 import java.nio.ByteBuffer;
 
@@ -35,8 +34,8 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
   protected final Supplier<ByteBuffer> bufferSupplier;
   protected final KeySerde<KeyType> keySerde;
   protected final int keySize;
-  protected final BufferAggregator[] aggregators;
-  protected final int[] aggregatorOffsets;
+  protected final AggregatorAdapters aggregators;
+  protected final int baseAggregatorOffset;
   protected final int bufferGrouperMaxSize; // Integer.MAX_VALUE in production, only used for unit tests
 
   // The load factor and bucket configurations are not final, to allow subclasses to set their own values
@@ -53,15 +52,16 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
       // the buffer returned from the below supplier can have dirty bits and should be cleared during initialization
       final Supplier<ByteBuffer> bufferSupplier,
       final KeySerde<KeyType> keySerde,
-      final AggregatorFactory[] aggregatorFactories,
+      final AggregatorAdapters aggregators,
+      final int baseAggregatorOffset,
       final int bufferGrouperMaxSize
   )
   {
     this.bufferSupplier = bufferSupplier;
     this.keySerde = keySerde;
     this.keySize = keySerde.keySize();
-    this.aggregators = new BufferAggregator[aggregatorFactories.length];
-    this.aggregatorOffsets = new int[aggregatorFactories.length];
+    this.aggregators = aggregators;
+    this.baseAggregatorOffset = baseAggregatorOffset;
     this.bufferGrouperMaxSize = bufferGrouperMaxSize;
   }
 
@@ -76,12 +76,12 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
   /**
    * Called to check if it's possible to skip aggregation for a row.
    *
-   * @param bucketWasUsed Was the row a new entry in the hash table?
-   * @param bucketOffset Offset of the bucket containing this row's entry in the hash table,
-   *                     within the buffer returned by hashTable.getTableBuffer()
+   * @param bucketOffset  Offset of the bucket containing this row's entry in the hash table,
+   *                      within the buffer returned by hashTable.getTableBuffer()
+   *
    * @return true if aggregation can be skipped, false otherwise.
    */
-  public abstract boolean canSkipAggregate(boolean bucketWasUsed, int bucketOffset);
+  public abstract boolean canSkipAggregate(int bucketOffset);
 
   /**
    * Called after a row is aggregated. An implementing BufferHashGrouper class can use this to update
@@ -123,7 +123,7 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
     if (keyBuffer == null) {
       // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
       // be correct.
-      return Groupers.DICTIONARY_FULL;
+      return Groupers.dictionaryFull(0);
     }
 
     if (keyBuffer.remaining() != keySize) {
@@ -135,11 +135,11 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
     }
 
     // find and try to expand if table is full and find again
-    int bucket = hashTable.findBucketWithAutoGrowth(keyBuffer, keyHash);
+    int bucket = hashTable.findBucketWithAutoGrowth(keyBuffer, keyHash, () -> {});
     if (bucket < 0) {
       // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
       // be correct.
-      return Groupers.HASH_TABLE_FULL;
+      return Groupers.hashTableFull(0);
     }
 
     final int bucketStartOffset = hashTable.getOffsetForBucket(bucket);
@@ -149,21 +149,16 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
     // Set up key and initialize the aggs if this is a new bucket.
     if (!bucketWasUsed) {
       hashTable.initializeNewBucketKey(bucket, keyBuffer, keyHash);
-      for (int i = 0; i < aggregators.length; i++) {
-        aggregators[i].init(tableBuffer, bucketStartOffset + aggregatorOffsets[i]);
-      }
-
+      aggregators.init(tableBuffer, bucketStartOffset + baseAggregatorOffset);
       newBucketHook(bucketStartOffset);
     }
 
-    if (canSkipAggregate(bucketWasUsed, bucketStartOffset)) {
+    if (canSkipAggregate(bucketStartOffset)) {
       return AggregateResult.ok();
     }
 
     // Aggregate the current row.
-    for (int i = 0; i < aggregators.length; i++) {
-      aggregators[i].aggregate(tableBuffer, bucketStartOffset + aggregatorOffsets[i]);
-    }
+    aggregators.aggregateBuffered(tableBuffer, bucketStartOffset + baseAggregatorOffset);
 
     afterAggregateHook(bucketStartOffset);
 
@@ -173,23 +168,16 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
   @Override
   public void close()
   {
-    for (BufferAggregator aggregator : aggregators) {
-      try {
-        aggregator.close();
-      }
-      catch (Exception e) {
-        log.warn(e, "Could not close aggregator [%s], skipping.", aggregator);
-      }
-    }
+    aggregators.close();
   }
 
   protected Entry<KeyType> bucketEntryForOffset(final int bucketOffset)
   {
     final ByteBuffer tableBuffer = hashTable.getTableBuffer();
     final KeyType key = keySerde.fromByteBuffer(tableBuffer, bucketOffset + HASH_SIZE);
-    final Object[] values = new Object[aggregators.length];
-    for (int i = 0; i < aggregators.length; i++) {
-      values[i] = aggregators[i].get(tableBuffer, bucketOffset + aggregatorOffsets[i]);
+    final Object[] values = new Object[aggregators.size()];
+    for (int i = 0; i < aggregators.size(); i++) {
+      values[i] = aggregators.get(tableBuffer, bucketOffset + baseAggregatorOffset, i);
     }
 
     return new Entry<>(key, values);

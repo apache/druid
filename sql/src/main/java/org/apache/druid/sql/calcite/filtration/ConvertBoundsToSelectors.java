@@ -28,16 +28,16 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 
 public class ConvertBoundsToSelectors extends BottomUpTransform
 {
-  private final RowSignature sourceRowSignature;
+  private final RowSignature rowSignature;
 
-  private ConvertBoundsToSelectors(final RowSignature sourceRowSignature)
+  private ConvertBoundsToSelectors(final RowSignature rowSignature)
   {
-    this.sourceRowSignature = sourceRowSignature;
+    this.rowSignature = rowSignature;
   }
 
-  public static ConvertBoundsToSelectors create(final RowSignature sourceRowSignature)
+  public static ConvertBoundsToSelectors create(final RowSignature rowSignature)
   {
-    return new ConvertBoundsToSelectors(sourceRowSignature);
+    return new ConvertBoundsToSelectors(rowSignature);
   }
 
   @Override
@@ -45,7 +45,7 @@ public class ConvertBoundsToSelectors extends BottomUpTransform
   {
     if (filter instanceof BoundDimFilter) {
       final BoundDimFilter bound = (BoundDimFilter) filter;
-      final StringComparator naturalStringComparator = sourceRowSignature.naturalStringComparator(
+      final StringComparator comparator = rowSignature.naturalStringComparator(
           SimpleExtraction.of(bound.getDimension(), bound.getExtractionFn())
       );
 
@@ -54,7 +54,7 @@ public class ConvertBoundsToSelectors extends BottomUpTransform
           && bound.getUpper().equals(bound.getLower())
           && !bound.isUpperStrict()
           && !bound.isLowerStrict()
-          && bound.getOrdering().equals(naturalStringComparator)) {
+          && bound.getOrdering().equals(comparator)) {
         return new SelectorDimFilter(
             bound.getDimension(),
             bound.getUpper(),

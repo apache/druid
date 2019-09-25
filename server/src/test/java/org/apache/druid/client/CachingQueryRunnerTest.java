@@ -56,6 +56,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
@@ -74,10 +75,10 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -97,7 +98,7 @@ public class CachingQueryRunnerTest
       new LongSumAggregatorFactory("impers", "imps")
   );
 
-  private static final Object[] objects = new Object[]{
+  private static final Object[] OBJECTS = new Object[]{
       DateTimes.of("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
       DateTimes.of("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
       DateTimes.of("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
@@ -127,8 +128,8 @@ public class CachingQueryRunnerTest
   @Test
   public void testCloseAndPopulate() throws Exception
   {
-    List<Result> expectedRes = makeTopNResults(false, objects);
-    List<Result> expectedCacheRes = makeTopNResults(true, objects);
+    List<Result> expectedRes = makeTopNResults(false, OBJECTS);
+    List<Result> expectedCacheRes = makeTopNResults(true, OBJECTS);
 
     TopNQueryBuilder builder = new TopNQueryBuilder()
         .dataSource("ds")
@@ -141,7 +142,7 @@ public class CachingQueryRunnerTest
 
     QueryToolChest toolchest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
 
     testCloseAndPopulate(expectedRes, expectedCacheRes, builder.build(), toolchest);
@@ -153,17 +154,17 @@ public class CachingQueryRunnerTest
   {
     for (boolean descending : new boolean[]{false, true}) {
       TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                    .dataSource(QueryRunnerTestHelper.dataSource)
-                                    .granularity(QueryRunnerTestHelper.dayGran)
-                                    .intervals(QueryRunnerTestHelper.firstToThird)
+                                    .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                    .granularity(QueryRunnerTestHelper.DAY_GRAN)
+                                    .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
                                     .aggregators(
                                         Arrays.asList(
-                                            QueryRunnerTestHelper.rowsCount,
+                                            QueryRunnerTestHelper.ROWS_COUNT,
                                             new LongSumAggregatorFactory(
                                                 "idx",
                                                 "index"
                                             ),
-                                            QueryRunnerTestHelper.qualityUniques
+                                            QueryRunnerTestHelper.QUALITY_UNIQUES
                                         )
                                     )
                                     .descending(descending)
@@ -189,7 +190,7 @@ public class CachingQueryRunnerTest
       }
 
       QueryToolChest toolChest = new TimeseriesQueryQueryToolChest(
-          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+          QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
       );
 
       testCloseAndPopulate(expectedResults, expectedResults, query, toolChest);
@@ -227,7 +228,7 @@ public class CachingQueryRunnerTest
     final CountDownLatch cacheMustBePutOnce = new CountDownLatch(1);
     Cache cache = new Cache()
     {
-      private final Map<NamedKey, byte[]> baseMap = new ConcurrentHashMap<>();
+      private final ConcurrentMap<NamedKey, byte[]> baseMap = new ConcurrentHashMap<>();
 
       @Override
       public byte[] get(NamedKey key)
@@ -254,7 +255,7 @@ public class CachingQueryRunnerTest
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
       }
 
@@ -289,7 +290,7 @@ public class CachingQueryRunnerTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(QueryPlus queryPlus, Map responseContext)
+          public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
           {
             return resultSeq;
           }
@@ -318,8 +319,7 @@ public class CachingQueryRunnerTest
         cacheStrategy.computeCacheKey(query)
     );
 
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    Sequence res = runner.run(QueryPlus.wrap(query), context);
+    Sequence res = runner.run(QueryPlus.wrap(query));
     // base sequence is not closed yet
     Assert.assertFalse("sequence must not be closed", closable.isClosed());
     Assert.assertNull("cache must be empty", cache.get(cacheKey));
@@ -377,7 +377,7 @@ public class CachingQueryRunnerTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(QueryPlus queryPlus, Map responseContext)
+          public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
           {
             return Sequences.empty();
           }
@@ -399,8 +399,7 @@ public class CachingQueryRunnerTest
         }
 
     );
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    List<Result> results = runner.run(QueryPlus.wrap(query), context).toList();
+    List<Result> results = runner.run(QueryPlus.wrap(query)).toList();
     Assert.assertEquals(expectedResults.toString(), results.toString());
   }
 

@@ -23,11 +23,11 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.client.ImmutableDruidServerTests;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.server.coordinator.helper.DruidCoordinatorBalancer;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import org.apache.druid.server.coordinator.rules.PeriodLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
@@ -43,10 +43,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
+/**
+ * TODO convert benchmarks to JMH
+ */
 public class DruidCoordinatorBalancerProfiler
 {
   private static final int MAX_SEGMENTS_TO_MOVE = 5;
@@ -84,6 +84,7 @@ public class DruidCoordinatorBalancerProfiler
         EasyMock.anyObject(),
         EasyMock.anyObject(),
         EasyMock.anyObject(),
+        EasyMock.anyObject(),
         EasyMock.anyObject()
     );
     EasyMock.expectLastCall().anyTimes();
@@ -117,9 +118,9 @@ public class DruidCoordinatorBalancerProfiler
       EasyMock.expect(server.getName()).andReturn(Integer.toString(i)).atLeastOnce();
       EasyMock.expect(server.getHost()).andReturn(Integer.toString(i)).anyTimes();
       if (i == 0) {
-        EasyMock.expect(server.getSegments()).andReturn(segments).anyTimes();
+        ImmutableDruidServerTests.expectSegments(server, segments);
       } else {
-        EasyMock.expect(server.getSegments()).andReturn(Collections.emptyList()).anyTimes();
+        ImmutableDruidServerTests.expectSegments(server, Collections.emptyList());
       }
       EasyMock.expect(server.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
       EasyMock.replay(server);
@@ -129,56 +130,26 @@ public class DruidCoordinatorBalancerProfiler
       serverHolderList.add(new ServerHolder(server, peon));
     }
 
-    DruidCoordinatorRuntimeParams params =
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                .withDruidCluster(
-                                    new DruidCluster(
-                                        null,
-                                        ImmutableMap.of(
-                                            "normal",
-                                            serverHolderList.stream().collect(
-                                                Collectors.toCollection(
-                                                    () -> new TreeSet<>(
-                                                        DruidCoordinatorBalancer.percentUsedComparator
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                                .withLoadManagementPeons(
-                                    peonMap
-                                )
-                                .withAvailableSegments(segments)
-                                .withDynamicConfigs(
-                                    CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
-                                        MAX_SEGMENTS_TO_MOVE
-                                    ).withReplicantLifetime(500)
-                                                                     .withReplicationThrottleLimit(5)
-                                                                     .build()
-                                )
-                                .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                .withEmitter(emitter)
-                                .withDatabaseRuleManager(manager)
-                                .withReplicationManager(new ReplicationThrottler(2, 500))
-                                .withSegmentReplicantLookup(
-                                    SegmentReplicantLookup.make(
-                                        new DruidCluster(
-                                            null,
-                                            ImmutableMap.of(
-                                                "normal",
-                                                serverHolderList.stream().collect(
-                                                    Collectors.toCollection(
-                                                        () -> new TreeSet<>(
-                                                            DruidCoordinatorBalancer.percentUsedComparator
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                                .build();
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier("normal", serverHolderList.toArray(new ServerHolder[0]))
+        .build();
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder(druidCluster)
+        .withLoadManagementPeons(peonMap)
+        .withUsedSegmentsInTest(segments)
+        .withDynamicConfigs(
+            CoordinatorDynamicConfig
+                .builder()
+                .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
+                .withReplicantLifetime(500)
+                .withReplicationThrottleLimit(5)
+                .build()
+        )
+        .withEmitter(emitter)
+        .withDatabaseRuleManager(manager)
+        .withReplicationManager(new ReplicationThrottler(2, 500))
+        .build();
 
     DruidCoordinatorBalancerTester tester = new DruidCoordinatorBalancerTester(coordinator);
     DruidCoordinatorRuleRunner runner = new DruidCoordinatorRuleRunner(coordinator);
@@ -198,7 +169,7 @@ public class DruidCoordinatorBalancerProfiler
     EasyMock.expect(druidServer1.getName()).andReturn("from").atLeastOnce();
     EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer1.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer1.getSegments()).andReturn(segments).anyTimes();
+    ImmutableDruidServerTests.expectSegments(druidServer1, segments);
     EasyMock.expect(druidServer1.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer1);
 
@@ -206,11 +177,12 @@ public class DruidCoordinatorBalancerProfiler
     EasyMock.expect(druidServer2.getTier()).andReturn("normal").anyTimes();
     EasyMock.expect(druidServer2.getCurrSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(druidServer2.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer2.getSegments()).andReturn(Collections.emptyList()).anyTimes();
+    ImmutableDruidServerTests.expectSegments(druidServer2, Collections.emptyList());
     EasyMock.expect(druidServer2.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer2);
 
     coordinator.moveSegment(
+        EasyMock.anyObject(),
         EasyMock.anyObject(),
         EasyMock.anyObject(),
         EasyMock.anyObject(),
@@ -219,42 +191,22 @@ public class DruidCoordinatorBalancerProfiler
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
 
-    DruidCoordinatorRuntimeParams params =
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                .withDruidCluster(
-                                    new DruidCluster(
-                                        null,
-                                        ImmutableMap.of(
-                                            "normal",
-                                            Stream.of(
-                                                new ServerHolder(druidServer1, fromPeon),
-                                                new ServerHolder(druidServer2, toPeon)
-                                            ).collect(
-                                                Collectors.toCollection(
-                                                    () -> new TreeSet<>(
-                                                        DruidCoordinatorBalancer.percentUsedComparator
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                                .withLoadManagementPeons(
-                                    ImmutableMap.of(
-                                        "from",
-                                        fromPeon,
-                                        "to",
-                                        toPeon
-                                    )
-                                )
-                                .withAvailableSegments(segments)
-                                .withDynamicConfigs(
-                                    CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
-                                        MAX_SEGMENTS_TO_MOVE
-                                    ).build()
-                                )
-                                .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                .build();
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
+        .withDruidCluster(
+            DruidClusterBuilder
+                .newBuilder()
+                .addTier(
+                    "normal",
+                    new ServerHolder(druidServer1, fromPeon),
+                    new ServerHolder(druidServer2, toPeon)
+                )
+                .build()
+        )
+        .withLoadManagementPeons(ImmutableMap.of("from", fromPeon, "to", toPeon))
+        .withUsedSegmentsInTest(segments)
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
+        .build();
     DruidCoordinatorBalancerTester tester = new DruidCoordinatorBalancerTester(coordinator);
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);

@@ -34,7 +34,6 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.utils.JvmUtils;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.OptionalLong;
@@ -119,7 +118,7 @@ public class CaffeineCache implements org.apache.druid.client.cache.Cache
 
   @Override
   @LifecycleStop
-  public void close() throws IOException
+  public void close()
   {
     cache.cleanUp();
   }

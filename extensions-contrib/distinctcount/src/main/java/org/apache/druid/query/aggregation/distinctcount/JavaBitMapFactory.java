@@ -25,14 +25,16 @@ import org.apache.druid.collections.bitmap.MutableBitmap;
 
 public class JavaBitMapFactory implements BitMapFactory
 {
-  private static final BitmapFactory bitmapFactory = new BitSetBitmapFactory();
+  private static final BitmapFactory BITMAP_FACTORY = new BitSetBitmapFactory();
 
-  public JavaBitMapFactory() {}
+  public JavaBitMapFactory()
+  {
+  }
 
   @Override
   public MutableBitmap makeEmptyMutableBitmap()
   {
-    return bitmapFactory.makeEmptyMutableBitmap();
+    return BITMAP_FACTORY.makeEmptyMutableBitmap();
   }
 
   @Override

@@ -254,4 +254,59 @@ public class InputRowSerdeTest
         result.getParseExceptionMessages()
     );
   }
+
+  @Test
+  public void testDimensionNullOrDefaultForNumerics()
+  {
+    HashMap<String, Object> eventWithNulls = new HashMap<>();
+    eventWithNulls.put("d1", null);
+    eventWithNulls.put("d2", Arrays.asList("d2v1", "d2v2"));
+    eventWithNulls.put("d3", null);
+    eventWithNulls.put("d4", null);
+    eventWithNulls.put("d5", null);
+
+    InputRow in = new MapBasedInputRow(
+        timestamp,
+        dims,
+        eventWithNulls
+    );
+
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Arrays.asList(
+            new StringDimensionSchema("d1"),
+            new StringDimensionSchema("d2"),
+            new LongDimensionSchema("d3"),
+            new FloatDimensionSchema("d4"),
+            new DoubleDimensionSchema("d5")
+        ),
+        null,
+        null
+    );
+
+    byte[] result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, new AggregatorFactory[0]).getSerializedRow();
+
+    if (NullHandling.replaceWithDefault()) {
+      long expected = 0;
+      expected += 9;  // timestamp bytes + dims length
+      expected += 18; // dim_non_existing writes: 1 16 1 bytes
+      expected += 4;  // d1: writes 1 2 1 bytes
+      expected += 14; // d2: writes 1 2 1 1 4 1 4 bytes
+      expected += 11; // d3: writes 1 2 8 bytes
+      expected += 7;  // d4: writes 1 2 4 bytes
+      expected += 11; // d5: writes 1 2 8 bytes
+      expected += 1;  // writes aggregator length
+
+      Assert.assertEquals(expected, result.length);
+      Assert.assertArrayEquals(new byte[] {0, 0, 0, 0, 0, 0, 0, 0}, Arrays.copyOfRange(result, 48, 56));
+      Assert.assertArrayEquals(new byte[] {0, 0, 0, 0}, Arrays.copyOfRange(result, 59, 63));
+      Assert.assertArrayEquals(new byte[] {0, 0, 0, 0, 0, 0, 0, 0}, Arrays.copyOfRange(result, 66, 74));
+    } else {
+      long expected = 9 + 18 + 4 + 14 + 4 + 4 + 4 + 1;
+
+      Assert.assertEquals(expected, result.length);
+      Assert.assertEquals(result[48], NullHandling.IS_NULL_BYTE);
+      Assert.assertEquals(result[52], NullHandling.IS_NULL_BYTE);
+      Assert.assertEquals(result[56], NullHandling.IS_NULL_BYTE);
+    }
+  }
 }

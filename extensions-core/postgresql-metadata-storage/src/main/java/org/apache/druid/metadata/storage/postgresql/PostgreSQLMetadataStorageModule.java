@@ -20,9 +20,11 @@
 package org.apache.druid.metadata.storage.postgresql;
 
 import com.fasterxml.jackson.databind.Module;
-import com.google.common.collect.ImmutableList;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Key;
+import org.apache.druid.firehose.PostgresqlFirehoseDatabaseConnector;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
@@ -35,6 +37,7 @@ import org.apache.druid.metadata.NoopMetadataStorageProvider;
 import org.apache.druid.metadata.PostgreSQLMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.SQLMetadataConnector;
 
+import java.util.Collections;
 import java.util.List;
 
 public class PostgreSQLMetadataStorageModule extends SQLMetadataStorageDruidModule implements DruidModule
@@ -50,7 +53,12 @@ public class PostgreSQLMetadataStorageModule extends SQLMetadataStorageDruidModu
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return ImmutableList.of();
+    return Collections.singletonList(
+        new SimpleModule()
+            .registerSubtypes(
+                new NamedType(PostgresqlFirehoseDatabaseConnector.class, "postgresql")
+            )
+    );
   }
 
   @Override
@@ -59,6 +67,7 @@ public class PostgreSQLMetadataStorageModule extends SQLMetadataStorageDruidModu
     super.configure(binder);
 
     JsonConfigProvider.bind(binder, "druid.metadata.postgres.ssl", PostgreSQLConnectorConfig.class);
+    JsonConfigProvider.bind(binder, "druid.metadata.postgres", PostgreSQLTablesConfig.class);
 
     PolyBind
         .optionBinder(binder, Key.get(MetadataStorageProvider.class))

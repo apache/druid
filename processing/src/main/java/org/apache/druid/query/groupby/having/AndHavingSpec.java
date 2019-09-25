@@ -22,17 +22,16 @@ package org.apache.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.Row;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.ResultRow;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * The logical "and" operator for the "having" clause.
  */
-public class AndHavingSpec extends BaseHavingSpec
+public class AndHavingSpec implements HavingSpec
 {
   private final List<HavingSpec> havingSpecs;
 
@@ -49,23 +48,15 @@ public class AndHavingSpec extends BaseHavingSpec
   }
 
   @Override
-  public void setRowSignature(Map<String, ValueType> rowSignature)
+  public void setQuery(GroupByQuery query)
   {
     for (HavingSpec havingSpec : havingSpecs) {
-      havingSpec.setRowSignature(rowSignature);
+      havingSpec.setQuery(query);
     }
   }
 
   @Override
-  public void setAggregators(Map<String, AggregatorFactory> aggregators)
-  {
-    for (HavingSpec havingSpec : havingSpecs) {
-      havingSpec.setAggregators(aggregators);
-    }
-  }
-
-  @Override
-  public boolean eval(Row row)
+  public boolean eval(ResultRow row)
   {
     for (HavingSpec havingSpec : havingSpecs) {
       if (!havingSpec.eval(row)) {
@@ -109,5 +100,12 @@ public class AndHavingSpec extends BaseHavingSpec
     sb.append("{havingSpecs=").append(havingSpecs);
     sb.append('}');
     return sb.toString();
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_AND)
+        .appendCacheables(havingSpecs).build();
   }
 }

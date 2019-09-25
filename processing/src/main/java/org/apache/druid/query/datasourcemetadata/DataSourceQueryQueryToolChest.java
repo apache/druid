@@ -22,9 +22,6 @@ package org.apache.druid.query.datasourcemetadata;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -38,19 +35,19 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.timeline.LogicalSegment;
 
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  */
 public class DataSourceQueryQueryToolChest
     extends QueryToolChest<Result<DataSourceMetadataResultValue>, DataSourceMetadataQuery>
 {
-  private static final TypeReference<Result<DataSourceMetadataResultValue>> TYPE_REFERENCE = new TypeReference<Result<DataSourceMetadataResultValue>>()
-  {
-  };
+  private static final TypeReference<Result<DataSourceMetadataResultValue>> TYPE_REFERENCE =
+      new TypeReference<Result<DataSourceMetadataResultValue>>() {};
 
   private final GenericQueryMetricsFactory queryMetricsFactory;
 
@@ -69,19 +66,9 @@ public class DataSourceQueryQueryToolChest
 
     final T max = segments.get(segments.size() - 1);
 
-    return Lists.newArrayList(
-        Iterables.filter(
-            segments,
-            new Predicate<T>()
-            {
-              @Override
-              public boolean apply(T input)
-              {
-                return max != null && input.getInterval().overlaps(max.getInterval());
-              }
-            }
-        )
-    );
+    return segments.stream()
+                   .filter(input -> max != null && input.getInterval().overlaps(max.getTrueInterval()))
+                   .collect(Collectors.toList());
   }
 
   @Override
@@ -95,7 +82,7 @@ public class DataSourceQueryQueryToolChest
       protected Sequence<Result<DataSourceMetadataResultValue>> doRun(
           QueryRunner<Result<DataSourceMetadataResultValue>> baseRunner,
           QueryPlus<Result<DataSourceMetadataResultValue>> input,
-          Map<String, Object> context
+          ResponseContext context
       )
       {
         DataSourceMetadataQuery query = (DataSourceMetadataQuery) input.getQuery();

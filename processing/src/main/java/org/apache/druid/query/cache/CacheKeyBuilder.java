@@ -64,6 +64,7 @@ public class CacheKeyBuilder
   static final byte STRING_LIST_KEY = 8;
   static final byte CACHEABLE_KEY = 9;
   static final byte CACHEABLE_LIST_KEY = 10;
+  static final byte DOUBLE_ARRAY_KEY = 11;
 
   static final byte[] STRING_SEPARATOR = new byte[]{(byte) 0xFF};
   static final byte[] EMPTY_BYTES = StringUtils.EMPTY_BYTES;
@@ -89,6 +90,13 @@ public class CacheKeyBuilder
   {
     final ByteBuffer buffer = ByteBuffer.allocate(Float.BYTES * input.length);
     buffer.asFloatBuffer().put(input);
+    return buffer.array();
+  }
+
+  private static byte[] doubleArrayToByteArray(double[] input)
+  {
+    final ByteBuffer buffer = ByteBuffer.allocate(Double.BYTES * input.length);
+    buffer.asDoubleBuffer().put(input);
     return buffer.array();
   }
 
@@ -251,6 +259,12 @@ public class CacheKeyBuilder
   public CacheKeyBuilder appendDouble(double input)
   {
     appendItem(DOUBLE_KEY, ByteBuffer.allocate(Double.BYTES).putDouble(input).array());
+    return this;
+  }
+
+  public CacheKeyBuilder appendDoubleArray(double[] input)
+  {
+    appendItem(DOUBLE_ARRAY_KEY, doubleArrayToByteArray(input));
     return this;
   }
 

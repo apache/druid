@@ -205,5 +205,7 @@ public final class IntIteratorUtils
     return IntLists.unmodifiable(integers);
   }
 
-  private IntIteratorUtils() {}
+  private IntIteratorUtils()
+  {
+  }
 }

@@ -45,5 +45,7 @@ final class TopNUtils
     return cursor.getOffset().clone();
   }
 
-  private TopNUtils() {}
+  private TopNUtils()
+  {
+  }
 }

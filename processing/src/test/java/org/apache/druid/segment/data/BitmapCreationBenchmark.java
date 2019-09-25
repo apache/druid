@@ -71,30 +71,30 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
     factory = serdeFactory.getBitmapFactory();
   }
 
-  private static final int numBits = 100000;
+  private static final int NUM_BITS = 100000;
 
 
   static Random random;
-  static int[] randIndex = new int[numBits];
+  static int[] randIndex = new int[NUM_BITS];
 
   @AfterClass
   public static void cleanupAfterClass()
   {
     List<Class<? extends BitmapSerdeFactory>[]> classes = factoryClasses();
     for (int i = 0; i < classes.size(); ++i) {
-      log.info("Entry [%d] is %s", i, classes.get(i)[0].getCanonicalName());
+      log.info("Entry [%d] is %s", i, classes.get(i)[0].getName());
     }
   }
 
   @BeforeClass
   public static void setupBeforeClass()
   {
-    for (int i = 0; i < numBits; ++i) {
+    for (int i = 0; i < NUM_BITS; ++i) {
       randIndex[i] = i;
     }
     // Random seed chosen by hitting keyboard with BOTH hands... multiple times!
     random = new Random(78591378);
-    for (int i = 0; i < numBits; ++i) {
+    for (int i = 0; i < NUM_BITS; ++i) {
       int idex = random.nextInt(randIndex.length);
       int swap = randIndex[i];
       randIndex[i] = randIndex[idex];
@@ -111,7 +111,7 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   public void setup()
   {
     baseMutableBitmap = factory.makeEmptyMutableBitmap();
-    for (int i = 0; i < numBits; ++i) {
+    for (int i = 0; i < NUM_BITS; ++i) {
       baseMutableBitmap.add(i);
     }
     baseImmutableBitmap = factory.makeImmutableBitmap(baseMutableBitmap);
@@ -125,10 +125,10 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   public void testLinearAddition()
   {
     MutableBitmap mutableBitmap = factory.makeEmptyMutableBitmap();
-    for (int i = 0; i < numBits; ++i) {
+    for (int i = 0; i < NUM_BITS; ++i) {
       mutableBitmap.add(i);
     }
-    Assert.assertEquals(numBits, mutableBitmap.size());
+    Assert.assertEquals(NUM_BITS, mutableBitmap.size());
   }
 
   @BenchmarkOptions(warmupRounds = 10, benchmarkRounds = 10)
@@ -139,7 +139,7 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
     for (int i : randIndex) {
       mutableBitmap.add(i);
     }
-    Assert.assertEquals(numBits, mutableBitmap.size());
+    Assert.assertEquals(NUM_BITS, mutableBitmap.size());
   }
 
   @BenchmarkOptions(warmupRounds = 10, benchmarkRounds = 1000)
@@ -147,10 +147,10 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   public void testLinearAdditionDescending()
   {
     MutableBitmap mutableBitmap = factory.makeEmptyMutableBitmap();
-    for (int i = numBits - 1; i >= 0; --i) {
+    for (int i = NUM_BITS - 1; i >= 0; --i) {
       mutableBitmap.add(i);
     }
-    Assert.assertEquals(numBits, mutableBitmap.size());
+    Assert.assertEquals(NUM_BITS, mutableBitmap.size());
   }
 
 
@@ -168,7 +168,7 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   public void testFromImmutableByteArray()
   {
     ImmutableBitmap immutableBitmap = factory.mapImmutableBitmap(baseByteBuffer);
-    Assert.assertEquals(numBits, immutableBitmap.size());
+    Assert.assertEquals(NUM_BITS, immutableBitmap.size());
   }
 
 }

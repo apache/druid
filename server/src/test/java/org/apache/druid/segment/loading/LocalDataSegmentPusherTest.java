@@ -19,17 +19,15 @@
 
 package org.apache.druid.segment.loading;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import org.apache.commons.io.FileUtils;
-import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.utils.CompressionUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -80,7 +78,7 @@ public class LocalDataSegmentPusherTest
   {
     config = new LocalDataSegmentPusherConfig();
     config.storageDirectory = temporaryFolder.newFolder();
-    localDataSegmentPusher = new LocalDataSegmentPusher(config, TestHelper.makeJsonMapper());
+    localDataSegmentPusher = new LocalDataSegmentPusher(config);
     dataSegmentFiles = temporaryFolder.newFolder();
     Files.asByteSink(new File(dataSegmentFiles, "version.bin")).write(Ints.toByteArray(0x9));
   }
@@ -113,9 +111,7 @@ public class LocalDataSegmentPusherTest
           localDataSegmentPusher.getStorageDir(returnSegment, false)
       );
       File versionFile = new File(outDir, "index.zip");
-      File descriptorJson = new File(outDir, "descriptor.json");
       Assert.assertTrue(versionFile.exists());
-      Assert.assertTrue(descriptorJson.exists());
     }
   }
 
@@ -169,9 +165,11 @@ public class LocalDataSegmentPusherTest
   {
     config.storageDirectory = new File("/druid");
 
+    // If this test fails because the path is returned as "file:/druid/", this can happen
+    // when a /druid directory exists on the local filesystem.
     Assert.assertEquals(
         "file:/druid",
-        new LocalDataSegmentPusher(config, new ObjectMapper()).getPathForHadoop()
+        new LocalDataSegmentPusher(config).getPathForHadoop()
     );
   }
 
@@ -182,7 +180,7 @@ public class LocalDataSegmentPusherTest
 
     Assert.assertEquals(
         StringUtils.format("file:%s/druid", System.getProperty("user.dir")),
-        new LocalDataSegmentPusher(config, new ObjectMapper()).getPathForHadoop()
+        new LocalDataSegmentPusher(config).getPathForHadoop()
     );
   }
 }

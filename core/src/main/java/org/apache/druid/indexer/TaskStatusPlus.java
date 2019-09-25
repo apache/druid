@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -31,8 +30,6 @@ import java.util.Objects;
 
 public class TaskStatusPlus
 {
-  private static final Logger log = new Logger(TaskStatusPlus.class);
-
   private final String id;
   private final String type;
   private final DateTime createdTime;
@@ -45,9 +42,12 @@ public class TaskStatusPlus
 
   @Nullable
   private final String errorMsg;
+  @Nullable
+  private final String groupId;
 
   public TaskStatusPlus(
       String id,
+      @Nullable String groupId,
       String type, // nullable for backward compatibility
       DateTime createdTime,
       DateTime queueInsertionTime,
@@ -61,6 +61,7 @@ public class TaskStatusPlus
   {
     this(
         id,
+        groupId,
         type,
         createdTime,
         queueInsertionTime,
@@ -74,10 +75,10 @@ public class TaskStatusPlus
     );
   }
 
-
   @JsonCreator
   public TaskStatusPlus(
       @JsonProperty("id") String id,
+      @JsonProperty("groupId") @Nullable String groupId,
       @JsonProperty("type") @Nullable String type, // nullable for backward compatibility
       @JsonProperty("createdTime") DateTime createdTime,
       @JsonProperty("queueInsertionTime") DateTime queueInsertionTime,
@@ -94,6 +95,7 @@ public class TaskStatusPlus
       Preconditions.checkNotNull(duration, "duration");
     }
     this.id = Preconditions.checkNotNull(id, "id");
+    this.groupId = groupId;
     this.type = type;
     this.createdTime = Preconditions.checkNotNull(createdTime, "createdTime");
     this.queueInsertionTime = Preconditions.checkNotNull(queueInsertionTime, "queueInsertionTime");
@@ -119,6 +121,13 @@ public class TaskStatusPlus
   public String getId()
   {
     return id;
+  }
+
+  @Nullable
+  @JsonProperty
+  public String getGroupId()
+  {
+    return groupId;
   }
 
   @Nullable
@@ -199,6 +208,7 @@ public class TaskStatusPlus
     }
     TaskStatusPlus that = (TaskStatusPlus) o;
     return Objects.equals(getId(), that.getId()) &&
+           Objects.equals(getGroupId(), that.getGroupId()) &&
            Objects.equals(getType(), that.getType()) &&
            Objects.equals(getCreatedTime(), that.getCreatedTime()) &&
            Objects.equals(getQueueInsertionTime(), that.getQueueInsertionTime()) &&
@@ -214,6 +224,7 @@ public class TaskStatusPlus
   {
     return Objects.hash(
         getId(),
+        getGroupId(),
         getType(),
         getCreatedTime(),
         getQueueInsertionTime(),
@@ -230,6 +241,7 @@ public class TaskStatusPlus
   {
     return "TaskStatusPlus{" +
            "id='" + id + '\'' +
+           ", groupId='" + groupId + '\'' +
            ", type='" + type + '\'' +
            ", createdTime=" + createdTime +
            ", queueInsertionTime=" + queueInsertionTime +

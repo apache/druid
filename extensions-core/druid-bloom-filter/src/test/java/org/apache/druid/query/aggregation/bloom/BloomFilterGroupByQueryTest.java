@@ -30,8 +30,11 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.filter.BloomKFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.TestHelper;
 import org.junit.After;
 import org.junit.Assert;
@@ -42,6 +45,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -49,17 +53,18 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class BloomFilterGroupByQueryTest
 {
-  private static final BloomFilterExtensionModule module = new BloomFilterExtensionModule();
+  private static final BloomFilterExtensionModule MODULE = new BloomFilterExtensionModule();
 
   static {
     // throwaway, just using to properly initialize jackson modules
     Guice.createInjector(
         binder -> binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper()),
-        module
+        MODULE
     );
   }
 
   private AggregationTestHelper helper;
+  private boolean isV2;
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
@@ -67,10 +72,11 @@ public class BloomFilterGroupByQueryTest
   public BloomFilterGroupByQueryTest(final GroupByQueryConfig config)
   {
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        Lists.newArrayList(module.getJacksonModules()),
+        Lists.newArrayList(MODULE.getJacksonModules()),
         config,
         tempFolder
     );
+    isV2 = config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2);
   }
 
   @Parameterized.Parameters(name = "{0}")
@@ -92,7 +98,6 @@ public class BloomFilterGroupByQueryTest
   @Test
   public void testQuery() throws Exception
   {
-
     String query = "{"
                    + "\"queryType\": \"groupBy\","
                    + "\"dataSource\": \"test_datasource\","
@@ -108,9 +113,85 @@ public class BloomFilterGroupByQueryTest
     MapBasedRow row = ingestAndQuery(query);
 
 
-    Assert.assertTrue(((BloomKFilter) row.getRaw("blooming_quality")).testString("mezzanine"));
-    Assert.assertTrue(((BloomKFilter) row.getRaw("blooming_quality")).testString("premium"));
-    Assert.assertFalse(((BloomKFilter) row.getRaw("blooming_quality")).testString("entertainment"));
+    BloomKFilter filter = BloomKFilter.deserialize((ByteBuffer) row.getRaw("blooming_quality"));
+    Assert.assertTrue(filter.testString("mezzanine"));
+    Assert.assertTrue(filter.testString("premium"));
+    Assert.assertFalse(filter.testString("entertainment"));
+  }
+
+  @Test
+  public void testNestedQuery() throws Exception
+  {
+    if (!isV2) {
+      return;
+    }
+
+    String query = "{"
+                   + "\"queryType\": \"groupBy\","
+                   + "\"dataSource\": {"
+                   + "\"type\": \"query\","
+                   + "\"query\": {"
+                   + "\"queryType\":\"groupBy\","
+                   + "\"dataSource\": \"test_datasource\","
+                   + "\"intervals\": [ \"1970/2050\" ],"
+                   + "\"granularity\":\"ALL\","
+                   + "\"dimensions\":[],"
+                   + "\"aggregations\": [{ \"type\":\"longSum\", \"name\":\"innerSum\", \"fieldName\":\"count\"}]"
+                   + "}"
+                   + "},"
+                   + "\"granularity\": \"ALL\","
+                   + "\"dimensions\": [],"
+                   + "\"aggregations\": ["
+                   + "  { \"type\": \"bloom\", \"name\": \"bloom\", \"field\": \"innerSum\" }"
+                   + "],"
+                   + "\"intervals\": [ \"1970/2050\" ]"
+                   + "}";
+
+    MapBasedRow row = ingestAndQuery(query);
+
+
+    BloomKFilter filter = BloomKFilter.deserialize((ByteBuffer) row.getRaw("bloom"));
+    Assert.assertTrue(filter.testLong(13L));
+    Assert.assertFalse(filter.testLong(5L));
+  }
+
+
+  @Test
+  public void testNestedQueryComplex() throws Exception
+  {
+    if (!isV2) {
+      return;
+    }
+
+    String query = "{"
+                   + "\"queryType\": \"groupBy\","
+                   + "\"dataSource\": {"
+                   + "\"type\": \"query\","
+                   + "\"query\": {"
+                   + "\"queryType\":\"groupBy\","
+                   + "\"dataSource\": \"test_datasource\","
+                   + "\"intervals\": [ \"1970/2050\" ],"
+                   + "\"granularity\":\"ALL\","
+                   + "\"dimensions\":[],"
+                   + "\"filter\":{ \"type\":\"selector\", \"dimension\":\"market\", \"value\":\"upfront\"},"
+                   + "\"aggregations\": [{ \"type\":\"bloom\", \"name\":\"innerBloom\", \"field\":\"quality\"}]"
+                   + "}"
+                   + "},"
+                   + "\"granularity\": \"ALL\","
+                   + "\"dimensions\": [],"
+                   + "\"aggregations\": ["
+                   + "  { \"type\": \"bloom\", \"name\": \"innerBloom\", \"field\": \"innerBloom\" }"
+                   + "],"
+                   + "\"intervals\": [ \"1970/2050\" ]"
+                   + "}";
+
+    MapBasedRow row = ingestAndQuery(query);
+
+
+    BloomKFilter filter = BloomKFilter.deserialize((ByteBuffer) row.getRaw("innerBloom"));
+    Assert.assertTrue(filter.testString("mezzanine"));
+    Assert.assertTrue(filter.testString("premium"));
+    Assert.assertFalse(filter.testString("entertainment"));
   }
 
   @Test
@@ -135,7 +216,7 @@ public class BloomFilterGroupByQueryTest
 
     Object val = row.getRaw("blooming_quality");
 
-    String serialized = BloomFilterAggregatorTest.filterToString((BloomKFilter) val);
+    String serialized = BloomFilterAggregatorTest.filterToString(BloomKFilter.deserialize((ByteBuffer) val));
     String empty = BloomFilterAggregatorTest.filterToString(filter);
 
     Assert.assertEquals(empty, serialized);
@@ -162,7 +243,7 @@ public class BloomFilterGroupByQueryTest
                        + "  }"
                        + "}";
 
-    Sequence seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         this.getClass().getClassLoader().getResourceAsStream("sample.data.tsv"),
         parseSpec,
         metricSpec,
@@ -172,6 +253,6 @@ public class BloomFilterGroupByQueryTest
         query
     );
 
-    return (MapBasedRow) seq.toList().get(0);
+    return seq.toList().get(0).toMapBasedRow((GroupByQuery) helper.readQuery(query));
   }
 }

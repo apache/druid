@@ -19,13 +19,13 @@
 
 package org.apache.druid.cli;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.initialization.Initialization;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.log.StartupLoggingConfig;
@@ -69,7 +69,7 @@ public abstract class GuiceRunnable implements Runnable
       return Initialization.makeInjectorWithModules(baseInjector, getModules());
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -79,12 +79,20 @@ public abstract class GuiceRunnable implements Runnable
       final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
       final StartupLoggingConfig startupLoggingConfig = injector.getInstance(StartupLoggingConfig.class);
 
+      Long directSizeBytes = null;
+      try {
+        directSizeBytes = JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
+      }
+      catch (UnsupportedOperationException ignore) {
+        // querying direct memory is not supported
+      }
+
       log.info(
-          "Starting up with processors[%,d], memory[%,d], maxMemory[%,d], directMemory[%,d].",
+          "Starting up with processors[%,d], memory[%,d], maxMemory[%,d]%s.",
           JvmUtils.getRuntimeInfo().getAvailableProcessors(),
           JvmUtils.getRuntimeInfo().getTotalHeapSizeBytes(),
           JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(),
-          JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes()
+          directSizeBytes != null ? StringUtils.format(", directMemory[%,d]", directSizeBytes) : ""
       );
 
       if (startupLoggingConfig.isLogProperties()) {
@@ -114,7 +122,7 @@ public abstract class GuiceRunnable implements Runnable
       return lifecycle;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 }

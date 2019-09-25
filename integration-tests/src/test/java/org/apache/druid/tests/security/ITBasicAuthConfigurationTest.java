@@ -21,7 +21,9 @@ package org.apache.druid.tests.security;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.calcite.avatica.AvaticaSqlException;
 import org.apache.druid.guice.annotations.Client;
@@ -41,25 +43,32 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.avatica.DruidAvaticaHandler;
 import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.TestQueryHelper;
+import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.Assert;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import javax.ws.rs.core.MediaType;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
+@Test(groups = TestNGGroup.SECURITY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITBasicAuthConfigurationTest
 {
@@ -69,6 +78,32 @@ public class ITBasicAuthConfigurationTest
       new TypeReference<Map<String, Boolean>>()
       {
       };
+
+  private static final TypeReference SYS_SCHEMA_RESULTS_TYPE_REFERENCE =
+      new TypeReference<List<Map<String, Object>>>()
+      {
+      };
+
+  private static final String SYSTEM_SCHEMA_SEGMENTS_RESULTS_RESOURCE =
+      "/results/auth_test_sys_schema_segments.json";
+  private static final String SYSTEM_SCHEMA_SERVER_SEGMENTS_RESULTS_RESOURCE =
+      "/results/auth_test_sys_schema_server_segments.json";
+  private static final String SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE =
+      "/results/auth_test_sys_schema_servers.json";
+  private static final String SYSTEM_SCHEMA_TASKS_RESULTS_RESOURCE =
+      "/results/auth_test_sys_schema_tasks.json";
+
+  private static final String SYS_SCHEMA_SEGMENTS_QUERY =
+      "SELECT * FROM sys.segments WHERE datasource IN ('auth_test')";
+
+  private static final String SYS_SCHEMA_SERVERS_QUERY =
+      "SELECT * FROM sys.servers WHERE tier IS NOT NULL";
+
+  private static final String SYS_SCHEMA_SERVER_SEGMENTS_QUERY =
+      "SELECT * FROM sys.server_segments WHERE segment_id LIKE 'auth_test%'";
+
+  private static final String SYS_SCHEMA_TASKS_QUERY =
+      "SELECT * FROM sys.tasks WHERE datasource IN ('auth_test')";
 
   @Inject
   IntegrationTestingConfig config;
@@ -80,7 +115,254 @@ public class ITBasicAuthConfigurationTest
   @Client
   HttpClient httpClient;
 
-  StatusResponseHandler responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
+
+  @Inject
+  private CoordinatorResourceTestClient coordinatorClient;
+
+  @BeforeMethod
+  public void before()
+  {
+    // ensure that auth_test segments are loaded completely, we use them for testing system schema tables
+    RetryUtil.retryUntilTrue(
+        () -> coordinatorClient.areSegmentsLoaded("auth_test"), "auth_test segment load"
+    );
+  }
+
+  @Test
+  public void testSystemSchemaAccess() throws Exception
+  {
+    HttpClient adminClient = new CredentialedHttpClient(
+        new BasicCredentials("admin", "priest"),
+        httpClient
+    );
+
+    // check that admin access works on all nodes
+    checkNodeAccess(adminClient);
+
+    // create a new user+role that can only read 'auth_test'
+    List<ResourceAction> readDatasourceOnlyPermissions = Collections.singletonList(
+        new ResourceAction(
+            new Resource("auth_test", ResourceType.DATASOURCE),
+            Action.READ
+        )
+    );
+    createUserAndRoleWithPermissions(
+        adminClient,
+        "datasourceOnlyUser",
+        "helloworld",
+        "datasourceOnlyRole",
+        readDatasourceOnlyPermissions
+    );
+    HttpClient datasourceOnlyUserClient = new CredentialedHttpClient(
+        new BasicCredentials("datasourceOnlyUser", "helloworld"),
+        httpClient
+    );
+
+    // create a new user+role that can only read 'auth_test' + STATE read access
+    List<ResourceAction> readDatasourceWithStatePermissions = ImmutableList.of(
+        new ResourceAction(
+            new Resource("auth_test", ResourceType.DATASOURCE),
+            Action.READ
+        ),
+        new ResourceAction(
+            new Resource(".*", ResourceType.STATE),
+            Action.READ
+        )
+    );
+    createUserAndRoleWithPermissions(
+        adminClient,
+        "datasourceWithStateUser",
+        "helloworld",
+        "datasourceWithStateRole",
+        readDatasourceWithStatePermissions
+    );
+    HttpClient datasourceWithStateUserClient = new CredentialedHttpClient(
+        new BasicCredentials("datasourceWithStateUser", "helloworld"),
+        httpClient
+    );
+
+    // create a new user+role with only STATE read access
+    List<ResourceAction> stateOnlyPermissions = ImmutableList.of(
+        new ResourceAction(
+            new Resource(".*", ResourceType.STATE),
+            Action.READ
+        )
+    );
+    createUserAndRoleWithPermissions(
+        adminClient,
+        "stateOnlyUser",
+        "helloworld",
+        "stateOnlyRole",
+        stateOnlyPermissions
+    );
+    HttpClient stateOnlyUserClient = new CredentialedHttpClient(
+        new BasicCredentials("stateOnlyUser", "helloworld"),
+        httpClient
+    );
+
+    // check that we can access a datasource-permission restricted resource on the broker
+    makeRequest(
+        datasourceOnlyUserClient,
+        HttpMethod.GET,
+        config.getBrokerUrl() + "/druid/v2/datasources/auth_test",
+        null
+    );
+
+    // check that we can access a state-permission restricted resource on the broker
+    makeRequest(datasourceWithStateUserClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
+    makeRequest(stateOnlyUserClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
+
+    // initial setup is done now, run the system schema response content tests
+    final List<Map<String, Object>> adminSegments = jsonMapper.readValue(
+        TestQueryHelper.class.getResourceAsStream(SYSTEM_SCHEMA_SEGMENTS_RESULTS_RESOURCE),
+        SYS_SCHEMA_RESULTS_TYPE_REFERENCE
+    );
+
+    final List<Map<String, Object>> adminServerSegments = jsonMapper.readValue(
+        TestQueryHelper.class.getResourceAsStream(SYSTEM_SCHEMA_SERVER_SEGMENTS_RESULTS_RESOURCE),
+        SYS_SCHEMA_RESULTS_TYPE_REFERENCE
+    );
+
+    final List<Map<String, Object>> adminServers = getServersWithoutCurrentSize(
+        jsonMapper.readValue(
+            TestQueryHelper.class.getResourceAsStream(SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE),
+            SYS_SCHEMA_RESULTS_TYPE_REFERENCE
+        )
+    );
+
+    final List<Map<String, Object>> adminTasks = jsonMapper.readValue(
+        TestQueryHelper.class.getResourceAsStream(SYSTEM_SCHEMA_TASKS_RESULTS_RESOURCE),
+        SYS_SCHEMA_RESULTS_TYPE_REFERENCE
+    );
+
+    // as admin
+    LOG.info("Checking sys.segments query as admin...");
+    verifySystemSchemaQuery(
+        adminClient,
+        SYS_SCHEMA_SEGMENTS_QUERY,
+        adminSegments
+    );
+
+    LOG.info("Checking sys.servers query as admin...");
+    verifySystemSchemaServerQuery(
+        adminClient,
+        SYS_SCHEMA_SERVERS_QUERY,
+        getServersWithoutCurrentSize(adminServers)
+    );
+
+    LOG.info("Checking sys.server_segments query as admin...");
+    verifySystemSchemaQuery(
+        adminClient,
+        SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
+        adminServerSegments
+    );
+
+    LOG.info("Checking sys.tasks query as admin...");
+    verifySystemSchemaQuery(
+        adminClient,
+        SYS_SCHEMA_TASKS_QUERY,
+        adminTasks
+    );
+
+    // as user that can only read auth_test
+    LOG.info("Checking sys.segments query as datasourceOnlyUser...");
+    verifySystemSchemaQuery(
+        datasourceOnlyUserClient,
+        SYS_SCHEMA_SEGMENTS_QUERY,
+        adminSegments.stream()
+                     .filter((segmentEntry) -> "auth_test".equals(segmentEntry.get("datasource")))
+                     .collect(Collectors.toList())
+    );
+
+    LOG.info("Checking sys.servers query as datasourceOnlyUser...");
+    verifySystemSchemaQueryFailure(
+        datasourceOnlyUserClient,
+        SYS_SCHEMA_SERVERS_QUERY,
+        HttpResponseStatus.FORBIDDEN,
+        "{\"Access-Check-Result\":\"Insufficient permission to view servers : Allowed:false, Message:\"}"
+    );
+
+    LOG.info("Checking sys.server_segments query as datasourceOnlyUser...");
+    verifySystemSchemaQueryFailure(
+        datasourceOnlyUserClient,
+        SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
+        HttpResponseStatus.FORBIDDEN,
+        "{\"Access-Check-Result\":\"Insufficient permission to view servers : Allowed:false, Message:\"}"
+    );
+
+    LOG.info("Checking sys.tasks query as datasourceOnlyUser...");
+    verifySystemSchemaQuery(
+        datasourceOnlyUserClient,
+        SYS_SCHEMA_TASKS_QUERY,
+        adminTasks.stream()
+                     .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
+                     .collect(Collectors.toList())
+    );
+
+    // as user that can read auth_test and STATE
+    LOG.info("Checking sys.segments query as datasourceWithStateUser...");
+    verifySystemSchemaQuery(
+        datasourceWithStateUserClient,
+        SYS_SCHEMA_SEGMENTS_QUERY,
+        adminSegments.stream()
+                     .filter((segmentEntry) -> "auth_test".equals(segmentEntry.get("datasource")))
+                     .collect(Collectors.toList())
+    );
+
+    LOG.info("Checking sys.servers query as datasourceWithStateUser...");
+    verifySystemSchemaServerQuery(
+        datasourceWithStateUserClient,
+        SYS_SCHEMA_SERVERS_QUERY,
+        adminServers
+    );
+
+    LOG.info("Checking sys.server_segments query as datasourceWithStateUser...");
+    verifySystemSchemaQuery(
+        datasourceWithStateUserClient,
+        SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
+        adminServerSegments.stream()
+                           .filter((serverSegmentEntry) -> ((String) serverSegmentEntry.get("segment_id")).contains("auth_test"))
+                           .collect(Collectors.toList())
+    );
+
+    LOG.info("Checking sys.tasks query as datasourceWithStateUser...");
+    verifySystemSchemaQuery(
+        datasourceWithStateUserClient,
+        SYS_SCHEMA_TASKS_QUERY,
+        adminTasks.stream()
+                     .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
+                     .collect(Collectors.toList())
+    );
+
+    // as user that can only read STATE
+    LOG.info("Checking sys.segments query as stateOnlyUser...");
+    verifySystemSchemaQuery(
+        stateOnlyUserClient,
+        SYS_SCHEMA_SEGMENTS_QUERY,
+        Collections.emptyList()
+    );
+
+    LOG.info("Checking sys.servers query as stateOnlyUser...");
+    verifySystemSchemaServerQuery(
+        stateOnlyUserClient,
+        SYS_SCHEMA_SERVERS_QUERY,
+        adminServers
+    );
+
+    LOG.info("Checking sys.server_segments query as stateOnlyUser...");
+    verifySystemSchemaQuery(
+        stateOnlyUserClient,
+        SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
+        Collections.emptyList()
+    );
+
+    LOG.info("Checking sys.tasks query as stateOnlyUser...");
+    verifySystemSchemaQuery(
+        stateOnlyUserClient,
+        SYS_SCHEMA_TASKS_QUERY,
+        Collections.emptyList()
+    );
+  }
 
   @Test
   public void testAuthConfiguration() throws Exception
@@ -111,54 +393,19 @@ public class ITBasicAuthConfigurationTest
     // check that internal user works
     checkNodeAccess(internalSystemClient);
 
-    // create a new user that can read /status
-    makeRequest(
-        adminClient,
-        HttpMethod.POST,
-        config.getCoordinatorUrl() + "/druid-ext/basic-security/authentication/db/basic/users/druid",
-        null
-    );
-
-    makeRequest(
-        adminClient,
-        HttpMethod.POST,
-        config.getCoordinatorUrl() + "/druid-ext/basic-security/authentication/db/basic/users/druid/credentials",
-        jsonMapper.writeValueAsBytes(new BasicAuthenticatorCredentialUpdate("helloworld", 5000))
-    );
-
-    makeRequest(
-        adminClient,
-        HttpMethod.POST,
-        config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/db/basic/users/druid",
-        null
-    );
-
-    makeRequest(
-        adminClient,
-        HttpMethod.POST,
-        config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/db/basic/roles/druidrole",
-        null
-    );
-
-    makeRequest(
-        adminClient,
-        HttpMethod.POST,
-        config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/db/basic/users/druid/roles/druidrole",
-        null
-    );
-
+    // create a new user+role that can read /status
     List<ResourceAction> permissions = Collections.singletonList(
         new ResourceAction(
             new Resource(".*", ResourceType.STATE),
             Action.READ
         )
     );
-    byte[] permissionsBytes = jsonMapper.writeValueAsBytes(permissions);
-    makeRequest(
+    createUserAndRoleWithPermissions(
         adminClient,
-        HttpMethod.POST,
-        config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/db/basic/roles/druidrole/permissions",
-        permissionsBytes
+        "druid",
+        "helloworld",
+        "druidrole",
+        permissions
     );
 
     // check that the new user works
@@ -166,7 +413,6 @@ public class ITBasicAuthConfigurationTest
 
     // check loadStatus
     checkLoadStatus(adminClient);
-
 
     // create 100 users
     for (int i = 0; i < 100; i++) {
@@ -248,8 +494,8 @@ public class ITBasicAuthConfigurationTest
     LOG.info("URL: " + url);
     try {
       Properties connectionProperties = new Properties();
-      connectionProperties.put("user", "admin");
-      connectionProperties.put("password", "priest");
+      connectionProperties.setProperty("user", "admin");
+      connectionProperties.setProperty("password", "priest");
       Connection connection = DriverManager.getConnection(url, connectionProperties);
       Statement statement = connection.createStatement();
       statement.setMaxRows(450);
@@ -269,8 +515,8 @@ public class ITBasicAuthConfigurationTest
     LOG.info("URL: " + url);
     try {
       Properties connectionProperties = new Properties();
-      connectionProperties.put("user", "admin");
-      connectionProperties.put("password", "wrongpassword");
+      connectionProperties.setProperty("user", "admin");
+      connectionProperties.setProperty("password", "wrongpassword");
       Connection connection = DriverManager.getConnection(url, connectionProperties);
       Statement statement = connection.createStatement();
       statement.setMaxRows(450);
@@ -335,6 +581,23 @@ public class ITBasicAuthConfigurationTest
 
   private StatusResponseHolder makeRequest(HttpClient httpClient, HttpMethod method, String url, byte[] content)
   {
+    return makeRequestWithExpectedStatus(
+        httpClient,
+        method,
+        url,
+        content,
+        HttpResponseStatus.OK
+    );
+  }
+
+  private StatusResponseHolder makeRequestWithExpectedStatus(
+      HttpClient httpClient,
+      HttpMethod method,
+      String url,
+      byte[] content,
+      HttpResponseStatus expectedStatus
+  )
+  {
     try {
       Request request = new Request(method, new URL(url));
       if (content != null) {
@@ -347,10 +610,10 @@ public class ITBasicAuthConfigurationTest
       while (true) {
         response = httpClient.go(
             request,
-            responseHandler
+            StatusResponseHandler.getInstance()
         ).get();
 
-        if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        if (!response.getStatus().equals(expectedStatus)) {
           String errMsg = StringUtils.format(
               "Error while making request to url[%s] status[%s] content[%s]",
               url,
@@ -358,7 +621,7 @@ public class ITBasicAuthConfigurationTest
               response.getContent()
           );
           // it can take time for the auth config to propagate, so we retry
-          if (retryCount > 4) {
+          if (retryCount > 10) {
             throw new ISE(errMsg);
           } else {
             LOG.error(errMsg);
@@ -373,7 +636,159 @@ public class ITBasicAuthConfigurationTest
       return response;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
+  }
+
+  private void createUserAndRoleWithPermissions(
+      HttpClient adminClient,
+      String user,
+      String password,
+      String role,
+      List<ResourceAction> permissions
+  ) throws Exception
+  {
+    makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format(
+            "%s/druid-ext/basic-security/authentication/db/basic/users/%s",
+            config.getCoordinatorUrl(),
+            user
+        ),
+        null
+    );
+    makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format(
+            "%s/druid-ext/basic-security/authentication/db/basic/users/%s/credentials",
+            config.getCoordinatorUrl(),
+            user
+        ),
+        jsonMapper.writeValueAsBytes(new BasicAuthenticatorCredentialUpdate(password, 5000))
+    );
+    makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format(
+            "%s/druid-ext/basic-security/authorization/db/basic/users/%s",
+            config.getCoordinatorUrl(),
+            user
+        ),
+        null
+    );
+    makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format(
+            "%s/druid-ext/basic-security/authorization/db/basic/roles/%s",
+            config.getCoordinatorUrl(),
+            role
+        ),
+        null
+    );
+    makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format(
+            "%s/druid-ext/basic-security/authorization/db/basic/users/%s/roles/%s",
+            config.getCoordinatorUrl(),
+            user,
+            role
+        ),
+        null
+    );
+    byte[] permissionsBytes = jsonMapper.writeValueAsBytes(permissions);
+    makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format(
+            "%s/druid-ext/basic-security/authorization/db/basic/roles/%s/permissions",
+            config.getCoordinatorUrl(),
+            role
+        ),
+        permissionsBytes
+    );
+  }
+
+  private StatusResponseHolder makeSQLQueryRequest(
+      HttpClient httpClient,
+      String query,
+      HttpResponseStatus expectedStatus
+  ) throws Exception
+  {
+    Map<String, Object> queryMap = ImmutableMap.of(
+        "query", query
+    );
+    return makeRequestWithExpectedStatus(
+        httpClient,
+        HttpMethod.POST,
+        config.getBrokerUrl() + "/druid/v2/sql",
+        jsonMapper.writeValueAsBytes(queryMap),
+        expectedStatus
+    );
+  }
+
+  private void verifySystemSchemaQueryBase(
+      HttpClient client,
+      String query,
+      List<Map<String, Object>> expectedResults,
+      boolean isServerQuery
+  ) throws Exception
+  {
+    StatusResponseHolder responseHolder = makeSQLQueryRequest(client, query, HttpResponseStatus.OK);
+    String content = responseHolder.getContent();
+    List<Map<String, Object>> responseMap = jsonMapper.readValue(content, SYS_SCHEMA_RESULTS_TYPE_REFERENCE);
+    if (isServerQuery) {
+      responseMap = getServersWithoutCurrentSize(responseMap);
+    }
+    Assert.assertEquals(responseMap, expectedResults);
+  }
+
+  private void verifySystemSchemaQuery(
+      HttpClient client,
+      String query,
+      List<Map<String, Object>> expectedResults
+  ) throws Exception
+  {
+    verifySystemSchemaQueryBase(client, query, expectedResults, false);
+  }
+
+  private void verifySystemSchemaServerQuery(
+      HttpClient client,
+      String query,
+      List<Map<String, Object>> expectedResults
+  ) throws Exception
+  {
+    verifySystemSchemaQueryBase(client, query, expectedResults, true);
+  }
+
+  private void verifySystemSchemaQueryFailure(
+      HttpClient client,
+      String query,
+      HttpResponseStatus expectedErrorStatus,
+      String expectedErrorMessage
+  ) throws Exception
+  {
+    StatusResponseHolder responseHolder = makeSQLQueryRequest(client, query, expectedErrorStatus);
+    Assert.assertEquals(responseHolder.getStatus(), expectedErrorStatus);
+    Assert.assertEquals(responseHolder.getContent(), expectedErrorMessage);
+  }
+
+  /**
+   * curr_size on historicals changes because cluster state is not isolated across different
+   * integration tests, zero it out for consistent test results
+   */
+  private static List<Map<String, Object>> getServersWithoutCurrentSize(List<Map<String, Object>> servers)
+  {
+    return Lists.transform(
+        servers,
+        (server) -> {
+          Map<String, Object> newServer = new HashMap<>(server);
+          newServer.put("curr_size", 0);
+          return newServer;
+        }
+    );
   }
 }

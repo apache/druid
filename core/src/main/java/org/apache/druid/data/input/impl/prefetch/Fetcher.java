@@ -20,7 +20,6 @@
 package org.apache.druid.data.input.impl.prefetch;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -42,7 +41,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * A file fetcher used by {@link PrefetchableTextFilesFirehoseFactory} and {@link PrefetchSqlFirehoseFactory}.
+ * A file fetcher used by {@link PrefetchableTextFilesFirehoseFactory} and PrefetchSqlFirehoseFactory (in druid-server).
  * See the javadoc of {@link PrefetchableTextFilesFirehoseFactory} for more details.
  */
 public abstract class Fetcher<T> implements Iterator<OpenedObject<T>>
@@ -73,7 +72,7 @@ public abstract class Fetcher<T> implements Iterator<OpenedObject<T>>
 
   private int numRemainingObjects;
 
-  Fetcher(
+  public Fetcher(
       CacheManager<T> cacheManager,
       List<T> objects,
       ExecutorService fetchExecutor,
@@ -224,7 +223,7 @@ public abstract class Fetcher<T> implements Iterator<OpenedObject<T>>
         }
       }
       catch (InterruptedException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
     final FetchedFile<T> maybeCached = cacheIfPossible(fetchedFile);
@@ -252,7 +251,7 @@ public abstract class Fetcher<T> implements Iterator<OpenedObject<T>>
         return new OpenedObject<>(cached);
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     } else {
       final T object = objects.get(nextFetchIndex);

@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.seekablestream;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -27,71 +26,49 @@ import org.apache.druid.segment.indexing.IOConfig;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.Set;
 
 public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> implements IOConfig
 {
   private static final boolean DEFAULT_USE_TRANSACTION = true;
-  private static final boolean DEFAULT_SKIP_OFFSET_GAPS = false;
 
   @Nullable
   private final Integer taskGroupId;
   private final String baseSequenceName;
-  private final SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> startPartitions;
-  private final SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> endPartitions;
+  private final SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> startSequenceNumbers;
+  private final SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetType> endSequenceNumbers;
   private final boolean useTransaction;
   private final Optional<DateTime> minimumMessageTime;
   private final Optional<DateTime> maximumMessageTime;
-  private final boolean skipOffsetGaps;
-  private final Set<PartitionIdType> exclusiveStartSequenceNumberPartitions;
 
-  @JsonCreator
   public SeekableStreamIndexTaskIOConfig(
-      @JsonProperty("taskGroupId") @Nullable Integer taskGroupId, // can be null for backward compabitility
-      @JsonProperty("baseSequenceName") String baseSequenceName,
-      @JsonProperty("startPartitions") SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> startPartitions,
-      @JsonProperty("endPartitions") SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> endPartitions,
-      @JsonProperty("useTransaction") Boolean useTransaction,
-      @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
-      @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
-      @JsonProperty("skipOffsetGaps") Boolean skipOffsetGaps,
-      @JsonProperty("exclusiveStartSequenceNumberPartitions")
-          Set<PartitionIdType> exclusiveStartSequenceNumberPartitions
+      final @Nullable Integer taskGroupId, // can be null for backward compabitility
+      final String baseSequenceName,
+      final SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> startSequenceNumbers,
+      final SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetType> endSequenceNumbers,
+      final Boolean useTransaction,
+      final DateTime minimumMessageTime,
+      final DateTime maximumMessageTime
   )
   {
     this.taskGroupId = taskGroupId;
     this.baseSequenceName = Preconditions.checkNotNull(baseSequenceName, "baseSequenceName");
-    this.startPartitions = Preconditions.checkNotNull(startPartitions, "startPartitions");
-    this.endPartitions = Preconditions.checkNotNull(endPartitions, "endPartitions");
+    this.startSequenceNumbers = Preconditions.checkNotNull(startSequenceNumbers, "startSequenceNumbers");
+    this.endSequenceNumbers = Preconditions.checkNotNull(endSequenceNumbers, "endSequenceNumbers");
     this.useTransaction = useTransaction != null ? useTransaction : DEFAULT_USE_TRANSACTION;
     this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
     this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
-    this.skipOffsetGaps = skipOffsetGaps != null ? skipOffsetGaps : DEFAULT_SKIP_OFFSET_GAPS;
-    this.exclusiveStartSequenceNumberPartitions = exclusiveStartSequenceNumberPartitions == null
-                                                  ? Collections.emptySet()
-                                                  : exclusiveStartSequenceNumberPartitions;
 
     Preconditions.checkArgument(
-        startPartitions.getStream().equals(endPartitions.getStream()),
+        startSequenceNumbers.getStream().equals(endSequenceNumbers.getStream()),
         "start topic/stream and end topic/stream must match"
     );
 
     Preconditions.checkArgument(
-        startPartitions.getPartitionSequenceNumberMap()
+        startSequenceNumbers.getPartitionSequenceNumberMap()
                        .keySet()
-                       .equals(endPartitions.getPartitionSequenceNumberMap().keySet()),
+                       .equals(endSequenceNumbers.getPartitionSequenceNumberMap().keySet()),
         "start partition set and end partition set must match"
     );
-  }
-
-  // exclusive starting sequence partitions are used only for kinesis where the starting
-  // sequence number for certain partitions are discarded because they've already been
-  // read by a previous task
-  @JsonProperty
-  public Set<PartitionIdType> getExclusiveStartSequenceNumberPartitions()
-  {
-    return exclusiveStartSequenceNumberPartitions;
   }
 
   @Nullable
@@ -108,15 +85,15 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
   }
 
   @JsonProperty
-  public SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> getStartPartitions()
+  public SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> getStartSequenceNumbers()
   {
-    return startPartitions;
+    return startSequenceNumbers;
   }
 
   @JsonProperty
-  public SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> getEndPartitions()
+  public SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetType> getEndSequenceNumbers()
   {
-    return endPartitions;
+    return endSequenceNumbers;
   }
 
   @JsonProperty
@@ -137,9 +114,4 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
     return minimumMessageTime;
   }
 
-  @JsonProperty
-  public boolean isSkipOffsetGaps()
-  {
-    return skipOffsetGaps;
-  }
 }

@@ -34,7 +34,7 @@ import java.util.Set;
 
 public class CascadeExtractionFnTest
 {
-  private static final String[] paths = {
+  private static final String[] PATHS = {
       "/druid/prod/historical",
       "/druid/prod/broker",
       "/druid/prod/coordinator",
@@ -71,7 +71,7 @@ public class CascadeExtractionFnTest
     CascadeExtractionFn cascadeExtractionFn = new CascadeExtractionFn(fns);
 
     Set<String> extracted = new LinkedHashSet<>();
-    for (String path : paths) {
+    for (String path : PATHS) {
       extracted.add(cascadeExtractionFn.apply(path));
     }
 

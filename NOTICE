@@ -1,100 +1,96 @@
 Apache Druid (incubating)
-Copyright 2018 The Apache Software Foundation
+Copyright 2019 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
 
+
+############ SOURCE/JAVA-CORE ############
+
+================= Apache Calcite 1.10.0 =================
+Apache Calcite
+Copyright 2012-2019 The Apache Software Foundation
+
+This product is based on source code originally developed
+by DynamoBI Corporation, LucidEra Inc., SQLstream Inc. and others
+under the auspices of the Eigenbase Foundation
+and released as the LucidDB project.
+
+
+
+
+================= Apache Flink 1.8.1 =================
+Apache Flink
+Copyright 2014-2019 The Apache Software Foundation
+
+
+
+
+================= Apache Hadoop 2.8.3 =================
+Apache Hadoop
+Copyright 2009-2017 The Apache Software Foundation
+
+
+
+
+================= Apache Hive 2.0.0 =================
+Apache Hive
+Copyright 2008-2015 The Apache Software Foundation
+
+
+
+
+================= Apache Hive 2.0.1 =================
+Apache Hive
+Copyright 2008-2016 The Apache Software Foundation
+
+
+
+
+================= Apache Hive 2.7.0 =================
+Apache Hive
+Copyright 2008-2018 The Apache Software Foundation
+
+
+
+
+================= Apache Kafka 1.0 =================
+Apache Kafka
+Copyright 2017 The Apache Software Foundation.
+
+
+
+
+================= Apache Lucene 6.2.0 =================
+Apache Lucene
+Copyright 2014 The Apache Software Foundation
+
+
+
+
+================= Metamarkets bytebuffer-collections 0.2.5 =================
+bytebuffer-collections
+Copyright 2011-2015 Metamarkets Group Inc.
+
+
+
+
+================= Metamarkets java-util 1.3.3 =================
+java-util
+Copyright 2011-2017 Metamarkets Group Inc.
+
+
+
+
+================= Metamarkets extendedset 1.3.10 =================
+extendedset
+Copyright 2012 Metamarkets Group Inc.
+
 -------------------------------------------------------------------------------
 
-This product contains a modified version of Andrew Duffy's java-alphanum library
-  * LICENSE:
-    * https://github.com/amjjd/java-alphanum/blob/5c036e2e492cc7f3b7bcdebd46b8f9e2a87927e5/LICENSE.txt (Apache License, Version 2.0)
-  * HOMEPAGE:
-    * https://github.com/amjjd/java-alphanum
-
-This product contains conjunctive normal form conversion code, a variance aggregator algorithm, and bloom filter adapted from Apache Hive
-  * LICENSE:
-    * https://github.com/apache/hive/blob/branch-2.0/LICENSE (Apache License, Version 2.0)
-  * HOMEPAGE:
-    * https://github.com/apache/hive
-
-This product contains variable length long deserialization code adapted from Apache Lucene
-  * LICENSE:
-    * https://github.com/apache/lucene-solr/blob/master/lucene/LICENSE.txt (Apache License, Version 2.0)
-  * HOMEPAGE:
-    * https://github.com/apache/lucene-solr
-
-This product contains a modified version of Metamarkets java-util library
-  * LICENSE:
-    * https://github.com/metamx/java-util/blob/master/LICENSE (Apache License, Version 2.0)
-  * HOMEPAGE:
-    * https://github.com/metamx/java-util
-  * COMMIT TAG:
-    * https://github.com/metamx/java-util/commit/826021f
-
-This product contains a modified version of TestNG 6.8.7
-  * LICENSE:
-    * http://testng.org/license/ (Apache License, Version 2.0)
-  * HOMEPAGE:
-    * http://testng.org/
-
-This product contains a modified version of Metamarkets bytebuffer-collections library
-  * LICENSE:
-    * https://github.com/metamx/bytebuffer-collections/blob/master/LICENSE (Apache License, Version 2.0)
-  * HOMEPAGE:
-    * https://github.com/metamx/bytebuffer-collections
-  * COMMIT TAG:
-    * https://github.com/metamx/bytebuffer-collections/commit/3d1e7c8
-
-This product contains SQL query planning code adapted from Apache Calcite
-  * LICENSE:
-    * https://github.com/apache/calcite/blob/master/LICENSE (Apache License, Version 2.0)
-  * HOMEPAGE:
-    * https://calcite.apache.org/
-
-This product contains a modified version of Metamarkets extendedset library
-  * LICENSE:
-    * https://github.com/metamx/extendedset/blob/master/LICENSE (Apache License, Version 2.0)
-  * HOMEPAGE:
-    * https://github.com/metamx/extendedset
-  * COMMIT TAG:
-    * https://github.com/metamx/extendedset/commit/c9d647d
-
-This product contains a modified version of Alessandro Colantonio's CONCISE
+This library contains a modified version of Alessandro Colantonio's CONCISE
 (COmpressed 'N' Composable Integer SEt) library, extending the functionality of
 ConciseSet to use IntBuffers.
-  * (c) 2010 Alessandro Colantonio
-  * <mailto:colanton@mat.uniroma3.it>
-  * <http://ricerca.mat.uniroma3.it/users/colanton>
-  * LICENSE:
-    * Apache License, Version 2.0
-  * HOMEPAGE:
-    * https://sourceforge.net/projects/concise/
 
-This product contains a modified version of The Guava Authors's Closer class from Guava library:
- * LICENSE:
-   * https://github.com/google/guava/blob/c462d69329709f72a17a64cb229d15e76e72199c/COPYING (Apache License, Version 2.0)
- * HOMEPAGE:
-   * https://github.com/google/guava
- * COMMIT TAG:
-   * https://github.com/google/guava/commit/0ba7ccf36f5384a321cb78d62375bf7574e7bc24
 
-This product contains code adapted from Apache Hadoop
-  * LICENSE:
-    * https://github.com/apache/hadoop/blob/trunk/LICENSE.txt (Apache License, Version 2.0)
-  * HOMEPAGE:
-    * http://hadoop.apache.org/
 
-This product contains modified versions of the Dockerfile and related configuration files from SequenceIQ's Hadoop Docker image:
-  * LICENSE:
-    * https://github.com/sequenceiq/hadoop-docker/blob/master/LICENSE (Apache License, Version 2.0)
-  * HOMEPAGE:
-    * https://github.com/sequenceiq/hadoop-docker/
-  * COMMIT TAG:
-    * update this when this patch is committed
-
-This product contains fixed bins histogram percentile computation code adapted from Netflix Spectator:
-  * LICENSE:
-    * https://github.com/Netflix/spectator/blob/master/LICENSE (Apache License, Version 2.0)
-  * HOMEPAGE:
-    * https://github.com/Netflix/spectator

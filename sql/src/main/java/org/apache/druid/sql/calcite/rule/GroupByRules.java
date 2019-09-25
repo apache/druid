@@ -31,6 +31,7 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import java.util.ArrayList;
@@ -52,12 +53,13 @@ public class GroupByRules
    */
   public static Aggregation translateAggregateCall(
       final PlannerContext plannerContext,
-      final RowSignature sourceRowSignature,
+      final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
       final RexBuilder rexBuilder,
       final Project project,
-      final AggregateCall call,
       final List<Aggregation> existingAggregations,
       final String name,
+      final AggregateCall call,
       final boolean finalizeAggregations
   )
   {
@@ -71,11 +73,18 @@ public class GroupByRules
       }
 
       final RexNode expression = project.getChildExps().get(call.filterArg);
-      final DimFilter nonOptimizedFilter = Expressions.toFilter(plannerContext, sourceRowSignature, expression);
+      final DimFilter nonOptimizedFilter = Expressions.toFilter(
+          plannerContext,
+          rowSignature,
+          virtualColumnRegistry,
+          expression
+      );
       if (nonOptimizedFilter == null) {
         return null;
       } else {
-        filter = Filtration.create(nonOptimizedFilter).optimizeFilterOnly(sourceRowSignature).getDimFilter();
+        filter = Filtration.create(nonOptimizedFilter)
+                           .optimizeFilterOnly(virtualColumnRegistry.getFullRowSignature())
+                           .getDimFilter();
       }
     } else {
       filter = null;
@@ -121,7 +130,8 @@ public class GroupByRules
 
     final Aggregation retVal = sqlAggregator.toDruidAggregation(
         plannerContext,
-        sourceRowSignature,
+        rowSignature,
+        virtualColumnRegistry,
         rexBuilder,
         name,
         call,
@@ -137,7 +147,7 @@ public class GroupByRules
       if (isUsingExistingAggregation(retVal, existingAggregationsWithSameFilter)) {
         return retVal;
       } else {
-        return retVal.filter(sourceRowSignature, filter);
+        return retVal.filter(rowSignature, virtualColumnRegistry, filter);
       }
     }
   }

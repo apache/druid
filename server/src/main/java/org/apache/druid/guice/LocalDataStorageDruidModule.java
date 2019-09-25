@@ -27,10 +27,8 @@ import com.google.inject.Key;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.segment.loading.DataSegmentFinder;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.loading.LocalDataSegmentFinder;
 import org.apache.druid.segment.loading.LocalDataSegmentKiller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
@@ -67,8 +65,6 @@ public class LocalDataStorageDruidModule implements DruidModule
         Key.get(DataSegmentKiller.class),
         Key.get(LocalDataSegmentKiller.class)
     );
-
-    PolyBind.createChoice(binder, "druid.storage.type", Key.get(DataSegmentFinder.class), null);
   }
 
   private static void bindDeepStorageLocal(Binder binder)
@@ -86,11 +82,6 @@ public class LocalDataStorageDruidModule implements DruidModule
     PolyBind.optionBinder(binder, Key.get(DataSegmentPusher.class))
             .addBinding(SCHEME)
             .to(LocalDataSegmentPusher.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(DataSegmentFinder.class))
-            .addBinding(SCHEME)
-            .to(LocalDataSegmentFinder.class)
             .in(LazySingleton.class);
 
     JsonConfigProvider.bind(binder, "druid.storage", LocalDataSegmentPusherConfig.class);

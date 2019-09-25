@@ -29,7 +29,6 @@ import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Row;
-import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -45,6 +44,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.select.EventHolder;
 import org.apache.druid.query.select.PagingSpec;
@@ -175,9 +175,7 @@ public class SelectBenchmark
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
-    if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
-    }
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
     executorService = Execs.multiThreaded(numSegments, "SelectThreadPool");
 
@@ -233,8 +231,7 @@ public class SelectBenchmark
     factory = new SelectQueryRunnerFactory(
         new SelectQueryQueryToolChest(
             JSON_MAPPER,
-            QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator(),
-            selectConfigSupplier
+            QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()
         ),
         new SelectQueryEngine(),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER
@@ -265,7 +262,7 @@ public class SelectBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
     return queryResult.toList();
   }
 
@@ -315,7 +312,6 @@ public class SelectBenchmark
     }
   }
 
-
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
@@ -337,9 +333,7 @@ public class SelectBenchmark
       if (result.getEvents().size() == 0) {
         done = true;
       } else {
-        for (EventHolder eh : result.getEvents()) {
-          blackhole.consume(eh);
-        }
+        blackhole.consume(result);
         queryCopy = incrementQueryPagination(queryCopy, result);
       }
     }
@@ -375,7 +369,7 @@ public class SelectBenchmark
 
     boolean done = false;
     while (!done) {
-      Sequence<Result<SelectResultValue>> queryResult = theRunner.run(QueryPlus.wrap(queryCopy), new HashMap<>());
+      Sequence<Result<SelectResultValue>> queryResult = theRunner.run(QueryPlus.wrap(queryCopy), ResponseContext.createEmpty());
       List<Result<SelectResultValue>> results = queryResult.toList();
       
       SelectResultValue result = results.get(0).getValue();
@@ -383,9 +377,7 @@ public class SelectBenchmark
       if (result.getEvents().size() == 0) {
         done = true;
       } else {
-        for (EventHolder eh : result.getEvents()) {
-          blackhole.consume(eh);
-        }
+        blackhole.consume(result);
         queryCopy = incrementQueryPagination(queryCopy, result);
       }
     }

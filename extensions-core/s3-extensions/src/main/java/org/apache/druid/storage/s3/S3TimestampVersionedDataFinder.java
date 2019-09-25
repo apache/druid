@@ -20,7 +20,6 @@
 package org.apache.druid.storage.s3;
 
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -93,7 +92,7 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

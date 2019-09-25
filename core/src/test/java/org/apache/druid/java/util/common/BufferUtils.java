@@ -36,5 +36,7 @@ public final class BufferUtils
     return totalMemoryUsed;
   }
 
-  private BufferUtils() {}
+  private BufferUtils()
+  {
+  }
 }

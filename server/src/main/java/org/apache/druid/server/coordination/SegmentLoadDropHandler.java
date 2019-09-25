@@ -44,6 +44,8 @@ import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -106,11 +108,16 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       SegmentManager segmentManager
   )
   {
-    this(jsonMapper, config, announcer, serverAnnouncer, segmentManager,
-         Executors.newScheduledThreadPool(
-             config.getNumLoadingThreads(),
-             Execs.makeThreadFactory("SimpleDataSegmentChangeHandler-%s")
-         )
+    this(
+        jsonMapper,
+        config,
+        announcer,
+        serverAnnouncer,
+        segmentManager,
+        Executors.newScheduledThreadPool(
+            config.getNumLoadingThreads(),
+            Execs.makeThreadFactory("SimpleDataSegmentChangeHandler-%s")
+        )
     );
   }
 
@@ -151,7 +158,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       }
       catch (Exception e) {
         Throwables.propagateIfPossible(e, IOException.class);
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       started = true;
       log.info("Started.");
@@ -171,7 +178,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         serverAnnouncer.unannounce();
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       finally {
         started = false;
@@ -235,14 +242,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
     addSegments(
         cachedSegments,
-        new DataSegmentChangeCallback()
-        {
-          @Override
-          public void execute()
-          {
-            log.info("Cache load took %,d ms", System.currentTimeMillis() - start);
-          }
-        }
+        () -> log.info("Cache load took %,d ms", System.currentTimeMillis() - start)
     );
   }
 
@@ -250,7 +250,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
    * Load a single segment. If the segment is loaded successfully, this function simply returns. Otherwise it will
    * throw a SegmentLoadingException
    *
-   * @throws SegmentLoadingException
+   * @throws SegmentLoadingException if it fails to load the given segment
    */
   private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback, boolean lazy) throws SegmentLoadingException
   {
@@ -305,6 +305,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         }
       }
       loadSegment(segment, DataSegmentChangeCallback.NOOP, false);
+      // announce segment even if the segment file already exists.
       try {
         announcer.announceSegment(segment);
       }
@@ -342,34 +343,29 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       final CopyOnWriteArrayList<DataSegment> failedSegments = new CopyOnWriteArrayList<>();
       for (final DataSegment segment : segments) {
         loadingExecutor.submit(
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
+            () -> {
+              try {
+                log.info(
+                    "Loading segment[%d/%d][%s]",
+                    counter.incrementAndGet(),
+                    numSegments,
+                    segment.getId()
+                );
+                loadSegment(segment, callback, config.isLazyLoadOnStart());
                 try {
-                  log.info(
-                      "Loading segment[%d/%d][%s]",
-                      counter.incrementAndGet(),
-                      numSegments,
-                      segment.getId()
-                  );
-                  loadSegment(segment, callback, config.isLazyLoadOnStart());
-                  try {
-                    backgroundSegmentAnnouncer.announceSegment(segment);
-                  }
-                  catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new SegmentLoadingException(e, "Loading Interrupted");
-                  }
+                  backgroundSegmentAnnouncer.announceSegment(segment);
                 }
-                catch (SegmentLoadingException e) {
-                  log.error(e, "[%s] failed to load", segment.getId());
-                  failedSegments.add(segment);
+                catch (InterruptedException e) {
+                  Thread.currentThread().interrupt();
+                  throw new SegmentLoadingException(e, "Loading Interrupted");
                 }
-                finally {
-                  latch.countDown();
-                }
+              }
+              catch (SegmentLoadingException e) {
+                log.error(e, "[%s] failed to load", segment.getId());
+                failedSegments.add(segment);
+              }
+              finally {
+                latch.countDown();
               }
             }
         );
@@ -421,28 +417,23 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       announcer.unannounceSegment(segment);
       segmentsToDelete.add(segment);
 
-      Runnable runnable = new Runnable()
-      {
-        @Override
-        public void run()
-        {
-          try {
-            synchronized (segmentDeleteLock) {
-              if (segmentsToDelete.remove(segment)) {
-                segmentManager.dropSegment(segment);
+      Runnable runnable = () -> {
+        try {
+          synchronized (segmentDeleteLock) {
+            if (segmentsToDelete.remove(segment)) {
+              segmentManager.dropSegment(segment);
 
-                File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getId().toString());
-                if (!segmentInfoCacheFile.delete()) {
-                  log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
-                }
+              File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getId().toString());
+              if (!segmentInfoCacheFile.delete()) {
+                log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
               }
             }
           }
-          catch (Exception e) {
-            log.makeAlert(e, "Failed to remove segment! Possible resource leak!")
-               .addData("segment", segment)
-               .emit();
-          }
+        }
+        catch (Exception e) {
+          log.makeAlert(e, "Failed to remove segment! Possible resource leak!")
+             .addData("segment", segment)
+             .emit();
         }
       };
 
@@ -537,7 +528,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
                 );
               }
             },
-            () -> resolveWaitingFutures()
+            this::resolveWaitingFutures
         );
       }
       return requestStatuses.getIfPresent(changeRequest);
@@ -582,7 +573,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     private final Object lock = new Object();
 
     private volatile boolean finished = false;
+    @Nullable
     private volatile ScheduledFuture startedAnnouncing = null;
+    @Nullable
     private volatile ScheduledFuture nextAnnoucement = null;
 
     public BackgroundSegmentAnnouncer(
@@ -727,14 +720,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             (request, statusRef) -> result.add(new DataSegmentChangeRequestAndStatus(request, statusRef.get()))
         );
 
-        super.set(result);
+        set(result);
       }
-    }
-
-    @Override
-    public boolean setException(Throwable throwable)
-    {
-      return super.setException(throwable);
     }
 
     @Override
@@ -755,6 +742,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
 
     private final STATE state;
+    @Nullable
     private final String failureCause;
 
     public static final Status SUCCESS = new Status(STATE.SUCCESS, null);
@@ -763,7 +751,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     @JsonCreator
     Status(
         @JsonProperty("state") STATE state,
-        @JsonProperty("failureCause") String failureCause
+        @JsonProperty("failureCause") @Nullable String failureCause
     )
     {
       Preconditions.checkNotNull(state, "state must be non-null");
@@ -782,6 +770,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       return state;
     }
 
+    @Nullable
     @JsonProperty
     public String getFailureCause()
     {

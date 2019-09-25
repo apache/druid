@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -39,6 +38,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -52,15 +52,15 @@ import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class MapVirtualColumnGroupByTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  private QueryRunner<Row> runner;
+  private QueryRunner<ResultRow> runner;
 
   @Before
   public void setup() throws IOException
@@ -109,7 +109,7 @@ public class MapVirtualColumnGroupByTest
         strategySelector,
         new GroupByQueryQueryToolChest(
             strategySelector,
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
         )
     );
 
@@ -125,7 +125,7 @@ public class MapVirtualColumnGroupByTest
   public void testWithMapColumn()
   {
     final GroupByQuery query = new GroupByQuery(
-        new TableDataSource(QueryRunnerTestHelper.dataSource),
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2011/2012"))),
         VirtualColumns.create(ImmutableList.of(new MapVirtualColumn("keys", "values", "params"))),
         null,
@@ -141,14 +141,14 @@ public class MapVirtualColumnGroupByTest
 
     expectedException.expect(UnsupportedOperationException.class);
     expectedException.expectMessage("Map column doesn't support getRow()");
-    runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    runner.run(QueryPlus.wrap(query)).toList();
   }
 
   @Test
   public void testWithSubColumn()
   {
     final GroupByQuery query = new GroupByQuery(
-        new TableDataSource(QueryRunnerTestHelper.dataSource),
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2011/2012"))),
         VirtualColumns.create(ImmutableList.of(new MapVirtualColumn("keys", "values", "params"))),
         null,
@@ -162,14 +162,14 @@ public class MapVirtualColumnGroupByTest
         null
     );
 
-    final List<Row> result = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
-    final List<Row> expected = ImmutableList.of(
+    final List<ResultRow> result = runner.run(QueryPlus.wrap(query)).toList();
+    final List<ResultRow> expected = ImmutableList.of(
         new MapBasedRow(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             MapVirtualColumnTestBase.mapOf("count", 1L, "params.key3", "value3")
         ),
         new MapBasedRow(DateTimes.of("2011-01-12T00:00:00.000Z"), MapVirtualColumnTestBase.mapOf("count", 2L))
-    );
+    ).stream().map(row -> ResultRow.fromLegacyRow(row, query)).collect(Collectors.toList());
 
     Assert.assertEquals(expected, result);
   }

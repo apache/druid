@@ -34,14 +34,13 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
-import org.apache.druid.indexing.common.task.NoopTestTaskFileWriter;
+import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.TestTaskRunner;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
@@ -86,6 +85,7 @@ public class WorkerTaskManagerTest
         null,
         false,
         null,
+        null,
         null
     );
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
@@ -108,6 +108,7 @@ public class WorkerTaskManagerTest
         new TestTaskRunner(
             new TaskToolboxFactory(
                 taskConfig,
+                null,
                 taskActionClientFactory,
                 null,
                 null,
@@ -120,7 +121,7 @@ public class WorkerTaskManagerTest
                 null,
                 null,
                 null,
-                new SegmentLoaderFactory(new SegmentLoaderLocalCacheManager(null, loaderConfig, jsonMapper)),
+                new SegmentLoaderFactory(null, jsonMapper),
                 jsonMapper,
                 indexIO,
                 null,
@@ -131,7 +132,8 @@ public class WorkerTaskManagerTest
                 null,
                 null,
                 null,
-                new NoopTestTaskFileWriter()
+                new NoopTestTaskReportFileWriter(),
+                null
             ),
             taskConfig,
             location
@@ -259,6 +261,6 @@ public class WorkerTaskManagerTest
 
   private NoopTask createNoopTask(String id)
   {
-    return new NoopTask(id, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
+    return new NoopTask(id, null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
   }
 }

@@ -26,10 +26,10 @@ import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.service.UnitEvent;
+import org.apache.druid.utils.CompressionUtils;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Request;
 import org.asynchttpclient.Response;
@@ -57,7 +57,7 @@ import java.util.stream.Stream;
  */
 public class EmitterTest
 {
-  private static final ObjectMapper jsonMapper = new ObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
   public static String TARGET_URL = "http://metrics.foo.bar/";
   public static final Response OK_RESPONSE = Stream
       .of(responseBuilder(HttpVersion.HTTP_1_1, HttpResponseStatus.CREATED))
@@ -120,7 +120,7 @@ public class EmitterTest
     HttpPostEmitter emitter = new HttpPostEmitter(
         config,
         httpClient,
-        jsonMapper
+        JSON_MAPPER
     );
     emitter.start();
     return emitter;
@@ -135,7 +135,7 @@ public class EmitterTest
     HttpPostEmitter emitter = new HttpPostEmitter(
         config,
         httpClient,
-        jsonMapper
+        JSON_MAPPER
     );
     emitter.start();
     return emitter;
@@ -150,7 +150,7 @@ public class EmitterTest
     props.setProperty("org.apache.druid.java.util.emitter.flushCount", String.valueOf(size));
 
     Lifecycle lifecycle = new Lifecycle();
-    Emitter emitter = Emitters.create(props, httpClient, jsonMapper, lifecycle);
+    Emitter emitter = Emitters.create(props, httpClient, JSON_MAPPER, lifecycle);
     Assert.assertTrue(StringUtils.format(
         "HttpPostEmitter emitter should be created, but found %s",
         emitter.getClass().getName()
@@ -169,7 +169,7 @@ public class EmitterTest
     HttpPostEmitter emitter = new HttpPostEmitter(
         config,
         httpClient,
-        jsonMapper
+        JSON_MAPPER
     );
     emitter.start();
     return emitter;
@@ -187,7 +187,7 @@ public class EmitterTest
     HttpPostEmitter emitter = new HttpPostEmitter(
         config,
         httpClient,
-        jsonMapper
+        JSON_MAPPER
     );
     emitter.start();
     return emitter;
@@ -203,7 +203,7 @@ public class EmitterTest
     HttpPostEmitter emitter = new HttpPostEmitter(
         config,
         httpClient,
-        jsonMapper
+        JSON_MAPPER
     );
     emitter.start();
     return emitter;
@@ -232,8 +232,8 @@ public class EmitterTest
             Assert.assertEquals(
                 StringUtils.format(
                     "[%s,%s]\n",
-                    jsonMapper.writeValueAsString(events.get(0)),
-                    jsonMapper.writeValueAsString(events.get(1))
+                    JSON_MAPPER.writeValueAsString(events.get(0)),
+                    JSON_MAPPER.writeValueAsString(events.get(1))
                 ),
                 StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
@@ -274,8 +274,8 @@ public class EmitterTest
             Assert.assertEquals(
                 StringUtils.format(
                     "[%s,%s]\n",
-                    jsonMapper.writeValueAsString(events.get(0)),
-                    jsonMapper.writeValueAsString(events.get(1))
+                    JSON_MAPPER.writeValueAsString(events.get(0)),
+                    JSON_MAPPER.writeValueAsString(events.get(1))
                 ),
                 StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
@@ -459,8 +459,8 @@ public class EmitterTest
             Assert.assertEquals(
                 StringUtils.format(
                     "%s\n%s\n",
-                    jsonMapper.writeValueAsString(events.get(0)),
-                    jsonMapper.writeValueAsString(events.get(1))
+                    JSON_MAPPER.writeValueAsString(events.get(0)),
+                    JSON_MAPPER.writeValueAsString(events.get(1))
                 ),
                 StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
@@ -513,8 +513,8 @@ public class EmitterTest
             Assert.assertEquals(
                 StringUtils.format(
                     "[%s,%s]\n",
-                    jsonMapper.writeValueAsString(events.get(counter.getAndIncrement())),
-                    jsonMapper.writeValueAsString(events.get(counter.getAndIncrement()))
+                    JSON_MAPPER.writeValueAsString(events.get(counter.getAndIncrement())),
+                    JSON_MAPPER.writeValueAsString(events.get(counter.getAndIncrement()))
                 ),
                 StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
@@ -576,8 +576,8 @@ public class EmitterTest
             Assert.assertEquals(
                 StringUtils.format(
                     "[%s,%s]\n",
-                    jsonMapper.writeValueAsString(events.get(0)),
-                    jsonMapper.writeValueAsString(events.get(1))
+                    JSON_MAPPER.writeValueAsString(events.get(0)),
+                    JSON_MAPPER.writeValueAsString(events.get(1))
                 ),
                 baos.toString(StandardCharsets.UTF_8.name())
             );

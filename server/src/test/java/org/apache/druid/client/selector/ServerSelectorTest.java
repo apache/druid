@@ -32,19 +32,13 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.easymock.EasyMock.expect;
-
-/**
- */
 public class ServerSelectorTest
 {
-  TierSelectorStrategy tierSelectorStrategy;
-
   @Before
   public void setUp()
   {
-    tierSelectorStrategy = EasyMock.createMock(TierSelectorStrategy.class);
-    expect(tierSelectorStrategy.getComparator()).andReturn(Integer::compare).anyTimes();
+    TierSelectorStrategy tierSelectorStrategy = EasyMock.createMock(TierSelectorStrategy.class);
+    EasyMock.expect(tierSelectorStrategy.getComparator()).andReturn(Integer::compare).anyTimes();
   }
 
   @Test

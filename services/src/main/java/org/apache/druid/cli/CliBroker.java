@@ -29,7 +29,6 @@ import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.CacheConfig;
-import org.apache.druid.client.cache.CacheMonitor;
 import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.ServerSelectorStrategy;
 import org.apache.druid.client.selector.TierSelectorStrategy;
@@ -52,7 +51,6 @@ import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.http.BrokerResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
-import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.router.TieredBrokerConfig;
 import org.apache.druid.sql.guice.SqlModule;
@@ -65,7 +63,7 @@ import java.util.List;
  */
 @Command(
     name = "broker",
-    description = "Runs a broker node, see http://druid.io/docs/latest/Broker.html for a description"
+    description = "Runs a broker node, see https://druid.apache.org/docs/latest/Broker.html for a description"
 )
 public class CliBroker extends ServerRunnable
 {
@@ -117,8 +115,6 @@ public class CliBroker extends ServerRunnable
           LifecycleModule.register(binder, BrokerQueryResource.class);
 
           Jerseys.addResource(binder, HttpServerInventoryViewResource.class);
-
-          MetricsModule.register(binder, CacheMonitor.class);
 
           LifecycleModule.register(binder, Server.class);
 

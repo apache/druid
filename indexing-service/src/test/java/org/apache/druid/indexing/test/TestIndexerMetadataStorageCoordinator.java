@@ -19,15 +19,18 @@
 
 package org.apache.druid.indexing.test;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -37,6 +40,7 @@ import java.util.Set;
 
 public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataStorageCoordinator
 {
+  private final ObjectMapper objectMapper = new DefaultObjectMapper();
   private final Set<DataSegment> published = Sets.newConcurrentHashSet();
   private final Set<DataSegment> nuked = Sets.newConcurrentHashSet();
   private final List<DataSegment> unusedSegments;
@@ -116,7 +120,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   )
   {
     // Don't actually compare metadata, just do it!
-    return new SegmentPublishResult(announceHistoricalSegments(segments), true);
+    return SegmentPublishResult.ok(announceHistoricalSegments(segments));
   }
 
   @Override
@@ -125,11 +129,17 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       String sequenceName,
       String previousSegmentId,
       Interval interval,
+      ShardSpecFactory shardSpecFactory,
       String maxVersion,
       boolean skipSegmentLineageCheck
   )
   {
-    throw new UnsupportedOperationException();
+    return new SegmentIdWithShardSpec(
+        dataSource,
+        interval,
+        maxVersion,
+        shardSpecFactory.create(objectMapper, 0)
+    );
   }
 
   @Override

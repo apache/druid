@@ -20,12 +20,12 @@
 package org.apache.druid.query.aggregation.variance;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
-
 import java.nio.ByteBuffer;
 
 /**
@@ -89,15 +89,17 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     @Override
     public void aggregate(ByteBuffer buf, int position)
     {
-      float v = selector.getFloat();
-      long count = buf.getLong(position + COUNT_OFFSET) + 1;
-      double sum = buf.getDouble(position + SUM_OFFSET) + v;
-      buf.putLong(position, count);
-      buf.putDouble(position + SUM_OFFSET, sum);
-      if (count > 1) {
-        double t = count * v - sum;
-        double variance = buf.getDouble(position + NVARIANCE_OFFSET) + (t * t) / ((double) count * (count - 1));
-        buf.putDouble(position + NVARIANCE_OFFSET, variance);
+      if (NullHandling.replaceWithDefault() || !selector.isNull()) {
+        float v = selector.getFloat();
+        long count = buf.getLong(position + COUNT_OFFSET) + 1;
+        double sum = buf.getDouble(position + SUM_OFFSET) + v;
+        buf.putLong(position, count);
+        buf.putDouble(position + SUM_OFFSET, sum);
+        if (count > 1) {
+          double t = count * v - sum;
+          double variance = buf.getDouble(position + NVARIANCE_OFFSET) + (t * t) / ((double) count * (count - 1));
+          buf.putDouble(position + NVARIANCE_OFFSET, variance);
+        }
       }
     }
 
@@ -120,15 +122,17 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     @Override
     public void aggregate(ByteBuffer buf, int position)
     {
-      long v = selector.getLong();
-      long count = buf.getLong(position + COUNT_OFFSET) + 1;
-      double sum = buf.getDouble(position + SUM_OFFSET) + v;
-      buf.putLong(position, count);
-      buf.putDouble(position + SUM_OFFSET, sum);
-      if (count > 1) {
-        double t = count * v - sum;
-        double variance = buf.getDouble(position + NVARIANCE_OFFSET) + (t * t) / ((double) count * (count - 1));
-        buf.putDouble(position + NVARIANCE_OFFSET, variance);
+      if (NullHandling.replaceWithDefault() || !selector.isNull()) {
+        long v = selector.getLong();
+        long count = buf.getLong(position + COUNT_OFFSET) + 1;
+        double sum = buf.getDouble(position + SUM_OFFSET) + v;
+        buf.putLong(position, count);
+        buf.putDouble(position + SUM_OFFSET, sum);
+        if (count > 1) {
+          double t = count * v - sum;
+          double variance = buf.getDouble(position + NVARIANCE_OFFSET) + (t * t) / ((double) count * (count - 1));
+          buf.putDouble(position + NVARIANCE_OFFSET, variance);
+        }
       }
     }
 

@@ -1,0 +1,23 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`home view matches snapshot 1`] = `
+<div
+  className="home-view app-view"
+>
+  <StatusCard />
+  <DatasourcesCard
+    noSqlMode={false}
+  />
+  <SegmentsCard
+    noSqlMode={false}
+  />
+  <SupervisorsCard />
+  <TasksCard
+    noSqlMode={false}
+  />
+  <ServersCard
+    noSqlMode={false}
+  />
+  <LookupsCard />
+</div>
+`;

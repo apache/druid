@@ -86,14 +86,14 @@ public class IndexIO
   public static final byte V8_VERSION = 0x8;
   public static final byte V9_VERSION = 0x9;
   public static final int CURRENT_VERSION_ID = V9_VERSION;
-  public static BitmapSerdeFactory LEGACY_FACTORY = new BitmapSerde.LegacyBitmapSerdeFactory();
+  public static final BitmapSerdeFactory LEGACY_FACTORY = new BitmapSerde.LegacyBitmapSerdeFactory();
 
   public static final ByteOrder BYTE_ORDER = ByteOrder.nativeOrder();
 
   private final Map<Integer, IndexLoader> indexLoaders;
 
   private static final EmittingLogger log = new EmittingLogger(IndexIO.class);
-  private static final SerializerUtils serializerUtils = new SerializerUtils();
+  private static final SerializerUtils SERIALIZER_UTILS = new SerializerUtils();
 
   private final ObjectMapper mapper;
 
@@ -335,7 +335,7 @@ public class IndexIO
           GenericIndexed.STRING_STRATEGY,
           smooshedFiles
       );
-      final Interval dataInterval = Intervals.of(serializerUtils.readString(indexBuffer));
+      final Interval dataInterval = Intervals.of(SERIALIZER_UTILS.readString(indexBuffer));
       final BitmapSerdeFactory bitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
 
       CompressedColumnarLongsSupplier timestamps = CompressedColumnarLongsSupplier.fromByteBuffer(
@@ -360,7 +360,7 @@ public class IndexIO
 
       for (String dimension : IndexedIterable.create(availableDimensions)) {
         ByteBuffer dimBuffer = smooshedFiles.mapFile(makeDimFile(inDir, dimension).getName());
-        String fileDimensionName = serializerUtils.readString(dimBuffer);
+        String fileDimensionName = SERIALIZER_UTILS.readString(dimBuffer);
         Preconditions.checkState(
             dimension.equals(fileDimensionName),
             "Dimension file[%s] has dimension[%s] in it!?",
@@ -375,7 +375,7 @@ public class IndexIO
       ByteBuffer invertedBuffer = smooshedFiles.mapFile("inverted.drd");
       for (int i = 0; i < availableDimensions.size(); ++i) {
         bitmaps.put(
-            serializerUtils.readString(invertedBuffer),
+            SERIALIZER_UTILS.readString(invertedBuffer),
             GenericIndexed.read(invertedBuffer, bitmapSerdeFactory.getObjectStrategy())
         );
       }
@@ -384,7 +384,7 @@ public class IndexIO
       ByteBuffer spatialBuffer = smooshedFiles.mapFile("spatial.drd");
       while (spatialBuffer != null && spatialBuffer.hasRemaining()) {
         spatialIndexed.put(
-            serializerUtils.readString(spatialBuffer),
+            SERIALIZER_UTILS.readString(spatialBuffer),
             new ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory()).fromByteBufferWithSize(
                 spatialBuffer
             )
@@ -504,7 +504,7 @@ public class IndexIO
     private Supplier<ColumnHolder> getColumnHolderSupplier(ColumnBuilder builder, boolean lazy)
     {
       if (lazy) {
-        return  Suppliers.memoize(() -> builder.build());
+        return Suppliers.memoize(() -> builder.build());
       } else {
         ColumnHolder columnHolder = builder.build();
         return () -> columnHolder;
@@ -558,7 +558,7 @@ public class IndexIO
        * this information is appended to the end of index.drd.
        */
       if (indexBuffer.hasRemaining()) {
-        segmentBitmapSerdeFactory = mapper.readValue(serializerUtils.readString(indexBuffer), BitmapSerdeFactory.class);
+        segmentBitmapSerdeFactory = mapper.readValue(SERIALIZER_UTILS.readString(indexBuffer), BitmapSerdeFactory.class);
       } else {
         segmentBitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
       }
@@ -568,7 +568,7 @@ public class IndexIO
       if (metadataBB != null) {
         try {
           metadata = mapper.readValue(
-              serializerUtils.readBytes(metadataBB, metadataBB.remaining()),
+              SERIALIZER_UTILS.readBytes(metadataBB, metadataBB.remaining()),
               Metadata.class
           );
         }
@@ -647,7 +647,7 @@ public class IndexIO
         throws IOException
     {
       ColumnDescriptor serde = mapper.readValue(
-          serializerUtils.readString(byteBuffer), ColumnDescriptor.class
+          SERIALIZER_UTILS.readString(byteBuffer), ColumnDescriptor.class
       );
       return serde.read(byteBuffer, columnConfig, smooshedFiles);
     }

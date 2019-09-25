@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import net.jpountz.lz4.LZ4BlockInputStream;
 import net.jpountz.lz4.LZ4BlockOutputStream;
@@ -33,6 +32,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -40,8 +40,11 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -56,11 +59,12 @@ import java.util.Set;
 public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 {
   private static final Logger log = new Logger(SpillingGrouper.class);
-
-  private final Grouper<KeyType> grouper;
-  private static final AggregateResult DISK_FULL = AggregateResult.failure(
+  private static final AggregateResult DISK_FULL = AggregateResult.partial(
+      0,
       "Not enough disk space to execute this query. Try raising druid.query.groupBy.maxOnDiskStorage."
   );
+
+  private final Grouper<KeyType> grouper;
   private final KeySerde<KeyType> keySerde;
   private final LimitedTemporaryStorage temporaryStorage;
   private final ObjectMapper spillMapper;
@@ -97,8 +101,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       LimitedBufferHashGrouper<KeyType> limitGrouper = new LimitedBufferHashGrouper<>(
           bufferSupplier,
           keySerde,
-          columnSelectorFactory,
-          aggregatorFactories,
+          AggregatorAdapters.factorizeBuffered(columnSelectorFactory, Arrays.asList(aggregatorFactories)),
           bufferGrouperMaxSize,
           bufferGrouperMaxLoadFactor,
           bufferGrouperInitialBuckets,
@@ -120,8 +123,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
         this.grouper = new BufferHashGrouper<>(
             bufferSupplier,
             keySerde,
-            columnSelectorFactory,
-            aggregatorFactories,
+            AggregatorAdapters.factorizeBuffered(columnSelectorFactory, Arrays.asList(aggregatorFactories)),
             bufferGrouperMaxSize,
             bufferGrouperMaxLoadFactor,
             bufferGrouperInitialBuckets,
@@ -134,8 +136,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       this.grouper = new BufferHashGrouper<>(
           bufferSupplier,
           keySerde,
-          columnSelectorFactory,
-          aggregatorFactories,
+          AggregatorAdapters.factorizeBuffered(columnSelectorFactory, Arrays.asList(aggregatorFactories)),
           bufferGrouperMaxSize,
           bufferGrouperMaxLoadFactor,
           bufferGrouperInitialBuckets,
@@ -169,6 +170,9 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     if (result.isOk() || !spillingAllowed || temporaryStorage.maxSize() <= 0) {
       return result;
     } else {
+      // Expecting all-or-nothing behavior.
+      assert result.getCount() == 0;
+
       // Warning: this can potentially block up a processing thread for a while.
       try {
         spill();
@@ -177,7 +181,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
         return DISK_FULL;
       }
       catch (IOException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
 
       // Try again.
@@ -213,8 +217,10 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 
     for (File dictFile : dictionaryFiles) {
       try (
+          final InputStream fileStream = Files.newInputStream(dictFile.toPath());
+          final LZ4BlockInputStream blockStream = new LZ4BlockInputStream(fileStream);
           final MappingIterator<String> dictIterator = spillMapper.readValues(
-              spillMapper.getFactory().createParser(new LZ4BlockInputStream(new FileInputStream(dictFile))),
+              spillMapper.getFactory().createParser(blockStream),
               spillMapper.getTypeFactory().constructType(String.class)
           )
       ) {
@@ -319,7 +325,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       );
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

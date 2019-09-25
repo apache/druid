@@ -46,7 +46,7 @@ public class LongCardinalityAggregatorColumnSelectorStrategy
   public void hashValues(BaseLongColumnValueSelector selector, HyperLogLogCollector collector)
   {
     if (NullHandling.replaceWithDefault() || !selector.isNull()) {
-      collector.add(CardinalityAggregator.hashFn.hashLong(selector.getLong()).asBytes());
+      collector.add(CardinalityAggregator.HASH_FUNCTION.hashLong(selector.getLong()).asBytes());
     }
   }
 }

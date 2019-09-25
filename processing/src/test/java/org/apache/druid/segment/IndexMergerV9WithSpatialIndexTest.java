@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
@@ -60,7 +59,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -528,7 +526,7 @@ public class IndexMergerV9WithSpatialIndexTest
 
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -574,7 +572,7 @@ public class IndexMergerV9WithSpatialIndexTest
     try {
       TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
           new TimeseriesQueryQueryToolChest(
-              QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
           ),
           new TimeseriesQueryEngine(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
@@ -585,10 +583,10 @@ public class IndexMergerV9WithSpatialIndexTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<>()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -628,7 +626,7 @@ public class IndexMergerV9WithSpatialIndexTest
     try {
       TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
           new TimeseriesQueryQueryToolChest(
-              QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
           ),
           new TimeseriesQueryEngine(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
@@ -639,10 +637,10 @@ public class IndexMergerV9WithSpatialIndexTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<>()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -717,7 +715,7 @@ public class IndexMergerV9WithSpatialIndexTest
     try {
       TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
           new TimeseriesQueryQueryToolChest(
-              QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
           ),
           new TimeseriesQueryEngine(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
@@ -728,10 +726,10 @@ public class IndexMergerV9WithSpatialIndexTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<>()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 }

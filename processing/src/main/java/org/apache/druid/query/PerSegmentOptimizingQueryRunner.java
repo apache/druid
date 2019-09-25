@@ -20,8 +20,7 @@
 package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.guava.Sequence;
-
-import java.util.Map;
+import org.apache.druid.query.context.ResponseContext;
 
 /**
  * This runner optimizes queries made on a single segment, using per-segment information,
@@ -49,7 +48,7 @@ public class PerSegmentOptimizingQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final QueryPlus<T> input, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> input, final ResponseContext responseContext)
   {
     return base.run(
         input.optimizeForSegment(optimizationContext),

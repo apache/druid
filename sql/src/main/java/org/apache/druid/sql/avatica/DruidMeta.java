@@ -22,7 +22,6 @@ package org.apache.druid.sql.avatica;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -54,6 +53,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -68,11 +68,13 @@ public class DruidMeta extends MetaImpl
   private final AvaticaServerConfig config;
   private final List<Authenticator> authenticators;
 
-  // Used to track logical connections.
-  private final Map<String, DruidConnection> connections = new ConcurrentHashMap<>();
+  /** Used to track logical connections. */
+  private final ConcurrentMap<String, DruidConnection> connections = new ConcurrentHashMap<>();
 
-  // Number of connections reserved in "connections". May be higher than the actual number of connections at times,
-  // such as when we're reserving space to open a new one.
+  /**
+   * Number of connections reserved in "connections". May be higher than the actual number of connections at times,
+   * such as when we're reserving space to open a new one.
+   */
   private final AtomicInteger connectionCount = new AtomicInteger();
 
   @Inject
@@ -618,7 +620,7 @@ public class DruidMeta extends MetaImpl
       return metaResultSet;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     finally {
       closeStatement(statement);

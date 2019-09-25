@@ -31,6 +31,7 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
@@ -247,6 +248,15 @@ public final class SegmentId implements Comparable<SegmentId>
     return of(dataSource, Intervals.ETERNITY, "dummy_version", 0);
   }
 
+  /**
+   * Creates a dummy SegmentId with the given data source and partition number.
+   * This method is useful in benchmark and test code.
+   */
+  public static SegmentId dummy(String dataSource, int partitionNum)
+  {
+    return of(dataSource, Intervals.ETERNITY, "dummy_version", partitionNum);
+  }
+
   private final String dataSource;
   /**
    * {@code intervalStartMillis}, {@link #intervalEndMillis} and {@link #intervalChronology} are the three fields of
@@ -313,7 +323,6 @@ public final class SegmentId implements Comparable<SegmentId>
     return new Interval(intervalStartMillis, intervalEndMillis, intervalChronology);
   }
 
-  @Nullable
   public String getVersion()
   {
     return version;
@@ -327,6 +336,11 @@ public final class SegmentId implements Comparable<SegmentId>
   public SegmentId withInterval(Interval newInterval)
   {
     return of(dataSource, newInterval, version, partitionNum);
+  }
+
+  public SegmentDescriptor toDescriptor()
+  {
+    return new SegmentDescriptor(Intervals.utc(intervalStartMillis, intervalEndMillis), version, partitionNum);
   }
 
   @Override

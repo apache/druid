@@ -20,7 +20,6 @@
 package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
@@ -38,7 +37,7 @@ import org.apache.druid.guice.RouterProcessingModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.http.JettyHttpClientModule;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.lookup.LookupModule;
+import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.server.AsyncQueryForwardingServlet;
 import org.apache.druid.server.http.RouterResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
@@ -60,7 +59,7 @@ import java.util.List;
  */
 @Command(
     name = "router",
-    description = "Experimental! Understands tiers and routes things to different brokers, see http://druid.io/docs/latest/development/router.html for a description"
+    description = "Experimental! Understands tiers and routes things to different brokers, see https://druid.apache.org/docs/latest/development/router.html for a description"
 )
 public class CliRouter extends ServerRunnable
 {
@@ -80,44 +79,39 @@ public class CliRouter extends ServerRunnable
         new QueryRunnerFactoryModule(),
         new JettyHttpClientModule("druid.router.http", Router.class),
         JettyHttpClientModule.global(),
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/router");
-            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8888);
-            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(9088);
+        binder -> {
+          binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/router");
+          binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8888);
+          binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(9088);
 
-            JsonConfigProvider.bind(binder, "druid.router", TieredBrokerConfig.class);
-            JsonConfigProvider.bind(binder, "druid.router.avatica.balancer", AvaticaConnectionBalancer.class);
-            JsonConfigProvider.bind(binder, "druid.router.managementProxy", ManagementProxyConfig.class);
+          JsonConfigProvider.bind(binder, "druid.router", TieredBrokerConfig.class);
+          JsonConfigProvider.bind(binder, "druid.router.avatica.balancer", AvaticaConnectionBalancer.class);
+          JsonConfigProvider.bind(binder, "druid.router.managementProxy", ManagementProxyConfig.class);
 
-            binder.bind(CoordinatorRuleManager.class);
-            LifecycleModule.register(binder, CoordinatorRuleManager.class);
+          binder.bind(CoordinatorRuleManager.class);
+          LifecycleModule.register(binder, CoordinatorRuleManager.class);
 
-            binder.bind(TieredBrokerHostSelector.class).in(ManageLifecycle.class);
-            binder.bind(QueryHostFinder.class).in(LazySingleton.class);
-            binder.bind(new TypeLiteral<List<TieredBrokerSelectorStrategy>>() {})
-                  .toProvider(TieredBrokerSelectorStrategiesProvider.class)
-                  .in(LazySingleton.class);
+          binder.bind(TieredBrokerHostSelector.class).in(ManageLifecycle.class);
+          binder.bind(QueryHostFinder.class).in(LazySingleton.class);
+          binder.bind(new TypeLiteral<List<TieredBrokerSelectorStrategy>>() {})
+                .toProvider(TieredBrokerSelectorStrategiesProvider.class)
+                .in(LazySingleton.class);
 
-            binder.bind(QueryCountStatsProvider.class).to(AsyncQueryForwardingServlet.class).in(LazySingleton.class);
-            binder.bind(JettyServerInitializer.class).to(RouterJettyServerInitializer.class).in(LazySingleton.class);
+          binder.bind(QueryCountStatsProvider.class).to(AsyncQueryForwardingServlet.class).in(LazySingleton.class);
+          binder.bind(JettyServerInitializer.class).to(RouterJettyServerInitializer.class).in(LazySingleton.class);
 
-            Jerseys.addResource(binder, RouterResource.class);
+          Jerseys.addResource(binder, RouterResource.class);
 
-            LifecycleModule.register(binder, RouterResource.class);
-            LifecycleModule.register(binder, Server.class);
-            DiscoveryModule.register(binder, Self.class);
+          LifecycleModule.register(binder, RouterResource.class);
+          LifecycleModule.register(binder, Server.class);
+          DiscoveryModule.register(binder, Self.class);
 
-            bindAnnouncer(
-                binder,
-                DiscoverySideEffectsProvider.builder(NodeType.ROUTER).build()
-            );
-          }
+          bindAnnouncer(
+              binder,
+              DiscoverySideEffectsProvider.builder(NodeType.ROUTER).build()
+          );
         },
-        new LookupModule()
+        new LookupSerdeModule()
     );
   }
 }

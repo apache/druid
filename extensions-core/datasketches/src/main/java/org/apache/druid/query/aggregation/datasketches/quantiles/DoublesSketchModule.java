@@ -22,10 +22,13 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import com.yahoo.sketches.quantiles.DoublesSketch;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchSqlAggregator;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.sql.guice.SqlBindings;
 
 import java.util.Collections;
 import java.util.List;
@@ -39,14 +42,15 @@ public class DoublesSketchModule implements DruidModule
   public static final String DOUBLES_SKETCH_HISTOGRAM_POST_AGG = "quantilesDoublesSketchToHistogram";
   public static final String DOUBLES_SKETCH_QUANTILE_POST_AGG = "quantilesDoublesSketchToQuantile";
   public static final String DOUBLES_SKETCH_QUANTILES_POST_AGG = "quantilesDoublesSketchToQuantiles";
+  public static final String DOUBLES_SKETCH_RANK_POST_AGG = "quantilesDoublesSketchToRank";
+  public static final String DOUBLES_SKETCH_CDF_POST_AGG = "quantilesDoublesSketchToCDF";
   public static final String DOUBLES_SKETCH_TO_STRING_POST_AGG = "quantilesDoublesSketchToString";
 
   @Override
   public void configure(final Binder binder)
   {
-    if (ComplexMetrics.getSerdeForType(DOUBLES_SKETCH) == null) {
-      ComplexMetrics.registerSerde(DOUBLES_SKETCH, new DoublesSketchComplexMetricSerde());
-    }
+    registerSerde();
+    SqlBindings.addAggregator(binder, DoublesSketchSqlAggregator.class);
   }
 
   @Override
@@ -60,9 +64,16 @@ public class DoublesSketchModule implements DruidModule
                 new NamedType(DoublesSketchToHistogramPostAggregator.class, DOUBLES_SKETCH_HISTOGRAM_POST_AGG),
                 new NamedType(DoublesSketchToQuantilePostAggregator.class, DOUBLES_SKETCH_QUANTILE_POST_AGG),
                 new NamedType(DoublesSketchToQuantilesPostAggregator.class, DOUBLES_SKETCH_QUANTILES_POST_AGG),
+                new NamedType(DoublesSketchToRankPostAggregator.class, DOUBLES_SKETCH_RANK_POST_AGG),
+                new NamedType(DoublesSketchToCDFPostAggregator.class, DOUBLES_SKETCH_CDF_POST_AGG),
                 new NamedType(DoublesSketchToStringPostAggregator.class, DOUBLES_SKETCH_TO_STRING_POST_AGG)
             ).addSerializer(DoublesSketch.class, new DoublesSketchJsonSerializer())
     );
   }
 
+  @VisibleForTesting
+  public static void registerSerde()
+  {
+    ComplexMetrics.registerSerde(DOUBLES_SKETCH, new DoublesSketchComplexMetricSerde());
+  }
 }

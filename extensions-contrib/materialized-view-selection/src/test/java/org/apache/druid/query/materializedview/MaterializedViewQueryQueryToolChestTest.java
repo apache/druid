@@ -44,10 +44,10 @@ public class MaterializedViewQueryQueryToolChestTest
   public void testMakePostComputeManipulatorFn()
   {
     TimeseriesQuery realQuery = Druids.newTimeseriesQueryBuilder()
-                                        .dataSource(QueryRunnerTestHelper.dataSource)
-                                        .granularity(QueryRunnerTestHelper.dayGran)
-                                        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-                                        .aggregators(QueryRunnerTestHelper.rowsCount)
+                                        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                        .granularity(QueryRunnerTestHelper.DAY_GRAN)
+                                        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                                        .aggregators(QueryRunnerTestHelper.ROWS_COUNT)
                                         .descending(true)
                                         .build();
     MaterializedViewQuery materializedViewQuery = new MaterializedViewQuery(realQuery, null);
@@ -58,7 +58,7 @@ public class MaterializedViewQueryQueryToolChestTest
                 .put(
                     TimeseriesQuery.class,
                     new TimeseriesQueryQueryToolChest(
-                        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
                     )
                 )
                 .build()
@@ -87,7 +87,7 @@ public class MaterializedViewQueryQueryToolChestTest
 
     Assert.assertEquals(postResult.getTimestamp(), result.getTimestamp());
     Assert.assertEquals(postResultMap.size(), 2);
-    Assert.assertEquals(postResultMap.get(QueryRunnerTestHelper.rowsCount.getName()), "metricvalue1");
+    Assert.assertEquals(postResultMap.get(QueryRunnerTestHelper.ROWS_COUNT.getName()), "metricvalue1");
     Assert.assertEquals(postResultMap.get("dim1"), "dimvalue1");
   }
 }

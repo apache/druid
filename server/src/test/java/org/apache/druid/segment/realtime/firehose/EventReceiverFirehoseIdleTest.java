@@ -55,7 +55,7 @@ public class EventReceiverFirehoseIdleTest
   private HttpServletRequest req;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     req = EasyMock.createMock(HttpServletRequest.class);
     eventReceiverFirehoseFactory = new EventReceiverFirehoseFactory(
@@ -87,8 +87,20 @@ public class EventReceiverFirehoseIdleTest
   @Test(timeout = 40_000L)
   public void testIdle() throws Exception
   {
-    Thread.sleep(8_000L);
-    Assert.assertTrue(firehose.isClosed());
+    awaitFirehoseClosed();
+    awaitDelayedExecutorThreadTerminated();
+  }
+
+  private void awaitFirehoseClosed() throws InterruptedException
+  {
+    while (!firehose.isClosed()) {
+      Thread.sleep(50);
+    }
+  }
+
+  private void awaitDelayedExecutorThreadTerminated() throws InterruptedException
+  {
+    firehose.getDelayedCloseExecutor().join();
   }
 
   @Test(timeout = 40_000L)
@@ -117,7 +129,7 @@ public class EventReceiverFirehoseIdleTest
       Thread.sleep(3_000L);
     }
 
-    Thread.sleep(5_000L);
-    Assert.assertTrue(firehose.isClosed());
+    awaitFirehoseClosed();
+    awaitDelayedExecutorThreadTerminated();
   }
 }

@@ -60,7 +60,7 @@ import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskClient;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
 import org.apache.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import org.apache.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
 import org.apache.druid.indexing.overlord.ForkingTaskRunnerFactory;
@@ -79,6 +79,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfi
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningStrategy;
+import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.helpers.OverlordHelper;
 import org.apache.druid.indexing.overlord.helpers.TaskLogAutoCleaner;
@@ -87,11 +88,16 @@ import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerResource;
 import org.apache.druid.indexing.overlord.http.OverlordRedirectInfo;
 import org.apache.druid.indexing.overlord.http.OverlordResource;
+import org.apache.druid.indexing.overlord.sampler.SamplerModule;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorModule;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorResource;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.lookup.LookupSerdeModule;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.audit.AuditManagerProvider;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
@@ -123,13 +129,13 @@ import java.util.List;
  */
 @Command(
     name = "overlord",
-    description = "Runs an Overlord node, see http://druid.io/docs/latest/Indexing-Service.html for a description"
+    description = "Runs an Overlord node, see https://druid.apache.org/docs/latest/Indexing-Service.html for a description"
 )
 public class CliOverlord extends ServerRunnable
 {
   private static Logger log = new Logger(CliOverlord.class);
 
-  protected static List<String> UNSECURED_PATHS = ImmutableList.of(
+  protected static final List<String> UNSECURED_PATHS = ImmutableList.of(
       "/",
       "/favicon.png",
       "/console.html",
@@ -169,6 +175,7 @@ public class CliOverlord extends ServerRunnable
 
             JsonConfigProvider.bind(binder, "druid.coordinator.asOverlord", CoordinatorOverlordServiceConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
+            JsonConfigProvider.bind(binder, "druid.indexer.tasklock", TaskLockConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.auditlog", TaskAuditLogConfig.class);
 
@@ -196,7 +203,9 @@ public class CliOverlord extends ServerRunnable
             binder.bind(SupervisorManager.class).in(LazySingleton.class);
 
             binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
-            binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexTaskClient>>() {})
+            binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexSupervisorTaskClient>>()
+            {
+            })
                   .toProvider(Providers.of(null));
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.of(null));
 
@@ -234,6 +243,11 @@ public class CliOverlord extends ServerRunnable
             Jerseys.addResource(binder, OverlordResource.class);
             Jerseys.addResource(binder, SupervisorResource.class);
             Jerseys.addResource(binder, HttpRemoteTaskRunnerResource.class);
+
+
+            binder.bind(AppenderatorsManager.class)
+                  .to(DummyForInjectionAppenderatorsManager.class)
+                  .in(LazySingleton.class);
 
             if (standalone) {
               LifecycleModule.register(binder, Server.class);
@@ -331,7 +345,10 @@ public class CliOverlord extends ServerRunnable
           }
         },
         new IndexingServiceFirehoseModule(),
-        new IndexingServiceTaskLogsModule()
+        new IndexingServiceTaskLogsModule(),
+        new SupervisorModule(),
+        new LookupSerdeModule(),
+        new SamplerModule()
     );
   }
 
@@ -371,9 +388,9 @@ public class CliOverlord extends ServerRunnable
 
       AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
 
-      // perform no-op authorization for these resources
-      AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
-      AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
+      // perform no-op authorization/authentication for these resources
+      AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, UNSECURED_PATHS);
+      AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
       final List<Authenticator> authenticators = authenticatorMapper.getAuthenticatorChain();
       AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);

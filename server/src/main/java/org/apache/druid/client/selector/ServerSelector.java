@@ -20,9 +20,11 @@
 package org.apache.druid.client.selector;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
+import org.apache.druid.client.DataSegmentInterner;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Overshadowable;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -34,7 +36,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
-public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
+public class ServerSelector implements DiscoverySelector<QueryableDruidServer>, Overshadowable<ServerSelector>
 {
 
   private final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> historicalServers;
@@ -50,7 +52,7 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
       TierSelectorStrategy strategy
   )
   {
-    this.segment = new AtomicReference<>(segment);
+    this.segment = new AtomicReference<>(DataSegmentInterner.intern(segment));
     this.strategy = strategy;
     this.historicalServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
     this.realtimeServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
@@ -126,7 +128,7 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
             .map(server -> server.getServer().getMetadata())
             .forEach(candidates::add);
 
-        if (candidates.size() < numCandidates) {
+        if (candidates.size() < numCandidates) { //-V6007: false alarm due to a bug in PVS-Studio
           strategy.pick(realtimeServers, segment.get(), numCandidates - candidates.size())
               .stream()
               .map(server -> server.getServer().getMetadata())
@@ -167,5 +169,43 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
       }
       return strategy.pick(realtimeServers, segment.get());
     }
+  }
+
+  @Override
+  public boolean overshadows(ServerSelector other)
+  {
+    final DataSegment thisSegment = segment.get();
+    final DataSegment thatSegment = other.getSegment();
+    return thisSegment.overshadows(thatSegment);
+  }
+
+  @Override
+  public int getStartRootPartitionId()
+  {
+    return segment.get().getStartRootPartitionId();
+  }
+
+  @Override
+  public int getEndRootPartitionId()
+  {
+    return segment.get().getEndRootPartitionId();
+  }
+
+  @Override
+  public String getVersion()
+  {
+    return segment.get().getVersion();
+  }
+
+  @Override
+  public short getMinorVersion()
+  {
+    return segment.get().getMinorVersion();
+  }
+
+  @Override
+  public short getAtomicUpdateGroupSize()
+  {
+    return segment.get().getAtomicUpdateGroupSize();
   }
 }

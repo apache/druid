@@ -19,17 +19,35 @@
 
 package org.apache.druid.query;
 
+import org.apache.druid.java.util.common.logger.Logger;
+
 /**
  */
 @Deprecated
 public class ReflectionQueryToolChestWarehouse implements QueryToolChestWarehouse
 {
-  ReflectionLoaderThingy<QueryToolChest> loader = ReflectionLoaderThingy.create(QueryToolChest.class);
+  private static final Logger log = new Logger(ReflectionQueryToolChestWarehouse.class);
+
+  private final ClassValue<QueryToolChest<?, ?>> toolChests = new ClassValue<QueryToolChest<?, ?>>()
+  {
+    @Override
+    protected QueryToolChest<?, ?> computeValue(Class<?> type)
+    {
+      try {
+        final Class<?> queryToolChestClass = Class.forName(type.getName() + "QueryToolChest");
+        return (QueryToolChest<?, ?>) queryToolChestClass.newInstance();
+      }
+      catch (Exception e) {
+        log.warn(e, "Unable to load interface[QueryToolChest] for input class[%s]", type);
+        throw new RuntimeException(e);
+      }
+    }
+  };
 
   @Override
   @SuppressWarnings("unchecked")
   public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(QueryType query)
   {
-    return (QueryToolChest<T, QueryType>) loader.getForObject(query);
+    return (QueryToolChest<T, QueryType>) toolChests.get(query.getClass());
   }
 }

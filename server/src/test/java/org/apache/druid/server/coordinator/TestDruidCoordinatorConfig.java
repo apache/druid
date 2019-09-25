@@ -44,8 +44,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration coordinatorKillDurationToRetain,
       int coordinatorKillMaxSegments,
       String consoleStatic,
-      boolean mergeSegments,
-      boolean convertSegments,
       Duration getLoadQueuePeonRepeatDelay
   )
   {
@@ -108,8 +106,10 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     return consoleStatic;
   }
 
-  @Override public Duration getLoadQueuePeonRepeatDelay()
+  @Override
+  public Duration getLoadQueuePeonRepeatDelay()
   {
     return getLoadQueuePeonRepeatDelay;
   }
+
 }

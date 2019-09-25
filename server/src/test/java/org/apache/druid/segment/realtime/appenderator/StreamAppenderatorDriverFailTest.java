@@ -137,12 +137,12 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         new FireDepartmentMetrics()
     );
 
-    driver.startJob();
+    driver.startJob(null);
 
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
     segmentHandoffNotifierFactory.setHandoffDelay(100);
 
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
 
     for (int i = 0; i < ROWS.size(); i++) {
       committerSupplier.setMetadata(i + 1);
@@ -175,12 +175,12 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         new FireDepartmentMetrics()
     );
 
-    driver.startJob();
+    driver.startJob(null);
 
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
     segmentHandoffNotifierFactory.setHandoffDelay(100);
 
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
 
     for (int i = 0; i < ROWS.size(); i++) {
       committerSupplier.setMetadata(i + 1);
@@ -213,12 +213,12 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         new FireDepartmentMetrics()
     );
 
-    driver.startJob();
+    driver.startJob(null);
 
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
     segmentHandoffNotifierFactory.setHandoffDelay(100);
 
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
 
     for (int i = 0; i < ROWS.size(); i++) {
       committerSupplier.setMetadata(i + 1);
@@ -239,7 +239,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
   {
     expectedException.expect(ExecutionException.class);
     expectedException.expectCause(CoreMatchers.instanceOf(ISE.class));
-    expectedException.expectMessage("Failed to publish segments.");
+    expectedException.expectMessage("Failed to publish segments because of [test].");
 
     testFailDuringPublishInternal(false);
   }
@@ -266,12 +266,12 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         new FireDepartmentMetrics()
     );
 
-    driver.startJob();
+    driver.startJob(null);
 
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
     segmentHandoffNotifierFactory.setHandoffDelay(100);
 
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
 
     for (int i = 0; i < ROWS.size(); i++) {
       committerSupplier.setMetadata(i + 1);

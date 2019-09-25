@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.view;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeImpl;
@@ -60,7 +59,7 @@ public class DruidViewMacro implements TableMacro
       rowType = planner.plan(viewSql).rowType();
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     return new ViewTable(

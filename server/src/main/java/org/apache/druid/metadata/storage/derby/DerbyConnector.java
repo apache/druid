@@ -33,6 +33,7 @@ import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.tweak.HandleCallback;
 
 @ManageLifecycle
 public class DerbyConnector extends SQLMetadataConnector
@@ -111,6 +112,31 @@ public class DerbyConnector extends SQLMetadataConnector
   public String getValidationQuery()
   {
     return "VALUES 1";
+  }
+
+  @Override
+  public void exportTable(
+      String tableName,
+      String outputPath
+  )
+  {
+    retryWithHandle(
+        new HandleCallback<Void>()
+        {
+          @Override
+          public Void withHandle(Handle handle)
+          {
+            handle.createStatement(
+                StringUtils.format(
+                    "CALL SYSCS_UTIL.SYSCS_EXPORT_TABLE (null, '%s', '%s', null, null, null)",
+                    tableName,
+                    outputPath
+                )
+            ).execute();
+            return null;
+          }
+        }
+    );
   }
 
   @LifecycleStart

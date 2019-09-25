@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.cloudfiles;
 
-import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import org.jclouds.io.Payload;
 
@@ -65,7 +64,7 @@ public class CloudFilesByteSource extends ByteSource
       if (CloudFilesUtils.CLOUDFILESRETRY.apply(e)) {
         throw new IOException("Recoverable exception", e);
       }
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 }

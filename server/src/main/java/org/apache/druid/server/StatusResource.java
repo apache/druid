@@ -134,18 +134,18 @@ public class StatusResource
     @Override
     public String toString()
     {
-      final String NL = System.getProperty("line.separator");
       StringBuilder output = new StringBuilder();
-      output.append(StringUtils.format("Druid version - %s", version)).append(NL).append(NL);
+      String lineSeparator = System.lineSeparator();
+      output.append(StringUtils.format("Druid version - %s", version)).append(lineSeparator).append(lineSeparator);
 
       if (modules.size() > 0) {
-        output.append("Registered Druid Modules").append(NL);
+        output.append("Registered Druid Modules").append(lineSeparator);
       } else {
         output.append("No Druid Modules loaded !");
       }
 
       for (ModuleVersion moduleVersion : modules) {
-        output.append(moduleVersion).append(NL);
+        output.append(moduleVersion).append(lineSeparator);
       }
       return output.toString();
     }
@@ -161,8 +161,7 @@ public class StatusResource
       for (DruidModule module : druidModules) {
         String artifact = module.getClass().getPackage().getImplementationTitle();
         String version = module.getClass().getPackage().getImplementationVersion();
-
-        moduleVersions.add(new ModuleVersion(module.getClass().getCanonicalName(), artifact, version));
+        moduleVersions.add(new ModuleVersion(module.getClass().getName(), artifact, version));
       }
       return moduleVersions;
     }
@@ -225,7 +224,15 @@ public class StatusResource
       totalMemory = runtime.getTotalHeapSizeBytes();
       freeMemory = runtime.getFreeHeapSizeBytes();
       usedMemory = totalMemory - freeMemory;
-      directMemory = runtime.getDirectMemorySizeBytes();
+
+      long directMemory = -1;
+      try {
+        directMemory = runtime.getDirectMemorySizeBytes();
+      }
+      catch (UnsupportedOperationException ignore) {
+        // querying direct memory is not supported
+      }
+      this.directMemory = directMemory;
     }
 
     @JsonProperty

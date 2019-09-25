@@ -34,7 +34,9 @@ public class AllGranularity extends Granularity
    * This constructor is public b/c it is serialized and deserialized
    * based on type in GranularityModule
    */
-  public AllGranularity() {}
+  public AllGranularity()
+  {
+  }
 
   @Override
   public DateTimeFormatter getFormatter(Formatter type)
@@ -58,6 +60,15 @@ public class AllGranularity extends Granularity
   public DateTime toDate(String filePath, Formatter formatter)
   {
     throw new UnsupportedOperationException("This method should not be invoked for this granularity type");
+  }
+
+  /**
+   * No interval is aligned with all granularity since it's infinite.
+   */
+  @Override
+  public boolean isAligned(Interval interval)
+  {
+    return false;
   }
 
   @Override

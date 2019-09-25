@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.histogram.sql;
 
+import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -119,8 +120,10 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
   @Before
   public void setUp() throws Exception
   {
-    // Note: this is needed in order to properly register the serde for Histogram.
-    new ApproximateHistogramDruidModule().configure(null);
+    ApproximateHistogramDruidModule.registerSerde();
+    for (Module mod : new ApproximateHistogramDruidModule().getJacksonModules()) {
+      CalciteTests.getJsonMapper().registerModule(mod);
+    }
 
     final QueryableIndex index = IndexBuilder.create()
                                              .tmpDir(temporaryFolder.newFolder())
@@ -136,7 +139,8 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                                                              null,
                                                              null,
                                                              null,
-                                                             null
+                                                             null,
+                                                             false
                                                          )
                                                      )
                                                      .withRollup(false)
@@ -157,7 +161,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
 
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker);
+    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
         ImmutableSet.of(new QuantileSqlAggregator()),
         ImmutableSet.of()
@@ -188,221 +192,211 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
   public void testQuantileOnFloatAndLongs() throws Exception
   {
     SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
-    try {
-      final String sql = "SELECT\n"
-                         + "APPROX_QUANTILE(m1, 0.01),\n"
-                         + "APPROX_QUANTILE(m1, 0.5, 50),\n"
-                         + "APPROX_QUANTILE(m1, 0.98, 200),\n"
-                         + "APPROX_QUANTILE(m1, 0.99),\n"
-                         + "APPROX_QUANTILE(m1 * 2, 0.97),\n"
-                         + "APPROX_QUANTILE(m1, 0.99) FILTER(WHERE dim1 = 'abc'),\n"
-                         + "APPROX_QUANTILE(m1, 0.999) FILTER(WHERE dim1 <> 'abc'),\n"
-                         + "APPROX_QUANTILE(m1, 0.999) FILTER(WHERE dim1 = 'abc'),\n"
-                         + "APPROX_QUANTILE(cnt, 0.5)\n"
-                         + "FROM foo";
 
-      // Verify results
-      final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
-      final List<Object[]> expectedResults = ImmutableList.of(
-          new Object[]{
-              1.0,
-              3.0,
-              5.880000114440918,
-              5.940000057220459,
-              11.640000343322754,
-              6.0,
-              4.994999885559082,
-              6.0,
-              1.0
-          }
-      );
-      Assert.assertEquals(expectedResults.size(), results.size());
-      for (int i = 0; i < expectedResults.size(); i++) {
-        Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
-      }
+    final String sql = "SELECT\n"
+                       + "APPROX_QUANTILE(m1, 0.01),\n"
+                       + "APPROX_QUANTILE(m1, 0.5, 50),\n"
+                       + "APPROX_QUANTILE(m1, 0.98, 200),\n"
+                       + "APPROX_QUANTILE(m1, 0.99),\n"
+                       + "APPROX_QUANTILE(m1 * 2, 0.97),\n"
+                       + "APPROX_QUANTILE(m1, 0.99) FILTER(WHERE dim1 = 'abc'),\n"
+                       + "APPROX_QUANTILE(m1, 0.999) FILTER(WHERE dim1 <> 'abc'),\n"
+                       + "APPROX_QUANTILE(m1, 0.999) FILTER(WHERE dim1 = 'abc'),\n"
+                       + "APPROX_QUANTILE(cnt, 0.5)\n"
+                       + "FROM foo";
 
-      // Verify query
-      Assert.assertEquals(
-          Druids.newTimeseriesQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE1)
-                .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                .granularity(Granularities.ALL)
-                .virtualColumns(
-                    new ExpressionVirtualColumn(
-                        "a4:v",
-                        "(\"m1\" * 2)",
-                        ValueType.FLOAT,
-                        TestExprMacroTable.INSTANCE
-                    )
-                )
-                .aggregators(ImmutableList.of(
-                    new ApproximateHistogramAggregatorFactory("a0:agg", "m1", null, null, null, null),
-                    new ApproximateHistogramAggregatorFactory("a2:agg", "m1", 200, null, null, null),
-                    new ApproximateHistogramAggregatorFactory("a4:agg", "a4:v", null, null, null, null),
-                    new FilteredAggregatorFactory(
-                        new ApproximateHistogramAggregatorFactory("a5:agg", "m1", null, null, null, null),
-                        new SelectorDimFilter("dim1", "abc", null)
-                    ),
-                    new FilteredAggregatorFactory(
-                        new ApproximateHistogramAggregatorFactory("a6:agg", "m1", null, null, null, null),
-                        new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
-                    ),
-                    new ApproximateHistogramAggregatorFactory("a8:agg", "cnt", null, null, null, null)
-                ))
-                .postAggregators(
-                    new QuantilePostAggregator("a0", "a0:agg", 0.01f),
-                    new QuantilePostAggregator("a1", "a0:agg", 0.50f),
-                    new QuantilePostAggregator("a2", "a2:agg", 0.98f),
-                    new QuantilePostAggregator("a3", "a0:agg", 0.99f),
-                    new QuantilePostAggregator("a4", "a4:agg", 0.97f),
-                    new QuantilePostAggregator("a5", "a5:agg", 0.99f),
-                    new QuantilePostAggregator("a6", "a6:agg", 0.999f),
-                    new QuantilePostAggregator("a7", "a5:agg", 0.999f),
-                    new QuantilePostAggregator("a8", "a8:agg", 0.50f)
-                )
-                .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
-                .build(),
-          Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
-      );
+    // Verify results
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{
+            1.0,
+            3.0,
+            5.880000114440918,
+            5.940000057220459,
+            11.640000343322754,
+            6.0,
+            4.994999885559082,
+            6.0,
+            1.0
+        }
+    );
+    Assert.assertEquals(expectedResults.size(), results.size());
+    for (int i = 0; i < expectedResults.size(); i++) {
+      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
     }
-    catch (Exception e) {
-      throw e;
-    }
+
+    // Verify query
+    Assert.assertEquals(
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(CalciteTests.DATASOURCE1)
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+              .granularity(Granularities.ALL)
+              .virtualColumns(
+                  new ExpressionVirtualColumn(
+                      "v0",
+                      "(\"m1\" * 2)",
+                      ValueType.FLOAT,
+                      TestExprMacroTable.INSTANCE
+                  )
+              )
+              .aggregators(ImmutableList.of(
+                  new ApproximateHistogramAggregatorFactory("a0:agg", "m1", null, null, null, null, false),
+                  new ApproximateHistogramAggregatorFactory("a2:agg", "m1", 200, null, null, null, false),
+                  new ApproximateHistogramAggregatorFactory("a4:agg", "v0", null, null, null, null, false),
+                  new FilteredAggregatorFactory(
+                      new ApproximateHistogramAggregatorFactory("a5:agg", "m1", null, null, null, null, false),
+                      new SelectorDimFilter("dim1", "abc", null)
+                  ),
+                  new FilteredAggregatorFactory(
+                      new ApproximateHistogramAggregatorFactory("a6:agg", "m1", null, null, null, null, false),
+                      new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
+                  ),
+                  new ApproximateHistogramAggregatorFactory("a8:agg", "cnt", null, null, null, null, false)
+              ))
+              .postAggregators(
+                  new QuantilePostAggregator("a0", "a0:agg", 0.01f),
+                  new QuantilePostAggregator("a1", "a0:agg", 0.50f),
+                  new QuantilePostAggregator("a2", "a2:agg", 0.98f),
+                  new QuantilePostAggregator("a3", "a0:agg", 0.99f),
+                  new QuantilePostAggregator("a4", "a4:agg", 0.97f),
+                  new QuantilePostAggregator("a5", "a5:agg", 0.99f),
+                  new QuantilePostAggregator("a6", "a6:agg", 0.999f),
+                  new QuantilePostAggregator("a7", "a5:agg", 0.999f),
+                  new QuantilePostAggregator("a8", "a8:agg", 0.50f)
+              )
+              .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+              .build(),
+        Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+    );
   }
 
   @Test
   public void testQuantileOnComplexColumn() throws Exception
   {
     SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
-    try {
-      final String sql = "SELECT\n"
-                         + "APPROX_QUANTILE(hist_m1, 0.01),\n"
-                         + "APPROX_QUANTILE(hist_m1, 0.5, 50),\n"
-                         + "APPROX_QUANTILE(hist_m1, 0.98, 200),\n"
-                         + "APPROX_QUANTILE(hist_m1, 0.99),\n"
-                         + "APPROX_QUANTILE(hist_m1, 0.99) FILTER(WHERE dim1 = 'abc'),\n"
-                         + "APPROX_QUANTILE(hist_m1, 0.999) FILTER(WHERE dim1 <> 'abc'),\n"
-                         + "APPROX_QUANTILE(hist_m1, 0.999) FILTER(WHERE dim1 = 'abc')\n"
-                         + "FROM foo";
+    final String sql = "SELECT\n"
+                       + "APPROX_QUANTILE(hist_m1, 0.01),\n"
+                       + "APPROX_QUANTILE(hist_m1, 0.5, 50),\n"
+                       + "APPROX_QUANTILE(hist_m1, 0.98, 200),\n"
+                       + "APPROX_QUANTILE(hist_m1, 0.99),\n"
+                       + "APPROX_QUANTILE(hist_m1, 0.99) FILTER(WHERE dim1 = 'abc'),\n"
+                       + "APPROX_QUANTILE(hist_m1, 0.999) FILTER(WHERE dim1 <> 'abc'),\n"
+                       + "APPROX_QUANTILE(hist_m1, 0.999) FILTER(WHERE dim1 = 'abc')\n"
+                       + "FROM foo";
 
-      // Verify results
-      final List<Object[]> results = lifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
-      final List<Object[]> expectedResults = ImmutableList.of(
-          new Object[]{1.0, 3.0, 5.880000114440918, 5.940000057220459, 6.0, 4.994999885559082, 6.0}
-      );
-      Assert.assertEquals(expectedResults.size(), results.size());
-      for (int i = 0; i < expectedResults.size(); i++) {
-        Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
-      }
+    // Verify results
+    final List<Object[]> results = lifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{1.0, 3.0, 5.880000114440918, 5.940000057220459, 6.0, 4.994999885559082, 6.0}
+    );
+    Assert.assertEquals(expectedResults.size(), results.size());
+    for (int i = 0; i < expectedResults.size(); i++) {
+      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
+    }
 
-      // Verify query
-      Assert.assertEquals(
-          Druids.newTimeseriesQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE1)
-                .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                .granularity(Granularities.ALL)
-                .aggregators(ImmutableList.of(
-                    new ApproximateHistogramFoldingAggregatorFactory("a0:agg", "hist_m1", null, null, null, null),
-                    new ApproximateHistogramFoldingAggregatorFactory("a2:agg", "hist_m1", 200, null, null, null),
-                    new FilteredAggregatorFactory(
-                        new ApproximateHistogramFoldingAggregatorFactory("a4:agg", "hist_m1", null, null, null, null),
-                        new SelectorDimFilter("dim1", "abc", null)
-                    ),
-                    new FilteredAggregatorFactory(
-                        new ApproximateHistogramFoldingAggregatorFactory("a5:agg", "hist_m1", null, null, null, null),
-                        new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
-                    )
-                ))
-                .postAggregators(
-                    new QuantilePostAggregator("a0", "a0:agg", 0.01f),
-                    new QuantilePostAggregator("a1", "a0:agg", 0.50f),
-                    new QuantilePostAggregator("a2", "a2:agg", 0.98f),
-                    new QuantilePostAggregator("a3", "a0:agg", 0.99f),
-                    new QuantilePostAggregator("a4", "a4:agg", 0.99f),
-                    new QuantilePostAggregator("a5", "a5:agg", 0.999f),
-                    new QuantilePostAggregator("a6", "a4:agg", 0.999f)
-                )
-                .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
-                .build(),
-          Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
-      );
-    }
-    catch (Exception e) {
-      throw e;
-    }
+    // Verify query
+    Assert.assertEquals(
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(CalciteTests.DATASOURCE1)
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+              .granularity(Granularities.ALL)
+              .aggregators(ImmutableList.of(
+                  new ApproximateHistogramFoldingAggregatorFactory("a0:agg", "hist_m1", null, null, null, null, false),
+                  new ApproximateHistogramFoldingAggregatorFactory("a2:agg", "hist_m1", 200, null, null, null, false),
+                  new FilteredAggregatorFactory(
+                      new ApproximateHistogramFoldingAggregatorFactory("a4:agg", "hist_m1", null, null, null, null, false),
+                      new SelectorDimFilter("dim1", "abc", null)
+                  ),
+                  new FilteredAggregatorFactory(
+                      new ApproximateHistogramFoldingAggregatorFactory("a5:agg", "hist_m1", null, null, null, null, false),
+                      new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
+                  )
+              ))
+              .postAggregators(
+                  new QuantilePostAggregator("a0", "a0:agg", 0.01f),
+                  new QuantilePostAggregator("a1", "a0:agg", 0.50f),
+                  new QuantilePostAggregator("a2", "a2:agg", 0.98f),
+                  new QuantilePostAggregator("a3", "a0:agg", 0.99f),
+                  new QuantilePostAggregator("a4", "a4:agg", 0.99f),
+                  new QuantilePostAggregator("a5", "a5:agg", 0.999f),
+                  new QuantilePostAggregator("a6", "a4:agg", 0.999f)
+              )
+              .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+              .build(),
+        Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+    );
   }
 
   @Test
   public void testQuantileOnInnerQuery() throws Exception
   {
     SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
-    try {
-      final String sql = "SELECT AVG(x), APPROX_QUANTILE(x, 0.98)\n"
-                         + "FROM (SELECT dim2, SUM(m1) AS x FROM foo GROUP BY dim2)";
+    final String sql = "SELECT AVG(x), APPROX_QUANTILE(x, 0.98)\n"
+                       + "FROM (SELECT dim2, SUM(m1) AS x FROM foo GROUP BY dim2)";
 
-      // Verify results
-      final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
-      final List<Object[]> expectedResults;
-      if (NullHandling.replaceWithDefault()) {
-        expectedResults = ImmutableList.of(new Object[]{7.0, 8.26386833190918});
-      } else {
-        expectedResults = ImmutableList.of(new Object[]{5.25, 6.59091854095459});
-      }
-      Assert.assertEquals(expectedResults.size(), results.size());
-      for (int i = 0; i < expectedResults.size(); i++) {
-        Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
-      }
+    // Verify results
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> expectedResults;
+    if (NullHandling.replaceWithDefault()) {
+      expectedResults = ImmutableList.of(new Object[]{7.0, 8.26386833190918});
+    } else {
+      expectedResults = ImmutableList.of(new Object[]{5.25, 6.59091854095459});
+    }
+    Assert.assertEquals(expectedResults.size(), results.size());
+    for (int i = 0; i < expectedResults.size(); i++) {
+      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
+    }
 
-      // Verify query
-      Assert.assertEquals(
-          GroupByQuery.builder()
-                      .setDataSource(
-                          new QueryDataSource(
-                              GroupByQuery.builder()
-                                          .setDataSource(CalciteTests.DATASOURCE1)
-                                          .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                                          .setGranularity(Granularities.ALL)
-                                          .setDimensions(new DefaultDimensionSpec("dim2", "d0"))
-                                          .setAggregatorSpecs(
-                                              ImmutableList.of(
-                                                  new DoubleSumAggregatorFactory("a0", "m1")
-                                              )
-                                          )
-                                          .setContext(ImmutableMap.of(PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
-                                          .build()
-                          )
-                      )
-                      .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                      .setGranularity(Granularities.ALL)
-                      .setAggregatorSpecs(new DoubleSumAggregatorFactory("_a0:sum", "a0"),
-                                          new CountAggregatorFactory("_a0:count"),
-                                          new ApproximateHistogramAggregatorFactory("_a1:agg",
-                                                                                    "a0",
-                                                                                    null,
-                                                                                    null,
-                                                                                    null,
-                                                                                    null
-                                          ))
-                      .setPostAggregatorSpecs(
-                          ImmutableList.of(
-                              new ArithmeticPostAggregator(
-                                  "_a0",
-                                  "quotient",
-                                  ImmutableList.of(
-                                      new FieldAccessPostAggregator(null, "_a0:sum"),
-                                      new FieldAccessPostAggregator(null, "_a0:count")
-                                  )
-                              ),
-                              new QuantilePostAggregator("_a1", "_a1:agg", 0.98f)
-                          )
-                      )
-                      .setContext(ImmutableMap.of(PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
-                      .build(),
-          Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
-      );
-    }
-    catch (Exception e) {
-      throw e;
-    }
+    // Verify query
+    Assert.assertEquals(
+        GroupByQuery.builder()
+                    .setDataSource(
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(CalciteTests.DATASOURCE1)
+                                        .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(new DefaultDimensionSpec("dim2", "d0"))
+                                        .setAggregatorSpecs(
+                                            ImmutableList.of(
+                                                new DoubleSumAggregatorFactory("a0", "m1")
+                                            )
+                                        )
+                                        .setContext(ImmutableMap.of(PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+                                        .build()
+                        )
+                    )
+                    .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                    .setGranularity(Granularities.ALL)
+                    .setAggregatorSpecs(
+                        new DoubleSumAggregatorFactory("_a0:sum", "a0"),
+                        new CountAggregatorFactory("_a0:count"),
+                        new ApproximateHistogramAggregatorFactory(
+                            "_a1:agg",
+                            "a0",
+                            null,
+                            null,
+                            null,
+                            null,
+                            false
+                        )
+                    )
+                    .setPostAggregatorSpecs(
+                        ImmutableList.of(
+                            new ArithmeticPostAggregator(
+                                "_a0",
+                                "quotient",
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator(null, "_a0:sum"),
+                                    new FieldAccessPostAggregator(null, "_a0:count")
+                                )
+                            ),
+                            new QuantilePostAggregator("_a1", "_a1:agg", 0.98f)
+                        )
+                    )
+                    .setContext(ImmutableMap.of(PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+                    .build(),
+        Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+    );
   }
 }

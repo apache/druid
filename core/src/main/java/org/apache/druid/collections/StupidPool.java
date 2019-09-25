@@ -22,9 +22,9 @@ package org.apache.druid.collections;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import org.apache.druid.java.util.common.Cleaners;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
-import sun.misc.Cleaner;
 
 import java.lang.ref.WeakReference;
 import java.util.Queue;
@@ -118,7 +118,7 @@ public class StupidPool<T> implements NonBlockingPool<T>
     ObjectLeakNotifier notifier = new ObjectLeakNotifier(this);
     // Using objectId as referent for Cleaner, because if the object itself (e. g. ByteBuffer) is leaked after taken
     // from the pool, and the ResourceHolder is not closed, Cleaner won't notify about the leak.
-    return new ObjectResourceHolder(object, objectId, Cleaner.create(objectId, notifier), notifier);
+    return new ObjectResourceHolder(object, objectId, Cleaners.register(objectId, notifier), notifier);
   }
 
   @VisibleForTesting
@@ -133,7 +133,7 @@ public class StupidPool<T> implements NonBlockingPool<T>
     return leakedObjectsCounter.get();
   }
 
-  private void tryReturnToPool(T object, ObjectId objectId, Cleaner cleaner, ObjectLeakNotifier notifier)
+  private void tryReturnToPool(T object, ObjectId objectId, Cleaners.Cleanable cleanable, ObjectLeakNotifier notifier)
   {
     long currentPoolSize;
     do {
@@ -142,7 +142,8 @@ public class StupidPool<T> implements NonBlockingPool<T>
         notifier.disable();
         // Effectively does nothing, because notifier is disabled above. The purpose of this call is to deregister the
         // cleaner from the internal global linked list of all cleaners in the JVM, and let it be reclaimed itself.
-        cleaner.clean();
+        cleanable.clean();
+
         // Important to use the objectId after notifier.disable() (in the logging statement below), otherwise VM may
         // already decide that the objectId is unreachable and run Cleaner before notifier.disable(), that would be
         // reported as a false-positive "leak". Ideally reachabilityFence(objectId) should be inserted here.
@@ -150,8 +151,8 @@ public class StupidPool<T> implements NonBlockingPool<T>
         return;
       }
     } while (!poolSize.compareAndSet(currentPoolSize, currentPoolSize + 1));
-    if (!objects.offer(new ObjectResourceHolder(object, objectId, cleaner, notifier))) {
-      impossibleOffsetFailed(object, objectId, cleaner, notifier);
+    if (!objects.offer(new ObjectResourceHolder(object, objectId, cleanable, notifier))) {
+      impossibleOffsetFailed(object, objectId, cleanable, notifier);
     }
   }
 
@@ -159,13 +160,13 @@ public class StupidPool<T> implements NonBlockingPool<T>
    * This should be impossible, because {@link ConcurrentLinkedQueue#offer(Object)} event don't have `return false;` in
    * it's body in OpenJDK 8.
    */
-  private void impossibleOffsetFailed(T object, ObjectId objectId, Cleaner cleaner, ObjectLeakNotifier notifier)
+  private void impossibleOffsetFailed(T object, ObjectId objectId, Cleaners.Cleanable cleanable, ObjectLeakNotifier notifier)
   {
     poolSize.decrementAndGet();
     notifier.disable();
     // Effectively does nothing, because notifier is disabled above. The purpose of this call is to deregister the
     // cleaner from the internal global linked list of all cleaners in the JVM, and let it be reclaimed itself.
-    cleaner.clean();
+    cleanable.clean();
     log.error(
         new ISE("Queue offer failed"),
         "Could not offer object [%s] back into the queue, objectId [%s]",
@@ -178,19 +179,19 @@ public class StupidPool<T> implements NonBlockingPool<T>
   {
     private final AtomicReference<T> objectRef;
     private ObjectId objectId;
-    private Cleaner cleaner;
+    private Cleaners.Cleanable cleanable;
     private ObjectLeakNotifier notifier;
 
     ObjectResourceHolder(
         final T object,
         final ObjectId objectId,
-        final Cleaner cleaner,
+        final Cleaners.Cleanable cleanable,
         final ObjectLeakNotifier notifier
     )
     {
       this.objectRef = new AtomicReference<>(object);
       this.objectId = objectId;
-      this.cleaner = cleaner;
+      this.cleanable = cleanable;
       this.notifier = notifier;
     }
 
@@ -213,7 +214,7 @@ public class StupidPool<T> implements NonBlockingPool<T>
       final T object = objectRef.get();
       if (object != null && objectRef.compareAndSet(object, null)) {
         try {
-          tryReturnToPool(object, objectId, cleaner, notifier);
+          tryReturnToPool(object, objectId, cleanable, notifier);
         }
         finally {
           // Need to null reference to objectId because if ObjectResourceHolder is closed, but leaked, this reference
@@ -221,7 +222,7 @@ public class StupidPool<T> implements NonBlockingPool<T>
           // again.
           objectId = null;
           // Nulling cleaner and notifier is not strictly needed, but harmless for sure.
-          cleaner = null;
+          cleanable = null;
           notifier = null;
         }
       }

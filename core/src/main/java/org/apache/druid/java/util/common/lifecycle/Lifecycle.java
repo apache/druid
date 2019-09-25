@@ -40,15 +40,30 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * A manager of object Lifecycles.
- * <p/>
+ *
  * This object has methods for registering objects that should be started and stopped.  The Lifecycle allows for
- * three stages: Stage.INIT, Stage.NORMAL, and Stage.LAST.
- * <p/>
+ * four stages: Stage.INIT, Stage.NORMAL, Stage.SERVER, and Stage.ANNOUNCEMENTS.
+ *
  * Things added at Stage.INIT will be started first (in the order that they are added to the Lifecycle instance) and
- * then things added at Stage.NORMAL, and finally, Stage.LAST will be started.
- * <p/>
- * The close operation goes in reverse order, starting with the last thing added at Stage.LAST and working backwards.
- * <p/>
+ * then things added at Stage.NORMAL, then Stage.SERVER, and finally, Stage.ANNOUNCEMENTS will be started.
+ *
+ * The close operation goes in reverse order, starting with the last thing added at Stage.ANNOUNCEMENTS and working
+ * backwards.
+ *
+ * Conceptually, the stages have the following purposes:
+ *  - Stage.INIT: Currently, this stage is used exclusively for log4j initialization, since almost everything needs
+ *    logging and it should be the last thing to shutdown. Any sort of bootstrapping object that provides something that
+ *    should be initialized before nearly all other Lifecycle objects could also belong here (if it doesn't need
+ *    logging during start or stop).
+ *  - Stage.NORMAL: This is the default stage. Most objects will probably make the most sense to be registered at
+ *    this level, with the exception of any form of server or service announcements
+ *  - Stage.SERVER: This lifecycle stage is intended for all 'server' objects, and currently only contains the Jetty
+ *    module, but any sort of 'server' that expects most Lifecycle objects to be initialized by the time it starts, and
+ *    still available at the time it stops can logically live in this stage.
+ *  - Stage.ANNOUNCEMENTS: Any object which announces to a cluster this servers location belongs in this stage. By being
+ *    last, we can be sure that all servers are initialized before we advertise the endpoint locations, and also can be
+ *    sure that we un-announce these advertisements prior to the Stage.SERVER objects stop.
+ *
  * There are two sets of methods to add things to the Lifecycle.  One set that will just add instances and enforce that
  * start() has not been called yet.  The other set will add instances and, if the lifecycle is already started, start
  * them.
@@ -61,7 +76,8 @@ public class Lifecycle
   {
     INIT,
     NORMAL,
-    LAST
+    SERVER,
+    ANNOUNCEMENTS
   }
 
   private enum State
@@ -416,8 +432,7 @@ public class Lifecycle
       for (Method method : o.getClass().getMethods()) {
         boolean doStart = false;
         for (Annotation annotation : method.getAnnotations()) {
-          if ("org.apache.druid.java.util.common.lifecycle.LifecycleStart".equals(annotation.annotationType()
-              .getCanonicalName())) {
+          if (LifecycleStart.class.getName().equals(annotation.annotationType().getName())) {
             doStart = true;
             break;
           }
@@ -435,8 +450,7 @@ public class Lifecycle
       for (Method method : o.getClass().getMethods()) {
         boolean doStop = false;
         for (Annotation annotation : method.getAnnotations()) {
-          if ("org.apache.druid.java.util.common.lifecycle.LifecycleStop".equals(annotation.annotationType()
-              .getCanonicalName())) {
+          if (LifecycleStop.class.getName().equals(annotation.annotationType().getName())) {
             doStop = true;
             break;
           }

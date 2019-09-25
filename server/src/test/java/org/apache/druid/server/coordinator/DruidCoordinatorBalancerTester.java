@@ -27,13 +27,14 @@ import org.apache.druid.timeline.SegmentId;
 
 public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
 {
+
   public DruidCoordinatorBalancerTester(DruidCoordinator coordinator)
   {
     super(coordinator);
   }
 
   @Override
-  protected void moveSegment(
+  protected boolean moveSegment(
       final BalancerSegmentHolder segment,
       final ImmutableDruidServer toServer,
       final DruidCoordinatorRuntimeParams params
@@ -64,10 +65,12 @@ public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
         dropPeon.markSegmentToDrop(segment.getSegment());
 
         currentlyMovingSegments.get("normal").put(segmentId, segment);
+        return true;
       }
       catch (Exception e) {
         log.info(e, StringUtils.format("[%s] : Moving exception", segmentId));
       }
     }
+    return false;
   }
 }

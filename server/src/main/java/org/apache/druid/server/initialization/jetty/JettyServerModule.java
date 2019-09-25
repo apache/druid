@@ -97,7 +97,7 @@ public class JettyServerModule extends JerseyServletModule
 {
   private static final Logger log = new Logger(JettyServerModule.class);
 
-  private static final AtomicInteger activeConnections = new AtomicInteger();
+  private static final AtomicInteger ACTIVE_CONNECTIONS = new AtomicInteger();
   private static final String HTTP_1_1_STRING = "HTTP/1.1";
 
   @Override
@@ -112,6 +112,7 @@ public class JettyServerModule extends JerseyServletModule
     binder.bind(DruidGuiceContainer.class).in(Scopes.SINGLETON);
     binder.bind(CustomExceptionMapper.class).in(Singleton.class);
     binder.bind(ForbiddenExceptionMapper.class).in(Singleton.class);
+    binder.bind(BadRequestExceptionMapper.class).in(Singleton.class);
 
     serve("/*").with(DruidGuiceContainer.class);
 
@@ -272,7 +273,8 @@ public class JettyServerModule extends JerseyServletModule
         }
 
         sslContextFactory.setNeedClientAuth(tlsServerConfig.isRequireClientCertificate());
-        if (tlsServerConfig.isRequireClientCertificate()) {
+        sslContextFactory.setWantClientAuth(tlsServerConfig.isRequestClientCertificate());
+        if (tlsServerConfig.isRequireClientCertificate() || tlsServerConfig.isRequestClientCertificate()) {
           if (tlsServerConfig.getCrlPath() != null) {
             // setValidatePeerCerts is used just to enable revocation checking using a static CRL file.
             // Certificate validation is always performed when client certificates are required.
@@ -335,7 +337,7 @@ public class JettyServerModule extends JerseyServletModule
 
       List<ConnectionFactory> monitoredConnFactories = new ArrayList<>();
       for (ConnectionFactory cf : connector.getConnectionFactories()) {
-        monitoredConnFactories.add(new JettyMonitoringConnectionFactory(cf, activeConnections));
+        monitoredConnFactories.add(new JettyMonitoringConnectionFactory(cf, ACTIVE_CONNECTIONS));
       }
       connector.setConnectionFactories(monitoredConnFactories);
     }
@@ -440,7 +442,8 @@ public class JettyServerModule extends JerseyServletModule
               log.warn(e, "Unable to stop Jetty server.");
             }
           }
-        }
+        },
+        Lifecycle.Stage.SERVER
     );
 
     return server;
@@ -475,7 +478,7 @@ public class JettyServerModule extends JerseyServletModule
     {
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-      emitter.emit(builder.build("jetty/numOpenConnections", activeConnections.get()));
+      emitter.emit(builder.build("jetty/numOpenConnections", ACTIVE_CONNECTIONS.get()));
       return true;
     }
   }

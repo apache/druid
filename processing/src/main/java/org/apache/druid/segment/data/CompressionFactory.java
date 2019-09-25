@@ -199,11 +199,11 @@ public class CompressionFactory
       return id;
     }
 
-    static final Map<Byte, LongEncodingFormat> idMap = new HashMap<>();
+    static final Map<Byte, LongEncodingFormat> ID_MAP = new HashMap<>();
 
     static {
       for (LongEncodingFormat format : LongEncodingFormat.values()) {
-        idMap.put(format.getId(), format);
+        ID_MAP.put(format.getId(), format);
       }
     }
 
@@ -211,7 +211,7 @@ public class CompressionFactory
 
     public static LongEncodingFormat forId(byte id)
     {
-      return idMap.get(id);
+      return ID_MAP.get(id);
     }
   }
 
@@ -282,6 +282,27 @@ public class CompressionFactory
     void setBuffer(ByteBuffer buffer);
 
     long read(int index);
+
+    default void read(long[] out, int outPosition, int startIndex, int length)
+    {
+      for (int i = 0; i < length; i++) {
+        out[outPosition + i] = read(startIndex + i);
+      }
+    }
+
+    default int read(long[] out, int outPosition, int[] indexes, int length, int indexOffset, int limit)
+    {
+      for (int i = 0; i < length; i++) {
+        int index = indexes[outPosition + i] - indexOffset;
+        if (index >= limit) {
+          return i;
+        }
+
+        out[outPosition + i] = read(index);
+      }
+
+      return length;
+    }
 
     LongEncodingReader duplicate();
   }

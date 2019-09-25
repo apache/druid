@@ -59,8 +59,8 @@ public class Main
         CliCoordinator.class,
         CliHistorical.class,
         CliBroker.class,
-        CliRealtime.class,
         CliOverlord.class,
+        CliIndexer.class,
         CliMiddleManager.class,
         CliRouter.class
     );
@@ -69,19 +69,14 @@ public class Main
            .withDefaultCommand(Help.class)
            .withCommands(serverCommands);
 
-    builder.withGroup("example")
-           .withDescription("Run an example")
-           .withDefaultCommand(Help.class)
-           .withCommands(CliRealtimeExample.class);
-
     List<Class<? extends Runnable>> toolCommands = Arrays.asList(
         DruidJsonValidator.class,
         PullDependencies.class,
         CreateTables.class,
-        InsertSegment.class,
         DumpSegment.class,
         ResetCluster.class,
-        ValidateSegments.class
+        ValidateSegments.class,
+        ExportMetadata.class
     );
     builder.withGroup("tools")
            .withDescription("Various tools for working with Druid")

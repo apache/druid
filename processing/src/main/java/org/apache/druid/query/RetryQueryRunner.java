@@ -29,12 +29,12 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.guava.YieldingSequenceBase;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.SegmentMissingException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class RetryQueryRunner<T> implements QueryRunner<T>
 {
@@ -56,7 +56,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> context)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext context)
   {
     final List<Sequence<T>> listOfSequences = new ArrayList<>();
     listOfSequences.add(baseRunner.run(queryPlus, context));
@@ -72,7 +72,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           for (int i = 0; i < config.getNumTries(); i++) {
             log.info("[%,d] missing segments found. Retry attempt [%,d]", missingSegments.size(), i);
 
-            context.put(Result.MISSING_SEGMENTS_KEY, new ArrayList<>());
+            context.put(ResponseContext.Key.MISSING_SEGMENTS, new ArrayList<>());
             final QueryPlus<T> retryQueryPlus = queryPlus.withQuerySegmentSpec(
                 new MultipleSpecificSegmentSpec(
                     missingSegments
@@ -100,9 +100,9 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
     };
   }
 
-  private List<SegmentDescriptor> getMissingSegments(final Map<String, Object> context)
+  private List<SegmentDescriptor> getMissingSegments(final ResponseContext context)
   {
-    final Object maybeMissingSegments = context.get(Result.MISSING_SEGMENTS_KEY);
+    final Object maybeMissingSegments = context.get(ResponseContext.Key.MISSING_SEGMENTS);
     if (maybeMissingSegments == null) {
       return new ArrayList<>();
     }

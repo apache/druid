@@ -21,20 +21,26 @@ package org.apache.druid.indexing.common.task;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexer.updater.HadoopDruidConverterConfig;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.hadoop.yarn.util.ApplicationClassLoader;
 import org.easymock.EasyMock;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import java.net.URLClassLoader;
+import java.util.Collections;
+import java.util.List;
 
 public class HadoopTaskTest
 {
@@ -64,7 +70,37 @@ public class HadoopTaskTest
       }
 
       @Override
-      public TaskStatus run(TaskToolbox toolbox)
+      public void stopGracefully(TaskConfig taskConfig)
+      {
+      }
+
+      @Override
+      public boolean requireLockExistingSegments()
+      {
+        return true;
+      }
+
+      @Override
+      public List<DataSegment> findSegmentsToLock(TaskActionClient taskActionClient, List<Interval> intervals)
+      {
+        return Collections.emptyList();
+      }
+
+      @Override
+      public boolean isPerfectRollup()
+      {
+        return true;
+      }
+
+      @Nullable
+      @Override
+      public Granularity getSegmentGranularity()
+      {
+        return null;
+      }
+
+      @Override
+      public TaskStatus runTask(TaskToolbox toolbox)
       {
         return null;
       }
@@ -77,6 +113,7 @@ public class HadoopTaskTest
         null,
         ImmutableList.of("something:hadoop:1"),
         false,
+        null,
         null,
         null
     )).once();
@@ -91,6 +128,7 @@ public class HadoopTaskTest
     final Class<?> druidHadoopConfigClazz = Class.forName("org.apache.druid.indexer.HadoopDruidIndexerConfig", false, classLoader);
     assertClassLoaderIsSingular(druidHadoopConfigClazz.getClassLoader());
   }
+
   public static void assertClassLoaderIsSingular(ClassLoader classLoader)
   {
     // This is a check against the current HadoopTask which creates a single URLClassLoader with null parent
@@ -98,7 +136,7 @@ public class HadoopTaskTest
     Assert.assertFalse(classLoader instanceof ApplicationClassLoader);
     Assert.assertTrue(classLoader instanceof URLClassLoader);
 
-    final ClassLoader appLoader = HadoopDruidConverterConfig.class.getClassLoader();
+    final ClassLoader appLoader = HadoopDruidIndexerConfig.class.getClassLoader();
     Assert.assertNotEquals(StringUtils.format("ClassLoader [%s] is not isolated!", classLoader), appLoader, classLoader);
   }
 }

@@ -20,34 +20,26 @@
 package org.apache.druid.indexing.firehose;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexing.common.RetryPolicyConfig;
+import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
-import org.apache.druid.indexing.common.TaskLock;
-import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.actions.LockAcquireAction;
-import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
-import org.apache.druid.indexing.common.actions.TaskAction;
-import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
-import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.task.NoopTask;
-import org.apache.druid.indexing.common.task.NoopTestTaskFileWriter;
-import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -59,12 +51,8 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
-import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
-import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.TransformSpec;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -86,6 +74,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
 public class IngestSegmentFirehoseFactoryTimelineTest
@@ -115,6 +104,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   private final File tmpDir;
   private final int expectedCount;
   private final long expectedSum;
+  private final int segmentCount;
 
   private static final ObjectMapper MAPPER;
   private static final IndexIO INDEX_IO;
@@ -132,22 +122,33 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       IngestSegmentFirehoseFactory factory,
       File tmpDir,
       int expectedCount,
-      long expectedSum
+      long expectedSum,
+      int segmentCount
   )
   {
     this.factory = factory;
     this.tmpDir = tmpDir;
     this.expectedCount = expectedCount;
     this.expectedSum = expectedSum;
+    this.segmentCount = segmentCount;
   }
 
   @Test
-  public void testSimple() throws Exception
+  public void test() throws Exception
+  {
+    // Junit 4.12 doesn't have a good way to run tearDown after multiple tests in a Parameterized
+    // class run. (Junit 4.13 adds @AfterParam but isn't released yet.) Fake it by just running
+    // "tests" in series inside one @Test.
+    testSimple();
+    testSplit();
+  }
+
+  private void testSimple() throws Exception
   {
     int count = 0;
     long sum = 0;
 
-    try (final Firehose firehose = factory.connect(ROW_PARSER, null)) {
+    try (final Firehose firehose = factory.connect(ROW_PARSER, tmpDir)) {
       while (firehose.hasMore()) {
         final InputRow row = firehose.nextRow();
         count++;
@@ -159,13 +160,43 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     Assert.assertEquals("sum", expectedSum, sum);
   }
 
+  private void testSplit() throws Exception
+  {
+    Assert.assertTrue(factory.isSplittable());
+    final int numSplits = factory.getNumSplits();
+    // We set maxInputSegmentBytesPerSplit to 2 so each segment should become a byte.
+    Assert.assertEquals(segmentCount, numSplits);
+    final List<InputSplit<List<WindowedSegmentId>>> splits =
+        factory.getSplits().collect(Collectors.toList());
+    Assert.assertEquals(numSplits, splits.size());
+
+    int count = 0;
+    long sum = 0;
+
+    for (InputSplit<List<WindowedSegmentId>> split : splits) {
+      final FiniteFirehoseFactory<InputRowParser, List<WindowedSegmentId>> splitFactory =
+          factory.withSplit(split);
+      try (final Firehose firehose = splitFactory.connect(ROW_PARSER, tmpDir)) {
+        while (firehose.hasMore()) {
+          final InputRow row = firehose.nextRow();
+          count++;
+          sum += row.getMetric(METRICS[0]).longValue();
+        }
+      }
+    }
+
+    Assert.assertEquals("count", expectedCount, count);
+    Assert.assertEquals("sum", expectedSum, sum);
+
+  }
+
   @After
   public void tearDown() throws Exception
   {
     FileUtils.deleteDirectory(tmpDir);
   }
 
-  private static TestCase TC(
+  private static TestCase tc(
       String intervalString,
       int expectedCount,
       long expectedSum,
@@ -187,7 +218,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     );
   }
 
-  private static DataSegmentMaker DS(
+  private static DataSegmentMaker ds(
       String intervalString,
       String version,
       int partitionNum,
@@ -197,7 +228,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     return new DataSegmentMaker(Intervals.of(intervalString), version, partitionNum, Arrays.asList(rows));
   }
 
-  private static InputRow IR(String timeString, long metricValue)
+  private static InputRow ir(String timeString, long metricValue)
   {
     return new MapBasedInputRow(
         DateTimes.of(timeString).getMillis(),
@@ -228,7 +259,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
         index.add(row);
       }
       catch (IndexSizeExceededException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 
@@ -236,7 +267,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       INDEX_MERGER_V9.persist(index, persistDir, new IndexSpec(), null);
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     return ImmutableMap.of(
@@ -249,115 +280,81 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   public static Collection<Object[]> constructorFeeder()
   {
     final List<TestCase> testCases = ImmutableList.of(
-        TC(
+        tc(
             "2000/2000T02", 3, 7,
-            DS("2000/2000T01", "v1", 0, IR("2000", 1), IR("2000T00:01", 2)),
-            DS("2000T01/2000T02", "v1", 0, IR("2000T01", 4))
+            ds("2000/2000T01", "v1", 0, ir("2000", 1), ir("2000T00:01", 2)),
+            ds("2000T01/2000T02", "v1", 0, ir("2000T01", 4))
         ) /* Adjacent segments */,
-        TC(
+        tc(
             "2000/2000T02", 3, 7,
-            DS("2000/2000T02", "v1", 0, IR("2000", 1), IR("2000T00:01", 2), IR("2000T01", 8)),
-            DS("2000T01/2000T02", "v2", 0, IR("2000T01:01", 4))
+            ds("2000/2000T02", "v1", 0, ir("2000", 1), ir("2000T00:01", 2), ir("2000T01", 8)),
+            ds("2000T01/2000T02", "v2", 0, ir("2000T01:01", 4))
         ) /* 1H segment overlaid on top of 2H segment */,
-        TC(
+        tc(
             "2000/2000-01-02", 4, 23,
-            DS("2000/2000-01-02", "v1", 0, IR("2000", 1), IR("2000T00:01", 2), IR("2000T01", 8), IR("2000T02", 16)),
-            DS("2000T01/2000T02", "v2", 0, IR("2000T01:01", 4))
+            ds("2000/2000-01-02", "v1", 0, ir("2000", 1), ir("2000T00:01", 2), ir("2000T01", 8), ir("2000T02", 16)),
+            ds("2000T01/2000T02", "v2", 0, ir("2000T01:01", 4))
         ) /* 1H segment overlaid on top of 1D segment */,
-        TC(
+        tc(
             "2000/2000T02", 4, 15,
-            DS("2000/2000T02", "v1", 0, IR("2000", 1), IR("2000T00:01", 2), IR("2000T01", 8)),
-            DS("2000/2000T02", "v1", 1, IR("2000T01:01", 4))
+            ds("2000/2000T02", "v1", 0, ir("2000", 1), ir("2000T00:01", 2), ir("2000T01", 8)),
+            ds("2000/2000T02", "v1", 1, ir("2000T01:01", 4))
         ) /* Segment set with two segments for the same interval */,
-        TC(
+        tc(
             "2000T01/2000T02", 1, 2,
-            DS("2000/2000T03", "v1", 0, IR("2000", 1), IR("2000T01", 2), IR("2000T02", 4))
+            ds("2000/2000T03", "v1", 0, ir("2000", 1), ir("2000T01", 2), ir("2000T02", 4))
         ) /* Segment wider than desired interval */,
-        TC(
+        tc(
             "2000T02/2000T04", 2, 12,
-            DS("2000/2000T03", "v1", 0, IR("2000", 1), IR("2000T01", 2), IR("2000T02", 4)),
-            DS("2000T03/2000T04", "v1", 0, IR("2000T03", 8))
+            ds("2000/2000T03", "v1", 0, ir("2000", 1), ir("2000T01", 2), ir("2000T02", 4)),
+            ds("2000T03/2000T04", "v1", 0, ir("2000T03", 8))
         ) /* Segment intersecting desired interval */
     );
 
     final List<Object[]> constructors = new ArrayList<>();
 
     for (final TestCase testCase : testCases) {
-      final TaskActionClient taskActionClient = new TaskActionClient()
-      {
-        @Override
-        public <RetType> RetType submit(TaskAction<RetType> taskAction)
-        {
-          if (taskAction instanceof SegmentListUsedAction) {
-            // Expect the interval we asked for
-            final SegmentListUsedAction action = (SegmentListUsedAction) taskAction;
-            if (action.getIntervals().equals(ImmutableList.of(testCase.interval))) {
-              return (RetType) ImmutableList.copyOf(testCase.segments);
-            } else {
-              throw new IllegalArgumentException("WTF");
-            }
-          } else if (taskAction instanceof LockAcquireAction) {
-            return (RetType) new TaskLock(TaskLockType.EXCLUSIVE, null, DATA_SOURCE, Intervals.of("2000/2001"), "v1", 0);
-          } else {
-            throw new UnsupportedOperationException();
-          }
-        }
-      };
       SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
       EasyMock.replay(notifierFactory);
-      SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
+      final SegmentLoaderFactory slf = new SegmentLoaderFactory(null, MAPPER);
+      final RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory(new RetryPolicyConfig());
+      final CoordinatorClient cc = new CoordinatorClient(null, null)
       {
         @Override
-        public List<StorageLocationConfig> getLocations()
+        public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
         {
-          return new ArrayList<>();
+          // Expect the interval we asked for
+          if (intervals.equals(ImmutableList.of(testCase.interval))) {
+            return ImmutableList.copyOf(testCase.segments);
+          } else {
+            throw new IllegalArgumentException("WTF");
+          }
+        }
+
+        @Override
+        public DataSegment getDatabaseSegmentDataSourceSegment(String dataSource, String segmentId)
+        {
+          return testCase.segments
+              .stream()
+              .filter(s -> s.getId().toString().equals(segmentId))
+              .findAny()
+              .get();  // throwing if not found is exactly what the real code does
         }
       };
-      final TaskToolboxFactory taskToolboxFactory = new TaskToolboxFactory(
-          new TaskConfig(testCase.tmpDir.getAbsolutePath(), null, null, 50000, null, false, null, null),
-          new TaskActionClientFactory()
-          {
-            @Override
-            public TaskActionClient create(Task task)
-            {
-              return taskActionClient;
-            }
-          },
-          new NoopServiceEmitter(),
-          null, // segment pusher
-          null, // segment killer
-          null, // segment mover
-          null, // segment archiver
-          null, // segment announcer,
-          null,
-          notifierFactory,
-          null, // query runner factory conglomerate corporation unionized collective
-          null, // query executor service
-          null, // monitor scheduler
-          new SegmentLoaderFactory(
-              new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, MAPPER)
-          ),
-          MAPPER,
-          INDEX_IO,
-          null,
-          null,
-          null,
-          INDEX_MERGER_V9,
-          null,
-          null,
-          null,
-          null,
-          new NoopTestTaskFileWriter()
-      );
       final IngestSegmentFirehoseFactory factory = new IngestSegmentFirehoseFactory(
           DATA_SOURCE,
           testCase.interval,
+          null,
           new TrueDimFilter(),
           Arrays.asList(DIMENSIONS),
           Arrays.asList(METRICS),
-          INDEX_IO
+          // Split as much as possible
+          1L,
+          INDEX_IO,
+          cc,
+          slf,
+          retryPolicyFactory
       );
-      factory.setTaskToolbox(taskToolboxFactory.build(NoopTask.create(DATA_SOURCE)));
 
       constructors.add(
           new Object[]{
@@ -365,7 +362,8 @@ public class IngestSegmentFirehoseFactoryTimelineTest
               factory,
               testCase.tmpDir,
               testCase.expectedCount,
-              testCase.expectedSum
+              testCase.expectedSum,
+              testCase.segments.size()
           }
       );
     }
@@ -445,7 +443,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           Arrays.asList(METRICS),
           new LinearShardSpec(partitionNum),
           -1,
-          0L
+          2L
       );
     }
   }

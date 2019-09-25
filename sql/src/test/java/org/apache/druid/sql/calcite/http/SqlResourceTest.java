@@ -112,9 +112,16 @@ public class SqlResourceTest extends CalciteTestBase
   {
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
 
-    final PlannerConfig plannerConfig = new PlannerConfig();
+    final PlannerConfig plannerConfig = new PlannerConfig()
+    {
+      @Override
+      public boolean shouldSerializeComplexValues()
+      {
+        return false;
+      }
+    };
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker);
+    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     req = EasyMock.createStrictMock(HttpServletRequest.class);

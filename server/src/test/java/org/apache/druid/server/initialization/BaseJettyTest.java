@@ -19,12 +19,10 @@
 
 package org.apache.druid.server.initialization;
 
-import com.google.common.base.Throwables;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.guice.http.LifecycleUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.HttpClientConfig;
@@ -64,6 +62,7 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.Deflater;
 
 public abstract class BaseJettyTest
 {
@@ -119,11 +118,11 @@ public abstract class BaseJettyTest
       try {
         this.client = HttpClientInit.createClient(
             new HttpClientConfig(maxClientConnections, SSLContext.getDefault(), Duration.ZERO),
-            LifecycleUtils.asMmxLifecycle(druidLifecycle)
+            druidLifecycle
         );
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 
@@ -145,7 +144,13 @@ public abstract class BaseJettyTest
       root.addFilter(GuiceFilter.class, "/*", null);
 
       final HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(root, 4096, -1)});
+      handlerList.setHandlers(
+          new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(
+              root,
+              ServerConfig.DEFAULT_GZIP_INFLATE_BUFFER_SIZE,
+              Deflater.DEFAULT_COMPRESSION
+          )}
+      );
       server.setHandler(handlerList);
     }
 

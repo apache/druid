@@ -19,12 +19,10 @@
 
 package org.apache.druid.collections.bitmap;
 
-import com.google.common.base.Throwables;
+import org.roaringbitmap.BatchIterator;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
 
 public class WrappedImmutableRoaringBitmap implements ImmutableBitmap
@@ -58,12 +56,12 @@ public class WrappedImmutableRoaringBitmap implements ImmutableBitmap
   public byte[] toBytes()
   {
     try {
-      final ByteArrayOutputStream out = new ByteArrayOutputStream();
-      bitmap.serialize(new DataOutputStream(out));
-      return out.toByteArray();
+      ByteBuffer buffer = ByteBuffer.allocate(bitmap.serializedSizeInBytes());
+      bitmap.serialize(buffer);
+      return buffer.array();
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -77,6 +75,12 @@ public class WrappedImmutableRoaringBitmap implements ImmutableBitmap
   public IntIterator iterator()
   {
     return bitmap.getIntIterator();
+  }
+
+  @Override
+  public BatchIterator batchIterator()
+  {
+    return bitmap.getBatchIterator();
   }
 
   @Override

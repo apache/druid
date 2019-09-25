@@ -19,7 +19,6 @@
 
 package org.apache.druid.query;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -71,7 +70,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -87,24 +85,25 @@ public class DoubleStorageTest
       QueryRunnerTestHelper.NOOP_QUERYWATCHER
   );
 
-  private static final ScanQueryQueryToolChest scanQueryQueryToolChest = new ScanQueryQueryToolChest(
+  private static final ScanQueryQueryToolChest SCAN_QUERY_QUERY_TOOL_CHEST = new ScanQueryQueryToolChest(
       new ScanQueryConfig(),
       DefaultGenericQueryMetricsFactory.instance()
   );
 
   private static final ScanQueryRunnerFactory SCAN_QUERY_RUNNER_FACTORY = new ScanQueryRunnerFactory(
-      scanQueryQueryToolChest,
-      new ScanQueryEngine()
+      SCAN_QUERY_QUERY_TOOL_CHEST,
+      new ScanQueryEngine(),
+      new ScanQueryConfig()
   );
 
-  private ScanQuery.ScanQueryBuilder newTestQuery()
+  private Druids.ScanQueryBuilder newTestQuery()
   {
-    return ScanQuery.newScanQueryBuilder()
-                    .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
-                    .columns(Collections.emptyList())
-                    .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-                    .limit(Integer.MAX_VALUE)
-                    .legacy(false);
+    return Druids.newScanQueryBuilder()
+                 .dataSource(new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE))
+                 .columns(Collections.emptyList())
+                 .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                 .limit(Integer.MAX_VALUE)
+                 .legacy(false);
   }
 
 
@@ -271,7 +270,7 @@ public class DoubleStorageTest
                                                       )
                                                       .merge(true)
                                                       .build();
-    List<SegmentAnalysis> results = runner.run(QueryPlus.wrap(segmentMetadataQuery), new HashMap<>()).toList();
+    List<SegmentAnalysis> results = runner.run(QueryPlus.wrap(segmentMetadataQuery)).toList();
 
     Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis), results);
 
@@ -292,8 +291,7 @@ public class DoubleStorageTest
         .virtualColumns()
         .build();
 
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
 
     ScanResultValue expectedScanResult = new ScanResultValue(
         SEGMENT_ID.toString(),
@@ -327,7 +325,7 @@ public class DoubleStorageTest
         index.add(ROW_PARSER.parseBatch((Map<String, Object>) o).get(0));
       }
       catch (IndexSizeExceededException e) {
-        Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     });
 

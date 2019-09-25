@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.guice.annotations.ExtensionPoint;
 
 import javax.annotation.Nullable;
 
@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
  *
  * All implementations of this interface MUST also implement {@link ColumnValueSelector}.
  */
-@PublicApi
+@ExtensionPoint
 public interface BaseObjectColumnValueSelector<T> extends BaseNullableColumnValueSelector
 {
   @Nullable

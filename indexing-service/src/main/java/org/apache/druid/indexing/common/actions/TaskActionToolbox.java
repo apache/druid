@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.google.inject.Inject;
-import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
@@ -34,7 +33,6 @@ public class TaskActionToolbox
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final ServiceEmitter emitter;
   private final SupervisorManager supervisorManager;
-  private final Counters counters;
 
   @Inject
   public TaskActionToolbox(
@@ -42,8 +40,7 @@ public class TaskActionToolbox
       TaskStorage taskStorage,
       IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       ServiceEmitter emitter,
-      SupervisorManager supervisorManager,
-      Counters counters
+      SupervisorManager supervisorManager
   )
   {
     this.taskLockbox = taskLockbox;
@@ -51,7 +48,6 @@ public class TaskActionToolbox
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
     this.emitter = emitter;
     this.supervisorManager = supervisorManager;
-    this.counters = counters;
   }
 
   public TaskLockbox getTaskLockbox()
@@ -77,10 +73,5 @@ public class TaskActionToolbox
   public SupervisorManager getSupervisorManager()
   {
     return supervisorManager;
-  }
-
-  public Counters getCounters()
-  {
-    return counters;
   }
 }

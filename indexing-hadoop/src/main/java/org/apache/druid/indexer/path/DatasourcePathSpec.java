@@ -19,10 +19,8 @@
 
 package org.apache.druid.indexer.path;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
@@ -51,7 +49,6 @@ public class DatasourcePathSpec implements PathSpec
 
   public static final String TYPE = "dataSource";
 
-  private final ObjectMapper mapper;
   private final DatasourceIngestionSpec ingestionSpec;
   private final long maxSplitSize;
   private final List<WindowedDataSegment> segments;
@@ -67,14 +64,12 @@ public class DatasourcePathSpec implements PathSpec
 
   @JsonCreator
   public DatasourcePathSpec(
-      @JacksonInject ObjectMapper mapper,
       @JsonProperty("segments") List<WindowedDataSegment> segments,
       @JsonProperty("ingestionSpec") DatasourceIngestionSpec spec,
       @JsonProperty("maxSplitSize") Long maxSplitSize,
       @JsonProperty(USE_NEW_AGGS_KEY) boolean useNewAggs
   )
   {
-    this.mapper = Preconditions.checkNotNull(mapper, "null mapper");
     this.segments = segments;
     this.ingestionSpec = Preconditions.checkNotNull(spec, "null ingestionSpec");
 

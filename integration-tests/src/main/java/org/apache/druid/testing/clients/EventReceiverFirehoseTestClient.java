@@ -22,7 +22,6 @@ package org.apache.druid.testing.clients;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -46,7 +45,6 @@ import java.util.Map;
 public class EventReceiverFirehoseTestClient
 {
   private final String host;
-  private final StatusResponseHandler responseHandler;
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private final String chatID;
@@ -62,7 +60,6 @@ public class EventReceiverFirehoseTestClient
   {
     this.host = host;
     this.jsonMapper = jsonMapper;
-    this.responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
     this.httpClient = httpClient;
     this.chatID = chatID;
     this.smileMapper = smileMapper;
@@ -90,7 +87,7 @@ public class EventReceiverFirehoseTestClient
       StatusResponseHolder response = httpClient.go(
           new Request(HttpMethod.POST, new URL(getURL()))
               .setContent(mediaType, objectMapper.writeValueAsBytes(events)),
-          responseHandler
+          StatusResponseHandler.getInstance()
       ).get();
 
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
@@ -109,7 +106,7 @@ public class EventReceiverFirehoseTestClient
       return responseData.get("eventCount");
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -156,7 +153,7 @@ public class EventReceiverFirehoseTestClient
       return totalEventsPosted;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
   }

@@ -19,24 +19,36 @@
 
 package org.apache.druid.timeline;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
+import java.util.Objects;
+
 /**
 */
-public class TimelineObjectHolder<VersionType, ObjectType> implements LogicalSegment
+public class TimelineObjectHolder<VersionType, ObjectType extends Overshadowable<ObjectType>> implements LogicalSegment
 {
   private final Interval interval;
+  private final Interval trueInterval;
   private final VersionType version;
   private final PartitionHolder<ObjectType> object;
 
+  @VisibleForTesting
+  public TimelineObjectHolder(Interval interval, VersionType version, PartitionHolder<ObjectType> object)
+  {
+    this(interval, interval, version, object);
+  }
+
   public TimelineObjectHolder(
       Interval interval,
+      Interval trueInterval,
       VersionType version,
       PartitionHolder<ObjectType> object
   )
   {
     this.interval = interval;
+    this.trueInterval = trueInterval;
     this.version = version;
     this.object = object;
   }
@@ -45,6 +57,12 @@ public class TimelineObjectHolder<VersionType, ObjectType> implements LogicalSeg
   public Interval getInterval()
   {
     return interval;
+  }
+
+  @Override
+  public Interval getTrueInterval()
+  {
+    return trueInterval;
   }
 
   public VersionType getVersion()
@@ -58,10 +76,32 @@ public class TimelineObjectHolder<VersionType, ObjectType> implements LogicalSeg
   }
 
   @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    TimelineObjectHolder<?, ?> that = (TimelineObjectHolder<?, ?>) o;
+    return Objects.equals(interval, that.interval) &&
+           Objects.equals(version, that.version) &&
+           Objects.equals(object, that.object);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(interval, version, object);
+  }
+
+  @Override
   public String toString()
   {
     return "TimelineObjectHolder{" +
            "interval=" + interval +
+           ", trueInterval=" + trueInterval +
            ", version=" + version +
            ", object=" + object +
            '}';

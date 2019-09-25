@@ -26,7 +26,6 @@ import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -49,6 +48,7 @@ import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -90,7 +90,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -240,9 +239,7 @@ public class TimeseriesBenchmark
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
-    if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
-    }
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
     executorService = Execs.multiThreaded(numSegments, "TimeseriesThreadPool");
 
@@ -296,7 +293,7 @@ public class TimeseriesBenchmark
 
     factory = new TimeseriesQueryRunnerFactory(
         new TimeseriesQueryQueryToolChest(
-            QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()
+            QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()
         ),
         new TimeseriesQueryEngine(),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER
@@ -326,7 +323,7 @@ public class TimeseriesBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
     return queryResult.toList();
   }
 
@@ -342,9 +339,7 @@ public class TimeseriesBenchmark
     );
 
     List<Result<TimeseriesResultValue>> results = TimeseriesBenchmark.runQuery(factory, runner, query);
-    for (Result<TimeseriesResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -359,9 +354,7 @@ public class TimeseriesBenchmark
     );
 
     List<Result<TimeseriesResultValue>> results = TimeseriesBenchmark.runQuery(factory, runner, query);
-    for (Result<TimeseriesResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -379,9 +372,7 @@ public class TimeseriesBenchmark
     Query filteredQuery = query.withDimFilter(filter);
 
     List<Result<TimeseriesResultValue>> results = TimeseriesBenchmark.runQuery(factory, runner, filteredQuery);
-    for (Result<TimeseriesResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -410,12 +401,10 @@ public class TimeseriesBenchmark
 
     Sequence<Result<TimeseriesResultValue>> queryResult = theRunner.run(
         QueryPlus.wrap(query),
-        new HashMap<>()
+        ResponseContext.createEmpty()
     );
     List<Result<TimeseriesResultValue>> results = queryResult.toList();
 
-    for (Result<TimeseriesResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 }

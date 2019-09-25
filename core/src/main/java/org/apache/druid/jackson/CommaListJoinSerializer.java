@@ -31,7 +31,7 @@ import java.util.List;
  */
 public class CommaListJoinSerializer extends StdScalarSerializer<List<String>>
 {
-  private static final Joiner joiner = Joiner.on(",");
+  private static final Joiner JOINER = Joiner.on(",");
 
   protected CommaListJoinSerializer()
   {
@@ -41,6 +41,6 @@ public class CommaListJoinSerializer extends StdScalarSerializer<List<String>>
   @Override
   public void serialize(List<String> value, JsonGenerator jgen, SerializerProvider provider) throws IOException
   {
-    jgen.writeString(joiner.join(value));
+    jgen.writeString(JOINER.join(value));
   }
 }

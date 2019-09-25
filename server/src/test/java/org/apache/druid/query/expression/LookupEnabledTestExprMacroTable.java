@@ -27,8 +27,8 @@ import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactory;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupIntrospectHandler;
-import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.easymock.EasyMock;
 
 import javax.annotation.Nullable;
@@ -36,7 +36,7 @@ import java.util.Collections;
 
 /**
  * Separate from {@link TestExprMacroTable} since that one is in druid-processing, which doesn't have
- * {@link LookupReferencesManager}.
+ * {@link LookupExtractorFactoryContainerProvider}.
  */
 public class LookupEnabledTestExprMacroTable extends ExprMacroTable
 {
@@ -57,12 +57,15 @@ public class LookupEnabledTestExprMacroTable extends ExprMacroTable
   }
 
   /**
-   * Returns a mock {@link LookupReferencesManager} that has one lookup, "lookyloo".
+   * Returns a mock {@link LookupExtractorFactoryContainerProvider} that has one lookup, "lookyloo".
    */
-  public static LookupReferencesManager createTestLookupReferencesManager(final ImmutableMap<String, String> theLookup)
+  public static LookupExtractorFactoryContainerProvider createTestLookupReferencesManager(
+      final ImmutableMap<String, String> theLookup
+  )
   {
-    final LookupReferencesManager lookupReferencesManager = EasyMock.createMock(LookupReferencesManager.class);
-    EasyMock.expect(lookupReferencesManager.get(EasyMock.eq("lookyloo"))).andReturn(
+    final LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider =
+        EasyMock.createMock(LookupExtractorFactoryContainerProvider.class);
+    EasyMock.expect(lookupExtractorFactoryContainerProvider.get(EasyMock.eq("lookyloo"))).andReturn(
         new LookupExtractorFactoryContainer(
             "v0",
             new LookupExtractorFactory()
@@ -99,8 +102,8 @@ public class LookupEnabledTestExprMacroTable extends ExprMacroTable
             }
         )
     ).anyTimes();
-    EasyMock.expect(lookupReferencesManager.get(EasyMock.not(EasyMock.eq("lookyloo")))).andReturn(null).anyTimes();
-    EasyMock.replay(lookupReferencesManager);
-    return lookupReferencesManager;
+    EasyMock.expect(lookupExtractorFactoryContainerProvider.get(EasyMock.not(EasyMock.eq("lookyloo")))).andReturn(null).anyTimes();
+    EasyMock.replay(lookupExtractorFactoryContainerProvider);
+    return lookupExtractorFactoryContainerProvider;
   }
 }

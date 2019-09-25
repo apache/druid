@@ -40,10 +40,11 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
-import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
+import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -73,6 +74,11 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 {
+  public static final TypeReference<TreeMap<Integer, Map<String, String>>> CHECKPOINTS_TYPE_REF =
+      new TypeReference<TreeMap<Integer, Map<String, String>>>()
+      {
+      };
+
   private static final String NOT_SET = "-1";
   private final KinesisSupervisorSpec spec;
   private final AWSCredentialsConfig awsCredentialsConfig;
@@ -120,15 +126,18 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     return new KinesisIndexTaskIOConfig(
         groupId,
         baseSequenceName,
-        new SeekableStreamPartitions<>(ioConfig.getStream(), startPartitions),
-        new SeekableStreamPartitions<>(ioConfig.getStream(), endPartitions),
+        new SeekableStreamStartSequenceNumbers<>(
+            ioConfig.getStream(),
+            startPartitions,
+            exclusiveStartSequenceNumberPartitions
+        ),
+        new SeekableStreamEndSequenceNumbers<>(ioConfig.getStream(), endPartitions),
         true,
         minimumMessageTime,
         maximumMessageTime,
         ioConfig.getEndpoint(),
         ioConfig.getRecordsPerFetch(),
         ioConfig.getFetchDelayMillis(),
-        exclusiveStartSequenceNumberPartitions,
         ioConfig.getAwsAssumedRoleArn(),
         ioConfig.getAwsExternalId(),
         ioConfig.isDeaggregate()
@@ -146,20 +155,10 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       RowIngestionMetersFactory rowIngestionMetersFactory
   ) throws JsonProcessingException
   {
-    final String checkpoints = sortingMapper.writerFor(new TypeReference<TreeMap<Integer, Map<String, String>>>()
-    {
-    }).writeValueAsString(sequenceOffsets);
-    final Map<String, Object> context = spec.getContext() == null
-                                        ? ImmutableMap.of(
-        "checkpoints",
-        checkpoints,
-        IS_INCREMENTAL_HANDOFF_SUPPORTED,
-        true
-    ) : ImmutableMap.<String, Object>builder()
-                                            .put("checkpoints", checkpoints)
-                                            .put(IS_INCREMENTAL_HANDOFF_SUPPORTED, true)
-                                            .putAll(spec.getContext())
-                                            .build();
+    final String checkpoints = sortingMapper.writerFor(CHECKPOINTS_TYPE_REF).writeValueAsString(sequenceOffsets);
+    final Map<String, Object> context = createBaseTaskContexts();
+    context.put(CHECKPOINTS_CTX_KEY, checkpoints);
+
     List<SeekableStreamIndexTask<String, String>> taskList = new ArrayList<>();
     for (int i = 0; i < replicas; i++) {
       String taskId = Joiner.on("_").join(baseSequenceName, RandomIdUtils.getRandomId());
@@ -173,7 +172,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
           null,
           null,
           rowIngestionMetersFactory,
-          awsCredentialsConfig
+          awsCredentialsConfig,
+          null
       ));
     }
     return taskList;
@@ -204,9 +204,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         taskTuningConfig.getFetchSequenceNumberTimeout(),
         taskTuningConfig.getMaxRecordsPerPoll()
     );
-
   }
-
 
   @Override
   protected void scheduleReporting(ScheduledExecutorService reportingExec)
@@ -249,7 +247,11 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         numPartitions,
         ioConfig.getReplicas(),
         ioConfig.getTaskDuration().getMillis() / 1000,
-        spec.isSuspended()
+        spec.isSuspended(),
+        stateManager.isHealthy(),
+        stateManager.getSupervisorState().getBasicState(),
+        stateManager.getSupervisorState(),
+        stateManager.getExceptionEvents()
     );
   }
 
@@ -261,14 +263,12 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
-  protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetaData(
+  protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetaDataForReset(
       String stream,
       Map<String, String> map
   )
   {
-    return new KinesisDataSourceMetadata(
-        new SeekableStreamPartitions<>(stream, map)
-    );
+    return new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(stream, map));
   }
 
   @Override
@@ -300,12 +300,18 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   @Override
   protected String getEndOfPartitionMarker()
   {
-    return SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER;
+    return KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER;
   }
 
   @Override
   protected boolean isEndOfShard(String seqNum)
   {
     return KinesisSequenceNumber.END_OF_SHARD_MARKER.equals(seqNum);
+  }
+
+  @Override
+  protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
+  {
+    return true;
   }
 }

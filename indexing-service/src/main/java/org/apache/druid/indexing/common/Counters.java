@@ -19,54 +19,35 @@
 
 package org.apache.druid.indexing.common;
 
-import com.google.common.util.concurrent.AtomicDouble;
-
-import javax.annotation.Nullable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BinaryOperator;
+import java.util.concurrent.atomic.AtomicLong;
 
-public class Counters
+public final class Counters
 {
-  private final ConcurrentMap<String, AtomicInteger> intCounters = new ConcurrentHashMap<>();
-  private final ConcurrentMap<String, AtomicDouble> doubleCounters = new ConcurrentHashMap<>();
-  private final ConcurrentMap<String, AtomicReference> objectCounters = new ConcurrentHashMap<>();
-
-  public int increment(String key, int val)
+  public static <K> int getAndIncrementInt(ConcurrentHashMap<K, AtomicInteger> counters, K key)
   {
-    return intCounters.computeIfAbsent(key, k -> new AtomicInteger()).addAndGet(val);
+    // get() before computeIfAbsent() is an optimization to avoid locking in computeIfAbsent() if not needed.
+    // See https://github.com/apache/incubator-druid/pull/6898#discussion_r251384586.
+    AtomicInteger counter = counters.get(key);
+    if (counter == null) {
+      counter = counters.computeIfAbsent(key, k -> new AtomicInteger());
+    }
+    return counter.getAndIncrement();
   }
 
-  public double increment(String key, double val)
+  public static <K> long incrementAndGetLong(ConcurrentHashMap<K, AtomicLong> counters, K key)
   {
-    return doubleCounters.computeIfAbsent(key, k -> new AtomicDouble()).addAndGet(val);
+    // get() before computeIfAbsent() is an optimization to avoid locking in computeIfAbsent() if not needed.
+    // See https://github.com/apache/incubator-druid/pull/6898#discussion_r251384586.
+    AtomicLong counter = counters.get(key);
+    if (counter == null) {
+      counter = counters.computeIfAbsent(key, k -> new AtomicLong());
+    }
+    return counter.incrementAndGet();
   }
 
-  public Object increment(String key, Object obj, BinaryOperator mergeFunction)
+  private Counters()
   {
-    return objectCounters.computeIfAbsent(key, k -> new AtomicReference()).accumulateAndGet(obj, mergeFunction);
-  }
-
-  @Nullable
-  public Integer getIntCounter(String key)
-  {
-    final AtomicInteger atomicInteger = intCounters.get(key);
-    return atomicInteger == null ? null : atomicInteger.get();
-  }
-
-  @Nullable
-  public Double getDoubleCounter(String key)
-  {
-    final AtomicDouble atomicDouble = doubleCounters.get(key);
-    return atomicDouble == null ? null : atomicDouble.get();
-  }
-
-  @Nullable
-  public Object getObjectCounter(String key)
-  {
-    final AtomicReference atomicReference = objectCounters.get(key);
-    return atomicReference == null ? null : atomicReference.get();
   }
 }

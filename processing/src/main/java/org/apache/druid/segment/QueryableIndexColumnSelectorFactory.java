@@ -30,7 +30,9 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ReadableOffset;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * The basic implementation of {@link ColumnSelectorFactory} over a historical segment (i. e. {@link QueryableIndex}).
@@ -45,7 +47,13 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
   private final Closer closer;
   protected final ReadableOffset offset;
 
+  // Share Column objects, since they cache decompressed buffers internally, and we can avoid recomputation if the
+  // same column is used by more than one part of a query.
   private final Map<String, BaseColumn> columnCache;
+
+  // Share selectors too, for the same reason that we cache columns (they may cache things internally).
+  private final Map<DimensionSpec, DimensionSelector> dimensionSelectorCache;
+  private final Map<String, ColumnValueSelector> valueSelectorCache;
 
   QueryableIndexColumnSelectorFactory(
       QueryableIndex index,
@@ -62,16 +70,36 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
     this.closer = closer;
     this.offset = offset;
     this.columnCache = columnCache;
+    this.dimensionSelectorCache = new HashMap<>();
+    this.valueSelectorCache = new HashMap<>();
   }
 
   @Override
   public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
   {
-    if (virtualColumns.exists(dimensionSpec.getDimension())) {
-      return virtualColumns.makeDimensionSelector(dimensionSpec, this);
+    Function<DimensionSpec, DimensionSelector> mappingFunction = spec -> {
+      if (virtualColumns.exists(spec.getDimension())) {
+        DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(dimensionSpec, index, offset);
+        if (dimensionSelector == null) {
+          return virtualColumns.makeDimensionSelector(dimensionSpec, this);
+        } else {
+          return dimensionSelector;
+        }
+      }
+
+      return spec.decorate(makeDimensionSelectorUndecorated(spec));
+    };
+
+    // We cannot use dimensionSelectorCache.computeIfAbsent() here since the function being
+    // applied may modify the dimensionSelectorCache itself through virtual column references,
+    // triggering a ConcurrentModificationException in JDK 9 and above.
+    DimensionSelector dimensionSelector = dimensionSelectorCache.get(dimensionSpec);
+    if (dimensionSelector == null) {
+      dimensionSelector = mappingFunction.apply(dimensionSpec);
+      dimensionSelectorCache.put(dimensionSpec, dimensionSelector);
     }
 
-    return dimensionSpec.decorate(makeDimensionSelectorUndecorated(dimensionSpec));
+    return dimensionSelector;
   }
 
   private DimensionSelector makeDimensionSelectorUndecorated(DimensionSpec dimensionSpec)
@@ -93,20 +121,10 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
       return type.makeNumericWrappingDimensionSelector(makeColumnValueSelector(dimension), extractionFn);
     }
 
-    BaseColumn column = columnCache.computeIfAbsent(dimension, d -> {
-      BaseColumn col = columnHolder.getColumn();
-      if (col instanceof DictionaryEncodedColumn) {
-        return closer.register(col);
-      } else {
-        // Return null from the lambda in computeIfAbsent() results in no recorded value in the columnCache and
-        // the column variable is set to null.
-        return null;
-      }
-    });
+    final DictionaryEncodedColumn column = getCachedColumn(dimension, DictionaryEncodedColumn.class);
 
-    if (column instanceof DictionaryEncodedColumn) {
-      //noinspection unchecked
-      return ((DictionaryEncodedColumn<String>) column).makeDimensionSelector(offset, extractionFn);
+    if (column != null) {
+      return column.makeDimensionSelector(offset, extractionFn);
     } else {
       return DimensionSelector.constant(null, extractionFn);
     }
@@ -115,24 +133,54 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
   {
-    if (virtualColumns.exists(columnName)) {
-      return virtualColumns.makeColumnValueSelector(columnName, this);
-    }
-
-    BaseColumn column = columnCache.computeIfAbsent(columnName, name -> {
-      ColumnHolder holder = index.getColumnHolder(name);
-      if (holder != null) {
-        return closer.register(holder.getColumn());
-      } else {
-        return null;
+    Function<String, ColumnValueSelector<?>> mappingFunction = name -> {
+      if (virtualColumns.exists(columnName)) {
+        ColumnValueSelector<?> selector = virtualColumns.makeColumnValueSelector(columnName, index, offset);
+        if (selector == null) {
+          return virtualColumns.makeColumnValueSelector(columnName, this);
+        } else {
+          return selector;
+        }
       }
-    });
 
-    if (column != null) {
-      return column.makeColumnValueSelector(offset);
-    } else {
-      return NilColumnValueSelector.instance();
+      BaseColumn column = getCachedColumn(columnName, BaseColumn.class);
+
+      if (column != null) {
+        return column.makeColumnValueSelector(offset);
+      } else {
+        return NilColumnValueSelector.instance();
+      }
+    };
+
+    // We cannot use valueSelectorCache.computeIfAbsent() here since the function being
+    // applied may modify the valueSelectorCache itself through virtual column references,
+    // triggering a ConcurrentModificationException in JDK 9 and above.
+    ColumnValueSelector<?> columnValueSelector = valueSelectorCache.get(columnName);
+    if (columnValueSelector == null) {
+      columnValueSelector = mappingFunction.apply(columnName);
+      valueSelectorCache.put(columnName, columnValueSelector);
     }
+
+    return columnValueSelector;
+  }
+
+  @Nullable
+  @SuppressWarnings("unchecked")
+  private <T extends BaseColumn> T getCachedColumn(final String columnName, final Class<T> clazz)
+  {
+    return (T) columnCache.computeIfAbsent(
+        columnName,
+        name -> {
+          ColumnHolder holder = index.getColumnHolder(name);
+          if (holder != null && clazz.isAssignableFrom(holder.getColumn().getClass())) {
+            return closer.register(holder.getColumn());
+          } else {
+            // Return null from the lambda in computeIfAbsent() results in no recorded value in the columnCache and
+            // the column variable is set to null.
+            return null;
+          }
+        }
+    );
   }
 
   @Override

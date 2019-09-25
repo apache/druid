@@ -25,8 +25,8 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
-import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -40,7 +40,7 @@ import java.util.Map;
 @JsonTypeName("hadoop")
 public class HadoopTuningConfig implements TuningConfig
 {
-  private static final PartitionsSpec DEFAULT_PARTITIONS_SPEC = HashedPartitionsSpec.makeDefaultHashedPartitionsSpec();
+  private static final DimensionBasedPartitionsSpec DEFAULT_PARTITIONS_SPEC = HashedPartitionsSpec.defaultSpec();
   private static final Map<Long, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.of();
   private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
   private static final int DEFAULT_ROW_FLUSH_BOUNDARY = TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY;
@@ -54,6 +54,7 @@ public class HadoopTuningConfig implements TuningConfig
         DateTimes.nowUtc().toString(),
         DEFAULT_PARTITIONS_SPEC,
         DEFAULT_SHARD_SPECS,
+        DEFAULT_INDEX_SPEC,
         DEFAULT_INDEX_SPEC,
         DEFAULT_ROW_FLUSH_BOUNDARY,
         0L,
@@ -71,15 +72,17 @@ public class HadoopTuningConfig implements TuningConfig
         false,
         null,
         null,
+        null,
         null
     );
   }
 
   private final String workingPath;
   private final String version;
-  private final PartitionsSpec partitionsSpec;
+  private final DimensionBasedPartitionsSpec partitionsSpec;
   private final Map<Long, List<HadoopyShardSpec>> shardSpecs;
   private final IndexSpec indexSpec;
+  private final IndexSpec indexSpecForIntermediatePersists;
   private final int rowFlushBoundary;
   private final long maxBytesInMemory;
   private final boolean leaveIntermediate;
@@ -95,14 +98,16 @@ public class HadoopTuningConfig implements TuningConfig
   private final List<String> allowedHadoopPrefix;
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
+  private final boolean useYarnRMJobStatusFallback;
 
   @JsonCreator
   public HadoopTuningConfig(
       final @JsonProperty("workingPath") String workingPath,
       final @JsonProperty("version") String version,
-      final @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
+      final @JsonProperty("partitionsSpec") DimensionBasedPartitionsSpec partitionsSpec,
       final @JsonProperty("shardSpecs") Map<Long, List<HadoopyShardSpec>> shardSpecs,
       final @JsonProperty("indexSpec") IndexSpec indexSpec,
+      final @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
       final @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       final @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
       final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
@@ -121,7 +126,8 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("useExplicitVersion") boolean useExplicitVersion,
       final @JsonProperty("allowedHadoopPrefix") List<String> allowedHadoopPrefix,
       final @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
-      final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions
+      final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
+      final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback
   )
   {
     this.workingPath = workingPath;
@@ -129,6 +135,8 @@ public class HadoopTuningConfig implements TuningConfig
     this.partitionsSpec = partitionsSpec == null ? DEFAULT_PARTITIONS_SPEC : partitionsSpec;
     this.shardSpecs = shardSpecs == null ? DEFAULT_SHARD_SPECS : shardSpecs;
     this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
+    this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
+                                            this.indexSpec : indexSpecForIntermediatePersists;
     this.rowFlushBoundary = maxRowsInMemory == null ? maxRowsInMemoryCOMPAT == null
                                                       ? DEFAULT_ROW_FLUSH_BOUNDARY
                                                       : maxRowsInMemoryCOMPAT : maxRowsInMemory;
@@ -162,6 +170,8 @@ public class HadoopTuningConfig implements TuningConfig
       }
     }
     this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
+
+    this.useYarnRMJobStatusFallback = useYarnRMJobStatusFallback == null ? true : useYarnRMJobStatusFallback;
   }
 
   @JsonProperty
@@ -177,7 +187,7 @@ public class HadoopTuningConfig implements TuningConfig
   }
 
   @JsonProperty
-  public PartitionsSpec getPartitionsSpec()
+  public DimensionBasedPartitionsSpec getPartitionsSpec()
   {
     return partitionsSpec;
   }
@@ -192,6 +202,12 @@ public class HadoopTuningConfig implements TuningConfig
   public IndexSpec getIndexSpec()
   {
     return indexSpec;
+  }
+
+  @JsonProperty
+  public IndexSpec getIndexSpecForIntermediatePersists()
+  {
+    return indexSpecForIntermediatePersists;
   }
 
   @JsonProperty("maxRowsInMemory")
@@ -295,6 +311,12 @@ public class HadoopTuningConfig implements TuningConfig
     return maxParseExceptions;
   }
 
+  @JsonProperty
+  public boolean isUseYarnRMJobStatusFallback()
+  {
+    return useYarnRMJobStatusFallback;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -303,6 +325,7 @@ public class HadoopTuningConfig implements TuningConfig
         partitionsSpec,
         shardSpecs,
         indexSpec,
+        indexSpecForIntermediatePersists,
         rowFlushBoundary,
         maxBytesInMemory,
         leaveIntermediate,
@@ -319,7 +342,8 @@ public class HadoopTuningConfig implements TuningConfig
         useExplicitVersion,
         allowedHadoopPrefix,
         logParseExceptions,
-        maxParseExceptions
+        maxParseExceptions,
+        useYarnRMJobStatusFallback
     );
   }
 
@@ -331,6 +355,7 @@ public class HadoopTuningConfig implements TuningConfig
         partitionsSpec,
         shardSpecs,
         indexSpec,
+        indexSpecForIntermediatePersists,
         rowFlushBoundary,
         maxBytesInMemory,
         leaveIntermediate,
@@ -347,7 +372,8 @@ public class HadoopTuningConfig implements TuningConfig
         useExplicitVersion,
         allowedHadoopPrefix,
         logParseExceptions,
-        maxParseExceptions
+        maxParseExceptions,
+        useYarnRMJobStatusFallback
     );
   }
 
@@ -359,6 +385,7 @@ public class HadoopTuningConfig implements TuningConfig
         partitionsSpec,
         specs,
         indexSpec,
+        indexSpecForIntermediatePersists,
         rowFlushBoundary,
         maxBytesInMemory,
         leaveIntermediate,
@@ -375,7 +402,8 @@ public class HadoopTuningConfig implements TuningConfig
         useExplicitVersion,
         allowedHadoopPrefix,
         logParseExceptions,
-        maxParseExceptions
+        maxParseExceptions,
+        useYarnRMJobStatusFallback
     );
   }
 }

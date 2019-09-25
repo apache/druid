@@ -36,6 +36,7 @@ import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
@@ -319,7 +320,7 @@ public class VirtualColumnsTest
         @Override
         public int getValueCardinality()
         {
-          return DimensionSelector.CARDINALITY_UNKNOWN;
+          return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
         }
 
         @Override

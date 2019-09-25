@@ -30,30 +30,30 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import kafka.consumer.ConsumerConfig;
-import kafka.consumer.KafkaStream;
-import kafka.consumer.Whitelist;
-import kafka.javaapi.consumer.ConsumerConnector;
-import kafka.javaapi.consumer.ZookeeperConsumerConnector;
-import kafka.message.MessageAndMetadata;
-import kafka.serializer.Decoder;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.server.lookup.namespace.cache.CacheHandler;
 import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.StringDeserializer;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
 import java.nio.ByteBuffer;
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -61,21 +61,11 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.regex.Pattern;
 
 @JsonTypeName("kafka")
 public class KafkaLookupExtractorFactory implements LookupExtractorFactory
 {
   private static final Logger LOG = new Logger(KafkaLookupExtractorFactory.class);
-  static final Decoder<String> DEFAULT_STRING_DECODER = new Decoder<String>()
-  {
-    @Override
-    public String fromBytes(byte[] bytes)
-    {
-      return StringUtils.fromUtf8(bytes);
-    }
-  };
-
   private final ListeningExecutorService executorService;
   private final AtomicLong doubleEventCount = new AtomicLong(0L);
   private final NamespaceExtractionCacheManager cacheManager;
@@ -84,7 +74,6 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   private final AtomicBoolean started = new AtomicBoolean(false);
   private CacheHandler cacheHandler;
 
-  private volatile ConsumerConnector consumerConnector;
   private volatile ListenableFuture<?> future = null;
 
   @JsonProperty
@@ -155,92 +144,57 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     synchronized (started) {
       if (started.get()) {
         LOG.warn("Already started, not starting again");
-        return started.get();
+        return true;
       }
       if (executorService.isShutdown()) {
         LOG.warn("Already shut down, not starting again");
         return false;
       }
-      final Properties kafkaProperties = new Properties();
-      kafkaProperties.putAll(getKafkaProperties());
-      if (kafkaProperties.containsKey("group.id")) {
-        throw new IAE(
-            "Cannot set kafka property [group.id]. Property is randomly generated for you. Found [%s]",
-            kafkaProperties.getProperty("group.id")
-        );
-      }
-      if (kafkaProperties.containsKey("auto.offset.reset")) {
-        throw new IAE(
-            "Cannot set kafka property [auto.offset.reset]. Property will be forced to [smallest]. Found [%s]",
-            kafkaProperties.getProperty("auto.offset.reset")
-        );
-      }
-      Preconditions.checkNotNull(
-          kafkaProperties.getProperty("zookeeper.connect"),
-          "zookeeper.connect required property"
-      );
+      verifyKafkaProperties();
 
-      kafkaProperties.setProperty("group.id", factoryId);
       final String topic = getKafkaTopic();
       LOG.debug("About to listen to topic [%s] with group.id [%s]", topic, factoryId);
       cacheHandler = cacheManager.createCache();
-      final Map<String, String> map = cacheHandler.getCache();
+      final ConcurrentMap<String, String> map = cacheHandler.getCache();
       mapRef.set(map);
-      // Enable publish-subscribe
-      kafkaProperties.setProperty("auto.offset.reset", "smallest");
+
 
       final CountDownLatch startingReads = new CountDownLatch(1);
 
-      final ListenableFuture<?> future = executorService.submit(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              while (!executorService.isShutdown()) {
-                consumerConnector = buildConnector(kafkaProperties);
-                try {
-                  if (executorService.isShutdown()) {
-                    break;
-                  }
+      final ListenableFuture<?> future = executorService.submit(() -> {
+        final Consumer<String, String> consumer = getConsumer();
+        consumer.subscribe(Collections.singletonList(topic));
+        try {
+          while (!executorService.isShutdown()) {
+            try {
+              if (executorService.isShutdown()) {
+                break;
+              }
+              final ConsumerRecords<String, String> records = consumer.poll(1000);
+              startingReads.countDown();
 
-                  final List<KafkaStream<String, String>> streams = consumerConnector.createMessageStreamsByFilter(
-                      new Whitelist(Pattern.quote(topic)), 1, DEFAULT_STRING_DECODER, DEFAULT_STRING_DECODER
-                  );
-
-                  if (streams == null || streams.isEmpty()) {
-                    throw new IAE("Topic [%s] had no streams", topic);
-                  }
-                  if (streams.size() > 1) {
-                    throw new ISE("Topic [%s] has %d streams! expected 1", topic, streams.size());
-                  }
-                  final KafkaStream<String, String> kafkaStream = streams.get(0);
-
-                  startingReads.countDown();
-
-                  for (final MessageAndMetadata<String, String> messageAndMetadata : kafkaStream) {
-                    final String key = messageAndMetadata.key();
-                    final String message = messageAndMetadata.message();
-                    if (key == null || message == null) {
-                      LOG.error("Bad key/message from topic [%s]: [%s]", topic, messageAndMetadata);
-                      continue;
-                    }
-                    doubleEventCount.incrementAndGet();
-                    map.put(key, message);
-                    doubleEventCount.incrementAndGet();
-                    LOG.trace("Placed key[%s] val[%s]", key, message);
-                  }
+              for (final ConsumerRecord<String, String> record : records) {
+                final String key = record.key();
+                final String message = record.value();
+                if (key == null || message == null) {
+                  LOG.error("Bad key/message from topic [%s]: [%s]", topic, record);
+                  continue;
                 }
-                catch (Exception e) {
-                  LOG.error(e, "Error reading stream for topic [%s]", topic);
-                }
-                finally {
-                  consumerConnector.shutdown();
-                }
+                doubleEventCount.incrementAndGet();
+                map.put(key, message);
+                doubleEventCount.incrementAndGet();
+                LOG.trace("Placed key[%s] val[%s]", key, message);
               }
             }
+            catch (Exception e) {
+              LOG.error(e, "Error reading stream for topic [%s]", topic);
+            }
           }
-      );
+        }
+        finally {
+          consumer.close();
+        }
+      });
       Futures.addCallback(
           future,
           new FutureCallback<Object>()
@@ -292,14 +246,6 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     }
   }
 
-  // Overridden in tests
-  ConsumerConnector buildConnector(Properties properties)
-  {
-    return new ZookeeperConsumerConnector(
-        new ConsumerConfig(properties)
-    );
-  }
-
   @Override
   public boolean close()
   {
@@ -310,10 +256,6 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       }
       started.set(false);
       executorService.shutdown();
-
-      if (consumerConnector != null) {
-        consumerConnector.shutdown();
-      }
 
       final ListenableFuture<?> future = this.future;
       if (future != null) {
@@ -411,5 +353,52 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   ListenableFuture<?> getFuture()
   {
     return future;
+  }
+
+  private void verifyKafkaProperties()
+  {
+    if (kafkaProperties.containsKey(ConsumerConfig.GROUP_ID_CONFIG)) {
+      throw new IAE(
+              "Cannot set kafka property [group.id]. Property is randomly generated for you. Found [%s]",
+              kafkaProperties.get(ConsumerConfig.GROUP_ID_CONFIG)
+      );
+    }
+    if (kafkaProperties.containsKey(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)) {
+      throw new IAE(
+              "Cannot set kafka property [auto.offset.reset]. Property will be forced to [smallest]. Found [%s]",
+              kafkaProperties.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)
+      );
+    }
+    Preconditions.checkNotNull(
+            kafkaProperties.get(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG),
+            "bootstrap.servers required property"
+    );
+  }
+
+  // Overridden in tests
+  Consumer<String, String> getConsumer()
+  {
+    // Workaround for Kafka String Serializer could not be found
+    // Adopted from org.apache.druid.indexing.kafka.KafkaRecordSupplier#getKafkaConsumer
+    ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
+    final Properties properties = getConsumerProperties();
+    try {
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+      return new KafkaConsumer<>(properties, new StringDeserializer(), new StringDeserializer());
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(currCtxCl);
+    }
+  }
+
+  @Nonnull
+  private Properties getConsumerProperties()
+  {
+    final Properties properties = new Properties();
+    properties.putAll(kafkaProperties);
+    // Enable publish-subscribe
+    properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+    properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, factoryId);
+    return properties;
   }
 }

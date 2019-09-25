@@ -28,10 +28,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingInputStream;
+import com.google.common.util.concurrent.Uninterruptibles;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.concurrent.Threads;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
@@ -39,7 +40,6 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.metrics.EventReceiverFirehoseMetric;
 import org.apache.druid.server.metrics.EventReceiverFirehoseRegister;
@@ -49,7 +49,7 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.utils.Runnables;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -70,13 +70,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -86,16 +82,29 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowParser<Map<String, Object>>>
 {
+  private static final EmittingLogger log = new EmittingLogger(EventReceiverFirehoseFactory.class);
+
   public static final int MAX_FIREHOSE_PRODUCERS = 10_000;
 
-  private static final EmittingLogger log = new EmittingLogger(EventReceiverFirehoseFactory.class);
   private static final int DEFAULT_BUFFER_SIZE = 100_000;
-  private static final long DEFAULT_MAX_IDLE_TIME = Long.MAX_VALUE;
+
+  /**
+   * A "poison pill" object for {@link EventReceiverFirehose}'s internal buffer.
+   */
+  private static final Object FIREHOSE_CLOSED = new Object();
 
   private final String serviceName;
   private final int bufferSize;
-  private final long maxIdleTime;
-  private final Optional<ChatHandlerProvider> chatHandlerProvider;
+
+  /**
+   * Doesn't really support max idle times finer than 1 second due to how {@link
+   * EventReceiverFirehose#delayedCloseExecutor} is implemented, see a comment inside {@link
+   * EventReceiverFirehose#createDelayedCloseExecutor()}. This aspect is not reflected in docs because it's unlikely
+   * that anybody configures or cares about finer max idle times, and also because this is an implementation detail of
+   * {@link EventReceiverFirehose} that may change in the future.
+   */
+  private final long maxIdleTimeMillis;
+  private final ChatHandlerProvider chatHandlerProvider;
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final EventReceiverFirehoseRegister eventReceiverFirehoseRegister;
@@ -105,7 +114,9 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
   public EventReceiverFirehoseFactory(
       @JsonProperty("serviceName") String serviceName,
       @JsonProperty("bufferSize") Integer bufferSize,
-      @JsonProperty("maxIdleTime") Long maxIdleTime,
+      // Keeping the legacy 'maxIdleTime' property name for backward compatibility. When the project is updated to
+      // Jackson 2.9 it could be changed, see https://github.com/apache/incubator-druid/issues/7152
+      @JsonProperty("maxIdleTime") @Nullable Long maxIdleTimeMillis,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject @Json ObjectMapper jsonMapper,
       @JacksonInject @Smile ObjectMapper smileMapper,
@@ -117,9 +128,8 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
 
     this.serviceName = serviceName;
     this.bufferSize = bufferSize == null || bufferSize <= 0 ? DEFAULT_BUFFER_SIZE : bufferSize;
-    this.maxIdleTime = maxIdleTime == null || maxIdleTime <= 0 ?
-                       DEFAULT_MAX_IDLE_TIME : maxIdleTime;
-    this.chatHandlerProvider = Optional.ofNullable(chatHandlerProvider);
+    this.maxIdleTimeMillis = (maxIdleTimeMillis == null || maxIdleTimeMillis <= 0) ? Long.MAX_VALUE : maxIdleTimeMillis;
+    this.chatHandlerProvider = chatHandlerProvider;
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
     this.eventReceiverFirehoseRegister = eventReceiverFirehoseRegister;
@@ -135,12 +145,12 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
     log.info("Connecting firehose: %s", serviceName);
     final EventReceiverFirehose firehose = new EventReceiverFirehose(firehoseParser);
 
-    if (chatHandlerProvider.isPresent()) {
-      log.info("Found chathandler of class[%s]", chatHandlerProvider.get().getClass().getName());
-      chatHandlerProvider.get().register(serviceName, firehose);
+    if (chatHandlerProvider != null) {
+      log.info("Found chathandler of class[%s]", chatHandlerProvider.getClass().getName());
+      chatHandlerProvider.register(serviceName, firehose);
       int lastIndexOfColon = serviceName.lastIndexOf(':');
       if (lastIndexOfColon > 0) {
-        chatHandlerProvider.get().register(serviceName.substring(lastIndexOfColon + 1), firehose);
+        chatHandlerProvider.register(serviceName.substring(lastIndexOfColon + 1), firehose);
       }
     } else {
       log.warn("No chathandler detected");
@@ -163,66 +173,185 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
     return bufferSize;
   }
 
-  @JsonProperty
-  public long getMaxIdleTime()
+  /**
+   * Keeping the legacy 'maxIdleTime' property name for backward compatibility. When the project is updated to Jackson
+   * 2.9 it could be changed, see https://github.com/apache/incubator-druid/issues/7152
+   */
+  @JsonProperty("maxIdleTime")
+  public long getMaxIdleTimeMillis()
   {
-    return maxIdleTime;
+    return maxIdleTimeMillis;
   }
 
+  /**
+   * Apart from adhering to {@link Firehose} contract regarding concurrency, this class has two methods that might be
+   * called concurrently with any other methods and each other, from arbitrary number of threads: {@link #addAll} and
+   * {@link #shutdown}.
+   *
+   * Concurrent data flow: in {@link #addAll} (can be called concurrently with any other methods and other calls to
+   * {@link #addAll}) rows are pushed into {@link #buffer}. The single Firehose "consumer" thread calls {@link #hasMore}
+   * and {@link #nextRow()}, where rows are taken out from the other end of the {@link #buffer} queue.
+   *
+   * This class creates and manages one thread ({@link #delayedCloseExecutor}) for calling {@link #close()}
+   * asynchronously in response to a {@link #shutdown} request, or after this Firehose has been idle (no calls to {@link
+   * #addAll}) for {@link #maxIdleTimeMillis}.
+   */
+  @VisibleForTesting
   public class EventReceiverFirehose implements ChatHandler, Firehose, EventReceiverFirehoseMetric
   {
-    private final ScheduledExecutorService exec;
-    private final ExecutorService idleDetector;
-    private final BlockingQueue<InputRow> buffer;
+    /**
+     * How does this thread work (and its interruption policy) is described in the comment for {@link
+     * #createDelayedCloseExecutor}.
+     */
+    @GuardedBy("this")
+    private @Nullable Thread delayedCloseExecutor;
+
+    /**
+     * Contains {@link InputRow} objects, the last one is {@link #FIREHOSE_CLOSED} which is a "poison pill". Poison pill
+     * is used to notify the thread that calls {@link #hasMore()} and {@link #nextRow()} that the EventReceiverFirehose
+     * is closed without heuristic 500 ms timed blocking in a loop instead of a simple {@link BlockingQueue#take()}
+     * call (see {@link #hasMore} code).
+     */
+    private final BlockingQueue<Object> buffer;
     private final InputRowParser<Map<String, Object>> parser;
 
-    private final Object readLock = new Object();
-
-    private volatile InputRow nextRow = null;
+    /**
+     * This field needs to be volatile to ensure progress in {@link #addRows} method where it is read in a loop, and
+     * also in testing code calling {@link #isClosed()}.
+     */
     private volatile boolean closed = false;
-    private final AtomicLong bytesReceived = new AtomicLong(0);
-    private final AtomicLong lastBufferAddFailMsgTime = new AtomicLong(0);
-    private final ConcurrentMap<String, Long> producerSequences = new ConcurrentHashMap<>();
-    private final Stopwatch idleWatch = Stopwatch.createUnstarted();
 
-    public EventReceiverFirehose(InputRowParser<Map<String, Object>> parser)
+    /**
+     * This field and {@link #rowsRunOut} are not volatile because they are accessed only from {@link #hasMore()} and
+     * {@link #nextRow()} methods that are called from a single thread according to {@link Firehose} spec.
+     */
+    @Nullable
+    private InputRow nextRow = null;
+    private boolean rowsRunOut = false;
+
+    private final AtomicLong bytesReceived = new AtomicLong(0);
+    private final AtomicLong lastBufferAddFailLoggingTimeNs = new AtomicLong(System.nanoTime());
+    private final ConcurrentHashMap<String, Long> producerSequences = new ConcurrentHashMap<>();
+
+    /**
+     * This field and {@link #requestedShutdownTimeNs} use nanoseconds instead of milliseconds not to deal with the fact
+     * that {@link System#currentTimeMillis()} can "go backward", e. g. due to time correction on the server.
+     *
+     * This field and {@link #requestedShutdownTimeNs} must be volatile because they are de facto lazily initialized
+     * fields that are used concurrently in {@link #delayedCloseExecutor} (see {@link #createDelayedCloseExecutor()}).
+     * If they were not volatile, NPE would be possible in {@link #delayedCloseExecutor}. See
+     * https://shipilev.net/blog/2016/close-encounters-of-jmm-kind/#wishful-hb-actual for explanations.
+     */
+    @Nullable
+    private volatile Long idleCloseTimeNs = null;
+    @Nullable
+    private volatile Long requestedShutdownTimeNs = null;
+
+    EventReceiverFirehose(InputRowParser<Map<String, Object>> parser)
     {
       this.buffer = new ArrayBlockingQueue<>(bufferSize);
       this.parser = parser;
-      exec = Execs.scheduledSingleThreaded("event-receiver-firehose-%d");
-      idleDetector = Execs.singleThreaded("event-receiver-firehose-idle-detector-%d");
-      idleDetector.submit(() -> {
-        long idled;
-        try {
-          while ((idled = idleWatch.elapsed(TimeUnit.MILLISECONDS)) < maxIdleTime) {
-            Thread.sleep(maxIdleTime - idled);
-          }
+
+      if (maxIdleTimeMillis != Long.MAX_VALUE) {
+        idleCloseTimeNs = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(maxIdleTimeMillis);
+        synchronized (this) {
+          createDelayedCloseExecutor();
         }
-        catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          return;
-        }
-        log.info("Firehose has been idle for %d ms, closing.", idled);
-        close();
-      });
-      idleWatch.start();
+      }
     }
 
+    @VisibleForTesting
+    synchronized @Nullable Thread getDelayedCloseExecutor()
+    {
+      return delayedCloseExecutor;
+    }
+
+    /**
+     * Creates and starts a {@link #delayedCloseExecutor} thread, either right from the EventReceiverFirehose's
+     * constructor if {@link #maxIdleTimeMillis} is specified, or otherwise lazily from {@link #shutdown}.
+     *
+     * The thread waits until the time when the Firehose should be closed because either {@link #addAll} was not called
+     * for the specified max idle time (see {@link #idleCloseTimeNs}), or until the shutoff time requested last
+     * via {@link #shutdown} (see {@link #requestedShutdownTimeNs}), whatever is sooner. Then the thread does
+     * two things:
+     *  1. if the Firehose is already closed (or in the process of closing, but {@link #closed} flag is already set), it
+     *    silently exits.
+     *  2. It checks both deadlines again:
+     *       a) if either of them has arrived, it calls {@link #close()} and exits.
+     *       b) otherwise, it waits until the nearest deadline again, and so on in a loop.
+     *
+     * This way the thread works predictably and robustly regardless of how both deadlines change (for example, shutoff
+     * time specified via {@link #shutdown} may jump in both directions).
+     *
+     * Other methods notify {@link #delayedCloseExecutor} that the Firehose state in some way that is important for this
+     * thread (that is, when {@link #close()} is called, {@link #delayedCloseExecutor} is no longer needed and should
+     * exit as soon as possible to release system resources; when {@link #shutdown} is called, the thread may need to
+     * wake up sooner if the shutoff time has been moved sooner) by simply interrupting it. The thread wakes up and
+     * continues its loop.
+     */
+    @GuardedBy("this")
+    private Thread createDelayedCloseExecutor()
+    {
+      Thread delayedCloseExecutor = new Thread(
+          () -> {
+            // The closed = true is visible after close() because there is a happens-before edge between
+            // delayedCloseExecutor.interrupt() call in close() and catching InterruptedException below in this loop.
+            while (!closed) {
+              if (idleCloseTimeNs == null && requestedShutdownTimeNs == null) {
+                // This is not possible unless there are bugs in the code of EventReceiverFirehose. AssertionError could
+                // have been thrown instead, but it doesn't seem to make a lot of sense in a background thread. Instead,
+                // we long the error and continue a loop after some pause.
+                log.error(
+                    "Either idleCloseTimeNs or requestedShutdownTimeNs must be non-null. "
+                    + "Please file a bug at https://github.com/apache/incubator-druid/issues"
+                );
+              }
+              if (idleCloseTimeNs != null && idleCloseTimeNs - System.nanoTime() <= 0) { // overflow-aware comparison
+                log.info("Firehose has been idle for %d ms, closing.", maxIdleTimeMillis);
+                close();
+              } else if (requestedShutdownTimeNs != null &&
+                         requestedShutdownTimeNs - System.nanoTime() <= 0) { // overflow-aware comparison
+                log.info("Closing Firehose after a shutdown request");
+                close();
+              }
+              try {
+                // It is possible to write code that sleeps until the next the next idleCloseTimeNs or
+                // requestedShutdownTimeNs, whatever is non-null and sooner, but that's fairly complicated code. That
+                // complexity perhaps overweighs the minor inefficiency of simply waking up every second.
+                Threads.sleepFor(1, TimeUnit.SECONDS);
+              }
+              catch (InterruptedException ignore) {
+                // Interruption is a wakeup, continue the loop
+              }
+            }
+          },
+          "event-receiver-firehose-closer"
+      );
+      delayedCloseExecutor.setDaemon(true);
+      this.delayedCloseExecutor = delayedCloseExecutor;
+      delayedCloseExecutor.start();
+      return delayedCloseExecutor;
+    }
+
+    /**
+     * This method might be called concurrently from multiple threads, if multiple requests arrive to the server at the
+     * same time (possibly exact duplicates). Concurrency is controlled in {@link #checkProducerSequence}, where only
+     * requests with "X-Firehose-Producer-Seq" number greater than the max "X-Firehose-Producer-Seq" in previously
+     * arrived requests are allowed to proceed. After that check requests don't synchronize with each other and
+     * therefore if two large batches are sent with little interval, the events from the batches might be mixed up in
+     * {@link #buffer} (if two {@link #addRows(Iterable)} are executed concurrently).
+     */
     @POST
     @Path("/push-events")
     @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
     @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
-    public Response addAll(
-        InputStream in,
-        @Context final HttpServletRequest req
-    )
+    public Response addAll(InputStream in, @Context final HttpServletRequest req) throws JsonProcessingException
     {
-      idleWatch.reset();
-      idleWatch.start();
+      idleCloseTimeNs = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(maxIdleTimeMillis);
       Access accessResult = AuthorizationUtils.authorizeResourceAction(
           req,
           new ResourceAction(
-              new Resource("STATE", ResourceType.STATE),
+              Resource.STATE_RESOURCE,
               Action.WRITE
           ),
           authorizerMapper
@@ -237,9 +366,9 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
 
       ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
 
-      Optional<Response> producerSequenceResponse = checkProducerSequence(req, reqContentType, objectMapper);
-      if (producerSequenceResponse.isPresent()) {
-        return producerSequenceResponse.get();
+      Response producerSequenceResponse = checkProducerSequence(req, reqContentType, objectMapper);
+      if (producerSequenceResponse != null) {
+        return producerSequenceResponse;
       }
 
       CountingInputStream countingInputStream = new CountingInputStream(in);
@@ -275,67 +404,59 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       }
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        throw Throwables.propagate(e);
-      }
-      catch (JsonProcessingException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 
     @Override
     public boolean hasMore()
     {
-      synchronized (readLock) {
-        try {
-          while (nextRow == null) {
-            nextRow = buffer.poll(500, TimeUnit.MILLISECONDS);
-            if (closed) {
-              break;
-            }
-          }
-        }
-        catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          throw Throwables.propagate(e);
-        }
-
-        return nextRow != null;
+      if (rowsRunOut) {
+        return false;
       }
+      if (nextRow != null) {
+        return true;
+      }
+      Object next;
+      try {
+        next = buffer.take();
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
+      }
+      //noinspection ObjectEquality
+      if (next == FIREHOSE_CLOSED) {
+        rowsRunOut = true;
+        return false;
+      }
+      nextRow = (InputRow) next;
+      return true;
     }
 
     @Nullable
     @Override
     public InputRow nextRow()
     {
-      synchronized (readLock) {
-        final InputRow row = nextRow;
+      final InputRow row = nextRow;
 
-        if (row == null) {
-          throw new NoSuchElementException();
-        } else {
-          nextRow = null;
-          return row;
-        }
+      if (row == null) {
+        throw new NoSuchElementException();
+      } else {
+        nextRow = null;
+        return row;
       }
     }
 
     @Override
     public Runnable commit()
     {
-      return new Runnable()
-      {
-        @Override
-        public void run()
-        {
-          // Nothing
-        }
-      };
+      return Runnables.getNoopRunnable();
     }
 
     @Override
     public int getCurrentBufferSize()
     {
-      // ArrayBlockingQueue's implementation of size() is thread-safe, so we can use that
       return buffer.size();
     }
 
@@ -351,34 +472,44 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       return bytesReceived.get();
     }
 
+    /**
+     * This method is synchronized because it might be called concurrently from multiple threads: from {@link
+     * #delayedCloseExecutor}, and from the thread that creates and uses the Firehose object.
+     */
     @Override
-    public void close()
+    public synchronized void close()
     {
-      if (!closed) {
-        log.info("Firehose closing.");
-        closed = true;
+      if (closed) {
+        return;
+      }
+      closed = true;
+      log.info("Firehose closing.");
 
-        eventReceiverFirehoseRegister.unregister(serviceName);
-        if (chatHandlerProvider.isPresent()) {
-          chatHandlerProvider.get().unregister(serviceName);
-        }
-        exec.shutdown();
-        idleDetector.shutdown();
-        idleWatch.stop();
+      // Critical to add the poison pill to the queue, don't allow interruption.
+      Uninterruptibles.putUninterruptibly(buffer, FIREHOSE_CLOSED);
+
+      eventReceiverFirehoseRegister.unregister(serviceName);
+      if (chatHandlerProvider != null) {
+        chatHandlerProvider.unregister(serviceName);
+      }
+      if (delayedCloseExecutor != null && !delayedCloseExecutor.equals(Thread.currentThread())) {
+        // Interrupt delayedCloseExecutor to let it discover that closed flag is already set and exit.
+        delayedCloseExecutor.interrupt();
       }
     }
 
-    // public for tests
-    public void addRows(Iterable<InputRow> rows) throws InterruptedException
+    @VisibleForTesting
+    void addRows(Iterable<InputRow> rows) throws InterruptedException
     {
       for (final InputRow row : rows) {
         boolean added = false;
         while (!closed && !added) {
           added = buffer.offer(row, 500, TimeUnit.MILLISECONDS);
           if (!added) {
-            long currTime = System.currentTimeMillis();
-            long lastTime = lastBufferAddFailMsgTime.get();
-            if (currTime - lastTime > 10000 && lastBufferAddFailMsgTime.compareAndSet(lastTime, currTime)) {
+            long currTimeNs = System.nanoTime();
+            long lastTimeNs = lastBufferAddFailLoggingTimeNs.get();
+            if (currTimeNs - lastTimeNs > TimeUnit.SECONDS.toNanos(10) &&
+                lastBufferAddFailLoggingTimeNs.compareAndSet(lastTimeNs, currTimeNs)) {
               log.warn("Failed to add event to buffer with current size [%s] . Retrying...", buffer.size());
             }
           }
@@ -390,19 +521,26 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       }
     }
 
+    /**
+     * This method might be called concurrently from multiple threads, if multiple shutdown requests arrive at the same
+     * time. No attempts are made to synchronize such requests, or prioritize them a-la "latest shutdown time wins" or
+     * "soonest shutdown time wins". {@link #delayedCloseExecutor}'s logic (see {@link #createDelayedCloseExecutor()})
+     * is indifferent to shutdown times jumping in arbitrary directions. But once a shutdown request is made, it can't
+     * be cancelled entirely, the shutdown time could only be rescheduled with a new request.
+     */
     @POST
     @Path("/shutdown")
     @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
     @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
     public Response shutdown(
-        @QueryParam("shutoffTime") final String shutoffTime,
+        @QueryParam("shutoffTime") final String shutoffTimeMillis,
         @Context final HttpServletRequest req
     )
     {
       Access accessResult = AuthorizationUtils.authorizeResourceAction(
           req,
           new ResourceAction(
-              new Resource("STATE", ResourceType.STATE),
+              Resource.STATE_RESOURCE,
               Action.WRITE
           ),
           authorizerMapper
@@ -412,13 +550,27 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       }
 
       try {
-        DateTime shutoffAt = shutoffTime == null ? DateTimes.nowUtc() : DateTimes.of(shutoffTime);
-        log.info("Setting Firehose shutoffTime to %s", shutoffTime);
-        exec.schedule(
-            this::close,
-            shutoffAt.getMillis() - System.currentTimeMillis(),
-            TimeUnit.MILLISECONDS
-        );
+        DateTime shutoffAt = shutoffTimeMillis == null ? DateTimes.nowUtc() : DateTimes.of(shutoffTimeMillis);
+        log.info("Setting Firehose shutoffTime to %s", shutoffTimeMillis);
+        long shutoffTimeoutMillis = Math.max(shutoffAt.getMillis() - System.currentTimeMillis(), 0);
+
+        requestedShutdownTimeNs = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(shutoffTimeoutMillis);
+        Thread delayedCloseExecutor;
+        // Need to interrupt delayedCloseExecutor because a newly specified shutdown time might be closer than idle
+        // timeout or previously specified shutdown. Interruption of delayedCloseExecutor lets it adjust the sleep time
+        // (see the logic of this thread in createDelayedCloseExecutor()).
+        boolean needToInterruptDelayedCloseExecutor = true;
+        synchronized (this) {
+          delayedCloseExecutor = this.delayedCloseExecutor;
+          if (delayedCloseExecutor == null) {
+            delayedCloseExecutor = createDelayedCloseExecutor();
+            // Don't need to interrupt a freshly created thread
+            needToInterruptDelayedCloseExecutor = false;
+          }
+        }
+        if (needToInterruptDelayedCloseExecutor) {
+          delayedCloseExecutor.interrupt();
+        }
         return Response.ok().build();
       }
       catch (IllegalArgumentException e) {
@@ -430,7 +582,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
     }
 
     @VisibleForTesting
-    public boolean isClosed()
+    boolean isClosed()
     {
       return closed;
     }
@@ -438,14 +590,17 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
     /**
      * Checks the request for a producer ID and sequence value.  If the producer ID is specified, a corresponding
      * sequence value must be specified as well.  If the incoming sequence is less than or equal to the last seen
-     * sequence for that producer ID, the request is ignored
+     * sequence for that producer ID, the request is ignored.
+     *
+     * This method might be called concurrently from multiple threads.
      *
      * @param req Http request
      * @param responseContentType Response content type
      * @param responseMapper Response object mapper
-     * @return Optional of a response to return of an empty optional if the request can proceed
+     * @return an error response to return or null if the request can proceed
      */
-    private Optional<Response> checkProducerSequence(
+    @Nullable
+    private Response checkProducerSequence(
         final HttpServletRequest req,
         final String responseContentType,
         final ObjectMapper responseMapper
@@ -454,61 +609,57 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       final String producerId = req.getHeader("X-Firehose-Producer-Id");
 
       if (producerId == null) {
-        return Optional.empty();
+        return null;
       }
 
       final String sequenceValue = req.getHeader("X-Firehose-Producer-Seq");
 
       if (sequenceValue == null) {
-        return Optional.of(
-            Response.status(Response.Status.BAD_REQUEST)
-                       .entity(ImmutableMap.<String, Object>of("error", "Producer sequence value is missing"))
-                       .build()
-        );
+        return Response
+            .status(Response.Status.BAD_REQUEST)
+            .entity(ImmutableMap.<String, Object>of("error", "Producer sequence value is missing"))
+            .build();
       }
 
       Long producerSequence = producerSequences.computeIfAbsent(producerId, key -> Long.MIN_VALUE);
 
       if (producerSequences.size() >= MAX_FIREHOSE_PRODUCERS) {
-        return Optional.of(
-            Response.status(Response.Status.FORBIDDEN)
-                    .entity(
-                        ImmutableMap.<String, Object>of(
-                            "error",
-                            "Too many individual producer IDs for this firehose.  Max is " + MAX_FIREHOSE_PRODUCERS
-                        )
-                    )
-                    .build()
-        );
+        return Response
+            .status(Response.Status.FORBIDDEN)
+            .entity(
+                ImmutableMap.of(
+                    "error",
+                    "Too many individual producer IDs for this firehose.  Max is " + MAX_FIREHOSE_PRODUCERS
+                )
+            )
+            .build();
       }
 
       try {
         Long newSequence = Long.parseLong(sequenceValue);
-        if (newSequence <= producerSequence) {
-          return Optional.of(
-              Response.ok(
-                responseMapper.writeValueAsString(
-                    ImmutableMap.of("eventCount", 0, "skipped", true)
-                ),
-                responseContentType
-            ).build()
-          );
-        }
 
-        producerSequences.put(producerId, newSequence);
+        while (true) {
+          if (newSequence <= producerSequence) {
+            return Response.ok(
+                responseMapper.writeValueAsString(ImmutableMap.of("eventCount", 0, "skipped", true)),
+                responseContentType
+            ).build();
+          }
+          if (producerSequences.replace(producerId, producerSequence, newSequence)) {
+            return null;
+          }
+          producerSequence = producerSequences.get(producerId);
+        }
       }
       catch (JsonProcessingException ex) {
-        throw Throwables.propagate(ex);
+        throw new RuntimeException(ex);
       }
       catch (NumberFormatException ex) {
-        return Optional.of(
-            Response.status(Response.Status.BAD_REQUEST)
-                    .entity(ImmutableMap.<String, Object>of("error", "Producer sequence must be a number"))
-                    .build()
-        );
+        return Response
+            .status(Response.Status.BAD_REQUEST)
+            .entity(ImmutableMap.<String, Object>of("error", "Producer sequence must be a number"))
+            .build();
       }
-
-      return Optional.empty();
     }
   }
 }

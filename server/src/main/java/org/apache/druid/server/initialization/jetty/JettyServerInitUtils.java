@@ -27,9 +27,11 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.eclipse.jetty.server.handler.gzip.GzipHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
+import org.eclipse.jetty.servlet.FilterMapping;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 
 import javax.ws.rs.HttpMethod;
+import java.util.Arrays;
 import java.util.Set;
 
 public class JettyServerInitUtils
@@ -63,14 +65,23 @@ public class JettyServerInitUtils
       } else if (servletFilterHolder.getFilterClass() != null) {
         holder = new FilterHolder(servletFilterHolder.getFilterClass());
       } else {
-        throw new ISE("Filter[%s] for path[%s] didn't have a Filter!?", servletFilterHolder, servletFilterHolder.getPath());
+        throw new ISE(
+            "Filter[%s] for paths[%s] didn't have a Filter!?",
+            servletFilterHolder,
+            Arrays.toString(servletFilterHolder.getPaths())
+        );
       }
 
       if (servletFilterHolder.getInitParameters() != null) {
         holder.setInitParameters(servletFilterHolder.getInitParameters());
       }
 
-      handler.addFilter(holder, servletFilterHolder.getPath(), servletFilterHolder.getDispatcherType());
+      FilterMapping filterMapping = new FilterMapping();
+      filterMapping.setFilterName(holder.getName());
+      filterMapping.setPathSpecs(servletFilterHolder.getPaths());
+      filterMapping.setDispatcherTypes(servletFilterHolder.getDispatcherType());
+
+      handler.getServletHandler().addFilter(holder, filterMapping);
     }
   }
 

@@ -19,7 +19,6 @@
 
 package org.apache.druid.security.kerberos;
 
-import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -149,7 +148,7 @@ public class KerberosHttpClient extends AbstractHttpClient
       }, exec);
     }
     catch (Throwable e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

@@ -24,10 +24,10 @@ import com.google.common.io.Files;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.utils.Time;
 import scala.Some;
@@ -40,11 +40,12 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class TestBroker implements Closeable
 {
-
+  private static final Random RANDOM = ThreadLocalRandom.current();
   private final String zookeeperConnect;
   private final File directory;
   private final boolean directoryCleanup;
@@ -77,6 +78,9 @@ public class TestBroker implements Closeable
     props.setProperty("broker.id", String.valueOf(id));
     props.setProperty("port", String.valueOf(ThreadLocalRandom.current().nextInt(9999) + 10000));
     props.setProperty("advertised.host.name", "localhost");
+    props.setProperty("transaction.state.log.replication.factor", "1");
+    props.setProperty("offsets.topic.replication.factor", "1");
+    props.setProperty("transaction.state.log.min.isr", "1");
     props.putAll(brokerProps);
 
     final KafkaConfig config = new KafkaConfig(props);
@@ -112,17 +116,15 @@ public class TestBroker implements Closeable
     props.put("key.serializer", ByteArraySerializer.class.getName());
     props.put("value.serializer", ByteArraySerializer.class.getName());
     props.put("acks", "all");
+    props.put("enable.idempotence", "true");
+    props.put("transactional.id", String.valueOf(RANDOM.nextInt()));
     return props;
   }
 
   public Map<String, Object> consumerProperties()
   {
-    final Map<String, Object> props = new HashMap<>();
+    final Map<String, Object> props = KafkaConsumerConfigs.getConsumerProperties();
     props.put("bootstrap.servers", StringUtils.format("localhost:%d", getPort()));
-    props.put("key.deserializer", ByteArrayDeserializer.class.getName());
-    props.put("value.deserializer", ByteArrayDeserializer.class.getName());
-    props.put("group.id", String.valueOf(ThreadLocalRandom.current().nextInt()));
-    props.put("auto.offset.reset", "earliest");
     return props;
   }
 

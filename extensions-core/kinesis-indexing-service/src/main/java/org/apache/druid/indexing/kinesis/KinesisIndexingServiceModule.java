@@ -48,7 +48,8 @@ public class KinesisIndexingServiceModule implements DruidModule
                 new NamedType(KinesisDataSourceMetadata.class, "kinesis"),
                 new NamedType(KinesisIndexTaskIOConfig.class, "kinesis"),
                 new NamedType(KinesisSupervisorTuningConfig.class, "kinesis"),
-                new NamedType(KinesisSupervisorSpec.class, "kinesis")
+                new NamedType(KinesisSupervisorSpec.class, "kinesis"),
+                new NamedType(KinesisSamplerSpec.class, "kinesis")
             )
     );
   }

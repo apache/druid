@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -81,10 +80,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -102,12 +99,12 @@ public class IncrementalIndexTest
     IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories);
   }
 
-  private static final Closer resourceCloser = Closer.create();
+  private static final Closer RESOURCE_CLOSER = Closer.create();
 
   @AfterClass
   public static void teardown() throws IOException
   {
-    resourceCloser.close();
+    RESOURCE_CLOSER.close();
   }
 
   private final IndexCreator indexCreator;
@@ -129,7 +126,7 @@ public class IncrementalIndexTest
         "OffheapIncrementalIndex-bufferPool",
         () -> ByteBuffer.allocate(256 * 1024)
     );
-    resourceCloser.register(pool1);
+    RESOURCE_CLOSER.register(pool1);
     params.add(
         new Object[] {
             (IndexCreator) factories -> new Builder()
@@ -143,7 +140,7 @@ public class IncrementalIndexTest
         "OffheapIncrementalIndex-bufferPool",
         () -> ByteBuffer.allocate(256 * 1024)
     );
-    resourceCloser.register(pool2);
+    RESOURCE_CLOSER.register(pool2);
     params.add(
         new Object[] {
             (IndexCreator) factories -> new Builder()
@@ -163,7 +160,7 @@ public class IncrementalIndexTest
 
   public static AggregatorFactory[] getDefaultCombiningAggregatorFactories()
   {
-    return defaultCombiningAggregatorFactories;
+    return DEFAULT_COMBINING_AGGREGATOR_FACTORIES;
   }
 
   public static IncrementalIndex createIndex(
@@ -172,7 +169,7 @@ public class IncrementalIndexTest
   )
   {
     if (null == aggregatorFactories) {
-      aggregatorFactories = defaultAggregatorFactories;
+      aggregatorFactories = DEFAULT_AGGREGATOR_FACTORIES;
     }
 
     return new IncrementalIndex.Builder()
@@ -189,7 +186,7 @@ public class IncrementalIndexTest
   public static IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories)
   {
     if (null == aggregatorFactories) {
-      aggregatorFactories = defaultAggregatorFactories;
+      aggregatorFactories = DEFAULT_AGGREGATOR_FACTORIES;
     }
 
     return new IncrementalIndex.Builder()
@@ -201,7 +198,7 @@ public class IncrementalIndexTest
   public static IncrementalIndex createNoRollupIndex(AggregatorFactory[] aggregatorFactories)
   {
     if (null == aggregatorFactories) {
-      aggregatorFactories = defaultAggregatorFactories;
+      aggregatorFactories = DEFAULT_AGGREGATOR_FACTORIES;
     }
 
     return new IncrementalIndex.Builder()
@@ -253,21 +250,21 @@ public class IncrementalIndexTest
     return new MapBasedInputRow(timestamp, dimensionList, builder.build());
   }
 
-  private static final AggregatorFactory[] defaultAggregatorFactories = new AggregatorFactory[]{
+  private static final AggregatorFactory[] DEFAULT_AGGREGATOR_FACTORIES = new AggregatorFactory[]{
       new CountAggregatorFactory(
           "count"
       )
   };
 
-  private static final AggregatorFactory[] defaultCombiningAggregatorFactories = new AggregatorFactory[]{
-      defaultAggregatorFactories[0].getCombiningFactory()
+  private static final AggregatorFactory[] DEFAULT_COMBINING_AGGREGATOR_FACTORIES = new AggregatorFactory[]{
+      DEFAULT_AGGREGATOR_FACTORIES[0].getCombiningFactory()
   };
 
   @Test
   public void testCaseSensitivity() throws Exception
   {
     long timestamp = System.currentTimeMillis();
-    IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex(defaultAggregatorFactories));
+    IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex(DEFAULT_AGGREGATOR_FACTORIES));
 
     populateIndex(timestamp, index);
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensionNames());
@@ -433,7 +430,7 @@ public class IncrementalIndexTest
 
     final Segment incrementalIndexSegment = new IncrementalIndexSegment(index, null);
     final QueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
-        new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+        new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
         new TimeseriesQueryEngine(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
@@ -443,7 +440,7 @@ public class IncrementalIndexTest
     );
 
 
-    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()).toList();
+    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     Result<TimeseriesResultValue> result = Iterables.getOnlyElement(results);
     boolean isRollup = index.isRollup();
     Assert.assertEquals(rows * (isRollup ? 1 : 2), result.getValue().getLongMetric("rows").intValue());
@@ -530,7 +527,7 @@ public class IncrementalIndexTest
     final List<ListenableFuture<?>> queryFutures = Lists.newArrayListWithExpectedSize(concurrentThreads);
     final Segment incrementalIndexSegment = new IncrementalIndexSegment(index, null);
     final QueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
-        new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+        new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
         new TimeseriesQueryEngine(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
@@ -554,7 +551,7 @@ public class IncrementalIndexTest
                   }
                   catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    throw Throwables.propagate(e);
+                    throw new RuntimeException(e);
                   }
                   currentlyRunning.incrementAndGet();
                   try {
@@ -564,7 +561,7 @@ public class IncrementalIndexTest
                     }
                   }
                   catch (IndexSizeExceededException e) {
-                    throw Throwables.propagate(e);
+                    throw new RuntimeException(e);
                   }
                   currentlyRunning.decrementAndGet();
                 }
@@ -591,15 +588,14 @@ public class IncrementalIndexTest
                   }
                   catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    throw Throwables.propagate(e);
+                    throw new RuntimeException(e);
                   }
                   while (concurrentlyRan.get() == 0) {
                     QueryRunner<Result<TimeseriesResultValue>> runner = new FinalizeResultsQueryRunner<Result<TimeseriesResultValue>>(
                         factory.createRunner(incrementalIndexSegment),
                         factory.getToolchest()
                     );
-                    Map<String, Object> context = new HashMap<String, Object>();
-                    Sequence<Result<TimeseriesResultValue>> sequence = runner.run(QueryPlus.wrap(query), context);
+                    Sequence<Result<TimeseriesResultValue>> sequence = runner.run(QueryPlus.wrap(query));
 
                     Double[] results = sequence.accumulate(
                         new Double[0],
@@ -654,8 +650,7 @@ public class IncrementalIndexTest
                                   .intervals(ImmutableList.of(queryInterval))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
-    Map<String, Object> context = new HashMap<String, Object>();
-    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
+    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     boolean isRollup = index.isRollup();
     for (Result<TimeseriesResultValue> result : results) {
       Assert.assertEquals(
@@ -680,7 +675,7 @@ public class IncrementalIndexTest
   @Test
   public void testConcurrentAdd() throws Exception
   {
-    final IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex(defaultAggregatorFactories));
+    final IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex(DEFAULT_AGGREGATOR_FACTORIES));
     final int threadCount = 10;
     final int elementsPerThread = 200;
     final int dimensionCount = 5;

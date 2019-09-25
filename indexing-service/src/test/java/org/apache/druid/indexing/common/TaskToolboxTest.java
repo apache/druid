@@ -26,7 +26,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.task.NoopTestTaskFileWriter;
+import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -41,6 +41,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.timeline.DataSegment;
@@ -76,6 +77,7 @@ public class TaskToolboxTest
   private MonitorScheduler mockMonitorScheduler = EasyMock.createMock(MonitorScheduler.class);
   private ExecutorService mockQueryExecutorService = EasyMock.createMock(ExecutorService.class);
   private ObjectMapper ObjectMapper = new ObjectMapper();
+  private SegmentLoaderFactory mockSegmentLoaderFactory = EasyMock.createMock(SegmentLoaderFactory.class);
   private SegmentLoaderLocalCacheManager mockSegmentLoaderLocalCacheManager = EasyMock.createMock(SegmentLoaderLocalCacheManager.class);
   private Task task = EasyMock.createMock(Task.class);
   private IndexMergerV9 mockIndexMergerV9 = EasyMock.createMock(IndexMergerV9.class);
@@ -94,7 +96,8 @@ public class TaskToolboxTest
     EasyMock.replay(task, mockHandoffNotifierFactory);
 
     taskToolbox = new TaskToolboxFactory(
-        new TaskConfig(temporaryFolder.newFile().toString(), null, null, 50000, null, false, null, null),
+        new TaskConfig(temporaryFolder.newFile().toString(), null, null, 50000, null, false, null, null, null),
+        new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         mockTaskActionClientFactory,
         mockEmitter,
         mockSegmentPusher,
@@ -107,7 +110,7 @@ public class TaskToolboxTest
         () -> mockQueryRunnerFactoryConglomerate,
         mockQueryExecutorService,
         mockMonitorScheduler,
-        new SegmentLoaderFactory(mockSegmentLoaderLocalCacheManager),
+        mockSegmentLoaderFactory,
         ObjectMapper,
         mockIndexIO,
         mockCache,
@@ -118,7 +121,8 @@ public class TaskToolboxTest
         null,
         null,
         null,
-        new NoopTestTaskFileWriter()
+        new NoopTestTaskReportFileWriter(),
+        null
     );
   }
 
@@ -163,12 +167,12 @@ public class TaskToolboxTest
   {
     File expectedFile = temporaryFolder.newFile();
     EasyMock
+        .expect(mockSegmentLoaderFactory.manufacturate(EasyMock.anyObject()))
+        .andReturn(mockSegmentLoaderLocalCacheManager).anyTimes();
+    EasyMock
         .expect(mockSegmentLoaderLocalCacheManager.getSegmentFiles(EasyMock.anyObject()))
         .andReturn(expectedFile).anyTimes();
-    EasyMock
-        .expect(mockSegmentLoaderLocalCacheManager.withConfig(EasyMock.anyObject()))
-        .andReturn(mockSegmentLoaderLocalCacheManager).anyTimes();
-    EasyMock.replay(mockSegmentLoaderLocalCacheManager);
+    EasyMock.replay(mockSegmentLoaderFactory, mockSegmentLoaderLocalCacheManager);
     DataSegment dataSegment = DataSegment.builder().dataSource("source").interval(Intervals.of("2012-01-01/P1D")).version("1").size(1).build();
     List<DataSegment> segments = ImmutableList.of
         (

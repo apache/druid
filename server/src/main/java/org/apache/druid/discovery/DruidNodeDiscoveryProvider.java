@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Provider of {@link DruidNodeDiscovery} instances.
@@ -39,9 +40,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public abstract class DruidNodeDiscoveryProvider
 {
   private static final Map<String, Set<NodeType>> SERVICE_TO_NODE_TYPES = ImmutableMap.of(
-      LookupNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NodeType.BROKER, NodeType.HISTORICAL, NodeType.PEON),
-      DataNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NodeType.HISTORICAL, NodeType.PEON),
-      WorkerNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NodeType.PEON)
+      LookupNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NodeType.BROKER, NodeType.HISTORICAL, NodeType.PEON, NodeType.INDEXER),
+      DataNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NodeType.HISTORICAL, NodeType.PEON, NodeType.INDEXER),
+      WorkerNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NodeType.MIDDLE_MANAGER, NodeType.INDEXER)
   );
 
   private final ConcurrentHashMap<String, ServiceDruidNodeDiscovery> serviceDiscoveryMap =
@@ -81,7 +82,7 @@ public abstract class DruidNodeDiscoveryProvider
     private static final Logger log = new Logger(ServiceDruidNodeDiscovery.class);
 
     private final String service;
-    private final Map<String, DiscoveryDruidNode> nodes = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, DiscoveryDruidNode> nodes = new ConcurrentHashMap<>();
     private final Collection<DiscoveryDruidNode> unmodifiableNodes = Collections.unmodifiableCollection(nodes.values());
 
     private final List<Listener> listeners = new ArrayList<>();

@@ -26,10 +26,10 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CollectionUtils;
 
-import java.util.AbstractCollection;
+import javax.annotation.Nullable;
 import java.util.Collection;
-import java.util.Iterator;
 
 /**
  * This class should not be subclassed, it isn't declared final only to make it possible to mock the class with EasyMock
@@ -42,19 +42,19 @@ public class ImmutableDruidServer
   private final DruidServerMetadata metadata;
   private final long currSize;
   private final ImmutableMap<String, ImmutableDruidDataSource> dataSources;
-  private final int totalSegments;
+  private final int numSegments;
 
   public ImmutableDruidServer(
       DruidServerMetadata metadata,
       long currSize,
       ImmutableMap<String, ImmutableDruidDataSource> dataSources,
-      int totalSegments
+      int numSegments
   )
   {
     this.metadata = Preconditions.checkNotNull(metadata);
     this.currSize = currSize;
     this.dataSources = dataSources;
-    this.totalSegments = totalSegments;
+    this.numSegments = numSegments;
   }
 
   public String getName()
@@ -107,6 +107,7 @@ public class ImmutableDruidServer
     return metadata.getPriority();
   }
 
+  @Nullable
   public DataSegment getSegment(SegmentId segmentId)
   {
     ImmutableDruidDataSource dataSource = dataSources.get(segmentId.getDataSource());
@@ -126,22 +127,25 @@ public class ImmutableDruidServer
     return dataSources.get(name);
   }
 
-  public Collection<DataSegment> getSegments()
+  /**
+   * Returns a lazy collection with all segments in all data sources stored on this ImmutableDruidServer to be used for
+   * iteration or {@link Collection#stream()} transformation. The order of segments in this collection is unspecified.
+   *
+   * Note: iteration over the returned collection may not be as trivially cheap as, for example, iteration over an
+   * ArrayList. Try (to some reasonable extent) to organize the code so that it iterates the returned collection only
+   * once rather than several times.
+   */
+  public Collection<DataSegment> iterateAllSegments()
   {
-    return new AbstractCollection<DataSegment>()
-    {
-      @Override
-      public Iterator<DataSegment> iterator()
-      {
-        return dataSources.values().stream().flatMap(dataSource -> dataSource.getSegments().stream()).iterator();
-      }
+    return CollectionUtils.createLazyCollectionFromStream(
+        () -> dataSources.values().stream().flatMap(dataSource -> dataSource.getSegments().stream()),
+        numSegments
+    );
+  }
 
-      @Override
-      public int size()
-      {
-        return totalSegments;
-      }
-    };
+  public int getNumSegments()
+  {
+    return numSegments;
   }
 
   public String getURL()

@@ -23,10 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.Pair;
 
+import javax.annotation.Nullable;
+
 public class SerializablePair<T1, T2> extends Pair<T1, T2>
 {
   @JsonCreator
-  public SerializablePair(@JsonProperty("lhs") T1 lhs, @JsonProperty("rhs") T2 rhs)
+  public SerializablePair(@JsonProperty("lhs") T1 lhs, @JsonProperty("rhs") @Nullable T2 rhs)
   {
     super(lhs, rhs);
   }
@@ -38,6 +40,7 @@ public class SerializablePair<T1, T2> extends Pair<T1, T2>
   }
 
   @JsonProperty
+  @Nullable
   public T2 getRhs()
   {
     return rhs;

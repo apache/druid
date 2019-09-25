@@ -21,7 +21,6 @@ package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
@@ -37,7 +36,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -131,10 +129,17 @@ public class DetermineHashedPartitionsJob implements Jobby
         JobHelper.writeJobIdToFile(config.getHadoopJobIdFileName(), groupByJob.getJobID().toString());
       }
 
-      if (!groupByJob.waitForCompletion(true)) {
-        log.error("Job failed: %s", groupByJob.getJobID());
-        failureCause = Utils.getFailureMessage(groupByJob, config.JSON_MAPPER);
-        return false;
+      try {
+        if (!groupByJob.waitForCompletion(true)) {
+          log.error("Job failed: %s", groupByJob.getJobID());
+          failureCause = Utils.getFailureMessage(groupByJob, config.JSON_MAPPER);
+          return false;
+        }
+      }
+      catch (IOException ioe) {
+        if (!Utils.checkAppSuccessForJobIOException(ioe, groupByJob, config.isUseYarnRMJobStatusFallback())) {
+          throw ioe;
+        }
       }
 
       /*
@@ -185,23 +190,19 @@ public class DetermineHashedPartitionsJob implements Jobby
           log.info("Creating [%,d] shards", numberOfShards);
 
           List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(numberOfShards);
-          if (numberOfShards == 1) {
-            actualSpecs.add(new HadoopyShardSpec(NoneShardSpec.instance(), shardCount++));
-          } else {
-            for (int i = 0; i < numberOfShards; ++i) {
-              actualSpecs.add(
-                  new HadoopyShardSpec(
-                      new HashBasedNumberedShardSpec(
-                          i,
-                          numberOfShards,
-                          null,
-                          HadoopDruidIndexerConfig.JSON_MAPPER
-                      ),
-                      shardCount++
-                  )
-              );
-              log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
-            }
+          for (int i = 0; i < numberOfShards; ++i) {
+            actualSpecs.add(
+                new HadoopyShardSpec(
+                    new HashBasedNumberedShardSpec(
+                        i,
+                        numberOfShards,
+                        null,
+                        HadoopDruidIndexerConfig.JSON_MAPPER
+                    ),
+                    shardCount++
+                )
+            );
+            log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
           }
 
           shardSpecs.put(bucket.getMillis(), actualSpecs);
@@ -220,7 +221,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       return true;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -306,9 +307,7 @@ public class DetermineHashedPartitionsJob implements Jobby
                          .getSegmentGranularity()
                          .bucket(DateTimes.utc(inputRow.getTimestampFromEpoch()));
 
-        if (!hyperLogLogs.containsKey(interval)) {
-          hyperLogLogs.put(interval, HyperLogLogCollector.makeLatestCollector());
-        }
+        hyperLogLogs.computeIfAbsent(interval, intv -> HyperLogLogCollector.makeLatestCollector());
       } else {
         final Optional<Interval> maybeInterval = config.getGranularitySpec()
                                                        .bucketInterval(DateTimes.utc(inputRow.getTimestampFromEpoch()));

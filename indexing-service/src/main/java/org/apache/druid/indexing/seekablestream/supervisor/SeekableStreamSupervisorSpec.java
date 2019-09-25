@@ -32,11 +32,13 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -51,17 +53,19 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   private final DataSchema dataSchema;
   private final SeekableStreamSupervisorTuningConfig tuningConfig;
   private final SeekableStreamSupervisorIOConfig ioConfig;
+  @Nullable
   private final Map<String, Object> context;
   protected final ServiceEmitter emitter;
   protected final DruidMonitorSchedulerConfig monitorSchedulerConfig;
   private final boolean suspended;
+  protected final SupervisorStateManagerConfig supervisorStateManagerConfig;
 
   @JsonCreator
   public SeekableStreamSupervisorSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("tuningConfig") SeekableStreamSupervisorTuningConfig tuningConfig,
       @JsonProperty("ioConfig") SeekableStreamSupervisorIOConfig ioConfig,
-      @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("context") @Nullable Map<String, Object> context,
       @JsonProperty("suspended") Boolean suspended,
       @JacksonInject TaskStorage taskStorage,
       @JacksonInject TaskMaster taskMaster,
@@ -70,7 +74,8 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
       @JacksonInject @Json ObjectMapper mapper,
       @JacksonInject ServiceEmitter emitter,
       @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject SupervisorStateManagerConfig supervisorStateManagerConfig
   )
   {
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
@@ -87,6 +92,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     this.monitorSchedulerConfig = monitorSchedulerConfig;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
     this.suspended = suspended != null ? suspended : false;
+    this.supervisorStateManagerConfig = supervisorStateManagerConfig;
   }
 
   @JsonProperty
@@ -107,6 +113,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     return ioConfig;
   }
 
+  @Nullable
   @JsonProperty
   public Map<String, Object> getContext()
   {
@@ -148,6 +155,11 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   public SeekableStreamSupervisorSpec createRunningSpec()
   {
     return toggleSuspend(false);
+  }
+
+  public SupervisorStateManagerConfig getSupervisorStateManagerConfig()
+  {
+    return supervisorStateManagerConfig;
   }
 
   @Override
