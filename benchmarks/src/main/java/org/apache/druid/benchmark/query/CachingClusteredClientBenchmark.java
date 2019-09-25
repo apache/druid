@@ -148,7 +148,7 @@ public class CachingClusteredClientBenchmark
   private static final String DATA_SOURCE = "ds";
 
   public static final ObjectMapper JSON_MAPPER;
-  @Param({"8", "32", "64"})
+  @Param({"8", "24"})
   private int numServers;
 
 

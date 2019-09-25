@@ -282,13 +282,14 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       final int submissionCount = getPool().getQueuedSubmissionCount();
       final long queuedTaskCount = getPool().getQueuedTaskCount();
       LOG.info(
-          "processors: [%s] pool parallelism: [%s] active thread count: [%s] running thread count: [%s] submission count: [%s] queued task count: [%s]",
+          "processors: [%s] pool parallelism: [%s] active thread count: [%s] running thread count: [%s] submission count: [%s] queued task count: [%s] steal: [%s]",
           numProcessors,
           poolParallelism,
           activeThreadCount,
           runningThreadCount,
           submissionCount,
-          queuedTaskCount
+          queuedTaskCount,
+          getPool().getStealCount()
       );
       // max is minimum of either number of processors or user suggested parallelism
       final int maxParallelism = Math.min(numProcessors, parallelism);
@@ -526,7 +527,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     {
       PriorityQueue<BatchedResultsCursor<T>> cursors = new PriorityQueue<>(sequences.size());
       for (Sequence<T> s : sequences) {
-        Yielder<OrderedResultBatch<T>> batchYielder = OrderedResultBatch.fromSequence(s, batchSize);
+        final SequenceYielder<T> yielder = new SequenceYielder<>(s, batchSize);
+        final Yielder<OrderedResultBatch<T>> batchYielder = yielder.getYielder();
         if (!(batchYielder.get() == null || (batchYielder.get().isDrained() && batchYielder.isDone()))) {
           YielderBatchedResultsCursor<T> batchedSequenceYielder = new YielderBatchedResultsCursor<>(
               batchYielder,
@@ -617,6 +619,47 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       ));
     }
   }
+
+
+  /**
+   * {@link ForkJoinPool} friendly {@link Sequence} to {@link OrderedResultBatch} {@link Yielder}
+   */
+  private static class SequenceYielder<E> implements ForkJoinPool.ManagedBlocker
+  {
+    private final Sequence<E> sequence;
+    private final int batchSize;
+    private volatile Yielder<OrderedResultBatch<E>> batchYielder;
+
+    public SequenceYielder(Sequence<E> sequence, int batchSize)
+    {
+      this.sequence = sequence;
+      this.batchSize = batchSize;
+    }
+
+    public Yielder<OrderedResultBatch<E>> getYielder()
+    {
+      try {
+        ForkJoinPool.managedBlock(this);
+        return batchYielder;
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException("Failed to load next batch of results", e);
+      }
+    }
+    @Override
+    public boolean block() throws InterruptedException
+    {
+      batchYielder = OrderedResultBatch.fromSequence(sequence, batchSize);
+      return true;
+    }
+
+    @Override
+    public boolean isReleasable()
+    {
+      return batchYielder != null;
+    }
+  }
+
 
   /**
    * {@link ForkJoinPool} friendly {@link BlockingQueue} feeder, adapted from 'QueueTaker' of Java documentation on
