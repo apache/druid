@@ -19,10 +19,10 @@
 
 package org.apache.druid.segment.loading;
 
-import com.google.common.collect.Iterators;
-
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A {@link StorageLocation} selector strategy that selects a segment cache location in a round-robin fashion each time
@@ -30,25 +30,45 @@ import java.util.List;
  */
 public class RoundRobinStorageLocationSelectorStrategy implements StorageLocationSelectorStrategy
 {
-  private Iterator<StorageLocation> cyclicIterator;
+
+  private final List<StorageLocation> storageLocations;
+  private final AtomicInteger startIndex = new AtomicInteger(0);
 
   public RoundRobinStorageLocationSelectorStrategy(List<StorageLocation> storageLocations)
   {
-    // cyclicIterator remembers the marker internally
-    this.cyclicIterator = Iterators.cycle(storageLocations);
+    this.storageLocations = storageLocations;
   }
 
   @Override
-  public Iterator getLocations()
+  public Iterator<StorageLocation> getLocations()
   {
-    return this.cyclicIterator;
+    return new Iterator<StorageLocation>() {
+
+      private final int numStorageLocations = storageLocations.size();
+      private int remainingIterations = numStorageLocations;
+      private int i = startIndex.getAndUpdate(n -> (n + 1) % numStorageLocations);
+
+      @Override
+      public boolean hasNext()
+      {
+        return remainingIterations > 0;
+      }
+
+      @Override
+      public StorageLocation next()
+      {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        remainingIterations--;
+        final StorageLocation nextLocation = storageLocations.get(i++);
+        if (i == numStorageLocations) {
+          i = 0;
+          startIndex.set(0);
+        }
+        return nextLocation;
+      }
+    };
   }
 
-  @Override
-  public String toString()
-  {
-    return "RoundRobinStorageLocationSelectorStrategy{" +
-           "cyclicIterator=" + cyclicIterator +
-           '}';
-  }
 }

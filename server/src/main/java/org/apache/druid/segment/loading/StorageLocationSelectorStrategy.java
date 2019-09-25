@@ -48,7 +48,9 @@ public interface StorageLocationSelectorStrategy
    * method. This is because a single location may be problematic like failed disk or might become unwritable for
    * whatever reasons.
    *
+   * This method can be called by different threads and so should be thread-safe.
+   *
    * @return An iterator of {@link StorageLocation}s from which the callers can iterate and pick a location.
    */
-  Iterator getLocations();
+  Iterator<StorageLocation> getLocations();
 }

@@ -42,7 +42,7 @@ public class LeastBytesUsedStorageLocationSelectorStrategy implements StorageLoc
   }
 
   @Override
-  public Iterator getLocations()
+  public Iterator<StorageLocation> getLocations()
   {
     return ORDERING.sortedCopy(this.storageLocations).iterator();
   }

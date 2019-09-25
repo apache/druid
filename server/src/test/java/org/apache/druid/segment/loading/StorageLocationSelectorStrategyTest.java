@@ -73,9 +73,31 @@ public class StorageLocationSelectorStrategyTest
   }
 
   @Test
+  public void testRoundRobinLocationSelectorStrategySingleLocation() throws Exception
+  {
+    List<StorageLocation> storageLocations = new ArrayList<>();
+    final File localStorageFolder1 = tmpFolder.newFolder("local_storage_folder_1");
+    storageLocations.add(new StorageLocation(localStorageFolder1, 10000000000L, null));
+    StorageLocationSelectorStrategy roundRobinStrategy =
+        new RoundRobinStorageLocationSelectorStrategy(storageLocations);
+
+    Iterator<StorageLocation> locations = roundRobinStrategy.getLocations();
+
+    StorageLocation loc1 = locations.next();
+    Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_1",
+        localStorageFolder1, loc1.getPath());
+
+    locations = roundRobinStrategy.getLocations();
+
+    StorageLocation loc2 = locations.next();
+    Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_1",
+        localStorageFolder1, loc2.getPath());
+  }
+
+
+  @Test
   public void testRoundRobinLocationSelectorStrategy() throws Exception
   {
-
     List<StorageLocation> storageLocations = new ArrayList<>();
 
     final File localStorageFolder1 = tmpFolder.newFolder("local_storage_folder_1");
@@ -88,23 +110,30 @@ public class StorageLocationSelectorStrategyTest
 
     StorageLocationSelectorStrategy roundRobinStrategy = new RoundRobinStorageLocationSelectorStrategy(storageLocations);
 
+    iterateLocs(localStorageFolder1, localStorageFolder2, localStorageFolder3, roundRobinStrategy);
+    iterateLocs(localStorageFolder1, localStorageFolder2, localStorageFolder3, roundRobinStrategy);
+    iterateLocs(localStorageFolder1, localStorageFolder2, localStorageFolder3, roundRobinStrategy);
+    iterateLocs(localStorageFolder1, localStorageFolder2, localStorageFolder3, roundRobinStrategy);
+    iterateLocs(localStorageFolder1, localStorageFolder2, localStorageFolder3, roundRobinStrategy);
+  }
 
-    Iterator<StorageLocation> locations = roundRobinStrategy.getLocations();
+  private void iterateLocs(File localStorageFolder1, File localStorageFolder2, File localStorageFolder3,
+                           StorageLocationSelectorStrategy roundRobinStrategy)
+  {
+    Iterator<StorageLocation> locations;
+    locations = roundRobinStrategy.getLocations();
+
     StorageLocation loc1 = locations.next();
     Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_1",
         localStorageFolder1, loc1.getPath());
 
     StorageLocation loc2 = locations.next();
-    Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_2",
+    Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_1",
         localStorageFolder2, loc2.getPath());
 
     StorageLocation loc3 = locations.next();
-    Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_3",
-        localStorageFolder3, loc3.getPath());
-
-    StorageLocation loc4 = locations.next();
     Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_1",
-        localStorageFolder1, loc4.getPath());
+        localStorageFolder3, loc3.getPath());
   }
 
 }
