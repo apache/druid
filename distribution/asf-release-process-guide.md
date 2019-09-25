@@ -191,7 +191,7 @@ Next create an issue in the Druid github to contain the release notes and allow 
 Once the release branch is good for an RC, you can build a new tag with:
 
 ```
-mvn -DreleaseVersion=0.16.0-incubating -DdevelopmentVersion=0.16.1-incubating-SNAPSHOT -Dtag=druid-0.16.1-incubating-rc3 -DpushChanges=false clean release:clean release:prepare
+mvn -DreleaseVersion=0.16.0-incubating -DdevelopmentVersion=0.16.1-incubating-SNAPSHOT -Dtag=druid-0.16.0-incubating-rc3 -DpushChanges=false clean release:clean release:prepare
 ```
 
 In this example it will create a tag, `druid-0.16.0-incubating-rc3`. If this release passes vote then we can add the final `druid-0.16.0-incubating` release tag later.
