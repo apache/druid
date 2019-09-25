@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
@@ -125,8 +126,8 @@ public class DoubleMeanAggregatorFactory extends AggregatorFactory
     } else {
       throw new IAE(
           "lhs[%s] or rhs[%s] not of type [%s]",
-          lhs.getClass().getName(),
-          rhs.getClass().getName(),
+          Utils.safeObjectClassGetName(lhs),
+          Utils.safeObjectClassGetName(rhs),
           DoubleMeanHolder.class.getName()
       );
     }
@@ -152,7 +153,7 @@ public class DoubleMeanAggregatorFactory extends AggregatorFactory
     } else if (object instanceof DoubleMeanHolder) {
       return object;
     } else {
-      throw new IAE("Unknown object type [%s]", object.getClass().getName());
+      throw new IAE("Unknown object type [%s]", Utils.safeObjectClassGetName(object));
     }
   }
 
