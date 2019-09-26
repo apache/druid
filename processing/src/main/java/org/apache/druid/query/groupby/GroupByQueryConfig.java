@@ -43,7 +43,7 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_FORCE_HASH_AGGREGATION = "forceHashAggregation";
   private static final String CTX_KEY_INTERMEDIATE_COMBINE_DEGREE = "intermediateCombineDegree";
   private static final String CTX_KEY_NUM_PARALLEL_COMBINE_THREADS = "numParallelCombineThreads";
-  private static final String CTX_KEY_VECTORIZE = "vectorize";
+  public static final String CTX_KEY_VECTORIZE = "vectorize";
 
   @JsonProperty
   private String defaultStrategy = GroupByStrategySelector.STRATEGY_V2;
