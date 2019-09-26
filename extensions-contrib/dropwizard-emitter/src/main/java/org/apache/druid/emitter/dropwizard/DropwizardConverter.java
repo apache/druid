@@ -98,7 +98,8 @@ public class DropwizardConverter
     }
     catch (IOException e) {
       throw new ISE(e, "Failed to parse metric dimensions and types");
-    } finally {
+    }
+    finally {
       Closeables.closeQuietly(is);
     }
   }

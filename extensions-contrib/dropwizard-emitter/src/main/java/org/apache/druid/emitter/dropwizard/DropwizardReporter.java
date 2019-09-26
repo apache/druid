@@ -25,8 +25,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.emitter.dropwizard.reporters.DropwizardConsoleReporter;
 import org.apache.druid.emitter.dropwizard.reporters.DropwizardJMXReporter;
 
-import java.io.Flushable;
-
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "console", value = DropwizardConsoleReporter.class),
