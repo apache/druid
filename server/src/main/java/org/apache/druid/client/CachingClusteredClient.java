@@ -36,8 +36,8 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
 import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
-import org.apache.druid.guice.LifecycleForkJoinPool;
 import org.apache.druid.guice.annotations.Client;
+import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.Intervals;
@@ -89,6 +89,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.ForkJoinPool;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
@@ -104,7 +105,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final CachePopulator cachePopulator;
   private final CacheConfig cacheConfig;
   private final DruidHttpClientConfig httpClientConfig;
-  private final LifecycleForkJoinPool pool;
+  private final ForkJoinPool pool;
 
   @Inject
   public CachingClusteredClient(
@@ -115,7 +116,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       CachePopulator cachePopulator,
       CacheConfig cacheConfig,
       @Client DruidHttpClientConfig httpClientConfig,
-      LifecycleForkJoinPool pool
+      @Merging ForkJoinPool pool
   )
   {
     this.warehouse = warehouse;

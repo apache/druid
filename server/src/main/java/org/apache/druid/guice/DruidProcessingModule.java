@@ -138,15 +138,22 @@ public class DruidProcessingModule implements Module
 
   @Provides
   @ManageLifecycle
-  public LifecycleForkJoinPool getMergeProcessingPool(DruidProcessingConfig config)
+  public LifecycleForkJoinPoolProvider getMergeProcessingPoolProvider(DruidProcessingConfig config)
   {
-    return new LifecycleForkJoinPool(
+    return new LifecycleForkJoinPoolProvider(
         config.getNumThreadsMergePool(),
         ForkJoinPool.defaultForkJoinWorkerThreadFactory, // todo: ?
         null,
         true,
         config.getMergePoolAwaitShutdownMillis()
     );
+  }
+
+  @Provides
+  @Merging
+  public ForkJoinPool getMergeProcessingPool(LifecycleForkJoinPoolProvider poolProvider)
+  {
+    return poolProvider.getPool();
   }
 
   private void verifyDirectMemory(DruidProcessingConfig config)

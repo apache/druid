@@ -47,7 +47,6 @@ import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.StupidPool;
-import org.apache.druid.guice.LifecycleForkJoinPool;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -165,7 +164,7 @@ public class CachingClusteredClientBenchmark
   private QueryRunnerFactoryConglomerate conglomerate;
   private CachingClusteredClient cachingClusteredClient;
   private ExecutorService processingPool;
-  private LifecycleForkJoinPool forkJoinPool;
+  private ForkJoinPool forkJoinPool;
 
   private boolean parallelCombine;
 
@@ -306,7 +305,12 @@ public class CachingClusteredClientBenchmark
     }
 
     processingPool = Execs.multiThreaded(processingConfig.getNumThreads(), "caching-clustered-client-benchmark");
-    forkJoinPool = new LifecycleForkJoinPool((int) Math.ceil(Runtime.getRuntime().availableProcessors() * 1.5), ForkJoinPool.defaultForkJoinWorkerThreadFactory, null, true, 1000L);
+    forkJoinPool = new ForkJoinPool(
+        (int) Math.ceil(Runtime.getRuntime().availableProcessors() * 1.5),
+        ForkJoinPool.defaultForkJoinWorkerThreadFactory,
+        null,
+        true
+    );
     cachingClusteredClient = new CachingClusteredClient(
         toolChestWarehouse,
         serverView,
@@ -369,7 +373,7 @@ public class CachingClusteredClientBenchmark
   {
     closer.close();
     processingPool.shutdown();
-    forkJoinPool.stop();
+    forkJoinPool.shutdownNow();
   }
 
   @Benchmark

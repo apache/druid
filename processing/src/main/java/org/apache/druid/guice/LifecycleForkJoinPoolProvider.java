@@ -26,20 +26,21 @@ import org.apache.druid.java.util.common.logger.Logger;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
-public class LifecycleForkJoinPool extends ForkJoinPool
+public class LifecycleForkJoinPoolProvider
 {
-  private static final Logger LOG = new Logger(LifecycleForkJoinPool.class);
+  private static final Logger LOG = new Logger(LifecycleForkJoinPoolProvider.class);
   private final long awaitShutdownMillis;
+  private final ForkJoinPool pool;
 
-  public LifecycleForkJoinPool(
+  public LifecycleForkJoinPoolProvider(
       int parallelism,
-      ForkJoinWorkerThreadFactory factory,
+      ForkJoinPool.ForkJoinWorkerThreadFactory factory,
       Thread.UncaughtExceptionHandler handler,
       boolean asyncMode,
       long awaitShutdownMillis
   )
   {
-    super(parallelism, factory, handler, asyncMode);
+    this.pool = new ForkJoinPool(parallelism, factory, handler, asyncMode);
     this.awaitShutdownMillis = awaitShutdownMillis;
   }
 
@@ -47,9 +48,9 @@ public class LifecycleForkJoinPool extends ForkJoinPool
   public void stop()
   {
     LOG.info("Shutting down ForkJoinPool [%s]", this);
-    shutdown();
+    pool.shutdown();
     try {
-      if (!awaitTermination(awaitShutdownMillis, TimeUnit.MILLISECONDS)) {
+      if (!pool.awaitTermination(awaitShutdownMillis, TimeUnit.MILLISECONDS)) {
         LOG.warn("Failed to complete all tasks in FJP [%s]", this);
       }
     }
@@ -57,5 +58,10 @@ public class LifecycleForkJoinPool extends ForkJoinPool
       Thread.currentThread().interrupt();
       throw new RuntimeException("interrupted on shutdown", e);
     }
+  }
+
+  public ForkJoinPool getPool()
+  {
+    return pool;
   }
 }
