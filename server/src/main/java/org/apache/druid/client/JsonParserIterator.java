@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.ResourceLimitExceededException;
@@ -47,6 +48,8 @@ import java.util.concurrent.TimeoutException;
 
 public class JsonParserIterator<T> implements Iterator<T>, Closeable
 {
+  private static final Logger LOG = new Logger(JsonParserIterator.class);
+
   private JsonParser jp;
   private ObjectCodec objectCodec;
   private final JavaType typeRef;
@@ -182,6 +185,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
 
   private void interruptQuery(Exception cause)
   {
+    LOG.warn(cause, "Query [%s] to host [%s] interrupted", queryId, host);
     throw new QueryInterruptedException(cause, host);
   }
 }
