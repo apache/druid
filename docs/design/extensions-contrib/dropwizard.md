@@ -44,7 +44,7 @@ All the configuration parameters for Dropwizard emitter are under `druid.emitter
 |`druid.emitter.dropwizard.includeHost`|Flag to include the host and port as part of the metric name.|no|yes|
 |`druid.emitter.dropwizard.dimensionMapPath`|Path to JSON file defining the dropwizard metric type, and desired dimensions for every Druid metric|no|Default mapping provided. See below.|
 |`druid.emitter.dropwizard.alertEmitters`| List of emitters where alerts will be forwarded to. |no| empty list (no forwarding)|
-|`druid.emitter.dropwizard.maxMetricsRegistrySize`| Maximum size of metrics registry to be cached at any time. |no| 100Mb|
+|`druid.emitter.dropwizard.maxMetricsRegistrySize`| Maximum size of metrics registry to be cached at any time. |no| 100 Mb|
 
 
 ### Druid to Dropwizard Event Conversion
@@ -85,7 +85,7 @@ druid.emitter.dropwizard.reporters={"type":"console","emitIntervalInSecs":30}"}
 ```
 
 ### Default Metrics Mapping
-Latest default metrics mapping can be foung [here] (https://github.com/apache/incubator-druid/tree/master/extensions-contrib/dropwizard/src/main/resources/defaultMetricDimensions.json)
+Latest default metrics mapping can be found [here] (https://github.com/apache/incubator-druid/tree/master/extensions-contrib/dropwizard/src/main/resources/defaultMetricDimensions.json)
 ```json
 {
   "query/time": {
