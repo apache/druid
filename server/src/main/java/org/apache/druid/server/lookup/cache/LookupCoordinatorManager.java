@@ -557,16 +557,16 @@ public class LookupCoordinatorManager
 
     try {
       List<ListenableFuture<Map.Entry>> futures = new ArrayList<>();
-      for (Map.Entry<String, Map<String, LookupExtractorFactoryMapContainer>> tierEntry : allLookupTiers.entrySet()) {
+      for (String tier : lookupNodeDiscovery.getAllTiers()) {
 
-        LOG.debug("Starting lookup mgmt for tier [%s].", tierEntry.getKey());
+        LOG.debug("Starting lookup mgmt for tier [%s].", tier);
 
-        final Map<String, LookupExtractorFactoryMapContainer> tierLookups = tierEntry.getValue();
-        for (final HostAndPortWithScheme node : lookupNodeDiscovery.getNodesInTier(tierEntry.getKey())) {
+        final Map<String, LookupExtractorFactoryMapContainer> tierLookups = allLookupTiers.getOrDefault(tier, ImmutableMap.of());
+        for (final HostAndPortWithScheme node : lookupNodeDiscovery.getNodesInTier(tier)) {
 
           LOG.debug(
               "Starting lookup mgmt for tier [%s] and host [%s:%s:%s].",
-              tierEntry.getKey(),
+              tier,
               node.getScheme(),
               node.getHostText(),
               node.getPort()
