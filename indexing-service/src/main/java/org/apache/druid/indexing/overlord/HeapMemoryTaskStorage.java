@@ -195,6 +195,25 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
+  public List<Task> getActiveTasksByDatasource(String datasource)
+  {
+    giant.lock();
+
+    try {
+      final ImmutableList.Builder<Task> listBuilder = ImmutableList.builder();
+      for (Map.Entry<String, TaskStuff> entry : tasks.entrySet()) {
+        if (entry.getValue().getStatus().isRunnable() && entry.getValue().getDataSource().equals(datasource)) {
+          listBuilder.add(entry.getValue().getTask());
+        }
+      }
+      return listBuilder.build();
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  @Override
   public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
   {
     giant.lock();
@@ -241,7 +260,8 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
       return maxTaskStatuses == null ?
              getRecentlyCreatedAlreadyFinishedTaskInfoSince(
-                 DateTimes.nowUtc().minus(durationBeforeNow == null ? config.getRecentlyFinishedThreshold() : durationBeforeNow),
+                 DateTimes.nowUtc()
+                          .minus(durationBeforeNow == null ? config.getRecentlyFinishedThreshold() : durationBeforeNow),
                  createdDateDesc
              ) :
              getNRecentlyCreatedAlreadyFinishedTaskInfo(maxTaskStatuses, createdDateDesc);
@@ -283,7 +303,10 @@ public class HeapMemoryTaskStorage implements TaskStorage
     }
   }
 
-  private List<TaskInfo<Task, TaskStatus>> getNRecentlyCreatedAlreadyFinishedTaskInfo(int n, Ordering<TaskStuff> createdDateDesc)
+  private List<TaskInfo<Task, TaskStatus>> getNRecentlyCreatedAlreadyFinishedTaskInfo(
+      int n,
+      Ordering<TaskStuff> createdDateDesc
+  )
   {
     giant.lock();
 
