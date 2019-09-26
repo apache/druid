@@ -742,6 +742,11 @@ fully endorsed by the ASF.
 
 [Previous release announcements](https://lists.apache.org/list.html?general@incubator.apache.org:lte=1y:%22%5BANNOUNCE%5D%20Apache%20Druid%20(incubating%22))
 
+Sticky the announcment on the ['druid-user' group](https://groups.google.com/forum/?pli=1#!forum/druid-user).
+
+### Update Wikipedia
+
+Update the release version and date on the [Apache Druid Wikipedia article](https://en.wikipedia.org/w/index.php?title=Apache_Druid) (bots might also do this?).
 
 ### Remove old releases which are not 'active'
 
