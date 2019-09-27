@@ -92,41 +92,39 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   @Override
   public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
   {
-    final BlockingQueue<OrderedResultBatch<T>> outputQueue = new ArrayBlockingQueue<>(queueSize);
-
-    if (baseSequences.size() > 0) {
-      // 2 layer parallel merge done in fjp
-      ParallelMergeCombineAction<T> finalMergeAction = new ParallelMergeCombineAction<>(
-          baseSequences,
-          orderingFn,
-          combineFn,
-          outputQueue,
-          queueSize,
-          parallelism,
-          yieldAfter,
-          batchSize,
-          hasTimeout,
-          timeoutAt
-      );
-      workerPool.execute(finalMergeAction);
-      Sequence<T> finalOutSequence = makeOutputSequenceForQueue(finalMergeAction, outputQueue, hasTimeout, timeoutAt);
-      return finalOutSequence.toYielder(initValue, accumulator);
+    if (baseSequences.isEmpty()) {
+      return Sequences.<T>empty().toYielder(initValue, accumulator);
     }
-    // empty result
-    return Sequences.<T>empty().toYielder(initValue, accumulator);
+
+    final BlockingQueue<OrderedResultBatch<T>> outputQueue = new ArrayBlockingQueue<>(queueSize);
+    ParallelMergeCombineAction<T> finalMergeAction = new ParallelMergeCombineAction<>(
+        baseSequences,
+        orderingFn,
+        combineFn,
+        outputQueue,
+        queueSize,
+        parallelism,
+        yieldAfter,
+        batchSize,
+        hasTimeout,
+        timeoutAt
+    );
+    workerPool.execute(finalMergeAction);
+    Sequence<T> finalOutSequence = makeOutputSequenceForQueue(outputQueue, hasTimeout, timeoutAt);
+    return finalOutSequence.toYielder(initValue, accumulator);
   }
 
   /**
    * Create an output {@link Sequence} that wraps the output {@link BlockingQueue} of a {@link RecursiveAction} task
    */
   private static <T> Sequence<T> makeOutputSequenceForQueue(
-      RecursiveAction task,
       BlockingQueue<OrderedResultBatch<T>> queue,
       boolean hasTimeout,
       long timeoutAt
   )
   {
-    final Sequence<T> backgroundCombineSequence = new BaseSequence<>(
+
+    return new BaseSequence<>(
         new BaseSequence.IteratorMaker<T, Iterator<T>>()
         {
           @Override
@@ -179,22 +177,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           @Override
           public void cleanup(Iterator<T> iterFromMake)
           {
-            try {
-              // todo: hmm.. this probably does nothing since this is only the first task and it doesn't run until all
-              // recursive tasks that are spawned complete, maybe we need a collection of 'active' tasks which the tasks
-              // themselves update?
-              if (!task.isDone()) {
-                task.cancel(true);
-              }
-            }
-            catch (Exception e) {
-              throw new RuntimeException(e);
-            }
+            // todo: do ... something?
           }
         }
     );
-
-    return backgroundCombineSequence;
   }
 
   /**
@@ -251,7 +237,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       // just serially perform the merge-combine with a single task
       if (sequences.size() < 4 || parallelMergeTasks < 2) {
         LOG.info(
-            "Input sequence count: %s or available parallel merge task count: %s too small to perform parallel"
+            "Input sequence count (%s) or available parallel merge task count (%s) too small to perform parallel"
             + " merge-combine, performing serially with a single merge-combine task",
             sequences.size(),
             parallelMergeTasks
@@ -266,45 +252,12 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
             yieldAfter,
             batchSize
         );
-        invokeAll(mergeAction);
+        getPool().execute(mergeAction);
       } else {
+        // 2 layer parallel merge done in fjp
         LOG.info("Spawning %s parallel merge-combine tasks for %s sequences", parallelMergeTasks, sequences.size());
         spawnParallelTasks(parallelMergeTasks);
       }
-    }
-
-    int computeNumTasks()
-    {
-      final int numProcessors = JvmUtils.getRuntimeInfo().getAvailableProcessors();
-      final int poolParallelism = getPool().getParallelism();
-      final int activeThreadCount = getPool().getActiveThreadCount();
-      final int runningThreadCount = getPool().getRunningThreadCount();
-      final int submissionCount = getPool().getQueuedSubmissionCount();
-      final long queuedTaskCount = getPool().getQueuedTaskCount();
-      LOG.info(
-          "processors: [%s] pool parallelism: [%s] active thread count: [%s] running thread count: [%s] submission count: [%s] queued task count: [%s] steal: [%s]",
-          numProcessors,
-          poolParallelism,
-          activeThreadCount,
-          runningThreadCount,
-          submissionCount,
-          queuedTaskCount,
-          getPool().getStealCount()
-      );
-      // max is minimum of either number of processors or user suggested parallelism
-      final int maxParallelism = Math.min(numProcessors, parallelism);
-      // adjust max to be no more than total pool parallelism less the number of running threads
-      final int computedParallelism = Math.min(maxParallelism, poolParallelism - runningThreadCount);
-      // compute total number of layer 1 'parallel' tasks, the final merge task will take the remaining slot, we need at least 2
-      final int computedOptimalParallelism = Math.min((int) Math.floor((double) sequences.size() / 2.0), computedParallelism - 1);
-      return computedOptimalParallelism;
-
-
-      /* original manual control
-      final int suggestedParallelism = Math.max(2, parallelism - 1);
-      final int suggestedOptimalParallelism = Math.min((int) Math.floor((double) yielders.size() / 2.0), suggestedParallelism);
-      return suggestedOptimalParallelism;
-       */
     }
 
     void spawnParallelTasks(int parallelMergeTasks)
@@ -350,6 +303,27 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       );
 
       getPool().execute(finalMergeAction);
+    }
+
+    /**
+     * Computes maximum number of layer 1 parallel merging tasks given available processors and an estimate of current
+     * {@link ForkJoinPool} utilization. A return value of 1 or less indicates that a serial merge will be done on
+     * the pool instead.
+     */
+    int computeNumTasks()
+    {
+      // max is minimum of either number of processors or user suggested parallelism
+      final int maxParallelism = Math.min(JvmUtils.getRuntimeInfo().getAvailableProcessors(), parallelism);
+      // adjust max to be no more than total pool parallelism less the number of running threads + submitted tasks
+      final int utilizationEstimate = getPool().getRunningThreadCount() + getPool().getQueuedSubmissionCount();
+      // minimum of 'max computed parallelism' and pool parallelism less current 'utilization estimate'
+      final int computedParallelism = Math.min(maxParallelism, getPool().getParallelism() - utilizationEstimate);
+      // compute total number of layer 1 'parallel' tasks, the final merge task will take the remaining slot
+      final int computedOptimalParallelism = Math.min(
+          (int) Math.floor((double) sequences.size() / 2.0),
+          computedParallelism - 1
+      );
+      return computedOptimalParallelism;
     }
   }
 
@@ -469,19 +443,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         final double nextYieldAfter = Math.max(10.0 * ((double) yieldAfter / elapsedMillis), 1.0);
         final double cumulativeMovingAverage = (nextYieldAfter + (depth * yieldAfter)) / (depth + 1);
         final int adjustedNextYieldAfter = (int) Math.ceil(cumulativeMovingAverage);
-
-        LOG.info(
-            "stage %s processed %s results in %s millis, next task yielding after %s operations (active thread count: [%s] running thread count: [%s] submission count: [%s] queued task count: [%s] steal: [%s])",
-            depth,
-            yieldAfter,
-            elapsedMillis,
-            adjustedNextYieldAfter,
-            getPool().getActiveThreadCount(),
-            getPool().getRunningThreadCount(),
-            getPool().getQueuedSubmissionCount(),
-            getPool().getQueuedTaskCount(),
-            getPool().getStealCount()
-        );
         getPool().execute(new MergeCombineAction<>(
             pQueue,
             outputQueue,
@@ -554,7 +515,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       if (cursors.isEmpty()) {
         outputQueue.offer(new OrderedResultBatch<>());
       } else {
-        invokeAll(new MergeCombineAction<T>(
+        getPool().execute(new MergeCombineAction<T>(
             cursors,
             outputQueue,
             orderingFn,
@@ -612,9 +573,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       for (BlockingQueue<OrderedResultBatch<T>> queue : queues) {
         BatchedResultsCursor<T> outputCursor =
             new BlockingQueueuBatchedResultsCursor<>(queue, orderingFn, hasTimeout, timeoutAt);
-        // seed the Drainer before we can add to pQueue, this is because a blocking queue starts empty where
-        // a yielder starts with the first value
 
+        // this is blocking
         outputCursor.initialize();
         if (!outputCursor.isDone()) {
           cursors.offer(outputCursor);
@@ -658,7 +618,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         return batchYielder;
       }
       catch (InterruptedException e) {
-        throw new RuntimeException("Failed to load next batch of results", e);
+        throw new RuntimeException("Failed to load initial batch of results", e);
       }
     }
     @Override
@@ -800,7 +760,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
             public OrderedResultBatch<E> accumulate(OrderedResultBatch<E> accumulated, E in)
             {
               count++;
-              if (/*count == 1 ||*/  count % batchSize == 0) {
+              if (count % batchSize == 0) {
                 yield();
               }
               accumulated.add(in);
