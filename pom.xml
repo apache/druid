@@ -90,7 +90,6 @@
         <jersey.version>1.19.3</jersey.version>
         <jackson.version>2.9.10</jackson.version>
         <log4j.version>2.5</log4j.version>
-        <!-- HttpClient has not yet been ported to Netty 4.x -->
         <netty3.version>3.10.6.Final</netty3.version>
         <!-- Spark updated in https://github.com/apache/spark/pull/19884 -->
         <netty4.version>4.1.30.Final</netty4.version>
@@ -200,11 +199,6 @@
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
                 <version>1.12</version>
-            </dependency>
-            <dependency>
-                <groupId>commons-httpclient</groupId>
-                <artifactId>commons-httpclient</artifactId>
-                <version>3.1</version>
             </dependency>
             <dependency>
                 <groupId>commons-io</groupId>
