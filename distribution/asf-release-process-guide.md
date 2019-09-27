@@ -27,7 +27,7 @@ First up in performing an official release of Apache Druid (incubating) is to an
 
 Next up is creating the release branch off of master (or the previous release branch for a bug fix release). Be sure to do this from the apache git repo, _not your fork_. Name the branch for the release version that is being created, omitting the `druid` prefix that will appear on the release candidate and release tags:
 
-```bash
+```console
 $ git checkout origin/0.15.0-incubating
 ...
 $ git checkout -b 0.15.1-incubating
