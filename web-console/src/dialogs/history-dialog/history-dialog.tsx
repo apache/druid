@@ -16,25 +16,18 @@
  * limitations under the License.
  */
 
-import { Card, Dialog, Divider, IDialogProps } from '@blueprintjs/core';
+import { Card, Dialog, Divider } from '@blueprintjs/core';
 import React from 'react';
 
 import { JSONCollapse } from '../../components';
 
 import './history-dialog.scss';
 
-interface HistoryDialogProps extends IDialogProps {
+interface HistoryDialogProps {
   historyRecords: any[];
 }
 
-interface HistoryDialogState {}
-
-export class HistoryDialog extends React.PureComponent<HistoryDialogProps, HistoryDialogState> {
-  constructor(props: HistoryDialogProps) {
-    super(props);
-    this.state = {};
-  }
-
+export class HistoryDialog extends React.PureComponent<HistoryDialogProps> {
   renderRecords() {
     const { children, historyRecords } = this.props;
     let content;
@@ -78,7 +71,7 @@ export class HistoryDialog extends React.PureComponent<HistoryDialogProps, Histo
 
   render(): React.ReactNode {
     return (
-      <Dialog isOpen {...this.props}>
+      <Dialog className="history-dialog" isOpen {...this.props}>
         {this.renderRecords()}
       </Dialog>
     );

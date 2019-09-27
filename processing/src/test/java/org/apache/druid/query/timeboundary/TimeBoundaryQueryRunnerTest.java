@@ -73,7 +73,7 @@ public class TimeBoundaryQueryRunnerTest
   }
 
   private final QueryRunner runner;
-  private static final QueryRunnerFactory factory = new TimeBoundaryQueryRunnerFactory(
+  private static final QueryRunnerFactory FACTORY = new TimeBoundaryQueryRunnerFactory(
       QueryRunnerTestHelper.NOOP_QUERYWATCHER
   );
   private static Segment segment0;
@@ -130,7 +130,7 @@ public class TimeBoundaryQueryRunnerTest
 
   private static SegmentId makeIdentifier(Interval interval, String version)
   {
-    return SegmentId.of(QueryRunnerTestHelper.dataSource, interval, version, NoneShardSpec.instance());
+    return SegmentId.of(QueryRunnerTestHelper.DATA_SOURCE, interval, version, NoneShardSpec.instance());
   }
 
   private QueryRunner getCustomRunner() throws IOException
@@ -156,7 +156,7 @@ public class TimeBoundaryQueryRunnerTest
         new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment1))
     );
 
-    return QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, factory);
+    return QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, FACTORY);
   }
 
   @Test

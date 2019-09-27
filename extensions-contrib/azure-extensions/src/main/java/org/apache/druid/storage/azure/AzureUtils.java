@@ -30,29 +30,23 @@ import java.net.URISyntaxException;
 public class AzureUtils
 {
 
-
-  public static final Predicate<Throwable> AZURE_RETRY = new Predicate<Throwable>()
-  {
-    @Override
-    public boolean apply(Throwable e)
-    {
-      if (e instanceof URISyntaxException) {
-        return false;
-      }
-
-      if (e instanceof IOException) {
-        return false;
-      }
-
-      if (e instanceof StorageException) {
-        return true;
-      }
-
+  public static final Predicate<Throwable> AZURE_RETRY = e -> {
+    if (e instanceof URISyntaxException) {
       return false;
     }
+
+    if (e instanceof StorageException) {
+      return true;
+    }
+
+    if (e instanceof IOException) {
+      return true;
+    }
+
+    return false;
   };
 
-  public static <T> T retryAzureOperation(Task<T> f, int maxTries) throws Exception
+  static <T> T retryAzureOperation(Task<T> f, int maxTries) throws Exception
   {
     return RetryUtils.retry(f, AZURE_RETRY, maxTries);
   }

@@ -85,7 +85,7 @@ public class MapVirtualColumnTopNTest
   public void testWithMapColumn()
   {
     final TopNQuery query = new TopNQuery(
-        new TableDataSource(QueryRunnerTestHelper.dataSource),
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         VirtualColumns.create(
             ImmutableList.of(
                 new MapVirtualColumn("keys", "values", "params")
@@ -111,7 +111,7 @@ public class MapVirtualColumnTopNTest
   public void testWithSubColumn()
   {
     final TopNQuery query = new TopNQuery(
-        new TableDataSource(QueryRunnerTestHelper.dataSource),
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         VirtualColumns.create(
             ImmutableList.of(
                 new MapVirtualColumn("keys", "values", "params")

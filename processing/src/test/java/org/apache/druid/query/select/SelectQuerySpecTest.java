@@ -75,11 +75,11 @@ public class SelectQuerySpecTest
         + "\"context\":null}";
 
     SelectQuery query = new SelectQuery(
-        new TableDataSource(QueryRunnerTestHelper.dataSource),
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         new LegacySegmentSpec(Intervals.of("2011-01-12/2011-01-14")),
         true,
         null,
-        QueryRunnerTestHelper.allGran,
+        QueryRunnerTestHelper.ALL_GRAN,
         DefaultDimensionSpec.toSpec(Arrays.asList("market", "quality")),
         Collections.singletonList("index"),
         null,
@@ -119,11 +119,11 @@ public class SelectQuerySpecTest
         + "\"context\":null}";
 
     SelectQuery queryWithNull = new SelectQuery(
-        new TableDataSource(QueryRunnerTestHelper.dataSource),
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         new LegacySegmentSpec(Intervals.of("2011-01-12/2011-01-14")),
         true,
         null,
-        QueryRunnerTestHelper.allGran,
+        QueryRunnerTestHelper.ALL_GRAN,
         DefaultDimensionSpec.toSpec(Arrays.asList("market", "quality")),
         Collections.singletonList("index"),
         null,

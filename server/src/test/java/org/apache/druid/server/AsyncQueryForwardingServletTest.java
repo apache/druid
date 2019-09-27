@@ -255,7 +255,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         null,
         new NoopServiceEmitter(),
         new NoopRequestLogger(),
-        new DefaultGenericQueryMetricsFactory(jsonMapper),
+        new DefaultGenericQueryMetricsFactory(),
         new AuthenticatorMapper(ImmutableMap.of())
     )
     {
@@ -347,7 +347,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
               injector.getInstance(DruidHttpClientConfig.class),
               new NoopServiceEmitter(),
               new NoopRequestLogger(),
-              new DefaultGenericQueryMetricsFactory(jsonMapper),
+              new DefaultGenericQueryMetricsFactory(),
               new AuthenticatorMapper(ImmutableMap.of())
           )
           {

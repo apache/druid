@@ -32,13 +32,18 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 
 public class ParallelIndexTuningConfigTest
 {
   private final ObjectMapper mapper = new DefaultObjectMapper();
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Before
   public void setup()
@@ -79,11 +84,14 @@ public class ParallelIndexTuningConfigTest
         true,
         10000L,
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+        null,
         250,
         100,
         20,
         new Duration(3600),
         128,
+        null,
+        null,
         false,
         null,
         null
@@ -91,5 +99,127 @@ public class ParallelIndexTuningConfigTest
     final byte[] json = mapper.writeValueAsBytes(tuningConfig);
     final ParallelIndexTuningConfig fromJson = (ParallelIndexTuningConfig) mapper.readValue(json, TuningConfig.class);
     Assert.assertEquals(fromJson, tuningConfig);
+  }
+
+  @Test
+  public void testSerdeWithMaxNumConcurrentSubTasks() throws IOException
+  {
+    final int maxNumConcurrentSubTasks = 250;
+    final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+        null,
+        null,
+        10,
+        1000L,
+        null,
+        null,
+        new DynamicPartitionsSpec(100, 100L),
+        new IndexSpec(
+            new RoaringBitmapSerdeFactory(true),
+            CompressionStrategy.UNCOMPRESSED,
+            CompressionStrategy.LZF,
+            LongEncodingStrategy.LONGS
+        ),
+        new IndexSpec(),
+        1,
+        false,
+        true,
+        10000L,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+        null,
+        maxNumConcurrentSubTasks,
+        100,
+        20,
+        new Duration(3600),
+        128,
+        null,
+        null,
+        false,
+        null,
+        null
+    );
+    final byte[] json = mapper.writeValueAsBytes(tuningConfig);
+    final ParallelIndexTuningConfig fromJson = (ParallelIndexTuningConfig) mapper.readValue(json, TuningConfig.class);
+    Assert.assertEquals(fromJson, tuningConfig);
+  }
+
+  @Test
+  public void testSerdeWithMaxNumSubTasks() throws IOException
+  {
+    final int maxNumSubTasks = 250;
+    final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+        null,
+        null,
+        10,
+        1000L,
+        null,
+        null,
+        new DynamicPartitionsSpec(100, 100L),
+        new IndexSpec(
+            new RoaringBitmapSerdeFactory(true),
+            CompressionStrategy.UNCOMPRESSED,
+            CompressionStrategy.LZF,
+            LongEncodingStrategy.LONGS
+        ),
+        new IndexSpec(),
+        1,
+        false,
+        true,
+        10000L,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+        maxNumSubTasks,
+        null,
+        100,
+        20,
+        new Duration(3600),
+        128,
+        null,
+        null,
+        false,
+        null,
+        null
+    );
+    final byte[] json = mapper.writeValueAsBytes(tuningConfig);
+    final ParallelIndexTuningConfig fromJson = (ParallelIndexTuningConfig) mapper.readValue(json, TuningConfig.class);
+    Assert.assertEquals(fromJson, tuningConfig);
+  }
+
+  @Test
+  public void testSerdeWithMaxNumSubTasksAndMaxNumConcurrentSubTasks()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Can't use both maxNumSubTasks and maxNumConcurrentSubTasks");
+    final int maxNumSubTasks = 250;
+    final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+        null,
+        null,
+        10,
+        1000L,
+        null,
+        null,
+        new DynamicPartitionsSpec(100, 100L),
+        new IndexSpec(
+            new RoaringBitmapSerdeFactory(true),
+            CompressionStrategy.UNCOMPRESSED,
+            CompressionStrategy.LZF,
+            LongEncodingStrategy.LONGS
+        ),
+        new IndexSpec(),
+        1,
+        false,
+        true,
+        10000L,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+        maxNumSubTasks,
+        maxNumSubTasks,
+        100,
+        20,
+        new Duration(3600),
+        128,
+        null,
+        null,
+        false,
+        null,
+        null
+    );
   }
 }

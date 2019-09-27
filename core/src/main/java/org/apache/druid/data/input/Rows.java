@@ -112,7 +112,7 @@ public final class Rows
         throw new ParseException(e, "Unable to parse value[%s] for field[%s]", inputValue, name);
       }
     } else {
-      throw new ParseException("Unknown type[%s] for field", inputValue.getClass(), inputValue);
+      throw new ParseException("Unknown type[%s] for field[%s]", inputValue.getClass(), name);
     }
   }
 

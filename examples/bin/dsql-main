@@ -55,17 +55,17 @@ def do_query(url, sql, context, timeout, user, ignore_ssl_verification, ca_file,
     if timeout <= 0:
       timeout = None
       query_context = context
-    elif int(context.get('timeout', 0)) / 1000 < timeout:
+    elif int(context.get('timeout', 0)) / 1000. < timeout:
       query_context = context.copy()
-      query_context['timeout'] = timeout * 1000;
+      query_context['timeout'] = timeout * 1000
 
     sql_json = json.dumps({'query' : sql, 'context' : query_context})
 
     # SSL stuff
-    ssl_context =  None;
-    if (ignore_ssl_verification or ca_file != None or ca_path != None):
+    ssl_context = None
+    if ignore_ssl_verification or ca_file is not None or ca_path is not None:
       ssl_context = ssl.create_default_context()
-      if (ignore_ssl_verification):
+      if ignore_ssl_verification:
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
       else:
@@ -463,7 +463,7 @@ def main():
               # break to execute sql
               break
             else:
-              sql = "SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES";
+              sql = "SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES"
               if not include_system:
                 sql = sql + " WHERE TABLE_SCHEMA = 'druid'"
               # break to execute sql

@@ -28,15 +28,15 @@ import java.io.IOException;
 
 public class RegexSearchQueryTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   @Test
   public void testQuerySerialization() throws IOException
   {
     RegexSearchQuerySpec spec = new RegexSearchQuerySpec("(upfront|total_market)");
 
-    String json = jsonMapper.writeValueAsString(spec);
-    RegexSearchQuerySpec serdeQuery = (RegexSearchQuerySpec) jsonMapper.readValue(json, RegexSearchQuerySpec.class);
+    String json = JSON_MAPPER.writeValueAsString(spec);
+    RegexSearchQuerySpec serdeQuery = (RegexSearchQuerySpec) JSON_MAPPER.readValue(json, RegexSearchQuerySpec.class);
 
     Assert.assertEquals(spec, serdeQuery);
   }

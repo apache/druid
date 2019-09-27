@@ -118,7 +118,6 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
     return (
       <SnitchDialog
         className="coordinator-dynamic-config-dialog"
-        isOpen
         onSave={this.saveClusterConfig}
         onClose={onClose}
         title="Coordinator dynamic config"
@@ -135,6 +134,12 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
         <AutoForm
           fields={[
             {
+              name: 'maxSegmentsToMove',
+              type: 'number',
+              defaultValue: 5,
+              info: <>The maximum number of segments that can be moved at any given time.</>,
+            },
+            {
               name: 'balancerComputeThreads',
               type: 'number',
               defaultValue: 1,
@@ -149,6 +154,7 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
             {
               name: 'emitBalancingStats',
               type: 'boolean',
+              defaultValue: false,
               info: (
                 <>
                   Boolean flag for whether or not we should emit balancing stats. This is an
@@ -159,6 +165,7 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
             {
               name: 'killAllDataSources',
               type: 'boolean',
+              defaultValue: false,
               info: (
                 <>
                   Send kill tasks for ALL dataSources if property{' '}
@@ -205,12 +212,6 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
                   queue is unbounded)
                 </>
               ),
-            },
-            {
-              name: 'maxSegmentsToMove',
-              type: 'number',
-              defaultValue: 5,
-              info: <>The maximum number of segments that can be moved at any given time.</>,
             },
             {
               name: 'mergeBytesLimit',

@@ -33,7 +33,7 @@ import java.util.Set;
  */
 public class TimeDimExtractionFnTest
 {
-  private static final String[] dims = {
+  private static final String[] DIMS = {
       "01/01/2012",
       "01/02/2012",
       "03/03/2012",
@@ -64,7 +64,7 @@ public class TimeDimExtractionFnTest
     Set<String> months = new HashSet<>();
     ExtractionFn extractionFn = new TimeDimExtractionFn("MM/dd/yyyy", "MM/yyyy", false);
 
-    for (String dim : dims) {
+    for (String dim : DIMS) {
       months.add(extractionFn.apply(dim));
     }
 
@@ -81,7 +81,7 @@ public class TimeDimExtractionFnTest
     Set<String> months = new HashSet<>();
     ExtractionFn extractionFn = new TimeDimExtractionFn("MM/dd/yyyy", "MM/yyyy", true);
 
-    for (String dim : dims) {
+    for (String dim : DIMS) {
       months.add(extractionFn.apply(dim));
     }
 
@@ -98,7 +98,7 @@ public class TimeDimExtractionFnTest
     Set<String> quarters = new HashSet<>();
     ExtractionFn extractionFn = new TimeDimExtractionFn("MM/dd/yyyy", "QQQ/yyyy", false);
 
-    for (String dim : dims) {
+    for (String dim : DIMS) {
       quarters.add(extractionFn.apply(dim));
     }
 

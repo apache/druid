@@ -703,7 +703,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       // can be injected based on the configuration given in config.getSchema().getIOConfig().getMetadataUpdateSpec()
       final MetadataStorageUpdaterJobHandler maybeHandler;
       if (config.isUpdaterJobSpecSet()) {
-        maybeHandler = injector.getInstance(MetadataStorageUpdaterJobHandler.class);
+        maybeHandler = INJECTOR.getInstance(MetadataStorageUpdaterJobHandler.class);
       } else {
         maybeHandler = null;
       }

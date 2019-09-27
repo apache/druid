@@ -90,7 +90,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
   private static final byte[] LARGE_EVENTS_STOP = new byte[]{};
 
   private static final Logger log = new Logger(HttpPostEmitter.class);
-  private static final AtomicInteger instanceCounter = new AtomicInteger();
+  private static final AtomicInteger INSTANCE_COUNTER = new AtomicInteger();
 
   final BatchingStrategy batchingStrategy;
   final HttpEmitterConfig config;
@@ -484,7 +484,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
 
     EmittingThread(HttpEmitterConfig config)
     {
-      super("HttpPostEmitter-" + instanceCounter.incrementAndGet());
+      super("HttpPostEmitter-" + INSTANCE_COUNTER.incrementAndGet());
       setDaemon(true);
       timeoutLessThanMinimumException = new TimeoutException(
           "Timeout less than minimum [" + config.getMinHttpTimeoutMillis() + "] ms."

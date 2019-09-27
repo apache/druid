@@ -147,6 +147,41 @@ public class SketchAggregationTest
   }
 
   @Test
+  public void testEmptySketchAggregateCombine() throws Exception
+  {
+    final String groupByQueryString = readFileFromClasspathAsString("empty_sketch_group_by_query.json");
+    final GroupByQuery groupByQuery = (GroupByQuery) helper.getObjectMapper()
+                                                           .readValue(groupByQueryString, Query.class);
+
+    final Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(SketchAggregationTest.class.getClassLoader().getResource("empty_sketch_data.tsv").getFile()),
+        readFileFromClasspathAsString("empty_sketch_data_record_parser.json"),
+        readFileFromClasspathAsString("empty_sketch_test_data_aggregators.json"),
+        0,
+        Granularities.NONE,
+        5,
+        groupByQueryString
+    );
+
+    List<ResultRow> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    Assert.assertEquals(
+        ResultRow.fromLegacyRow(
+            new MapBasedRow(
+                DateTimes.of("2019-07-14T00:00:00.000Z"),
+                ImmutableMap
+                    .<String, Object>builder()
+                    .put("product", "product_b")
+                    .put("sketch_count", 0.0)
+                    .build()
+            ),
+            groupByQuery
+        ),
+        results.get(0)
+    );
+  }
+
+  @Test
   public void testThetaCardinalityOnSimpleColumn() throws Exception
   {
     final String groupByQueryString = readFileFromClasspathAsString("simple_test_data_group_by_query.json");

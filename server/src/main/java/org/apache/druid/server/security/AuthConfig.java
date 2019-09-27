@@ -44,6 +44,8 @@ public class AuthConfig
 
   public static final String ANONYMOUS_NAME = "anonymous";
 
+  public static final String TRUSTED_DOMAIN_NAME = "trustedDomain";
+
   public AuthConfig()
   {
     this(null, null, null, false);

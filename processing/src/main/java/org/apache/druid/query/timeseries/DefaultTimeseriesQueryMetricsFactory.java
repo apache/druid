@@ -19,18 +19,14 @@
 
 package org.apache.druid.query.timeseries;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.jackson.DefaultObjectMapper;
 
 @LazySingleton
 public class DefaultTimeseriesQueryMetricsFactory implements TimeseriesQueryMetricsFactory
 {
   private static final TimeseriesQueryMetricsFactory INSTANCE =
-      new DefaultTimeseriesQueryMetricsFactory(new DefaultObjectMapper());
+      new DefaultTimeseriesQueryMetricsFactory();
 
   /**
    * Should be used only in tests, directly or indirectly (via {@link
@@ -42,17 +38,9 @@ public class DefaultTimeseriesQueryMetricsFactory implements TimeseriesQueryMetr
     return INSTANCE;
   }
 
-  private final ObjectMapper jsonMapper;
-
-  @Inject
-  public DefaultTimeseriesQueryMetricsFactory(@Json ObjectMapper jsonMapper)
-  {
-    this.jsonMapper = jsonMapper;
-  }
-
   @Override
   public TimeseriesQueryMetrics makeMetrics()
   {
-    return new DefaultTimeseriesQueryMetrics(jsonMapper);
+    return new DefaultTimeseriesQueryMetrics();
   }
 }

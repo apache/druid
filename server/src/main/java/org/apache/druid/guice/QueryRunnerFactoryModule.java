@@ -52,7 +52,7 @@ import java.util.Map;
  */
 public class QueryRunnerFactoryModule extends QueryToolChestModule
 {
-  private static final Map<Class<? extends Query>, Class<? extends QueryRunnerFactory>> mappings =
+  private static final Map<Class<? extends Query>, Class<? extends QueryRunnerFactory>> MAPPINGS =
       ImmutableMap.<Class<? extends Query>, Class<? extends QueryRunnerFactory>>builder()
                   .put(TimeseriesQuery.class, TimeseriesQueryRunnerFactory.class)
                   .put(SearchQuery.class, SearchQueryRunnerFactory.class)
@@ -80,7 +80,7 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
         binder
     );
 
-    for (Map.Entry<Class<? extends Query>, Class<? extends QueryRunnerFactory>> entry : mappings.entrySet()) {
+    for (Map.Entry<Class<? extends Query>, Class<? extends QueryRunnerFactory>> entry : MAPPINGS.entrySet()) {
       queryFactoryBinder.addBinding(entry.getKey()).to(entry.getValue());
       binder.bind(entry.getValue()).in(LazySingleton.class);
     }

@@ -43,7 +43,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -419,7 +419,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   @Nullable
   private Map<String, LookupExtractorFactoryContainer> tryGetLookupListFromCoordinator(String tier) throws Exception
   {
-    final FullResponseHolder response = fetchLookupsForTier(tier);
+    final StringFullResponseHolder response = fetchLookupsForTier(tier);
     if (response.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
       LOG.warn("No lookups found for tier [%s], response [%s]", tier, response);
       return null;
@@ -564,7 +564,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     }
   }
 
-  private FullResponseHolder fetchLookupsForTier(String tier) throws InterruptedException, IOException
+  private StringFullResponseHolder fetchLookupsForTier(String tier) throws InterruptedException, IOException
   {
     return druidLeaderClient.go(
         druidLeaderClient.makeRequest(

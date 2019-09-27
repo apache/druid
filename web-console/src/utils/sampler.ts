@@ -18,8 +18,8 @@
 
 import axios from 'axios';
 
-import { getDruidErrorMessage } from './druid-query';
-import { alphanumericCompare, sortWithPrefixSuffix } from './general';
+import { getDruidErrorMessage, queryDruidRune } from './druid-query';
+import { alphanumericCompare, filterMap, sortWithPrefixSuffix } from './general';
 import {
   DimensionsSpec,
   getEmptyTimestampSpec,
@@ -27,6 +27,7 @@ import {
   IngestionSpec,
   IoConfig,
   isColumnTimestampSpec,
+  isIngestSegment,
   MetricSpec,
   Parser,
   ParseSpec,
@@ -34,6 +35,8 @@ import {
   TransformSpec,
 } from './ingestion-spec';
 import { deepGet, deepSet, whitelistKeys } from './object-change';
+
+const MS_IN_HOUR = 60 * 60 * 1000;
 
 const SAMPLER_URL = `/druid/indexer/v1/sampler`;
 const BASE_SAMPLER_CONFIG: SamplerConfig = {
@@ -60,6 +63,14 @@ export interface SampleResponse {
   data: SampleEntry[];
 }
 
+export interface SampleResponseWithExtraInfo extends SampleResponse {
+  queryGranularity?: any;
+  timestampSpec?: any;
+  rollup?: boolean;
+  columns?: Record<string, any>;
+  aggregators?: Record<string, any>;
+}
+
 export interface SampleEntry {
   raw: string;
   parsed?: Record<string, any>;
@@ -70,6 +81,12 @@ export interface SampleEntry {
 export interface HeaderAndRows {
   header: string[];
   rows: SampleEntry[];
+}
+
+export interface ExampleManifest {
+  name: string;
+  description: string;
+  spec: any;
 }
 
 function dedupe(xs: string[]): string[] {
@@ -161,16 +178,65 @@ function makeSamplerIoConfig(
   return ioConfig;
 }
 
+/**
+ * This function scopes down the interval of an ingestSegment firehose for the data sampler
+ * this is needed because the ingestSegment firehose gets the interval you are sampling over,
+ * looks up the corresponding segments and segment locations from metadata store, downloads
+ * every segment from deep storage to disk, and then maps all the segments into memory;
+ * and this happens in the constructor before the timer thread is even created meaning the sampler
+ * will time out on a larger interval.
+ * This is essentially a workaround for https://github.com/apache/incubator-druid/issues/8448
+ * @param ioConfig The IO Config to scope down the interval of
+ */
+export async function scopeDownIngestSegmentFirehoseIntervalIfNeeded(
+  ioConfig: IoConfig,
+): Promise<IoConfig> {
+  if (deepGet(ioConfig, 'firehose.type') !== 'ingestSegment') return ioConfig;
+  const interval = deepGet(ioConfig, 'firehose.interval');
+  const intervalParts = interval.split('/');
+  const start = new Date(intervalParts[0]);
+  if (isNaN(start.valueOf())) throw new Error(`could not decode interval start`);
+  const end = new Date(intervalParts[1]);
+  if (isNaN(end.valueOf())) throw new Error(`could not decode interval end`);
+
+  // Less than or equal to 1 hour so there is no need to adjust intervals
+  if (Math.abs(end.valueOf() - start.valueOf()) <= MS_IN_HOUR) return ioConfig;
+
+  const dataSourceMetadataResponse = await queryDruidRune({
+    queryType: 'dataSourceMetadata',
+    dataSource: deepGet(ioConfig, 'firehose.dataSource'),
+  });
+
+  const maxIngestedEventTime = new Date(
+    deepGet(dataSourceMetadataResponse, '0.result.maxIngestedEventTime'),
+  );
+
+  // If invalid maxIngestedEventTime do nothing
+  if (isNaN(maxIngestedEventTime.valueOf())) return ioConfig;
+
+  // If maxIngestedEventTime is before the start of the interval do nothing
+  if (maxIngestedEventTime < start) return ioConfig;
+
+  const newEnd = maxIngestedEventTime < end ? maxIngestedEventTime : end;
+  const newStart = new Date(newEnd.valueOf() - MS_IN_HOUR); // Set start to 1 hour ago
+
+  return deepSet(
+    ioConfig,
+    'firehose.interval',
+    `${newStart.toISOString()}/${newEnd.toISOString()}`,
+  );
+}
+
 export async function sampleForConnect(
   spec: IngestionSpec,
   sampleStrategy: SampleStrategy,
-): Promise<SampleResponse> {
+): Promise<SampleResponseWithExtraInfo> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = makeSamplerIoConfig(
-    deepGet(spec, 'ioConfig'),
-    samplerType,
-    sampleStrategy,
+  const ioConfig: IoConfig = await scopeDownIngestSegmentFirehoseIntervalIfNeeded(
+    makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy),
   );
+
+  const ingestSegmentMode = isIngestSegment(spec);
 
   const sampleSpec: SampleSpec = {
     type: samplerType,
@@ -194,7 +260,33 @@ export async function sampleForConnect(
     samplerConfig: BASE_SAMPLER_CONFIG,
   };
 
-  return postToSampler(sampleSpec, 'connect');
+  const samplerResponse: SampleResponseWithExtraInfo = await postToSampler(sampleSpec, 'connect');
+
+  if (!samplerResponse.data.length) return samplerResponse;
+
+  if (ingestSegmentMode) {
+    const segmentMetadataResponse = await queryDruidRune({
+      queryType: 'segmentMetadata',
+      dataSource: deepGet(ioConfig, 'firehose.dataSource'),
+      intervals: [deepGet(ioConfig, 'firehose.interval')],
+      merge: true,
+      lenientAggregatorMerge: true,
+      analysisTypes: ['timestampSpec', 'queryGranularity', 'aggregators', 'rollup'],
+    });
+
+    if (Array.isArray(segmentMetadataResponse) && segmentMetadataResponse.length === 1) {
+      const segmentMetadataResponse0 = segmentMetadataResponse[0];
+      samplerResponse.queryGranularity = segmentMetadataResponse0.queryGranularity;
+      samplerResponse.timestampSpec = segmentMetadataResponse0.timestampSpec;
+      samplerResponse.rollup = segmentMetadataResponse0.rollup;
+      samplerResponse.columns = segmentMetadataResponse0.columns;
+      samplerResponse.aggregators = segmentMetadataResponse0.aggregators;
+    } else {
+      throw new Error(`unexpected response from segmentMetadata query`);
+    }
+  }
+
+  return samplerResponse;
 }
 
 export async function sampleForParser(
@@ -203,10 +295,8 @@ export async function sampleForParser(
   cacheKey: string | undefined,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = makeSamplerIoConfig(
-    deepGet(spec, 'ioConfig'),
-    samplerType,
-    sampleStrategy,
+  const ioConfig: IoConfig = await scopeDownIngestSegmentFirehoseIntervalIfNeeded(
+    makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy),
   );
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
 
@@ -242,10 +332,8 @@ export async function sampleForTimestamp(
   cacheKey: string | undefined,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = makeSamplerIoConfig(
-    deepGet(spec, 'ioConfig'),
-    samplerType,
-    sampleStrategy,
+  const ioConfig: IoConfig = await scopeDownIngestSegmentFirehoseIntervalIfNeeded(
+    makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy),
   );
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
   const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
@@ -333,10 +421,8 @@ export async function sampleForTransform(
   cacheKey: string | undefined,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = makeSamplerIoConfig(
-    deepGet(spec, 'ioConfig'),
-    samplerType,
-    sampleStrategy,
+  const ioConfig: IoConfig = await scopeDownIngestSegmentFirehoseIntervalIfNeeded(
+    makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy),
   );
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
   const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
@@ -409,10 +495,8 @@ export async function sampleForFilter(
   cacheKey: string | undefined,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = makeSamplerIoConfig(
-    deepGet(spec, 'ioConfig'),
-    samplerType,
-    sampleStrategy,
+  const ioConfig: IoConfig = await scopeDownIngestSegmentFirehoseIntervalIfNeeded(
+    makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy),
   );
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
   const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
@@ -487,10 +571,8 @@ export async function sampleForSchema(
   cacheKey: string | undefined,
 ): Promise<SampleResponse> {
   const samplerType = getSamplerType(spec);
-  const ioConfig: IoConfig = makeSamplerIoConfig(
-    deepGet(spec, 'ioConfig'),
-    samplerType,
-    sampleStrategy,
+  const ioConfig: IoConfig = await scopeDownIngestSegmentFirehoseIntervalIfNeeded(
+    makeSamplerIoConfig(deepGet(spec, 'ioConfig'), samplerType, sampleStrategy),
   );
   const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
   const transformSpec: TransformSpec =
@@ -520,4 +602,63 @@ export async function sampleForSchema(
   };
 
   return postToSampler(sampleSpec, 'schema');
+}
+
+export async function sampleForExampleManifests(
+  exampleManifestUrl: string,
+): Promise<ExampleManifest[]> {
+  const sampleSpec: SampleSpec = {
+    type: 'index',
+    spec: {
+      type: 'index',
+      ioConfig: {
+        type: 'index',
+        firehose: { type: 'http', uris: [exampleManifestUrl] },
+      },
+      dataSchema: {
+        dataSource: 'sample',
+        parser: {
+          type: 'string',
+          parseSpec: {
+            format: 'tsv',
+            timestampSpec: {
+              column: 'timestamp',
+              missingValue: '2010-01-01T00:00:00Z',
+            },
+            dimensionsSpec: {},
+            hasHeaderRow: true,
+          },
+        },
+      },
+    },
+    samplerConfig: { numRows: 50, timeoutMs: 10000, skipCache: true },
+  };
+
+  const exampleData = await postToSampler(sampleSpec, 'example-manifest');
+
+  return filterMap(exampleData.data, datum => {
+    const parsed = datum.parsed;
+    if (!parsed) return;
+    let { name, description, spec } = parsed;
+    try {
+      spec = JSON.parse(spec);
+    } catch {
+      return;
+    }
+
+    if (
+      typeof name === 'string' &&
+      typeof description === 'string' &&
+      spec &&
+      typeof spec === 'object'
+    ) {
+      return {
+        name: parsed.name,
+        description: parsed.description,
+        spec,
+      };
+    } else {
+      return;
+    }
+  });
 }

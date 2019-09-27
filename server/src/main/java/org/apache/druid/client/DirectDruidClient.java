@@ -485,6 +485,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                   if (res.getStatus().getCode() >= 500) {
                     throw new RE(
                         "Error cancelling query[%s]: queriable node returned status[%d] [%s].",
+                        query,
                         res.getStatus().getCode(),
                         res.getStatus().getReasonPhrase()
                     );

@@ -713,8 +713,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           if (sequenceToCheckpoint != null && stillReading) {
             Preconditions.checkArgument(
                 getLastSequenceMetadata()
-                         .getSequenceName()
-                         .equals(sequenceToCheckpoint.getSequenceName()),
+                    .getSequenceName()
+                    .equals(sequenceToCheckpoint.getSequenceName()),
                 "Cannot checkpoint a sequence [%s] which is not the latest one, sequences %s",
                 sequenceToCheckpoint,
                 sequences
@@ -724,17 +724,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 task.getDataSource(),
                 ioConfig.getTaskGroupId(),
                 task.getIOConfig().getBaseSequenceName(),
+                null,
                 createDataSourceMetadata(
                     new SeekableStreamStartSequenceNumbers<>(
                         stream,
                         sequenceToCheckpoint.getStartOffsets(),
                         sequenceToCheckpoint.getExclusiveStartPartitions()
-                    )
-                ),
-                createDataSourceMetadata(
-                    new SeekableStreamEndSequenceNumbers<>(
-                        stream,
-                        currOffsets
                     )
                 )
             );
@@ -1167,7 +1162,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     // Actually do the add.
     sequences.add(sequenceMetadata);
   }
-  
+
   private SequenceMetadata<PartitionIdType, SequenceOffsetType> getLastSequenceMetadata()
   {
     Preconditions.checkState(!sequences.isEmpty(), "Empty sequences");
@@ -1333,11 +1328,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             new ResetDataSourceMetadataAction(
                 task.getDataSource(),
                 createDataSourceMetadata(
-                    new SeekableStreamStartSequenceNumbers<>(
+                    new SeekableStreamEndSequenceNumbers<>(
                         ioConfig.getStartSequenceNumbers().getStream(),
-                        partitionOffsetMap,
-                        // Clear all exclusive start offsets for automatic reset
-                        Collections.emptySet()
+                        partitionOffsetMap
                     )
                 )
             )
@@ -1495,14 +1488,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return setEndOffsets(sequences, finish);
   }
 
-  @GET
-  @Path("/rowStats")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response getRowStats(
-      @Context final HttpServletRequest req
-  )
+  public Map<String, Object> doGetRowStats()
   {
-    authorizationCheck(req, Action.READ);
     Map<String, Object> returnMap = new HashMap<>();
     Map<String, Object> totalsMap = new HashMap<>();
     Map<String, Object> averagesMap = new HashMap<>();
@@ -1518,8 +1505,50 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     returnMap.put("movingAverages", averagesMap);
     returnMap.put("totals", totalsMap);
-    return Response.ok(returnMap).build();
+    return returnMap;
   }
+
+  public Map<String, Object> doGetLiveReports()
+  {
+    Map<String, Object> returnMap = new HashMap<>();
+    Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
+    Map<String, Object> payload = new HashMap<>();
+    Map<String, Object> events = getTaskCompletionUnparseableEvents();
+
+    payload.put("ingestionState", ingestionState);
+    payload.put("unparseableEvents", events);
+    payload.put("rowStats", doGetRowStats());
+
+    ingestionStatsAndErrors.put("taskId", task.getId());
+    ingestionStatsAndErrors.put("payload", payload);
+    ingestionStatsAndErrors.put("type", "ingestionStatsAndErrors");
+
+    returnMap.put("ingestionStatsAndErrors", ingestionStatsAndErrors);
+    return returnMap;
+  }
+
+  @GET
+  @Path("/rowStats")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getRowStats(
+      @Context final HttpServletRequest req
+  )
+  {
+    authorizationCheck(req, Action.READ);
+    return Response.ok(doGetRowStats()).build();
+  }
+
+  @GET
+  @Path("/liveReports")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getLiveReport(
+      @Context final HttpServletRequest req
+  )
+  {
+    authorizationCheck(req, Action.READ);
+    return Response.ok(doGetLiveReports()).build();
+  }
+
 
   @GET
   @Path("/unparseableEvents")
@@ -1593,7 +1622,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         }
 
         for (Map.Entry<PartitionIdType, SequenceOffsetType> entry : sequenceNumbers.entrySet()) {
-          if (createSequenceNumber(entry.getValue()).compareTo(createSequenceNumber(currOffsets.get(entry.getKey()))) < 0) {
+          if (createSequenceNumber(entry.getValue()).compareTo(createSequenceNumber(currOffsets.get(entry.getKey())))
+              < 0) {
             return Response.status(Response.Status.BAD_REQUEST)
                            .entity(
                                StringUtils.format(
@@ -1785,7 +1815,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   /**
    * This method does two things:
-   *
+   * <p>
    * 1) Verifies that the sequence numbers we read are at least as high as those read previously, and throws an
    * exception if not.
    * 2) Returns false if we should skip this record because it's either (a) the first record in a partition that we are
@@ -1836,9 +1866,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    *
    * @param toolbox           task toolbox
    * @param checkpointsString the json-serialized checkpoint string
-   *
    * @return checkpoint
-   *
    * @throws IOException jsonProcessingException
    */
   @Nullable
@@ -1852,7 +1880,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * This is what would become the start offsets of the next reader, if we stopped reading now.
    *
    * @param sequenceNumber the sequence number that has already been processed
-   *
    * @return next sequence number to be stored
    */
   protected abstract SequenceOffsetType getNextStartOffset(SequenceOffsetType sequenceNumber);
@@ -1862,7 +1889,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    *
    * @param mapper json objectMapper
    * @param object metadata
-   *
    * @return SeekableStreamEndSequenceNumbers
    */
   protected abstract SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetType> deserializePartitionsFromMetadata(
@@ -1876,9 +1902,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    *
    * @param recordSupplier
    * @param toolbox
-   *
    * @return list of records polled, can be empty but cannot be null
-   *
    * @throws Exception
    */
   @NotNull
@@ -1891,7 +1915,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * creates specific implementations of kafka/kinesis datasource metadata
    *
    * @param partitions partitions used to create the datasource metadata
-   *
    * @return datasource metadata
    */
   protected abstract SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetadata(
@@ -1902,7 +1925,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * create a specific implementation of Kafka/Kinesis sequence number/offset used for comparison mostly
    *
    * @param sequenceNumber
-   *
    * @return a specific OrderedSequenceNumber instance for Kafka/Kinesis
    */
   protected abstract OrderedSequenceNumber<SequenceOffsetType> createSequenceNumber(SequenceOffsetType sequenceNumber);

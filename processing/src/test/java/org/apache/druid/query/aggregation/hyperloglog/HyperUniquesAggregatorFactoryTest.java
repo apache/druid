@@ -35,7 +35,7 @@ import java.util.Random;
 
 public class HyperUniquesAggregatorFactoryTest
 {
-  static final HyperUniquesAggregatorFactory aggregatorFactory = new HyperUniquesAggregatorFactory(
+  static final HyperUniquesAggregatorFactory AGGREGATOR_FACTORY = new HyperUniquesAggregatorFactory(
       "hyperUnique",
       "uniques"
   );
@@ -46,7 +46,7 @@ public class HyperUniquesAggregatorFactoryTest
   @Test
   public void testDeserializeV0()
   {
-    Object v0 = aggregatorFactory.deserialize(V0_BASE64);
+    Object v0 = AGGREGATOR_FACTORY.deserialize(V0_BASE64);
     Assert.assertEquals("deserialized value is VersionZeroHyperLogLogCollector", VersionZeroHyperLogLogCollector.class, v0.getClass());
   }
 

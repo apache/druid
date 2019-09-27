@@ -128,8 +128,7 @@ public class NoopSupervisorSpec implements SupervisorSpec
       public void checkpoint(
           @Nullable Integer taskGroupId,
           String baseSequenceName,
-          DataSourceMetadata previousCheckPoint,
-          DataSourceMetadata currentCheckPoint
+          DataSourceMetadata checkpointMetadata
       )
       {
 

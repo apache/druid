@@ -19,18 +19,11 @@
 
 package org.apache.druid.query.groupby;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidMetrics;
 
 public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery> implements GroupByQueryMetrics
 {
-
-  public DefaultGroupByQueryMetrics(ObjectMapper jsonMapper)
-  {
-    super(jsonMapper);
-  }
-
   @Override
   public void query(GroupByQuery query)
   {

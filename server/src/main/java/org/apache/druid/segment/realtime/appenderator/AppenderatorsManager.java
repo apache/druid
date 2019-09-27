@@ -96,12 +96,12 @@ public interface AppenderatorsManager
   /**
    * Removes any internal Appenderator-tracking state associated with the provided taskId.
    *
-   * This method should be called when a task is finished using its Appenderator that was previously created by
+   * This method should be called when a task is finished using its Appenderators that were previously created by
    * createRealtimeAppenderatorForTask or createOfflineAppenderatorForTask.
    *
    * The method can be called by the entity managing Tasks when the Tasks finish, such as ThreadingTaskRunner.
    */
-  void removeAppenderatorForTask(String taskId);
+  void removeAppenderatorsForTask(String taskId, String dataSource);
 
   /**
    * Returns a query runner for the given intervals over the Appenderators managed by this AppenderatorsManager.

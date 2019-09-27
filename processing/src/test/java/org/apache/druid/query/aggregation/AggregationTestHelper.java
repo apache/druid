@@ -571,6 +571,60 @@ public class AggregationTestHelper implements Closeable
     }
   }
 
+  public static IncrementalIndex createIncrementalIndex(
+      Iterator rows,
+      InputRowParser parser,
+      final AggregatorFactory[] metrics,
+      long minTimestamp,
+      Granularity gran,
+      boolean deserializeComplexMetrics,
+      int maxRowCount,
+      boolean rollup
+  ) throws Exception
+  {
+    IncrementalIndex index = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMinTimestamp(minTimestamp)
+                .withQueryGranularity(gran)
+                .withMetrics(metrics)
+                .withRollup(rollup)
+                .build()
+        )
+        .setDeserializeComplexMetrics(deserializeComplexMetrics)
+        .setMaxRowCount(maxRowCount)
+        .buildOnheap();
+
+    while (rows.hasNext()) {
+      Object row = rows.next();
+      if (!index.canAppendRow()) {
+        throw new IAE("Can't add row to index");
+      }
+      if (row instanceof String && parser instanceof StringInputRowParser) {
+        //Note: this is required because StringInputRowParser is InputRowParser<ByteBuffer> as opposed to
+        //InputRowsParser<String>
+        index.add(((StringInputRowParser) parser).parse((String) row));
+      } else {
+        index.add(((List<InputRow>) parser.parseBatch(row)).get(0));
+      }
+    }
+
+    return index;
+  }
+
+  public Segment persistIncrementalIndex(
+      IncrementalIndex index,
+      File outDir
+  ) throws Exception
+  {
+    if (outDir == null) {
+      outDir = tempFolder.newFolder();
+    }
+    indexMerger.persist(index, outDir, new IndexSpec(), null);
+
+    return new QueryableIndexSegment(indexIO.loadIndex(outDir), SegmentId.dummy(""));
+  }
+
   //Simulates running group-by query on individual segments as historicals would do, json serialize the results
   //from each segment, later deserialize and merge and finally return the results
   public Sequence<ResultRow> runQueryOnSegments(final List<File> segmentDirs, final String queryJson)

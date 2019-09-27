@@ -70,17 +70,17 @@ public class RetryQueryRunnerTest
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                      .dataSource(QueryRunnerTestHelper.dataSource)
-                                      .granularity(QueryRunnerTestHelper.dayGran)
-                                      .intervals(QueryRunnerTestHelper.firstToThird)
+                                      .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                      .granularity(QueryRunnerTestHelper.DAY_GRAN)
+                                      .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
                                       .aggregators(
                                           Arrays.asList(
-                                              QueryRunnerTestHelper.rowsCount,
+                                              QueryRunnerTestHelper.ROWS_COUNT,
                                               new LongSumAggregatorFactory(
                                                   "idx",
                                                   "index"
                                               ),
-                                              QueryRunnerTestHelper.qualityUniques
+                                              QueryRunnerTestHelper.QUALITY_UNIQUES
                                           )
                                       )
                                       .build();
