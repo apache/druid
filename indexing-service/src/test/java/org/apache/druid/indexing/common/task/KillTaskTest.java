@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -86,7 +87,8 @@ public class KillTaskTest extends IngestionTestBase
             newSegment(Intervals.of("2019-01-01/2019-02-01"), version),
             newSegment(Intervals.of("2019-04-01/2019-05-01"), version)
         ),
-        getMetadataStorageCoordinator().getUsedSegmentsForInterval(DATA_SOURCE, Intervals.of("2019/2020"))
+        getMetadataStorageCoordinator()
+            .getUsedSegmentsForInterval(DATA_SOURCE, Intervals.of("2019/2020"), Segments.ONLY_VISIBLE)
     );
   }
 

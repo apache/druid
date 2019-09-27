@@ -32,6 +32,7 @@ import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -42,6 +43,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -114,7 +116,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<DataSegment> getUsedSegmentsForIntervals(final String dataSource, final List<Interval> intervals)
+  public List<DataSegment> getUsedSegmentsForIntervals(
+      final String dataSource,
+      final List<Interval> intervals,
+      Segments visibility
+  )
   {
     return connector.retryWithHandle(
         handle -> {
@@ -124,7 +130,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               intervals
           );
 
-          return new ArrayList<>(timeline.iterateAllObjects());
+          if (visibility == Segments.ONLY_VISIBLE) {
+            return new ArrayList<>(
+                timeline.findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE)
+            );
+          } else {
+            return new ArrayList<>(timeline.iterateAllObjects());
+          }
         }
     );
   }

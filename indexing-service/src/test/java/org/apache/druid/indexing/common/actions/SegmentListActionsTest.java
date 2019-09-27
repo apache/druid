@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.actions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -94,21 +95,18 @@ public class SegmentListActionsTest
   }
 
   @Test
-  public void testSegmentListUsedAction()
+  public void testRetrieveUsedSegmentsAction()
   {
-    final SegmentListUsedAction action = new SegmentListUsedAction(
-        task.getDataSource(),
-        null,
-        ImmutableList.of(INTERVAL)
-    );
+    final RetrieveUsedSegmentsAction action =
+        new RetrieveUsedSegmentsAction(task.getDataSource(), INTERVAL, null, Segments.ONLY_VISIBLE);
     final Set<DataSegment> resultSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
     Assert.assertEquals(expectedUsedSegments, resultSegments);
   }
 
   @Test
-  public void testSegmentListUnusedAction()
+  public void testRetrieveUnusedSegmentsAction()
   {
-    final SegmentListUnusedAction action = new SegmentListUnusedAction(task.getDataSource(), INTERVAL);
+    final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(task.getDataSource(), INTERVAL);
     final Set<DataSegment> resultSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
     Assert.assertEquals(expectedUnusedSegments, resultSegments);
   }

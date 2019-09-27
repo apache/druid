@@ -17,28 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.indexer.path;
-
-import org.apache.druid.timeline.DataSegment;
-import org.joda.time.Interval;
-
-import java.io.IOException;
-import java.util.List;
+package org.apache.druid.timeline;
 
 /**
+ * This enum is used a parameter for several methods in {@link VersionedIntervalTimeline}, specifying whether only
+ * complete partitions should be considered, or incomplete partitions as well.
  */
-public interface UsedSegmentLister
+public enum Partitions
 {
-  /**
-   * Get all segments which may include any data in the interval and are flagged as used.
-   *
-   * @param dataSource The datasource to query
-   * @param intervals  The intervals for which used segments are to be returned
-   *
-   * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the requested interval.
-   *
-   * @throws IOException
-   */
-  List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> intervals)
-      throws IOException;
+  /** Specifies that only complete partitions should be considered. */
+  ONLY_COMPLETE,
+  /** Specifies that complete as well as incomplete partitions should be considered. */
+  INCOMPLETE_OK
 }

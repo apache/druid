@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -39,6 +40,7 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -331,17 +333,10 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     final List<Interval> searchIntervals = new ArrayList<>();
 
     for (Interval lookupInterval : filteredInterval) {
-      final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(
-          new Interval(lookupInterval.getStart(), lookupInterval.getEnd())
+      final List<DataSegment> segments = new ArrayList<>(
+          timeline.findNonOvershadowedObjectsInInterval(lookupInterval, Partitions.ONLY_COMPLETE)
       );
-
-      final List<DataSegment> segments = holders
-          .stream()
-          .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
-          .map(PartitionChunk::getObject)
-          .filter(segment -> lookupInterval.contains(segment.getInterval()))
-          .sorted((s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval()))
-          .collect(Collectors.toList());
+      segments.sort(Comparator.comparing(DataSegment::getInterval, Comparators.intervalsByStartThenEnd()));
 
       if (!segments.isEmpty()) {
         searchIntervals.add(

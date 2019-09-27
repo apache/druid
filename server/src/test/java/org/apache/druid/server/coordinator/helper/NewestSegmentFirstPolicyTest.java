@@ -27,9 +27,9 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -41,7 +41,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 public class NewestSegmentFirstPolicyTest
 {
@@ -436,12 +435,9 @@ public class NewestSegmentFirstPolicyTest
         Collections.emptyMap()
     );
 
-    final List<DataSegment> expectedSegmentsToCompact = timeline
-        .lookup(Intervals.of("2017-12-01/2017-12-02"))
-        .stream()
-        .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
-        .map(PartitionChunk::getObject)
-        .collect(Collectors.toList());
+    final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-01/2017-12-02"), Partitions.ONLY_COMPLETE)
+    );
 
     Assert.assertTrue(iterator.hasNext());
     Assert.assertEquals(expectedSegmentsToCompact, iterator.next());

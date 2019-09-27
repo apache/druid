@@ -80,6 +80,7 @@ import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisor;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.MetadataTaskStorage;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
@@ -2923,10 +2924,11 @@ public class KinesisIndexTaskTest extends EasyMockSupport
 
   private List<SegmentDescriptor> publishedDescriptors()
   {
-    return metadataStorageCoordinator.getUsedSegmentsForInterval(
-        DATA_SCHEMA.getDataSource(),
-        Intervals.of("0000/3000")
-    ).stream().map(DataSegment::toDescriptor).collect(Collectors.toList());
+    return metadataStorageCoordinator
+        .getUsedSegmentsForInterval(DATA_SCHEMA.getDataSource(), Intervals.of("0000/3000"), Segments.ONLY_VISIBLE)
+        .stream()
+        .map(DataSegment::toDescriptor)
+        .collect(Collectors.toList());
   }
 
   private void unlockAppenderatorBasePersistDirForTask(KinesisIndexTask task)

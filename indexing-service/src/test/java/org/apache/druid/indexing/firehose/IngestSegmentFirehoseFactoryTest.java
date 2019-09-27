@@ -50,6 +50,7 @@ import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.java.util.common.IOE;
@@ -141,13 +142,11 @@ public class IngestSegmentFirehoseFactoryTest
       private final Set<DataSegment> published = new HashSet<>();
 
       @Override
-      public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
-      {
-        return ImmutableList.copyOf(SEGMENT_SET);
-      }
-
-      @Override
-      public List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> interval)
+      public List<DataSegment> getUsedSegmentsForIntervals(
+          String dataSource,
+          List<Interval> interval,
+          Segments visibility
+      )
       {
         return ImmutableList.copyOf(SEGMENT_SET);
       }

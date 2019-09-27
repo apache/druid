@@ -33,12 +33,10 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.PartitionChunk;
 
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 /**
  */
@@ -268,10 +266,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
         .getUsedSegmentsTimelinesPerDataSource()
         .values()
         .stream()
-        .flatMap(timeline -> timeline.getAllTimelineEntries().values().stream())
-        .flatMap(entryMap -> entryMap.values().stream())
-        .flatMap(entry -> StreamSupport.stream(entry.getPartitionHolder().spliterator(), false))
-        .map(PartitionChunk::getObject);
+        .flatMap(timeline -> timeline.iterateAllObjects().stream());
 
     allSegments
         .collect(Collectors.groupingBy(DataSegment::getDataSource))

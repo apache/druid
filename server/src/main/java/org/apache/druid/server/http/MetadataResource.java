@@ -29,6 +29,7 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.metadata.MetadataSegmentManager;
 import org.apache.druid.server.JettyUtils;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
@@ -259,7 +260,8 @@ public class MetadataResource
       List<Interval> intervals
   )
   {
-    List<DataSegment> segments = metadataStorageCoordinator.getUsedSegmentsForIntervals(dataSourceName, intervals);
+    Collection<DataSegment> segments = metadataStorageCoordinator
+        .getUsedSegmentsForIntervals(dataSourceName, intervals, Segments.INCLUDING_OVERSHADOWED);
 
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
     if (full != null) {
