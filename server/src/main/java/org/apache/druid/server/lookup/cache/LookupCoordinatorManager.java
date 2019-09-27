@@ -557,7 +557,18 @@ public class LookupCoordinatorManager
 
     try {
       List<ListenableFuture<Map.Entry>> futures = new ArrayList<>();
-      for (String tier : lookupNodeDiscovery.getAllTiers()) {
+
+      Set<String> discoveredLookupTiers = lookupNodeDiscovery.getAllTiers();
+
+      // Check and Log warnings about lookups configured by user in DB but no nodes discovered to load those.
+      for (String tierInDB : allLookupTiers.keySet()) {
+        if (!discoveredLookupTiers.contains(tierInDB) &&
+            !allLookupTiers.getOrDefault(tierInDB, ImmutableMap.of()).isEmpty()) {
+          LOG.warn("Found lookups for tier [%s] in DB, but no nodes discovered for it", tierInDB);
+        }
+      }
+
+      for (String tier : discoveredLookupTiers) {
 
         LOG.debug("Starting lookup mgmt for tier [%s].", tier);
 
