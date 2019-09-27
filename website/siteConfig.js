@@ -37,7 +37,7 @@ const siteConfig = {
     {doc: 'design/index', label: 'Docs'},
     {href: '/community/', label: 'Community'},
     {href: 'https://www.apache.org', label: 'Apache'},
-    {href: '/download.html', label: 'Download'},
+    {href: '/downloads.html', label: 'Download'},
   ],
 
   /* path to images for header/footer */

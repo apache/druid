@@ -264,7 +264,7 @@ public class HadoopIngestionSpecTest
 
     Assert.assertFalse("overwriteFiles", schema.getTuningConfig().isOverwriteFiles());
 
-    Assert.assertFalse(
+    Assert.assertTrue(
         "isDeterminingPartitions",
         schema.getTuningConfig().getPartitionsSpec().needsDeterminePartitions(true)
     );

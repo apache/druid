@@ -72,6 +72,20 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
     );
   }
 
+  renderRemoveGroupBy(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = this.props;
+    if (!parsedQuery.hasGroupByForColumn(columnName)) return;
+    return (
+      <MenuItem
+        icon={IconNames.UNGROUP_OBJECTS}
+        text={'Remove group by'}
+        onClick={() => {
+          onQueryChange(parsedQuery.removeGroupBy(columnName), true);
+        }}
+      />
+    );
+  }
+
   renderGroupByMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = this.props;
     if (!parsedQuery.hasGroupBy()) return;
@@ -163,6 +177,7 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
         {this.renderFilterMenu()}
         {this.renderRemoveFilter()}
         {this.renderGroupByMenu()}
+        {this.renderRemoveGroupBy()}
         {this.renderAggregateMenu()}
       </>
     );

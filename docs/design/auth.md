@@ -80,6 +80,34 @@ druid.auth.authenticator.anonymous.authorizerName=myBasicAuthorizer
 # ... usual configs for basic authentication would go here ...
 ```
 
+### Trusted domain Authenticator
+
+This built-in Trusted Domain Authenticator authenticates requests originating from the configured trusted domain, and directs them to an Authorizer specified in the configuration by the user. It is intended to be used for adding a default level of trust and allow access for hosts within same domain. 
+
+|Property|Description|Default|Required|
+|--------|-----------|-------|--------|
+|`druid.auth.authenticator.<authenticatorName>.name`|authenticator name.|N/A|Yes|
+|`druid.auth.authenticator.<authenticatorName>.domain`|Trusted Domain from which requests should be authenticated. If authentication is allowed for connections from only a given host, fully qualified hostname of that host needs to be specified.|N/A|Yes|
+|`druid.auth.authenticator.<authenticatorName>.useForwardedHeaders`|Clients connecting to druid could pass through many layers of proxy. Some proxies also append its own IP address to 'X-Forwarded-For' header before passing on the request to another proxy. Some proxies also connect on behalf of client. If this config is set to true and if 'X-Forwarded-For' is present, trusted domain authenticator will use left most host name from X-Forwarded-For header. Note: It is possible to spoof X-Forwarded-For headers in HTTP requests, enable this with caution.|false|No|
+|`druid.auth.authenticator.<authenticatorName>.authorizerName`|Authorizer that requests should be directed to.|N/A|Yes|
+|`druid.auth.authenticator.<authenticatorName>.identity`|The identity of the requester.|defaultUser|No|
+
+To use the Trusted Domain Authenticator, add an authenticator with type `trustedDomain` to the authenticatorChain.
+
+For example, the following enables the Trusted Domain Authenticator :
+
+```
+druid.auth.authenticatorChain=["trustedDomain"]
+
+druid.auth.authenticator.trustedDomain.type=trustedDomain
+druid.auth.authenticator.trustedDomain.domain=trustedhost.mycompany.com
+druid.auth.authenticator.trustedDomain.identity=defaultUser
+druid.auth.authenticator.trustedDomain.authorizerName=myBasicAuthorizer
+druid.auth.authenticator.trustedDomain.name=myTrustedAutenticator
+# ... usual configs for druid would go here ...
+```
+
+
 ## Escalator
 The `druid.escalator.type` property determines what authentication scheme should be used for internal Druid cluster communications (such as when a Broker process communicates with Historical processes for query processing).
 

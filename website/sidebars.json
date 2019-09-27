@@ -145,7 +145,6 @@
       "design/overlord",
       "design/router",
       "design/peons",
-      "development/integrating-druid-with-other-technologies",
       "development/extensions-core/approximate-histograms",
       "development/extensions-core/avro",
       "development/extensions-core/bloom-filter",

@@ -54,7 +54,7 @@ export interface AutoFormProps<T> {
   model: T | undefined;
   onChange: (newModel: T) => void;
   showCustom?: (model: T) => boolean;
-  updateJSONValidity?: (jsonValidity: boolean) => void;
+  updateJsonValidity?: (jsonValidity: boolean) => void;
   large?: boolean;
 }
 
@@ -169,6 +169,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         min={0}
         stepSize={1000}
         majorStepSize={1000000}
+        fill
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model)}
       />
@@ -235,19 +236,19 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   }
 
   private renderJSONInput(field: Field<T>): JSX.Element {
-    const { model, updateJSONValidity } = this.props;
+    const { model, updateJsonValidity } = this.props;
     const { jsonInputsValidity } = this.state;
 
     const updateInputValidity = (e: any) => {
-      if (updateJSONValidity) {
+      if (updateJsonValidity) {
         const newJSONInputValidity = Object.assign({}, jsonInputsValidity, { [field.name]: e });
         this.setState({
           jsonInputsValidity: newJSONInputValidity,
         });
-        const allJSONValid: boolean = Object.keys(newJSONInputValidity).every(
+        const allJsonValid: boolean = Object.keys(newJSONInputValidity).every(
           property => newJSONInputValidity[property] === true,
         );
-        updateJSONValidity(allJSONValid);
+        updateJsonValidity(allJsonValid);
       }
     };
 

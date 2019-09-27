@@ -331,8 +331,8 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                 Maps.filterEntries(
                     workers,
                     input -> !lazyWorkers.containsKey(input.getKey()) &&
-                           !workersWithUnacknowledgedTask.containsKey(input.getKey()) &&
-                           !blackListedWorkers.containsKey(input.getKey())
+                             !workersWithUnacknowledgedTask.containsKey(input.getKey()) &&
+                             !blackListedWorkers.containsKey(input.getKey())
                 ),
                 (String key, WorkerHolder value) -> value.toImmutable()
             )
@@ -875,6 +875,52 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           "/druid/worker/v1/task/%s/log?offset=%s",
           taskId,
           Long.toString(offset)
+      );
+      return Optional.of(
+          new ByteSource()
+          {
+            @Override
+            public InputStream openStream() throws IOException
+            {
+              try {
+                return httpClient.go(
+                    new Request(HttpMethod.GET, url),
+                    new InputStreamResponseHandler()
+                ).get();
+              }
+              catch (InterruptedException e) {
+                throw new RuntimeException(e);
+              }
+              catch (ExecutionException e) {
+                // Unwrap if possible
+                Throwables.propagateIfPossible(e.getCause(), IOException.class);
+                throw new RuntimeException(e);
+              }
+            }
+          }
+      );
+    }
+  }
+
+  @Override
+  public Optional<ByteSource> streamTaskReports(String taskId)
+  {
+    HttpRemoteTaskRunnerWorkItem taskRunnerWorkItem = tasks.get(taskId);
+    Worker worker = null;
+    if (taskRunnerWorkItem != null && taskRunnerWorkItem.getState() != HttpRemoteTaskRunnerWorkItem.State.COMPLETE) {
+      worker = taskRunnerWorkItem.getWorker();
+    }
+
+    if (worker == null || !workers.containsKey(worker.getHost())) {
+      // Worker is not running this task, it might be available in deep storage
+      return Optional.absent();
+    } else {
+      // Worker is still running this task
+      TaskLocation taskLocation = taskRunnerWorkItem.getLocation();
+      final URL url = TaskRunnerUtils.makeTaskLocationURL(
+          taskLocation,
+          "/druid/worker/v1/chat/%s/liveReports",
+          taskId
       );
       return Optional.of(
           new ByteSource()

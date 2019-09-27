@@ -80,4 +80,13 @@ public class Utils
 
     return true;
   }
+
+  public static String safeObjectClassGetName(@Nullable Object o)
+  {
+    if (o == null) {
+      return "NULL";
+    } else {
+      return o.getClass().getName();
+    }
+  }
 }
