@@ -45,7 +45,6 @@ import java.util.Random;
  */
 @Ignore
 @RunWith(Parameterized.class)
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class BitmapCreationBenchmark extends AbstractBenchmark
 {
   private static final Logger LOG = new Logger(BitmapCreationBenchmark.class);
@@ -75,6 +74,7 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   private static final int NUM_BITS = 100000;
 
 
+  @SuppressWarnings("SSBasedInspection")  // static field(s) cannot be final because set in an initializer block
   static Random random;
   static final int[] RAND_INDEX = new int[NUM_BITS];
 

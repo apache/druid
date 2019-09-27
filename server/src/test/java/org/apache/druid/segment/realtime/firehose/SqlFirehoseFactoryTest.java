@@ -52,10 +52,11 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class SqlFirehoseFactoryTest
 {
   private static final List<File> FIREHOSE_TMP_DIRS = new ArrayList<>();
+
+  @SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
   private static File TEST_DIR;
   private final String TABLE_NAME_1 = "FOOS_TABLE_1";
   private final String TABLE_NAME_2 = "FOOS_TABLE_2";

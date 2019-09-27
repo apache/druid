@@ -42,7 +42,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class FloatCompressionBenchmarkFileGenerator
 {
   private static final Logger log = new Logger(FloatCompressionBenchmarkFileGenerator.class);
@@ -53,6 +52,7 @@ public class FloatCompressionBenchmarkFileGenerator
           CompressionStrategy.NONE
       );
 
+  @SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
   private static String dirPath = "floatCompress/";
 
   public static void main(String[] args) throws IOException

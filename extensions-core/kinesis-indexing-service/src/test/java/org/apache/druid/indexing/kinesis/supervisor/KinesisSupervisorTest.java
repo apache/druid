@@ -108,7 +108,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.Executor;
 
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
 public class KinesisSupervisorTest extends EasyMockSupport
 {
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
@@ -123,6 +122,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   private static final StreamPartition<String> SHARD1_PARTITION = StreamPartition.of(STREAM, SHARD_ID1);
   private static final StreamPartition<String> SHARD0_PARTITION = StreamPartition.of(STREAM, SHARD_ID0);
 
+  @SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
   private static DataSchema dataSchema;
   private KinesisRecordSupplier supervisorRecordSupplier;
 

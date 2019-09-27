@@ -54,12 +54,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class SqlFirehoseTest
 {
   private static final TypeReference<Map<String, Object>> TYPE_REF = new TypeReference<Map<String, Object>>()
   {
   };
+  @SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
   private static File TEST_DIR;
   private List<Map<String, Object>> inputs;
   private List<FileInputStream> fileList;

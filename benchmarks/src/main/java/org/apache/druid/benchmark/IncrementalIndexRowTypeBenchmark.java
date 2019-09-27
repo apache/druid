@@ -48,12 +48,12 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class IncrementalIndexRowTypeBenchmark
 {
-  private IncrementalIndex incIndex;
-  private IncrementalIndex incFloatIndex;
-  private IncrementalIndex incStrIndex;
   private static final AggregatorFactory[] AGGS;
   static final int DIMENSION_COUNT = 8;
   static final int MAX_ROWS = 250000;
+  private IncrementalIndex incIndex;
+  private IncrementalIndex incFloatIndex;
+  private IncrementalIndex incStrIndex;
 
   private ArrayList<InputRow> longRows = new ArrayList<InputRow>();
   private ArrayList<InputRow> floatRows = new ArrayList<InputRow>();

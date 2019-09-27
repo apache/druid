@@ -37,9 +37,9 @@ import java.util.UUID;
 /**
  *
  */
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class MapLookupExtractionFnSerDeTest
 {
+  @SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
   private static ObjectMapper mapper;
   private static final Map<String, String> RENAMES = ImmutableMap.of(
       "foo", "bar",

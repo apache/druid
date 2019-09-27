@@ -38,7 +38,6 @@ import java.util.concurrent.Executors;
 
 @Ignore
 @RunWith(Parameterized.class)
-@SuppressWarnings("SSBasedInspection")
 public class CostBalancerStrategyBenchmark extends AbstractBenchmark
 {
   @Parameterized.Parameters
@@ -63,6 +62,7 @@ public class CostBalancerStrategyBenchmark extends AbstractBenchmark
     this.strategy = costBalancerStrategy;
   }
 
+  @SuppressWarnings("SSBasedInspection")
   private static List<ServerHolder> serverHolderList;
   volatile ServerHolder selected;
 

@@ -64,7 +64,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class LookupCoordinatorManagerTest
 {
   @Rule
@@ -113,6 +112,7 @@ public class LookupCoordinatorManagerTest
   );
 
   private static final AtomicLong EVENT_EMITS = new AtomicLong(0L);
+  @SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
   private static ServiceEmitter SERVICE_EMITTER;
 
   @BeforeClass

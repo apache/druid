@@ -160,7 +160,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @RunWith(Parameterized.class)
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because as they are set in multiple class's
 public class TaskLifecycleTest
 {
   private static final ObjectMapper MAPPER;
@@ -251,6 +250,7 @@ public class TaskLifecycleTest
   private SegmentHandoffNotifierFactory handoffNotifierFactory;
   private Map<SegmentDescriptor, Pair<Executor, Runnable>> handOffCallbacks;
 
+  @SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
   private static CountDownLatch publishCountDown;
 
   private static ServiceEmitter newMockEmitter()

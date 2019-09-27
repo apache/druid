@@ -100,9 +100,12 @@ import java.util.concurrent.TimeUnit;
 @Fork(value = 1)
 @Warmup(iterations = 10)
 @Measurement(iterations = 25)
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because variable is not initilized.
 public class ScanBenchmark
 {
+  @Param({"NONE", "DESCENDING", "ASCENDING"})
+  @SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
+  private static ScanQuery.Order ordering;
+
   @Param({"2", "4"})
   private int numSegments;
 
@@ -117,9 +120,6 @@ public class ScanBenchmark
 
   @Param({"1000", "99999"})
   private int limit;
-
-  @Param({"NONE", "DESCENDING", "ASCENDING"})
-  private static ScanQuery.Order ordering;
 
   private static final Logger log = new Logger(ScanBenchmark.class);
   private static final ObjectMapper JSON_MAPPER;

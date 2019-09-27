@@ -33,10 +33,10 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class InDimFilterSerDesrTest
 {
 
+  @SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an initializer block
   private static ObjectMapper mapper;
 
   private final String serializedFilter =

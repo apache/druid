@@ -42,7 +42,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class LongCompressionBenchmarkFileGenerator
 {
   private static final Logger log = new Logger(LongCompressionBenchmarkFileGenerator.class);
@@ -54,6 +53,7 @@ public class LongCompressionBenchmarkFileGenerator
   public static final List<CompressionFactory.LongEncodingStrategy> ENCODINGS =
       ImmutableList.of(CompressionFactory.LongEncodingStrategy.AUTO, CompressionFactory.LongEncodingStrategy.LONGS);
 
+  @SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
   private static String dirPath = "longCompress/";
 
   public static void main(String[] args) throws IOException

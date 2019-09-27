@@ -44,7 +44,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 @RunWith(Parameterized.class)
-@SuppressWarnings("SSBasedInspection") // static field(s) cannot be final because set in an static method
 public class CompressionStrategyTest
 {
   @Parameterized.Parameters
@@ -72,6 +71,8 @@ public class CompressionStrategyTest
 
   // MUST be smaller than CompressedPools.BUFFER_SIZE
   private static final int DATA_SIZER = 0xFFFF;
+
+  @SuppressWarnings("SSBasedInspection")  // static field(s) cannot be final because set in an initializer block
   private static byte[] originalData;
 
   @BeforeClass
