@@ -741,7 +741,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             {
               Header: 'Task ID',
               accessor: 'task_id',
-              width: 300,
+              width: 500,
               Aggregated: () => '',
               show: hiddenTaskColumns.exists('Task ID'),
             },
@@ -755,6 +755,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             {
               Header: 'Type',
               accessor: 'type',
+              width: 140,
               Cell: row => {
                 const value = row.value;
                 return (
@@ -799,7 +800,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             {
               Header: 'Created time',
               accessor: 'created_time',
-              width: 120,
+              width: 190,
               Aggregated: () => '',
               show: hiddenTaskColumns.exists('Created time'),
             },
@@ -866,6 +867,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             {
               Header: 'Duration',
               accessor: 'duration',
+              width: 70,
               filterable: false,
               Cell: row => (row.value > 0 ? formatDuration(row.value) : ''),
               Aggregated: () => '',
