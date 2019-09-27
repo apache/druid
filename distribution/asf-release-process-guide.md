@@ -25,15 +25,15 @@ First up in performing an official release of Apache Druid (incubating) is to an
 
 ### Create a release branch
 
-Next up is creating the release branch off of master (or the previous release branch for a bug fix release). Name the branch for the release version that is being created, omitting the `druid` prefix that will appear on the release candidate and release tags:
+Next up is creating the release branch off of master (or the previous release branch for a bug fix release). Be sure to do this from the apache git repo, _not your fork_. Name the branch for the release version that is being created, omitting the `druid` prefix that will appear on the release candidate and release tags:
 
-```
+```bash
 $ git checkout origin/0.15.0-incubating
 ...
 $ git checkout -b 0.15.1-incubating
 ```
 
-```
+```bash
 $ git checkout origin/master
 ...
 $ git checkout -b 0.16.0-incubating
@@ -41,7 +41,7 @@ $ git checkout -b 0.16.0-incubating
 
 Then push the branch to `origin`. If doing a quarterly release, it will also be necessary to bump the version in master to the next release snapshot:
 
-```
+```bash
 $ mvn versions:set -DnewVersion=0.17.0-incubating-SNAPSHOT
 ```
 
@@ -69,7 +69,7 @@ After your key has been propagated to public key servers, add your key fingerpri
 
 The key fingerprint can be seen with `gpg --list-keys`, e.g.:
 
-```
+```plaintext
 ...
 pub   rsa4096 2019-02-28 [SC]
       0495E031C35D132479C241EC9283C4921AC4483E
@@ -84,14 +84,14 @@ If all goes well, your Apache account will be associated with that key, which yo
 
 You will also need to add your key to our project KEYS file: https://dist.apache.org/repos/dist/release/incubator/druid/KEYS, this repo can be pulled with:
 
-```
-svn co https://dist.apache.org/repos/dist/release/incubator/druid
+```bash
+$ svn co https://dist.apache.org/repos/dist/release/incubator/druid
 ```
 
 Add your entry to the file and commit:
 
-```
-svn commit -m 'add key for jonwei@apache.org'
+```bash
+$ svn commit -m 'add key for jonwei@apache.org'
 ```
 
 ### Maven credentials
@@ -190,8 +190,8 @@ Next create an issue in the Druid github to contain the release notes and allow 
 
 Once the release branch is good for an RC, you can build a new tag with:
 
-```
-mvn -DreleaseVersion=0.16.0-incubating -DdevelopmentVersion=0.16.1-incubating-SNAPSHOT -Dtag=druid-0.16.0-incubating-rc3 -DpushChanges=false clean release:clean release:prepare
+```bash
+$ mvn -DreleaseVersion=0.16.0-incubating -DdevelopmentVersion=0.16.1-incubating-SNAPSHOT -Dtag=druid-0.16.0-incubating-rc3 -DpushChanges=false clean release:clean release:prepare
 ```
 
 In this example it will create a tag, `druid-0.16.0-incubating-rc3`. If this release passes vote then we can add the final `druid-0.16.0-incubating` release tag later.
@@ -200,25 +200,25 @@ In this example it will create a tag, `druid-0.16.0-incubating-rc3`. If this rel
 
 ### Do a clean clone (so the source distribution does not pick up extra files)
 
-```
-git clone git@github.com:apache/incubator-druid.git druid-release
+```bash
+$ git clone git@github.com:apache/incubator-druid.git druid-release
 ```
 
 ### Switch to tag
 
-```
-git checkout druid-0.16.0-incubating-rc3
+```bash
+$ git checkout druid-0.16.0-incubating-rc3
 ```
 
 ### Build Artifacts
 
-```
+```bash
 $ mvn clean install -Papache-release,dist,rat -DskipTests
 ```
 
 This should produce the following artifacts:
 
-```
+```plaintext
 apache-druid-0.16.0-incubating-bin.tar.gz
 apache-druid-0.16.0-incubating-bin.tar.gz.asc
 apache-druid-0.16.0-incubating-bin.tar.gz.sha512
@@ -231,7 +231,7 @@ You _might_ or _might not_ need to specify which key to use depending on your ke
 
 ### Verify checksums
 
-```
+```bash
 $ diff <(shasum -a512 apache-druid-0.16.0-incubating-bin.tar.gz | cut -d ' ' -f1) <(cat apache-druid-0.16.0-incubating-bin.tar.gz.sha512 ; echo)
 ...
 $ diff <(shasum -a512 apache-druid-0.16.0-incubating-src.tar.gz | cut -d ' ' -f1) <(cat apache-druid-0.16.0-incubating-src.tar.gz.sha512 ; echo)
@@ -239,7 +239,7 @@ $ diff <(shasum -a512 apache-druid-0.16.0-incubating-src.tar.gz | cut -d ' ' -f1
 
 ### Verify GPG signatures
 
-```
+```bash
 $ gpg --verify apache-druid-0.16.0-incubating-bin.tar.gz.asc apache-druid-0.16.0-incubating-bin.tar.gz
 ...
 $ gpg --verify apache-druid-0.16.0-incubating-src.tar.gz.asc apache-druid-0.16.0-incubating-src.tar.gz
@@ -249,34 +249,32 @@ $ gpg --verify apache-druid-0.16.0-incubating-src.tar.gz.asc apache-druid-0.16.0
 
 Checkout the dist/dev repo and add a directory for the new release candidate. The KEYS file in this repo is obsoleted and should not be used.
 
-```
+```bash
 $ svn checkout https://dist.apache.org/repos/dist/dev/incubator/druid
 ```
 
 Copy the `src` and `bin` artifacts to a folder for the release version and add it to SVN and publish the artifacts:
 
-```
+```bash
 $ svn add 0.16.0-incubating-rc3
 ...
 $ svn commit -m 'add 0.16.0-incubating-rc3 artifacts'
 ```
 
-### Update staged website
-
-### Update druid.apache.org
+### Update druid.staged.apache.org
 
 1. Pull https://github.com/apache/incubator-druid-website and https://github.com/apache/incubator-druid-website-src. These repositories should be in the same directory as your Druid repository that should have the release tag checked out.
 
 2. From incubator-druid-website, checkout branch `asf-staging`.
 
-3. From incubator-druid-website-src, run `./release.sh 0.16.0-incubating 0.16.0-incubating`, replacing `0.16.0-incubating` where the first argument is the release version and 2nd argument is commitish. This script will:
+3. From incubator-druid-website-src, run `./release.sh 0.16.0-incubating 0.16.0-incubating`, replacing `0.16.0-incubating` where the first argument is the release version and 2nd argument is commit-ish. This script will:
 
 * checkout the tag of the Druid release version
 * build the docs for that version into incubator-druid-website-src
 * build incubator-druid-website-src into incubator-druid-website
 * stage incubator-druid-website-src and incubator-druid-website repositories to git.
 
-4. Make a PR to the src repo (https://github.com/apache/incubator-druid-website-src) for the release branch. Once the website PR is pushed to `asf-site`, https://druid.staged.apache.org/ will be updated immediately with the new docs.
+4. Make a PR to the src repo (https://github.com/apache/incubator-druid-website-src) for the release branch. Once the website PR is pushed to `asf-site`, https://druid.staged.apache.org/ will be updated near immediately with the new docs.
 
 ## Release candidates and voting
 
@@ -291,13 +289,13 @@ For the Druid community vote, send an email to dev@druid.apache.org, using somet
 
 ##### Subject
 
-```
+```plaintext
 [VOTE] Release Apache Druid (incubating) 0.16.0 [RC3]
 ```
 
 ##### Body
 
-```
+```plaintext
 Hi all,
 
 I have created a build for Apache Druid (incubating) 0.16.0, release
@@ -392,7 +390,7 @@ fully endorsed by the ASF.
 
 Anyone can vote on a release. When voting, you should list out what exactly you checked and note whether or not your vote is binding. (It is binding if you are on the Druid PPMC, otherwise it is non-binding.) A sample vote would look like:
 
-```
+```plaintext
 +1 (binding)
 
 - Proper NOTICE, LICENSE, DISCLAIMER files are present in both src and bin packages.
@@ -404,7 +402,7 @@ Anyone can vote on a release. When voting, you should list out what exactly you 
 
 If you find something wrong with a release that should block it, vote -1 and explain why. For example:
 
-```
+```plaintext
 -1, because the src tarball appears to accidentally have binary jar files in it:
 
 - foo.jar
@@ -424,13 +422,13 @@ Once the Druid community vote passes (or fails), close the vote with a thread li
 
 ##### Subject
 
-```
+```plaintext
 [RESULT][VOTE] Release Apache Druid (incubating) 0.16.0 [RC3]
 ```
 
 ##### Body
 
-```
+```plaintext
 Thanks to everyone who participated in the vote! The results are as follows:
 
 Clint Wylie: +1 (non-binding)
@@ -462,13 +460,13 @@ Here is the IPMC vote template. Please note that "6190EEFC" in the template is y
 
 ##### Subject
 
-```
+```plaintext
 [VOTE] Release Apache Druid (incubating) 0.16.0 [RC3]
 ```
 
 ##### Body
 
-```
+```plaintext
 Hi IPMC,
 
 The Apache Druid community has voted on and approved a proposal to release
@@ -586,13 +584,13 @@ Once a release candidate has passed the incubator PMC vote, you'll need to do th
 
 ##### Subject
 
-```
+```plaintext
 [RESULT] [VOTE] Release Apache Druid (incubating) 0.16.0 [RC3]
 ```
 
 ##### Body
 
-```
+```plaintext
 Hi all,
 
 The vote to release Apache Druid (incubating) 0.16.0 has passed with 3 +1
@@ -620,7 +618,7 @@ Clint
 
 Tag the rc that passed vote as the release tag and push to github.
 
-```
+```bash
 $ git checkout druid-0.16.0-incubating-rc3
 $ git tag druid-0.16.0-incubating
 $ git push origin/druid-0.16.0-incubating
@@ -630,13 +628,13 @@ $ git push origin/druid-0.16.0-incubating
 
 The final release artifacts are kept in the following repo (same as KEYS):
 
-```
-svn checkout https://dist.apache.org/repos/dist/release/incubator/druid
+```bash
+$ svn checkout https://dist.apache.org/repos/dist/release/incubator/druid
 ```
 
 Create a new directory for the release and put the artifacts there.
 
-```
+```bash
 $ svn add 0.16.0-incubating
 ...
 $ svn commit -m 'add 0.16.0-incubating artifacts'
@@ -673,7 +671,7 @@ druid_versions:
         date: 2019-08-15
 ```
 
-3. From incubator-druid-website-src, run `./release.sh 0.16.0-incubating 0.16.0-incubating`, replacing `0.16.0-incubating` where the first argument is the release version and 2nd argument is commitish. This script will:
+3. From incubator-druid-website-src, run `./release.sh 0.16.0-incubating 0.16.0-incubating`, replacing `0.16.0-incubating` where the first argument is the release version and 2nd argument is commit-ish. This script will:
 
 * checkout the tag of the Druid release version
 * build the docs for that version into incubator-druid-website-src
@@ -697,13 +695,13 @@ Additionally, announce it to the Druid official ASF Slack channel, https://druid
 
 ##### subject
 
-```
+```plaintext
 [ANNOUNCE] Apache Druid (incubating) 0.16.0 release
 ```
 
 ##### body
 
-```
+```plaintext
 The Apache Druid team is proud to announce the release of Apache Druid
 (incubating) 0.16.0. Druid is a high performance analytics data store for
 event-driven data.
@@ -742,7 +740,7 @@ fully endorsed by the ASF.
 
 [Previous release announcements](https://lists.apache.org/list.html?general@incubator.apache.org:lte=1y:%22%5BANNOUNCE%5D%20Apache%20Druid%20(incubating%22))
 
-Sticky the announcment on the ['druid-user' group](https://groups.google.com/forum/?pli=1#!forum/druid-user).
+Sticky the announcement on the ['druid-user' group](https://groups.google.com/forum/?pli=1#!forum/druid-user).
 
 ### Update Wikipedia
 
