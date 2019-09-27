@@ -34,7 +34,8 @@ import java.util.Iterator;
  * https://github.com/apache/incubator-druid/pull/8038#discussion_r325520829 of PR https://github
  * .com/apache/incubator-druid/pull/8038 for more details.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "tier", defaultImpl = LeastBytesUsedStorageLocationSelectorStrategy.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl =
+    LeastBytesUsedStorageLocationSelectorStrategy.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "leastBytesUsed", value = LeastBytesUsedStorageLocationSelectorStrategy.class),
     @JsonSubTypes.Type(name = "roundRobin", value = RoundRobinStorageLocationSelectorStrategy.class)
