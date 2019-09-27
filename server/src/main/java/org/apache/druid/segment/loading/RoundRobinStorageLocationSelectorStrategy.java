@@ -26,7 +26,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A {@link StorageLocation} selector strategy that selects a segment cache location in a round-robin fashion each time
- * among the available storage locations.
+ * among the available storage locations. When {@link Iterator#next()} on iterator retuned by
+ * {@link RoundRobinStorageLocationSelectorStrategy#getLocations()} is called the locations are returned in a round
+ * robin fashion even when multiple threads are in use.
  */
 public class RoundRobinStorageLocationSelectorStrategy implements StorageLocationSelectorStrategy
 {

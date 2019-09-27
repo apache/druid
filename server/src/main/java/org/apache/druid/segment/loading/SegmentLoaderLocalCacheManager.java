@@ -180,13 +180,10 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   private StorageLocation loadSegmentWithRetry(DataSegment segment, String storageDirStr) throws SegmentLoadingException
   {
     Iterator<StorageLocation> locationsIterator = strategy.getLocations();
-    int numLocationsToTry = this.locations.size();
 
-    while (locationsIterator.hasNext() && numLocationsToTry > 0) {
+    while (locationsIterator.hasNext()) {
 
       StorageLocation loc = locationsIterator.next();
-      numLocationsToTry--; // This is to avoid the cyclic iterator returned from Round Robin strategy to loop
-      // indefinitely.
 
       File storageDir = loc.reserve(storageDirStr, segment);
       if (storageDir != null) {
