@@ -2596,6 +2596,93 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertFalse(sequenceMetadata.isCheckpointed());
   }
 
+  /**
+   * Tests handling of a closed shard. The task is initially given an unlimited end sequence number and
+   * eventually gets an EOS marker which causes it to stop reading.
+   */
+  @Test(timeout = 120_000L)
+  public void testEndOfShard() throws Exception
+  {
+    recordSupplier.assign(EasyMock.anyObject());
+    EasyMock.expectLastCall().anyTimes();
+
+    EasyMock.expect(recordSupplier.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn("0").anyTimes();
+
+    recordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
+    EasyMock.expectLastCall().anyTimes();
+
+    List<OrderedPartitionableRecord<String, String>> eosRecord = ImmutableList.of(
+        new OrderedPartitionableRecord<>(STREAM, SHARD_ID1, KinesisSequenceNumber.END_OF_SHARD_MARKER, null)
+    );
+
+    EasyMock.expect(recordSupplier.poll(EasyMock.anyLong()))
+            .andReturn(records.subList(2, 5)).once()
+            .andReturn(eosRecord).once()
+    ;
+
+    recordSupplier.close();
+    EasyMock.expectLastCall().once();
+
+    replayAll();
+
+    final KinesisIndexTask task = createTask(
+        null,
+        new KinesisIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamStartSequenceNumbers<>(
+                STREAM,
+                ImmutableMap.of(SHARD_ID1, "2"), ImmutableSet.of()
+            ),
+            new SeekableStreamEndSequenceNumbers<>(
+                STREAM,
+                ImmutableMap.of(SHARD_ID1, KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER)
+            ),
+            true,
+            null,
+            null,
+            "awsEndpoint",
+            null,
+            null,
+            null,
+            null,
+            false
+        )
+
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    verifyAll();
+
+    // Check metrics
+    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getThrownAway()); // EOS marker
+
+    // Check published metadata
+    SegmentDescriptor desc1 = sd("2010/P1D", 0);
+    SegmentDescriptor desc2 = sd("2011/P1D", 0);
+    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
+    Assert.assertEquals(
+        new KinesisDataSourceMetadata(
+            new SeekableStreamEndSequenceNumbers<>(
+                STREAM,
+                ImmutableMap.of(SHARD_ID1, KinesisSequenceNumber.END_OF_SHARD_MARKER)
+            )
+        ),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
+
+    // Check segments in deep storage
+    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
+    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
+    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", publishedDescriptors.get(1)));
+  }
+
   private ListenableFuture<TaskStatus> runTask(final Task task)
   {
     try {
