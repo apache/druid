@@ -293,8 +293,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       );
       // max is minimum of either number of processors or user suggested parallelism
       final int maxParallelism = Math.min(numProcessors, parallelism);
-      // adjust max to be no more than total pool parallelism less the number of active threads
-      final int computedParallelism = Math.min(maxParallelism, poolParallelism - activeThreadCount);
+      // adjust max to be no more than total pool parallelism less the number of running threads
+      final int computedParallelism = Math.min(maxParallelism, poolParallelism - runningThreadCount);
       // compute total number of layer 1 'parallel' tasks, the final merge task will take the remaining slot, we need at least 2
       final int computedOptimalParallelism = Math.min((int) Math.floor((double) sequences.size() / 2.0), computedParallelism - 1);
       return computedOptimalParallelism;
@@ -377,6 +377,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     private final T initialValue;
     private final int yieldAfter;
     private final int batchSize;
+    private final int depth;
 
     private MergeCombineAction(
         PriorityQueue<BatchedResultsCursor<T>> pQueue,
@@ -385,7 +386,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         BinaryOperator<T> combineFn,
         T initialValue,
         int yieldAfter,
-        int batchSize
+        int batchSize,
+        int depth
     )
     {
       this.pQueue = pQueue;
@@ -395,6 +397,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       this.initialValue = initialValue;
       this.yieldAfter = yieldAfter;
       this.batchSize = batchSize;
+      this.depth = depth;
     }
 
     @Override
@@ -463,12 +466,21 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
             TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS),
             1L
         );
-        final int nextYieldAfter = Math.max(Ints.checkedCast(10 * (yieldAfter / elapsedMillis)), 1);
+        final double nextYieldAfter = Math.max(10.0 * ((double) yieldAfter / elapsedMillis), 1.0);
+        final double cumulativeMovingAverage = (nextYieldAfter + (depth * yieldAfter)) / (depth + 1);
+        final int adjustedNextYieldAfter = (int) Math.ceil(cumulativeMovingAverage);
+
         LOG.info(
-            "%s yielded results ran for %s millis, next task yielding every %s operations",
+            "stage %s processed %s results in %s millis, next task yielding after %s operations (active thread count: [%s] running thread count: [%s] submission count: [%s] queued task count: [%s] steal: [%s])",
+            depth,
             yieldAfter,
             elapsedMillis,
-            nextYieldAfter
+            adjustedNextYieldAfter,
+            getPool().getActiveThreadCount(),
+            getPool().getRunningThreadCount(),
+            getPool().getQueuedSubmissionCount(),
+            getPool().getQueuedTaskCount(),
+            getPool().getStealCount()
         );
         getPool().execute(new MergeCombineAction<>(
             pQueue,
@@ -476,8 +488,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
             orderingFn,
             combineFn,
             currentCombinedValue,
-            nextYieldAfter,
-            batchSize
+            adjustedNextYieldAfter,
+            batchSize,
+            depth + 1
         ));
       } else {
         // if priority queue is empty, push the final accumulated value
@@ -548,7 +561,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
             combineFn,
             null,
             yieldAfter,
-            batchSize
+            batchSize,
+            1
         ));
       }
     }
@@ -615,7 +629,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           combineFn,
           null,
           yieldAfter,
-          batchSize
+          batchSize,
+          1
       ));
     }
   }
@@ -647,7 +662,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       }
     }
     @Override
-    public boolean block() throws InterruptedException
+    public boolean block()
     {
       batchYielder = OrderedResultBatch.fromSequence(sequence, batchSize);
       return true;

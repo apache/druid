@@ -381,8 +381,8 @@ public class ParallelMergeCombiningSequenceTest
         5000,
         0,
         Runtime.getRuntime().availableProcessors() - 1,
-        8,
-        4
+        4,
+        2
     );
 
     Yielder<IntPair> combiningYielder = Yielders.each(combiningSequence);
