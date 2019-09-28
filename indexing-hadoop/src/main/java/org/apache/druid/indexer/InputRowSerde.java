@@ -408,6 +408,7 @@ public class InputRowSerde
     return result;
   }
 
+  @Nullable
   private static List<String> readStringArray(DataInput in) throws IOException
   {
     int count = WritableUtils.readVInt(in);
@@ -493,6 +494,7 @@ public class InputRowSerde
     }
   }
 
+  @Nullable
   private static String getType(String metric, AggregatorFactory[] aggs, int i)
   {
     if (aggs[i].getName().equals(metric)) {
