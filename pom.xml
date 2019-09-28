@@ -88,7 +88,7 @@
         <hamcrest.version>1.3</hamcrest.version>
         <jetty.version>9.4.10.v20180503</jetty.version>
         <jersey.version>1.19.3</jersey.version>
-        <jackson.version>2.9.9</jackson.version>
+        <jackson.version>2.9.10</jackson.version>
         <log4j.version>2.5</log4j.version>
         <!-- HttpClient has not yet been ported to Netty 4.x -->
         <netty3.version>3.10.6.Final</netty3.version>
