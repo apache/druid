@@ -1549,6 +1549,7 @@ java.class.path
 java.io.tmpdir
 javaOpts
 javaOptsArray
+leastBytesUsed
 loadList
 loadqueuepeon
 loadspec
@@ -1572,6 +1573,7 @@ queryType
 remoteTaskRunnerConfig
 rendezvousHash
 resultsets
+roundRobin
 runtime.properties
 runtime.properties.
 s3
