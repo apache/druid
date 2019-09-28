@@ -120,19 +120,18 @@ public class StorageLocationSelectorStrategyTest
   private void iterateLocs(File localStorageFolder1, File localStorageFolder2, File localStorageFolder3,
                            StorageLocationSelectorStrategy roundRobinStrategy)
   {
-    Iterator<StorageLocation> locations;
-    locations = roundRobinStrategy.getLocations();
+    Iterator<StorageLocation> locations = roundRobinStrategy.getLocations();
 
     StorageLocation loc1 = locations.next();
     Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_1",
         localStorageFolder1, loc1.getPath());
 
     StorageLocation loc2 = locations.next();
-    Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_1",
+    Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_2",
         localStorageFolder2, loc2.getPath());
 
     StorageLocation loc3 = locations.next();
-    Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_1",
+    Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_3",
         localStorageFolder3, loc3.getPath());
   }
 
