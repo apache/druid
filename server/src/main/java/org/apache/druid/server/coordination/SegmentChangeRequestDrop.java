@@ -33,7 +33,11 @@ import java.util.Objects;
 public class SegmentChangeRequestDrop implements DataSegmentChangeRequest
 {
   @JsonUnwrapped
-  private final DataSegment segment;
+  private DataSegment segment;
+
+  public SegmentChangeRequestDrop()
+  {
+  }
 
   public SegmentChangeRequestDrop(DataSegment segment)
   {
