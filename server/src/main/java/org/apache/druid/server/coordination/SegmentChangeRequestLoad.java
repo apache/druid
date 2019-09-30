@@ -51,7 +51,6 @@ public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
   }
 
   @JsonProperty
-  @JsonUnwrapped
   public DataSegment getSegment()
   {
     return segment;
