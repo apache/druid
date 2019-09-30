@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordination;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import org.apache.druid.java.util.common.StringUtils;
@@ -33,18 +32,15 @@ import java.util.Objects;
  */
 public class SegmentChangeRequestDrop implements DataSegmentChangeRequest
 {
+  @JsonUnwrapped
   private final DataSegment segment;
 
-  @JsonCreator
-  public SegmentChangeRequestDrop(
-      @JsonUnwrapped DataSegment segment
-  )
+  public SegmentChangeRequestDrop(DataSegment segment)
   {
     this.segment = segment;
   }
 
   @JsonProperty
-  @JsonUnwrapped
   public DataSegment getSegment()
   {
     return segment;
