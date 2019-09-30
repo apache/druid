@@ -237,7 +237,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.9.9
+version: 2.9.10
 libraries:
   - com.fasterxml.jackson.core: jackson-annotations
   - com.fasterxml.jackson.module: jackson-module-jaxb-annotations
