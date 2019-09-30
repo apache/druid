@@ -40,14 +40,22 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
   @JsonUnwrapped
   private final DataSegment dataSegment;
 
-  @JsonCreator
   public SegmentWithOvershadowedStatus(
-      @JsonProperty("dataSegment") DataSegment dataSegment,
-      @JsonProperty("overshadowed") boolean overshadowed
+          DataSegment dataSegment,
+          boolean overshadowed
   )
   {
     this.dataSegment = dataSegment;
     this.overshadowed = overshadowed;
+  }
+
+  @JsonCreator
+  public SegmentWithOvershadowedStatus(
+          @JsonProperty("overshadowed") boolean overshadowed
+  )
+  {
+    this.overshadowed = overshadowed;
+    this.dataSegment = null;
   }
 
   @JsonProperty

@@ -28,14 +28,12 @@ import javax.annotation.Nullable;
 
 import java.util.Objects;
 
-import static com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY;
 
 /**
  */
 public class SegmentChangeRequestDrop implements DataSegmentChangeRequest
 {
   @JsonUnwrapped
-  @JsonProperty(access = READ_ONLY)
   private DataSegment segment;
 
   public SegmentChangeRequestDrop()
