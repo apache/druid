@@ -28,7 +28,7 @@ import com.google.common.base.Preconditions;
 import java.util.Objects;
 
 /**
- * This class contains the attributes of a supervisor task which are returned by the API's in
+ * This class contains the attributes of a supervisor which are returned by the API's in
  * org.apache.druid.indexing.overlord.supervisor.SupervisorResource
  * and used by org.apache.druid.sql.calcite.schema.SystemSchema.SupervisorsTable
  */
@@ -43,7 +43,7 @@ public class SupervisorStatus
   private final SupervisorSpec spec;
   /**
    * This is a JSON representation of {@code spec}
-   * The explicit serialization is present here so that users of  {@code SupervisorStatus} which cannot
+   * The explicit serialization is present here so that users of {@code SupervisorStatus} which cannot
    * deserialize {@link SupervisorSpec} can use this attribute instead
    */
   private final String specString;

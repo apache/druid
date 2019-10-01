@@ -61,7 +61,7 @@ public interface SupervisorSpec
    * This API is only used for informational purposes in
    * org.apache.druid.sql.calcite.schema.SystemSchema.SupervisorsTable
    *
-   * @return supervisor task type
+   * @return supervisor type
    */
   String getType();
 

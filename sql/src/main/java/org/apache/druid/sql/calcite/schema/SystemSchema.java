@@ -744,7 +744,7 @@ public class SystemSchema extends AbstractSchema
     try {
       request = indexingServiceClient.makeRequest(
           HttpMethod.GET,
-          StringUtils.format("/druid/indexer/v1/tasks"),
+          "/druid/indexer/v1/tasks",
           false
       );
     }
@@ -908,7 +908,7 @@ public class SystemSchema extends AbstractSchema
     try {
       request = indexingServiceClient.makeRequest(
           HttpMethod.GET,
-          StringUtils.format("/druid/indexer/v1/supervisor?fullStatus"),
+          "/druid/indexer/v1/supervisor?fullStatus",
           false
       );
     }

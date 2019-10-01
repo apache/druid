@@ -773,16 +773,16 @@ SELECT * FROM sys.tasks WHERE status='FAILED';
 
 #### SUPERVISORS table
 
-The supervisors table provides information about supervisor tasks.
+The supervisors table provides information about supervisors.
 
 |Column|Type|Notes|
 |------|-----|-----|
-|supervisor_id|STRING|supervisor task identifier|
-|state|STRING|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`|
-|detailed_state|STRING|supervisor specific state. (See documentation of specific supervisor for details)|
+|supervisor_id|STRING|Supervisor task identifier|
+|state|STRING|Basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../../development/kafka-ingestion.html#operations) for details.||
+|detailed_state|STRING|Supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../../development/kafka-ingestion.html) or [Kinesis](../../development/kinesis-ingestion.html))|
 |healthy|LONG|Boolean represented as long type where 1 = true, 0 = false. 1 indicates a healthy supervisor|
-|type|STRING|type of supervisor task, e.g., `kafka`, `kinesis` or `materialized_view`|
-|source|STRING|source of the supervisor, e.g., Kafka topic or Kinesis stream|
+|type|STRING|Type of supervisor, e.g. `kafka`, `kinesis` or `materialized_view`|
+|source|STRING|Source of the supervisor, e.g. Kafka topic or Kinesis stream|
 |suspended|LONG|Boolean represented as long type where 1 = true, 0 = false. 1 indicates supervisor is in suspended state|
 |spec|STRING|JSON-serialized supervisor spec|
 
