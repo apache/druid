@@ -21,6 +21,7 @@ package org.apache.druid.timeline;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
 /**
@@ -29,6 +30,7 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped;
  * SegmentWithOvershadowedStatus's {@link #compareTo} method considers only the {@link SegmentId}
  * of the DataSegment object.
  */
+@JsonPropertyOrder(alphabetic=true)
 public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOvershadowedStatus>
 {
   /**
