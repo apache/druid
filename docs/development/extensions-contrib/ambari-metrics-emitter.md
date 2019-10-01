@@ -87,7 +87,7 @@ Same as for the `all` converter user has control of `<namespacePrefix>.[<druid s
 White-list based converter comes with the following  default white list map located under resources in `./src/main/resources/defaultWhiteListMap.json`
 
 Although user can override the default white list map by supplying a property called `mapPath`.
-This property is a String containing  the path for the file containing **white list map Json object**.
+This property is a String containing  the path for the file containing **white list map JSON object**.
 For example the following converter will read the map from the file `/pathPrefix/fileName.json`.
 
 ```json

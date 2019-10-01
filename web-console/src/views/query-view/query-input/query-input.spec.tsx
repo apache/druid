@@ -30,4 +30,14 @@ describe('query input', () => {
     const { container } = render(sqlControl);
     expect(container.firstChild).toMatchSnapshot();
   });
+
+  it('correctly formats helper HTML', () => {
+    expect(
+      QueryInput.completerToHtml({
+        caption: 'COUNT',
+        syntax: 'COUNT(*)',
+        description: 'Counts the number of things',
+      }),
+    ).toMatchSnapshot();
+  });
 });

@@ -232,10 +232,6 @@
       "development/geo": {
         "title": "Spatial filters"
       },
-      "development/integrating-druid-with-other-technologies": {
-        "title": "Integrating Apache Druid with other technologies",
-        "sidebar_label": "Integrating with other technologies"
-      },
       "development/javascript": {
         "title": "JavaScript programming guide",
         "sidebar_label": "JavaScript functionality"

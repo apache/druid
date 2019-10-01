@@ -43,17 +43,19 @@ the Overlord APIs.
 
 ## Task reports
 
+A report containing information about the number of rows ingested, and any parse exceptions that occurred is available for both completed tasks and running tasks.
+
+The reporting feature is supported by the [simple native batch task](../ingestion/native-batch.md#simple-task), the Hadoop batch task, and Kafka and Kinesis ingestion tasks.
+
 ### Completion report
 
-After a task completes, a report containing information about the number of rows ingested and any parse exceptions that occurred is available at:
+After a task completes, a completion report can be retrieved at:
 
 ```
 http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/task/<task-id>/reports
 ```
 
-The reporting feature is supported by the [simple native batch task](../ingestion/native-batch.md#simple-task), the Hadoop batch task, and Kafka and Kinesis ingestion tasks.
-
-An example output is shown below, along with a description of the fields:
+An example output is shown below:
 
 ```json
 {
@@ -82,6 +84,70 @@ An example output is shown below, along with a description of the fields:
   }
 }
 ```
+
+### Live report
+
+When a task is running, a live report containing ingestion state, unparseable events and moving average for number of events processed for 1 min, 5 min, 15 min time window can be retrieved at:
+
+```
+http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/task/<task-id>/reports
+```
+
+and 
+
+```
+http://<middlemanager-host>:<worker-port>/druid/worker/v1/chat/<task-id>/liveReports
+```
+
+An example output is shown below:
+
+```json
+{
+  "ingestionStatsAndErrors": {
+    "taskId": "compact_twitter_2018-09-24T18:24:23.920Z",
+    "payload": {
+      "ingestionState": "RUNNING",
+      "unparseableEvents": {},
+      "rowStats": {
+        "movingAverages": {
+          "buildSegments": {
+            "5m": {
+              "processed": 3.392158326408501,
+              "unparseable": 0,
+              "thrownAway": 0,
+              "processedWithError": 0
+            },
+            "15m": {
+              "processed": 1.736165476881023,
+              "unparseable": 0,
+              "thrownAway": 0,
+              "processedWithError": 0
+            },
+            "1m": {
+              "processed": 4.206417693750045,
+              "unparseable": 0,
+              "thrownAway": 0,
+              "processedWithError": 0
+            }
+          }
+        },
+        "totals": {
+          "buildSegments": {
+            "processed": 1994,
+            "processedWithError": 0,
+            "thrownAway": 0,
+            "unparseable": 0
+          }
+        }
+      },
+      "errorMsg": null
+    },
+    "type": "ingestionStatsAndErrors"
+  }
+}
+```
+
+A description of the fields:
 
 The `ingestionStatsAndErrors` report provides information about row counts and errors.
 
@@ -175,7 +241,7 @@ and Kinesis indexing services.
 ## Task lock system
 
 This section explains the task locking system in Druid. Druid's locking system
-and versioning system are tighly coupled with each other to guarantee the correctness of ingested data.
+and versioning system are tightly coupled with each other to guarantee the correctness of ingested data.
 
 ## "Overshadowing" between segments
 
@@ -247,7 +313,7 @@ then this task will _preempt_ the other task of a lower priority. The lock
 of the lower-prioritized task will be revoked and the higher-prioritized task will acquire a new lock.
 
 This lock preemption can happen at any time while a task is running except
-when it is _publishing segments_ in a critical section. Its locks become preemptable again once publishing segments is finished.
+when it is _publishing segments_ in a critical section. Its locks become preemptible again once publishing segments is finished.
 
 Note that locks are shared by the tasks of the same groupId.
 For example, Kafka indexing tasks of the same supervisor have the same groupId and share all locks with each other.

@@ -34,6 +34,7 @@ import java.util.Map;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = AuthConfig.ALLOW_ALL_NAME, value = AllowAllAuthenticator.class),
     @JsonSubTypes.Type(name = AuthConfig.ANONYMOUS_NAME, value = AnonymousAuthenticator.class),
+    @JsonSubTypes.Type(name = AuthConfig.TRUSTED_DOMAIN_NAME, value = TrustedDomainAuthenticator.class),
 })
 /**
  * This interface is essentially a ServletFilterHolder with additional requirements on the getFilter() method contract, plus:

@@ -33,7 +33,7 @@ This Apache Druid (incubating) extension enables Druid to ingest and understand 
 | type | String | This should say `protobuf`. | no |
 | descriptor | String | Protobuf descriptor file name in the classpath or URL. | yes |
 | protoMessageType | String | Protobuf message type in the descriptor.  Both short name and fully qualified name are accepted.  The parser uses the first message type found in the descriptor if not specified. | no |
-| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be json. See [JSON ParseSpec](../../ingestion/index.md) for more configuration options.  Please note timeAndDims parseSpec is no longer supported. | yes |
+| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be JSON. See [JSON ParseSpec](../../ingestion/index.md) for more configuration options.  Please note timeAndDims parseSpec is no longer supported. | yes |
 
 ## Example: Load Protobuf messages from Kafka
 
@@ -96,7 +96,7 @@ Please make sure these keys are properly configured for successful ingestion.
 - `protoMessageType` from the proto definition.
 - parseSpec `format` must be `json`.
 - `topic` to subscribe.  The topic is "metrics_pb" instead of "metrics".
-- `bootstrap.server` is the kafka broker host.
+- `bootstrap.server` is the Kafka broker host.
 
 ```json
 {
