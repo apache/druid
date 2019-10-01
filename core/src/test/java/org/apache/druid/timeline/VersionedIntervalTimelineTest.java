@@ -56,7 +56,8 @@ public class VersionedIntervalTimelineTest
   VersionedIntervalTimeline<String, OvershadowableInteger> timeline;
 
   @Before
-  public void setUp() {
+  public void setUp()
+  {
     timeline = makeStringIntegerTimeline();
   }
 
@@ -1497,7 +1498,8 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testIterateAllObjects() {
+  public void testIterateAllObjects()
+  {
     add("2011-01-01/2011-01-10", "1", 1);
     add("2011-01-01/2011-01-10", "2", 3);
 

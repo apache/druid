@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.helper;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -86,7 +85,8 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSource);
 
       if (config != null && !timeline.isEmpty()) {
-        final List<Interval> searchIntervals = findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest(), skipIntervals.get(dataSource));
+        final List<Interval> searchIntervals =
+            findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest(), skipIntervals.get(dataSource));
         if (!searchIntervals.isEmpty()) {
           timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals));
         }
@@ -200,15 +200,32 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           .flatMap(interval -> timeline
               .lookup(interval)
               .stream()
-              .filter(holder -> {
-                final List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holder.getObject().iterator());
-                final long partitionBytes = chunks.stream().mapToLong(chunk -> chunk.getObject().getSize()).sum();
-                return chunks.size() > 1
-                       && partitionBytes > 0
-                       && interval.contains(chunks.get(0).getObject().getInterval());
-              })
+              .filter(holder -> isCompactibleHolder(interval, holder))
           )
           .collect(Collectors.toList());
+    }
+
+    private boolean isCompactibleHolder(Interval interval, TimelineObjectHolder<String, DataSegment> holder)
+    {
+      final Iterator<PartitionChunk<DataSegment>> chunks = holder.getObject().iterator();
+      if (!chunks.hasNext()) {
+        return false;
+      }
+      PartitionChunk<DataSegment> firstChunk = chunks.next();
+      if (!interval.contains(firstChunk.getObject().getInterval())) {
+        return false;
+      }
+      long partitionBytes = firstChunk.getObject().getSize();
+      if (!chunks.hasNext()) {
+        return false; // There should be at least two chunks for a holder to be compactible.
+      }
+      while (chunks.hasNext()) {
+        partitionBytes += chunks.next().getObject().getSize();
+        if (partitionBytes > 0) {
+          return true;
+        }
+      }
+      return false;
     }
 
     @Override

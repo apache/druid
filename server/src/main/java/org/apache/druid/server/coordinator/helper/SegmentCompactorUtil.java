@@ -24,7 +24,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.List;
+import java.util.Collection;
 
 /**
  * Util class used by {@link DruidCoordinatorSegmentCompactor} and {@link CompactionSegmentSearchPolicy}.
@@ -37,7 +37,7 @@ class SegmentCompactorUtil
    */
   private static final double ALLOWED_ERROR_OF_SEGMENT_SIZE = .2;
 
-  static boolean needsCompaction(@Nullable Long targetCompactionSizeBytes, List<DataSegment> candidates)
+  static boolean needsCompaction(@Nullable Long targetCompactionSizeBytes, Collection<DataSegment> candidates)
   {
     if (targetCompactionSizeBytes == null) {
       // If targetCompactionSizeBytes is null, we have no way to check that the given segments need compaction or not.

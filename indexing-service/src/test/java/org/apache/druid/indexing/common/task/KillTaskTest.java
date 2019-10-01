@@ -76,19 +76,19 @@ public class KillTaskTest extends IngestionTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
 
-    final List<DataSegment> unusedSegments = getMetadataStorageCoordinator().getUnusedSegmentsForInterval(
-        DATA_SOURCE,
-        Intervals.of("2019/2020")
-    );
+    final List<DataSegment> unusedSegments =
+        getMetadataStorageCoordinator().getUnusedSegmentsForInterval(DATA_SOURCE, Intervals.of("2019/2020"));
 
     Assert.assertEquals(ImmutableList.of(newSegment(Intervals.of("2019-02-01/2019-03-01"), version)), unusedSegments);
     Assert.assertEquals(
-        ImmutableList.of(
+        ImmutableSet.of(
             newSegment(Intervals.of("2019-01-01/2019-02-01"), version),
             newSegment(Intervals.of("2019-04-01/2019-05-01"), version)
         ),
-        getMetadataStorageCoordinator()
-            .getUsedSegmentsForInterval(DATA_SOURCE, Intervals.of("2019/2020"), Segments.ONLY_VISIBLE)
+        ImmutableSet.copyOf(
+            getMetadataStorageCoordinator()
+                .getUsedSegmentsForInterval(DATA_SOURCE, Intervals.of("2019/2020"), Segments.ONLY_VISIBLE)
+        )
     );
   }
 

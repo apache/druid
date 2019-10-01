@@ -39,6 +39,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -438,6 +439,7 @@ public class NewestSegmentFirstPolicyTest
     final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
         timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-01/2017-12-02"), Partitions.ONLY_COMPLETE)
     );
+    expectedSegmentsToCompact.sort(Comparator.naturalOrder());
 
     Assert.assertTrue(iterator.hasNext());
     Assert.assertEquals(expectedSegmentsToCompact, iterator.next());

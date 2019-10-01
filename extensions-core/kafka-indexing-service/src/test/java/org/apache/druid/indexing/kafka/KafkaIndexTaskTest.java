@@ -155,6 +155,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CompressionUtils;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.assertj.core.api.Assertions;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -192,6 +193,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("unchecked")
 @RunWith(Parameterized.class)
 public class KafkaIndexTaskTest
 {
@@ -439,19 +441,18 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
-    // Check published metadata
-    SegmentDescriptor desc1 = sd("2010/P1D", 0);
-    SegmentDescriptor desc2 = sd("2011/P1D", 0);
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
+    // Check published metadata and segments in deep storage
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            sdd("2010/P1D", 0, ImmutableList.of("c")),
+            sdd("2011/P1D", 0, ImmutableList.of("d", "e"))
+        ),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
-
-    // Check segments in deep storage
-    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", publishedDescriptors.get(1)));
   }
 
   @Test(timeout = 60_000L)
@@ -490,19 +491,18 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
-    // Check published metadata
-    SegmentDescriptor desc1 = sd("2010/P1D", 0);
-    SegmentDescriptor desc2 = sd("2011/P1D", 0);
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
+    // Check published metadata and segments in deep storage
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            sdd("2010/P1D", 0, ImmutableList.of("c")),
+            sdd("2011/P1D", 0, ImmutableList.of("d", "e"))
+        ),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
-
-    // Check segments in deep storage
-    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", publishedDescriptors.get(1)));
   }
 
   @Test(timeout = 60_000L)
@@ -577,33 +577,25 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getThrownAway());
 
-    // Check published metadata
-    SegmentDescriptor desc1 = sd("2008/P1D", 0);
-    SegmentDescriptor desc2 = sd("2009/P1D", 0);
-    SegmentDescriptor desc3 = sd("2010/P1D", 0);
-    SegmentDescriptor desc4 = sd("2011/P1D", 0);
-    SegmentDescriptor desc5 = sd("2011/P1D", 1);
-    SegmentDescriptor desc6 = sd("2012/P1D", 0);
-    SegmentDescriptor desc7 = sd("2013/P1D", 0);
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
+    // Check published metadata and segments in deep storage
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            sdd("2008/P1D", 0, ImmutableList.of("a")),
+            sdd("2009/P1D", 0, ImmutableList.of("b")),
+            sdd("2010/P1D", 0, ImmutableList.of("c")),
+            sdd("2011/P1D", 0, ImmutableList.of("d", "e"), ImmutableList.of("d", "h")),
+            sdd("2011/P1D", 1, ImmutableList.of("h"), ImmutableList.of("e")),
+            sdd("2012/P1D", 0, ImmutableList.of("g")),
+            sdd("2013/P1D", 0, ImmutableList.of("f"))
+        ),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 2L))
         ),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
-
-    // Check segments in deep storage
-    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    Assert.assertEquals(ImmutableList.of("a"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(ImmutableList.of("b"), readSegmentColumn("dim1", publishedDescriptors.get(1)));
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", publishedDescriptors.get(2)));
-    Assert.assertTrue((ImmutableList.of("d", "e").equals(readSegmentColumn("dim1", publishedDescriptors.get(3)))
-                       && ImmutableList.of("h").equals(readSegmentColumn("dim1", publishedDescriptors.get(4)))) ||
-                      (ImmutableList.of("d", "h").equals(readSegmentColumn("dim1", publishedDescriptors.get(3)))
-                       && ImmutableList.of("e").equals(readSegmentColumn("dim1", publishedDescriptors.get(4)))));
-    Assert.assertEquals(ImmutableList.of("g"), readSegmentColumn("dim1", publishedDescriptors.get(5)));
-    Assert.assertEquals(ImmutableList.of("f"), readSegmentColumn("dim1", publishedDescriptors.get(6)));
   }
 
   @Test(timeout = 60_000L)
@@ -718,15 +710,19 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getThrownAway());
 
-    // Check published metadata
-    SegmentDescriptor desc1 = sd("2008/P1D", 0);
-    SegmentDescriptor desc2 = sd("2009/P1D", 0);
-    SegmentDescriptor desc3 = sd("2010/P1D", 0);
-    SegmentDescriptor desc4 = sd("2011/P1D", 0);
-    SegmentDescriptor desc5 = sd("2011/P1D", 1);
-    SegmentDescriptor desc6 = sd("2012/P1D", 0);
-    SegmentDescriptor desc7 = sd("2013/P1D", 0);
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
+    // Check published metadata and segments in deep storage
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            sdd("2008/P1D", 0, ImmutableList.of("a")),
+            sdd("2009/P1D", 0, ImmutableList.of("b")),
+            sdd("2010/P1D", 0, ImmutableList.of("c")),
+            sdd("2011/P1D", 0, ImmutableList.of("d", "e"), ImmutableList.of("d", "h")),
+            sdd("2011/P1D", 1, ImmutableList.of("h"), ImmutableList.of("e")),
+            sdd("2012/P1D", 0, ImmutableList.of("g")),
+            sdd("2013/P1D", 0, ImmutableList.of("f"))
+        ),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 2L))
@@ -734,25 +730,12 @@ public class KafkaIndexTaskTest
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
     Assert.assertEquals(
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 2L))
         ),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
-
-    // Check segments in deep storage
-    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    Assert.assertEquals(ImmutableList.of("a"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(ImmutableList.of("b"), readSegmentColumn("dim1", publishedDescriptors.get(1)));
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", publishedDescriptors.get(2)));
-    Assert.assertTrue((ImmutableList.of("d", "e").equals(readSegmentColumn("dim1", publishedDescriptors.get(3)))
-                       && ImmutableList.of("h").equals(readSegmentColumn("dim1", publishedDescriptors.get(4)))) ||
-                      (ImmutableList.of("d", "h").equals(readSegmentColumn("dim1", publishedDescriptors.get(3)))
-                       && ImmutableList.of("e").equals(readSegmentColumn("dim1", publishedDescriptors.get(4)))));
-    Assert.assertEquals(ImmutableList.of("g"), readSegmentColumn("dim1", publishedDescriptors.get(5)));
-    Assert.assertEquals(ImmutableList.of("f"), readSegmentColumn("dim1", publishedDescriptors.get(6)));
   }
 
   @Test(timeout = 60_000L)
@@ -823,21 +806,20 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
-    // Check published metadata
-    SegmentDescriptor desc1 = sd("2008/P1D", 0);
-    SegmentDescriptor desc2 = sd("2009/P1D", 0);
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
+    // Check published metadata and segments in deep storage
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            sdd("2008/P1D", 0, ImmutableList.of("a")),
+            sdd("2009/P1D", 0, ImmutableList.of("b"))
+        ),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 2L, 1, 0L))
         ),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
-
-    // Check segments in deep storage
-    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    Assert.assertEquals(ImmutableList.of("a"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(ImmutableList.of("b"), readSegmentColumn("dim1", publishedDescriptors.get(1)));
   }
 
   @Test(timeout = 60_000L)
@@ -977,19 +959,18 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getThrownAway());
 
-    // Check published metadata
-    SegmentDescriptor desc1 = sd("2010/P1D", 0);
-    SegmentDescriptor desc2 = sd("2011/P1D", 0);
-    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors);
+    // Check published metadata and segments in deep storage
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            sdd("2010/P1D", 0, ImmutableList.of("c")),
+            sdd("2011/P1D", 0, ImmutableList.of("d", "e"))
+        ),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
-
-    // Check segments in deep storage
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", publishedDescriptors.get(1)));
   }
 
   @Test(timeout = 60_000L)
@@ -1028,21 +1009,19 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getThrownAway());
 
-    // Check published metadata
-    SegmentDescriptor desc1 = sd("2008/P1D", 0);
-    SegmentDescriptor desc2 = sd("2009/P1D", 0);
-    SegmentDescriptor desc3 = sd("2010/P1D", 0);
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3), publishedDescriptors());
+    // Check published metadata and segments in deep storage
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            sdd("2008/P1D", 0, ImmutableList.of("a")),
+            sdd("2009/P1D", 0, ImmutableList.of("b")),
+            sdd("2010/P1D", 0, ImmutableList.of("c"))
+        ),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
-
-    // Check segments in deep storage
-    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    Assert.assertEquals(ImmutableList.of("a"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(ImmutableList.of("b"), readSegmentColumn("dim1", publishedDescriptors.get(1)));
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", publishedDescriptors.get(2)));
   }
 
   @Test(timeout = 60_000L)
@@ -1090,15 +1069,14 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
-    SegmentDescriptor desc1 = sd("2009/P1D", 0);
-    assertEqualsExceptVersion(ImmutableList.of(desc1), publishedDescriptors());
+    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
+    assertEqualsExceptVersion(ImmutableList.of(sdd("2009/P1D", 0)), publishedDescriptors);
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
-    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
     Assert.assertEquals(ImmutableList.of("b"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
     Assert.assertEquals(ImmutableList.of("bb"), readSegmentColumn("dim1t", publishedDescriptors.get(0)));
   }
@@ -1171,19 +1149,18 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
-    // Check published metadata
-    SegmentDescriptor desc1 = sd("2010/P1D", 0);
-    SegmentDescriptor desc2 = sd("2011/P1D", 0);
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
+    // Check published metadata and segments in deep storage
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            sdd("2010/P1D", 0, ImmutableList.of("c")),
+            sdd("2011/P1D", 0, ImmutableList.of("d", "e"))
+        ),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
-
-    // Check segments in deep storage
-    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", publishedDescriptors.get(1)));
   }
 
   @Test(timeout = 60_000L)
@@ -1220,21 +1197,20 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
-    // Check published metadata
-    SegmentDescriptor desc1 = sd("2010/P1D", 0);
-    SegmentDescriptor desc2 = sd("2011/P1D", 0);
-    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors);
+    // Check published metadata and segments in deep storage
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            sdd("2010/P1D", 0, ImmutableList.of("c")),
+            sdd("2011/P1D", 0, ImmutableList.of("d", "e"))
+        ),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))
         ),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
-
-    // Check segments in deep storage
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", publishedDescriptors.get(1)));
   }
 
   @Test(timeout = 60_000L)
@@ -1319,11 +1295,10 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
-    SegmentDescriptor desc1 = sd("2010/P1D", 0);
-    SegmentDescriptor desc2 = sd("2011/P1D", 0);
-    SegmentDescriptor desc3 = sd("2013/P1D", 0);
-    SegmentDescriptor desc4 = sd("2049/P1D", 0);
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4), publishedDescriptors());
+    assertEqualsExceptVersion(
+        ImmutableList.of(sdd("2010/P1D", 0), sdd("2011/P1D", 0), sdd("2013/P1D", 0), sdd("2049/P1D", 0)),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 13L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
@@ -1475,18 +1450,17 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
-    SegmentDescriptor desc1 = sd("2010/P1D", 0);
-    SegmentDescriptor desc2 = sd("2011/P1D", 0);
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            sdd("2010/P1D", 0, ImmutableList.of("c")),
+            sdd("2011/P1D", 0, ImmutableList.of("d", "e"))
+        ),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
-
-    // Check segments in deep storage
-    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", publishedDescriptors.get(1)));
   }
 
   @Test(timeout = 60_000L)
@@ -1541,18 +1515,18 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(1, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata, should all be from the first task
-    SegmentDescriptor desc1 = sd("2010/P1D", 0);
-    SegmentDescriptor desc2 = sd("2011/P1D", 0);
     final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors);
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            sdd("2010/P1D", 0, ImmutableList.of("c")),
+            sdd("2011/P1D", 0, ImmutableList.of("d", "e"))
+        ),
+        publishedDescriptors
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
-
-    // Check segments in deep storage
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", publishedDescriptors.get(1)));
   }
 
   @Test(timeout = 60_000L)
@@ -1595,8 +1569,8 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
 
     // Check published segments & metadata
-    SegmentDescriptor desc1 = sd("2010/P1D", 0);
-    SegmentDescriptor desc2 = sd("2011/P1D", 0);
+    SegmentDescriptorAndExpectedDim1Values desc1 = sdd("2010/P1D", 0, ImmutableList.of("c"));
+    SegmentDescriptorAndExpectedDim1Values desc2 = sdd("2011/P1D", 0, ImmutableList.of("d", "e"));
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
     Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource()));
 
@@ -1613,17 +1587,10 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(1, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
-    SegmentDescriptor desc3 = sd("2011/P1D", 1);
-    SegmentDescriptor desc4 = sd("2013/P1D", 0);
+    SegmentDescriptorAndExpectedDim1Values desc3 = sdd("2011/P1D", 1, ImmutableList.of("d", "e"));
+    SegmentDescriptorAndExpectedDim1Values desc4 = sdd("2013/P1D", 0, ImmutableList.of("f"));
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4), publishedDescriptors());
     Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource()));
-
-    // Check segments in deep storage
-    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", publishedDescriptors.get(1)));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", publishedDescriptors.get(2)));
-    Assert.assertEquals(ImmutableList.of("f"), readSegmentColumn("dim1", publishedDescriptors.get(3)));
   }
 
   @Test(timeout = 60_000L)
@@ -1658,34 +1625,18 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
-    SegmentDescriptor desc1 = sd("2010/P1D", 0);
-    SegmentDescriptor desc2 = sd("2011/P1D", 0);
+    SegmentDescriptorAndExpectedDim1Values desc1 = sdd("2010/P1D", 0, ImmutableList.of("c"));
+    SegmentDescriptorAndExpectedDim1Values desc2 = sdd("2011/P1D", 0, ImmutableList.of("d", "e", "h"));
     // desc3 will not be created in KafkaIndexTask (0.12.x) as it does not create per Kafka partition Druid segments
+    @SuppressWarnings("unused")
     SegmentDescriptor desc3 = sd("2011/P1D", 1);
-    SegmentDescriptor desc4 = sd("2012/P1D", 0);
-    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
+    SegmentDescriptorAndExpectedDim1Values desc4 = sdd("2012/P1D", 0, ImmutableList.of("g"));
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc4), publishedDescriptors());
     Assert.assertEquals(
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L, 1, 2L))
         ),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
-    );
-
-    // Check segments in deep storage
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(
-        ImmutableList.of("g"),
-        readSegmentColumn(
-            "dim1",
-            publishedDescriptors.get(2)
-        )
-    );
-
-    // Check desc2/desc3 without strong ordering because two partitions are interleaved nondeterministically
-    Assert.assertEquals(
-        ImmutableSet.of(ImmutableList.of("d", "e", "h")),
-        ImmutableSet.of(readSegmentColumn("dim1", publishedDescriptors.get(1)))
     );
   }
 
@@ -1740,22 +1691,20 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
-    SegmentDescriptor desc1 = sd("2010/P1D", 0);
-    SegmentDescriptor desc2 = sd("2011/P1D", 0);
-    SegmentDescriptor desc3 = sd("2012/P1D", 0);
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3), publishedDescriptors());
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            sdd("2010/P1D", 0, ImmutableList.of("c")),
+            sdd("2011/P1D", 0, ImmutableList.of("d", "e")),
+            sdd("2012/P1D", 0, ImmutableList.of("g"))
+        ),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L, 1, 1L))
         ),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
-
-    // Check segments in deep storage
-    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", publishedDescriptors.get(1)));
-    Assert.assertEquals(ImmutableList.of("g"), readSegmentColumn("dim1", publishedDescriptors.get(2)));
   }
 
   @Test(timeout = 60_000L)
@@ -1841,18 +1790,17 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
-    SegmentDescriptor desc1 = sd("2010/P1D", 0);
-    SegmentDescriptor desc2 = sd("2011/P1D", 0);
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            sdd("2010/P1D", 0, ImmutableList.of("c")),
+            sdd("2011/P1D", 0, ImmutableList.of("d", "e"))
+        ),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 6L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
-
-    // Check segments in deep storage
-    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", publishedDescriptors.get(1)));
   }
 
   @Test(timeout = 60_000L)
@@ -1951,14 +1899,18 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
-    SegmentDescriptor desc1 = sd("2008/P1D", 0);
-    SegmentDescriptor desc2 = sd("2008/P1D", 1);
-    SegmentDescriptor desc3 = sd("2009/P1D", 0);
-    SegmentDescriptor desc4 = sd("2009/P1D", 1);
-    SegmentDescriptor desc5 = sd("2010/P1D", 0);
-    SegmentDescriptor desc6 = sd("2011/P1D", 0);
-    SegmentDescriptor desc7 = sd("2012/P1D", 0);
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            sdd("2008/P1D", 0),
+            sdd("2008/P1D", 1),
+            sdd("2009/P1D", 0),
+            sdd("2009/P1D", 1),
+            sdd("2010/P1D", 0),
+            sdd("2011/P1D", 0),
+            sdd("2012/P1D", 0)
+        ),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 10L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
@@ -2040,19 +1992,18 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
-    // Check published metadata
-    SegmentDescriptor desc1 = sd("2010/P1D", 0);
-    SegmentDescriptor desc2 = sd("2011/P1D", 0);
-    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors);
+    // Check published metadata and segments in deep storage
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            sdd("2010/P1D", 0, ImmutableList.of("c")),
+            sdd("2011/P1D", 0, ImmutableList.of("d", "e"))
+        ),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 6L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
-
-    // Check segments in deep storage
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", publishedDescriptors.get(1)));
   }
 
   @Test(timeout = 60_000L)
@@ -2164,19 +2115,18 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
-    // Check published metadata
-    SegmentDescriptor desc1 = sd("2010/P1D", 0);
-    SegmentDescriptor desc2 = sd("2011/P1D", 0);
-    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors);
+    // Check published metadata and segments in deep storage
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            sdd("2010/P1D", 0, ImmutableList.of("c")),
+            sdd("2011/P1D", 0, ImmutableList.of("d", "e"))
+        ),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
-
-    // Check segments in deep storage
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", publishedDescriptors.get(1)));
   }
 
   @Test(timeout = 60_000L)
@@ -2306,23 +2256,20 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getThrownAway());
 
-    // Check published metadata
-    SegmentDescriptor desc1 = sd("2008/P1D", 0);
-    SegmentDescriptor desc2 = sd("2009/P1D", 0);
-    SegmentDescriptor desc3 = sd("2013/P1D", 0);
-    SegmentDescriptor desc4 = sd("2049/P1D", 0);
-    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4), publishedDescriptors);
+    // Check published metadata and segments in deep storage
+    assertEqualsExceptVersion(
+        ImmutableList.of(
+            sdd("2008/P1D", 0, ImmutableList.of("a")),
+            sdd("2009/P1D", 0, ImmutableList.of("b")),
+            sdd("2013/P1D", 0, ImmutableList.of("f")),
+            sdd("2049/P1D", 0, ImmutableList.of("f"))
+        ),
+        publishedDescriptors()
+    );
     Assert.assertEquals(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 13L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
-
-    // Check segments in deep storage
-    Assert.assertEquals(ImmutableList.of("a"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(ImmutableList.of("b"), readSegmentColumn("dim1", publishedDescriptors.get(1)));
-    Assert.assertEquals(ImmutableList.of("f"), readSegmentColumn("dim1", publishedDescriptors.get(2)));
-    Assert.assertEquals(ImmutableList.of("f"), readSegmentColumn("dim1", publishedDescriptors.get(3)));
   }
 
   @Test(timeout = 60_000L)
@@ -2845,9 +2792,12 @@ public class KafkaIndexTaskTest
     return new SegmentDescriptor(interval, "fakeVersion", partitionNum);
   }
 
-  private void assertEqualsExceptVersion(List<SegmentDescriptor> descriptors1, List<SegmentDescriptor> descriptors2)
+  private void assertEqualsExceptVersion(
+      List<SegmentDescriptorAndExpectedDim1Values> expectedDescriptors,
+      List<SegmentDescriptor> actualDescriptors
+  ) throws IOException
   {
-    Assert.assertEquals(descriptors1.size(), descriptors2.size());
+    Assert.assertEquals(expectedDescriptors.size(), actualDescriptors.size());
     final Comparator<SegmentDescriptor> comparator = (s1, s2) -> {
       final int intervalCompare = Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval());
       if (intervalCompare == 0) {
@@ -2857,14 +2807,27 @@ public class KafkaIndexTaskTest
       }
     };
 
-    final List<SegmentDescriptor> copy1 = new ArrayList<>(descriptors1);
-    final List<SegmentDescriptor> copy2 = new ArrayList<>(descriptors2);
-    copy1.sort(comparator);
-    copy2.sort(comparator);
+    final List<SegmentDescriptorAndExpectedDim1Values> expectedDescsCopy = new ArrayList<>(expectedDescriptors);
+    final List<SegmentDescriptor> actualDescsCopy = new ArrayList<>(actualDescriptors);
+    expectedDescsCopy.sort(
+        Comparator.comparing(SegmentDescriptorAndExpectedDim1Values::getSegmentDescriptor, comparator)
+    );
+    actualDescsCopy.sort(comparator);
 
-    for (int i = 0; i < copy1.size(); i++) {
-      Assert.assertEquals(copy1.get(i).getInterval(), copy2.get(i).getInterval());
-      Assert.assertEquals(copy1.get(i).getPartitionNumber(), copy2.get(i).getPartitionNumber());
+    for (int i = 0; i < expectedDescsCopy.size(); i++) {
+      SegmentDescriptorAndExpectedDim1Values expectedDesc = expectedDescsCopy.get(i);
+      SegmentDescriptor actualDesc = actualDescsCopy.get(i);
+      Assert.assertEquals(
+          expectedDesc.segmentDescriptor.getInterval(),
+          actualDesc.getInterval());
+      Assert.assertEquals(
+          expectedDesc.segmentDescriptor.getPartitionNumber(),
+          actualDesc.getPartitionNumber()
+      );
+      if (expectedDesc.expectedDim1Values.isEmpty()) {
+        continue; // Treating empty expectedDim1Values as a signal that checking the dim1 column value is not needed.
+      }
+      Assertions.assertThat(readSegmentColumn("dim1", actualDesc)).isIn(expectedDesc.expectedDim1Values);
     }
   }
 
@@ -2879,5 +2842,30 @@ public class KafkaIndexTaskTest
     return IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
         taskReports
     );
+  }
+
+  /** "sdd" stands for "Segment Descriptor and expected Dim1 values" */
+  private SegmentDescriptorAndExpectedDim1Values sdd(
+      String interval, int partitionNum, List<String>... expectedDim1Values
+  )
+  {
+    return new SegmentDescriptorAndExpectedDim1Values(interval, partitionNum, expectedDim1Values);
+  }
+
+  private class SegmentDescriptorAndExpectedDim1Values
+  {
+    final SegmentDescriptor segmentDescriptor;
+    final Set<List<String>> expectedDim1Values;
+
+    SegmentDescriptorAndExpectedDim1Values(String interval, int partitionNum, List<String>... expectedDim1Values)
+    {
+      segmentDescriptor = sd(interval, partitionNum);
+      this.expectedDim1Values = ImmutableSet.copyOf(Arrays.asList(expectedDim1Values));
+    }
+
+    public SegmentDescriptor getSegmentDescriptor()
+    {
+      return segmentDescriptor;
+    }
   }
 }

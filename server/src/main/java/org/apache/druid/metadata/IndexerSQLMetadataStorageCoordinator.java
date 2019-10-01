@@ -70,6 +70,7 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -116,7 +117,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<DataSegment> getUsedSegmentsForIntervals(
+  public Collection<DataSegment> getUsedSegmentsForIntervals(
       final String dataSource,
       final List<Interval> intervals,
       Segments visibility
@@ -131,11 +132,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           );
 
           if (visibility == Segments.ONLY_VISIBLE) {
-            return new ArrayList<>(
-                timeline.findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE)
-            );
+            return timeline.findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
           } else {
-            return new ArrayList<>(timeline.iterateAllObjects());
+            return timeline.iterateAllObjects();
           }
         }
     );
