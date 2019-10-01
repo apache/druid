@@ -31,6 +31,7 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped;
  */
 public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOvershadowedStatus>
 {
+  private final boolean overshadowed;
   /**
    * dataSegment is serialized "unwrapped", i.e. it's properties are included as properties of
    * enclosing class. If in future, if {@Code SegmentWithOvershadowedStatus} were to extend {@link DataSegment},
@@ -38,8 +39,6 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
    */
   @JsonUnwrapped
   private final DataSegment dataSegment;
-
-  private final boolean overshadowed;
 
   public SegmentWithOvershadowedStatus(
           DataSegment dataSegment,
