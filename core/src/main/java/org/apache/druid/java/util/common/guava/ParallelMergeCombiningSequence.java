@@ -422,7 +422,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         int counter = 0;
         int batchCounter = 0;
         OrderedResultBatch<T> outputBatch = new OrderedResultBatch<>(batchSize);
-        OrderedResultBatch<T> errorBatch = null;
 
         T currentCombinedValue = initialValue;
         while (counter++ < yieldAfter && !pQueue.isEmpty()) {
@@ -492,12 +491,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               depth + 1,
               cancellationGizmo
           ));
-        } else if (cancellationGizmo.isCancelled() || errorBatch != null) {
-          if (errorBatch == null) {
-            outputQueue.offer(new OrderedResultBatch<>());
-          } else {
-            outputQueue.offer(errorBatch);
-          }
+        } else if (cancellationGizmo.isCancelled()) {
+          outputQueue.offer(new OrderedResultBatch<>());
         } else {
           // if priority queue is empty, push the final accumulated value
           outputBatch.add(currentCombinedValue);
