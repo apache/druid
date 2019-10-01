@@ -22,8 +22,10 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
+
 
 public abstract class SeekableStreamSupervisorIOConfig
 {
@@ -37,6 +39,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   private final Duration completionTimeout;
   private final Optional<Duration> lateMessageRejectionPeriod;
   private final Optional<Duration> earlyMessageRejectionPeriod;
+  private final Optional<DateTime> lateMessageRejectionStartDate;
 
   public SeekableStreamSupervisorIOConfig(
       String stream,
@@ -48,7 +51,8 @@ public abstract class SeekableStreamSupervisorIOConfig
       Boolean useEarliestSequenceNumber,
       Period completionTimeout,
       Period lateMessageRejectionPeriod,
-      Period earlyMessageRejectionPeriod
+      Period earlyMessageRejectionPeriod,
+      DateTime lateMessageRejectionStartDate
   )
   {
     this.stream = Preconditions.checkNotNull(stream, "stream cannot be null");
@@ -62,6 +66,9 @@ public abstract class SeekableStreamSupervisorIOConfig
     this.lateMessageRejectionPeriod = lateMessageRejectionPeriod == null
                                       ? Optional.absent()
                                       : Optional.of(lateMessageRejectionPeriod.toStandardDuration());
+    this.lateMessageRejectionStartDate = lateMessageRejectionStartDate == null
+                                      ? Optional.absent()
+                                      : Optional.of(lateMessageRejectionStartDate);
     this.earlyMessageRejectionPeriod = earlyMessageRejectionPeriod == null
                                        ? Optional.absent()
                                        : Optional.of(earlyMessageRejectionPeriod.toStandardDuration());
@@ -130,5 +137,11 @@ public abstract class SeekableStreamSupervisorIOConfig
   public Optional<Duration> getLateMessageRejectionPeriod()
   {
     return lateMessageRejectionPeriod;
+  }
+
+  @JsonProperty
+  public Optional<DateTime> getLateMessageRejectionStartDate()
+  {
+    return lateMessageRejectionStartDate;
   }
 }
