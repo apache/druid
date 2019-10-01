@@ -778,8 +778,8 @@ The supervisors table provides information about supervisors.
 |Column|Type|Notes|
 |------|-----|-----|
 |supervisor_id|STRING|Supervisor task identifier|
-|state|STRING|Basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../../development/kafka-ingestion.html#operations) for details.||
-|detailed_state|STRING|Supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../../development/kafka-ingestion.html) or [Kinesis](../../development/kinesis-ingestion.html))|
+|state|STRING|Basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../../development/extensions-core/kafka-ingestion.html#operations) for details.|
+|detailed_state|STRING|Supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../../development/kafka-ingestion.html) or [Kinesis](../../development/extensions-core/kinesis-ingestion.html))|
 |healthy|LONG|Boolean represented as long type where 1 = true, 0 = false. 1 indicates a healthy supervisor|
 |type|STRING|Type of supervisor, e.g. `kafka`, `kinesis` or `materialized_view`|
 |source|STRING|Source of the supervisor, e.g. Kafka topic or Kinesis stream|
