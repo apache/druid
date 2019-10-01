@@ -115,8 +115,7 @@ public interface MetadataSegmentManager
 
   /**
    * Retrieves all data source names for which there are segment in the database, regardless of whether those segments
-   * are used or not. Data source names in the returned collection are unique. If there are no segments in the database,
-   * returns an empty collection.
+   * are used or not. If there are no segments in the database, returns an empty set.
    *
    * Performance warning: this method makes a query into the database.
    *
@@ -125,7 +124,7 @@ public interface MetadataSegmentManager
    * are no used segments belonging to it, while {@link #getImmutableDataSourcesWithAllUsedSegments} won't return
    * such a data source.
    */
-  Collection<String> retrieveAllDataSourceNames();
+  Set<String> retrieveAllDataSourceNames();
 
   /**
    * Returns top N unused segment intervals with the end time no later than the specified maxEndTime when ordered by

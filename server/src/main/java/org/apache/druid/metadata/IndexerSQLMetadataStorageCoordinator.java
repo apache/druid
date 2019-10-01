@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -61,14 +62,12 @@ import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
-import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 import org.skife.jdbi.v2.util.StringMapper;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -125,16 +124,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     return connector.retryWithHandle(
         handle -> {
-          final VersionedIntervalTimeline<String, DataSegment> timeline = getTimelineForIntervalsWithHandle(
-              handle,
-              dataSource,
-              intervals
-          );
-
           if (visibility == Segments.ONLY_VISIBLE) {
+            final VersionedIntervalTimeline<String, DataSegment> timeline =
+                getTimelineForIntervalsWithHandle(handle, dataSource, intervals);
             return timeline.findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
           } else {
-            return timeline.iterateAllObjects();
+            return getAllUsedSegmentsForIntervalsWithHandle(handle, dataSource, intervals);
           }
         }
     );
@@ -181,6 +176,32 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final List<Interval> intervals
   )
   {
+    Query<Map<String, Object>> sql = createUsedSegmentsSqlQueryForIntervals(handle, dataSource, intervals);
+
+    try (final ResultIterator<byte[]> dbSegments = sql.map(ByteArrayMapper.FIRST).iterator()) {
+      return VersionedIntervalTimeline.forSegments(
+          Iterators.transform(dbSegments, payload -> JacksonUtils.readValue(jsonMapper, payload, DataSegment.class))
+      );
+    }
+  }
+
+  private Collection<DataSegment> getAllUsedSegmentsForIntervalsWithHandle(
+      final Handle handle,
+      final String dataSource,
+      final List<Interval> intervals
+  )
+  {
+    return createUsedSegmentsSqlQueryForIntervals(handle, dataSource, intervals)
+        .map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes("payload"), DataSegment.class))
+        .list();
+  }
+
+  private Query<Map<String, Object>> createUsedSegmentsSqlQueryForIntervals(
+      Handle handle,
+      String dataSource,
+      List<Interval> intervals
+  )
+  {
     if (intervals == null || intervals.isEmpty()) {
       throw new IAE("null/empty intervals");
     }
@@ -211,22 +232,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           .bind(2 * i + 1, interval.getEnd().toString())
           .bind(2 * i + 2, interval.getStart().toString());
     }
-
-    try (final ResultIterator<byte[]> dbSegments = sql.map(ByteArrayMapper.FIRST).iterator()) {
-      return VersionedIntervalTimeline.forSegments(
-          Iterators.transform(
-              dbSegments,
-              payload -> {
-                try {
-                  return jsonMapper.readValue(payload, DataSegment.class);
-                }
-                catch (IOException e) {
-                  throw new RuntimeException(e);
-                }
-              }
-          )
-      );
-    }
+    return sql;
   }
 
   /**
@@ -843,12 +849,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return null;
     }
 
-    try {
-      return jsonMapper.readValue(bytes, DataSourceMetadata.class);
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+    return JacksonUtils.readValue(jsonMapper, bytes, DataSourceMetadata.class);
   }
 
   /**
@@ -1144,13 +1145,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                           StatementContext statementContext
                       )
                       {
-                        try {
-                          accumulator.add(jsonMapper.readValue(payload, DataSegment.class));
-                          return accumulator;
-                        }
-                        catch (Exception e) {
-                          throw new RuntimeException(e);
-                        }
+                        accumulator.add(JacksonUtils.readValue(jsonMapper, payload, DataSegment.class));
+                        return accumulator;
                       }
                     }
                 );
@@ -1163,7 +1159,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<Pair<DataSegment, String>> getUsedSegmentAndCreatedDateForInterval(String dataSource, Interval interval)
+  public Collection<Pair<DataSegment, String>> getUsedSegmentAndCreatedDateForInterval(
+      String dataSource,
+      Interval interval
+  )
   {
     return connector.retryWithHandle(
         handle -> handle.createQuery(
@@ -1176,23 +1175,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                         .bind("dataSource", dataSource)
                         .bind("start", interval.getStart().toString())
                         .bind("end", interval.getEnd().toString())
-                        .map(new ResultSetMapper<Pair<DataSegment, String>>()
-                        {
-                          @Override
-                          public Pair<DataSegment, String> map(int index, ResultSet r, StatementContext ctx)
-                              throws SQLException
-                          {
-                            try {
-                              return new Pair<>(
-                                  jsonMapper.readValue(r.getBytes("payload"), DataSegment.class),
-                                  r.getString("created_date")
-                              );
-                            }
-                            catch (IOException e) {
-                              throw new RuntimeException(e);
-                            }
-                          }
-                        })
+                        .map((int index, ResultSet r, StatementContext ctx) -> new Pair<>(
+                            JacksonUtils.readValue(jsonMapper, r.getBytes("payload"), DataSegment.class),
+                            r.getString("created_date")
+                        ))
                         .list()
     );
   }

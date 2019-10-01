@@ -45,6 +45,10 @@ public interface UsedSegmentsRetriever
    *                   Segments#ONLY_VISIBLE} is passed.
    * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the
    *         requested interval.
+   *
+   * @implNote This method doesn't return a {@link java.util.Set} because it's implemented via {@link
+   * org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator#getUsedSegmentsForIntervals} and which returns
+   * a collection. Producing a {@link java.util.Set} would require an unnecessary copy of segments collection.
    */
   Collection<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> intervals, Segments visibility)
       throws IOException;

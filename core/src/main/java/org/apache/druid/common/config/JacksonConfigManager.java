@@ -27,6 +27,7 @@ import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -115,12 +116,7 @@ public class JacksonConfigManager
           return defaultVal;
         }
 
-        try {
-          return jsonMapper.readValue(bytes, clazz);
-        }
-        catch (IOException e) {
-          throw new RuntimeException(e);
-        }
+        return JacksonUtils.readValue(jsonMapper, bytes, clazz);
       }
     };
   }

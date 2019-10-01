@@ -94,7 +94,7 @@ public class MetadataResource
   {
     final boolean includeUnused = JettyUtils.getQueryParam(uriInfo, "includeUnused", "includeDisabled") != null;
     Collection<ImmutableDruidDataSource> druidDataSources = null;
-    final Set<String> dataSourceNamesPreAuth;
+    final TreeSet<String> dataSourceNamesPreAuth;
     if (includeUnused) {
       dataSourceNamesPreAuth = new TreeSet<>(segmentsMetadata.retrieveAllDataSourceNames());
     } else {
@@ -105,7 +105,7 @@ public class MetadataResource
           .collect(Collectors.toCollection(TreeSet::new));
     }
 
-    final Set<String> dataSourceNamesPostAuth = new TreeSet<>();
+    final TreeSet<String> dataSourceNamesPostAuth = new TreeSet<>();
     Function<String, Iterable<ResourceAction>> raGenerator = datasourceName ->
         Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
 

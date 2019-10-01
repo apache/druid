@@ -51,6 +51,11 @@ public interface IndexerMetadataStorageCoordinator
    *                   Segments#ONLY_VISIBLE} is passed.
    * @return The DataSegments which include data in the requested interval. These segments may contain data outside the
    *         requested interval.
+   *
+   * @implNote This method doesn't return a {@link Set} because there may be an expectation that {@code Set.contains()}
+   * is O(1) operation, while it's not the case for the returned collection unless it copies all segments into a new
+   * {@link java.util.HashSet} or {@link com.google.common.collect.ImmutableSet} which may in turn be unnecessary in
+   * other use cases. So clients should perform such copy themselves if they need {@link Set} semantics.
    */
   default Collection<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval, Segments visibility)
   {
@@ -66,7 +71,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return The DataSegments and the related created_date of segments which include data in the requested interval
    */
-  List<Pair<DataSegment, String>> getUsedSegmentAndCreatedDateForInterval(String dataSource, Interval interval);
+  Collection<Pair<DataSegment, String>> getUsedSegmentAndCreatedDateForInterval(String dataSource, Interval interval);
 
   /**
    * Get all segments which may include any data in the interval and are marked as used.
@@ -82,6 +87,11 @@ public interface IndexerMetadataStorageCoordinator
    *                   Segments#ONLY_VISIBLE} is passed.
    * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the
    *         requested interval.
+   *
+   * @implNote This method doesn't return a {@link Set} because there may be an expectation that {@code Set.contains()}
+   * is O(1) operation, while it's not the case for the returned collection unless it copies all segments into a new
+   * {@link java.util.HashSet} or {@link com.google.common.collect.ImmutableSet} which may in turn be unnecessary in
+   * other use cases. So clients should perform such copy themselves if they need {@link Set} semantics.
    */
   Collection<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> intervals, Segments visibility);
 

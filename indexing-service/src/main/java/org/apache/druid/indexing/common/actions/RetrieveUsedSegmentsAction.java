@@ -42,6 +42,10 @@ import java.util.Objects;
  *
  * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
  * the collection only once.
+ *
+ * @implNote This action doesn't produce a {@link java.util.Set} because it's implemented via {@link
+ * org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator#getUsedSegmentsForIntervals} which returns
+ * a collection. Producing a {@link java.util.Set} would require an unnecessary copy of segments collection.
  */
 public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSegment>>
 {

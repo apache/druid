@@ -453,7 +453,7 @@ public class MaterializedViewSupervisor implements Supervisor
   }
 
   private Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> getMaxCreateDateAndBaseSegments(
-      List<Pair<DataSegment, String>> snapshot
+      Collection<Pair<DataSegment, String>> snapshot
   )
   {
     Interval maxAllowedToBuildInterval = snapshot.parallelStream()
