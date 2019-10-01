@@ -325,6 +325,7 @@ public class DeterminePartitionsJob implements Jobby
 
   public static class DeterminePartitionsGroupByMapper extends HadoopDruidIndexerMapper<BytesWritable, NullWritable>
   {
+    @Nullable
     private Granularity rollupGranularity = null;
 
     @Override
@@ -374,6 +375,7 @@ public class DeterminePartitionsJob implements Jobby
   public static class DeterminePartitionsDimSelectionPostGroupByMapper
       extends Mapper<BytesWritable, NullWritable, BytesWritable, Text>
   {
+    @Nullable
     private DeterminePartitionsDimSelectionMapperHelper helper;
 
     @Override
@@ -537,6 +539,7 @@ public class DeterminePartitionsJob implements Jobby
   private abstract static class DeterminePartitionsDimSelectionBaseReducer
       extends Reducer<BytesWritable, Text, BytesWritable, Text>
   {
+    @Nullable
     protected volatile HadoopDruidIndexerConfig config = null;
 
     @Override
@@ -905,6 +908,7 @@ public class DeterminePartitionsJob implements Jobby
 
   private static class DimPartition
   {
+    @Nullable
     public ShardSpec shardSpec = null;
     int cardinality = 0;
     public long rows = 0;
