@@ -110,7 +110,7 @@ export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusD
               text="View raw"
               disabled={!response}
               minimal
-              onClick={() => window.open(UrlBaser.base(UrlBaser.base(`/status`)), '_blank')}
+              onClick={() => window.open(UrlBaser.base(`/status`), '_blank')}
             />
           </div>
           <div className="closeButton">
