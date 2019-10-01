@@ -571,7 +571,7 @@ public class AggregationTestHelper implements Closeable
     }
   }
 
-  public IncrementalIndex createIncrementalIndex(
+  public static IncrementalIndex createIncrementalIndex(
       Iterator rows,
       InputRowParser parser,
       final AggregatorFactory[] metrics,

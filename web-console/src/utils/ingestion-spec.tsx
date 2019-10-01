@@ -286,11 +286,13 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
   {
     name: 'pattern',
     type: 'string',
+    required: true,
     defined: (p: ParseSpec) => p.format === 'regex',
   },
   {
     name: 'function',
     type: 'string',
+    required: true,
     defined: (p: ParseSpec) => p.format === 'javascript',
   },
   {
@@ -513,11 +515,13 @@ const FLATTEN_FIELD_FORM_FIELDS: Field<FlattenField>[] = [
     name: 'name',
     type: 'string',
     placeholder: 'column_name',
+    required: true,
   },
   {
     name: 'type',
     type: 'string',
     suggestions: ['path', 'jq', 'root'],
+    required: true,
   },
   {
     name: 'expr',
@@ -525,6 +529,7 @@ const FLATTEN_FIELD_FORM_FIELDS: Field<FlattenField>[] = [
     placeholder: '$.thing',
     defined: (flattenField: FlattenField) =>
       flattenField.type === 'path' || flattenField.type === 'jq',
+    required: true,
     info: (
       <>
         Specify a flatten{' '}
@@ -557,16 +562,19 @@ const TRANSFORM_FORM_FIELDS: Field<Transform>[] = [
     name: 'name',
     type: 'string',
     placeholder: 'output_name',
+    required: true,
   },
   {
     name: 'type',
     type: 'string',
     suggestions: ['expression'],
+    required: true,
   },
   {
     name: 'expression',
     type: 'string',
     placeholder: '"foo" + "bar"',
+    required: true,
     info: (
       <>
         A valid Druid{' '}
@@ -787,6 +795,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string-array',
           placeholder:
             'https://example.com/path/to/file1.ext, https://example.com/path/to/file2.ext',
+          required: true,
           info: (
             <p>
               The full URI of your file. To ingest from multiple URIs, use commas to separate each
@@ -818,6 +827,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Base directory',
           type: 'string',
           placeholder: '/path/to/files/',
+          required: true,
           info: (
             <>
               <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html#localfirehose">
@@ -831,7 +841,8 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'firehose.filter',
           label: 'File filter',
           type: 'string',
-          defaultValue: '*.*',
+          required: true,
+          suggestions: ['*', '*.json', '*.json.gz', '*.csv', '*.tsv'],
           info: (
             <>
               <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html#localfirehose">
@@ -856,6 +867,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'firehose.dataSource',
           label: 'Datasource',
           type: 'string',
+          required: true,
           info: <p>The datasource to fetch rows from.</p>,
         },
         {
@@ -868,6 +880,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             `${CURRENT_YEAR}-01-01/${CURRENT_YEAR + 1}-01-01`,
             `${CURRENT_YEAR}/${CURRENT_YEAR + 1}`,
           ],
+          required: true,
           info: (
             <p>
               A String representing ISO-8601 Interval. This defines the time range to fetch the data
@@ -930,6 +943,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'S3 URIs',
           type: 'string-array',
           placeholder: 's3://your-bucket/some-file1.ext, s3://your-bucket/some-file2.ext',
+          required: true,
           defined: ioConfig => !deepGet(ioConfig, 'firehose.prefixes'),
           info: (
             <>
@@ -946,6 +960,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'S3 prefixes',
           type: 'string-array',
           placeholder: 's3://your-bucket/some-path1, s3://your-bucket/some-path2',
+          required: true,
           defined: ioConfig => !deepGet(ioConfig, 'firehose.uris'),
           info: (
             <>
@@ -963,6 +978,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'firehose.blobs',
           label: 'Google blobs',
           type: 'json',
+          required: true,
           info: (
             <>
               <p>
@@ -983,6 +999,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'consumerProperties.{bootstrap.servers}',
           label: 'Bootstrap servers',
           type: 'string',
+          required: true,
           info: (
             <>
               <ExternalLink href="https://druid.apache.org/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig">
@@ -998,6 +1015,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         {
           name: 'topic',
           type: 'string',
+          required: true,
           defined: (i: IoConfig) => i.type === 'kafka',
         },
         {
@@ -1021,6 +1039,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'stream',
           type: 'string',
           placeholder: 'your-kinesis-stream',
+          required: true,
           info: <>The Kinesis stream to read.</>,
         },
         {
@@ -1051,6 +1070,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             'kinesis.us-gov-east-1.amazonaws.com',
             'kinesis.us-gov-west-1.amazonaws.com',
           ],
+          required: true,
           info: (
             <>
               The Amazon Kinesis stream endpoint for a region. You can find a list of endpoints{' '}
@@ -1987,6 +2007,10 @@ export function updateIngestionType(
 
   if (firehoseType) {
     newSpec = deepSet(newSpec, 'ioConfig.firehose', { type: firehoseType });
+
+    if (firehoseType === 'local') {
+      newSpec = deepSet(newSpec, 'ioConfig.firehose.filter', '*');
+    }
   }
 
   if (!deepGet(spec, 'dataSchema.dataSource')) {
@@ -2110,21 +2134,60 @@ const FILTER_FORM_FIELDS: Field<DruidFilter>[] = [
   {
     name: 'type',
     type: 'string',
-    suggestions: ['selector', 'in'],
+    suggestions: ['selector', 'in', 'regex', 'like', 'not'],
   },
   {
     name: 'dimension',
     type: 'string',
+    defined: (df: DruidFilter) => ['selector', 'in', 'regex', 'like'].includes(df.type),
   },
   {
     name: 'value',
     type: 'string',
-    defined: (druidFilter: DruidFilter) => druidFilter.type === 'selector',
+    defined: (df: DruidFilter) => df.type === 'selector',
   },
   {
     name: 'values',
     type: 'string-array',
-    defined: (druidFilter: DruidFilter) => druidFilter.type === 'in',
+    defined: (df: DruidFilter) => df.type === 'in',
+  },
+  {
+    name: 'pattern',
+    type: 'string',
+    defined: (df: DruidFilter) => ['regex', 'like'].includes(df.type),
+  },
+
+  {
+    name: 'field.type',
+    label: 'Sub-filter type',
+    type: 'string',
+    suggestions: ['selector', 'in', 'regex', 'like'],
+    defined: (df: DruidFilter) => df.type === 'not',
+  },
+  {
+    name: 'field.dimension',
+    label: 'Sub-filter dimension',
+    type: 'string',
+    defined: (df: DruidFilter) => df.type === 'not',
+  },
+  {
+    name: 'field.value',
+    label: 'Sub-filter value',
+    type: 'string',
+    defined: (df: DruidFilter) => df.type === 'not' && deepGet(df, 'field.type') === 'selector',
+  },
+  {
+    name: 'field.values',
+    label: 'Sub-filter values',
+    type: 'string-array',
+    defined: (df: DruidFilter) => df.type === 'not' && deepGet(df, 'field.type') === 'in',
+  },
+  {
+    name: 'field.pattern',
+    label: 'Sub-filter pattern',
+    type: 'string',
+    defined: (df: DruidFilter) =>
+      df.type === 'not' && ['regex', 'like'].includes(deepGet(df, 'field.type')),
   },
 ];
 

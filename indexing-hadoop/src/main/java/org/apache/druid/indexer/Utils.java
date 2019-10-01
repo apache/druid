@@ -39,6 +39,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -131,6 +133,7 @@ public class Utils
     JSON_MAPPER.writeValue(makePathAndOutputStream(job, path, true), stats);
   }
 
+  @Nullable
   public static String getFailureMessage(Job failedJob, ObjectMapper jsonMapper)
   {
     try {

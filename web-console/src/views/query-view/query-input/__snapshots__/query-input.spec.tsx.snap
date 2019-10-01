@@ -1,5 +1,24 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`query input correctly formats helper HTML 1`] = `
+"
+<div class=\\"function-doc\\">
+  <div class=\\"function-doc-name\\">
+    <b>COUNT</b>
+  </div>
+  <hr />
+  <div>
+    <b>Syntax:</b>
+  </div>
+  <div>COUNT(*)</div>
+  <br />
+  <div>
+    <b>Description:</b>
+  </div>
+  <div>Counts the number of things</div>
+</div>"
+`;
+
 exports[`query input matches snapshot 1`] = `
 <div
   class="query-input"

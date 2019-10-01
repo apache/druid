@@ -163,7 +163,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
               throw new QueryInterruptedException(e);
             }
             catch (TimeoutException e) {
-              log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
+              log.warn("Query timeout, cancelling pending results for query id [%s]", query.getId());
               futures.cancel(true);
               throw new QueryInterruptedException(e);
             }

@@ -24,7 +24,6 @@ import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import org.apache.druid.client.cache.CacheConfig;
-import org.apache.druid.client.cache.CacheMonitor;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeType;
@@ -49,7 +48,6 @@ import org.apache.druid.server.coordination.ZkCoordinator;
 import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
-import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.eclipse.jetty.server.Server;
 
@@ -100,7 +98,6 @@ public class CliHistorical extends ServerRunnable
 
           JsonConfigProvider.bind(binder, "druid.historical.cache", CacheConfig.class);
           binder.install(new CacheModule());
-          MetricsModule.register(binder, CacheMonitor.class);
 
           bindAnnouncer(
               binder,

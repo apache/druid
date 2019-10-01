@@ -69,7 +69,7 @@ import java.util.TreeMap;
  */
 public class DetermineHashedPartitionsJob implements Jobby
 {
-  private static final Logger LOG = new Logger(DetermineHashedPartitionsJob.class);
+  private static final Logger log = new Logger(DetermineHashedPartitionsJob.class);
   private final HadoopDruidIndexerConfig config;
   private String failureCause;
   private Job groupByJob;
@@ -122,7 +122,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       FileOutputFormat.setOutputPath(groupByJob, config.makeGroupedDataDir());
 
       groupByJob.submit();
-      LOG.info("Job %s submitted, status available at: %s", groupByJob.getJobName(), groupByJob.getTrackingURL());
+      log.info("Job %s submitted, status available at: %s", groupByJob.getJobName(), groupByJob.getTrackingURL());
 
       // Store the jobId in the file
       if (groupByJob.getJobID() != null) {
@@ -131,7 +131,7 @@ public class DetermineHashedPartitionsJob implements Jobby
 
       try {
         if (!groupByJob.waitForCompletion(true)) {
-          LOG.error("Job failed: %s", groupByJob.getJobID());
+          log.error("Job failed: %s", groupByJob.getJobID());
           failureCause = Utils.getFailureMessage(groupByJob, config.JSON_MAPPER);
           return false;
         }
@@ -142,8 +142,11 @@ public class DetermineHashedPartitionsJob implements Jobby
         }
       }
 
-      // Load partitions and intervals determined by the previous job.
-      LOG.info("Job completed, loading up partitions for intervals[%s].", config.getSegmentGranularIntervals());
+      /*
+       * Load partitions and intervals determined by the previous job.
+       */
+
+      log.info("Job completed, loading up partitions for intervals[%s].", config.getSegmentGranularIntervals());
       FileSystem fileSystem = null;
       if (!config.getSegmentGranularIntervals().isPresent()) {
         final Path intervalInfoPath = config.makeIntervalInfoPath();
@@ -163,7 +166,7 @@ public class DetermineHashedPartitionsJob implements Jobby
                 intervals
             )
         );
-        LOG.info("Determined Intervals for Job [%s].", config.getSegmentGranularIntervals());
+        log.info("Determined Intervals for Job [%s].", config.getSegmentGranularIntervals());
       }
       Map<Long, List<HadoopyShardSpec>> shardSpecs = new TreeMap<>(DateTimeComparator.getInstance());
       int shardCount = 0;
@@ -180,11 +183,11 @@ public class DetermineHashedPartitionsJob implements Jobby
               Long.class
           );
 
-          LOG.info("Found approximately [%,d] rows in data.", numRows);
+          log.info("Found approximately [%,d] rows in data.", numRows);
 
           final int numberOfShards = (int) Math.ceil((double) numRows / config.getTargetPartitionSize());
 
-          LOG.info("Creating [%,d] shards", numberOfShards);
+          log.info("Creating [%,d] shards", numberOfShards);
 
           List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(numberOfShards);
           for (int i = 0; i < numberOfShards; ++i) {
@@ -199,18 +202,18 @@ public class DetermineHashedPartitionsJob implements Jobby
                     shardCount++
                 )
             );
-            LOG.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
+            log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
           }
 
           shardSpecs.put(bucket.getMillis(), actualSpecs);
 
         } else {
-          LOG.info("Path[%s] didn't exist!?", partitionInfoPath);
+          log.info("Path[%s] didn't exist!?", partitionInfoPath);
         }
       }
 
       config.setShardSpecs(shardSpecs);
-      LOG.info(
+      log.info(
           "DetermineHashedPartitionsJob took %d millis",
           (System.currentTimeMillis() - startTime)
       );
@@ -242,11 +245,11 @@ public class DetermineHashedPartitionsJob implements Jobby
       return metrics;
     }
     catch (IllegalStateException ise) {
-      LOG.debug("Couldn't get counters due to job state");
+      log.debug("Couldn't get counters due to job state");
       return null;
     }
     catch (Exception e) {
-      LOG.debug(e, "Encountered exception in getStats().");
+      log.debug(e, "Encountered exception in getStats().");
       return null;
     }
   }
@@ -261,8 +264,11 @@ public class DetermineHashedPartitionsJob implements Jobby
   public static class DetermineCardinalityMapper extends HadoopDruidIndexerMapper<LongWritable, BytesWritable>
   {
     private static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
+    @Nullable
     private Granularity rollupGranularity = null;
+    @Nullable
     private Map<Interval, HyperLogLogCollector> hyperLogLogs;
+    @Nullable
     private HadoopDruidIndexerConfig config;
     private boolean determineIntervals;
 
@@ -346,6 +352,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       extends Reducer<LongWritable, BytesWritable, NullWritable, NullWritable>
   {
     private final List<Interval> intervals = new ArrayList<>();
+    @Nullable
     protected HadoopDruidIndexerConfig config = null;
     private boolean determineIntervals;
 
@@ -426,8 +433,10 @@ public class DetermineHashedPartitionsJob implements Jobby
   public static class DetermineHashedPartitionsPartitioner
       extends Partitioner<LongWritable, BytesWritable> implements Configurable
   {
+    @Nullable
     private Configuration config;
     private boolean determineIntervals;
+    @Nullable
     private Map<LongWritable, Integer> reducerLookup;
 
     @Override

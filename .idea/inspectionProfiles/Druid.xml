@@ -317,6 +317,14 @@
         <constraint name="k" within="" contains="" />
         <constraint name="v" within="" contains="" />
       </searchConfiguration>
+      <searchConfiguration name="Prohibit Thread.getState() != TERMINATED antipattern" text="$t$.getState()!=Thread.State.$state$" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="t" within="" contains="" />
+        <constraint name="state" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Prohibit Thread.getState() == TERMINATED antipattern" text="$t$.getState()==Thread.State.$state$" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="t" within="" contains="" />
+        <constraint name="state" within="" contains="" />
+      </searchConfiguration>
       <searchConfiguration name="Use CollectionUtils.mapValues(Map&lt;K,V&gt;, Function&lt;V,V2&gt;)" text="$x$.entrySet().stream().collect(Collectors.toMap($k$ -&gt; $k$.getKey(), $y$))" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="x" within="" contains="" />
         <constraint name="y" within="" contains="" />

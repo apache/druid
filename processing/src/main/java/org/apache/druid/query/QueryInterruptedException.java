@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeoutException;
 
@@ -57,10 +58,10 @@ public class QueryInterruptedException extends RuntimeException
 
   @JsonCreator
   public QueryInterruptedException(
-      @JsonProperty("error") String errorCode,
+      @JsonProperty("error") @Nullable String errorCode,
       @JsonProperty("errorMessage") String errorMessage,
-      @JsonProperty("errorClass") String errorClass,
-      @JsonProperty("host") String host
+      @JsonProperty("errorClass") @Nullable String errorClass,
+      @JsonProperty("host") @Nullable String host
   )
   {
     super(errorMessage);
@@ -88,6 +89,7 @@ public class QueryInterruptedException extends RuntimeException
     this.host = host;
   }
 
+  @Nullable
   @JsonProperty("error")
   public String getErrorCode()
   {
@@ -144,6 +146,7 @@ public class QueryInterruptedException extends RuntimeException
     }
   }
 
+  @Nullable
   private static String getErrorClassFromThrowable(Throwable e)
   {
     if (e instanceof QueryInterruptedException) {
@@ -155,6 +158,7 @@ public class QueryInterruptedException extends RuntimeException
     }
   }
 
+  @Nullable
   private static String getHostFromThrowable(Throwable e)
   {
     if (e instanceof QueryInterruptedException) {

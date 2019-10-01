@@ -76,6 +76,7 @@ Homebrew
 HyperLogLog
 IANA
 IETF
+IP
 IPv4
 IS0
 ISO-8601
@@ -864,6 +865,7 @@ segmentTable
 shardSpec
 single_dim
 targetPartitionSize
+targetRowsPerSegment
 useCombiner
 useExplicitVersion
 useNewAggs
@@ -1547,6 +1549,7 @@ java.class.path
 java.io.tmpdir
 javaOpts
 javaOptsArray
+leastBytesUsed
 loadList
 loadqueuepeon
 loadspec
@@ -1570,6 +1573,7 @@ queryType
 remoteTaskRunnerConfig
 rendezvousHash
 resultsets
+roundRobin
 runtime.properties
 runtime.properties.
 s3
