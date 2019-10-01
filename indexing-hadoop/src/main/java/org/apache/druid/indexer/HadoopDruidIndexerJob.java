@@ -35,9 +35,13 @@ public class HadoopDruidIndexerJob implements Jobby
 {
   private static final Logger log = new Logger(HadoopDruidIndexerJob.class);
   private final HadoopDruidIndexerConfig config;
+  @Nullable
   private final MetadataStorageUpdaterJob metadataStorageUpdaterJob;
+  @Nullable
   private IndexGeneratorJob indexJob;
+  @Nullable
   private volatile List<DataSegment> publishedSegments = null;
+  @Nullable
   private String hadoopJobIdFile;
 
   @Inject

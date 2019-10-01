@@ -17,28 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexer;
+@EverythingIsNonnullByDefault
+package org.apache.druid.indexing;
 
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-
-/**
- * Used by ResetCluster to delete the Hadoop Working Path.
- */
-@SuppressWarnings("unused")
-public class HadoopWorkingDirCleaner
-{
-  private static final Logger log = new Logger(HadoopWorkingDirCleaner.class);
-
-  public static void runTask(String[] args) throws Exception
-  {
-    String workingPath = args[0];
-    log.info("Deleting indexing hadoop working path [%s].", workingPath);
-    Path p = new Path(workingPath);
-    try (FileSystem fs = p.getFileSystem(new Configuration())) {
-      fs.delete(p, true);
-    }
-  }
-}
+import org.apache.druid.annotations.EverythingIsNonnullByDefault;
