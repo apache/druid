@@ -21,12 +21,11 @@ package org.apache.druid.data.input.protobuf;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.github.os72.protobuf.dynamic.DynamicSchema;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.protobuf.ByteString;
+import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.DynamicMessage;
@@ -37,6 +36,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.Parser;
 
@@ -47,7 +47,7 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ProtobufInputRowParser implements ByteBufferInputRowParser
 {
@@ -102,7 +102,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
     }
     String json;
     try {
-      DynamicMessage message = DynamicMessage.parseFrom(descriptor, ByteString.copyFrom(input));
+      DynamicMessage message = DynamicMessage.parseFrom(descriptor, input.array());
       json = JsonFormat.printer().print(message);
     }
     catch (InvalidProtocolBufferException e) {
@@ -127,49 +127,59 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
 
   private Descriptor getDescriptor(String descriptorFilePath)
   {
-    InputStream fin;
-
-    fin = this.getClass().getClassLoader().getResourceAsStream(descriptorFilePath);
+    InputStream fin = this.getClass().getClassLoader().getResourceAsStream(descriptorFilePath);
     if (fin == null) {
-      URL url;
       try {
-        url = new URL(descriptorFilePath);
+        final URL url = new URL(descriptorFilePath);
+        fin = url.openConnection().getInputStream();
       }
       catch (MalformedURLException e) {
         throw new ParseException(e, "Descriptor not found in class path or malformed URL:" + descriptorFilePath);
       }
-      try {
-        fin = url.openConnection().getInputStream();
-      }
       catch (IOException e) {
-        throw new ParseException(e, "Cannot read descriptor file: " + url);
+        throw new ParseException(e, "Cannot read descriptor file: " + descriptorFilePath);
       }
     }
 
-    DynamicSchema dynamicSchema;
+    final DescriptorProtos.FileDescriptorProto schema;
     try {
-      dynamicSchema = DynamicSchema.parseFrom(fin);
-    }
-    catch (Descriptors.DescriptorValidationException e) {
-      throw new ParseException(e, "Invalid descriptor file: " + descriptorFilePath);
+      final DescriptorProtos.FileDescriptorSet set = DescriptorProtos.FileDescriptorSet.parseFrom(fin);
+      schema = set.getFile(0);
     }
     catch (IOException e) {
       throw new ParseException(e, "Cannot read descriptor file: " + descriptorFilePath);
     }
+    finally {
+      CloseQuietly.close(fin);
+    }
 
-    Set<String> messageTypes = dynamicSchema.getMessageTypes();
-    if (messageTypes.size() == 0) {
+    final Descriptors.FileDescriptor fd;
+    try {
+      fd = Descriptors.FileDescriptor.buildFrom(schema, new Descriptors.FileDescriptor[] {});
+    }
+    catch (Descriptors.DescriptorValidationException e) {
+      throw new ParseException(e, "Cannot read descriptor file: " + descriptorFilePath);
+    }
+
+    if (schema.getMessageTypeCount() == 0) {
       throw new ParseException("No message types found in the descriptor: " + descriptorFilePath);
     }
 
-    String messageType = protoMessageType == null ? (String) messageTypes.toArray()[0] : protoMessageType;
-    Descriptor desc = dynamicSchema.getMessageDescriptor(messageType);
+    // Step through the descriptors, and find the correct one
+    Descriptors.Descriptor desc = null;
+    for (Descriptor d : fd.getMessageTypes()) {
+      if (protoMessageType == null || d.getName().equals(protoMessageType) || d.getFullName().equals(protoMessageType)) {
+        desc = d;
+        break;
+      }
+    }
+
     if (desc == null) {
+      String messageTypes = fd.getMessageTypes().stream().map(Descriptor::getName).collect(Collectors.joining(", "));
       throw new ParseException(
           StringUtils.format(
-              "Protobuf message type %s not found in the specified descriptor.  Available messages types are %s",
-              protoMessageType,
-              messageTypes
+              "Protobuf message type %s not found in the specified descriptor. Available: %s",
+              protoMessageType, messageTypes
           )
       );
     }

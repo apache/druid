@@ -156,7 +156,6 @@ public class ProtobufInputRowParserTest
     event.writeTo(out);
 
     InputRow row = parser.parseBatch(ByteBuffer.wrap(out.toByteArray())).get(0);
-    System.out.println(row);
 
     Assert.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
 
