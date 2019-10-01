@@ -56,10 +56,10 @@ public class QueryContexts
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
   public static final long NO_TIMEOUT = 0;
-  public static final boolean DEFAULT_ENABLE_PARALLEL_MERGE = false;
+  public static final boolean DEFAULT_ENABLE_PARALLEL_MERGE = true;
   public static final int DEFAULT_PARALLEL_MERGE_INITIAL_YIELD_ROWS = 1024;
   public static final int DEFAULT_PARALLEL_MERGE_SMALL_BATCH_ROWS = 128;
-  public static final int DEFAULT_PARALLEL_MERGE_PARALLELISM = 3;
+  public static final int DEFAULT_PARALLEL_MERGE_PARALLELISM = Integer.MAX_VALUE;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize

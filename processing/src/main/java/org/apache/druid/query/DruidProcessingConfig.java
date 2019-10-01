@@ -146,6 +146,12 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     return System.getProperty("java.io.tmpdir");
   }
 
+  @Config(value = "${base_path}.useParallelMergePool")
+  public boolean useParallelMergePool()
+  {
+    return true;
+  }
+
   @Config(value = "${base_path}.numMergePoolThreads")
   public int getNumThreadsMergePoolConfigured()
   {

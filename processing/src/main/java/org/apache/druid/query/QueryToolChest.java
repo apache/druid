@@ -113,9 +113,10 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * function is used in the default {@link ResultMergeQueryRunner} provided by
    * {@link QueryToolChest#mergeResults(QueryRunner)} and can be used in additional future merge implementations
    */
+  @Nullable
   public BinaryOperator<ResultType> createMergeFn(Query<ResultType> query)
   {
-    throw new UOE("%s doesn't provide a merge function", query.getClass().getName());
+    return null;
   }
 
   /**

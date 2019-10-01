@@ -239,6 +239,12 @@ public class CachingClusteredClientBenchmark
       {
         return numProcessingThreads;
       }
+
+      @Override
+      public boolean useParallelMergePool()
+      {
+        return true;
+      }
     };
 
     conglomerate = new DefaultQueryRunnerFactoryConglomerate(
@@ -319,6 +325,7 @@ public class CachingClusteredClientBenchmark
         new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), 0),
         new CacheConfig(),
         new DruidHttpClientConfig(),
+        processingConfig,
         forkJoinPool
     );
   }

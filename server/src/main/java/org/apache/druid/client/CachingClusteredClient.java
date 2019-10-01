@@ -52,6 +52,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.CacheStrategy;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
@@ -90,6 +91,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ForkJoinPool;
+import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
@@ -105,6 +107,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final CachePopulator cachePopulator;
   private final CacheConfig cacheConfig;
   private final DruidHttpClientConfig httpClientConfig;
+  private final DruidProcessingConfig processingConfig;
   private final ForkJoinPool pool;
 
   @Inject
@@ -116,6 +119,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       CachePopulator cachePopulator,
       CacheConfig cacheConfig,
       @Client DruidHttpClientConfig httpClientConfig,
+      DruidProcessingConfig processingConfig,
       @Merging ForkJoinPool pool
   )
   {
@@ -126,6 +130,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.cachePopulator = cachePopulator;
     this.cacheConfig = cacheConfig;
     this.httpClientConfig = httpClientConfig;
+    this.processingConfig = processingConfig;
     this.pool = pool;
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
@@ -298,15 +303,15 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
     private Sequence<T> merge(List<Sequence<T>> sequencesByInterval)
     {
-      if (QueryContexts.getEnableParallelMerges(query)) {
+      BinaryOperator<T> mergeFn = toolChest.createMergeFn(query);
+      if (processingConfig.useParallelMergePool() && QueryContexts.getEnableParallelMerges(query) && mergeFn != null) {
         final int yieldAfter = QueryContexts.getParallelMergeInitialYieldRows(query);
         final int batchSize = QueryContexts.getParallelMergeSmallBatchRows(query);
         return new ParallelMergeCombiningSequence<>(
             pool,
             sequencesByInterval,
             query.getResultOrdering(),
-            toolChest.createMergeFn(query),
-            8 * (yieldAfter / batchSize),
+            mergeFn,
             QueryContexts.hasTimeout(query),
             QueryContexts.getTimeout(query),
             QueryContexts.getPriority(query),
