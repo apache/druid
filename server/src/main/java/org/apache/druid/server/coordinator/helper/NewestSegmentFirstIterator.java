@@ -44,7 +44,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.PriorityQueue;
 import java.util.stream.Collectors;
@@ -79,9 +78,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     this.dataSources = dataSources;
     this.timelineIterators = new HashMap<>(dataSources.size());
 
-    for (Entry<String, VersionedIntervalTimeline<String, DataSegment>> entry : dataSources.entrySet()) {
-      final String dataSource = entry.getKey();
-      final VersionedIntervalTimeline<String, DataSegment> timeline = entry.getValue();
+    dataSources.forEach((String dataSource, VersionedIntervalTimeline<String, DataSegment> timeline) -> {
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSource);
 
       if (config != null && !timeline.isEmpty()) {
@@ -91,18 +88,14 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals));
         }
       }
-    }
+    });
 
-    for (Entry<String, DataSourceCompactionConfig> entry : compactionConfigs.entrySet()) {
-      final String dataSourceName = entry.getKey();
-      final DataSourceCompactionConfig config = entry.getValue();
-
+    compactionConfigs.forEach((String dataSourceName, DataSourceCompactionConfig config) -> {
       if (config == null) {
         throw new ISE("Unknown dataSource[%s]", dataSourceName);
       }
-
       updateQueue(dataSourceName, config);
-    }
+    });
   }
 
   @Override
@@ -350,19 +343,29 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     final List<Interval> searchIntervals = new ArrayList<>();
 
     for (Interval lookupInterval : filteredInterval) {
-      final List<DataSegment> segments = new ArrayList<>(
-          timeline.findNonOvershadowedObjectsInInterval(lookupInterval, Partitions.ONLY_COMPLETE)
-      );
-      segments.sort(Comparator.comparing(DataSegment::getInterval, Comparators.intervalsByStartThenEnd()));
+      final List<DataSegment> segments = timeline
+          .findNonOvershadowedObjectsInInterval(lookupInterval, Partitions.ONLY_COMPLETE)
+          .stream()
+          // findNonOvershadowedObjectsInInterval() may return segments merely intersecting with lookupInterval, while
+          // we are interested only in segments fully lying within lookupInterval here.
+          .filter(segment -> lookupInterval.contains(segment.getInterval()))
+          .collect(Collectors.toList());
 
-      if (!segments.isEmpty()) {
-        searchIntervals.add(
-            new Interval(
-                segments.get(0).getInterval().getStart(),
-                segments.get(segments.size() - 1).getInterval().getEnd()
-            )
-        );
+      if (segments.isEmpty()) {
+        continue;
       }
+
+      DateTime searchStart = segments
+          .stream()
+          .map(segment -> segment.getId().getIntervalStart())
+          .min(Comparator.naturalOrder())
+          .orElseThrow(AssertionError::new);
+      DateTime searchEnd = segments
+          .stream()
+          .map(segment -> segment.getId().getIntervalEnd())
+          .max(Comparator.naturalOrder())
+          .orElseThrow(AssertionError::new);
+      searchIntervals.add(new Interval(searchStart, searchEnd));
     }
 
     return searchIntervals;

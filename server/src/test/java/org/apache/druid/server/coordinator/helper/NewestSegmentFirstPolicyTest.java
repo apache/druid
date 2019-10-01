@@ -627,18 +627,17 @@ public class NewestSegmentFirstPolicyTest
     final String version = DateTimes.nowUtc().toString();
 
     final List<SegmentGenerateSpec> orderedSpecs = Arrays.asList(specs);
-    orderedSpecs.sort((s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.totalInterval, s2.totalInterval));
-    Collections.reverse(orderedSpecs);
+    orderedSpecs.sort(Comparator.comparing(s -> s.totalInterval, Comparators.intervalsByStartThenEnd().reversed()));
 
     for (SegmentGenerateSpec spec : orderedSpecs) {
-      Interval remaininInterval = spec.totalInterval;
+      Interval remainingInterval = spec.totalInterval;
 
-      while (!Intervals.isEmpty(remaininInterval)) {
+      while (!Intervals.isEmpty(remainingInterval)) {
         final Interval segmentInterval;
-        if (remaininInterval.toDuration().isLongerThan(spec.segmentPeriod.toStandardDuration())) {
-          segmentInterval = new Interval(spec.segmentPeriod, remaininInterval.getEnd());
+        if (remainingInterval.toDuration().isLongerThan(spec.segmentPeriod.toStandardDuration())) {
+          segmentInterval = new Interval(spec.segmentPeriod, remainingInterval.getEnd());
         } else {
-          segmentInterval = remaininInterval;
+          segmentInterval = remainingInterval;
         }
 
         for (int i = 0; i < spec.numSegmentsPerShard; i++) {
@@ -657,7 +656,7 @@ public class NewestSegmentFirstPolicyTest
           segments.add(segment);
         }
 
-        remaininInterval = SegmentCompactorUtil.removeIntervalFromEnd(remaininInterval, segmentInterval);
+        remainingInterval = SegmentCompactorUtil.removeIntervalFromEnd(remainingInterval, segmentInterval);
       }
     }
 
