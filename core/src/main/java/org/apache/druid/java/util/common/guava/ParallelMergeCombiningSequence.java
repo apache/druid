@@ -473,6 +473,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           if (!outputBatch.isDrained()) {
             outputQueue.offer(outputBatch);
           }
+
+          // measure the time it took to process 'yieldAfter' elements in order to project a next 'yieldAfter' value
+          // which we want to target a 10ms task run time. smooth this value with a cumulative moving average in order
+          // to prevent normal jitter in processing time from skewing the next yield value too far in any direction
           final long elapsedMillis = Math.max(
               TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS),
               1L
@@ -480,6 +484,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           final double nextYieldAfter = Math.max(10.0 * ((double) yieldAfter / elapsedMillis), 1.0);
           final double cumulativeMovingAverage = (nextYieldAfter + (depth * yieldAfter)) / (depth + 1);
           final int adjustedNextYieldAfter = (int) Math.ceil(cumulativeMovingAverage);
+
           getPool().execute(new MergeCombineAction<>(
               pQueue,
               outputQueue,
@@ -492,9 +497,11 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               cancellationGizmo
           ));
         } else if (cancellationGizmo.isCancelled()) {
+          // if we got the cancellation signal, go ahead and write terminal value into output queue to help gracefully
+          // allow downstream stuff to stop
           outputQueue.offer(new OrderedResultBatch<>());
         } else {
-          // if priority queue is empty, push the final accumulated value
+          // if priority queue is empty, push the final accumulated value into the output batch and push it out
           outputBatch.add(currentCombinedValue);
           outputQueue.offer(outputBatch);
           // ... and the terminal value to indicate the blocking queue holding the values is complete
