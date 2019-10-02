@@ -201,11 +201,12 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           @Override
           public void cleanup(Iterator<T> iterFromMake)
           {
-            // todo: do ... something?
+            // nothing to cleanup
           }
         }
     );
   }
+
 
   /**
    * This {@link RecursiveAction} is the initial task of the parallel merge-combine process. Capacity and input sequence
@@ -319,9 +320,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       List<? extends List<Sequence<T>>> partitions =
           Lists.partition(sequences, sequences.size() / parallelMergeTasks);
 
-
       for (List<Sequence<T>> partition : partitions) {
-
         BlockingQueue<ResultBatch<T>> outputQueue = new ArrayBlockingQueue<>(queueSize);
         intermediaryOutputs.add(outputQueue);
         QueuePusher<ResultBatch<T>> pusher = new QueuePusher<>(outputQueue, hasTimeout, timeoutAt);
@@ -476,7 +475,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
             }
 
             // else, push accumulated value to the queue, accumulate again with next value as initial
-
             outputBatch.add(currentCombinedValue);
             batchCounter++;
             if (batchCounter >= batchSize) {
@@ -539,6 +537,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       }
     }
   }
+
 
   /**
    * This {@link RecursiveAction}, given a set of uninitialized {@link BatchedResultsCursor}, will initialize each of
@@ -671,7 +670,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       this.item = item;
     }
 
-
     public void offer(E item)
     {
       try {
@@ -726,12 +724,12 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       return values.poll();
     }
 
-    public boolean isDrained()
+    boolean isDrained()
     {
       return !isTerminal && values.isEmpty();
     }
 
-    public boolean isTerminalResult()
+    boolean isTerminalResult()
     {
       return isTerminal;
     }
@@ -761,6 +759,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     }
   }
 
+
   /**
    * {@link ForkJoinPool} friendly conversion of {@link Sequence} to {@link Yielder< ResultBatch >}
    */
@@ -770,13 +769,13 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     private final int batchSize;
     private volatile Yielder<ResultBatch<E>> batchYielder;
 
-    public SequenceBatcher(Sequence<E> sequence, int batchSize)
+    SequenceBatcher(Sequence<E> sequence, int batchSize)
     {
       this.sequence = sequence;
       this.batchSize = batchSize;
     }
 
-    public Yielder<ResultBatch<E>> getBatchYielder()
+    Yielder<ResultBatch<E>> getBatchYielder()
     {
       try {
         ForkJoinPool.managedBlock(this);
@@ -786,6 +785,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         throw new RuntimeException("Failed to load initial batch of results", e);
       }
     }
+
     @Override
     public boolean block()
     {
@@ -799,6 +799,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       return batchYielder != null;
     }
   }
+
 
   /**
    * Provides a higher level cursor interface to provide individual results out {@link ResultBatch} provided by
@@ -821,7 +822,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
     public abstract void advance();
 
-    public void nextBatch()
+    public abstract boolean isDone();
+
+    void nextBatch()
     {
       try {
         ForkJoinPool.managedBlock(this);
@@ -831,7 +834,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       }
     }
 
-    public abstract boolean isDone();
 
     public void close()
     {
@@ -852,7 +854,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     @Override
     public boolean equals(Object o)
     {
-      if (!(o instanceof ParallelMergeCombiningSequence.BatchedResultsCursor)) {
+      if (!(o instanceof BatchedResultsCursor)) {
         return false;
       }
       return compareTo((BatchedResultsCursor) o) == 0;
@@ -864,6 +866,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       return Objects.hash(ordering);
     }
   }
+
 
   /**
    * {@link BatchedResultsCursor} that wraps a {@link Yielder} of {@link ResultBatch} to provide individual rows
@@ -936,6 +939,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       }
     }
   }
+
 
   /**
    * {@link BatchedResultsCursor} that wraps a {@link BlockingQueue} of {@link ResultBatch} to provide individual
