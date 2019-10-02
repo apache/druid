@@ -19,45 +19,51 @@
 
 package org.apache.druid.emitter.prometheus;
 
-import java.util.Map;
-
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.core.Emitter;
-import org.apache.druid.java.util.emitter.core.Event;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.core.Emitter;
+import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import java.util.Map;
 
 /**
+ *
  */
-public class PrometheusEmitter implements Emitter {
+public class PrometheusEmitter implements Emitter
+{
 
   private static final Logger log = new Logger(PrometheusEmitter.class);
   private final Metrics metrics;
 
-  static PrometheusEmitter of(PrometheusEmitterConfig config) {
+  static PrometheusEmitter of(PrometheusEmitterConfig config)
+  {
     return new PrometheusEmitter(config);
   }
 
-  public PrometheusEmitter(PrometheusEmitterConfig config) {
+  public PrometheusEmitter(PrometheusEmitterConfig config)
+  {
     metrics = new Metrics(config.getNamespace());
   }
 
 
   @Override
-  public void start() {
+  public void start()
+  {
   }
 
   @Override
-  public void emit(Event event) {
+  public void emit(Event event)
+  {
     if (event instanceof ServiceMetricEvent) {
       emitMetric((ServiceMetricEvent) event);
     }
   }
 
-  void emitMetric(ServiceMetricEvent metricEvent) {
+  void emitMetric(ServiceMetricEvent metricEvent)
+  {
     String host = metricEvent.getHost();
     String service = metricEvent.getService();
     String metric = metricEvent.getMetric();
@@ -86,10 +92,12 @@ public class PrometheusEmitter implements Emitter {
   }
 
   @Override
-  public void flush() {
+  public void flush()
+  {
   }
 
   @Override
-  public void close() {
+  public void close()
+  {
   }
 }

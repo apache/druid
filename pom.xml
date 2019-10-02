@@ -184,6 +184,7 @@
         <module>extensions-contrib/moving-average-query</module>
         <module>extensions-contrib/tdigestsketch</module>
         <module>extensions-contrib/influxdb-emitter</module>
+        <module>extensions-contrib/prometheus-emitter</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
