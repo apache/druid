@@ -259,7 +259,7 @@ public class HllSketchAggregatorTest
       List<ExpressionTransform> transforms
   )
   {
-    List<Map<String, String>> transformsObjects = transforms.stream().map( transform ->
+    List<Map<String, String>> transformsObjects = transforms.stream().map(transform ->
         ImmutableMap.of(
             "type", "expression",
             "name", transform.getName(),
