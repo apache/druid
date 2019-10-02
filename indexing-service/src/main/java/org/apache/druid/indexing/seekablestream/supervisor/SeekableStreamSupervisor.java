@@ -2674,7 +2674,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         log.info("Creating new task group [%d] for partitions %s", groupId, partitionGroups.get(groupId).keySet());
         Optional<DateTime> minimumMessageTime;
         if (ioConfig.getLateMessageRejectionStartDate().isPresent()) {
-          minimumMessageTime = ioConfig.getLateMessageRejectionStartDate();
+          minimumMessageTime = Optional.of(ioConfig.getLateMessageRejectionStartDate().get());
         } else {
           minimumMessageTime = (ioConfig.getLateMessageRejectionPeriod().isPresent() ? Optional.of(
                                 DateTimes.nowUtc().minus(ioConfig.getLateMessageRejectionPeriod().get())
