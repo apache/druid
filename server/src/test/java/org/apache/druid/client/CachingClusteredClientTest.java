@@ -1572,16 +1572,13 @@ public class CachingClusteredClientTest
               .bound(TimeBoundaryQuery.MAX_TIME)
               .build(),
         Intervals.of("2011-01-01/2011-01-02"),
-        makeTimeBoundaryResult(DateTimes.of("2011-01-01"), null, DateTimes.of("2011-01-02")),
+        makeTimeBoundaryResult(DateTimes.of("2011-01-02"), null, DateTimes.of("2011-01-02")),
 
         Intervals.of("2011-01-01/2011-01-03"),
-        makeTimeBoundaryResult(DateTimes.of("2011-01-02"), null, DateTimes.of("2011-01-03")),
+        makeTimeBoundaryResult(DateTimes.of("2011-01-03"), null, DateTimes.of("2011-01-03")),
 
         Intervals.of("2011-01-01/2011-01-10"),
-        makeTimeBoundaryResult(DateTimes.of("2011-01-05"), null, DateTimes.of("2011-01-10")),
-
-        Intervals.of("2011-01-01/2011-01-10"),
-        makeTimeBoundaryResult(DateTimes.of("2011-01-05T01"), null, DateTimes.of("2011-01-10"))
+        makeTimeBoundaryResult(DateTimes.of("2011-01-10"), null, DateTimes.of("2011-01-10"))
     );
 
     testQueryCaching(
@@ -1785,19 +1782,19 @@ public class CachingClusteredClientTest
     if (minTime != null && maxTime != null) {
       value = ImmutableMap.of(
           TimeBoundaryQuery.MIN_TIME,
-          minTime.toString(),
+          minTime,
           TimeBoundaryQuery.MAX_TIME,
-          maxTime.toString()
+          maxTime
       );
     } else if (maxTime != null) {
       value = ImmutableMap.of(
           TimeBoundaryQuery.MAX_TIME,
-          maxTime.toString()
+          maxTime
       );
     } else {
       value = ImmutableMap.of(
           TimeBoundaryQuery.MIN_TIME,
-          minTime.toString()
+          minTime
       );
     }
 
@@ -3040,16 +3037,13 @@ public class CachingClusteredClientTest
               .bound(TimeBoundaryQuery.MAX_TIME)
               .build(),
         Intervals.of("1970-01-01/2011-01-02"),
-        makeTimeBoundaryResult(DateTimes.of("1970-01-01"), null, DateTimes.of("1970-01-02")),
+        makeTimeBoundaryResult(DateTimes.of("1970-01-02"), null, DateTimes.of("1970-01-02")),
 
         Intervals.of("1970-01-01/2011-01-03"),
-        makeTimeBoundaryResult(DateTimes.of("1970-01-02"), null, DateTimes.of("1970-01-03")),
+        makeTimeBoundaryResult(DateTimes.of("1970-01-03"), null, DateTimes.of("1970-01-03")),
 
         Intervals.of("1970-01-01/2011-01-10"),
-        makeTimeBoundaryResult(DateTimes.of("1970-01-05"), null, DateTimes.of("1970-01-10")),
-
-        Intervals.of("1970-01-01/2011-01-10"),
-        makeTimeBoundaryResult(DateTimes.of("1970-01-05T01"), null, DateTimes.of("1970-01-10"))
+        makeTimeBoundaryResult(DateTimes.of("1970-01-10"), null, DateTimes.of("1970-01-10"))
     );
 
     testQueryCaching(

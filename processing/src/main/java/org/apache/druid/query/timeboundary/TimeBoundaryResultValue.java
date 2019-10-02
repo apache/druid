@@ -27,6 +27,7 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -80,11 +81,7 @@ public class TimeBoundaryResultValue
 
     TimeBoundaryResultValue that = (TimeBoundaryResultValue) o;
 
-    if (value != null ? !value.equals(that.value) : that.value != null) {
-      return false;
-    }
-
-    return true;
+    return Objects.equals(value, that.value);
   }
 
   @Override
