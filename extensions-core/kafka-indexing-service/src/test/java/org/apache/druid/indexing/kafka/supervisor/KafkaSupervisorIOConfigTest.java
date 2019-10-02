@@ -97,7 +97,7 @@ public class KafkaSupervisorIOConfigTest
                      + "  \"useEarliestOffset\": true,\n"
                      + "  \"completionTimeout\": \"PT45M\",\n"
                      + "  \"lateMessageRejectionPeriod\": \"PT1H\",\n"
-                     + "  \"earlyMessageRejectionPeriod\": \"PT1H\"\n"
+                     + "  \"earlyMessageRejectionPeriod\": \"PT1H\",\n"
                      + "  \"earlyMessageRejectionStartDate\": \"2016-05-31T12:00Z\"\n"
                      + "}";
 
