@@ -64,29 +64,30 @@ public class PrometheusEmitter implements Emitter
 
   void emitMetric(ServiceMetricEvent metricEvent)
   {
-    String metric = metricEvent.getMetric();
+    String name = metricEvent.getMetric();
     Map<String, Object> userDims = metricEvent.getUserDims();
     Number value = metricEvent.getValue();
 
-    Metrics.Metric byName = metrics.getByName(metric);
-    String[] labelValues = new String[byName.getDimensions().length];
-    String[] labelNames = byName.getDimensions();
-    for (int i = 0; i < labelValues.length; i++) {
-      String labelName = labelNames[i];
-      Object userDim = userDims.get(labelName);
-      labelValues[i] = userDim.toString();
-    }
+    Metrics.Metric metric = metrics.getByName(name);
+    if (metric != null) {
+      String[] labelValues = new String[metric.getDimensions().length];
+      String[] labelNames = metric.getDimensions();
+      for (int i = 0; i < labelValues.length; i++) {
+        String labelName = labelNames[i];
+        Object userDim = userDims.get(labelName);
+        labelValues[i] = userDim.toString();
+      }
 
-    if (byName.getCollector() instanceof Counter) {
-      ((Counter) byName.getCollector()).labels(labelValues).inc(value.doubleValue());
-    } else if (byName.getCollector() instanceof Gauge) {
-      ((Gauge) byName.getCollector()).labels(labelValues).set(value.doubleValue());
-    } else if (byName.getCollector() instanceof Histogram) {
-      ((Histogram) byName.getCollector()).labels(labelValues).observe(value.doubleValue());
-    } else {
-      //TODO
+      if (metric.getCollector() instanceof Counter) {
+        ((Counter) metric.getCollector()).labels(labelValues).inc(value.doubleValue());
+      } else if (metric.getCollector() instanceof Gauge) {
+        ((Gauge) metric.getCollector()).labels(labelValues).set(value.doubleValue());
+      } else if (metric.getCollector() instanceof Histogram) {
+        ((Histogram) metric.getCollector()).labels(labelValues).observe(value.doubleValue());
+      } else {
+        //TODO
+      }
     }
-
   }
 
   @Override
