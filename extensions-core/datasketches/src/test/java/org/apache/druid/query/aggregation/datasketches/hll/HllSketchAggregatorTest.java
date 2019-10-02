@@ -141,7 +141,7 @@ public class HllSketchAggregatorTest
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
     ResultRow row = results.get(0);
-    Assert.assertEquals(200, (double) row.get(0), 0.1);
+    Assert.assertEquals(15, (double) row.get(0), 0.1);
   }
 
   @Test
@@ -183,7 +183,7 @@ public class HllSketchAggregatorTest
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
     ResultRow row = results.get(0);
-    Assert.assertEquals(15, (double) row.get(0), 0.1);
+    Assert.assertEquals(14, (double) row.get(0), 0.1);
   }
 
   @Test
