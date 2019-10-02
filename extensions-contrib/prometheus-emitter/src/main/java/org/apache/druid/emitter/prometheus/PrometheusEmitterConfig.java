@@ -19,12 +19,13 @@
 
 package org.apache.druid.emitter.prometheus;
 
-import javax.annotation.Nullable;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.annotation.Nullable;
+
 /**
+ *
  */
 public class PrometheusEmitterConfig
 {
@@ -32,13 +33,26 @@ public class PrometheusEmitterConfig
   @JsonProperty
   private final String namespace;
 
+  @JsonProperty
+  private final String path;
+
   @JsonCreator
-  public PrometheusEmitterConfig(@JsonProperty("namespace") @Nullable String namespace)
+  public PrometheusEmitterConfig(
+      @JsonProperty("namespace") @Nullable String namespace,
+      @JsonProperty("path") @Nullable String path
+  )
   {
-    this.namespace = namespace != null ? namespace : "";
+    this.namespace = namespace != null ? namespace : "druid";
+    this.path = path != null ? path : "/prometheus";
   }
 
-  public String getNamespace() {
+  public String getNamespace()
+  {
     return namespace;
+  }
+
+  public String getPath()
+  {
+    return path;
   }
 }
