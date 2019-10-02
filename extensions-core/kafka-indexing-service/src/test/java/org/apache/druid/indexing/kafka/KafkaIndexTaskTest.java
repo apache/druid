@@ -65,6 +65,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
+import org.apache.druid.indexing.common.stats.RowIngestionMetersTotals;
 import org.apache.druid.indexing.common.task.IndexTaskTest;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -80,6 +81,7 @@ import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
@@ -503,6 +505,57 @@ public class KafkaIndexTaskTest
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
+  }
+
+  @Test(timeout = 60_000L)
+  public void testRunAfterDataInsertedLiveReport() throws Exception
+  {
+    // Insert data
+    insertData();
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 12L)),
+            kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null
+        )
+    );
+    final ListenableFuture<TaskStatus> future = runTask(task);
+    SeekableStreamIndexTaskRunner runner = task.getRunner();
+    while (true) {
+      Thread.sleep(1000);
+      if (runner.getStatus() == Status.PUBLISHING) {
+        break;
+      }
+    }
+    Map rowStats = runner.doGetRowStats();
+    Map totals = (Map) rowStats.get("totals");
+    RowIngestionMetersTotals buildSegments = (RowIngestionMetersTotals) totals.get("buildSegments");
+
+    Map movingAverages = (Map) rowStats.get("movingAverages");
+    Map buildSegments2 = (Map) movingAverages.get("buildSegments");
+    HashMap avg_1min = (HashMap) buildSegments2.get("1m");
+    HashMap avg_5min = (HashMap) buildSegments2.get("5m");
+    HashMap avg_15min = (HashMap) buildSegments2.get("15m");
+
+    runner.resume();
+
+    // Check metrics
+    Assert.assertEquals(buildSegments.getProcessed(), task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(buildSegments.getUnparseable(), task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(buildSegments.getThrownAway(), task.getRunner().getRowIngestionMeters().getThrownAway());
+
+    Assert.assertEquals(avg_1min.get("processed"), 0.0);
+    Assert.assertEquals(avg_5min.get("processed"), 0.0);
+    Assert.assertEquals(avg_15min.get("processed"), 0.0);
+    // Wait for task to exit
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
   }
 
   @Test(timeout = 60_000L)

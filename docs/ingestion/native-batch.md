@@ -229,8 +229,9 @@ For perfect rollup, you should use `hashed`.
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should always be `hashed`|none|yes|
-|numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
-|partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions.|null|no|
+|targetRowsPerSegment|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|5000000 (if `numShards` is not set)|either this or `numShards`|
+|numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `targetRowsPerSegment` is set.|null|no|
+|partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions. Only used with `numShards`, will be ignored when `targetRowsPerSegment` is set.|null|no|
 
 For best-effort rollup, you should use `dynamic`.
 
@@ -629,7 +630,7 @@ For perfect rollup, you should use `hashed`.
 |--------|-----------|-------|---------|
 |type|This should always be `hashed`|none|yes|
 |maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
-|numShards|Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data. numShards cannot be specified if maxRowsPerSegment is set.|null|no|
+|numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
 |partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions.|null|no|
 
 For best-effort rollup, you should use `dynamic`.

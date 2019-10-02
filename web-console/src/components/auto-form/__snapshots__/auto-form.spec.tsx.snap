@@ -105,7 +105,7 @@ exports[`auto-form snapshot matches snapshot 1`] = `
       class="bp3-form-content"
     >
       <div
-        class="bp3-control-group bp3-numeric-input"
+        class="bp3-control-group bp3-fill bp3-numeric-input"
       >
         <div
           class="bp3-input-group"

@@ -143,7 +143,7 @@ java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log
 
 In the example command above:
 
-- `lib` is the the Druid lib directory
+- `lib` is the Druid lib directory
 - `extensions` is the Druid extensions directory
 - `/tmp/csv` is the output directory. Please make sure that this directory exists.
 

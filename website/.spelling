@@ -54,6 +54,8 @@ Double.NEGATIVE_INFINITY
 Double.NEGATIVE_INFINITY.
 Double.POSITIVE_INFINITY
 Double.POSITIVE_INFINITY.
+Dropwizard
+dropwizard
 DruidSQL
 EC2
 EMR
@@ -76,6 +78,7 @@ Homebrew
 HyperLogLog
 IANA
 IETF
+IP
 IPv4
 IS0
 ISO-8601
@@ -89,6 +92,7 @@ JDK
 JDK7
 JDK8
 JKS
+JMX
 JRE
 JS
 JSON
@@ -759,6 +763,7 @@ statsd-emitter
 coords
 dimName
 maxCoords
+Mb
 minCoords
  - ../docs/development/javascript.md
 Metaspace
@@ -864,6 +869,7 @@ segmentTable
 shardSpec
 single_dim
 targetPartitionSize
+targetRowsPerSegment
 useCombiner
 useExplicitVersion
 useNewAggs
@@ -1547,6 +1553,7 @@ java.class.path
 java.io.tmpdir
 javaOpts
 javaOptsArray
+leastBytesUsed
 loadList
 loadqueuepeon
 loadspec
@@ -1570,6 +1577,7 @@ queryType
 remoteTaskRunnerConfig
 rendezvousHash
 resultsets
+roundRobin
 runtime.properties
 runtime.properties.
 s3
