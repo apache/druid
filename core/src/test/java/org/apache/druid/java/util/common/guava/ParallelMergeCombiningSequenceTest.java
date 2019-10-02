@@ -82,12 +82,12 @@ public class ParallelMergeCombiningSequenceTest
   public void testOrderedResultBatchFromSequence() throws IOException
   {
     Sequence<IntPair> rawSequence = generateOrderedPairsSequence(5000);
-    Yielder<ParallelMergeCombiningSequence.OrderedResultBatch<IntPair>> batchYielder =
-        ParallelMergeCombiningSequence.OrderedResultBatch.fromSequence(rawSequence, 128);
-
     ParallelMergeCombiningSequence.YielderBatchedResultsCursor<IntPair> cursor =
-        new ParallelMergeCombiningSequence.YielderBatchedResultsCursor<>(batchYielder, ordering);
-
+        new ParallelMergeCombiningSequence.YielderBatchedResultsCursor<>(
+            new ParallelMergeCombiningSequence.SequenceBatcher<>(rawSequence, 128),
+            ordering
+        );
+    cursor.initialize();
     Yielder<IntPair> rawYielder = Yielders.each(rawSequence);
 
     IntPair prev = null;
@@ -109,21 +109,21 @@ public class ParallelMergeCombiningSequenceTest
     final int batchSize = 128;
     final int sequenceSize = 5_000;
     Sequence<IntPair> rawSequence = generateOrderedPairsSequence(sequenceSize);
-    Yielder<ParallelMergeCombiningSequence.OrderedResultBatch<IntPair>> batchYielder =
-        ParallelMergeCombiningSequence.OrderedResultBatch.fromSequence(rawSequence, batchSize);
-
     ParallelMergeCombiningSequence.YielderBatchedResultsCursor<IntPair> cursor =
-        new ParallelMergeCombiningSequence.YielderBatchedResultsCursor<>(batchYielder, ordering);
+        new ParallelMergeCombiningSequence.YielderBatchedResultsCursor<>(
+            new ParallelMergeCombiningSequence.SequenceBatcher<>(rawSequence, 128),
+            ordering
+        );
 
-
+    cursor.initialize();
     Yielder<IntPair> rawYielder = Yielders.each(rawSequence);
 
-    ArrayBlockingQueue<ParallelMergeCombiningSequence.OrderedResultBatch<IntPair>> outputQueue =
+    ArrayBlockingQueue<ParallelMergeCombiningSequence.ResultBatch<IntPair>> outputQueue =
         new ArrayBlockingQueue<>((int) Math.ceil(((double) sequenceSize / batchSize) + 2));
 
     IntPair prev = null;
-    ParallelMergeCombiningSequence.OrderedResultBatch<IntPair> currentBatch =
-        new ParallelMergeCombiningSequence.OrderedResultBatch<>(batchSize);
+    ParallelMergeCombiningSequence.ResultBatch<IntPair> currentBatch =
+        new ParallelMergeCombiningSequence.ResultBatch<>(batchSize);
     int batchCounter = 0;
     while (!rawYielder.isDone() && !cursor.isDone()) {
       Assert.assertEquals(rawYielder.get(), cursor.get());
@@ -134,7 +134,7 @@ public class ParallelMergeCombiningSequenceTest
       batchCounter++;
       if (batchCounter >= batchSize) {
         outputQueue.offer(currentBatch);
-        currentBatch = new ParallelMergeCombiningSequence.OrderedResultBatch<>(batchSize);
+        currentBatch = new ParallelMergeCombiningSequence.ResultBatch<>(batchSize);
         batchCounter = 0;
       }
       rawYielder = rawYielder.next(rawYielder.get());
@@ -143,7 +143,7 @@ public class ParallelMergeCombiningSequenceTest
     if (!currentBatch.isDrained()) {
       outputQueue.offer(currentBatch);
     }
-    outputQueue.offer(new ParallelMergeCombiningSequence.OrderedResultBatch<>());
+    outputQueue.offer(new ParallelMergeCombiningSequence.ResultBatch<>());
 
     rawYielder.close();
     cursor.close();
@@ -179,21 +179,22 @@ public class ParallelMergeCombiningSequenceTest
     final int batchSize = 128;
     final int sequenceSize = 5_000;
     Sequence<IntPair> rawSequence = generateOrderedPairsSequence(sequenceSize);
-    Yielder<ParallelMergeCombiningSequence.OrderedResultBatch<IntPair>> batchYielder =
-        ParallelMergeCombiningSequence.OrderedResultBatch.fromSequence(rawSequence, batchSize);
-
     ParallelMergeCombiningSequence.YielderBatchedResultsCursor<IntPair> cursor =
-        new ParallelMergeCombiningSequence.YielderBatchedResultsCursor<>(batchYielder, ordering);
+        new ParallelMergeCombiningSequence.YielderBatchedResultsCursor<>(
+            new ParallelMergeCombiningSequence.SequenceBatcher<>(rawSequence, 128),
+            ordering
+        );
 
+    cursor.initialize();
 
     Yielder<IntPair> rawYielder = Yielders.each(rawSequence);
 
-    ArrayBlockingQueue<ParallelMergeCombiningSequence.OrderedResultBatch<IntPair>> outputQueue =
+    ArrayBlockingQueue<ParallelMergeCombiningSequence.ResultBatch<IntPair>> outputQueue =
         new ArrayBlockingQueue<>((int) Math.ceil(((double) sequenceSize / batchSize) + 2));
 
     IntPair prev = null;
-    ParallelMergeCombiningSequence.OrderedResultBatch<IntPair> currentBatch =
-        new ParallelMergeCombiningSequence.OrderedResultBatch<>(batchSize);
+    ParallelMergeCombiningSequence.ResultBatch<IntPair> currentBatch =
+        new ParallelMergeCombiningSequence.ResultBatch<>(batchSize);
     int batchCounter = 0;
     while (!rawYielder.isDone() && !cursor.isDone()) {
       Assert.assertEquals(rawYielder.get(), cursor.get());
@@ -204,7 +205,7 @@ public class ParallelMergeCombiningSequenceTest
       batchCounter++;
       if (batchCounter >= batchSize) {
         outputQueue.offer(currentBatch);
-        currentBatch = new ParallelMergeCombiningSequence.OrderedResultBatch<>(batchSize);
+        currentBatch = new ParallelMergeCombiningSequence.ResultBatch<>(batchSize);
         batchCounter = 0;
       }
       rawYielder = rawYielder.next(rawYielder.get());
@@ -213,7 +214,7 @@ public class ParallelMergeCombiningSequenceTest
     if (!currentBatch.isDrained()) {
       outputQueue.offer(currentBatch);
     }
-    outputQueue.offer(new ParallelMergeCombiningSequence.OrderedResultBatch<>());
+    outputQueue.offer(new ParallelMergeCombiningSequence.ResultBatch<>());
 
     rawYielder.close();
     cursor.close();
