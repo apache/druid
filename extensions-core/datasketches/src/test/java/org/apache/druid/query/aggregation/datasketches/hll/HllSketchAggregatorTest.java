@@ -290,7 +290,7 @@ public class HllSketchAggregatorTest
     Map<String, Object> object = ImmutableMap.of(
         "type", "string",
         "parseSpec", parseSpec,
-        "transformationSpec", transformsObject
+        "transformSpec", transformsObject
     );
     return toJson(object);
   }
