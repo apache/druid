@@ -64,8 +64,6 @@ public class PrometheusEmitter implements Emitter
 
   void emitMetric(ServiceMetricEvent metricEvent)
   {
-    String host = metricEvent.getHost();
-    String service = metricEvent.getService();
     String metric = metricEvent.getMetric();
     Map<String, Object> userDims = metricEvent.getUserDims();
     Number value = metricEvent.getValue();
