@@ -21,13 +21,16 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.segment.transform.ExpressionTransform;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -42,6 +45,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
 public class HllSketchAggregatorTest
@@ -113,6 +117,34 @@ public class HllSketchAggregatorTest
   }
 
   @Test
+  public void buildSketchesAtIngestionTimeMultiValueWithTransformations() throws Exception
+  {
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
+        buildParserJson(
+            Collections.singletonList("dim"),
+            Arrays.asList("timestamp", "dim", "multiDim", "id"),
+            ImmutableList.of(
+                new ExpressionTransform(
+                    "multiDim",
+                    "array_append(multiDim, '0')",
+                    ExprMacroTable.nil()
+                )
+            )
+        ),
+        buildAggregatorJson("HLLSketchBuild", "multiDim", !ROUND),
+        0, // minTimestamp
+        Granularities.NONE,
+        200, // maxRowCount
+        buildGroupByQueryJson("HLLSketchMerge", "sketch", !ROUND)
+    );
+    List<ResultRow> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    ResultRow row = results.get(0);
+    Assert.assertEquals(200, (double) row.get(0), 0.1);
+  }
+
+  @Test
   public void buildSketchesAtQueryTime() throws Exception
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
@@ -151,7 +183,7 @@ public class HllSketchAggregatorTest
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
     ResultRow row = results.get(0);
-    Assert.assertEquals(14, (double) row.get(0), 0.1);
+    Assert.assertEquals(15, (double) row.get(0), 0.1);
   }
 
   @Test
@@ -217,6 +249,48 @@ public class HllSketchAggregatorTest
     Map<String, Object> object = ImmutableMap.of(
         "type", "string",
         "parseSpec", parseSpec
+    );
+    return toJson(object);
+  }
+
+  private static String buildParserJson(
+      List<String> dimensions,
+      List<String> columns,
+      List<ExpressionTransform> transforms
+  )
+  {
+    List<Map<String, String>> transformsObjects = transforms.stream().map( transform ->
+        ImmutableMap.of(
+            "type", "expression",
+            "name", transform.getName(),
+            "expression", transform.getExpression()
+        )
+    ).collect(Collectors.toList());
+
+    Map<String, Object> transformsObject = ImmutableMap.of(
+        "transforms", transformsObjects
+    );
+
+    Map<String, Object> timestampSpec = ImmutableMap.of(
+        "column", "timestamp",
+        "format", "yyyyMMdd"
+    );
+    Map<String, Object> dimensionsSpec = ImmutableMap.of(
+        "dimensions", dimensions,
+        "dimensionExclusions", Collections.emptyList(),
+        "spatialDimensions", Collections.emptyList()
+    );
+    Map<String, Object> parseSpec = ImmutableMap.of(
+        "format", "tsv",
+        "timestampSpec", timestampSpec,
+        "dimensionsSpec", dimensionsSpec,
+        "columns", columns,
+        "listDelimiter", ","
+    );
+    Map<String, Object> object = ImmutableMap.of(
+        "type", "string",
+        "parseSpec", parseSpec,
+        "transformationSpec", transformsObject
     );
     return toJson(object);
   }

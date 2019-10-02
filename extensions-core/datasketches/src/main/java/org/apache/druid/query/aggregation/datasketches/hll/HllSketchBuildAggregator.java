@@ -107,6 +107,12 @@ public class HllSketchBuildAggregator implements Aggregator
       for (String v : list) {
         sketch.update(v.toCharArray());
       }
+    } else if (value instanceof String[]) {
+      // noinspection unchecked
+      String[] list = (String[]) value;
+      for (String v : list) {
+        sketch.update(v.toCharArray());
+      }
     } else if (value instanceof char[]) {
       sketch.update((char[]) value);
     } else if (value instanceof byte[]) {
