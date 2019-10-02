@@ -46,11 +46,6 @@
       <version>0.7.0</version>
     </dependency>
     <dependency>
-      <groupId>io.prometheus</groupId>
-      <artifactId>simpleclient_httpserver</artifactId>
-      <version>0.7.0</version>
-    </dependency>
-    <dependency>
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>jsr305</artifactId>
       <scope>provided</scope>
@@ -113,10 +108,6 @@
       <version>${project.parent.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.dropwizard.metrics</groupId>
-      <artifactId>metrics-core</artifactId>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
