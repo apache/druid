@@ -127,7 +127,7 @@ public class HllSketchAggregatorTest
             ImmutableList.of(
                 new ExpressionTransform(
                     "multiDim",
-                    "array_append(multiDim, '0')",
+                    "array_append(multiDim, 0)",
                     ExprMacroTable.nil()
                 )
             )
