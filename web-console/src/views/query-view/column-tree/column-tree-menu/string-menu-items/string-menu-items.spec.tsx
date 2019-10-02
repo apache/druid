@@ -25,7 +25,20 @@ import { StringMenuItems } from './string-menu-items';
 describe('string menu', () => {
   const parser = sqlParserFactory(['COUNT']);
 
-  it('matches snapshot', () => {
+  it('matches snapshot when menu is opened for column not inside group by', () => {
+    const stringMenu = (
+      <StringMenuItems
+        columnName={'cityName'}
+        parsedQuery={parser(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
+        onQueryChange={() => {}}
+      />
+    );
+
+    const { container } = render(stringMenu);
+    expect(container).toMatchSnapshot();
+  });
+
+  it('matches snapshot when menu is opened for column inside group by', () => {
     const stringMenu = (
       <StringMenuItems
         columnName={'channel'}
@@ -35,6 +48,6 @@ describe('string menu', () => {
     );
 
     const { container } = render(stringMenu);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 });

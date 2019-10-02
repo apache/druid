@@ -65,6 +65,20 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
     );
   }
 
+  renderRemoveGroupBy(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = this.props;
+    if (!parsedQuery.hasGroupByForColumn(columnName)) return;
+    return (
+      <MenuItem
+        icon={IconNames.UNGROUP_OBJECTS}
+        text={'Remove group by'}
+        onClick={() => {
+          onQueryChange(parsedQuery.removeGroupBy(columnName), true);
+        }}
+      />
+    );
+  }
+
   renderGroupByMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = this.props;
     if (!parsedQuery.groupByClause) return;
@@ -145,6 +159,7 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
         {this.renderFilterMenu()}
         {this.renderRemoveFilter()}
         {this.renderGroupByMenu()}
+        {this.renderRemoveGroupBy()}
         {this.renderAggregateMenu()}
       </>
     );

@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import org.apache.druid.segment.indexing.IOConfig;
 
+import javax.annotation.Nullable;
+
 import java.util.Map;
 
 /**
@@ -33,14 +35,16 @@ import java.util.Map;
 public class HadoopIOConfig implements IOConfig
 {
   private final Map<String, Object> pathSpec;
+  @Nullable
   private final MetadataStorageUpdaterJobSpec metadataUpdateSpec;
+  @Nullable
   private final String segmentOutputPath;
 
   @JsonCreator
   public HadoopIOConfig(
       final @JsonProperty("inputSpec") Map<String, Object> pathSpec,
-      final @JsonProperty("metadataUpdateSpec") MetadataStorageUpdaterJobSpec metadataUpdateSpec,
-      final @JsonProperty("segmentOutputPath") String segmentOutputPath
+      final @JsonProperty("metadataUpdateSpec") @Nullable MetadataStorageUpdaterJobSpec metadataUpdateSpec,
+      final @JsonProperty("segmentOutputPath") @Nullable String segmentOutputPath
   )
   {
     this.pathSpec = pathSpec;
@@ -54,12 +58,14 @@ public class HadoopIOConfig implements IOConfig
     return pathSpec;
   }
 
+  @Nullable
   @JsonProperty("metadataUpdateSpec")
   public MetadataStorageUpdaterJobSpec getMetadataUpdateSpec()
   {
     return metadataUpdateSpec;
   }
 
+  @Nullable
   @JsonProperty
   public String getSegmentOutputPath()
   {

@@ -1139,6 +1139,10 @@ public class LookupCoordinatorManagerTest
 
     EasyMock.reset(lookupNodeDiscovery);
     EasyMock
+        .expect(lookupNodeDiscovery.getAllTiers())
+        .andReturn(ImmutableSet.of("tier1"))
+        .once();
+    EasyMock
         .expect(lookupNodeDiscovery.getNodesInTier("tier1"))
         .andReturn(ImmutableList.of(host1, host2))
         .anyTimes();
