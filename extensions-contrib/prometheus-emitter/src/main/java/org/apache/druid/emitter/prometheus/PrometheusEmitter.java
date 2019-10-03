@@ -45,7 +45,7 @@ public class PrometheusEmitter implements Emitter
 
   public PrometheusEmitter(PrometheusEmitterConfig config)
   {
-    metrics = new Metrics(config.getNamespace());
+    metrics = new Metrics(config.getNamespace(), config.getDimensionMapPath());
   }
 
 
@@ -68,7 +68,7 @@ public class PrometheusEmitter implements Emitter
     Map<String, Object> userDims = metricEvent.getUserDims();
     Number value = metricEvent.getValue();
 
-    Metrics.Metric metric = metrics.getByName(name);
+    DimensionsAndCollector metric = metrics.getByName(name);
     if (metric != null) {
       String[] labelValues = new String[metric.getDimensions().length];
       String[] labelNames = metric.getDimensions();

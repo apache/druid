@@ -36,14 +36,20 @@ public class PrometheusEmitterConfig
   @JsonProperty
   private final String path;
 
+  @JsonProperty
+  @Nullable
+  private final String dimensionMapPath;
+
   @JsonCreator
   public PrometheusEmitterConfig(
       @JsonProperty("namespace") @Nullable String namespace,
-      @JsonProperty("path") @Nullable String path
+      @JsonProperty("path") @Nullable String path,
+      @JsonProperty("dimensionMapPath") @Nullable String dimensionMapPath
   )
   {
     this.namespace = namespace != null ? namespace : "druid";
     this.path = path != null ? path : "/prometheus";
+    this.dimensionMapPath = dimensionMapPath;
   }
 
   public String getNamespace()
@@ -54,5 +60,10 @@ public class PrometheusEmitterConfig
   public String getPath()
   {
     return path;
+  }
+
+  public String getDimensionMapPath()
+  {
+    return dimensionMapPath;
   }
 }
