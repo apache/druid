@@ -23,10 +23,13 @@ package org.apache.druid.emitter.prometheus;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
+import io.prometheus.client.exporter.HTTPServer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+
+import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -37,6 +40,9 @@ public class PrometheusEmitter implements Emitter
 
   private static final Logger log = new Logger(PrometheusEmitter.class);
   private final Metrics metrics;
+  private final PrometheusEmitterConfig config;
+
+  private HTTPServer server;
 
   static PrometheusEmitter of(PrometheusEmitterConfig config)
   {
@@ -45,6 +51,7 @@ public class PrometheusEmitter implements Emitter
 
   public PrometheusEmitter(PrometheusEmitterConfig config)
   {
+    this.config = config;
     metrics = new Metrics(config.getNamespace(), config.getDimensionMapPath());
   }
 
@@ -52,6 +59,12 @@ public class PrometheusEmitter implements Emitter
   @Override
   public void start()
   {
+    try {
+      server = new HTTPServer(config.getPort());
+    }
+    catch (IOException e) {
+      log.error(e, "Unable to start prometheus HTTPServer");
+    }
   }
 
   @Override
@@ -98,5 +111,8 @@ public class PrometheusEmitter implements Emitter
   @Override
   public void close()
   {
+    if (server != null) {
+      server.stop();
+    }
   }
 }

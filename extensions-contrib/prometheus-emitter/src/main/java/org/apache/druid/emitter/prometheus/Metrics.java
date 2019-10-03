@@ -55,8 +55,9 @@ public class Metrics
   public Metrics(String namespace, String path)
   {
     Map<String, Metric> metrics = readMap(path);
-    for (String name : metrics.keySet()) {
-      Metric metric = metrics.get(name);
+    for (Map.Entry<String, Metric> entry : metrics.entrySet()) {
+      String name = entry.getKey();
+      Metric metric = entry.getValue();
       Metric.Type type = metric.type;
       String[] dimensions = metric.dimensions.toArray(new String[0]);
       String formattedName = StringUtils.replaceChar(StringUtils.toLowerCase(name), '/', "_");

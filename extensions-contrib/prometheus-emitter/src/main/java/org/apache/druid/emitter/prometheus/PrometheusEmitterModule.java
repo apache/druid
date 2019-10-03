@@ -24,15 +24,12 @@ import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
-import io.prometheus.client.exporter.MetricsServlet;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.emitter.core.Emitter;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
@@ -59,12 +56,8 @@ public class PrometheusEmitterModule implements DruidModule
   @Provides
   @ManageLifecycle
   @Named(EMITTER_TYPE)
-  public Emitter getEmitter(PrometheusEmitterConfig config, Server server)
+  public Emitter getEmitter(PrometheusEmitterConfig config) throws IOException
   {
-    ServletContextHandler context = new ServletContextHandler();
-    context.setContextPath("/");
-    server.setHandler(context);
-    context.addServlet(new ServletHolder(new MetricsServlet()), config.getPath());
     return PrometheusEmitter.of(config);
   }
 }
