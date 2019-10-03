@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexer.partitions;
 
+import org.apache.druid.indexer.Checks;
+import org.apache.druid.indexer.Property;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;

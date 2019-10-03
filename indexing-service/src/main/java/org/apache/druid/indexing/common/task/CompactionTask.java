@@ -28,6 +28,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -40,6 +41,8 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.NoopInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
+import org.apache.druid.indexer.Checks;
+import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -197,17 +200,24 @@ public class CompactionTask extends AbstractBatchIndexTask
   {
     super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context);
 
+    Checks.checkOneNotNullOrEmpty(
+        ImmutableList.of(
+            new Property<>("ioConfig", ioConfig),
+            new Property<>("interval", interval),
+            new Property<>("segments", segments)
+        )
+    );
+
     if (ioConfig != null) {
       this.ioConfig = ioConfig;
+    } else if (interval != null) {
+      this.ioConfig = new CompactionIOConfig(new CompactionIntervalSpec(interval, null));
     } else {
-      if (interval != null) {
-        this.ioConfig = new CompactionIOConfig(new CompactionIntervalSpec(interval, null));
-      } else if (segments != null && !segments.isEmpty()) {
-        this.ioConfig = new CompactionIOConfig(SpecificSegmentsSpec.fromSegments(segments));
-      } else {
-        throw new IAE("Missing ioConfig");
-      }
+      // We already checked segments is not null or empty above.
+      //noinspection ConstantConditions
+      this.ioConfig = new CompactionIOConfig(SpecificSegmentsSpec.fromSegments(segments));
     }
+
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
     this.metricsSpec = metricsSpec;
     this.segmentGranularity = segmentGranularity;

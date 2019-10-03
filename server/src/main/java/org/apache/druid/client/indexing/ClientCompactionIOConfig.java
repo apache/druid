@@ -24,6 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
 
+/**
+ * IOConfig for {@link ClientCompactQuery}.
+ *
+ * Should be synchronized with org.apache.druid.indexing.common.task.CompactionIOConfig.
+ */
 public class ClientCompactionIOConfig
 {
   private static final String TYPE = "compact";

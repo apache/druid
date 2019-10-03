@@ -66,7 +66,7 @@ public class ClientCompactQuerySerdeTest
         new ClientCompactionIOConfig(
             new ClientCompactionIntervalSpec(
                 Intervals.of("2019/2020"),
-                "testSha256OfSoredSegmentIds"
+                "testSha256OfSortedSegmentIds"
             )
         ),
         null,

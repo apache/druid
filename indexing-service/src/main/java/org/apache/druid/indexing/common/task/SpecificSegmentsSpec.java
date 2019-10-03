@@ -50,6 +50,8 @@ public class SpecificSegmentsSpec implements CompactionInputSpec
   public SpecificSegmentsSpec(@JsonProperty("segments") List<String> segments)
   {
     this.segments = segments;
+    // Sort segments to use in validateSegments.
+    Collections.sort(this.segments);
   }
 
   @JsonProperty
@@ -76,9 +78,8 @@ public class SpecificSegmentsSpec implements CompactionInputSpec
     final List<String> thoseSegments = latestSegments
         .stream()
         .map(segment -> segment.getId().toString())
+        .sorted()
         .collect(Collectors.toList());
-    Collections.sort(this.segments);
-    Collections.sort(thoseSegments);
     return this.segments.equals(thoseSegments);
   }
 

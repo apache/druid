@@ -32,6 +32,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * InputSpec for {@link ClientCompactionIOConfig}.
+ *
+ * Should be synchronized with org.apache.druid.indexing.common.task.CompactionIntervalSpec.
+ */
 public class ClientCompactionIntervalSpec
 {
   private static final String TYPE = "interval";

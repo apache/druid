@@ -26,6 +26,11 @@ import org.apache.druid.segment.indexing.IOConfig;
 
 import java.util.Objects;
 
+/**
+ * {@link IOConfig} for {@link CompactionTask}.
+ *
+ * @see CompactionInputSpec
+ */
 @JsonTypeName("compact")
 public class CompactionIOConfig implements IOConfig
 {

@@ -17,19 +17,20 @@
  * under the License.
  */
 
-package org.apache.druid.indexer.partitions;
+package org.apache.druid.indexer;
 
+import java.util.Collection;
 import java.util.Objects;
 
 /**
  * Convenience class for holding a pair of string key and templated value.
  */
-class Property<T>
+public class Property<T>
 {
   private final String name;
   private final T value;
 
-  Property(String name, T value)
+  public Property(String name, T value)
   {
     this.name = name;
     this.value = value;
@@ -43,6 +44,17 @@ class Property<T>
   public T getValue()
   {
     return value;
+  }
+
+  public boolean isValueNullOrEmptyCollection()
+  {
+    if (value == null) {
+      return true;
+    }
+    if (value instanceof Collection) {
+      return ((Collection) value).isEmpty();
+    }
+    return false;
   }
 
   @Override
@@ -63,5 +75,14 @@ class Property<T>
   public int hashCode()
   {
     return Objects.hash(name, value);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "Property{" +
+           "name='" + name + '\'' +
+           ", value=" + value +
+           '}';
   }
 }
