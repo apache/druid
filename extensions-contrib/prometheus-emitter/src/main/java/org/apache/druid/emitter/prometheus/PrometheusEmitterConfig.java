@@ -21,6 +21,7 @@ package org.apache.druid.emitter.prometheus;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
 
@@ -34,22 +35,22 @@ public class PrometheusEmitterConfig
   private final String namespace;
 
   @JsonProperty
-  private final String path;
-
-  @JsonProperty
   @Nullable
   private final String dimensionMapPath;
+
+  @JsonProperty
+  private final int port;
 
   @JsonCreator
   public PrometheusEmitterConfig(
       @JsonProperty("namespace") @Nullable String namespace,
-      @JsonProperty("path") @Nullable String path,
-      @JsonProperty("dimensionMapPath") @Nullable String dimensionMapPath
+      @JsonProperty("dimensionMapPath") @Nullable String dimensionMapPath,
+      @JsonProperty("port") int port
   )
   {
     this.namespace = namespace != null ? namespace : "druid";
-    this.path = path != null ? path : "/prometheus";
     this.dimensionMapPath = dimensionMapPath;
+    this.port = Preconditions.checkNotNull(port, "Prometheus server port cannot be null.");
   }
 
   public String getNamespace()
@@ -57,13 +58,13 @@ public class PrometheusEmitterConfig
     return namespace;
   }
 
-  public String getPath()
-  {
-    return path;
-  }
-
   public String getDimensionMapPath()
   {
     return dimensionMapPath;
+  }
+
+  public int getPort()
+  {
+    return port;
   }
 }
