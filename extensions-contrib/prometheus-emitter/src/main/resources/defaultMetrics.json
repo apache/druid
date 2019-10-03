@@ -104,7 +104,7 @@
   "jvm/gc/count" : { "dimensions" : ["gcName"], "type" : "count" },
   "jvm/gc/cpu" : { "dimensions" : ["gcName"], "type" : "timer" },
 
-  "ingest/events/buffered" : { "dimensions" : ["serviceName, bufferCapacity"], "type" : "gauge"},
+  "ingest/events/buffered" : { "dimensions" : ["serviceName", "bufferCapacity"], "type" : "gauge"},
 
   "sys/swap/free" : { "dimensions" : [], "type" : "gauge"},
   "sys/swap/max" : { "dimensions" : [], "type" : "gauge"},

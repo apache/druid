@@ -67,14 +67,14 @@ public class Metrics
             .namespace(namespace)
             .name(formattedName)
             .labelNames(dimensions)
-            .help("")
+            .help("todo")
             .register();
       } else if (Metric.Type.gauge.equals(type)) {
         collector = new Gauge.Builder()
             .namespace(namespace)
             .name(formattedName)
             .labelNames(dimensions)
-            .help("")
+            .help("todo")
             .register();
       } else if (Metric.Type.timer.equals(type)) {
         collector = new Histogram.Builder()
@@ -82,7 +82,7 @@ public class Metrics
             .name(formattedName)
             .labelNames(dimensions)
             .buckets(.1, .25, .5, .75, 1, 2.5, 5, 7.5, 10, 30, 60, 120, 300)
-            .help("")
+            .help("todo")
             .register();
       } else {
         log.error("Unrecognized metric type [%s]", type);
