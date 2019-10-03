@@ -3146,16 +3146,6 @@ notices:
 
 ---
 
-name: Protocol Buffers Dynamic Schema
-license_category: binary
-module: extensions/protobuf-extensions
-license_name: Apache License version 2.0
-version: 0.9.3
-libraries:
-  - com.github.os72: protobuf-dynamic
-
----
-
 name: Gson
 license_category: binary
 module: extensions/protobuf-extensions
@@ -3278,7 +3268,7 @@ name: Protocol Buffers
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 3.1.0
+version: 3.9.1
 copyright: Google, Inc.
 license_file_path:
   - licenses/bin/protobuf-java.BSD3
@@ -3443,7 +3433,7 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 3.2.0
+version: 3.9.1
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
