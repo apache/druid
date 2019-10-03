@@ -101,6 +101,8 @@ public class PrometheusEmitter implements Emitter
       } else {
         log.error("Unrecognized metric type [%s]", metric.getCollector().getClass());
       }
+    } else {
+      log.debug("Unmapped metric [%s]", name);
     }
   }
 
