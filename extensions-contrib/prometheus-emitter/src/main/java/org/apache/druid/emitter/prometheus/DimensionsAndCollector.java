@@ -25,11 +25,13 @@ public class DimensionsAndCollector
 {
   private final String[] dimensions;
   private final SimpleCollector collector;
+  private final double conversionFactor;
 
-  DimensionsAndCollector(String[] dimensions, SimpleCollector collector)
+  DimensionsAndCollector(String[] dimensions, SimpleCollector collector, double conversionFactor)
   {
     this.dimensions = dimensions;
     this.collector = collector;
+    this.conversionFactor = conversionFactor;
   }
 
   public String[] getDimensions()
@@ -40,5 +42,10 @@ public class DimensionsAndCollector
   public SimpleCollector getCollector()
   {
     return collector;
+  }
+
+  public double getConversionFactor()
+  {
+    return conversionFactor;
   }
 }

@@ -47,9 +47,15 @@ public class Metrics
   private final Map<String, DimensionsAndCollector> map = new HashMap<>();
   private final ObjectMapper mapper = new ObjectMapper();
 
-  public DimensionsAndCollector getByName(String name)
+  public DimensionsAndCollector getByName(String name, String service)
   {
-    return map.get(name);
+    if (map.containsKey(name)) {
+      return map.get(name);
+    } else if (map.containsKey(service + "_" + name)) {
+      return map.get(service + "_" + name);
+    } else {
+      return null;
+    }
   }
 
   public Metrics(String namespace, String path)
@@ -67,14 +73,14 @@ public class Metrics
             .namespace(namespace)
             .name(formattedName)
             .labelNames(dimensions)
-            .help("todo")
+            .help(metric.help)
             .register();
       } else if (Metric.Type.gauge.equals(type)) {
         collector = new Gauge.Builder()
             .namespace(namespace)
             .name(formattedName)
             .labelNames(dimensions)
-            .help("todo")
+            .help(metric.help)
             .register();
       } else if (Metric.Type.timer.equals(type)) {
         collector = new Histogram.Builder()
@@ -82,14 +88,14 @@ public class Metrics
             .name(formattedName)
             .labelNames(dimensions)
             .buckets(.1, .25, .5, .75, 1, 2.5, 5, 7.5, 10, 30, 60, 120, 300)
-            .help("todo")
+            .help(metric.help)
             .register();
       } else {
         log.error("Unrecognized metric type [%s]", type);
       }
 
       if (collector != null) {
-        map.put(name, new DimensionsAndCollector(dimensions, collector));
+        map.put(name, new DimensionsAndCollector(dimensions, collector, metric.conversionFactor));
       }
     }
 
@@ -119,15 +125,21 @@ public class Metrics
   {
     public final SortedSet<String> dimensions;
     public final Type type;
+    public final String help;
+    public final double conversionFactor;
 
     @JsonCreator
     public Metric(
         @JsonProperty("dimensions") SortedSet<String> dimensions,
-        @JsonProperty("type") Type type
+        @JsonProperty("type") Type type,
+        @JsonProperty("help") String help,
+        @JsonProperty("conversionFactor") double conversionFactor
     )
     {
       this.dimensions = dimensions;
       this.type = type;
+      this.help = help;
+      this.conversionFactor = conversionFactor;
     }
 
     public enum Type

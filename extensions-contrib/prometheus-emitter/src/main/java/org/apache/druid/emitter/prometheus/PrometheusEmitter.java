@@ -78,10 +78,11 @@ public class PrometheusEmitter implements Emitter
   void emitMetric(ServiceMetricEvent metricEvent)
   {
     String name = metricEvent.getMetric();
+    String service = metricEvent.getService();
     Map<String, Object> userDims = metricEvent.getUserDims();
     Number value = metricEvent.getValue();
 
-    DimensionsAndCollector metric = metrics.getByName(name);
+    DimensionsAndCollector metric = metrics.getByName(name, service);
     if (metric != null) {
       String[] labelValues = new String[metric.getDimensions().length];
       String[] labelNames = metric.getDimensions();
@@ -96,9 +97,9 @@ public class PrometheusEmitter implements Emitter
       } else if (metric.getCollector() instanceof Gauge) {
         ((Gauge) metric.getCollector()).labels(labelValues).set(value.doubleValue());
       } else if (metric.getCollector() instanceof Histogram) {
-        ((Histogram) metric.getCollector()).labels(labelValues).observe(value.doubleValue());
+        ((Histogram) metric.getCollector()).labels(labelValues).observe(value.doubleValue() / metric.getConversionFactor());
       } else {
-        //TODO
+        log.error("Unrecognized metric type [%s]", metric.getCollector().getClass());
       }
     }
   }
