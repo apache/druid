@@ -30,3 +30,4 @@ export * from './spec-dialog/spec-dialog';
 export * from './supervisor-table-action-dialog/supervisor-table-action-dialog';
 export * from './table-action-dialog/table-action-dialog';
 export * from './task-table-action-dialog/task-table-action-dialog';
+export * from './rollup-estimate-dialog/rollup-estimate-dialog';

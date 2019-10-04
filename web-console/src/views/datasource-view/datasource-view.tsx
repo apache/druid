@@ -44,7 +44,12 @@ import {
 } from '../../components';
 import { ActionIcon } from '../../components/action-icon/action-icon';
 import { SegmentTimeline } from '../../components/segment-timeline/segment-timeline';
-import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
+import {
+  AsyncActionDialog,
+  CompactionDialog,
+  RetentionDialog,
+  RollupEstimateDialog,
+} from '../../dialogs';
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import {
@@ -132,6 +137,10 @@ interface DatasourceQueryResultRow {
   num_rows: number;
 }
 
+interface RollupEstimateDialogOpenOn {
+  datasource: string;
+}
+
 interface RetentionDialogOpenOn {
   datasource: string;
   rules: any[];
@@ -159,6 +168,7 @@ export interface DatasourcesViewState {
   datasourceFilter: Filter[];
 
   showDisabled: boolean;
+  rollupEstimateDialogOpenOn?: RollupEstimateDialogOpenOn;
   retentionDialogOpenOn?: RetentionDialogOpenOn;
   compactionDialogOpenOn?: CompactionDialogOpenOn;
   dropDataDatasource?: string;
@@ -611,6 +621,17 @@ GROUP BY 1`;
 
     const goToActions: BasicAction[] = [
       {
+        icon: IconNames.CALCULATOR,
+        title: 'Estimate rollup',
+        onAction: () => {
+          this.setState({
+            rollupEstimateDialogOpenOn: {
+              datasource,
+            },
+          });
+        },
+      },
+      {
         icon: IconNames.APPLICATION,
         title: 'Query with SQL',
         onAction: () => goToQuery(`SELECT * FROM ${escapeSqlIdentifier(datasource)}`),
@@ -697,6 +718,17 @@ GROUP BY 1`;
         },
       ]);
     }
+  }
+
+  renderRollupEstimateDialog() {
+    const { rollupEstimateDialogOpenOn } = this.state;
+    if (!rollupEstimateDialogOpenOn) return null;
+    return (
+      <RollupEstimateDialog
+        datasource={rollupEstimateDialogOpenOn.datasource}
+        onClose={() => this.setState({ rollupEstimateDialogOpenOn: undefined })}
+      />
+    );
   }
 
   renderRetentionDialog() {
@@ -996,6 +1028,7 @@ GROUP BY 1`;
         {this.renderEnableAction()}
         {this.renderDropReloadAction()}
         {this.renderKillAction()}
+        {this.renderRollupEstimateDialog()}
         {this.renderRetentionDialog()}
         {this.renderCompactionDialog()}
       </>
