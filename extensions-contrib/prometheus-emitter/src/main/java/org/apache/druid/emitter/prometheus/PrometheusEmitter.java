@@ -31,6 +31,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  *
@@ -41,6 +42,7 @@ public class PrometheusEmitter implements Emitter
   private static final Logger log = new Logger(PrometheusEmitter.class);
   private final Metrics metrics;
   private final PrometheusEmitterConfig config;
+  private final Pattern pattern = Pattern.compile("[^a-zA-Z_][^a-zA-Z0-9_]*");
 
   private HTTPServer server;
 
@@ -90,7 +92,7 @@ public class PrometheusEmitter implements Emitter
         String labelName = labelNames[i];
         //labelName is controlled by the user. Instead of potential NPE on invalid labelName we use "unknown" as the dimension value
         Object userDim = userDims.get(labelName);
-        labelValues[i] = userDim != null ? userDim.toString().replaceAll("[^a-zA-Z_][^a-zA-Z0-9_]*", "_") : "unknown";
+        labelValues[i] = userDim != null ? pattern.matcher(userDim.toString()).replaceAll("_") : "unknown";
       }
 
       if (metric.getCollector() instanceof Counter) {

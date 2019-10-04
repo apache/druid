@@ -39,6 +39,7 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedSet;
+import java.util.regex.Pattern;
 
 public class Metrics
 {
@@ -46,6 +47,7 @@ public class Metrics
   private static final Logger log = new Logger(Metrics.class);
   private final Map<String, DimensionsAndCollector> map = new HashMap<>();
   private final ObjectMapper mapper = new ObjectMapper();
+  private final Pattern pattern = Pattern.compile("[^a-zA-Z_:][^a-zA-Z0-9_:]*");
 
   public DimensionsAndCollector getByName(String name, String service)
   {
@@ -66,7 +68,7 @@ public class Metrics
       Metric metric = entry.getValue();
       Metric.Type type = metric.type;
       String[] dimensions = metric.dimensions.toArray(new String[0]);
-      String formattedName = StringUtils.toLowerCase(name).replaceAll("[^a-zA-Z_:][^a-zA-Z0-9_:]*", "_");
+      String formattedName = pattern.matcher(StringUtils.toLowerCase(name)).replaceAll("_");
       SimpleCollector collector = null;
       if (Metric.Type.count.equals(type)) {
         collector = new Counter.Builder()
