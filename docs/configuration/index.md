@@ -380,7 +380,7 @@ The Druid servers [emit various metrics](../operations/metrics.md) and alerts vi
 |--------|-----------|-------|
 |`druid.emitter.http.flushMillis`|How often the internal message buffer is flushed (data is sent).|60000|
 |`druid.emitter.http.flushCount`|How many messages the internal message buffer can hold before flushing (sending).|500|
-|`druid.emitter.http.basicAuthentication`|Login and password for authentication in "login:password" form, e.g., `druid.emitter.http.basicAuthentication=admin:adminpassword`|not specified = no authentication|
+|`druid.emitter.http.basicAuthentication`|[Password Provider](../operations/password-provider.md) for providing Login and password for authentication in "login:password" form, e.g., `druid.emitter.http.basicAuthentication=admin:adminpassword` uses Default Password Provider which allows plain text passwords.|not specified = no authentication|
 |`druid.emitter.http.flushTimeOut`|The timeout after which an event should be sent to the endpoint, even if internal buffers are not filled, in milliseconds.|not specified = no timeout|
 |`druid.emitter.http.batchingStrategy`|The strategy of how the batch is formatted. "ARRAY" means `[event1,event2]`, "NEWLINES" means `event1\nevent2`, ONLY_EVENTS means `event1event2`.|ARRAY|
 |`druid.emitter.http.maxBatchSize`|The maximum batch size, in bytes.|the minimum of (10% of JVM heap size divided by 2) or (5191680 (i. e. 5 MB))|
@@ -1286,6 +1286,7 @@ These Historical configurations can be defined in the `historical/runtime.proper
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.segmentCache.locations`|Segments assigned to a Historical process are first stored on the local file system (in a disk cache) and then served by the Historical process. These locations define where that local cache resides. This value cannot be NULL or EMPTY. Here is an example `druid.segmentCache.locations=[{"path": "/mnt/druidSegments", "maxSize": 10000, "freeSpacePercent": 1.0}]`. "freeSpacePercent" is optional, if provided then enforces that much of free disk partition space while storing segments. But, it depends on File.getTotalSpace() and File.getFreeSpace() methods, so enable if only if they work for your File System.| none |
+|`druid.segmentCache.locationSelectorStrategy`|The strategy used to select a location from the configured `druid.segmentCache.locations` for segment distribution. Possible values are `leastBytesUsed` or `roundRobin`. |leastBytesUsed|
 |`druid.segmentCache.deleteOnRemove`|Delete segment files from cache once a process is no longer serving a segment.|true|
 |`druid.segmentCache.dropSegmentDelayMillis`|How long a process delays before completely dropping segment.|30000 (30 seconds)|
 |`druid.segmentCache.infoDir`|Historical processes keep track of the segments they are serving so that when the process is restarted they can reload the same segments without waiting for the Coordinator to reassign. This path defines where this metadata is kept. Directory will be created if needed.|${first_location}/info_dir|
@@ -1295,6 +1296,8 @@ These Historical configurations can be defined in the `historical/runtime.proper
 |`druid.coordinator.loadqueuepeon.curator.numCallbackThreads`|Number of threads for executing callback actions associated with loading or dropping of segments. One might want to increase this number when noticing clusters are lagging behind w.r.t. balancing segments across historical nodes.|2|
 
 In `druid.segmentCache.locations`, *freeSpacePercent* was added because *maxSize* setting is only a theoretical limit and assumes that much space will always be available for storing segments. In case of any druid bug leading to unaccounted segment files left alone on disk or some other process writing stuff to disk, This check can start failing segment loading early before filling up the disk completely and leaving the host usable otherwise.
+
+In `druid.segmentCache.locationSelectorStrategy`, one of leastBytesUsed or roundRobin could be specified to represent the strategy to distribute segments across multiple segment cache locations. The leastBytesUsed which is the default strategy always selects a location which has least bytes used in absolute terms. The roundRobin strategy selects a location in a round robin fashion oblivious to the bytes used or the capacity. Note that `if druid.segmentCache.numLoadingThreads` > 1, multiple threads can download different segments at the same time. In this case, with the leastBytesUsed strategy, historicals may select a sub-optimal storage location because each decision is based on a snapshot of the storage location status of when a segment is requested to download.
 
 #### Historical query configs
 
