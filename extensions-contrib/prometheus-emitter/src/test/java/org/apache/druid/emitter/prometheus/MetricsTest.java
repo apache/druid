@@ -19,6 +19,25 @@
 
 package org.apache.druid.emitter.prometheus;
 
-public class PrometheusEmitterTest
+import io.prometheus.client.Histogram;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+public class MetricsTest
 {
+  @Test
+  public void testMetricsConfiguration()
+  {
+    Metrics metrics = new Metrics("test", null);
+    DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
+    assertNotNull(dimensionsAndCollector);
+    String[] dimensions = dimensionsAndCollector.getDimensions();
+    assertEquals("dataSource", dimensions[0]);
+    assertEquals("type", dimensions[1]);
+    assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
+    assertTrue(dimensionsAndCollector.getCollector() instanceof Histogram);
+  }
 }
