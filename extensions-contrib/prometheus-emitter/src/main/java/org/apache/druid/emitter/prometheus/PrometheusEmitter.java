@@ -88,8 +88,9 @@ public class PrometheusEmitter implements Emitter
       String[] labelNames = metric.getDimensions();
       for (int i = 0; i < labelValues.length; i++) {
         String labelName = labelNames[i];
+        //labelName is controlled by the user. Instead of potential NPE on invalid labelName we use "unknown" as the dimension value
         Object userDim = userDims.get(labelName);
-        labelValues[i] = userDim.toString();
+        labelValues[i] = userDim != null ? userDim.toString() : "unknown";
       }
 
       if (metric.getCollector() instanceof Counter) {
