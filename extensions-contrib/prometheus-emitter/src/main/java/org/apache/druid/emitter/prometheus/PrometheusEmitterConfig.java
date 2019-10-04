@@ -39,13 +39,13 @@ public class PrometheusEmitterConfig
   private final String dimensionMapPath;
 
   @JsonProperty
-  private final int port;
+  private final Integer port;
 
   @JsonCreator
   public PrometheusEmitterConfig(
       @JsonProperty("namespace") @Nullable String namespace,
       @JsonProperty("dimensionMapPath") @Nullable String dimensionMapPath,
-      @JsonProperty("port") int port
+      @JsonProperty("port") Integer port
   )
   {
     this.namespace = namespace != null ? namespace : "druid";
