@@ -49,6 +49,7 @@ public class PrometheusEmitterConfig
   )
   {
     this.namespace = namespace != null ? namespace : "druid";
+    Preconditions.checkArgument(namespace.matches("[a-zA-Z_:][a-zA-Z0-9_:]*"), "Invalid namespace " + namespace);
     this.dimensionMapPath = dimensionMapPath;
     this.port = Preconditions.checkNotNull(port, "Prometheus server port cannot be null.");
   }
