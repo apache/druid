@@ -32,7 +32,7 @@ public final class Checks
   {
     Property<T> nonNullProperty = null;
     for (Property<T> property : properties) {
-      if (property.isValueNullOrEmptyCollection()) {
+      if (!property.isValueNullOrEmptyCollection()) {
         if (nonNullProperty == null) {
           nonNullProperty = property;
         } else {

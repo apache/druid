@@ -166,7 +166,7 @@ You can check that your segments are rolled up or not by using [Segment Metadata
 
 ### Compaction IOConfig
 
-The compaction IOConfig requires to specifying `inputSpec` as seen below.
+The compaction IOConfig requires specifying `inputSpec` as seen below.
 
 |Field|Description|Required|
 |-----|-----------|--------|
