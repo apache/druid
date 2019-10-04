@@ -148,7 +148,7 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   @Override
   public Grouper.BufferComparator bufferComparator(int keyBufferPosition, @Nullable StringComparator stringComparator)
   {
-    if (stringComparator == null || stringComparator == StringComparators.LEXICOGRAPHIC) {
+    if (stringComparator == null || StringComparators.LEXICOGRAPHIC.equals(stringComparator)) {
       return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Integer.compare(
           lhsBuffer.getInt(lhsPosition + keyBufferPosition),
           rhsBuffer.getInt(rhsPosition + keyBufferPosition)
