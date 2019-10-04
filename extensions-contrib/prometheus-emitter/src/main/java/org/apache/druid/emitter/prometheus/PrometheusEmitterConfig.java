@@ -24,12 +24,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
+import java.util.regex.Pattern;
 
 /**
  *
  */
 public class PrometheusEmitterConfig
 {
+
+  Pattern pattern = Pattern.compile("[a-zA-Z_:][a-zA-Z0-9_:]*");
 
   @JsonProperty
   private final String namespace;
@@ -49,7 +52,7 @@ public class PrometheusEmitterConfig
   )
   {
     this.namespace = namespace != null ? namespace : "druid";
-    Preconditions.checkArgument(namespace.matches("[a-zA-Z_:][a-zA-Z0-9_:]*"), "Invalid namespace " + namespace);
+    Preconditions.checkArgument(pattern.matcher(namespace).matches(), "Invalid namespace " + namespace);
     this.dimensionMapPath = dimensionMapPath;
     this.port = Preconditions.checkNotNull(port, "Prometheus server port cannot be null.");
   }
