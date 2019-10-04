@@ -600,6 +600,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       return KEYS;
     }
 
+    @Nullable
     @Override
     public Map<String, Number> getTotalMetrics()
     {

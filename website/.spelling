@@ -54,6 +54,8 @@ Double.NEGATIVE_INFINITY
 Double.NEGATIVE_INFINITY.
 Double.POSITIVE_INFINITY
 Double.POSITIVE_INFINITY.
+Dropwizard
+dropwizard
 DruidSQL
 EC2
 EMR
@@ -90,6 +92,7 @@ JDK
 JDK7
 JDK8
 JKS
+JMX
 JRE
 JS
 JSON
@@ -760,6 +763,7 @@ statsd-emitter
 coords
 dimName
 maxCoords
+Mb
 minCoords
  - ../docs/development/javascript.md
 Metaspace
