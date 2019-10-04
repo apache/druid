@@ -66,7 +66,7 @@ public class Metrics
       Metric metric = entry.getValue();
       Metric.Type type = metric.type;
       String[] dimensions = metric.dimensions.toArray(new String[0]);
-      String formattedName = StringUtils.replaceChar(StringUtils.toLowerCase(name), '/', "_");
+      String formattedName = StringUtils.toLowerCase(name).replaceAll("[^a-zA-Z_:][^a-zA-Z0-9_:]*", "_");
       SimpleCollector collector = null;
       if (Metric.Type.count.equals(type)) {
         collector = new Counter.Builder()
