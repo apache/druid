@@ -135,7 +135,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   }
 
   @Test
-  public void test() throws Exception
+  public void testRunParallel() throws Exception
   {
     runIndexTask();
 
