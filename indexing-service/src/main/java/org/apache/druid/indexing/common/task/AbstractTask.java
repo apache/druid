@@ -29,6 +29,7 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.utils.RandomIdUtils;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.joda.time.Interval;
@@ -98,6 +99,8 @@ public abstract class AbstractTask implements Task
       objects.add(interval.getStart());
       objects.add(interval.getEnd());
     }
+    objects.add(DateTimes.nowUtc().toString());
+
     return joinId(objects);
   }
 
