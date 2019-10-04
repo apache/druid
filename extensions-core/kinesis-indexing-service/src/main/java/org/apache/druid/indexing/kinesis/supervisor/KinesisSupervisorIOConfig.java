@@ -63,7 +63,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("completionTimeout") Period completionTimeout,
       @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod,
       @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
-      @JsonProperty("lateMessageRejectionStartDate") DateTime lateMessageRejectionStartDate,
+      @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime,
       @JsonProperty("recordsPerFetch") Integer recordsPerFetch,
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
@@ -82,7 +82,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         completionTimeout,
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
-        lateMessageRejectionStartDate
+        lateMessageRejectionStartDateTime
     );
     this.endpoint = endpoint != null
                     ? endpoint
@@ -149,7 +149,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", completionTimeout=" + getCompletionTimeout() +
            ", lateMessageRejectionPeriod=" + getLateMessageRejectionPeriod() +
            ", earlyMessageRejectionPeriod=" + getEarlyMessageRejectionPeriod() +
-           ", lateMessageRejectionStartDate=" + getLateMessageRejectionStartDate() +
+           ", lateMessageRejectionStartDateTime=" + getLateMessageRejectionStartDateTime() +
            ", recordsPerFetch=" + recordsPerFetch +
            ", fetchDelayMillis=" + fetchDelayMillis +
            ", awsAssumedRoleArn='" + awsAssumedRoleArn + '\'' +

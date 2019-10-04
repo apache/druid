@@ -55,7 +55,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("completionTimeout") Period completionTimeout,
       @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod,
       @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
-      @JsonProperty("lateMessageRejectionStartDate") DateTime lateMessageRejectionStartDate
+      @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime
   )
   {
     super(
@@ -69,7 +69,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         completionTimeout,
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
-        lateMessageRejectionStartDate
+        lateMessageRejectionStartDateTime
     );
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
@@ -120,7 +120,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", completionTimeout=" + getCompletionTimeout() +
            ", earlyMessageRejectionPeriod=" + getEarlyMessageRejectionPeriod() +
            ", lateMessageRejectionPeriod=" + getLateMessageRejectionPeriod() +
-           ", lateMessageRejectionStartDate=" + getLateMessageRejectionStartDate() +
+           ", lateMessageRejectionStartDateTime=" + getLateMessageRejectionStartDateTime() +
            '}';
   }
 

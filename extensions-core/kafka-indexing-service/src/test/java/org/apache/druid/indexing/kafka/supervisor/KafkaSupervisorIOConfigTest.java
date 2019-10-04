@@ -78,7 +78,7 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertEquals(Duration.standardMinutes(30), config.getCompletionTimeout());
     Assert.assertFalse("lateMessageRejectionPeriod", config.getLateMessageRejectionPeriod().isPresent());
     Assert.assertFalse("earlyMessageRejectionPeriod", config.getEarlyMessageRejectionPeriod().isPresent());
-    Assert.assertFalse("lateMessageRejectionStartDate", config.getLateMessageRejectionStartDate().isPresent());
+    Assert.assertFalse("lateMessageRejectionStartDateTime", config.getLateMessageRejectionStartDateTime().isPresent());
   }
 
   @Test
@@ -98,7 +98,7 @@ public class KafkaSupervisorIOConfigTest
                      + "  \"completionTimeout\": \"PT45M\",\n"
                      + "  \"lateMessageRejectionPeriod\": \"PT1H\",\n"
                      + "  \"earlyMessageRejectionPeriod\": \"PT1H\",\n"
-                     + "  \"earlyMessageRejectionStartDate\": \"2016-05-31T12:00Z\"\n"
+                     + "  \"lateMessageRejectionStartDateTime\": \"2016-05-31T12:00Z\"\n"
                      + "}";
 
     KafkaSupervisorIOConfig config = mapper.readValue(

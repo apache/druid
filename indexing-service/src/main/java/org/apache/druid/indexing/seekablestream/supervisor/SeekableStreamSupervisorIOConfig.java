@@ -39,7 +39,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   private final Duration completionTimeout;
   private final Optional<Duration> lateMessageRejectionPeriod;
   private final Optional<Duration> earlyMessageRejectionPeriod;
-  private final Optional<DateTime> lateMessageRejectionStartDate;
+  private final Optional<DateTime> lateMessageRejectionStartDateTime;
 
   public SeekableStreamSupervisorIOConfig(
       String stream,
@@ -52,7 +52,7 @@ public abstract class SeekableStreamSupervisorIOConfig
       Period completionTimeout,
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
-      DateTime lateMessageRejectionStartDate
+      DateTime lateMessageRejectionStartDateTime
   )
   {
     this.stream = Preconditions.checkNotNull(stream, "stream cannot be null");
@@ -66,9 +66,9 @@ public abstract class SeekableStreamSupervisorIOConfig
     this.lateMessageRejectionPeriod = lateMessageRejectionPeriod == null
                                       ? Optional.absent()
                                       : Optional.of(lateMessageRejectionPeriod.toStandardDuration());
-    this.lateMessageRejectionStartDate = lateMessageRejectionStartDate == null
+    this.lateMessageRejectionStartDateTime = lateMessageRejectionStartDateTime == null
                                       ? Optional.absent()
-                                      : Optional.of(lateMessageRejectionStartDate);
+                                      : Optional.of(lateMessageRejectionStartDateTime);
     this.earlyMessageRejectionPeriod = earlyMessageRejectionPeriod == null
                                        ? Optional.absent()
                                        : Optional.of(earlyMessageRejectionPeriod.toStandardDuration());
@@ -140,8 +140,8 @@ public abstract class SeekableStreamSupervisorIOConfig
   }
 
   @JsonProperty
-  public Optional<DateTime> getLateMessageRejectionStartDate()
+  public Optional<DateTime> getLateMessageRejectionStartDateTime()
   {
-    return lateMessageRejectionStartDate;
+    return lateMessageRejectionStartDateTime;
   }
 }
