@@ -48,6 +48,7 @@ public class RoundRobinStorageLocationSelectorStrategy implements StorageLocatio
 
       private final int numStorageLocations = storageLocations.size();
       private int remainingIterations = numStorageLocations;
+      private int i = startIndex.getAndUpdate(n -> (n + 1) % numStorageLocations);
 
       @Override
       public boolean hasNext()
@@ -62,8 +63,10 @@ public class RoundRobinStorageLocationSelectorStrategy implements StorageLocatio
           throw new NoSuchElementException();
         }
         remainingIterations--;
-        final StorageLocation nextLocation =
-            storageLocations.get(startIndex.getAndUpdate(n -> (n + 1) % numStorageLocations));
+        final StorageLocation nextLocation = storageLocations.get(i++);
+        if (i == numStorageLocations) {
+          i = 0;
+        }
         return nextLocation;
       }
     };
