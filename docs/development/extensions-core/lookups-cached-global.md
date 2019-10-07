@@ -95,7 +95,7 @@ Proper functionality of globally cached lookups requires the following extension
 
 ## Example configuration
 
-In a simple case where only one [tier](../../querying/lookups.html#dynamic-configuration) exists (`realtime_customer2`) with one `cachedNamespace` lookup called `country_code`, the resulting configuration json looks similar to the following:
+In a simple case where only one [tier](../../querying/lookups.html#dynamic-configuration) exists (`realtime_customer2`) with one `cachedNamespace` lookup called `country_code`, the resulting configuration JSON looks similar to the following:
 
 ```json
 {
@@ -162,7 +162,7 @@ setting namespaces (Broker, Peon, Historical)
 |--------|-----------|-------|
 |`druid.lookup.namespace.cache.type`|Specifies the type of caching to be used by the namespaces. May be one of [`offHeap`, `onHeap`]. `offHeap` uses a temporary file for off-heap storage of the namespace (memory mapped files). `onHeap` stores all cache on the heap in standard java map types.|`onHeap`|
 |`druid.lookup.namespace.numExtractionThreads`|The number of threads in the thread pool dedicated for lookup extraction and updates. This number may need to be scaled up, if you have a lot of lookups and they take long time to extract, to avoid timeouts.|2|
-|`druid.lookup.namespace.numBufferedEntries`|If using offHeap caching, the number of records to be stored on an on-heap buffer.|100,000|
+|`druid.lookup.namespace.numBufferedEntries`|If using off-heap caching, the number of records to be stored on an on-heap buffer.|100,000|
 
 The cache is populated in different ways depending on the settings below. In general, most namespaces employ
 a `pollPeriod` at the end of which time they poll the remote resource of interest for updates.
@@ -178,7 +178,7 @@ For additional lookups, please see our [extensions list](../extensions.md).
 
 ### URI lookup
 
-The remapping values for each globally cached lookup can be specified by a json object as per the following examples:
+The remapping values for each globally cached lookup can be specified by a JSON object as per the following examples:
 
 ```json
 {
@@ -317,7 +317,7 @@ With customJson parsing, if the value field for a particular row is missing or n
 will not be included in the lookup.
 
 #### simpleJson lookupParseSpec
-The `simpleJson` lookupParseSpec does not take any parameters. It is simply a line delimited json file where the field is the key, and the field's value is the value.
+The `simpleJson` lookupParseSpec does not take any parameters. It is simply a line delimited JSON file where the field is the key, and the field's value is the value.
 
 *example input*
 
@@ -337,7 +337,7 @@ The `simpleJson` lookupParseSpec does not take any parameters. It is simply a li
 
 ### JDBC lookup
 
-The JDBC lookups will poll a database to populate its local cache. If the `tsColumn` is set it must be able to accept comparisons in the format `'2015-01-01 00:00:00'`. For example, the following must be valid sql for the table `SELECT * FROM some_lookup_table WHERE timestamp_column >  '2015-01-01 00:00:00'`. If `tsColumn` is set, the caching service will attempt to only poll values that were written *after* the last sync. If `tsColumn` is not set, the entire table is pulled every time.
+The JDBC lookups will poll a database to populate its local cache. If the `tsColumn` is set it must be able to accept comparisons in the format `'2015-01-01 00:00:00'`. For example, the following must be valid SQL for the table `SELECT * FROM some_lookup_table WHERE timestamp_column >  '2015-01-01 00:00:00'`. If `tsColumn` is set, the caching service will attempt to only poll values that were written *after* the last sync. If `tsColumn` is not set, the entire table is pulled every time.
 
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|

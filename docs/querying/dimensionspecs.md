@@ -79,7 +79,7 @@ The following filtered dimension spec acts as a whitelist or blacklist for value
 { "type" : "listFiltered", "delegate" : <dimensionSpec>, "values": <array of strings>, "isWhitelist": <optional attribute for true/false, default is true> }
 ```
 
-Following filtered dimension spec retains only the values matching regex. Note that `listFiltered` is faster than this and one should use that for whitelist or blacklist usecase.
+Following filtered dimension spec retains only the values matching regex. Note that `listFiltered` is faster than this and one should use that for whitelist or blacklist use case.
 
 ```json
 { "type" : "regexFiltered", "delegate" : <dimensionSpec>, "pattern": <java regex pattern> }
@@ -301,7 +301,7 @@ If a value cannot be parsed using the provided timeFormat, it will be returned a
 ```
 
 
-### Javascript Extraction Function
+### JavaScript Extraction Function
 
 Returns the dimension value, as transformed by the given JavaScript function.
 
@@ -327,7 +327,7 @@ Example for a regular dimension
 }
 ```
 
-A property of `injective` specifies if the javascript function preserves uniqueness. The default value is `false` meaning uniqueness is not preserved
+A property of `injective` specifies if the JavaScript function preserves uniqueness. The default value is `false` meaning uniqueness is not preserved
 
 Example for the `__time` dimension:
 
@@ -465,7 +465,7 @@ Provides chained execution of extraction functions.
 
 A property of `extractionFns` contains an array of any extraction functions, which is executed in the array index order.
 
-Example for chaining [regular expression extraction function](#regular-expression-extraction-function), [javascript extraction function](#javascript-extraction-function), and [substring extraction function](#substring-extraction-function) is as followings.
+Example for chaining [regular expression extraction function](#regular-expression-extraction-function), [JavaScript extraction function](#javascript-extraction-function), and [substring extraction function](#substring-extraction-function) is as followings.
 
 ```json
 {
@@ -490,7 +490,7 @@ Example for chaining [regular expression extraction function](#regular-expressio
 ```
 
 It will transform dimension values with specified extraction functions in the order named.
-For example, `'/druid/prod/historical'` is transformed to `'the dru'` as regular expression extraction function first transforms it to `'druid'` and then, javascript extraction function transforms it to `'the druid'`, and lastly, substring extraction function transforms it to `'the dru'`.
+For example, `'/druid/prod/historical'` is transformed to `'the dru'` as regular expression extraction function first transforms it to `'druid'` and then, JavaScript extraction function transforms it to `'the druid'`, and lastly, substring extraction function transforms it to `'the dru'`.
 
 ### String Format Extraction Function
 

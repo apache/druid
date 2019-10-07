@@ -47,12 +47,12 @@ the `ioConfig`:
 Both parse options support auto field discovery and flattening if provided with a
 [`flattenSpec`](../../ingestion/index.md#flattenspec) with `parquet` or `avro` as the format. Parquet nested list and map
 [logical types](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md) _should_ operate correctly with
-json path expressions for all supported types. `parquet-avro` sets a hadoop job property
+JSON path expressions for all supported types. `parquet-avro` sets a hadoop job property
 `parquet.avro.add-list-element-records` to `false` (which normally defaults to `true`), in order to 'unwrap' primitive
 list elements into multi-value dimensions.
 
 The `parquet` parser supports `int96` Parquet values, while `parquet-avro` does not. There may also be some subtle
-differences in the behavior of json path expression evaluation of `flattenSpec`.
+differences in the behavior of JSON path expression evaluation of `flattenSpec`.
 
 We suggest using `parquet` over `parquet-avro` to allow ingesting data beyond the schema constraints of Avro conversion.
 However, `parquet-avro` was the original basis for this extension, and as such it is a bit more mature.

@@ -28,6 +28,7 @@ import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexer.HadoopIOConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
@@ -159,7 +160,8 @@ public class TaskSerdeTest
     );
 
     Assert.assertNull(tuningConfig.getNumShards());
-    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
+    Assert.assertNotNull(tuningConfig.getMaxRowsPerSegment());
+    Assert.assertEquals(PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT, tuningConfig.getMaxRowsPerSegment().intValue());
   }
 
   @Test

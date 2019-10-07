@@ -48,13 +48,13 @@ This extension comes with two different caching strategies. First strategy is a 
 
 The poll strategy cache strategy will fetch and swap all the pair of key/values periodically from the lookup source.
 Hence, user should make sure that the cache can fit all the data.
-The current implementation provides 2 type of poll cache, the first is onheap (uses immutable map), while the second uses MapBD based offheap map.
+The current implementation provides 2 type of poll cache, the first is on-heap (uses immutable map), while the second uses MapDB based off-heap map.
 User can also implement a different lookup polling cache by implementing `PollingCacheFactory` and `PollingCache` interfaces.
 
 #### Loading lookup
 Loading cache strategy will load the key/value pair upon request on the key it self, the general algorithm is load key if absent.
 Once the key/value  pair is loaded eviction will occur according to the cache eviction policy.
-This module comes with two loading lookup implementation, the first is onheap backed by a Guava cache implementation, the second is MapDB offheap implementation.
+This module comes with two loading lookup implementation, the first is on-heap backed by a Guava cache implementation, the second is MapDB off-heap implementation.
 Both implementations offer various eviction strategies.
 Same for Loading cache, developer can implement a new type of loading cache by implementing `LookupLoadingCache` interface.
 
@@ -67,8 +67,8 @@ Same for Loading cache, developer can implement a new type of loading cache by i
 
 |Field|Type|Description|Required|default|
 |-----|----|-----------|--------|-------|
-|dataFetcher|Json object|Specifies the lookup data fetcher type  to use in order to fetch data|yes|null|
-|cacheFactory|Json Object|Cache factory implementation|no |onHeapPolling|
+|dataFetcher|JSON object|Specifies the lookup data fetcher type  to use in order to fetch data|yes|null|
+|cacheFactory|JSON Object|Cache factory implementation|no |onHeapPolling|
 |pollPeriod|Period|polling period |no |null (poll once)|
 
 
@@ -102,9 +102,9 @@ This example demonstrates an off-heap lookup that will be cached once and never 
 
 |Field|Type|Description|Required|default|
 |-----|----|-----------|--------|-------|
-|dataFetcher|Json object|Specifies the lookup data fetcher type  to use in order to fetch data|yes|null|
-|loadingCacheSpec|Json Object|Lookup cache spec implementation|yes |null|
-|reverseLoadingCacheSpec|Json Object| Reverse lookup cache  implementation|yes |null|
+|dataFetcher|JSON object|Specifies the lookup data fetcher type  to use in order to fetch data|yes|null|
+|loadingCacheSpec|JSON Object|Lookup cache spec implementation|yes |null|
+|reverseLoadingCacheSpec|JSON Object| Reverse lookup cache  implementation|yes |null|
 
 
 ##### Example Loading On-heap Guava

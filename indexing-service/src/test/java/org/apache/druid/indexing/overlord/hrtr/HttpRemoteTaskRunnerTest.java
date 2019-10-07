@@ -117,7 +117,8 @@ public class HttpRemoteTaskRunnerTest
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
           WorkerHolder.Listener listener,
-          Worker worker
+          Worker worker,
+          List<TaskAnnouncement> knownAnnouncements
       )
       {
         return HttpRemoteTaskRunnerTest.createWorkerHolder(
@@ -127,6 +128,7 @@ public class HttpRemoteTaskRunnerTest
             workersSyncExec,
             listener,
             worker,
+            ImmutableList.of(),
             ImmutableList.of(),
             ImmutableMap.of(),
             new AtomicInteger(),
@@ -212,7 +214,8 @@ public class HttpRemoteTaskRunnerTest
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
           WorkerHolder.Listener listener,
-          Worker worker
+          Worker worker,
+          List<TaskAnnouncement> knownAnnouncements
       )
       {
         return HttpRemoteTaskRunnerTest.createWorkerHolder(
@@ -222,6 +225,7 @@ public class HttpRemoteTaskRunnerTest
             workersSyncExec,
             listener,
             worker,
+            ImmutableList.of(),
             ImmutableList.of(),
             ImmutableMap.of(task1, ImmutableList.of()), //no announcements would be received for task1
             new AtomicInteger(),
@@ -314,7 +318,8 @@ public class HttpRemoteTaskRunnerTest
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
           WorkerHolder.Listener listener,
-          Worker worker
+          Worker worker,
+          List<TaskAnnouncement> knownAnnouncements
       )
       {
         if (workerHolders.containsKey(worker.getHost())) {
@@ -324,7 +329,8 @@ public class HttpRemoteTaskRunnerTest
               config,
               workersSyncExec,
               listener,
-              worker
+              worker,
+              knownAnnouncements
           );
         } else {
           throw new ISE("No WorkerHolder for [%s].", worker.getHost());
@@ -347,13 +353,14 @@ public class HttpRemoteTaskRunnerTest
 
     workerHolders.put(
         "host:1234",
-        (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
+        (mapper, httpClient, config, exec, listener, worker, knownAnnouncements) -> createWorkerHolder(
             mapper,
             httpClient,
             config,
             exec,
             listener,
             worker,
+            knownAnnouncements,
             ImmutableList.of(
                 TaskAnnouncement.create(
                     task1,
@@ -453,7 +460,8 @@ public class HttpRemoteTaskRunnerTest
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
           WorkerHolder.Listener listener,
-          Worker worker
+          Worker worker,
+          List<TaskAnnouncement> knownAnnouncements
       )
       {
         if (workerHolders.containsKey(worker.getHost())) {
@@ -463,7 +471,8 @@ public class HttpRemoteTaskRunnerTest
               config,
               workersSyncExec,
               listener,
-              worker
+              worker,
+              knownAnnouncements
           );
         } else {
           throw new ISE("No WorkerHolder for [%s].", worker.getHost());
@@ -486,13 +495,14 @@ public class HttpRemoteTaskRunnerTest
 
     workerHolders.put(
         "host:1234",
-        (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
+        (mapper, httpClient, config, exec, listener, worker, knownAnnouncements) -> createWorkerHolder(
             mapper,
             httpClient,
             config,
             exec,
             listener,
             worker,
+            knownAnnouncements,
             ImmutableList.of(),
             ImmutableMap.of(
                 task1, ImmutableList.of(
@@ -551,19 +561,15 @@ public class HttpRemoteTaskRunnerTest
 
     workerHolders.put(
         "host:1234",
-        (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
+        (mapper, httpClient, config, exec, listener, worker, knownAnnouncements) -> createWorkerHolder(
             mapper,
             httpClient,
             config,
             exec,
             listener,
             worker,
+            knownAnnouncements,
             ImmutableList.of(
-                TaskAnnouncement.create(
-                    task1,
-                    TaskStatus.success(task1.getId()),
-                    TaskLocation.create("host", 1234, 1235)
-                ),
                 TaskAnnouncement.create(
                     task2,
                     TaskStatus.running(task2.getId()),
@@ -629,7 +635,8 @@ public class HttpRemoteTaskRunnerTest
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
           WorkerHolder.Listener listener,
-          Worker worker
+          Worker worker,
+          List<TaskAnnouncement> knownAnnouncements
       )
       {
         if (workerHolders.containsKey(worker.getHost())) {
@@ -639,7 +646,8 @@ public class HttpRemoteTaskRunnerTest
               config,
               workersSyncExec,
               listener,
-              worker
+              worker,
+              knownAnnouncements
           );
         } else {
           throw new ISE("No WorkerHolder for [%s].", worker.getHost());
@@ -660,13 +668,14 @@ public class HttpRemoteTaskRunnerTest
 
     workerHolders.put(
         "host:1234",
-        (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
+        (mapper, httpClient, config, exec, listener, worker, knownAnnouncements) -> createWorkerHolder(
             mapper,
             httpClient,
             config,
             exec,
             listener,
             worker,
+            knownAnnouncements,
             ImmutableList.of(),
             ImmutableMap.of(
                 task1, ImmutableList.of(
@@ -726,13 +735,14 @@ public class HttpRemoteTaskRunnerTest
 
     workerHolders.put(
         "host:1234",
-        (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
+        (mapper, httpClient, config, exec, listener, worker, knownAnnouncements) -> createWorkerHolder(
             mapper,
             httpClient,
             config,
             exec,
             listener,
             worker,
+            knownAnnouncements,
             ImmutableList.of(
                 TaskAnnouncement.create(
                     task1,
@@ -806,7 +816,8 @@ public class HttpRemoteTaskRunnerTest
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
           WorkerHolder.Listener listener,
-          Worker worker
+          Worker worker,
+          List<TaskAnnouncement> knownAnnouncements
       )
       {
         if (workerHolders.containsKey(worker.getHost())) {
@@ -816,7 +827,8 @@ public class HttpRemoteTaskRunnerTest
               config,
               workersSyncExec,
               listener,
-              worker
+              worker,
+              knownAnnouncements
           );
         } else {
           throw new ISE("No WorkerHolder for [%s].", worker.getHost());
@@ -838,13 +850,14 @@ public class HttpRemoteTaskRunnerTest
 
     workerHolders.put(
         "host1:8080",
-        (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
+        (mapper, httpClient, config, exec, listener, worker, knownAnnouncements) -> createWorkerHolder(
             mapper,
             httpClient,
             config,
             exec,
             listener,
             worker,
+            knownAnnouncements,
             ImmutableList.of(),
             ImmutableMap.of(
                 task1, ImmutableList.of(
@@ -881,13 +894,14 @@ public class HttpRemoteTaskRunnerTest
 
     workerHolders.put(
         "host2:8080",
-        (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
+        (mapper, httpClient, config, exec, listener, worker, knownAnnouncements) -> createWorkerHolder(
             mapper,
             httpClient,
             config,
             exec,
             listener,
             worker,
+            knownAnnouncements,
             ImmutableList.of(),
             ImmutableMap.of(task2, ImmutableList.of()),
             ticks,
@@ -911,13 +925,14 @@ public class HttpRemoteTaskRunnerTest
 
     workerHolders.put(
         "host3:8080",
-        (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
+        (mapper, httpClient, config, exec, listener, worker, knownAnnouncements) -> createWorkerHolder(
             mapper,
             httpClient,
             config,
             exec,
             listener,
             worker,
+            knownAnnouncements,
             ImmutableList.of(),
             ImmutableMap.of(),
             new AtomicInteger(),
@@ -1267,6 +1282,7 @@ public class HttpRemoteTaskRunnerTest
       ScheduledExecutorService workersSyncExec,
       WorkerHolder.Listener listener,
       Worker worker,
+      List<TaskAnnouncement> knownAnnouncements,
 
       // simulates task announcements received from worker on first sync call for the tasks that are already
       // running/completed on the worker.
@@ -1284,7 +1300,7 @@ public class HttpRemoteTaskRunnerTest
       Set<String> actualShutdowns
   )
   {
-    return new WorkerHolder(smileMapper, httpClient, config, workersSyncExec, listener, worker)
+    return new WorkerHolder(smileMapper, httpClient, config, workersSyncExec, listener, worker, knownAnnouncements)
     {
       private final String workerHost;
       private final int workerPort;
@@ -1428,7 +1444,8 @@ public class HttpRemoteTaskRunnerTest
         HttpRemoteTaskRunnerConfig config,
         ScheduledExecutorService workersSyncExec,
         WorkerHolder.Listener listener,
-        Worker worker
+        Worker worker,
+        List<TaskAnnouncement> knownAnnouncements
     );
   }
 }

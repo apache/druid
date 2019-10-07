@@ -118,7 +118,7 @@ When choosing the Data server hardware, you can choose a split factor `N`, divid
 
 Instructions for adjusting the Historical/MiddleManager configs for the split are described in a later section in this guide.
 
-#### Query derver
+#### Query server
 
 The main considerations for the Query server are available CPUs and RAM for the Broker heap + direct memory, and Router heap.
 
@@ -144,14 +144,14 @@ First, download and unpack the release archive. It's best to do this on a single
 since you will be editing the configurations and then copying the modified distribution out to all
 of your servers.
 
-[Download](https://www.apache.org/dyn/closer.cgi?path=/incubator/druid/#{DRUIDVERSION}/apache-druid-#{DRUIDVERSION}-bin.tar.gz)
-the #{DRUIDVERSION} release.
+[Download](https://www.apache.org/dyn/closer.cgi?path=/incubator/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz)
+the {{DRUIDVERSION}} release.
 
 Extract Druid by running the following commands in your terminal:
 
 ```bash
-tar -xzf apache-druid-#{DRUIDVERSION}-bin.tar.gz
-cd apache-druid-#{DRUIDVERSION}
+tar -xzf apache-druid-{{DRUIDVERSION}}-bin.tar.gz
+cd apache-druid-{{DRUIDVERSION}}
 ```
 
 In the package, you should find:
@@ -418,7 +418,7 @@ Copy the Druid distribution and your edited configurations to your Master server
 If you have been editing the configurations on your local machine, you can use *rsync* to copy them:
 
 ```bash
-rsync -az apache-druid-#{DRUIDVERSION}/ MASTER_SERVER:apache-druid-#{DRUIDVERSION}/
+rsync -az apache-druid-{{DRUIDVERSION}}/ MASTER_SERVER:apache-druid-{{DRUIDVERSION}}/
 ```
 
 ### No Zookeeper on Master
@@ -478,7 +478,7 @@ tar -xzf tranquility-distribution-0.8.3.tgz
 mv tranquility-distribution-0.8.3 tranquility
 ```
 
-Afterwards, in `conf/supervise/cluster/data.conf`, uncomment out the `tranquility-server` line, and restart the Data server proceses.
+Afterwards, in `conf/supervise/cluster/data.conf`, uncomment out the `tranquility-server` line, and restart the Data server processes.
 
 ## Start Query Server
 
