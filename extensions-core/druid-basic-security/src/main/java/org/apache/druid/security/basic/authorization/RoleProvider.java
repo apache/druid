@@ -27,9 +27,9 @@ import org.apache.druid.server.security.AuthenticationResult;
 import java.util.Map;
 import java.util.Set;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DBRoleProvider.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = MetadataStoreRoleProvider.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "db", value = DBRoleProvider.class),
+    @JsonSubTypes.Type(name = "metadata", value = MetadataStoreRoleProvider.class),
     @JsonSubTypes.Type(name = "ldap", value = LDAPRoleProvider.class),
 })
 public interface RoleProvider

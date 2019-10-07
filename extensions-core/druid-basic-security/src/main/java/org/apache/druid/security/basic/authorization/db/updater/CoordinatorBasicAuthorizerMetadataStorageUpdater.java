@@ -1184,8 +1184,6 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
           );
       createGroupMappingInternal(authorizerName, groupMapping);
     }
-
-
   }
 
   private static List<ResourceAction> makeSuperUserPermissions()

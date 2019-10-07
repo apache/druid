@@ -29,7 +29,6 @@ public class BasicAuthLDAPConfig
   private final String baseDn;
   private final String userSearch;
   private final String userAttribute;
-  private final String[] groupFilters;
   private final int credentialIterations;
   private final Integer credentialVerifyDuration;
   private final Integer credentialMaxDuration;
@@ -42,7 +41,6 @@ public class BasicAuthLDAPConfig
       final String baseDn,
       final String userSearch,
       final String userAttribute,
-      final String[] groupFilters,
       final int credentialIterations,
       final Integer credentialVerifyDuration,
       final Integer credentialMaxDuration,
@@ -55,7 +53,6 @@ public class BasicAuthLDAPConfig
     this.baseDn = baseDn;
     this.userSearch = userSearch;
     this.userAttribute = userAttribute;
-    this.groupFilters = groupFilters;
     this.credentialIterations = credentialIterations;
     this.credentialVerifyDuration = credentialVerifyDuration;
     this.credentialMaxDuration = credentialMaxDuration;
@@ -90,11 +87,6 @@ public class BasicAuthLDAPConfig
   public String getUserAttribute()
   {
     return userAttribute;
-  }
-
-  public String[] getGroupFilters()
-  {
-    return groupFilters;
   }
 
   public int getCredentialIterations()

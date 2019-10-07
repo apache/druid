@@ -44,7 +44,6 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
 {
   private final LifecycleLock lifecycleLock = new LifecycleLock();
   private final CommonCacheNotifier userCacheNotifier;
-  private final CommonCacheNotifier configCacheNotifier;
 
   @Inject
   public CoordinatorBasicAuthenticatorCacheNotifier(
@@ -60,13 +59,6 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
         "/druid-ext/basic-security/authentication/listen/%s",
         "CoordinatorBasicAuthenticatorCacheNotifier"
     );
-    configCacheNotifier = new CommonCacheNotifier(
-        initAuthenticatorConfigMap(authenticatorMapper),
-        discoveryProvider,
-        httpClient,
-        "/druid-ext/basic-security/authentication/listen/config/%s",
-        "CoordinatorBasicAuthenticatorCacheNotifier"
-    );
   }
 
   @LifecycleStart
@@ -78,7 +70,6 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
 
     try {
       userCacheNotifier.start();
-      configCacheNotifier.start();
       lifecycleLock.started();
     }
     finally {
@@ -94,7 +85,6 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
     }
     try {
       userCacheNotifier.stop();
-      configCacheNotifier.stop();
     }
     finally {
       lifecycleLock.exitStop();

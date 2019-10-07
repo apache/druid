@@ -23,9 +23,9 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.server.security.AuthenticationResult;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DBCredentialsValidator.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = MetadataStoreCredentialsValidator.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "db", value = DBCredentialsValidator.class),
+    @JsonSubTypes.Type(name = "metadata", value = MetadataStoreCredentialsValidator.class),
     @JsonSubTypes.Type(name = "ldap", value = LDAPCredentialsValidator.class),
 })
 public interface CredentialsValidator

@@ -22,7 +22,6 @@ package org.apache.druid.security.basic.authentication.validator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.PasswordProvider;
@@ -30,29 +29,24 @@ import org.apache.druid.security.basic.BasicAuthLDAPConfig;
 import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.BasicSecurityAuthenticationException;
 import org.apache.druid.security.basic.BasicSecuritySSLSocketFactory;
-import org.apache.druid.security.basic.authentication.BasicAuthenticatorUserPrincipal;
+import org.apache.druid.security.basic.authentication.LdapUserPrincipal;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import org.apache.druid.server.security.AuthenticationResult;
 
 import javax.annotation.Nullable;
 import javax.naming.AuthenticationException;
 import javax.naming.Context;
-import javax.naming.InvalidNameException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
-import javax.naming.directory.Attribute;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantLock;
 
 @JsonTypeName("ldap")
@@ -73,7 +67,6 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       @JsonProperty("baseDn") String baseDn,
       @JsonProperty("userSearch") String userSearch,
       @JsonProperty("userAttribute") String userAttribute,
-      @JsonProperty("groupFilters") String[] groupFilters,
       @JsonProperty("credentialIterations") Integer credentialIterations,
       @JsonProperty("credentialVerifyDuration") Integer credentialVerifyDuration,
       @JsonProperty("credentialMaxDuration") Integer credentialMaxDuration,
@@ -87,7 +80,6 @@ public class LDAPCredentialsValidator implements CredentialsValidator
         baseDn,
         userSearch,
         userAttribute,
-        groupFilters,
         credentialIterations == null ? BasicAuthUtils.DEFAULT_KEY_ITERATIONS : credentialIterations,
         credentialVerifyDuration == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_VERIFY_DURATION_SECONDS : credentialVerifyDuration,
         credentialMaxDuration == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_MAX_DURATION_SECONDS : credentialMaxDuration,
@@ -138,26 +130,24 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       char[] password
   )
   {
-    Set<LdapName> groups;
+    SearchResult userResult;
     LdapName userDn;
-    Map<String, Object> contexMap = new HashMap<>();
+    Map<String, Object> contextMap = new HashMap<>();
 
-    BasicAuthenticatorUserPrincipal principal = this.cache.getOrExpire(username);
+    LdapUserPrincipal principal = this.cache.getOrExpire(username);
     if (principal != null && principal.hasSameCredentials(password)) {
-      contexMap.put(BasicAuthUtils.GROUPS_CONTEXT_KEY, principal.getGroups());
-      return new AuthenticationResult(username, authorizerName, authenticatorName, contexMap);
+      contextMap.put(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY, principal.getSearchResult());
+      return new AuthenticationResult(username, authorizerName, authenticatorName, contextMap);
     } else {
       try {
         InitialDirContext dirContext = new InitialDirContext(bindProperties(this.ldapConfig));
-
         try {
-          SearchResult userResult = getLdapUserObject(this.ldapConfig, dirContext, username);
+          userResult = getLdapUserObject(this.ldapConfig, dirContext, username);
           if (userResult == null) {
             LOG.debug("User not found: %s", username);
             return null;
           }
           userDn = new LdapName(userResult.getNameInNamespace());
-          groups = getGroupsFromLdap(this.ldapConfig, userResult);
         }
         finally {
           try {
@@ -167,7 +157,6 @@ public class LDAPCredentialsValidator implements CredentialsValidator
             // ignored
           }
         }
-
       }
       catch (NamingException e) {
         LOG.error(e, "Exception during user lookup");
@@ -175,21 +164,21 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       }
 
       if (!validatePassword(this.ldapConfig, userDn, password)) {
-        LOG.debug("Password incorrect for user %s", username);
+        LOG.debug("Password incorrect for LDAP user %s", username);
         throw new BasicSecurityAuthenticationException("User LDAP authentication failed username[%s].", userDn.toString());
       }
 
       byte[] salt = BasicAuthUtils.generateSalt();
       byte[] hash = BasicAuthUtils.hashPassword(password, salt, this.ldapConfig.getCredentialIterations());
-      BasicAuthenticatorUserPrincipal newPrincipal = new BasicAuthenticatorUserPrincipal(
+      LdapUserPrincipal newPrincipal = new LdapUserPrincipal(
           username,
           new BasicAuthenticatorCredentials(salt, hash, this.ldapConfig.getCredentialIterations()),
-          groups
+          userResult
       );
 
       this.cache.put(username, newPrincipal);
-      contexMap.put(BasicAuthUtils.GROUPS_CONTEXT_KEY, groups);
-      return new AuthenticationResult(username, authorizerName, authenticatorName, contexMap);
+      contextMap.put(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY, userResult);
+      return new AuthenticationResult(username, authorizerName, authenticatorName, contextMap);
     }
   }
 
@@ -220,65 +209,6 @@ public class LDAPCredentialsValidator implements CredentialsValidator
     }
   }
 
-  Set<LdapName> getGroupsFromLdap(BasicAuthLDAPConfig ldapConfig, SearchResult userResult) throws NamingException
-  {
-    Set<LdapName> groups = new TreeSet<>();
-
-    Attribute memberOf = userResult.getAttributes().get("memberOf");
-    if (memberOf == null) {
-      LOG.debug("No memberOf attributes");
-      return groups; // not part of any groups
-    }
-
-    Set<String> groupFilters = new TreeSet<>(Arrays.asList(ldapConfig.getGroupFilters()));
-    for (int i = 0; i < memberOf.size(); i++) {
-      String memberDn = memberOf.get(i).toString();
-      LdapName ln;
-      try {
-        ln = new LdapName(memberDn);
-      }
-      catch (InvalidNameException e) {
-        LOG.debug("Invalid LDAP name: %s", memberDn);
-        continue;
-      }
-
-      if (allowedLdapGroup(ln, groupFilters)) {
-        groups.add(ln);
-      }
-    }
-
-    return groups;
-  }
-
-  boolean allowedLdapGroup(LdapName groupName, Set<String> groupFilters)
-  {
-    for (String filter : groupFilters) {
-      try {
-        if (filter.startsWith("*,")) {
-          LdapName ln = new LdapName(filter.substring(2));
-          if (groupName.startsWith(ln)) {
-            return true;
-          }
-        } else if (filter.endsWith(",*")) {
-          LdapName ln = new LdapName(filter.substring(0, filter.length() - 2));
-          if (groupName.endsWith(ln)) {
-            return true;
-          }
-        } else {
-          LOG.debug("Attempting exact filter %s", filter);
-          LdapName ln = new LdapName(filter);
-          if (groupName.equals(ln)) {
-            return true;
-          }
-        }
-      }
-      catch (InvalidNameException e) {
-        throw new RE(StringUtils.format("Configuration problem - Invalid groupFilter '%s'", filter));
-      }
-    }
-    return false;
-  }
-
   boolean validatePassword(BasicAuthLDAPConfig ldapConfig, LdapName userDn, char[] password)
   {
     InitialDirContext context = null;
@@ -307,7 +237,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
     }
   }
 
-  private static class LruBlockCache extends LinkedHashMap<String, BasicAuthenticatorUserPrincipal>
+  private static class LruBlockCache extends LinkedHashMap<String, LdapUserPrincipal>
   {
     private static final long serialVersionUID = 7509410739092012261L;
 
@@ -324,17 +254,17 @@ public class LDAPCredentialsValidator implements CredentialsValidator
     }
 
     @Override
-    protected boolean removeEldestEntry(Map.Entry<String, BasicAuthenticatorUserPrincipal> eldest)
+    protected boolean removeEldestEntry(Map.Entry<String, LdapUserPrincipal> eldest)
     {
       return size() > cacheSize;
     }
 
     @Nullable
-    BasicAuthenticatorUserPrincipal getOrExpire(String identity)
+    LdapUserPrincipal getOrExpire(String identity)
     {
       try {
         LOCK.lock();
-        BasicAuthenticatorUserPrincipal principal = get(identity);
+        LdapUserPrincipal principal = get(identity);
         if (principal != null) {
           if (principal.isExpired(duration, maxDuration)) {
             remove(identity);
@@ -352,7 +282,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
     }
 
     @Override
-    public BasicAuthenticatorUserPrincipal put(String key, BasicAuthenticatorUserPrincipal value)
+    public LdapUserPrincipal put(String key, LdapUserPrincipal value)
     {
       try {
         LOCK.lock();

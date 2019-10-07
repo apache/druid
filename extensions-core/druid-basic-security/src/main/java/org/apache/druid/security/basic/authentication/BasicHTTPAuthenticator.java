@@ -31,7 +31,7 @@ import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.BasicSecurityAuthenticationException;
 import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
 import org.apache.druid.security.basic.authentication.validator.CredentialsValidator;
-import org.apache.druid.security.basic.authentication.validator.DBCredentialsValidator;
+import org.apache.druid.security.basic.authentication.validator.MetadataStoreCredentialsValidator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
@@ -88,7 +88,7 @@ public class BasicHTTPAuthenticator implements Authenticator
         credentialIterations == null ? BasicAuthUtils.DEFAULT_KEY_ITERATIONS : credentialIterations
     );
     if (credentialsValidator == null) {
-      this.credentialsValidator = new DBCredentialsValidator(cacheManager);
+      this.credentialsValidator = new MetadataStoreCredentialsValidator(cacheManager);
     } else {
       this.credentialsValidator = credentialsValidator;
     }
@@ -216,9 +216,9 @@ public class BasicHTTPAuthenticator implements Authenticator
         }
       }
       catch (BasicSecurityAuthenticationException ex) {
-        httpResp.sendError(HttpServletResponse.SC_UNAUTHORIZED, ex.getMessage());
+        String message = ex.getMessage();
+        httpResp.sendError(HttpServletResponse.SC_UNAUTHORIZED, message);
       }
-
     }
 
     @Override

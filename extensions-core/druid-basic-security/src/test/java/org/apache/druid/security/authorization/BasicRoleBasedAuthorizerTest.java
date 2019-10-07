@@ -27,8 +27,8 @@ import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
 import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
-import org.apache.druid.security.basic.authorization.DBRoleProvider;
 import org.apache.druid.security.basic.authorization.LDAPRoleProvider;
+import org.apache.druid.security.basic.authorization.MetadataStoreRoleProvider;
 import org.apache.druid.security.basic.authorization.db.cache.MetadataStoragePollingBasicAuthorizerCacheManager;
 import org.apache.druid.security.basic.authorization.db.updater.CoordinatorBasicAuthorizerMetadataStorageUpdater;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
@@ -45,18 +45,18 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import javax.naming.InvalidNameException;
-import javax.naming.ldap.LdapName;
+import javax.naming.directory.BasicAttribute;
+import javax.naming.directory.BasicAttributes;
+import javax.naming.directory.SearchResult;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
 public class BasicRoleBasedAuthorizerTest
 {
-  private static final String DB_AUTHORIZER_NAME = "db";
+  private static final String DB_AUTHORIZER_NAME = "metadata";
   private static final String LDAP_AUTHORIZER_NAME = "ldap";
 
   @Rule
@@ -66,6 +66,13 @@ public class BasicRoleBasedAuthorizerTest
   private BasicRoleBasedAuthorizer ldapAuthorizer;
 
   private CoordinatorBasicAuthorizerMetadataStorageUpdater updater;
+  private String[] groupFilters = {
+      "*,OU=Druid,OU=Application,OU=Groupings,DC=corp,DC=apache,DC=org",
+      "*,OU=Platform,OU=Groupings,DC=corp,DC=apache,DC=org"
+  };
+
+  private SearchResult userSearchResult;
+  private SearchResult adminSearchResult;
 
   @Before
   public void setUp()
@@ -73,6 +80,17 @@ public class BasicRoleBasedAuthorizerTest
     TestDerbyConnector connector = derbyConnectorRule.getConnector();
     MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createConfigTable();
+
+    BasicAttributes userAttrs = new BasicAttributes(true);
+    userAttrs.put(new BasicAttribute("sAMAccountName", "druiduser"));
+    userAttrs.put(new BasicAttribute("memberOf", "CN=user,OU=Druid,OU=Application,OU=Groupings,DC=corp,DC=apache,DC=org"));
+
+    BasicAttributes adminAttrs = new BasicAttributes(true);
+    adminAttrs.put(new BasicAttribute("sAMAccountName", "druidadmin"));
+    adminAttrs.put(new BasicAttribute("memberOf", "CN=admin,OU=Platform,OU=Groupings,DC=corp,DC=apache,DC=org"));
+
+    userSearchResult = new SearchResult("CN=1234,OU=Employees,OU=People", null, userAttrs);
+    adminSearchResult = new SearchResult("CN=9876,OU=Employees,OU=People", null, adminAttrs);
 
     updater = new CoordinatorBasicAuthorizerMetadataStorageUpdater(
         new AuthorizerMapper(
@@ -85,7 +103,7 @@ public class BasicRoleBasedAuthorizerTest
                     null,
                     null, null,
                     null,
-                    new DBRoleProvider(null)
+                    new MetadataStoreRoleProvider(null)
                 ),
                 LDAP_AUTHORIZER_NAME,
                 new BasicRoleBasedAuthorizer(
@@ -95,7 +113,7 @@ public class BasicRoleBasedAuthorizerTest
                     null,
                     null, null,
                     null,
-                    new LDAPRoleProvider(null)
+                    new LDAPRoleProvider(null, groupFilters)
                 )
             )
         ),
@@ -116,7 +134,7 @@ public class BasicRoleBasedAuthorizerTest
         null,
         null, null,
         null,
-        new DBRoleProvider(new MetadataStoragePollingBasicAuthorizerCacheManager(updater))
+        new MetadataStoreRoleProvider(new MetadataStoragePollingBasicAuthorizerCacheManager(updater))
     );
 
     ldapAuthorizer = new BasicRoleBasedAuthorizer(
@@ -126,7 +144,7 @@ public class BasicRoleBasedAuthorizerTest
         null,
         null, null,
         null,
-        new LDAPRoleProvider(new MetadataStoragePollingBasicAuthorizerCacheManager(updater))
+        new LDAPRoleProvider(new MetadataStoragePollingBasicAuthorizerCacheManager(updater), groupFilters)
     );
   }
 
@@ -166,9 +184,9 @@ public class BasicRoleBasedAuthorizerTest
   }
 
   @Test
-  public void testAuthGroupMapping() throws InvalidNameException
+  public void testAuthGroupMapping()
   {
-    BasicAuthorizerGroupMapping groupMapping = new BasicAuthorizerGroupMapping("druidGroupMapping", "CN=test", null);
+    BasicAuthorizerGroupMapping groupMapping = new BasicAuthorizerGroupMapping("druidGroupMapping", "CN=admin,OU=Platform,OU=Groupings,DC=corp,DC=apache,DC=org", null);
     updater.createGroupMapping(LDAP_AUTHORIZER_NAME, groupMapping);
     updater.createRole(LDAP_AUTHORIZER_NAME, "druidRole");
     updater.assignGroupMappingRole(LDAP_AUTHORIZER_NAME, "druidGroupMapping", "druidRole");
@@ -180,9 +198,9 @@ public class BasicRoleBasedAuthorizerTest
     updater.setPermissions(LDAP_AUTHORIZER_NAME, "druidRole", permissions);
 
     Map<String, Object> contexMap = new HashMap<>();
-    contexMap.put(BasicAuthUtils.GROUPS_CONTEXT_KEY, Collections.singleton(new LdapName("CN=test")));
+    contexMap.put(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY, adminSearchResult);
 
-    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, contexMap);
+    AuthenticationResult authenticationResult = new AuthenticationResult("druidadmin", "druid", null, contexMap);
 
     Access access = ldapAuthorizer.authorize(
         authenticationResult,
@@ -198,43 +216,43 @@ public class BasicRoleBasedAuthorizerTest
     );
     Assert.assertFalse(access.isAllowed());
   }
-
   @Test
-  public void testAuthGroupMappingPatternRightMask() throws InvalidNameException
+  public void testAuthGroupMappingPatternRightMask()
   {
-    BasicAuthorizerGroupMapping groupMapping = new BasicAuthorizerGroupMapping("druidGroupMapping", "CN=test,*", null);
-    updater.createGroupMapping(LDAP_AUTHORIZER_NAME, groupMapping);
-    updater.createRole(LDAP_AUTHORIZER_NAME, "druidRole");
-    updater.assignGroupMappingRole(LDAP_AUTHORIZER_NAME, "druidGroupMapping", "druidRole");
+    //Admin
+    BasicAuthorizerGroupMapping adminGrroupMapping = new BasicAuthorizerGroupMapping("adminGrroupMapping", "CN=admin,*", null);
+    updater.createGroupMapping(LDAP_AUTHORIZER_NAME, adminGrroupMapping);
+    updater.createRole(LDAP_AUTHORIZER_NAME, "adminDruidRole");
+    updater.assignGroupMappingRole(LDAP_AUTHORIZER_NAME, "adminGrroupMapping", "adminDruidRole");
+    List<ResourceAction> adminPermissions = Arrays.asList(
+        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.WRITE),
+        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.READ)
+    );
+    updater.setPermissions(LDAP_AUTHORIZER_NAME, "adminDruidRole", adminPermissions);
 
-    List<ResourceAction> permissions = Collections.singletonList(
-        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.WRITE)
+    //User
+    BasicAuthorizerGroupMapping userGrroupMapping = new BasicAuthorizerGroupMapping("userGrroupMapping", "CN=user,*", null);
+    updater.createGroupMapping(LDAP_AUTHORIZER_NAME, userGrroupMapping);
+    updater.createRole(LDAP_AUTHORIZER_NAME, "userDruidRole");
+    updater.assignGroupMappingRole(LDAP_AUTHORIZER_NAME, "userGrroupMapping", "userDruidRole");
+
+    List<ResourceAction> userPermissions = Collections.singletonList(
+        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.READ)
     );
 
-    updater.setPermissions(LDAP_AUTHORIZER_NAME, "druidRole", permissions);
+    updater.setPermissions(LDAP_AUTHORIZER_NAME, "userDruidRole", userPermissions);
 
     Map<String, Object> contexMap = new HashMap<>();
 
-    contexMap.put(BasicAuthUtils.GROUPS_CONTEXT_KEY, Collections.singleton(new LdapName("CN=test,ou=groupings,dc=corp")));
-    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, contexMap);
+    contexMap.put(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY, adminSearchResult);
+    AuthenticationResult authenticationResult = new AuthenticationResult("druidadmin", "druid", null, contexMap);
 
     Access access = ldapAuthorizer.authorize(
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
-        Action.WRITE
+        Action.READ
     );
     Assert.assertTrue(access.isAllowed());
-
-    access = ldapAuthorizer.authorize(
-        authenticationResult,
-        new Resource("wrongResource", ResourceType.DATASOURCE),
-        Action.WRITE
-    );
-    Assert.assertFalse(access.isAllowed());
-
-    contexMap = new HashMap<>();
-    contexMap.put(BasicAuthUtils.GROUPS_CONTEXT_KEY, Collections.singleton(new LdapName("CN=test")));
-    authenticationResult = new AuthenticationResult("druid", "druid", null, contexMap);
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
@@ -251,8 +269,8 @@ public class BasicRoleBasedAuthorizerTest
     Assert.assertFalse(access.isAllowed());
 
     contexMap = new HashMap<>();
-    contexMap.put(BasicAuthUtils.GROUPS_CONTEXT_KEY, Collections.singleton(new LdapName("CN=druid,CN=test")));
-    authenticationResult = new AuthenticationResult("druid", "druid", null, contexMap);
+    contexMap.put(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY, userSearchResult);
+    authenticationResult = new AuthenticationResult("druiduser", "druid", null, contexMap);
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
@@ -263,48 +281,56 @@ public class BasicRoleBasedAuthorizerTest
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
+        new Resource("testResource", ResourceType.DATASOURCE),
+        Action.READ
+    );
+    Assert.assertTrue(access.isAllowed());
+
+    access = ldapAuthorizer.authorize(
+        authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
-        Action.WRITE
+        Action.READ
     );
     Assert.assertFalse(access.isAllowed());
   }
 
   @Test
-  public void testAuthGroupMappingPatternLeftMask() throws InvalidNameException
+  public void testAuthGroupMappingPatternLeftMask()
   {
-    BasicAuthorizerGroupMapping groupMapping = new BasicAuthorizerGroupMapping("druidGroupMapping", "*,CN=test", null);
-    updater.createGroupMapping(LDAP_AUTHORIZER_NAME, groupMapping);
-    updater.createRole(LDAP_AUTHORIZER_NAME, "druidRole");
-    updater.assignGroupMappingRole(LDAP_AUTHORIZER_NAME, "druidGroupMapping", "druidRole");
+    //Admin
+    BasicAuthorizerGroupMapping adminGrroupMapping = new BasicAuthorizerGroupMapping("adminGrroupMapping", "*,CN=admin,OU=Platform,OU=Groupings,DC=corp,DC=apache,DC=org", null);
+    updater.createGroupMapping(LDAP_AUTHORIZER_NAME, adminGrroupMapping);
+    updater.createRole(LDAP_AUTHORIZER_NAME, "adminDruidRole");
+    updater.assignGroupMappingRole(LDAP_AUTHORIZER_NAME, "adminGrroupMapping", "adminDruidRole");
+    List<ResourceAction> adminPermissions = Arrays.asList(
+        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.WRITE),
+        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.READ)
+    );
+    updater.setPermissions(LDAP_AUTHORIZER_NAME, "adminDruidRole", adminPermissions);
 
-    List<ResourceAction> permissions = Collections.singletonList(
-        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.WRITE)
+    //User
+    BasicAuthorizerGroupMapping userGrroupMapping = new BasicAuthorizerGroupMapping("userGrroupMapping", "*,CN=user,OU=Druid,OU=Application,OU=Groupings,DC=corp,DC=apache,DC=org", null);
+    updater.createGroupMapping(LDAP_AUTHORIZER_NAME, userGrroupMapping);
+    updater.createRole(LDAP_AUTHORIZER_NAME, "userDruidRole");
+    updater.assignGroupMappingRole(LDAP_AUTHORIZER_NAME, "userGrroupMapping", "userDruidRole");
+
+    List<ResourceAction> userPermissions = Collections.singletonList(
+        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.READ)
     );
 
-    updater.setPermissions(LDAP_AUTHORIZER_NAME, "druidRole", permissions);
+    updater.setPermissions(LDAP_AUTHORIZER_NAME, "userDruidRole", userPermissions);
 
     Map<String, Object> contexMap = new HashMap<>();
 
-    contexMap.put(BasicAuthUtils.GROUPS_CONTEXT_KEY, Collections.singleton(new LdapName("CN=druid,CN=test")));
-    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, contexMap);
+    contexMap.put(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY, adminSearchResult);
+    AuthenticationResult authenticationResult = new AuthenticationResult("druidadmin", "druid", null, contexMap);
 
     Access access = ldapAuthorizer.authorize(
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
-        Action.WRITE
+        Action.READ
     );
     Assert.assertTrue(access.isAllowed());
-
-    access = ldapAuthorizer.authorize(
-        authenticationResult,
-        new Resource("wrongResource", ResourceType.DATASOURCE),
-        Action.WRITE
-    );
-    Assert.assertFalse(access.isAllowed());
-
-    contexMap = new HashMap<>();
-    contexMap.put(BasicAuthUtils.GROUPS_CONTEXT_KEY, Collections.singleton(new LdapName("CN=test")));
-    authenticationResult = new AuthenticationResult("druid", "druid", null, contexMap);
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
@@ -321,8 +347,8 @@ public class BasicRoleBasedAuthorizerTest
     Assert.assertFalse(access.isAllowed());
 
     contexMap = new HashMap<>();
-    contexMap.put(BasicAuthUtils.GROUPS_CONTEXT_KEY, Collections.singleton(new LdapName("CN=test,CN=druid")));
-    authenticationResult = new AuthenticationResult("druid", "druid", null, contexMap);
+    contexMap.put(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY, userSearchResult);
+    authenticationResult = new AuthenticationResult("druiduser", "druid", null, contexMap);
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
@@ -333,33 +359,38 @@ public class BasicRoleBasedAuthorizerTest
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
+        new Resource("testResource", ResourceType.DATASOURCE),
+        Action.READ
+    );
+    Assert.assertTrue(access.isAllowed());
+
+    access = ldapAuthorizer.authorize(
+        authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
-        Action.WRITE
+        Action.READ
     );
     Assert.assertFalse(access.isAllowed());
   }
 
   @Test
-  public void testAuthMissingGroupMapping() throws InvalidNameException
+  public void testAuthMissingGroupMapping()
   {
-    BasicAuthorizerGroupMapping groupMapping = new BasicAuthorizerGroupMapping("druidGroupMapping", "CN=test", null);
+    BasicAuthorizerGroupMapping groupMapping = new BasicAuthorizerGroupMapping("druidGroupMapping", "CN=unknown,*", null);
     updater.createGroupMapping(LDAP_AUTHORIZER_NAME, groupMapping);
     updater.createRole(LDAP_AUTHORIZER_NAME, "druidRole");
     updater.assignGroupMappingRole(LDAP_AUTHORIZER_NAME, "druidGroupMapping", "druidRole");
 
-    List<ResourceAction> permissions = Collections.singletonList(
-        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.WRITE)
+    List<ResourceAction> permissions = Arrays.asList(
+        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.WRITE),
+        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.READ)
     );
 
     updater.setPermissions(LDAP_AUTHORIZER_NAME, "druidRole", permissions);
 
     Map<String, Object> contexMap = new HashMap<>();
-    contexMap.put(
-        BasicAuthUtils.GROUPS_CONTEXT_KEY,
-        new HashSet<>(Arrays.asList(new LdapName("CN=unknown"), new LdapName("CN=test,ou=groupings,dc=corp")))
-    );
+    contexMap.put(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY, userSearchResult);
 
-    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, contexMap);
+    AuthenticationResult authenticationResult = new AuthenticationResult("druiduser", "druid", null, contexMap);
 
     Access access = ldapAuthorizer.authorize(
         authenticationResult,
@@ -370,8 +401,22 @@ public class BasicRoleBasedAuthorizerTest
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
+        new Resource("testResource", ResourceType.DATASOURCE),
+        Action.READ
+    );
+    Assert.assertFalse(access.isAllowed());
+
+    access = ldapAuthorizer.authorize(
+        authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
         Action.WRITE
+    );
+    Assert.assertFalse(access.isAllowed());
+
+    access = ldapAuthorizer.authorize(
+        authenticationResult,
+        new Resource("wrongResource", ResourceType.DATASOURCE),
+        Action.READ
     );
     Assert.assertFalse(access.isAllowed());
   }

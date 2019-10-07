@@ -76,7 +76,6 @@ public class CommonCacheNotifier
   private final HttpClient httpClient;
   private final BlockingQueue<Pair<String, byte[]>> updateQueue;
   private final Map<String, BasicAuthDBConfig> itemConfigMap;
-  private final BasicAuthDBConfig itemConfig;
   private final String baseUrl;
   private final String callerName;
   private final ExecutorService exec;
@@ -96,25 +95,6 @@ public class CommonCacheNotifier
     this.discoveryProvider = discoveryProvider;
     this.httpClient = httpClient;
     this.baseUrl = baseUrl;
-    this.itemConfig = null;
-  }
-
-  public CommonCacheNotifier(
-      BasicAuthDBConfig itemConfig,
-      DruidNodeDiscoveryProvider discoveryProvider,
-      HttpClient httpClient,
-      String baseUrl,
-      String callerName
-  )
-  {
-    this.itemConfig = itemConfig;
-    this.exec = Execs.scheduledSingleThreaded(StringUtils.format("%s-notifierThread-", callerName) + "%d");
-    this.callerName = callerName;
-    this.updateQueue = new LinkedBlockingQueue<>();
-    this.discoveryProvider = discoveryProvider;
-    this.httpClient = httpClient;
-    this.baseUrl = baseUrl;
-    this.itemConfigMap = null;
   }
 
   public void start()
@@ -128,25 +108,23 @@ public class CommonCacheNotifier
               String authorizer = update.lhs;
               byte[] serializedMap = update.rhs;
 
-              BasicAuthDBConfig dbConfig = itemConfigMap == null ? itemConfig : itemConfigMap.get(update.lhs);
-              if (!dbConfig.isEnableCacheNotifications()) {
+              BasicAuthDBConfig authorizerConfig = itemConfigMap.get(update.lhs);
+              if (!authorizerConfig.isEnableCacheNotifications()) {
                 continue;
               }
 
               LOG.debug(callerName + ":Sending cache update notifications");
               // Best effort, if a notification fails, the remote node will eventually poll to update its state
               // We wait for responses however, to avoid flooding remote nodes with notifications.
-              List<ListenableFuture<StatusResponseHolder>> futures;
-              if (authorizer != null) {
-                futures = sendUpdate(authorizer, serializedMap);
-              } else {
-                futures = sendUpdate(serializedMap);
-              }
+              List<ListenableFuture<StatusResponseHolder>> futures = sendUpdate(
+                  authorizer,
+                  serializedMap
+              );
 
               try {
                 List<StatusResponseHolder> responses = Futures.allAsList(futures)
                                                               .get(
-                                                                  dbConfig.getCacheNotificationTimeout(),
+                                                                  authorizerConfig.getCacheNotificationTimeout(),
                                                                   TimeUnit.MILLISECONDS
                                                               );
 
@@ -180,11 +158,6 @@ public class CommonCacheNotifier
     );
   }
 
-  public void addUpdate(byte[] updatedItemData)
-  {
-    updateQueue.add(new Pair<>(null, updatedItemData));
-  }
-
   private List<ListenableFuture<StatusResponseHolder>> sendUpdate(String updatedAuthenticatorPrefix, byte[] serializedEntity)
   {
     List<ListenableFuture<StatusResponseHolder>> futures = new ArrayList<>();
@@ -202,30 +175,6 @@ public class CommonCacheNotifier
         req.setContent(MediaType.APPLICATION_JSON, serializedEntity);
 
         BasicAuthDBConfig itemConfig = itemConfigMap.get(updatedAuthenticatorPrefix);
-
-        ListenableFuture<StatusResponseHolder> future = httpClient.go(
-            req,
-            new ResponseHandler(),
-            Duration.millis(itemConfig.getCacheNotificationTimeout())
-        );
-        futures.add(future);
-      }
-    }
-    return futures;
-  }
-
-  private List<ListenableFuture<StatusResponseHolder>> sendUpdate(byte[] serializedEntity)
-  {
-    List<ListenableFuture<StatusResponseHolder>> futures = new ArrayList<>();
-    for (NodeType nodeType : NODE_TYPES) {
-      DruidNodeDiscovery nodeDiscovery = discoveryProvider.getForNodeType(nodeType);
-      Collection<DiscoveryDruidNode> nodes = nodeDiscovery.getAllNodes();
-      for (DiscoveryDruidNode node : nodes) {
-        URL listenerURL = getListenerURL(node.getDruidNode(), baseUrl);
-
-        // best effort, if this fails, remote node will poll and pick up the update eventually
-        Request req = new Request(HttpMethod.POST, listenerURL);
-        req.setContent(MediaType.APPLICATION_JSON, serializedEntity);
 
         ListenableFuture<StatusResponseHolder> future = httpClient.go(
             req,

@@ -529,6 +529,26 @@ public class BasicAuthorizerResource
 
   /**
    * Listen for update notifications for the user auth storage
+   * @deprecated  path /listen/{authorizerName} is to replaced by /listen/users/{authorizerName}
+   *              use {@link #authorizerUserUpdateListener(HttpServletRequest, String, byte[])} instead
+   */
+  @POST
+  @Path("/listen/{authorizerName}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @Deprecated
+  public Response authorizerUpdateListener(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
+      byte[] serializedUserAndRoleMap
+  )
+  {
+    return resourceHandler.authorizerUserUpdateListener(authorizerName, serializedUserAndRoleMap);
+  }
+
+  /**
+   * Listen for update notifications for the user auth storage
    */
   @POST
   @Path("/listen/users/{authorizerName}")

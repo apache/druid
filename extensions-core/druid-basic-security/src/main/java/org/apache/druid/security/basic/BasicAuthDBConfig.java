@@ -32,7 +32,7 @@ public class BasicAuthDBConfig
   private final String initialAdminGroupMapping;
   private final boolean enableCacheNotifications;
   private final long cacheNotificationTimeout;
-  private final int iterations;
+  private final int credentialIterations;
 
   public BasicAuthDBConfig(
       final PasswordProvider initialAdminPassword,
@@ -52,7 +52,7 @@ public class BasicAuthDBConfig
     this.initialAdminGroupMapping = initialAdminGroupMapping;
     this.enableCacheNotifications = enableCacheNotifications;
     this.cacheNotificationTimeout = cacheNotificationTimeout;
-    this.iterations = credentialIterations;
+    this.credentialIterations = credentialIterations;
   }
 
   public PasswordProvider getInitialAdminPassword()
@@ -90,8 +90,8 @@ public class BasicAuthDBConfig
     return cacheNotificationTimeout;
   }
 
-  public int getIterations()
+  public int getCredentialIterations()
   {
-    return iterations;
+    return credentialIterations;
   }
 }

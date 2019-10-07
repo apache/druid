@@ -66,7 +66,6 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   private static final EmittingLogger LOG =
       new EmittingLogger(CoordinatorBasicAuthenticatorMetadataStorageUpdater.class);
   private static final String USERS = "users";
-  private static final String CONFIG = "config";
   private static final long UPDATE_RETRY_DELAY = 1000;
 
   private final AuthenticatorMapper authenticatorMapper;
@@ -338,7 +337,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
       credentials = new BasicAuthenticatorCredentials(
           new BasicAuthenticatorCredentialUpdate(
               update.getPassword(),
-              authenticator.getDbConfig().getIterations()
+              authenticator.getDbConfig().getCredentialIterations()
           )
       );
     } else {

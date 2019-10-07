@@ -34,7 +34,7 @@ Please see [Authentication and Authorization](../../design/auth.md) for more inf
 
 ## Configuration
 
-The examples in the section will use "MyBasicMetadataAuthenticator", "MyBasicLDAPAuthenticator" and "MyBasicAuthorizer" as names for the Authenticators and Authorizer.
+The examples in the section will use "MyBasicMetadataAuthenticator", "MyBasicLDAPAuthenticator", "MyBasicMetadataAuthorizer", and "MyBasicLDAPAuthorizer" as names for the Authenticators and Authorizer.
 
 These properties are not tied to specific Authenticator or Authorizer instances.
 
@@ -58,7 +58,7 @@ druid.auth.authenticator.MyBasicMetadataAuthenticator.initialAdminPassword=passw
 druid.auth.authenticator.MyBasicMetadataAuthenticator.initialInternalClientPassword=password2
 druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialsValidator.type=metadata
 druid.auth.authenticator.MyBasicMetadataAuthenticator.skipOnFailure=false
-druid.auth.authenticator.MyBasicMetadataAuthenticator.authorizerName=MyBasicAuthorizer
+druid.auth.authenticator.MyBasicMetadataAuthenticator.authorizerName=MyBasicMetadataAuthorizer
 ```
 
 To use the Basic authenticator, add an authenticator with type `basic` to the authenticatorChain.
@@ -71,7 +71,7 @@ Configuration of the named authenticator is assigned through properties with the
 druid.auth.authenticator.<authenticatorName>.<authenticatorProperty>
 ```
 
-The configuration examples in the rest of this document will use "MyBasicMetadataAuthenticator" or "MyBasicLDAPAuthenticator" as the name of the authenticators being configured.
+The authenticator configuration examples in the rest of this document will use "MyBasicMetadataAuthenticator" or "MyBasicLDAPAuthenticator" as the name of the authenticators being configured.
 
 
 #### Properties for Druid metadata store user authentication
@@ -101,7 +101,6 @@ The configuration examples in the rest of this document will use "MyBasicMetadat
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.baseDn`|The point from where the LDAP server will search for users.|null|Yes|
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.userSearch`|The filter/expression to use for the search. For example, (&(sAMAccountName=%s)(objectClass=user))|null|Yes|
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.userAttribute`|The attribute id identifying the attribute that will be returned as part of the search. For example, sAMAccountName. |null|Yes|
-|`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.groupFilters`|Array of filters used to filter out the allowed set of groups returned from search. Filters can be begin with *, or end with ,* to provide configurational flexibility.|null|Yes|
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.credentialVerifyDuration`|The duration in seconds for how long valid credentials are verifiable within the cache when not requested.|600|No|
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.credentialMaxDuration`|The max duration in seconds for valid credentials that can reside in cache regardless of how often they are requested.|3600|No|
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.credentialCacheSize`|The valid credentials cache size. The cache uses a LRU policy.|100|No|
@@ -115,7 +114,7 @@ The configuration examples in the rest of this document will use "MyBasicMetadat
 druid.escalator.type=basic
 druid.escalator.internalClientUsername=druid_system
 druid.escalator.internalClientPassword=password2
-druid.escalator.authorizerName=MyBasicAuthorizer
+druid.escalator.authorizerName=MyBasicMetadataAuthorizer
 ```
 
 #### Properties
@@ -128,9 +127,9 @@ druid.escalator.authorizerName=MyBasicAuthorizer
 
 ### Creating an Authorizer
 ```
-druid.auth.authorizers=["MyBasicAuthorizer"]
+druid.auth.authorizers=["MyBasicMetadataAuthorizer"]
 
-druid.auth.authorizer.MyBasicAuthorizer.type=basic
+druid.auth.authorizer.MyBasicMetadataAuthorizer.type=basic
 ```
 
 To use the Basic authorizer, add an authorizer with type `basic` to the authorizers list.
@@ -141,14 +140,27 @@ Configuration of the named authorizer is assigned through properties with the fo
 druid.auth.authorizer.<authorizerName>.<authorizerProperty>
 ```
 
-#### Properties
+The authorizer configuration examples in the rest of this document will use "MyBasicMetadataAuthorizer" or "MyBasicLDAPAuthorizer" as the name of the authenticators being configured.
+
+#### Properties for Druid metadata store user authorization
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
-|`druid.auth.authorizer.MyBasicAuthorizer.enableCacheNotifications`|If true, the Coordinator will notify Druid processes whenever a configuration change to this Authorizer occurs, allowing them to immediately update their state without waiting for polling.|true|No|
-|`druid.auth.authorizer.MyBasicAuthorizer.cacheNotificationTimeout`|The timeout in milliseconds for the cache notifications.|5000|No|
-|`druid.auth.authorizer.MyBasicAuthorizer.initialAdminUser`|The initial admin user with role defined in initialAdminRole property if specified, otherwise the default admin role will be assigned.|admin|No|
-|`druid.auth.authorizer.MyBasicAuthorizer.initialAdminRole`|The initial admin role to create if it doesn't already exists.|admin|No|
-|`druid.auth.authorizer.MyBasicAuthorizer.initialAdminGroupMapping`|The initial admin group mapping with role defined in initialAdminRole property if specified, otherwise the default admin role will be assigned.|admin|No|
+|`druid.auth.authorizer.MyBasicMetadataAuthorizer.enableCacheNotifications`|If true, the Coordinator will notify Druid processes whenever a configuration change to this Authorizer occurs, allowing them to immediately update their state without waiting for polling.|true|No|
+|`druid.auth.authorizer.MyBasicMetadataAuthorizer.cacheNotificationTimeout`|The timeout in milliseconds for the cache notifications.|5000|No|
+|`druid.auth.authorizer.MyBasicMetadataAuthorizer.initialAdminUser`|The initial admin user with role defined in initialAdminRole property if specified, otherwise the default admin role will be assigned.|admin|No|
+|`druid.auth.authorizer.MyBasicMetadataAuthorizer.initialAdminRole`|The initial admin role to create if it doesn't already exists.|admin|No|
+|`druid.auth.authorizer.MyBasicMetadataAuthorizer.roleProvider.type`|The type of role provider to authorize requests credentials.|metadata|No
+
+#### Properties for LDAP user authorization
+|Property|Description|Default|required|
+|--------|-----------|-------|--------|
+|`druid.auth.authorizer.MyBasicLDAPAuthorizer.enableCacheNotifications`|If true, the Coordinator will notify Druid processes whenever a configuration change to this Authorizer occurs, allowing them to immediately update their state without waiting for polling.|true|No|
+|`druid.auth.authorizer.MyBasicLDAPAuthorizer.cacheNotificationTimeout`|The timeout in milliseconds for the cache notifications.|5000|No|
+|`druid.auth.authorizer.MyBasicLDAPAuthorizer.initialAdminUser`|The initial admin user with role defined in initialAdminRole property if specified, otherwise the default admin role will be assigned.|admin|No|
+|`druid.auth.authorizer.MyBasicLDAPAuthorizer.initialAdminRole`|The initial admin role to create if it doesn't already exists.|admin|No|
+|`druid.auth.authorizer.MyBasicLDAPAuthorizer.initialAdminGroupMapping`|The initial admin group mapping with role defined in initialAdminRole property if specified, otherwise the default admin role will be assigned. The name of this initial admin group mapping will be set to adminGroupMapping|null|No|
+|`druid.auth.authorizer.MyBasicLDAPAuthorizer.roleProvider.type`|The type of role provider (ldap) to authorize requests credentials.|metadata|No
+|`druid.auth.authorizer.MyBasicLDAPAuthorizer.roleProvider.groupFilters`|Array of LDAP group filters used to filter out the allowed set of groups returned from LDAP search. Filters can be begin with *, or end with ,* to provide configurational flexibility to limit or filter allowed set of groups avaialable to LDAP Authorizer.|null|No|
 
 ## Usage
 

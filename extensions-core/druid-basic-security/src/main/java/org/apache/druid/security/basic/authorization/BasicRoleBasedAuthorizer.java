@@ -71,7 +71,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
         0
     );
     if (roleProvider == null) {
-      this.roleProvider = new DBRoleProvider(cacheManager);
+      this.roleProvider = new MetadataStoreRoleProvider(cacheManager);
     } else {
       this.roleProvider = roleProvider;
     }

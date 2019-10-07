@@ -28,7 +28,7 @@ import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticato
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
-import org.apache.druid.security.basic.authentication.validator.DBCredentialsValidator;
+import org.apache.druid.security.basic.authentication.validator.MetadataStoreCredentialsValidator;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -68,7 +68,7 @@ public class DBCredentialsValidatorTest
       }
   );
 
-  private static DBCredentialsValidator validator = new DBCredentialsValidator(CACHE_MANAGER_PROVIDER);
+  private static MetadataStoreCredentialsValidator validator = new MetadataStoreCredentialsValidator(CACHE_MANAGER_PROVIDER);
 
 
 
@@ -84,7 +84,7 @@ public class DBCredentialsValidatorTest
     EasyMock.expect(cacheManager.getUserMap(authenticatorName)).andReturn(null).times(1);
     EasyMock.replay(cacheManager);
 
-    DBCredentialsValidator validator = new DBCredentialsValidator(Providers.of(cacheManager));
+    MetadataStoreCredentialsValidator validator = new MetadataStoreCredentialsValidator(Providers.of(cacheManager));
 
     expectedException.expect(IAE.class);
     expectedException.expectMessage("No userMap is available for authenticator with prefix: [notbasic]");
