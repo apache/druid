@@ -20,11 +20,8 @@
 package org.apache.druid.emitter.prometheus;
 
 import io.prometheus.client.Histogram;
+import org.junit.Assert;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 public class MetricsTest
 {
@@ -33,11 +30,11 @@ public class MetricsTest
   {
     Metrics metrics = new Metrics("test", null);
     DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
-    assertNotNull(dimensionsAndCollector);
+    Assert.assertNotNull(dimensionsAndCollector);
     String[] dimensions = dimensionsAndCollector.getDimensions();
-    assertEquals("dataSource", dimensions[0]);
-    assertEquals("type", dimensions[1]);
-    assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
-    assertTrue(dimensionsAndCollector.getCollector() instanceof Histogram);
+    Assert.assertEquals("dataSource", dimensions[0]);
+    Assert.assertEquals("type", dimensions[1]);
+    Assert.assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
+    Assert.assertTrue(dimensionsAndCollector.getCollector() instanceof Histogram);
   }
 }
