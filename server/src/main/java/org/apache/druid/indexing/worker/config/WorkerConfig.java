@@ -31,7 +31,7 @@ import javax.validation.constraints.NotNull;
  */
 public class WorkerConfig
 {
-  public static final String DEFAULT_TIER = "_default_worker_tier";
+  public static final String DEFAULT_CATEGORY = "_default_worker_category";
 
   @JsonProperty
   private String ip = DruidNode.getDefaultHost();
@@ -45,7 +45,7 @@ public class WorkerConfig
 
   @JsonProperty
   @NotNull
-  private String tier = DEFAULT_TIER;
+  private String category = DEFAULT_CATEGORY;
 
   private long intermediaryPartitionDiscoveryPeriodSec = 60L;
 
@@ -76,9 +76,9 @@ public class WorkerConfig
     return capacity;
   }
 
-  public String getTier()
+  public String getCategory()
   {
-    return tier;
+    return category;
   }
 
   public long getIntermediaryPartitionDiscoveryPeriodSec()

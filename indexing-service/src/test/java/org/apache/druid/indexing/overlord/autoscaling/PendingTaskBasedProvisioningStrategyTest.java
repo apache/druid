@@ -578,7 +578,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         int capacity
     )
     {
-      super(new Worker(scheme, host, ip, capacity, version, WorkerConfig.DEFAULT_TIER), null, new DefaultObjectMapper());
+      super(new Worker(scheme, host, ip, capacity, version, WorkerConfig.DEFAULT_CATEGORY), null, new DefaultObjectMapper());
 
       this.testTask = testTask;
     }

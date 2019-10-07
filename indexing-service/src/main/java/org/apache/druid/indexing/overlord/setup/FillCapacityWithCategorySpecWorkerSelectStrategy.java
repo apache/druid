@@ -29,22 +29,22 @@ import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-public class EqualDistributionWithTierSpecWorkerSelectStrategy implements WorkerSelectStrategy
+public class FillCapacityWithCategorySpecWorkerSelectStrategy implements WorkerSelectStrategy
 {
-  private final WorkerTierSpec workerTierSpec;
+  private final WorkerCategorySpec workerCategorySpec;
 
   @JsonCreator
-  public EqualDistributionWithTierSpecWorkerSelectStrategy(
-      @JsonProperty("workerTierSpec") WorkerTierSpec workerTierSpec
+  public FillCapacityWithCategorySpecWorkerSelectStrategy(
+      @JsonProperty("workerCategorySpec") WorkerCategorySpec workerCategorySpec
   )
   {
-    this.workerTierSpec = workerTierSpec;
+    this.workerCategorySpec = workerCategorySpec;
   }
 
   @JsonProperty
-  public WorkerTierSpec getWorkerTierSpec()
+  public WorkerCategorySpec getWorkerCategorySpec()
   {
-    return workerTierSpec;
+    return workerCategorySpec;
   }
 
   @Nullable
@@ -59,8 +59,8 @@ public class EqualDistributionWithTierSpecWorkerSelectStrategy implements Worker
         task,
         zkWorkers,
         config,
-        workerTierSpec,
-        EqualDistributionWorkerSelectStrategy::selectFromEligibleWorkers
+        workerCategorySpec,
+        FillCapacityWorkerSelectStrategy::selectFromEligibleWorkers
     );
   }
 
@@ -73,21 +73,21 @@ public class EqualDistributionWithTierSpecWorkerSelectStrategy implements Worker
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final EqualDistributionWithTierSpecWorkerSelectStrategy that = (EqualDistributionWithTierSpecWorkerSelectStrategy) o;
-    return Objects.equals(workerTierSpec, that.workerTierSpec);
+    final FillCapacityWithCategorySpecWorkerSelectStrategy that = (FillCapacityWithCategorySpecWorkerSelectStrategy) o;
+    return Objects.equals(workerCategorySpec, that.workerCategorySpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(workerTierSpec);
+    return Objects.hash(workerCategorySpec);
   }
 
   @Override
   public String toString()
   {
-    return "EqualDistributionWithTierSpecWorkerSelectStrategy{" +
-           "workerTierSpec=" + workerTierSpec +
+    return "FillCapacityWithCategorySpecWorkerSelectStrategy{" +
+           "workerCategorySpec=" + workerCategorySpec +
            '}';
   }
 }

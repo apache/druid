@@ -35,7 +35,7 @@ public class WorkerNodeServiceTest
         "1.1.1.1",
         100,
         "v1",
-        "t1"
+        "c1"
     );
 
     ObjectMapper mapper = TestHelper.makeJsonMapper();

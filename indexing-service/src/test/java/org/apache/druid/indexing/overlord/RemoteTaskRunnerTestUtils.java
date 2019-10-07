@@ -148,7 +148,7 @@ public class RemoteTaskRunnerTestUtils
         workerId,
         capacity,
         "0",
-        WorkerConfig.DEFAULT_TIER
+        WorkerConfig.DEFAULT_CATEGORY
     );
 
     cf.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(
@@ -170,7 +170,7 @@ public class RemoteTaskRunnerTestUtils
             worker.getIp(),
             worker.getCapacity(),
             "",
-            worker.getTier()
+            worker.getCategory()
         ))
     );
   }

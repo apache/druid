@@ -30,34 +30,34 @@ import org.junit.Test;
 
 import java.util.HashSet;
 
-public class EqualDistributionWithTierSpecWorkerSelectStrategyTest
+public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
 {
   private static final ImmutableMap<String, ImmutableWorkerInfo> WORKERS_FOR_TIER_TESTS =
       ImmutableMap.of(
           "localhost0",
           new ImmutableWorkerInfo(
-              new Worker("http", "localhost0", "localhost0", 1, "v1", "t1"), 0,
+              new Worker("http", "localhost0", "localhost0", 5, "v1", "c1"), 1,
               new HashSet<>(),
               new HashSet<>(),
               DateTimes.nowUtc()
           ),
           "localhost1",
           new ImmutableWorkerInfo(
-              new Worker("http", "localhost1", "localhost1", 2, "v1", "t1"), 0,
+              new Worker("http", "localhost1", "localhost1", 5, "v1", "c1"), 2,
               new HashSet<>(),
               new HashSet<>(),
               DateTimes.nowUtc()
           ),
           "localhost2",
           new ImmutableWorkerInfo(
-              new Worker("http", "localhost2", "localhost2", 3, "v1", "t2"), 0,
+              new Worker("http", "localhost2", "localhost2", 5, "v1", "c2"), 3,
               new HashSet<>(),
               new HashSet<>(),
               DateTimes.nowUtc()
           ),
           "localhost3",
           new ImmutableWorkerInfo(
-              new Worker("http", "localhost3", "localhost3", 4, "v1", "t2"), 0,
+              new Worker("http", "localhost3", "localhost3", 5, "v1", "c2"), 4,
               new HashSet<>(),
               new HashSet<>(),
               DateTimes.nowUtc()
@@ -75,58 +75,58 @@ public class EqualDistributionWithTierSpecWorkerSelectStrategyTest
   public void testFindWorkerForTaskWithPreferredTier()
   {
     // test defaultTier != null and tierAffinity is not empty
-    final WorkerTierSpec workerTierSpec1 = new WorkerTierSpec(
+    final WorkerCategorySpec workerCategorySpec1 = new WorkerCategorySpec(
         ImmutableMap.of(
             "noop",
-            new WorkerTierSpec.TierConfig(
-                "t2",
-                ImmutableMap.of("ds1", "t2")
+            new WorkerCategorySpec.CategoryConfig(
+                "c1",
+                ImmutableMap.of("ds1", "c1")
             )
         ),
         false
     );
 
-    ImmutableWorkerInfo worker1 = selectWorker(workerTierSpec1);
-    Assert.assertEquals("localhost3", worker1.getWorker().getHost());
+    ImmutableWorkerInfo worker1 = selectWorker(workerCategorySpec1);
+    Assert.assertEquals("localhost1", worker1.getWorker().getHost());
 
     // test defaultTier == null and tierAffinity is not empty
-    final WorkerTierSpec workerTierSpec2 = new WorkerTierSpec(
+    final WorkerCategorySpec workerCategorySpec2 = new WorkerCategorySpec(
         ImmutableMap.of(
             "noop",
-            new WorkerTierSpec.TierConfig(
+            new WorkerCategorySpec.CategoryConfig(
                 null,
-                ImmutableMap.of("ds1", "t2")
+                ImmutableMap.of("ds1", "c1")
             )
         ),
         false
     );
 
-    ImmutableWorkerInfo worker2 = selectWorker(workerTierSpec2);
-    Assert.assertEquals("localhost3", worker2.getWorker().getHost());
+    ImmutableWorkerInfo worker2 = selectWorker(workerCategorySpec2);
+    Assert.assertEquals("localhost1", worker2.getWorker().getHost());
 
     // test defaultTier != null and tierAffinity is empty
-    final WorkerTierSpec workerTierSpec3 = new WorkerTierSpec(
+    final WorkerCategorySpec workerCategorySpec3 = new WorkerCategorySpec(
         ImmutableMap.of(
             "noop",
-            new WorkerTierSpec.TierConfig(
-                "t2",
+            new WorkerCategorySpec.CategoryConfig(
+                "c1",
                 null
             )
         ),
         false
     );
 
-    ImmutableWorkerInfo worker3 = selectWorker(workerTierSpec3);
-    Assert.assertEquals("localhost3", worker3.getWorker().getHost());
+    ImmutableWorkerInfo worker3 = selectWorker(workerCategorySpec3);
+    Assert.assertEquals("localhost1", worker3.getWorker().getHost());
   }
 
   @Test
   public void testFindWorkerForTaskWithNullPreferredTier()
   {
-    final WorkerTierSpec workerTierSpec = new WorkerTierSpec(
+    final WorkerCategorySpec workerCategorySpec = new WorkerCategorySpec(
         ImmutableMap.of(
             "noop",
-            new WorkerTierSpec.TierConfig(
+            new WorkerCategorySpec.CategoryConfig(
                 null,
                 null
             )
@@ -134,50 +134,50 @@ public class EqualDistributionWithTierSpecWorkerSelectStrategyTest
         false
     );
 
-    ImmutableWorkerInfo worker = selectWorker(workerTierSpec);
+    ImmutableWorkerInfo worker = selectWorker(workerCategorySpec);
     Assert.assertEquals("localhost3", worker.getWorker().getHost());
   }
 
   @Test
   public void testWeakTierSpec()
   {
-    final WorkerTierSpec workerTierSpec = new WorkerTierSpec(
+    final WorkerCategorySpec workerCategorySpec = new WorkerCategorySpec(
         ImmutableMap.of(
             "noop",
-            new WorkerTierSpec.TierConfig(
-                "t1",
-                ImmutableMap.of("ds1", "t3")
+            new WorkerCategorySpec.CategoryConfig(
+                "c1",
+                ImmutableMap.of("ds1", "c3")
             )
         ),
         false
     );
 
-    ImmutableWorkerInfo worker = selectWorker(workerTierSpec);
+    ImmutableWorkerInfo worker = selectWorker(workerCategorySpec);
     Assert.assertEquals("localhost3", worker.getWorker().getHost());
   }
 
   @Test
   public void testStrongTierSpec()
   {
-    final WorkerTierSpec workerTierSpec = new WorkerTierSpec(
+    final WorkerCategorySpec workerCategorySpec = new WorkerCategorySpec(
         ImmutableMap.of(
             "noop",
-            new WorkerTierSpec.TierConfig(
-                "t1",
-                ImmutableMap.of("ds1", "t3")
+            new WorkerCategorySpec.CategoryConfig(
+                "c1",
+                ImmutableMap.of("ds1", "c3")
             )
         ),
         true
     );
 
-    ImmutableWorkerInfo worker = selectWorker(workerTierSpec);
+    ImmutableWorkerInfo worker = selectWorker(workerCategorySpec);
     Assert.assertNull(worker);
   }
 
-  private ImmutableWorkerInfo selectWorker(WorkerTierSpec workerTierSpec)
+  private ImmutableWorkerInfo selectWorker(WorkerCategorySpec workerCategorySpec)
   {
-    final EqualDistributionWithTierSpecWorkerSelectStrategy strategy = new EqualDistributionWithTierSpecWorkerSelectStrategy(
-        workerTierSpec);
+    final FillCapacityWithCategorySpecWorkerSelectStrategy strategy = new FillCapacityWithCategorySpecWorkerSelectStrategy(
+        workerCategorySpec);
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
         new RemoteTaskRunnerConfig(),

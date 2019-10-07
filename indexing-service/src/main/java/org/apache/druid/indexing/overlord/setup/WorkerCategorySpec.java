@@ -26,26 +26,26 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
-public class WorkerTierSpec
+public class WorkerCategorySpec
 {
-  // key: taskType, value: tierConfig
-  private final Map<String, TierConfig> tierMap;
+  // key: taskType, value: categoryConfig
+  private final Map<String, CategoryConfig> categoryMap;
   private final boolean strong;
 
   @JsonCreator
-  public WorkerTierSpec(
-      @JsonProperty("tierMap") Map<String, TierConfig> tierMap,
+  public WorkerCategorySpec(
+      @JsonProperty("categoryMap") Map<String, CategoryConfig> categoryMap,
       @JsonProperty("strong") boolean strong
   )
   {
-    this.tierMap = tierMap == null ? Collections.EMPTY_MAP : tierMap;
+    this.categoryMap = categoryMap == null ? Collections.EMPTY_MAP : categoryMap;
     this.strong = strong;
   }
 
   @JsonProperty
-  public Map<String, TierConfig> getTierMap()
+  public Map<String, CategoryConfig> getCategoryMap()
   {
-    return tierMap;
+    return categoryMap;
   }
 
   @JsonProperty
@@ -63,52 +63,52 @@ public class WorkerTierSpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final WorkerTierSpec that = (WorkerTierSpec) o;
+    final WorkerCategorySpec that = (WorkerCategorySpec) o;
     return strong == that.strong &&
-           Objects.equals(tierMap, that.tierMap);
+           Objects.equals(categoryMap, that.categoryMap);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(tierMap, strong);
+    return Objects.hash(categoryMap, strong);
   }
 
   @Override
   public String toString()
   {
-    return "WorkerTierSpec{" +
-           "tierMap=" + tierMap +
+    return "WorkerCategorySpec{" +
+           "categoryMap=" + categoryMap +
            ", strong=" + strong +
            '}';
   }
 
-  public static class TierConfig
+  public static class CategoryConfig
   {
-    private final String defaultTier;
-    // key: datasource, value: tier
-    private final Map<String, String> tierAffinity;
+    private final String defaultCategory;
+    // key: datasource, value: category
+    private final Map<String, String> categoryAffinity;
 
     @JsonCreator
-    public TierConfig(
-        @JsonProperty("defaultTier") String defaultTier,
-        @JsonProperty("tierAffinity") Map<String, String> tierAffinity
+    public CategoryConfig(
+        @JsonProperty("defaultCategory") String defaultCategory,
+        @JsonProperty("categoryAffinity") Map<String, String> categoryAffinity
     )
     {
-      this.defaultTier = defaultTier;
-      this.tierAffinity = tierAffinity == null ? Collections.EMPTY_MAP : tierAffinity;
+      this.defaultCategory = defaultCategory;
+      this.categoryAffinity = categoryAffinity == null ? Collections.EMPTY_MAP : categoryAffinity;
     }
 
     @JsonProperty
-    public String getDefaultTier()
+    public String getDefaultCategory()
     {
-      return defaultTier;
+      return defaultCategory;
     }
 
     @JsonProperty
-    public Map<String, String> getTierAffinity()
+    public Map<String, String> getCategoryAffinity()
     {
-      return tierAffinity;
+      return categoryAffinity;
     }
 
     @Override
@@ -120,23 +120,23 @@ public class WorkerTierSpec
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-      final TierConfig that = (TierConfig) o;
-      return Objects.equals(defaultTier, that.defaultTier) &&
-             Objects.equals(tierAffinity, that.tierAffinity);
+      final CategoryConfig that = (CategoryConfig) o;
+      return Objects.equals(defaultCategory, that.defaultCategory) &&
+             Objects.equals(categoryAffinity, that.categoryAffinity);
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(defaultTier, tierAffinity);
+      return Objects.hash(defaultCategory, categoryAffinity);
     }
 
     @Override
     public String toString()
     {
-      return "TierConfig{" +
-             "defaultTier=" + defaultTier +
-             ", tierAffinity=" + tierAffinity +
+      return "CategoryConfig{" +
+             "defaultCategory=" + defaultCategory +
+             ", categoryAffinity=" + categoryAffinity +
              '}';
     }
   }

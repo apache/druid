@@ -79,7 +79,7 @@ public class WorkerResourceTest
         "ip",
         3,
         "v1",
-        WorkerConfig.DEFAULT_TIER
+        WorkerConfig.DEFAULT_CATEGORY
     );
 
     curatorCoordinator = new WorkerCuratorCoordinator(

@@ -92,7 +92,7 @@ public class WorkerResource
           enabledWorker.getIp(),
           enabledWorker.getCapacity(),
           DISABLED_VERSION,
-          enabledWorker.getTier()
+          enabledWorker.getCategory()
       );
       curatorCoordinator.updateWorkerAnnouncement(disabledWorker);
       workerTaskManager.workerDisabled();

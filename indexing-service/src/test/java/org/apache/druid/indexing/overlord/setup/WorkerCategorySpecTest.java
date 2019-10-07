@@ -26,7 +26,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class WorkerTierSpecTest
+public class WorkerCategorySpecTest
 {
   private ObjectMapper mapper;
 
@@ -41,24 +41,24 @@ public class WorkerTierSpecTest
   {
     String jsonStr = "{\n"
                      + "  \"strong\": true,\n"
-                     + "  \"tierMap\": {\n"
-                     + "    \"index_kafka\": {\"defaultTier\": \"t1\", \"tierAffinity\": {\"ds1\": \"t2\"}}\n"
+                     + "  \"categoryMap\": {\n"
+                     + "    \"index_kafka\": {\"defaultCategory\": \"c1\", \"categoryAffinity\": {\"ds1\": \"c2\"}}\n"
                      + "  }\n"
                      + "}";
 
-    WorkerTierSpec workerTierSpec = mapper.readValue(
+    WorkerCategorySpec workerCategorySpec = mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
-                WorkerTierSpec.class
+                WorkerCategorySpec.class
             )
-        ), WorkerTierSpec.class
+        ), WorkerCategorySpec.class
     );
 
-    Assert.assertTrue(workerTierSpec.isStrong());
+    Assert.assertTrue(workerCategorySpec.isStrong());
     Assert.assertEquals(ImmutableMap.of(
         "index_kafka",
-        new WorkerTierSpec.TierConfig("t1", ImmutableMap.of("ds1", "t2"))
-    ), workerTierSpec.getTierMap());
+        new WorkerCategorySpec.CategoryConfig("c1", ImmutableMap.of("ds1", "c2"))
+    ), workerCategorySpec.getCategoryMap());
   }
 }

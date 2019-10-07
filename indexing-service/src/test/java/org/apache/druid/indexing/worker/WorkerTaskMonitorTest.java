@@ -114,7 +114,7 @@ public class WorkerTaskMonitorTest
         "localhost",
         3,
         "0",
-        WorkerConfig.DEFAULT_TIER
+        WorkerConfig.DEFAULT_CATEGORY
     );
 
     workerCuratorCoordinator = new WorkerCuratorCoordinator(

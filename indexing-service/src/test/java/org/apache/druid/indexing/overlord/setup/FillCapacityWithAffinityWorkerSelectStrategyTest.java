@@ -46,14 +46,14 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
         ImmutableMap.of(
             "lhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "lhost", "lhost", 1, "v1", WorkerConfig.DEFAULT_TIER), 0,
+                new Worker("http", "lhost", "lhost", 1, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "localhost", "localhost", 1, "v1", WorkerConfig.DEFAULT_TIER), 0,
+                new Worker("http", "localhost", "localhost", 1, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
@@ -83,14 +83,14 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
         ImmutableMap.of(
             "lhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "lhost", "lhost", 1, "v1", WorkerConfig.DEFAULT_TIER), 0,
+                new Worker("http", "lhost", "lhost", 1, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "localhost", "localhost", 1, "v1", WorkerConfig.DEFAULT_TIER), 0,
+                new Worker("http", "localhost", "localhost", 1, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
@@ -113,7 +113,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
         ImmutableMap.of(
             "localhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "localhost", "localhost", 1, "v1", WorkerConfig.DEFAULT_TIER), 0,
+                new Worker("http", "localhost", "localhost", 1, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()

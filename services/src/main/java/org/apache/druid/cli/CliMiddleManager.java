@@ -155,7 +155,7 @@ public class CliMiddleManager extends ServerRunnable
                 config.getIp(),
                 config.getCapacity(),
                 config.getVersion(),
-                config.getTier()
+                config.getCategory()
             );
           }
 
@@ -167,7 +167,7 @@ public class CliMiddleManager extends ServerRunnable
                 workerConfig.getIp(),
                 workerConfig.getCapacity(),
                 workerConfig.getVersion(),
-                workerConfig.getTier()
+                workerConfig.getCategory()
             );
           }
         },

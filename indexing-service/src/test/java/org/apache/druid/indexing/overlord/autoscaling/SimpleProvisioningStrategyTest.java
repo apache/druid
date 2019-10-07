@@ -508,7 +508,7 @@ public class SimpleProvisioningStrategyTest
         String version
     )
     {
-      super(new Worker(scheme, host, ip, 3, version, WorkerConfig.DEFAULT_TIER), null, new DefaultObjectMapper());
+      super(new Worker(scheme, host, ip, 3, version, WorkerConfig.DEFAULT_CATEGORY), null, new DefaultObjectMapper());
 
       this.testTask = testTask;
     }

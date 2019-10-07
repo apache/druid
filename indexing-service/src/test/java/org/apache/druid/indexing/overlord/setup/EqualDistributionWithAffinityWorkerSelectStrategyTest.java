@@ -56,31 +56,31 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
             ImmutableMap.of(
                     "localhost0",
                     new ImmutableWorkerInfo(
-                        new Worker("http", "localhost0", "localhost0", 2, "v1", WorkerConfig.DEFAULT_TIER), 0,
+                        new Worker("http", "localhost0", "localhost0", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
                         new HashSet<>(),
                         new HashSet<>(),
                         DateTimes.nowUtc()
                     ),
                     "localhost1",
                     new ImmutableWorkerInfo(
-                            new Worker("http", "localhost1", "localhost1", 2, "v1", WorkerConfig.DEFAULT_TIER), 0,
-                            new HashSet<>(),
-                            new HashSet<>(),
-                            DateTimes.nowUtc()
+                        new Worker("http", "localhost1", "localhost1", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
+                        new HashSet<>(),
+                        new HashSet<>(),
+                        DateTimes.nowUtc()
                     ),
                     "localhost2",
                     new ImmutableWorkerInfo(
-                            new Worker("http", "localhost2", "localhost2", 2, "v1", WorkerConfig.DEFAULT_TIER), 1,
-                            new HashSet<>(),
-                            new HashSet<>(),
-                            DateTimes.nowUtc()
+                        new Worker("http", "localhost2", "localhost2", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 1,
+                        new HashSet<>(),
+                        new HashSet<>(),
+                        DateTimes.nowUtc()
                     ),
                     "localhost3",
                     new ImmutableWorkerInfo(
-                            new Worker("http", "localhost3", "localhost3", 2, "v1", WorkerConfig.DEFAULT_TIER), 1,
-                            new HashSet<>(),
-                            new HashSet<>(),
-                            DateTimes.nowUtc()
+                        new Worker("http", "localhost3", "localhost3", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 1,
+                        new HashSet<>(),
+                        new HashSet<>(),
+                        DateTimes.nowUtc()
                     )
             ),
             noopTask
@@ -100,17 +100,17 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
             ImmutableMap.of(
                     "lhost",
                     new ImmutableWorkerInfo(
-                            new Worker("http", "lhost", "lhost", 1, "v1", WorkerConfig.DEFAULT_TIER), 0,
-                            new HashSet<>(),
-                            new HashSet<>(),
-                            DateTimes.nowUtc()
+                        new Worker("http", "lhost", "lhost", 1, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
+                        new HashSet<>(),
+                        new HashSet<>(),
+                        DateTimes.nowUtc()
                     ),
                     "localhost",
                     new ImmutableWorkerInfo(
-                            new Worker("http", "localhost", "localhost", 1, "v1", WorkerConfig.DEFAULT_TIER), 0,
-                            new HashSet<>(),
-                            new HashSet<>(),
-                            DateTimes.nowUtc()
+                        new Worker("http", "localhost", "localhost", 1, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
+                        new HashSet<>(),
+                        new HashSet<>(),
+                        DateTimes.nowUtc()
                     )
             ),
             new NoopTask(null, null, null, 1, 0, null, null, null)
@@ -130,10 +130,10 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
             ImmutableMap.of(
                     "localhost",
                     new ImmutableWorkerInfo(
-                            new Worker("http", "localhost", "localhost", 1, "v1", WorkerConfig.DEFAULT_TIER), 0,
-                            new HashSet<>(),
-                            new HashSet<>(),
-                            DateTimes.nowUtc()
+                        new Worker("http", "localhost", "localhost", 1, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
+                        new HashSet<>(),
+                        new HashSet<>(),
+                        DateTimes.nowUtc()
                     )
             ),
             new NoopTask(null, null, null, 1, 0, null, null, null)

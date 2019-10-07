@@ -38,28 +38,28 @@ public class EqualDistributionWorkerSelectStrategyTest
       ImmutableMap.of(
           "localhost0",
           new ImmutableWorkerInfo(
-              new Worker("http", "localhost0", "localhost0", 2, "v1", WorkerConfig.DEFAULT_TIER), 0,
+              new Worker("http", "localhost0", "localhost0", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
               new HashSet<>(),
               new HashSet<>(),
               DateTimes.nowUtc()
           ),
           "localhost1",
           new ImmutableWorkerInfo(
-              new Worker("http", "localhost1", "localhost1", 2, "v1", WorkerConfig.DEFAULT_TIER), 0,
+              new Worker("http", "localhost1", "localhost1", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
               new HashSet<>(),
               new HashSet<>(),
               DateTimes.nowUtc()
           ),
           "localhost2",
           new ImmutableWorkerInfo(
-              new Worker("http", "localhost2", "localhost2", 2, "v1", WorkerConfig.DEFAULT_TIER), 1,
+              new Worker("http", "localhost2", "localhost2", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 1,
               new HashSet<>(),
               new HashSet<>(),
               DateTimes.nowUtc()
           ),
           "localhost3",
           new ImmutableWorkerInfo(
-              new Worker("http", "localhost3", "localhost3", 2, "v1", WorkerConfig.DEFAULT_TIER), 1,
+              new Worker("http", "localhost3", "localhost3", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 1,
               new HashSet<>(),
               new HashSet<>(),
               DateTimes.nowUtc()
@@ -76,14 +76,14 @@ public class EqualDistributionWorkerSelectStrategyTest
         ImmutableMap.of(
             "lhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "lhost", "lhost", 1, "v1", WorkerConfig.DEFAULT_TIER), 0,
+                new Worker("http", "lhost", "lhost", 1, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "localhost", "localhost", 1, "v1", WorkerConfig.DEFAULT_TIER), 1,
+                new Worker("http", "localhost", "localhost", 1, "v1", WorkerConfig.DEFAULT_CATEGORY), 1,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
@@ -111,14 +111,14 @@ public class EqualDistributionWorkerSelectStrategyTest
         ImmutableMap.of(
             "lhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "lhost", "lhost", 5, "v1", WorkerConfig.DEFAULT_TIER), 5,
+                new Worker("http", "lhost", "lhost", 5, "v1", WorkerConfig.DEFAULT_CATEGORY), 5,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "localhost", "localhost", 10, "v1", WorkerConfig.DEFAULT_TIER), 5,
+                new Worker("http", "localhost", "localhost", 10, "v1", WorkerConfig.DEFAULT_CATEGORY), 5,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
@@ -147,14 +147,14 @@ public class EqualDistributionWorkerSelectStrategyTest
         ImmutableMap.of(
             "lhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "disableHost", "disableHost", 10, disabledVersion, WorkerConfig.DEFAULT_TIER), 2,
+                new Worker("http", "disableHost", "disableHost", 10, disabledVersion, WorkerConfig.DEFAULT_CATEGORY), 2,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "enableHost", "enableHost", 10, "v1", WorkerConfig.DEFAULT_TIER), 5,
+                new Worker("http", "enableHost", "enableHost", 10, "v1", WorkerConfig.DEFAULT_CATEGORY), 5,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
@@ -183,14 +183,14 @@ public class EqualDistributionWorkerSelectStrategyTest
         ImmutableMap.of(
             "lhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "disableHost", "disableHost", 10, disabledVersion, WorkerConfig.DEFAULT_TIER), 5,
+                new Worker("http", "disableHost", "disableHost", 10, disabledVersion, WorkerConfig.DEFAULT_CATEGORY), 5,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "enableHost", "enableHost", 10, "v1", WorkerConfig.DEFAULT_TIER), 5,
+                new Worker("http", "enableHost", "enableHost", 10, "v1", WorkerConfig.DEFAULT_CATEGORY), 5,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()

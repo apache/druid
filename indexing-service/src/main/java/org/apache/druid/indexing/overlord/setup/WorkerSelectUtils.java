@@ -93,9 +93,9 @@ public class WorkerSelectUtils
    * Helper for {@link WorkerSelectStrategy} implementations.
    *
    * @param allWorkers     map of all workers, in the style provided to {@link WorkerSelectStrategy}
-   * @param workerTierSpec worker tier spec, or null
+   * @param workerCategorySpec worker category spec, or null
    * @param workerSelector function that receives a list of eligible workers: version is high enough, worker can run
-   *                       the task, and worker satisfies the worker tier spec. may return null.
+   *                       the task, and worker satisfies the worker category spec. may return null.
    *
    * @return selected worker from "allWorkers", or null.
    */
@@ -104,33 +104,33 @@ public class WorkerSelectUtils
       final Task task,
       final Map<String, ImmutableWorkerInfo> allWorkers,
       final WorkerTaskRunnerConfig workerTaskRunnerConfig,
-      @Nullable final WorkerTierSpec workerTierSpec,
+      @Nullable final WorkerCategorySpec workerCategorySpec,
       final Function<ImmutableMap<String, ImmutableWorkerInfo>, ImmutableWorkerInfo> workerSelector
   )
   {
     final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(task, allWorkers, workerTaskRunnerConfig);
 
-    // select worker according to worker tier spec
-    if (workerTierSpec != null) {
-      final WorkerTierSpec.TierConfig tierConfig = workerTierSpec.getTierMap().get(task.getType());
+    // select worker according to worker category spec
+    if (workerCategorySpec != null) {
+      final WorkerCategorySpec.CategoryConfig categoryConfig = workerCategorySpec.getCategoryMap().get(task.getType());
 
-      if (tierConfig != null) {
-        final String defaultTier = tierConfig.getDefaultTier();
-        final Map<String, String> tierAffinity = tierConfig.getTierAffinity();
+      if (categoryConfig != null) {
+        final String defaultCategory = categoryConfig.getDefaultCategory();
+        final Map<String, String> categoryAffinity = categoryConfig.getCategoryAffinity();
 
-        String preferredTier = tierAffinity.get(task.getDataSource());
-        // If there is no preferred tier for the datasource, then using the defaultTier. However, the defaultTier
+        String preferredCategory = categoryAffinity.get(task.getDataSource());
+        // If there is no preferred category for the datasource, then using the defaultCategory. However, the defaultCategory
         // may be null too, so we need to do one more null check (see below).
-        preferredTier = preferredTier == null ? defaultTier : preferredTier;
+        preferredCategory = preferredCategory == null ? defaultCategory : preferredCategory;
 
-        if (preferredTier != null) {
-          // select worker from preferred tier
-          final ImmutableMap<String, ImmutableWorkerInfo> tierWorkers = getTierWorkers(preferredTier, runnableWorkers);
-          final ImmutableWorkerInfo selected = workerSelector.apply(tierWorkers);
+        if (preferredCategory != null) {
+          // select worker from preferred category
+          final ImmutableMap<String, ImmutableWorkerInfo> categoryWorkers = getCategoryWorkers(preferredCategory, runnableWorkers);
+          final ImmutableWorkerInfo selected = workerSelector.apply(categoryWorkers);
 
           if (selected != null) {
             return selected;
-          } else if (workerTierSpec.isStrong()) {
+          } else if (workerCategorySpec.isStrong()) {
             return null;
           }
         }
@@ -141,7 +141,7 @@ public class WorkerSelectUtils
     return workerSelector.apply(ImmutableMap.copyOf(runnableWorkers));
   }
 
-  // Get workers that could potentially run this task, ignoring affinityConfig/workerTierSpec.
+  // Get workers that could potentially run this task, ignoring affinityConfig/workerCategorySpec.
   private static Map<String, ImmutableWorkerInfo> getRunnableWorkers(
       final Task task,
       final Map<String, ImmutableWorkerInfo> allWorkers,
@@ -156,20 +156,20 @@ public class WorkerSelectUtils
   }
 
   /**
-   * Return workers belong to this tier.
+   * Return workers belong to this category.
    *
-   * @param tier worker tier name
+   * @param category worker category name
    * @param workerMap  map of worker hostname to worker info
    *
    * @return map of worker hostname to worker info
    */
-  private static ImmutableMap<String, ImmutableWorkerInfo> getTierWorkers(
-      final String tier,
+  private static ImmutableMap<String, ImmutableWorkerInfo> getCategoryWorkers(
+      final String category,
       final Map<String, ImmutableWorkerInfo> workerMap
   )
   {
     return ImmutableMap.copyOf(
-        Maps.filterValues(workerMap, workerInfo -> workerInfo.getWorker().getTier().equals(tier))
+        Maps.filterValues(workerMap, workerInfo -> workerInfo.getWorker().getCategory().equals(category))
     );
   }
 

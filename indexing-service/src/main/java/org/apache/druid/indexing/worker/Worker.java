@@ -34,7 +34,7 @@ public class Worker
   private final String ip;
   private final int capacity;
   private final String version;
-  private final String tier;
+  private final String category;
 
   @JsonCreator
   public Worker(
@@ -43,7 +43,7 @@ public class Worker
       @JsonProperty("ip") String ip,
       @JsonProperty("capacity") int capacity,
       @JsonProperty("version") String version,
-      @JsonProperty("tier") String tier
+      @JsonProperty("category") String category
   )
   {
     this.scheme = scheme == null ? "http" : scheme; // needed for backwards compatibility with older workers (pre-#4270)
@@ -51,7 +51,7 @@ public class Worker
     this.ip = ip;
     this.capacity = capacity;
     this.version = version;
-    this.tier = tier;
+    this.category = category;
   }
 
   @JsonProperty
@@ -85,9 +85,9 @@ public class Worker
   }
 
   @JsonProperty
-  public String getTier()
+  public String getCategory()
   {
-    return tier;
+    return category;
   }
 
   @Override
@@ -117,7 +117,7 @@ public class Worker
     if (!version.equals(worker.version)) {
       return false;
     }
-    return tier.equals(worker.tier);
+    return category.equals(worker.category);
   }
 
   @Override
@@ -128,7 +128,7 @@ public class Worker
     result = 31 * result + ip.hashCode();
     result = 31 * result + capacity;
     result = 31 * result + version.hashCode();
-    result = 31 * result + tier.hashCode();
+    result = 31 * result + category.hashCode();
     return result;
   }
 
@@ -141,7 +141,7 @@ public class Worker
            ", ip='" + ip + '\'' +
            ", capacity=" + capacity +
            ", version='" + version + '\'' +
-           ", tier='" + tier + '\'' +
+           ", category='" + category + '\'' +
            '}';
   }
 

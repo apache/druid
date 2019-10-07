@@ -67,7 +67,7 @@ public class WorkerTaskRunnerQueryAdpaterTest
         ImmutableList.of(
             new ImmutableWorkerInfo(
                 new Worker(
-                    "http", "worker-host1", "192.0.0.1", 10, "v1", WorkerConfig.DEFAULT_TIER
+                    "http", "worker-host1", "192.0.0.1", 10, "v1", WorkerConfig.DEFAULT_CATEGORY
                 ),
                 2,
                 ImmutableSet.of("grp1", "grp2"),
@@ -76,7 +76,7 @@ public class WorkerTaskRunnerQueryAdpaterTest
             ),
             new ImmutableWorkerInfo(
                 new Worker(
-                    "https", "worker-host2", "192.0.0.2", 4, "v1", WorkerConfig.DEFAULT_TIER
+                    "https", "worker-host2", "192.0.0.2", 4, "v1", WorkerConfig.DEFAULT_CATEGORY
                 ),
                 1,
                 ImmutableSet.of("grp1"),

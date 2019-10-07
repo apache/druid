@@ -60,7 +60,7 @@ public class WorkerHolderTest
         new HttpRemoteTaskRunnerConfig(),
         EasyMock.createNiceMock(ScheduledExecutorService.class),
         (taskAnnouncement, holder) -> updates.add(taskAnnouncement),
-        new Worker("http", "localhost", "127.0.0.1", 5, "v0", WorkerConfig.DEFAULT_TIER),
+        new Worker("http", "localhost", "127.0.0.1", 5, "v0", WorkerConfig.DEFAULT_CATEGORY),
         ImmutableList.of(
             TaskAnnouncement.create(
                 task0,

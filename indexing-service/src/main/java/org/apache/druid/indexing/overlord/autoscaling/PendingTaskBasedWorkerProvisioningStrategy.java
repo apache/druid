@@ -478,7 +478,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
   private static ImmutableWorkerInfo createDummyWorker(String scheme, String host, int capacity, String version)
   {
     return new ImmutableWorkerInfo(
-        new Worker(scheme, host, "-2", capacity, version, WorkerConfig.DEFAULT_TIER),
+        new Worker(scheme, host, "-2", capacity, version, WorkerConfig.DEFAULT_CATEGORY),
         0,
         new HashSet<>(),
         new HashSet<>(),
