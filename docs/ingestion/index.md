@@ -216,7 +216,7 @@ The following table shows how each method handles rollup:
 
 |Method|How it works|
 |------|------------|
-|[Native batch](native-batch.html)|`index_parallel` type is best-effort. `index` type may be either perfect or best-effort, based on configuration.|
+|[Native batch](native-batch.html)|`index_parallel` and `index` type may be either perfect or best-effort, based on configuration.|
 |[Hadoop](hadoop.html)|Always perfect.|
 |[Kafka indexing service](../development/extensions-core/kafka-ingestion.md)|Always best-effort.|
 |[Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md)|Always best-effort.|
