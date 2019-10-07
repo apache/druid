@@ -867,9 +867,13 @@ public class RowBasedGrouperHelper
           fieldIndices.add(i);
           aggFlags.add(false);
           needsReverses.add(false);
-          final ValueType type = dimensions.get(i).getOutputType();
-          isNumericField.add(ValueType.isNumeric(type));
-          comparators.add(StringComparators.LEXICOGRAPHIC);
+          boolean isNumeric = ValueType.isNumeric(dimensions.get(i).getOutputType());
+          isNumericField.add(isNumeric);
+          if (isNumeric) {
+            comparators.add(StringComparators.NUMERIC);
+          } else {
+            comparators.add(StringComparators.LEXICOGRAPHIC);
+          }
         }
       }
 
