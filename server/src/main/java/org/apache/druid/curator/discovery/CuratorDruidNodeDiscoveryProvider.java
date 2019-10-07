@@ -330,7 +330,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
           runnable.run();
         }
         catch (Exception ex) {
-          log.error(errMsgFormat, args);
+          log.error(ex, errMsgFormat, args);
         }
       });
     }
