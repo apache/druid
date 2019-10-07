@@ -569,6 +569,18 @@ authorizerName
 druid_system
 pollingPeriod
 roleName
+LDAP
+ldap
+MyBasicMetadataAuthenticator
+MyBasicLDAPAuthenticator
+MyBasicMetadataAuthorizer
+MyBasicLDAPAuthorizer
+credentialsValidator
+sAMAccountName
+objectClass
+initialAdminRole
+adminGroupMapping
+groupMappingName
  - ../docs/development/extensions-core/druid-kerberos.md
 8Kb
 HttpComponents
