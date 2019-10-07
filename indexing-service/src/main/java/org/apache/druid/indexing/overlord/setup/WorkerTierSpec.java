@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord.setup;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
@@ -37,7 +38,7 @@ public class WorkerTierSpec
       @JsonProperty("strong") boolean strong
   )
   {
-    this.tierMap = tierMap;
+    this.tierMap = tierMap == null ? Collections.EMPTY_MAP : tierMap;
     this.strong = strong;
   }
 
@@ -95,7 +96,7 @@ public class WorkerTierSpec
     )
     {
       this.defaultTier = defaultTier;
-      this.tierAffinity = tierAffinity;
+      this.tierAffinity = tierAffinity == null ? Collections.EMPTY_MAP : tierAffinity;
     }
 
     @JsonProperty

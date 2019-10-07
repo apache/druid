@@ -161,7 +161,8 @@ public class CliIndexer extends ServerRunnable
                 node.getHostAndPortToUse(),
                 config.getIp(),
                 config.getCapacity(),
-                config.getVersion()
+                config.getVersion(),
+                WorkerConfig.DEFAULT_TIER
             );
           }
 
@@ -172,7 +173,8 @@ public class CliIndexer extends ServerRunnable
             return new WorkerNodeService(
                 workerConfig.getIp(),
                 workerConfig.getCapacity(),
-                workerConfig.getVersion()
+                workerConfig.getVersion(),
+                WorkerConfig.DEFAULT_TIER
             );
           }
         },

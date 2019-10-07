@@ -1037,6 +1037,8 @@ This strategy is a variant of `Fill Capacity`, which support `workerTierSpec` fi
 |`type`|`fillCapacityWithTierSpec`.|required; must be `fillCapacityWithTierSpec`|
 |`workerTierSpec`|[Worker Tier Spec](#workerTierSpec) object|null (no worker tier spec)|
 
+> Before using the _equalDistributionWithTierSpec_ and _fillCapacityWithTierSpec_ strategies, you must upgrade overlord and all MiddleManagers to the version that support this feature.
+
 ###### Javascript<a id="javascript-worker-select-strategy"></a>
 
 Allows defining arbitrary logic for selecting workers to run task using a JavaScript function.

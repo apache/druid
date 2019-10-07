@@ -74,7 +74,7 @@ public class EqualDistributionWithTierSpecWorkerSelectStrategyTest
   @Test
   public void testFindWorkerForTaskWithPreferredTier()
   {
-    // test defaultTier != null and tierAffinity != null
+    // test defaultTier != null and tierAffinity is not empty
     final WorkerTierSpec workerTierSpec1 = new WorkerTierSpec(
         ImmutableMap.of(
             "noop",
@@ -89,7 +89,7 @@ public class EqualDistributionWithTierSpecWorkerSelectStrategyTest
     ImmutableWorkerInfo worker1 = selectWorker(workerTierSpec1);
     Assert.assertEquals("localhost3", worker1.getWorker().getHost());
 
-    // test defaultTier == null and tierAffinity != null
+    // test defaultTier == null and tierAffinity is not empty
     final WorkerTierSpec workerTierSpec2 = new WorkerTierSpec(
         ImmutableMap.of(
             "noop",
@@ -104,7 +104,7 @@ public class EqualDistributionWithTierSpecWorkerSelectStrategyTest
     ImmutableWorkerInfo worker2 = selectWorker(workerTierSpec2);
     Assert.assertEquals("localhost3", worker2.getWorker().getHost());
 
-    // test defaultTier != null and tierAffinity == null
+    // test defaultTier != null and tierAffinity is empty
     final WorkerTierSpec workerTierSpec3 = new WorkerTierSpec(
         ImmutableMap.of(
             "noop",
@@ -182,7 +182,7 @@ public class EqualDistributionWithTierSpecWorkerSelectStrategyTest
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
         new RemoteTaskRunnerConfig(),
         WORKERS_FOR_TIER_TESTS,
-        new NoopTask(null, "ds1", 1, 0, null, null, null)
+        new NoopTask(null, null, "ds1", 1, 0, null, null, null)
     );
 
     return worker;

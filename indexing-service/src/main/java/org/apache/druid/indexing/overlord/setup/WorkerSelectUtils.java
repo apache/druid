@@ -57,13 +57,7 @@ public class WorkerSelectUtils
       final Function<ImmutableMap<String, ImmutableWorkerInfo>, ImmutableWorkerInfo> workerSelector
   )
   {
-    // Workers that could potentially run this task, ignoring affinityConfig.
-    final Map<String, ImmutableWorkerInfo> runnableWorkers = allWorkers
-        .values()
-        .stream()
-        .filter(worker -> worker.canRunTask(task)
-                          && worker.isValidVersion(workerTaskRunnerConfig.getMinWorkerVersion()))
-        .collect(Collectors.toMap(w -> w.getWorker().getHost(), Function.identity()));
+    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(task, allWorkers, workerTaskRunnerConfig);
 
     if (affinityConfig == null) {
       // All runnable workers are valid.
@@ -114,40 +108,51 @@ public class WorkerSelectUtils
       final Function<ImmutableMap<String, ImmutableWorkerInfo>, ImmutableWorkerInfo> workerSelector
   )
   {
-    // Workers that could potentially run this task, ignoring workerTierSpec.
-    final Map<String, ImmutableWorkerInfo> runnableWorkers = allWorkers
-        .values()
-        .stream()
-        .filter(worker -> worker.canRunTask(task)
-                          && worker.isValidVersion(workerTaskRunnerConfig.getMinWorkerVersion()))
-        .collect(Collectors.toMap(w -> w.getWorker().getHost(), Function.identity()));
+    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(task, allWorkers, workerTaskRunnerConfig);
 
     // select worker according to worker tier spec
-    if (workerTierSpec != null && workerTierSpec.getTierMap() != null) {
-      final WorkerTierSpec.TierConfig tierConfig = workerTierSpec.getTierMap()
-                                                                 .getOrDefault(
-                                                                     task.getType(),
-                                                                     new WorkerTierSpec.TierConfig(null, null)
-                                                                 );
-      final String defaultTier = tierConfig.getDefaultTier();
-      final Map<String, String> tierAffinity = tierConfig.getTierAffinity();
+    if (workerTierSpec != null) {
+      final WorkerTierSpec.TierConfig tierConfig = workerTierSpec.getTierMap().get(task.getType());
 
-      // select worker from preferred tier
-      final String preferredTier = tierAffinity != null ? tierAffinity.get(task.getDataSource()) : defaultTier;
-      if (preferredTier != null) {
-        final ImmutableMap<String, ImmutableWorkerInfo> tierWorkers = getTierWorkers(preferredTier, runnableWorkers);
-        final ImmutableWorkerInfo selected = workerSelector.apply(tierWorkers);
+      if (tierConfig != null) {
+        final String defaultTier = tierConfig.getDefaultTier();
+        final Map<String, String> tierAffinity = tierConfig.getTierAffinity();
 
-        if (selected != null) {
-          return selected;
-        } else if (workerTierSpec.isStrong()) {
-          return null;
+        String preferredTier = tierAffinity.get(task.getDataSource());
+        // If there is no preferred tier for the datasource, then using the defaultTier. However, the defaultTier
+        // may be null too, so we need to do one more null check (see below).
+        preferredTier = preferredTier == null ? defaultTier : preferredTier;
+
+        if (preferredTier != null) {
+          // select worker from preferred tier
+          final ImmutableMap<String, ImmutableWorkerInfo> tierWorkers = getTierWorkers(preferredTier, runnableWorkers);
+          final ImmutableWorkerInfo selected = workerSelector.apply(tierWorkers);
+
+          if (selected != null) {
+            return selected;
+          } else if (workerTierSpec.isStrong()) {
+            return null;
+          }
         }
       }
     }
 
     // select worker from all runnable workers by default
     return workerSelector.apply(ImmutableMap.copyOf(runnableWorkers));
+  }
+
+  // Get workers that could potentially run this task, ignoring affinityConfig/workerTierSpec.
+  private static Map<String, ImmutableWorkerInfo> getRunnableWorkers(
+      final Task task,
+      final Map<String, ImmutableWorkerInfo> allWorkers,
+      final WorkerTaskRunnerConfig workerTaskRunnerConfig
+  )
+  {
+    return allWorkers.values()
+                     .stream()
+                     .filter(worker -> worker.canRunTask(task)
+                                       && worker.isValidVersion(workerTaskRunnerConfig.getMinWorkerVersion()))
+                     .collect(Collectors.toMap(w -> w.getWorker().getHost(), Function.identity()));
   }
 
   /**

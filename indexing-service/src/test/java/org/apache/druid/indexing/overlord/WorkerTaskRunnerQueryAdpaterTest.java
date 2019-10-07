@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -66,7 +67,7 @@ public class WorkerTaskRunnerQueryAdpaterTest
         ImmutableList.of(
             new ImmutableWorkerInfo(
                 new Worker(
-                    "http", "worker-host1", "192.0.0.1", 10, "v1"
+                    "http", "worker-host1", "192.0.0.1", 10, "v1", WorkerConfig.DEFAULT_TIER
                 ),
                 2,
                 ImmutableSet.of("grp1", "grp2"),
@@ -75,7 +76,7 @@ public class WorkerTaskRunnerQueryAdpaterTest
             ),
             new ImmutableWorkerInfo(
                 new Worker(
-                    "https", "worker-host2", "192.0.0.2", 4, "v1"
+                    "https", "worker-host2", "192.0.0.2", 4, "v1", WorkerConfig.DEFAULT_TIER
                 ),
                 1,
                 ImmutableSet.of("grp1"),
