@@ -57,9 +57,6 @@ public class QueryContexts
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
   public static final long NO_TIMEOUT = 0;
   public static final boolean DEFAULT_ENABLE_PARALLEL_MERGE = true;
-  public static final int DEFAULT_PARALLEL_MERGE_INITIAL_YIELD_ROWS = 1024;
-  public static final int DEFAULT_PARALLEL_MERGE_SMALL_BATCH_ROWS = 128;
-  public static final int DEFAULT_PARALLEL_MERGE_PARALLELISM = Integer.MAX_VALUE;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
@@ -193,19 +190,19 @@ public class QueryContexts
     return parseBoolean(query, BROKER_PARALLEL_MERGE_KEY, DEFAULT_ENABLE_PARALLEL_MERGE);
   }
 
-  public static <T> int getParallelMergeInitialYieldRows(Query<T> query)
+  public static <T> int getParallelMergeInitialYieldRows(Query<T> query, int defaultValue)
   {
-    return parseInt(query, BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY, DEFAULT_PARALLEL_MERGE_INITIAL_YIELD_ROWS);
+    return parseInt(query, BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY, defaultValue);
   }
 
-  public static <T> int getParallelMergeSmallBatchRows(Query<T> query)
+  public static <T> int getParallelMergeSmallBatchRows(Query<T> query, int defaultValue)
   {
-    return parseInt(query, BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY, DEFAULT_PARALLEL_MERGE_SMALL_BATCH_ROWS);
+    return parseInt(query, BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY, defaultValue);
   }
 
-  public static <T> int getParallelMergeParallelism(Query<T> query)
+  public static <T> int getParallelMergeParallelism(Query<T> query, int defaultValue)
   {
-    return parseInt(query, BROKER_PARALLELISM, DEFAULT_PARALLEL_MERGE_PARALLELISM);
+    return parseInt(query, BROKER_PARALLELISM, defaultValue);
   }
 
   @Deprecated

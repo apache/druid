@@ -305,8 +305,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
     {
       BinaryOperator<T> mergeFn = toolChest.createMergeFn(query);
       if (processingConfig.useParallelMergePool() && QueryContexts.getEnableParallelMerges(query) && mergeFn != null) {
-        final int yieldAfter = QueryContexts.getParallelMergeInitialYieldRows(query);
-        final int batchSize = QueryContexts.getParallelMergeSmallBatchRows(query);
         return new ParallelMergeCombiningSequence<>(
             pool,
             sequencesByInterval,
@@ -315,9 +313,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
             QueryContexts.hasTimeout(query),
             QueryContexts.getTimeout(query),
             QueryContexts.getPriority(query),
-            QueryContexts.getParallelMergeParallelism(query),
-            yieldAfter,
-            batchSize
+            QueryContexts.getParallelMergeParallelism(query, processingConfig.getMergePoolDefaultMaxParallelism()),
+            QueryContexts.getParallelMergeInitialYieldRows(query, processingConfig.getMergePoolTaskInitialYieldRows()),
+            QueryContexts.getParallelMergeSmallBatchRows(query, processingConfig.getMergePoolSmallBatchRows())
         );
       } else {
         return Sequences

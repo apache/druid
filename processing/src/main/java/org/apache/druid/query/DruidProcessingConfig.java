@@ -34,6 +34,8 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   public static final int DEFAULT_NUM_MERGE_BUFFERS = -1;
   public static final int DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = -1;
   public static final int MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = 1024 * 1024 * 1024;
+  public static final int DEFAULT_PARALLEL_MERGE_INITIAL_YIELD_ROWS = 1024;
+  public static final int DEFAULT_PARALLEL_MERGE_SMALL_BATCH_ROWS = 128;
   public static final int DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS = 60_000;
 
   private AtomicReference<Integer> computedBufferSizeBytes = new AtomicReference<>();
@@ -156,6 +158,26 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   public int getNumThreadsMergePoolConfigured()
   {
     return DEFAULT_NUM_THREADS;
+  }
+
+
+
+  @Config(value = "${base_path}.mergePoolDefaultMaxParallelism")
+  public int getMergePoolDefaultMaxParallelism()
+  {
+    return Integer.MAX_VALUE;
+  }
+
+  @Config(value = "${base_path}.mergePoolTaskInitialYieldRows")
+  public int getMergePoolTaskInitialYieldRows()
+  {
+    return DEFAULT_PARALLEL_MERGE_INITIAL_YIELD_ROWS;
+  }
+
+  @Config(value = "${base_path}.mergePoolSmallBatchRows")
+  public int getMergePoolSmallBatchRows()
+  {
+    return DEFAULT_PARALLEL_MERGE_SMALL_BATCH_ROWS;
   }
 
   public int getNumThreadsMergePool()
