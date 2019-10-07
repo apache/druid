@@ -126,13 +126,13 @@ public class HllSketchAggregatorTest
             Arrays.asList("timestamp", "dim", "multiDim", "id"),
             ImmutableList.of(
                 new ExpressionTransform(
-                    "multiDim",
-                    "array_append(multiDim, 0)",
+                    "multiDimAppended",
+                    "array_append(multiDim, '0')",
                     ExprMacroTable.nil()
                 )
             )
         ),
-        buildAggregatorJson("HLLSketchBuild", "multiDim", !ROUND),
+        buildAggregatorJson("HLLSketchBuild", "multiDimAppended", !ROUND),
         0, // minTimestamp
         Granularities.NONE,
         200, // maxRowCount
