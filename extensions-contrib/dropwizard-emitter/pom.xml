@@ -30,20 +30,14 @@
   </parent>
 
   <groupId>org.apache.druid.extensions.contrib</groupId>
-  <artifactId>graphite-emitter</artifactId>
-  <name>graphite-emitter</name>
-  <description>Druid emitter extension to support graphite</description>
+  <artifactId>dropwizard-emitter</artifactId>
+  <name>dropwizard-emitter</name>
+  <description>Druid emitter extension to convert druid metric to Dropwizard metrics</description>
 
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-core</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.druid</groupId>
-      <artifactId>druid-processing</artifactId>
       <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>
@@ -55,12 +49,34 @@
     </dependency>
     <dependency>
       <groupId>io.dropwizard.metrics</groupId>
-      <artifactId>metrics-graphite</artifactId>
-      <version>3.1.2</version>
+      <artifactId>metrics-core</artifactId>
+      <version>${dropwizard.metrics.version}</version>
     </dependency>
     <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
+      <groupId>io.dropwizard.metrics</groupId>
+      <artifactId>metrics-jmx</artifactId>
+      <version>${dropwizard.metrics.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.easymock</groupId>
+      <artifactId>easymock</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>pl.pragmatists</groupId>
+      <artifactId>JUnitParams</artifactId>
+      <version>1.0.4</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid</groupId>
+      <artifactId>druid-processing</artifactId>
+      <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -69,8 +85,8 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>joda-time</groupId>
-      <artifactId>joda-time</artifactId>
+      <groupId>org.apache.curator</groupId>
+      <artifactId>curator-client</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -89,37 +105,19 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>javax.validation</groupId>
-      <artifactId>validation-api</artifactId>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
       <scope>provided</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.easymock</groupId>
-      <artifactId>easymock</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>pl.pragmatists</groupId>
-      <artifactId>JUnitParams</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.druid</groupId>
-      <artifactId>druid-processing</artifactId>
-      <version>${project.parent.version}</version>
-      <type>test-jar</type>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>
