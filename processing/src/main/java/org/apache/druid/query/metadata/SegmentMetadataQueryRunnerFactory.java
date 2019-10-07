@@ -20,7 +20,6 @@
 package org.apache.druid.query.metadata;
 
 import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -41,6 +40,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.ColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
@@ -84,7 +84,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
     return new QueryRunner<SegmentAnalysis>()
     {
       @Override
-      public Sequence<SegmentAnalysis> run(QueryPlus<SegmentAnalysis> inQ, Map<String, Object> responseContext)
+      public Sequence<SegmentAnalysis> run(QueryPlus<SegmentAnalysis> inQ, ResponseContext responseContext)
       {
         SegmentMetadataQuery updatedQuery = ((SegmentMetadataQuery) inQ.getQuery())
             .withFinalizedAnalysisTypes(toolChest.getConfig());
@@ -202,7 +202,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                   @Override
                   public Sequence<SegmentAnalysis> run(
                       final QueryPlus<SegmentAnalysis> queryPlus,
-                      final Map<String, Object> responseContext
+                      final ResponseContext responseContext
                   )
                   {
                     final Query<SegmentAnalysis> query = queryPlus.getQuery();
@@ -240,7 +240,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                       throw new QueryInterruptedException(e);
                     }
                     catch (ExecutionException e) {
-                      throw Throwables.propagate(e.getCause());
+                      throw new RuntimeException(e);
                     }
                   }
                 };

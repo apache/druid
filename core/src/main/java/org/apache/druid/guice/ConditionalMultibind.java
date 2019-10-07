@@ -184,11 +184,7 @@ public class ConditionalMultibind<T>
       Class<? extends T> target
   )
   {
-    final String value = properties.getProperty(property);
-    if (value == null) {
-      return this;
-    }
-    if (condition.apply(value)) {
+    if (matchCondition(property, condition)) {
       multibinder.addBinding().to(target);
     }
     return this;
@@ -209,11 +205,7 @@ public class ConditionalMultibind<T>
       T target
   )
   {
-    final String value = properties.getProperty(property);
-    if (value == null) {
-      return this;
-    }
-    if (condition.apply(value)) {
+    if (matchCondition(property, condition)) {
       multibinder.addBinding().toInstance(target);
     }
     return this;
@@ -235,13 +227,18 @@ public class ConditionalMultibind<T>
       TypeLiteral<T> target
   )
   {
-    final String value = properties.getProperty(property);
-    if (value == null) {
-      return this;
-    }
-    if (condition.apply(value)) {
+    if (matchCondition(property, condition)) {
       multibinder.addBinding().to(target);
     }
     return this;
+  }
+
+  public boolean matchCondition(String property, Predicate<String> condition)
+  {
+    final String value = properties.getProperty(property);
+    if (value == null) {
+      return false;
+    }
+    return condition.apply(value);
   }
 }

@@ -61,6 +61,12 @@
                 "baseDir": "/resources/data/batch_index",
                 "filter": "wikipedia_index_data*"
             }
+        },
+        "tuningConfig": {
+            "type": "index_parallel",
+            "maxNumConcurrentSubTasks": 10,
+            "forceGuaranteedRollup": "%%FORCE_GUARANTEED_ROLLUP%%",
+            "partitionsSpec": %%PARTITIONS_SPEC%%
         }
     }
 }

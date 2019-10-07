@@ -115,7 +115,7 @@ public class CachingCostBalancerStrategyTest
   {
     ClusterCostCache.Builder builder = ClusterCostCache.builder();
     serverHolders.forEach(
-        s -> s.getServer().getSegments().forEach(segment -> builder.addSegment(s.getServer().getName(), segment))
+        s -> s.getServer().iterateAllSegments().forEach(segment -> builder.addSegment(s.getServer().getName(), segment))
     );
     return new CachingCostBalancerStrategy(builder.build(), listeningExecutorService);
   }

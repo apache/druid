@@ -24,6 +24,7 @@ import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
@@ -33,6 +34,8 @@ import java.nio.ByteBuffer;
  *
  * Thus, an Aggregator can be thought of as a closure over some other thing that is stateful and changes between calls
  * to aggregate(...).
+ *
+ * @see VectorAggregator, the vectorized version
  */
 @ExtensionPoint
 public interface BufferAggregator extends HotLoopCallee
@@ -72,12 +75,22 @@ public interface BufferAggregator extends HotLoopCallee
    *
    * Converts the given byte buffer representation into an intermediate aggregate Object
    *
-   * <b>Implementations must not change the position, limit or mark of the given buffer</b>
+   * <b>Implementations must not change the position, limit or mark of the given buffer.</b>
+   *
+   * <b>
+   * The object returned must not have any references to the given buffer (i.e., make a copy), since the
+   * underlying buffer is a shared resource and may be given to another processing thread
+   * while the objects returned by this aggregator are still in use.
+   * </b>
+   *
+   * <b>If the corresponding {@link AggregatorFactory#combine(Object, Object)} method for this aggregator
+   * expects its inputs to be mutable, then the object returned by this method must be mutable.</b>
    *
    * @param buf byte buffer storing the byte array representation of the aggregate
    * @param position offset within the byte buffer at which the aggregate value is stored
    * @return the Object representation of the aggregate
    */
+  @Nullable
   Object get(ByteBuffer buf, int position);
 
   /**

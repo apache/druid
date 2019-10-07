@@ -31,7 +31,6 @@ public class PlannerConfig
 {
   public static final String CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT = "useApproximateCountDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
-  public static final String CTX_KEY_USE_FALLBACK = "useFallback";
 
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
@@ -46,16 +45,10 @@ public class PlannerConfig
   private int maxQueryCount = 8;
 
   @JsonProperty
-  private int selectThreshold = 1000;
-
-  @JsonProperty
   private boolean useApproximateCountDistinct = true;
 
   @JsonProperty
   private boolean useApproximateTopN = true;
-
-  @JsonProperty
-  private boolean useFallback = false;
 
   @JsonProperty
   private boolean requireTimeCondition = false;
@@ -104,11 +97,6 @@ public class PlannerConfig
     return maxQueryCount;
   }
 
-  public int getSelectThreshold()
-  {
-    return selectThreshold;
-  }
-
   public boolean isUseApproximateCountDistinct()
   {
     return useApproximateCountDistinct;
@@ -117,11 +105,6 @@ public class PlannerConfig
   public boolean isUseApproximateTopN()
   {
     return useApproximateTopN;
-  }
-
-  public boolean isUseFallback()
-  {
-    return useFallback;
   }
 
   public boolean isRequireTimeCondition()
@@ -155,7 +138,6 @@ public class PlannerConfig
     newConfig.maxSemiJoinRowsInMemory = getMaxSemiJoinRowsInMemory();
     newConfig.maxTopNLimit = getMaxTopNLimit();
     newConfig.maxQueryCount = getMaxQueryCount();
-    newConfig.selectThreshold = getSelectThreshold();
     newConfig.useApproximateCountDistinct = getContextBoolean(
         context,
         CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT,
@@ -165,11 +147,6 @@ public class PlannerConfig
         context,
         CTX_KEY_USE_APPROXIMATE_TOPN,
         isUseApproximateTopN()
-    );
-    newConfig.useFallback = getContextBoolean(
-        context,
-        CTX_KEY_USE_FALLBACK,
-        isUseFallback()
     );
     newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
@@ -211,10 +188,8 @@ public class PlannerConfig
     return maxSemiJoinRowsInMemory == that.maxSemiJoinRowsInMemory &&
            maxTopNLimit == that.maxTopNLimit &&
            maxQueryCount == that.maxQueryCount &&
-           selectThreshold == that.selectThreshold &&
            useApproximateCountDistinct == that.useApproximateCountDistinct &&
            useApproximateTopN == that.useApproximateTopN &&
-           useFallback == that.useFallback &&
            requireTimeCondition == that.requireTimeCondition &&
            awaitInitializationOnStart == that.awaitInitializationOnStart &&
            metadataSegmentCacheEnable == that.metadataSegmentCacheEnable &&
@@ -233,10 +208,8 @@ public class PlannerConfig
         maxSemiJoinRowsInMemory,
         maxTopNLimit,
         maxQueryCount,
-        selectThreshold,
         useApproximateCountDistinct,
         useApproximateTopN,
-        useFallback,
         requireTimeCondition,
         awaitInitializationOnStart,
         sqlTimeZone,
@@ -254,10 +227,8 @@ public class PlannerConfig
            ", maxSemiJoinRowsInMemory=" + maxSemiJoinRowsInMemory +
            ", maxTopNLimit=" + maxTopNLimit +
            ", maxQueryCount=" + maxQueryCount +
-           ", selectThreshold=" + selectThreshold +
            ", useApproximateCountDistinct=" + useApproximateCountDistinct +
            ", useApproximateTopN=" + useApproximateTopN +
-           ", useFallback=" + useFallback +
            ", requireTimeCondition=" + requireTimeCondition +
            ", awaitInitializationOnStart=" + awaitInitializationOnStart +
            ", metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +

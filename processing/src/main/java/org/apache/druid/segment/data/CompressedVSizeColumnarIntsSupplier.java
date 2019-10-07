@@ -42,7 +42,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
 {
   public static final byte VERSION = 0x2;
 
-  private static final MetaSerdeHelper<CompressedVSizeColumnarIntsSupplier> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<CompressedVSizeColumnarIntsSupplier> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((CompressedVSizeColumnarIntsSupplier x) -> VERSION)
       .writeByte(x -> ByteUtils.checkedCast(x.numBytes))
       .writeInt(x -> x.totalSize)
@@ -124,13 +124,13 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
   @Override
   public long getSerializedSize()
   {
-    return metaSerdeHelper.size(this) + baseBuffers.getSerializedSize();
+    return META_SERDE_HELPER.size(this) + baseBuffers.getSerializedSize();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     baseBuffers.writeTo(channel, smoosher);
   }
 
@@ -289,7 +289,9 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
 
     int currBufferNum = -1;
     ResourceHolder<ByteBuffer> holder;
-    /** buffer's position must be 0 */
+    /**
+     * buffer's position must be 0
+     */
     ByteBuffer buffer;
     boolean bigEndian;
 
@@ -320,6 +322,66 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
       }
 
       return _get(buffer, bigEndian, bufferIndex);
+    }
+
+    @Override
+    public void get(int[] out, int start, int length)
+    {
+      int p = 0;
+
+      while (p < length) {
+        // assumes the number of entries in each buffer is a power of 2
+        final int bufferNum = (start + p) >> div;
+        if (bufferNum != currBufferNum) {
+          loadBuffer(bufferNum);
+        }
+
+        final int currBufferStart = bufferNum * sizePer;
+        final int nextBufferStart = currBufferStart + sizePer;
+
+        int i;
+        for (i = p; i < length; i++) {
+          final int index = start + i;
+          if (index >= nextBufferStart) {
+            break;
+          }
+
+          out[i] = _get(buffer, bigEndian, index - currBufferStart);
+        }
+
+        assert i > p;
+        p = i;
+      }
+    }
+
+    @Override
+    public void get(final int[] out, final int[] indexes, final int length)
+    {
+      int p = 0;
+
+      while (p < length) {
+        // assumes the number of entries in each buffer is a power of 2
+        final int bufferNum = indexes[p] >> div;
+        if (bufferNum != currBufferNum) {
+          loadBuffer(bufferNum);
+        }
+
+        final int currBufferStart = bufferNum * sizePer;
+        final int nextBufferStart = currBufferStart + sizePer;
+
+        int i;
+        for (i = p; i < length; i++) {
+          final int index = indexes[i];
+          if (index >= nextBufferStart) {
+            break;
+          }
+
+          out[i] = _get(buffer, bigEndian, index - currBufferStart);
+        }
+
+        assert i > p;
+        p = i;
+      }
     }
 
     /**

@@ -57,7 +57,7 @@ public class EventReceiverFirehoseTest
 {
   private static final int CAPACITY = 300;
   private static final int NUM_EVENTS = 100;
-  private static final long MAX_IDLE_TIME = Long.MAX_VALUE;
+  private static final long MAX_IDLE_TIME_MILLIS = TimeUnit.SECONDS.toMillis(20);
   private static final String SERVICE_NAME = "test_firehose";
 
   private final String inputRow = "[{\n"
@@ -77,7 +77,7 @@ public class EventReceiverFirehoseTest
     eventReceiverFirehoseFactory = new EventReceiverFirehoseFactory(
         SERVICE_NAME,
         CAPACITY,
-        MAX_IDLE_TIME,
+        MAX_IDLE_TIME_MILLIS,
         null,
         new DefaultObjectMapper(),
         new DefaultObjectMapper(),
@@ -100,8 +100,8 @@ public class EventReceiverFirehoseTest
     );
   }
 
-  @Test
-  public void testSingleThread() throws IOException
+  @Test(timeout = 60_000L)
+  public void testSingleThread() throws IOException, InterruptedException
   {
     for (int i = 0; i < NUM_EVENTS; ++i) {
       setUpRequestExpectations(null, null);
@@ -138,9 +138,10 @@ public class EventReceiverFirehoseTest
     Assert.assertFalse(firehose.hasMore());
     Assert.assertEquals(0, Iterables.size(register.getMetrics()));
 
+    awaitDelayedExecutorThreadTerminated();
   }
 
-  @Test
+  @Test(timeout = 60_000L)
   public void testMultipleThreads() throws InterruptedException, IOException, TimeoutException, ExecutionException
   {
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
@@ -210,6 +211,8 @@ public class EventReceiverFirehoseTest
     Assert.assertFalse(firehose.hasMore());
     Assert.assertEquals(0, Iterables.size(register.getMetrics()));
 
+    awaitDelayedExecutorThreadTerminated();
+
     executorService.shutdownNow();
   }
 
@@ -219,7 +222,7 @@ public class EventReceiverFirehoseTest
     EventReceiverFirehoseFactory eventReceiverFirehoseFactory2 = new EventReceiverFirehoseFactory(
         SERVICE_NAME,
         CAPACITY,
-        MAX_IDLE_TIME,
+        MAX_IDLE_TIME_MILLIS,
         null,
         new DefaultObjectMapper(),
         new DefaultObjectMapper(),
@@ -259,9 +262,20 @@ public class EventReceiverFirehoseTest
     EasyMock.replay(req);
 
     firehose.shutdown(DateTimes.nowUtc().minusMinutes(2).toString(), req);
+    awaitFirehoseClosed();
+    awaitDelayedExecutorThreadTerminated();
+  }
+
+  private void awaitFirehoseClosed() throws InterruptedException
+  {
     while (!firehose.isClosed()) {
       Thread.sleep(50);
     }
+  }
+
+  private void awaitDelayedExecutorThreadTerminated() throws InterruptedException
+  {
+    firehose.getDelayedCloseExecutor().join();
   }
 
   @Test(timeout = 60_000L)
@@ -279,9 +293,8 @@ public class EventReceiverFirehoseTest
     EasyMock.replay(req);
 
     firehose.shutdown(DateTimes.nowUtc().plusMillis(100).toString(), req);
-    while (!firehose.isClosed()) {
-      Thread.sleep(50);
-    }
+    awaitFirehoseClosed();
+    awaitDelayedExecutorThreadTerminated();
   }
 
   @Test
@@ -322,7 +335,6 @@ public class EventReceiverFirehoseTest
     firehose.close();
     Assert.assertFalse(firehose.hasMore());
     Assert.assertEquals(0, Iterables.size(register.getMetrics()));
-
   }
 
   @Test

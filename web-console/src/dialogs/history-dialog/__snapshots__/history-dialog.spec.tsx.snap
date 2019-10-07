@@ -1,0 +1,132 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`history dialog matches snapshot 1`] = `
+<div
+  class="bp3-portal"
+>
+  <div
+    class="bp3-overlay bp3-overlay-open bp3-overlay-scroll-container"
+  >
+    <div
+      class="bp3-overlay-backdrop bp3-overlay-appear bp3-overlay-appear-active"
+      tabindex="0"
+    />
+    <div
+      class="bp3-dialog-container bp3-overlay-content bp3-overlay-appear bp3-overlay-appear-active"
+      tabindex="0"
+    >
+      <div
+        class="bp3-dialog history-dialog"
+      >
+        <div
+          class="history-record-container"
+        >
+          <span
+            class="history-dialog-title"
+          >
+            History
+          </span>
+          <div
+            class="history-record-entries"
+          >
+            <div
+              class="history-record-entry"
+            >
+              <div
+                class="bp3-card bp3-elevation-0"
+              >
+                <div
+                  class="history-record-title"
+                >
+                  <span
+                    class="history-record-title-change"
+                  >
+                    Change
+                  </span>
+                  <span />
+                </div>
+                <div
+                  class="bp3-divider"
+                />
+                <p />
+                <div
+                  class="json-collapse"
+                >
+                  <button
+                    class="bp3-button bp3-minimal"
+                    type="button"
+                  >
+                    <span
+                      class="bp3-button-text"
+                    >
+                      Payload
+                    </span>
+                  </button>
+                  <div>
+                    <div
+                      class="bp3-collapse"
+                    >
+                      <div
+                        aria-hidden="false"
+                        class="bp3-collapse-body"
+                        style="transform: translateY(-0px);"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="history-record-entry"
+            >
+              <div
+                class="bp3-card bp3-elevation-0"
+              >
+                <div
+                  class="history-record-title"
+                >
+                  <span
+                    class="history-record-title-change"
+                  >
+                    Change
+                  </span>
+                  <span />
+                </div>
+                <div
+                  class="bp3-divider"
+                />
+                <p />
+                <div
+                  class="json-collapse"
+                >
+                  <button
+                    class="bp3-button bp3-minimal"
+                    type="button"
+                  >
+                    <span
+                      class="bp3-button-text"
+                    >
+                      Payload
+                    </span>
+                  </button>
+                  <div>
+                    <div
+                      class="bp3-collapse"
+                    >
+                      <div
+                        aria-hidden="false"
+                        class="bp3-collapse-body"
+                        style="transform: translateY(-0px);"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

@@ -36,7 +36,7 @@ public class IndexingHadoopModule implements DruidModule
   public List<? extends Module> getJacksonModules()
   {
     return Collections.<Module>singletonList(
-        new SimpleModule("IndexingHadoopModule")
+        new SimpleModule(getClass().getSimpleName())
             .registerSubtypes(
                 new NamedType(HadoopyStringInputRowParser.class, "hadoopyString")
             )

@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class RetryUtilsTest
 {
-  private static final Predicate<Throwable> isTransient = new Predicate<Throwable>()
+  private static final Predicate<Throwable> IS_TRANSIENT = new Predicate<Throwable>()
   {
     @Override
     public boolean apply(Throwable e)
@@ -46,7 +46,7 @@ public class RetryUtilsTest
           count.incrementAndGet();
           return "hey";
         },
-        isTransient,
+        IS_TRANSIENT,
         2
     );
     Assert.assertEquals("result", "hey", result);
@@ -64,7 +64,7 @@ public class RetryUtilsTest
             count.incrementAndGet();
             throw new IOException("what");
           },
-          isTransient,
+          IS_TRANSIENT,
           2
       );
     }
@@ -87,7 +87,7 @@ public class RetryUtilsTest
             throw new IOException("what");
           }
         },
-        isTransient,
+        IS_TRANSIENT,
         3
     );
     Assert.assertEquals("result", "hey", result);
@@ -108,7 +108,7 @@ public class RetryUtilsTest
               throw new IOException("uhh");
             }
           },
-          isTransient,
+          IS_TRANSIENT,
           3
       );
     }

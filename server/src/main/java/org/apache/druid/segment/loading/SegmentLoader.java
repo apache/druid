@@ -25,6 +25,8 @@ import org.apache.druid.timeline.DataSegment;
 import java.io.File;
 
 /**
+ * Loading segments from deep storage to local storage.
+ * Implementations must be thread-safe.
  */
 public interface SegmentLoader
 {

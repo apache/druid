@@ -19,15 +19,19 @@
 
 package org.apache.druid.server.coordination;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public class SegmentChangeRequestNoop implements DataSegmentChangeRequest
 {
   @Override
-  public void go(DataSegmentChangeHandler handler, DataSegmentChangeCallback callback)
+  public void go(DataSegmentChangeHandler handler, @Nullable DataSegmentChangeCallback callback)
   {
     // just execute the callback and do nothing else
-    callback.execute();
+    if (callback != null) {
+      callback.execute();
+    }
   }
 
   @Override

@@ -22,7 +22,6 @@ package org.apache.druid.indexing.overlord;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -31,12 +30,14 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.inject.Inject;
+import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -46,6 +47,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.utils.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -80,6 +82,7 @@ public class TaskQueue
   private final List<Task> tasks = new ArrayList<>();
   private final Map<String, ListenableFuture<TaskStatus>> taskFutures = new HashMap<>();
 
+  private final TaskLockConfig lockConfig;
   private final TaskQueueConfig config;
   private final TaskStorage taskStorage;
   private final TaskRunner taskRunner;
@@ -109,8 +112,8 @@ public class TaskQueue
   private Map<String, Long> prevTotalSuccessfulTaskCount = new HashMap<>();
   private Map<String, Long> prevTotalFailedTaskCount = new HashMap<>();
 
-  @Inject
   public TaskQueue(
+      TaskLockConfig lockConfig,
       TaskQueueConfig config,
       TaskStorage taskStorage,
       TaskRunner taskRunner,
@@ -119,6 +122,7 @@ public class TaskQueue
       ServiceEmitter emitter
   )
   {
+    this.lockConfig = Preconditions.checkNotNull(lockConfig, "lockConfig");
     this.config = Preconditions.checkNotNull(config, "config");
     this.taskStorage = Preconditions.checkNotNull(taskStorage, "taskStorage");
     this.taskRunner = Preconditions.checkNotNull(taskRunner, "taskRunner");
@@ -272,6 +276,11 @@ public class TaskQueue
               }
             }
             taskFutures.put(task.getId(), attachCallbacks(task, runnerTaskFuture));
+          } else if (isTaskPending(task)) {
+            // if the taskFutures contain this task and this task is pending, also let the taskRunner
+            // to run it to guarantee it will be assigned to run
+            // see https://github.com/apache/incubator-druid/pull/6991
+            taskRunner.run(task);
           }
         }
         // Kill tasks that shouldn't be running
@@ -316,6 +325,13 @@ public class TaskQueue
     }
   }
 
+  private boolean isTaskPending(Task task)
+  {
+    return taskRunner.getPendingTasks()
+                     .stream()
+                     .anyMatch(workItem -> workItem.getTaskId().equals(task.getId()));
+  }
+
   /**
    * Adds some work to the queue and the underlying task storage facility with a generic "running" status.
    *
@@ -328,8 +344,11 @@ public class TaskQueue
   public boolean add(final Task task) throws EntryExistsException
   {
     if (taskStorage.getTask(task.getId()).isPresent()) {
-      throw new EntryExistsException(StringUtils.format("Task %s is already exists", task.getId()));
+      throw new EntryExistsException(StringUtils.format("Task %s already exists", task.getId()));
     }
+
+    // Set forceTimeChunkLock before adding task spec to taskStorage, so that we can see always consistent task spec.
+    task.addToContextIfAbsent(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockConfig.isForceTimeChunkLock());
 
     giant.lock();
 
@@ -403,6 +422,8 @@ public class TaskQueue
   {
     giant.lock();
 
+    TaskLocation taskLocation = TaskLocation.unknown();
+
     try {
       Preconditions.checkNotNull(task, "task");
       Preconditions.checkNotNull(taskStatus, "status");
@@ -415,6 +436,7 @@ public class TaskQueue
       );
       // Inform taskRunner that this task can be shut down
       try {
+        taskLocation = taskRunner.getTaskLocation(task.getId());
         taskRunner.shutdown(task.getId(), reasonFormat, args);
       }
       catch (Exception e) {
@@ -443,7 +465,7 @@ public class TaskQueue
           if (!previousStatus.isPresent() || !previousStatus.get().isRunnable()) {
             log.makeAlert("Ignoring notification for already-complete task").addData("task", task.getId()).emit();
           } else {
-            taskStorage.setStatus(taskStatus);
+            taskStorage.setStatus(taskStatus.withLocation(taskLocation));
             log.info("Task done: %s", task);
             managementMayBeNecessary.signalAll();
           }
@@ -585,7 +607,7 @@ public class TaskQueue
     }
     catch (Exception e) {
       log.warn(e, "Failed to sync tasks from storage!");
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     finally {
       giant.unlock();
@@ -610,12 +632,7 @@ public class TaskQueue
 
   public Map<String, Long> getSuccessfulTaskCount()
   {
-    Map<String, Long> total = totalSuccessfulTaskCount.entrySet()
-                                                      .stream()
-                                                      .collect(Collectors.toMap(
-                                                          Map.Entry::getKey,
-                                                          e -> e.getValue().get()
-                                                      ));
+    Map<String, Long> total = CollectionUtils.mapValues(totalSuccessfulTaskCount, AtomicLong::get);
     Map<String, Long> delta = getDeltaValues(total, prevTotalSuccessfulTaskCount);
     prevTotalSuccessfulTaskCount = total;
     return delta;
@@ -623,12 +640,7 @@ public class TaskQueue
 
   public Map<String, Long> getFailedTaskCount()
   {
-    Map<String, Long> total = totalFailedTaskCount.entrySet()
-                                                  .stream()
-                                                  .collect(Collectors.toMap(
-                                                      Map.Entry::getKey,
-                                                      e -> e.getValue().get()
-                                                  ));
+    Map<String, Long> total = CollectionUtils.mapValues(totalFailedTaskCount, AtomicLong::get);
     Map<String, Long> delta = getDeltaValues(total, prevTotalFailedTaskCount);
     prevTotalFailedTaskCount = total;
     return delta;

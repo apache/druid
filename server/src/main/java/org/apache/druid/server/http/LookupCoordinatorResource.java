@@ -61,9 +61,11 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Contains information about lookups exposed through the coordinator
@@ -97,11 +99,16 @@ public class LookupCoordinatorResource
   )
   {
     try {
+      final Map<String, Map<String, LookupExtractorFactoryMapContainer>> knownLookups =
+          lookupCoordinatorManager.getKnownLookups();
       if (discover) {
-        return Response.ok().entity(lookupCoordinatorManager.discoverTiers()).build();
+        final Set<String> discovered = new HashSet<>(lookupCoordinatorManager.discoverTiers());
+        if (knownLookups != null) {
+          discovered.addAll(knownLookups.keySet());
+        }
+        return Response.ok().entity(discovered).build();
       }
-      final Map<String, Map<String, LookupExtractorFactoryMapContainer>> knownLookups = lookupCoordinatorManager
-          .getKnownLookups();
+
       if (knownLookups == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       } else {
@@ -165,6 +172,35 @@ public class LookupCoordinatorResource
     }
     catch (Exception e) {
       LOG.error(e, "Error creating new lookups");
+      return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
+    }
+  }
+
+  @DELETE
+  @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
+  @Path("/config/{tier}")
+  public Response deleteTier(
+      @PathParam("tier") String tier,
+      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
+      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
+      @Context HttpServletRequest req
+  )
+  {
+    try {
+      if (Strings.isNullOrEmpty(tier)) {
+        return Response.status(Response.Status.BAD_REQUEST)
+                       .entity(ServletResourceUtils.sanitizeException(new NullPointerException("`tier` required")))
+                       .build();
+      }
+
+      if (lookupCoordinatorManager.deleteTier(tier, new AuditInfo(author, comment, req.getRemoteAddr()))) {
+        return Response.status(Response.Status.ACCEPTED).build();
+      } else {
+        return Response.status(Response.Status.NOT_FOUND).build();
+      }
+    }
+    catch (Exception e) {
+      LOG.error(e, "Error deleting tier [%s]", tier);
       return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
     }
   }

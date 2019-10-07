@@ -37,13 +37,13 @@ public class PotentiallyGzippedCompressionProvider implements CompressionProvide
   }
 
   @Override
-  public byte[] compress(String path, byte[] data) throws Exception
+  public byte[] compress(String path, byte[] data)
   {
     return compressOutput ? base.compress(path, data) : data;
   }
 
   @Override
-  public byte[] decompress(String path, byte[] data) throws Exception
+  public byte[] decompress(String path, byte[] data)
   {
     try {
       return base.decompress(path, data);

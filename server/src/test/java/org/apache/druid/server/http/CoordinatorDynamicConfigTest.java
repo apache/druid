@@ -50,8 +50,8 @@ public class CoordinatorDynamicConfigTest
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1,\n"
-                     + "  \"historicalNodesInMaintenance\": [\"host1\", \"host2\"],\n"
-                     + "  \"nodesInMaintenancePriority\": 9\n"
+                     + "  \"decommissioningNodes\": [\"host1\", \"host2\"],\n"
+                     + "  \"decommissioningMaxPercentOfMaxSegmentsToMove\": 9\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -63,19 +63,19 @@ public class CoordinatorDynamicConfigTest
         ),
         CoordinatorDynamicConfig.class
     );
-    ImmutableSet<String> maintenance = ImmutableSet.of("host1", "host2");
+    ImmutableSet<String> decommissioning = ImmutableSet.of("host1", "host2");
     ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, maintenance, 9);
+    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, decommissioning, 9);
 
-    actual = CoordinatorDynamicConfig.builder().withMaintenanceList(ImmutableSet.of("host1")).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withDecommissioningNodes(ImmutableSet.of("host1")).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 9);
 
-    actual = CoordinatorDynamicConfig.builder().withMaintenanceModeSegmentsPriority(5).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withDecommissioningMaxPercentOfMaxSegmentsToMove(5).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5);
   }
 
   @Test
-  public void testMaintenanceParametersBackwardCompatibility() throws Exception
+  public void testDecommissioningParametersBackwardCompatibility() throws Exception
   {
     String jsonStr = "{\n"
                      + "  \"millisToWaitBeforeDeleting\": 1,\n"
@@ -99,14 +99,14 @@ public class CoordinatorDynamicConfigTest
         ),
         CoordinatorDynamicConfig.class
     );
-    ImmutableSet<String> maintenance = ImmutableSet.of();
+    ImmutableSet<String> decommissioning = ImmutableSet.of();
     ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, maintenance, 0);
+    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, decommissioning, 0);
 
-    actual = CoordinatorDynamicConfig.builder().withMaintenanceList(ImmutableSet.of("host1")).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withDecommissioningNodes(ImmutableSet.of("host1")).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 0);
 
-    actual = CoordinatorDynamicConfig.builder().withMaintenanceModeSegmentsPriority(5).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withDecommissioningMaxPercentOfMaxSegmentsToMove(5).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5);
   }
 
@@ -217,15 +217,16 @@ public class CoordinatorDynamicConfigTest
   {
     CoordinatorDynamicConfig defaultConfig = CoordinatorDynamicConfig.builder().build();
     ImmutableSet<String> emptyList = ImmutableSet.of();
-    assertConfig(defaultConfig, 900000, 524288000, 100, 5, 15, 10, 1, false, emptyList, false, 0, emptyList, 7);
+    assertConfig(defaultConfig, 900000, 524288000, 100, 5, 15, 10, 1, false, emptyList, false, 0, emptyList, 70);
   }
 
   @Test
   public void testUpdate()
   {
-    CoordinatorDynamicConfig current = CoordinatorDynamicConfig.builder()
-                                                               .withKillDataSourceWhitelist(ImmutableSet.of("x"))
-                                                               .build();
+    CoordinatorDynamicConfig current = CoordinatorDynamicConfig
+        .builder()
+        .withSpecificDataSourcesToKillUnusedSegmentsIn(ImmutableSet.of("x"))
+        .build();
 
     Assert.assertEquals(
         current,
@@ -246,7 +247,7 @@ public class CoordinatorDynamicConfigTest
 
   private void assertConfig(
       CoordinatorDynamicConfig config,
-      long expectedMillisToWaitBeforeDeleting,
+      long expectedLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
       long expectedMergeBytesLimit,
       int expectedMergeSegmentsLimit,
       int expectedMaxSegmentsToMove,
@@ -254,14 +255,17 @@ public class CoordinatorDynamicConfigTest
       int expectedReplicationThrottleLimit,
       int expectedBalancerComputeThreads,
       boolean expectedEmitingBalancingStats,
-      Set<String> expectedKillableDatasources,
-      boolean expectedKillAllDataSources,
+      Set<String> expectedSpecificDataSourcesToKillUnusedSegmentsIn,
+      boolean expectedKillUnusedSegmentsInAllDataSources,
       int expectedMaxSegmentsInNodeLoadingQueue,
-      Set<String> maintenanceList,
-      int maintenancePriority
+      Set<String> decommissioningNodes,
+      int decommissioningMaxPercentOfMaxSegmentsToMove
   )
   {
-    Assert.assertEquals(expectedMillisToWaitBeforeDeleting, config.getMillisToWaitBeforeDeleting());
+    Assert.assertEquals(
+        expectedLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
+        config.getLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments()
+    );
     Assert.assertEquals(expectedMergeBytesLimit, config.getMergeBytesLimit());
     Assert.assertEquals(expectedMergeSegmentsLimit, config.getMergeSegmentsLimit());
     Assert.assertEquals(expectedMaxSegmentsToMove, config.getMaxSegmentsToMove());
@@ -269,10 +273,16 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(expectedReplicationThrottleLimit, config.getReplicationThrottleLimit());
     Assert.assertEquals(expectedBalancerComputeThreads, config.getBalancerComputeThreads());
     Assert.assertEquals(expectedEmitingBalancingStats, config.emitBalancingStats());
-    Assert.assertEquals(expectedKillableDatasources, config.getKillableDataSources());
-    Assert.assertEquals(expectedKillAllDataSources, config.isKillAllDataSources());
+    Assert.assertEquals(
+        expectedSpecificDataSourcesToKillUnusedSegmentsIn,
+        config.getSpecificDataSourcesToKillUnusedSegmentsIn()
+    );
+    Assert.assertEquals(expectedKillUnusedSegmentsInAllDataSources, config.isKillUnusedSegmentsInAllDataSources());
     Assert.assertEquals(expectedMaxSegmentsInNodeLoadingQueue, config.getMaxSegmentsInNodeLoadingQueue());
-    Assert.assertEquals(maintenanceList, config.getHistoricalNodesInMaintenance());
-    Assert.assertEquals(maintenancePriority, config.getNodesInMaintenancePriority());
+    Assert.assertEquals(decommissioningNodes, config.getDecommissioningNodes());
+    Assert.assertEquals(
+        decommissioningMaxPercentOfMaxSegmentsToMove,
+        config.getDecommissioningMaxPercentOfMaxSegmentsToMove()
+    );
   }
 }

@@ -199,9 +199,6 @@ public class DimensionsSpec
         "dimensions and dimensions exclusions cannot overlap"
     );
 
-    ParserUtils.validateFields(dimNames);
-    ParserUtils.validateFields(dimensionExclusions);
-
     List<String> spatialDimNames = Lists.transform(
         spatialDimensions,
         new Function<SpatialDimensionSchema, String>()
@@ -216,6 +213,7 @@ public class DimensionsSpec
 
     // Don't allow duplicates between main list and deprecated spatial list
     ParserUtils.validateFields(Iterables.concat(dimNames, spatialDimNames));
+    ParserUtils.validateFields(dimensionExclusions);
   }
 
   @Override

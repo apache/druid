@@ -26,7 +26,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -62,7 +61,6 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
@@ -130,9 +128,7 @@ public class AppenderatorImpl implements Appenderator
    */
   private final ConcurrentMap<SegmentIdWithShardSpec, Sink> sinks = new ConcurrentHashMap<>();
   private final Set<SegmentIdWithShardSpec> droppingSinks = Sets.newConcurrentHashSet();
-  private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<>(
-      String.CASE_INSENSITIVE_ORDER
-  );
+  private final VersionedIntervalTimeline<String, Sink> sinkTimeline;
   private final long maxBytesTuningConfig;
 
   private final QuerySegmentWalker texasRanger;
@@ -175,6 +171,55 @@ public class AppenderatorImpl implements Appenderator
       CachePopulatorStats cachePopulatorStats
   )
   {
+    this(
+        schema,
+        tuningConfig,
+        metrics,
+        dataSegmentPusher,
+        objectMapper,
+        segmentAnnouncer,
+        conglomerate == null ? null : new SinkQuerySegmentWalker(
+            schema.getDataSource(),
+            new VersionedIntervalTimeline<>(
+                String.CASE_INSENSITIVE_ORDER
+            ),
+            objectMapper,
+            emitter,
+            conglomerate,
+            queryExecutorService,
+            Preconditions.checkNotNull(cache, "cache"),
+            cacheConfig,
+            cachePopulatorStats
+        ),
+        indexIO,
+        indexMerger,
+        cache
+    );
+    log.info("Created Appenderator for dataSource[%s].", schema.getDataSource());
+  }
+
+  /**
+   * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
+   *
+   * The sinkTimeline is set to the sink timeline of the provided SinkQuerySegmentWalker.
+   * If the SinkQuerySegmentWalker is null, a new sink timeline is initialized.
+   *
+   * It is used by UnifiedIndexerAppenderatorsManager which allows queries on data associated with multiple
+   * Appenderators.
+   */
+  AppenderatorImpl(
+      DataSchema schema,
+      AppenderatorConfig tuningConfig,
+      FireDepartmentMetrics metrics,
+      DataSegmentPusher dataSegmentPusher,
+      ObjectMapper objectMapper,
+      DataSegmentAnnouncer segmentAnnouncer,
+      SinkQuerySegmentWalker sinkQuerySegmentWalker,
+      IndexIO indexIO,
+      IndexMerger indexMerger,
+      Cache cache
+  )
+  {
     this.schema = Preconditions.checkNotNull(schema, "schema");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
     this.metrics = Preconditions.checkNotNull(metrics, "metrics");
@@ -184,20 +229,20 @@ public class AppenderatorImpl implements Appenderator
     this.indexIO = Preconditions.checkNotNull(indexIO, "indexIO");
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "indexMerger");
     this.cache = cache;
-    this.texasRanger = conglomerate == null ? null : new SinkQuerySegmentWalker(
-        schema.getDataSource(),
-        sinkTimeline,
-        objectMapper,
-        emitter,
-        conglomerate,
-        queryExecutorService,
-        Preconditions.checkNotNull(cache, "cache"),
-        cacheConfig,
-        cachePopulatorStats
-    );
+    this.texasRanger = sinkQuerySegmentWalker;
+
+    if (sinkQuerySegmentWalker == null) {
+      this.sinkTimeline = new VersionedIntervalTimeline<>(
+          String.CASE_INSENSITIVE_ORDER
+      );
+    } else {
+      this.sinkTimeline = sinkQuerySegmentWalker.getSinkTimeline();
+    }
+
     maxBytesTuningConfig = TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory());
     log.info("Created Appenderator for dataSource[%s].", schema.getDataSource());
   }
+
 
   @Override
   public String getDataSource()
@@ -273,7 +318,7 @@ public class AppenderatorImpl implements Appenderator
 
     boolean isPersistRequired = false;
     boolean persist = false;
-    List<String> persistReasons = new ArrayList();
+    List<String> persistReasons = new ArrayList<>();
 
     if (!sink.canAppendRow()) {
       persist = true;
@@ -628,7 +673,11 @@ public class AppenderatorImpl implements Appenderator
               continue;
             }
 
-            final DataSegment dataSegment = mergeAndPush(entry.getKey(), entry.getValue(), useUniquePath);
+            final DataSegment dataSegment = mergeAndPush(
+                entry.getKey(),
+                entry.getValue(),
+                useUniquePath
+            );
             if (dataSegment != null) {
               dataSegments.add(dataSegment);
             } else {
@@ -747,7 +796,8 @@ public class AppenderatorImpl implements Appenderator
           // semantics.
           () -> dataSegmentPusher.push(
               mergedFile,
-              sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
+              sink.getSegment()
+                  .withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
               useUniquePath
           ),
           exception -> exception instanceof Exception,
@@ -763,7 +813,7 @@ public class AppenderatorImpl implements Appenderator
     catch (Exception e) {
       metrics.incrementFailedHandoffs();
       log.warn(e, "Failed to push merged index for segment[%s].", identifier);
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -883,7 +933,7 @@ public class AppenderatorImpl implements Appenderator
         }
       }
       catch (IOException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
   }
@@ -898,7 +948,7 @@ public class AppenderatorImpl implements Appenderator
       }
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -1139,7 +1189,7 @@ public class AppenderatorImpl implements Appenderator
                 log.makeAlert(e, "Failed to update committed segments[%s]", schema.getDataSource())
                    .addData("identifier", identifier.toString())
                    .emit();
-                throw Throwables.propagate(e);
+                throw new RuntimeException(e);
               }
               finally {
                 commitLock.unlock();
@@ -1261,12 +1311,11 @@ public class AppenderatorImpl implements Appenderator
 
         final File persistedFile;
         final File persistDir = createPersistDirIfNeeded(identifier);
-        final IndexSpec indexSpec = tuningConfig.getIndexSpec();
         persistedFile = indexMerger.persist(
             indexToPersist.getIndex(),
             identifier.getInterval(),
             new File(persistDir, String.valueOf(indexToPersist.getCount())),
-            indexSpec,
+            tuningConfig.getIndexSpecForIntermediatePersists(),
             tuningConfig.getSegmentWriteOutMediumFactory()
         );
 
@@ -1281,7 +1330,7 @@ public class AppenderatorImpl implements Appenderator
            .addData("count", indexToPersist.getCount())
            .emit();
 
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
   }

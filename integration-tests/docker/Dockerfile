@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # Base image is built from integration-tests/docker-base in the Druid repo
-FROM imply/druiditbase
+FROM imply/druiditbase:0.2
 
 RUN echo "[mysqld]\ncharacter-set-server=utf8\ncollation-server=utf8_bin\n" >> /etc/mysql/my.cnf
 

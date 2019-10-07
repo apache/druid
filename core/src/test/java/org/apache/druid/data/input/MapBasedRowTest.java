@@ -22,10 +22,18 @@ package org.apache.druid.data.input;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class MapBasedRowTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Test
   public void testGetLongMetricFromString()
   {
@@ -49,5 +57,16 @@ public class MapBasedRowTest
     Assert.assertEquals(9223372036854775806L, row.getMetric("k4"));
     Assert.assertEquals(-9223372036854775807L, row.getMetric("k5"));
     Assert.assertEquals(9223372036854775802L, row.getMetric("k6"));
+  }
+
+  @Test
+  public void testImmutability()
+  {
+    final Map<String, Object> event = new HashMap<>();
+    event.put("k0", 1);
+    event.put("k1", 2);
+    final MapBasedRow row = new MapBasedRow(DateTimes.nowUtc(), event);
+    expectedException.expect(UnsupportedOperationException.class);
+    row.getEvent().put("k2", 3);
   }
 }

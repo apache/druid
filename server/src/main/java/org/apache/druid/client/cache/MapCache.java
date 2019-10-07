@@ -23,7 +23,6 @@ import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -148,7 +147,7 @@ public class MapCache implements Cache
 
   @Override
   @LifecycleStop
-  public void close() throws IOException
+  public void close()
   {
     baseMap.clear();
     byteCountingLRUMap.clear();

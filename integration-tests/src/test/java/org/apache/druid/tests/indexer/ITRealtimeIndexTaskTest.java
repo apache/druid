@@ -19,7 +19,6 @@
 
 package org.apache.druid.tests.indexer;
 
-import com.google.common.base.Throwables;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -29,6 +28,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.clients.EventReceiverFirehoseTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.ServerDiscoveryUtil;
+import org.apache.druid.tests.TestNGGroup;
 import org.joda.time.DateTime;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -44,6 +44,7 @@ import java.util.Map;
 /**
  * See {@link AbstractITRealtimeIndexTaskTest} for test details.
  */
+@Test(groups = TestNGGroup.REALTIME_INDEX)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
 {
@@ -70,11 +71,10 @@ public class ITRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
   }
 
   @Override
-  public void postEvents() throws Exception
+  void postEvents() throws Exception
   {
     final ServerDiscoverySelector eventReceiverSelector = factory.createSelector(EVENT_RECEIVER_SERVICE_NAME);
     eventReceiverSelector.start();
-    BufferedReader reader = null;
     InputStreamReader isr;
     try {
       isr = new InputStreamReader(
@@ -83,10 +83,9 @@ public class ITRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
-    try {
-      reader = new BufferedReader(isr);
+    try (BufferedReader reader = new BufferedReader(isr)) {
       ServerDiscoveryUtil.waitUntilInstanceReady(eventReceiverSelector, "Event Receiver");
       // Use the host from the config file and the port announced in zookeeper
       String host = config.getMiddleManagerHost() + ":" + eventReceiverSelector.pick().getPort();
@@ -114,7 +113,7 @@ public class ITRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
         }
         String event = StringUtils.replace(line, TIME_PLACEHOLDER, EVENT_FMT.print(dt));
         LOG.info("sending event: [%s]\n", event);
-        Collection<Map<String, Object>> events = new ArrayList<Map<String, Object>>();
+        Collection<Map<String, Object>> events = new ArrayList<>();
         events.add(this.jsonMapper.readValue(event, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT));
         int eventsPosted = client.postEvents(events, this.jsonMapper, MediaType.APPLICATION_JSON);
         if (eventsPosted != events.size()) {
@@ -124,17 +123,18 @@ public class ITRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
         try {
           Thread.sleep(DELAY_BETWEEN_EVENTS_SECS * 1000);
         }
-        catch (InterruptedException ex) { /* nothing */ }
+        catch (InterruptedException ignored) {
+          /* nothing */
+        }
         dtLast = dt;
         dt = DateTimes.nowUtc();
         i++;
       }
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     finally {
-      reader.close();
       eventReceiverSelector.stop();
     }
   }

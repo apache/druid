@@ -43,7 +43,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
         new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost1", "localhost2", "localhost3")), false)
     );
 
-    NoopTask noopTask = new NoopTask(null, null, 1, 0, null, null, null)
+    NoopTask noopTask = new NoopTask(null, null, null, 1, 0, null, null, null)
     {
       @Override
       public String getDataSource()
@@ -113,7 +113,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
                             DateTimes.nowUtc()
                     )
             ),
-            new NoopTask(null, null, 1, 0, null, null, null)
+            new NoopTask(null, null, null, 1, 0, null, null, null)
     );
     Assert.assertEquals("lhost", worker.getWorker().getHost());
   }
@@ -136,7 +136,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
                             DateTimes.nowUtc()
                     )
             ),
-            new NoopTask(null, null, 1, 0, null, null, null)
+            new NoopTask(null, null, null, 1, 0, null, null, null)
     );
     Assert.assertNull(worker);
   }

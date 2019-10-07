@@ -28,6 +28,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.Druids.SearchQueryBuilder;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndex;
@@ -43,27 +44,12 @@ import org.junit.runners.Parameterized;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import static org.apache.druid.query.QueryRunnerTestHelper.NOOP_QUERYWATCHER;
-import static org.apache.druid.query.QueryRunnerTestHelper.allGran;
-import static org.apache.druid.query.QueryRunnerTestHelper.dataSource;
-import static org.apache.druid.query.QueryRunnerTestHelper.fullOnIntervalSpec;
-import static org.apache.druid.query.QueryRunnerTestHelper.makeQueryRunner;
-import static org.apache.druid.query.QueryRunnerTestHelper.marketDimension;
-import static org.apache.druid.query.QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator;
-import static org.apache.druid.query.QueryRunnerTestHelper.placementDimension;
-import static org.apache.druid.query.QueryRunnerTestHelper.placementishDimension;
-import static org.apache.druid.query.QueryRunnerTestHelper.qualityDimension;
-import static org.apache.druid.query.QueryRunnerTestHelper.transformToConstructionFeeder;
-
-/**
- */
 @RunWith(Parameterized.class)
 public class SearchQueryRunnerWithCaseTest
 {
@@ -94,25 +80,25 @@ public class SearchQueryRunnerWithCaseTest
     final List<QueryRunner<Result<SearchResultValue>>> runners = new ArrayList<>();
     for (SearchQueryConfig config : configs) {
       runners.addAll(Arrays.asList(
-          makeQueryRunner(
+          QueryRunnerTestHelper.makeQueryRunner(
               makeRunnerFactory(config),
               SegmentId.dummy("index1"),
               new IncrementalIndexSegment(index1, SegmentId.dummy("index1")),
               "index1"
           ),
-          makeQueryRunner(
+          QueryRunnerTestHelper.makeQueryRunner(
               makeRunnerFactory(config),
               SegmentId.dummy("index2"),
               new IncrementalIndexSegment(index2, SegmentId.dummy("index2")),
               "index2"
           ),
-          makeQueryRunner(
+          QueryRunnerTestHelper.makeQueryRunner(
               makeRunnerFactory(config),
               SegmentId.dummy("index3"),
               new QueryableIndexSegment(index3, SegmentId.dummy("index3")),
               "index3"
           ),
-          makeQueryRunner(
+          QueryRunnerTestHelper.makeQueryRunner(
               makeRunnerFactory(config),
               SegmentId.dummy("index4"),
               new QueryableIndexSegment(index4, SegmentId.dummy("index4")),
@@ -121,7 +107,7 @@ public class SearchQueryRunnerWithCaseTest
       ));
     }
 
-    return transformToConstructionFeeder(runners);
+    return QueryRunnerTestHelper.transformToConstructionFeeder(runners);
   }
 
   static SearchQueryRunnerFactory makeRunnerFactory(final SearchQueryConfig config)
@@ -130,9 +116,9 @@ public class SearchQueryRunnerWithCaseTest
         new SearchStrategySelector(Suppliers.ofInstance(config)),
         new SearchQueryQueryToolChest(
             config,
-            noopIntervalChunkingQueryRunnerDecorator()
+            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
         ),
-        NOOP_QUERYWATCHER
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
   }
 
@@ -148,9 +134,9 @@ public class SearchQueryRunnerWithCaseTest
   private Druids.SearchQueryBuilder testBuilder()
   {
     return Druids.newSearchQueryBuilder()
-                 .dataSource(dataSource)
-                 .granularity(allGran)
-                 .intervals(fullOnIntervalSpec);
+                 .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                 .granularity(QueryRunnerTestHelper.ALL_GRAN)
+                 .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC);
   }
 
   @Test
@@ -161,15 +147,15 @@ public class SearchQueryRunnerWithCaseTest
     SearchQuery searchQuery;
 
     searchQuery = builder.query("SPOT").build();
-    expectedResults.put(marketDimension, Sets.newHashSet("spot", "SPot"));
+    expectedResults.put(QueryRunnerTestHelper.MARKET_DIMENSION, Sets.newHashSet("spot", "SPot"));
     checkSearchQuery(searchQuery, expectedResults);
 
     searchQuery = builder.query("spot", true).build();
-    expectedResults.put(marketDimension, Sets.newHashSet("spot"));
+    expectedResults.put(QueryRunnerTestHelper.MARKET_DIMENSION, Sets.newHashSet("spot"));
     checkSearchQuery(searchQuery, expectedResults);
 
     searchQuery = builder.query("SPot", true).build();
-    expectedResults.put(marketDimension, Sets.newHashSet("SPot"));
+    expectedResults.put(QueryRunnerTestHelper.MARKET_DIMENSION, Sets.newHashSet("SPot"));
     checkSearchQuery(searchQuery, expectedResults);
   }
 
@@ -178,17 +164,23 @@ public class SearchQueryRunnerWithCaseTest
   {
     SearchQuery searchQuery;
     Druids.SearchQueryBuilder builder = testBuilder()
-        .dimensions(Arrays.asList(placementDimension, placementishDimension));
+        .dimensions(Arrays.asList(
+            QueryRunnerTestHelper.PLACEMENT_DIMENSION,
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION
+        ));
     Map<String, Set<String>> expectedResults = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
     searchQuery = builder.query("PREFERRED").build();
-    expectedResults.put(placementDimension, Sets.newHashSet("PREFERRED", "preferred", "PREFERRed"));
-    expectedResults.put(placementishDimension, Sets.newHashSet("preferred", "Preferred"));
+    expectedResults.put(
+        QueryRunnerTestHelper.PLACEMENT_DIMENSION,
+        Sets.newHashSet("PREFERRED", "preferred", "PREFERRed")
+    );
+    expectedResults.put(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION, Sets.newHashSet("preferred", "Preferred"));
     checkSearchQuery(searchQuery, expectedResults);
 
     searchQuery = builder.query("preferred", true).build();
-    expectedResults.put(placementDimension, Sets.newHashSet("preferred"));
-    expectedResults.put(placementishDimension, Sets.newHashSet("preferred"));
+    expectedResults.put(QueryRunnerTestHelper.PLACEMENT_DIMENSION, Sets.newHashSet("preferred"));
+    expectedResults.put(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION, Sets.newHashSet("preferred"));
     checkSearchQuery(searchQuery, expectedResults);
   }
 
@@ -197,12 +189,12 @@ public class SearchQueryRunnerWithCaseTest
   {
     SearchQuery searchQuery;
     Druids.SearchQueryBuilder builder = testBuilder()
-        .dimensions(Collections.singletonList(qualityDimension))
+        .dimensions(Collections.singletonList(QueryRunnerTestHelper.QUALITY_DIMENSION))
         .intervals("2011-01-12T00:00:00.000Z/2011-01-13T00:00:00.000Z");
     Map<String, Set<String>> expectedResults = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
     searchQuery = builder.query("otive").build();
-    expectedResults.put(qualityDimension, Sets.newHashSet("AutoMotive"));
+    expectedResults.put(QueryRunnerTestHelper.QUALITY_DIMENSION, Sets.newHashSet("AutoMotive"));
     checkSearchQuery(searchQuery, expectedResults);
   }
 
@@ -211,12 +203,12 @@ public class SearchQueryRunnerWithCaseTest
   {
     SearchQuery searchQuery;
     Druids.SearchQueryBuilder builder = testBuilder()
-        .dimensions(Collections.singletonList(qualityDimension))
+        .dimensions(Collections.singletonList(QueryRunnerTestHelper.QUALITY_DIMENSION))
         .intervals("2011-01-10T00:00:00.000Z/2011-01-11T00:00:00.000Z");
     Map<String, Set<String>> expectedResults = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
     searchQuery = builder.query("business").build();
-    expectedResults.put(qualityDimension, new HashSet<>());
+    expectedResults.put(QueryRunnerTestHelper.QUALITY_DIMENSION, new HashSet<>());
     checkSearchQuery(searchQuery, expectedResults);
   }
 
@@ -228,11 +220,11 @@ public class SearchQueryRunnerWithCaseTest
     SearchQuery searchQuery;
 
     searchQuery = builder.fragments(Arrays.asList("auto", "ve")).build();
-    expectedResults.put(qualityDimension, Sets.newHashSet("automotive", "AutoMotive"));
+    expectedResults.put(QueryRunnerTestHelper.QUALITY_DIMENSION, Sets.newHashSet("automotive", "AutoMotive"));
     checkSearchQuery(searchQuery, expectedResults);
 
     searchQuery = builder.fragments(Arrays.asList("auto", "ve"), true).build();
-    expectedResults.put(qualityDimension, Sets.newHashSet("automotive"));
+    expectedResults.put(QueryRunnerTestHelper.QUALITY_DIMENSION, Sets.newHashSet("automotive"));
     checkSearchQuery(searchQuery, expectedResults);
   }
 
@@ -255,9 +247,7 @@ public class SearchQueryRunnerWithCaseTest
 
   private void checkSearchQuery(SearchQuery searchQuery, Map<String, Set<String>> expectedResults)
   {
-    HashMap<String, List> context = new HashMap<>();
-    Iterable<Result<SearchResultValue>> results =
-        runner.run(QueryPlus.<Result<SearchResultValue>>wrap(searchQuery), context).toList();
+    Iterable<Result<SearchResultValue>> results = runner.run(QueryPlus.wrap(searchQuery)).toList();
 
     for (Result<SearchResultValue> result : results) {
       Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), result.getTimestamp());

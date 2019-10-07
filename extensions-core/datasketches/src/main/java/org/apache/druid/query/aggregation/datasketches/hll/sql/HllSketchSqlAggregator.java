@@ -42,13 +42,13 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
@@ -60,6 +60,7 @@ public class HllSketchSqlAggregator implements SqlAggregator
 {
   private static final SqlAggFunction FUNCTION_INSTANCE = new HllSketchSqlAggFunction();
   private static final String NAME = "APPROX_COUNT_DISTINCT_DS_HLL";
+  private static final boolean ROUND = true;
 
   @Override
   public SqlAggFunction calciteFunction()
@@ -72,6 +73,7 @@ public class HllSketchSqlAggregator implements SqlAggregator
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
       RowSignature rowSignature,
+      VirtualColumnRegistry virtualColumnRegistry,
       RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
@@ -133,8 +135,15 @@ public class HllSketchSqlAggregator implements SqlAggregator
     final AggregatorFactory aggregatorFactory;
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
-    if (columnArg.isDirectColumnAccess() && rowSignature.getColumnType(columnArg.getDirectColumn()) == ValueType.COMPLEX) {
-      aggregatorFactory = new HllSketchMergeAggregatorFactory(aggregatorName, columnArg.getDirectColumn(), logK, tgtHllType);
+    if (columnArg.isDirectColumnAccess()
+        && rowSignature.getColumnType(columnArg.getDirectColumn()) == ValueType.COMPLEX) {
+      aggregatorFactory = new HllSketchMergeAggregatorFactory(
+          aggregatorName,
+          columnArg.getDirectColumn(),
+          logK,
+          tgtHllType,
+          ROUND
+      );
     } else {
       final SqlTypeName sqlTypeName = columnRexNode.getType().getSqlTypeName();
       final ValueType inputType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
@@ -147,10 +156,10 @@ public class HllSketchSqlAggregator implements SqlAggregator
       if (columnArg.isDirectColumnAccess()) {
         dimensionSpec = columnArg.getSimpleExtraction().toDimensionSpec(null, inputType);
       } else {
-        final ExpressionVirtualColumn virtualColumn = columnArg.toVirtualColumn(
-            Calcites.makePrefixedName(name, "v"),
-            inputType,
-            plannerContext.getExprMacroTable()
+        VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+            plannerContext,
+            columnArg,
+            sqlTypeName
         );
         dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), null, inputType);
         virtualColumns.add(virtualColumn);
@@ -160,7 +169,8 @@ public class HllSketchSqlAggregator implements SqlAggregator
           aggregatorName,
           dimensionSpec.getDimension(),
           logK,
-          tgtHllType
+          tgtHllType,
+          ROUND
       );
     }
 

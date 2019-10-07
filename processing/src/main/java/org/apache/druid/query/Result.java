@@ -24,6 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
+import java.util.Comparator;
+import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -31,13 +34,11 @@ import java.util.function.Function;
 @PublicApi
 public class Result<T> implements Comparable<Result<T>>
 {
-  public static String MISSING_SEGMENTS_KEY = "missingSegments";
-
   private final DateTime timestamp;
   private final T value;
 
   @JsonCreator
-  public Result(@JsonProperty("timestamp") DateTime timestamp, @JsonProperty("result") T value)
+  public Result(@JsonProperty("timestamp") @Nullable DateTime timestamp, @JsonProperty("result") T value)
   {
     this.timestamp = timestamp;
     this.value = value;
@@ -51,10 +52,12 @@ public class Result<T> implements Comparable<Result<T>>
   @Override
   public int compareTo(Result<T> tResult)
   {
-    return timestamp.compareTo(tResult.timestamp);
+    // timestamp is null for grandTotal which should come last.
+    return Comparator.nullsLast(DateTime::compareTo).compare(this.timestamp, tResult.timestamp);
   }
 
   @JsonProperty
+  @Nullable
   public DateTime getTimestamp()
   {
     return timestamp;
@@ -78,22 +81,22 @@ public class Result<T> implements Comparable<Result<T>>
 
     Result result = (Result) o;
 
-    if (timestamp != null ? !(timestamp.isEqual(result.timestamp) && timestamp.getZone().getOffset(timestamp) == result.timestamp.getZone().getOffset(result.timestamp)) : result.timestamp != null) {
-      return false;
-    }
-    if (value != null ? !value.equals(result.value) : result.value != null) {
+    if (timestamp != null && result.timestamp != null) {
+      if (!timestamp.isEqual(result.timestamp)
+          && timestamp.getZone().getOffset(timestamp) == result.timestamp.getZone().getOffset(result.timestamp)) {
+        return false;
+      }
+    } else if (timestamp == null ^ result.timestamp == null) {
       return false;
     }
 
-    return true;
+    return Objects.equals(value, result.value);
   }
 
   @Override
   public int hashCode()
   {
-    int result = timestamp != null ? timestamp.hashCode() : 0;
-    result = 31 * result + (value != null ? value.hashCode() : 0);
-    return result;
+    return Objects.hash(timestamp, value);
   }
 
   @Override

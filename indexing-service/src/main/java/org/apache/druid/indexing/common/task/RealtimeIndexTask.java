@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.io.FileUtils;
@@ -39,20 +38,18 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.LockAcquireAction;
 import org.apache.druid.indexing.common.actions.LockReleaseAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.query.FinalizeResultsQueryRunner;
+import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
@@ -191,14 +188,12 @@ public class RealtimeIndexTask extends AbstractTask
   @Override
   public <T> QueryRunner<T> getQueryRunner(Query<T> query)
   {
-    if (plumber != null) {
-      QueryRunnerFactory<T, Query<T>> factory = queryRunnerFactoryConglomerate.findFactory(query);
-      QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
-
-      return new FinalizeResultsQueryRunner<T>(plumber.getQueryRunner(query), toolChest);
-    } else {
-      return null;
+    if (plumber == null) {
+      // Not yet initialized, no data yet, just return a noop runner.
+      return new NoopQueryRunner<>();
     }
+
+    return plumber.getQueryRunner(query);
   }
 
   @Override
@@ -241,7 +236,7 @@ public class RealtimeIndexTask extends AbstractTask
         // Side effect: Calling announceSegment causes a lock to be acquired
         Preconditions.checkNotNull(
             toolbox.getTaskActionClient().submit(
-                new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
+                new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
             ),
             "Cannot acquire a lock for interval[%s]",
             segment.getInterval()
@@ -267,7 +262,7 @@ public class RealtimeIndexTask extends AbstractTask
         for (DataSegment segment : segments) {
           Preconditions.checkNotNull(
               toolbox.getTaskActionClient().submit(
-                  new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
+                  new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
               ),
               "Cannot acquire a lock for interval[%s]",
               segment.getInterval()
@@ -303,7 +298,7 @@ public class RealtimeIndexTask extends AbstractTask
       {
         try {
           // Side effect: Calling getVersion causes a lock to be acquired
-          final LockAcquireAction action = new LockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs);
+          final TimeChunkLockAcquireAction action = new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs);
           final TaskLock lock = Preconditions.checkNotNull(
               toolbox.getTaskActionClient().submit(action),
               "Cannot acquire a lock for interval[%s]",
@@ -313,7 +308,7 @@ public class RealtimeIndexTask extends AbstractTask
           return lock.getVersion();
         }
         catch (IOException e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       }
     };
@@ -336,9 +331,8 @@ public class RealtimeIndexTask extends AbstractTask
 
     // NOTE: This pusher selects path based purely on global configuration and the DataSegment, which means
     // NOTE: that redundant realtime tasks will upload to the same location. This can cause index.zip
-    // NOTE: (partitionNum_index.zip for HDFS data storage) and descriptor.json (partitionNum_descriptor.json for
-    // NOTE: HDFS data storage) to mismatch, or it can cause historical nodes to load different instances of
-    // NOTE: the "same" segment.
+    // NOTE: (partitionNum_index.zip for HDFS data storage) to mismatch, or it can cause historical nodes to load
+    // NOTE: different instances of the "same" segment.
     final PlumberSchool plumberSchool = new RealtimePlumberSchool(
         toolbox.getEmitter(),
         toolbox.getQueryRunnerFactoryConglomerate(),
@@ -518,7 +512,15 @@ public class RealtimeIndexTask extends AbstractTask
         }
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
+      }
+    } else {
+      synchronized (this) {
+        if (!gracefullyStopped) {
+          // If task restore is not enabled, just interrupt immediately.
+          gracefullyStopped = true;
+          runThread.interrupt();
+        }
       }
     }
   }

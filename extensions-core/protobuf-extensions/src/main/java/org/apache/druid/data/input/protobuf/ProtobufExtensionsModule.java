@@ -44,5 +44,6 @@ public class ProtobufExtensionsModule implements DruidModule
 
   @Override
   public void configure(Binder binder)
-  { }
+  {
+  }
 }

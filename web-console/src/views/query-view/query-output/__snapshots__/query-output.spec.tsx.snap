@@ -1,0 +1,1829 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`query output matches snapshot 1`] = `
+<div
+  class="query-output"
+>
+  <div
+    class="ReactTable"
+  >
+    <div
+      class="rt-table"
+      role="grid"
+    >
+      <div
+        class="rt-thead -header"
+        style="min-width: 400px;"
+      >
+        <div
+          class="rt-tr"
+          role="row"
+        >
+          <div
+            class="rt-th rt-resizable-header"
+            role="columnheader"
+            style="flex: 100 0 auto; width: 100px;"
+            tabindex="-1"
+          >
+            <div
+              class="rt-resizable-header-content"
+            >
+              <span
+                class="bp3-popover-wrapper clickable-cell"
+              >
+                <span
+                  class="bp3-popover-target"
+                >
+                  <div
+                    class=""
+                  >
+                    language
+                  </div>
+                </span>
+              </span>
+            </div>
+            <div
+              class="rt-resizer"
+            />
+          </div>
+          <div
+            class="rt-th -sort-desc aggregate-header rt-resizable-header"
+            role="columnheader"
+            style="flex: 100 0 auto; width: 100px;"
+            tabindex="-1"
+          >
+            <div
+              class="rt-resizable-header-content"
+            >
+              <span
+                class="bp3-popover-wrapper clickable-cell"
+              >
+                <span
+                  class="bp3-popover-target"
+                >
+                  <div
+                    class=""
+                  >
+                    Count
+                  </div>
+                </span>
+              </span>
+            </div>
+            <div
+              class="rt-resizer"
+            />
+          </div>
+          <div
+            class="rt-th  aggregate-header rt-resizable-header"
+            role="columnheader"
+            style="flex: 100 0 auto; width: 100px;"
+            tabindex="-1"
+          >
+            <div
+              class="rt-resizable-header-content"
+            >
+              <span
+                class="bp3-popover-wrapper clickable-cell"
+              >
+                <span
+                  class="bp3-popover-target"
+                >
+                  <div
+                    class=""
+                  >
+                    dist_language
+                  </div>
+                </span>
+              </span>
+            </div>
+            <div
+              class="rt-resizer"
+            />
+          </div>
+          <div
+            class="rt-th  aggregate-header rt-resizable-header"
+            role="columnheader"
+            style="flex: 100 0 auto; width: 100px;"
+            tabindex="-1"
+          >
+            <div
+              class="rt-resizable-header-content"
+            >
+              <span
+                class="bp3-popover-wrapper clickable-cell"
+              >
+                <span
+                  class="bp3-popover-target"
+                >
+                  <div
+                    class=""
+                  >
+                    language_filtered_count
+                  </div>
+                </span>
+              </span>
+            </div>
+            <div
+              class="rt-resizer"
+            />
+          </div>
+        </div>
+      </div>
+      <div
+        class="rt-tbody"
+        style="min-width: 400px;"
+      >
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -odd"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      6881
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -even"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      JavaScript
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      166
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -odd"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      Python
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      62
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -even"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      HTML
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      46
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -odd"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      Java
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      42
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -even"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      C++
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      28
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -odd"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      Go
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      24
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -even"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      Ruby
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      20
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -odd"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      C#
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      14
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -even"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      C
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      13
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -odd"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      CSS
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      13
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -even"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      Shell
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      12
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -odd"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      Makefile
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      10
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -even"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      PHP
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      9
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -odd"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      Scala
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      8
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -even"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      HCL
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      6
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -odd"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      Jupyter Notebook
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      6
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -even"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      Smarty
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      4
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -odd"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      Elm
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      4
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -even"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      Roff
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      3
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <div
+                      class=""
+                    >
+                      1
+                    </div>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              0
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="pagination-bottom"
+    >
+      <div
+        class="-pagination"
+      >
+        <div
+          class="-previous"
+        >
+          <button
+            class="-btn"
+            disabled=""
+            type="button"
+          >
+            Previous
+          </button>
+        </div>
+        <div
+          class="-center"
+        >
+          <span
+            class="-pageInfo"
+          >
+            Page
+             
+            <div
+              class="-pageJump"
+            >
+              <input
+                aria-label="jump to page"
+                type="number"
+                value="1"
+              />
+            </div>
+             
+            of
+             
+            <span
+              class="-totalPages"
+            >
+              2
+            </span>
+          </span>
+          <span
+            class="select-wrap -pageSizeOptions"
+          >
+            <select
+              aria-label="rows per page"
+            >
+              <option
+                value="5"
+              >
+                5 rows
+              </option>
+              <option
+                value="10"
+              >
+                10 rows
+              </option>
+              <option
+                value="20"
+              >
+                20 rows
+              </option>
+              <option
+                value="25"
+              >
+                25 rows
+              </option>
+              <option
+                value="50"
+              >
+                50 rows
+              </option>
+              <option
+                value="100"
+              >
+                100 rows
+              </option>
+            </select>
+          </span>
+        </div>
+        <div
+          class="-next"
+        >
+          <button
+            class="-btn"
+            type="button"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+    <div
+      class="-loading"
+    >
+      <div
+        class="-loading-inner"
+      >
+        Loading...
+      </div>
+    </div>
+  </div>
+</div>
+`;

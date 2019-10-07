@@ -22,7 +22,6 @@ package org.apache.druid.query.groupby.epinephelinae;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -47,6 +46,8 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+
+import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -419,7 +420,7 @@ public class ParallelCombiner<KeyType>
               }
             }
             catch (IOException e) {
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
 
             grouper.finish();
@@ -436,6 +437,7 @@ public class ParallelCombiner<KeyType>
     private static final int UNKNOWN_COLUMN_INDEX = -1;
     private final Object2IntMap<String> columnIndexMap;
 
+    @Nullable
     private Object[] values;
 
     SettableColumnSelectorFactory(AggregatorFactory[] aggregatorFactories)
@@ -447,7 +449,7 @@ public class ParallelCombiner<KeyType>
       }
     }
 
-    public void set(Object[] values)
+    public void set(@Nullable Object[] values)
     {
       this.values = values;
     }
@@ -497,7 +499,7 @@ public class ParallelCombiner<KeyType>
     @Override
     public ColumnCapabilities getColumnCapabilities(String column)
     {
-      throw new UnsupportedOperationException();
+      return null;
     }
   }
 }

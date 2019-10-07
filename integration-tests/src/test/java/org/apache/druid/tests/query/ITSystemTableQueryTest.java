@@ -19,17 +19,18 @@
 
 package org.apache.druid.tests.query;
 
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.RetryUtil;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
+import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+@Test(groups = TestNGGroup.QUERY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITSystemTableQueryTest
 {
@@ -65,7 +66,7 @@ public class ITSystemTableQueryTest
       this.queryHelper.testQueriesFromFile(SYSTEM_QUERIES_RESOURCE, 2);
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 }

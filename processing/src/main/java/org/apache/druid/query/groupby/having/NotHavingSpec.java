@@ -21,16 +21,14 @@ package org.apache.druid.query.groupby.having;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.data.input.Row;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.column.ValueType;
-
-import java.util.Map;
+import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.ResultRow;
 
 /**
  * The logical "not" operator for the "having" clause.
  */
-public class NotHavingSpec extends BaseHavingSpec
+public class NotHavingSpec implements HavingSpec
 {
   private final HavingSpec havingSpec;
 
@@ -47,19 +45,13 @@ public class NotHavingSpec extends BaseHavingSpec
   }
 
   @Override
-  public void setRowSignature(Map<String, ValueType> rowSignature)
+  public void setQuery(GroupByQuery query)
   {
-    havingSpec.setRowSignature(rowSignature);
+    havingSpec.setQuery(query);
   }
 
   @Override
-  public void setAggregators(Map<String, AggregatorFactory> aggregators)
-  {
-    havingSpec.setAggregators(aggregators);
-  }
-
-  @Override
-  public boolean eval(Row row)
+  public boolean eval(ResultRow row)
   {
     return !havingSpec.eval(row);
   }
@@ -97,5 +89,13 @@ public class NotHavingSpec extends BaseHavingSpec
   public int hashCode()
   {
     return havingSpec != null ? havingSpec.hashCode() : 0;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_NOT)
+        .appendCacheable(havingSpec)
+        .build();
   }
 }

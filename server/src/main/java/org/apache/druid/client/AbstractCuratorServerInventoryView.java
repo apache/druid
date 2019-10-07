@@ -22,7 +22,6 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.curator.inventory.CuratorInventoryManager;
 import org.apache.druid.curator.inventory.CuratorInventoryManagerStrategy;
@@ -91,7 +90,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
               return jsonMapper.readValue(bytes, DruidServer.class);
             }
             catch (IOException e) {
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
           }
 
@@ -103,7 +102,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
             }
             catch (IOException e) {
               log.error(e, "Could not parse json: %s", StringUtils.fromUtf8(bytes));
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
           }
 
@@ -314,7 +313,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
       return server != null && server.getSegment(segment.getId()) != null;
     }
     catch (Exception ex) {
-      throw Throwables.propagate(ex);
+      throw new RuntimeException(ex);
     }
   }
 

@@ -22,7 +22,6 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
@@ -42,11 +41,11 @@ import java.util.Collections;
 
 public class HadoopIngestionSpecTest
 {
-  private static final ObjectMapper jsonMapper;
+  private static final ObjectMapper JSON_MAPPER;
 
   static {
-    jsonMapper = new DefaultObjectMapper();
-    jsonMapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, jsonMapper));
+    JSON_MAPPER = new DefaultObjectMapper();
+    JSON_MAPPER.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, JSON_MAPPER));
   }
 
   @Test
@@ -71,7 +70,7 @@ public class HadoopIngestionSpecTest
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     final UniformGranularitySpec granularitySpec = (UniformGranularitySpec) schema.getDataSchema().getGranularitySpec();
@@ -111,7 +110,7 @@ public class HadoopIngestionSpecTest
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     final UniformGranularitySpec granularitySpec = (UniformGranularitySpec) schema.getDataSchema().getGranularitySpec();
@@ -142,21 +141,17 @@ public class HadoopIngestionSpecTest
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     final PartitionsSpec partitionsSpec = schema.getTuningConfig().getPartitionsSpec();
 
-    Assert.assertEquals(
-        "isDeterminingPartitions",
-        partitionsSpec.isDeterminingPartitions(),
-        true
-    );
+    Assert.assertTrue("isDeterminingPartitions", partitionsSpec.needsDeterminePartitions(true));
 
     Assert.assertEquals(
         "getTargetPartitionSize",
-        partitionsSpec.getTargetPartitionSize(),
-        100
+        100,
+        partitionsSpec.getMaxRowsPerSegment().intValue()
     );
 
     Assert.assertTrue(
@@ -172,14 +167,13 @@ public class HadoopIngestionSpecTest
 
     try {
       schema = jsonReadWriteRead(
-
           "{\n"
           + "    \"tuningConfig\": {\n"
           + "        \"type\": \"hadoop\",\n"
           + "        \"partitionsSpec\": {\n"
           + "            \"type\": \"dimension\",\n"
           + "            \"targetPartitionSize\": 100,\n"
-          + "            \"maxPartitionSize\" : 200,\n"
+          + "            \"maxPartitionSize\" : null,\n"
           + "            \"partitionDimension\" : \"foo\"\n"
           + "        }\n"
           + "    }\n"
@@ -188,34 +182,32 @@ public class HadoopIngestionSpecTest
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
-    final PartitionsSpec partitionsSpec = schema.getTuningConfig().getPartitionsSpec();
+    PartitionsSpec partitionsSpec = schema.getTuningConfig().getPartitionsSpec();
+    Assert.assertTrue("partitionsSpec", partitionsSpec instanceof SingleDimensionPartitionsSpec);
 
-    Assert.assertEquals(
-        "isDeterminingPartitions",
-        partitionsSpec.isDeterminingPartitions(),
-        true
-    );
+    SingleDimensionPartitionsSpec singleDimensionPartitionsSpec = (SingleDimensionPartitionsSpec) partitionsSpec;
+
+    Assert.assertTrue("isDeterminingPartitions", singleDimensionPartitionsSpec.needsDeterminePartitions(true));
 
     Assert.assertEquals(
         "getTargetPartitionSize",
-        partitionsSpec.getTargetPartitionSize(),
-        100
+        100,
+        singleDimensionPartitionsSpec.getTargetRowsPerSegment().intValue()
     );
 
     Assert.assertEquals(
         "getMaxPartitionSize",
-        partitionsSpec.getMaxPartitionSize(),
-        200
+        150,
+        singleDimensionPartitionsSpec.getMaxRowsPerSegment().intValue()
     );
 
-    Assert.assertTrue("partitionsSpec", partitionsSpec instanceof SingleDimensionPartitionsSpec);
     Assert.assertEquals(
         "getPartitionDimension",
-        ((SingleDimensionPartitionsSpec) partitionsSpec).getPartitionDimension(),
-        "foo"
+        "foo",
+        singleDimensionPartitionsSpec.getPartitionDimension()
     );
   }
 
@@ -261,25 +253,20 @@ public class HadoopIngestionSpecTest
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     Assert.assertEquals(
         "cleanupOnFailure",
-        schema.getTuningConfig().isCleanupOnFailure(),
-        true
+        true,
+        schema.getTuningConfig().isCleanupOnFailure()
     );
 
-    Assert.assertEquals(
-        "overwriteFiles",
-        schema.getTuningConfig().isOverwriteFiles(),
-        false
-    );
+    Assert.assertFalse("overwriteFiles", schema.getTuningConfig().isOverwriteFiles());
 
-    Assert.assertEquals(
+    Assert.assertTrue(
         "isDeterminingPartitions",
-        schema.getTuningConfig().getPartitionsSpec().isDeterminingPartitions(),
-        false
+        schema.getTuningConfig().getPartitionsSpec().needsDeterminePartitions(true)
     );
 
     Assert.assertFalse(Strings.isNullOrEmpty(schema.getUniqueId()));
@@ -326,23 +313,19 @@ public class HadoopIngestionSpecTest
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
-    Assert.assertEquals(
-        "cleanupOnFailure",
-        schema.getTuningConfig().isCleanupOnFailure(),
-        false
-    );
+    Assert.assertFalse("cleanupOnFailure", schema.getTuningConfig().isCleanupOnFailure());
   }
 
-  private <T> T jsonReadWriteRead(String s, Class<T> klass)
+  private static <T> T jsonReadWriteRead(String s, Class<T> klass)
   {
     try {
-      return jsonMapper.readValue(jsonMapper.writeValueAsBytes(jsonMapper.readValue(s, klass)), klass);
+      return JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsBytes(JSON_MAPPER.readValue(s, klass)), klass);
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

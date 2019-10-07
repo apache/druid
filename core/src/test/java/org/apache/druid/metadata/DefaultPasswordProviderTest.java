@@ -25,37 +25,46 @@ import org.junit.Test;
 
 public class DefaultPasswordProviderTest
 {
-  private static final String pwd = "nothing";
-  private static final ObjectMapper jsonMapper = new ObjectMapper();
+  private static final String PWD = "nothing";
+  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
   @Test
   public void testExplicitConstruction()
   {
-    DefaultPasswordProvider pp = new DefaultPasswordProvider(pwd);
-    Assert.assertEquals(pwd, pp.getPassword());
+    DefaultPasswordProvider pp = new DefaultPasswordProvider(PWD);
+    Assert.assertEquals(PWD, pp.getPassword());
   }
   
   @Test
   public void testFromStringConstruction()
   {
-    DefaultPasswordProvider pp = DefaultPasswordProvider.fromString(pwd);
-    Assert.assertEquals(pwd, pp.getPassword());
+    DefaultPasswordProvider pp = DefaultPasswordProvider.fromString(PWD);
+    Assert.assertEquals(PWD, pp.getPassword());
   }
 
   @Test
   public void testDeserializationFromJsonString() throws Exception
   {
-    PasswordProvider pp = jsonMapper.readValue("\"" + pwd + "\"",
+    PasswordProvider pp = JSON_MAPPER.readValue("\"" + PWD + "\"",
         PasswordProvider.class);
-    Assert.assertEquals(pwd, pp.getPassword());
+    Assert.assertEquals(PWD, pp.getPassword());
   }
 
   @Test
   public void testDeserializationFromJson() throws Exception
   {
-    PasswordProvider pp = jsonMapper.readValue(
-        "{\"type\": \"default\", \"password\": \"" + pwd + "\"}",
+    PasswordProvider pp = JSON_MAPPER.readValue(
+        "{\"type\": \"default\", \"password\": \"" + PWD + "\"}",
         PasswordProvider.class);
-    Assert.assertEquals(pwd, pp.getPassword());
+    Assert.assertEquals(PWD, pp.getPassword());
+  }
+
+  @Test
+  public void testSerializationWithMixIn() throws Exception
+  {
+    DefaultPasswordProvider pp = new DefaultPasswordProvider(PWD);
+    JSON_MAPPER.addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
+    String valueAsString = JSON_MAPPER.writeValueAsString(pp);
+    Assert.assertEquals("{\"type\":\"default\"}", valueAsString);
   }
 }

@@ -23,7 +23,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
-import org.apache.druid.indexing.common.TaskReportFileWriter;
+import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -37,7 +37,6 @@ import org.apache.druid.segment.loading.NoopDataSegmentArchiver;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.NoopDataSegmentMover;
 import org.apache.druid.segment.loading.NoopDataSegmentPusher;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -77,11 +76,13 @@ public class SingleTaskBackgroundRunnerTest
         null,
         true,
         null,
+        null,
         null
     );
     final ServiceEmitter emitter = new NoopServiceEmitter();
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(
         taskConfig,
+        null,
         EasyMock.createMock(TaskActionClientFactory.class),
         emitter,
         new NoopDataSegmentPusher(),
@@ -94,7 +95,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         null,
         null,
-        new SegmentLoaderFactory(EasyMock.createMock(SegmentLoaderLocalCacheManager.class)),
+        new SegmentLoaderFactory(null, utils.getTestObjectMapper()),
         utils.getTestObjectMapper(),
         utils.getTestIndexIO(),
         null,
@@ -105,7 +106,8 @@ public class SingleTaskBackgroundRunnerTest
         node,
         null,
         null,
-        new TaskReportFileWriter(new File("fake"))
+        new SingleFileTaskReportFileWriter(new File("fake")),
+        null
     );
     runner = new SingleTaskBackgroundRunner(
         toolboxFactory,
@@ -127,7 +129,7 @@ public class SingleTaskBackgroundRunnerTest
   {
     Assert.assertEquals(
         TaskState.SUCCESS,
-        runner.run(new NoopTask(null, null, 500L, 0, null, null, null)).get().getStatusCode()
+        runner.run(new NoopTask(null, null, null, 500L, 0, null, null, null)).get().getStatusCode()
     );
   }
 
@@ -135,7 +137,7 @@ public class SingleTaskBackgroundRunnerTest
   public void testStop() throws ExecutionException, InterruptedException, TimeoutException
   {
     final ListenableFuture<TaskStatus> future = runner.run(
-        new NoopTask(null, null, Long.MAX_VALUE, 0, null, null, null) // infinite task
+        new NoopTask(null, null, null, Long.MAX_VALUE, 0, null, null, null) // infinite task
     );
     runner.stop();
     Assert.assertEquals(

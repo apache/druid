@@ -21,7 +21,6 @@ package org.apache.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.TuningConfigs;
@@ -53,6 +52,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
+      @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
       // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
       @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
@@ -80,6 +80,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         basePersistDirectory,
         maxPendingPersists,
         indexSpec,
+        indexSpecForIntermediatePersists,
         true,
         reportParseExceptions,
         handoffConditionTimeout,
@@ -175,7 +176,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
   }
 
   @Override
-  public SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig()
+  public KafkaIndexTaskTuningConfig convertToTaskTuningConfig()
   {
     return new KafkaIndexTaskTuningConfig(
         getMaxRowsInMemory(),
@@ -186,6 +187,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         getBasePersistDirectory(),
         getMaxPendingPersists(),
         getIndexSpec(),
+        getIndexSpecForIntermediatePersists(),
         true,
         isReportParseExceptions(),
         getHandoffConditionTimeout(),

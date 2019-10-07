@@ -19,7 +19,6 @@
 
 package /*CHECKSTYLE.OFF: PackageName*/org.testng/*CHECKSTYLE.ON: PackageName*/;
 
-import com.google.common.base.Throwables;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import org.apache.druid.java.util.common.StringUtils;
@@ -40,7 +39,6 @@ import org.testng.internal.annotations.IAnnotationFinder;
 import org.testng.xml.XmlTest;
 
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -105,7 +103,7 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
       }
       catch (Exception e) {
         LOG.error(e, "");
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       finally {
         lifecycle.stop();
@@ -120,13 +118,12 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
 
     public void waitUntilInstanceReady(final HttpClient client, final String host)
     {
-      final StatusResponseHandler handler = new StatusResponseHandler(StandardCharsets.UTF_8);
       RetryUtil.retryUntilTrue(
           () -> {
             try {
               StatusResponseHolder response = client.go(
                   new Request(HttpMethod.GET, new URL(StringUtils.format("%s/status/health", host))),
-                  handler
+                  StatusResponseHandler.getInstance()
               ).get();
 
               LOG.info("%s %s", response.getStatus(), response.getContent());

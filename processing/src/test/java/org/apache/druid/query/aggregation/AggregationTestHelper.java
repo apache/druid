@@ -29,14 +29,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.IAE;
@@ -56,9 +54,11 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.select.SelectQueryConfig;
 import org.apache.druid.query.select.SelectQueryEngine;
 import org.apache.druid.query.select.SelectQueryQueryToolChest;
@@ -94,10 +94,8 @@ import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 /**
  * This class provides general utility to test any druid aggregation implementation given raw data,
@@ -195,15 +193,13 @@ public class AggregationTestHelper implements Closeable
 
     SelectQueryQueryToolChest toolchest = new SelectQueryQueryToolChest(
         TestHelper.makeJsonMapper(),
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
-        configSupplier
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
 
     SelectQueryRunnerFactory factory = new SelectQueryRunnerFactory(
         new SelectQueryQueryToolChest(
             TestHelper.makeJsonMapper(),
-            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
-            configSupplier
+            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
         ),
         new SelectQueryEngine(
         ),
@@ -329,7 +325,7 @@ public class AggregationTestHelper implements Closeable
     );
   }
 
-  public Sequence<Row> createIndexAndRunQueryOnSegment(
+  public Sequence<ResultRow> createIndexAndRunQueryOnSegment(
       File inputDataFile,
       String parserJson,
       String aggregators,
@@ -344,7 +340,7 @@ public class AggregationTestHelper implements Closeable
     return runQueryOnSegments(Collections.singletonList(segmentDir), groupByQueryJson);
   }
 
-  public Sequence<Row> createIndexAndRunQueryOnSegment(
+  public Sequence<ResultRow> createIndexAndRunQueryOnSegment(
       File inputDataFile,
       String parserJson,
       String aggregators,
@@ -360,7 +356,7 @@ public class AggregationTestHelper implements Closeable
     return runQueryOnSegments(Collections.singletonList(segmentDir), groupByQueryJson);
   }
 
-  public Sequence<Row> createIndexAndRunQueryOnSegment(
+  public Sequence<ResultRow> createIndexAndRunQueryOnSegment(
       InputStream inputDataStream,
       String parserJson,
       String aggregators,
@@ -382,7 +378,7 @@ public class AggregationTestHelper implements Closeable
     );
   }
 
-  public Sequence<Row> createIndexAndRunQueryOnSegment(
+  public Sequence<ResultRow> createIndexAndRunQueryOnSegment(
       InputStream inputDataStream,
       String parserJson,
       String aggregators,
@@ -565,14 +561,78 @@ public class AggregationTestHelper implements Closeable
     }
   }
 
-  //Simulates running group-by query on individual segments as historicals would do, json serialize the results
-  //from each segment, later deserialize and merge and finally return the results
-  public Sequence<Row> runQueryOnSegments(final List<File> segmentDirs, final String queryJson) throws Exception
+  public Query readQuery(final String queryJson)
   {
-    return runQueryOnSegments(segmentDirs, mapper.readValue(queryJson, Query.class));
+    try {
+      return mapper.readValue(queryJson, Query.class);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
-  public Sequence<Row> runQueryOnSegments(final List<File> segmentDirs, final Query query)
+  public static IncrementalIndex createIncrementalIndex(
+      Iterator rows,
+      InputRowParser parser,
+      final AggregatorFactory[] metrics,
+      long minTimestamp,
+      Granularity gran,
+      boolean deserializeComplexMetrics,
+      int maxRowCount,
+      boolean rollup
+  ) throws Exception
+  {
+    IncrementalIndex index = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMinTimestamp(minTimestamp)
+                .withQueryGranularity(gran)
+                .withMetrics(metrics)
+                .withRollup(rollup)
+                .build()
+        )
+        .setDeserializeComplexMetrics(deserializeComplexMetrics)
+        .setMaxRowCount(maxRowCount)
+        .buildOnheap();
+
+    while (rows.hasNext()) {
+      Object row = rows.next();
+      if (!index.canAppendRow()) {
+        throw new IAE("Can't add row to index");
+      }
+      if (row instanceof String && parser instanceof StringInputRowParser) {
+        //Note: this is required because StringInputRowParser is InputRowParser<ByteBuffer> as opposed to
+        //InputRowsParser<String>
+        index.add(((StringInputRowParser) parser).parse((String) row));
+      } else {
+        index.add(((List<InputRow>) parser.parseBatch(row)).get(0));
+      }
+    }
+
+    return index;
+  }
+
+  public Segment persistIncrementalIndex(
+      IncrementalIndex index,
+      File outDir
+  ) throws Exception
+  {
+    if (outDir == null) {
+      outDir = tempFolder.newFolder();
+    }
+    indexMerger.persist(index, outDir, new IndexSpec(), null);
+
+    return new QueryableIndexSegment(indexIO.loadIndex(outDir), SegmentId.dummy(""));
+  }
+
+  //Simulates running group-by query on individual segments as historicals would do, json serialize the results
+  //from each segment, later deserialize and merge and finally return the results
+  public Sequence<ResultRow> runQueryOnSegments(final List<File> segmentDirs, final String queryJson)
+  {
+    return runQueryOnSegments(segmentDirs, readQuery(queryJson));
+  }
+
+  public Sequence<ResultRow> runQueryOnSegments(final List<File> segmentDirs, final Query query)
   {
     final List<Segment> segments = Lists.transform(
         segmentDirs,
@@ -585,7 +645,7 @@ public class AggregationTestHelper implements Closeable
               return new QueryableIndexSegment(indexIO.loadIndex(segmentDir), SegmentId.dummy(""));
             }
             catch (IOException ex) {
-              throw Throwables.propagate(ex);
+              throw new RuntimeException(ex);
             }
           }
         }
@@ -601,7 +661,7 @@ public class AggregationTestHelper implements Closeable
     }
   }
 
-  public Sequence<Row> runQueryOnSegmentsObjs(final List<Segment> segments, final Query query)
+  public Sequence<ResultRow> runQueryOnSegmentsObjs(final List<Segment> segments, final Query query)
   {
     final FinalizeResultsQueryRunner baseRunner = new FinalizeResultsQueryRunner(
         toolChest.postMergeQueryDecoration(
@@ -624,7 +684,7 @@ public class AggregationTestHelper implements Closeable
                                   );
                                 }
                                 catch (Exception ex) {
-                                  throw Throwables.propagate(ex);
+                                  throw new RuntimeException(ex);
                                 }
                               }
                             }
@@ -636,22 +696,22 @@ public class AggregationTestHelper implements Closeable
         toolChest
     );
 
-    return baseRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    return baseRunner.run(QueryPlus.wrap(query));
   }
 
-  public QueryRunner<Row> makeStringSerdeQueryRunner(
+  public QueryRunner<ResultRow> makeStringSerdeQueryRunner(
       final ObjectMapper mapper,
       final QueryToolChest toolChest,
-      final QueryRunner<Row> baseRunner
+      final QueryRunner<ResultRow> baseRunner
   )
   {
-    return new QueryRunner<Row>()
+    return new QueryRunner<ResultRow>()
     {
       @Override
-      public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> map)
+      public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext map)
       {
         try {
-          Sequence<Row> resultSeq = baseRunner.run(queryPlus, new HashMap<>());
+          Sequence<ResultRow> resultSeq = baseRunner.run(queryPlus, ResponseContext.createEmpty());
           final Yielder yielder = resultSeq.toYielder(
               null,
               new YieldingAccumulator()
@@ -676,7 +736,7 @@ public class AggregationTestHelper implements Closeable
           return Sequences.simple(resultRows);
         }
         catch (Exception ex) {
-          throw Throwables.propagate(ex);
+          throw new RuntimeException(ex);
         }
       }
     };
@@ -695,7 +755,7 @@ public class AggregationTestHelper implements Closeable
     ObjectCodec objectCodec = jp.getCodec();
 
     while (jp.nextToken() != JsonToken.END_ARRAY) {
-      result.add(objectCodec.readValue(jp, toolChest.getResultTypeReference()));
+      result.add(objectCodec.readValue(jp, toolChest.getBaseResultType()));
     }
     return result;
   }

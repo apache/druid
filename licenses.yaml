@@ -1,0 +1,5156 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+name: conjunctive normal form conversion code, a variance aggregator algorithm, and Bloom filter adapted from Apache Hive
+version:
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+source_paths:
+  - processing/src/main/java/org/apache/druid/segment/filter/Filters.java
+  - extensions-core/stats/src/main/java/io/druid/query/aggregation/variance/VarianceAggregatorCollector.java
+  - extensions-core/druid-bloom-filter/src/main/java/org/apache/druid/query/filter/BloomKFilter.java
+
+---
+
+name: variable length long deserialization code adapted from Apache Lucene
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+source_paths:
+  - processing/src/main/java/org/apache/druid/segment/data/VSizeLongSerde.java
+
+---
+
+name: SQL query planning code adapted from Apache Calcite
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+source_paths:
+  - sql/src/main/java/org/apache/druid/sql/calcite/
+
+---
+
+name: Kerberos authentication code adapted from Apache Hadoop
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+source_paths:
+  - extensions-core/druid-kerberos/src/main/java/org/apache/druid/security/kerberos/
+
+---
+
+name: a modified version of the java-alphanum library
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+copyright: Andrew Duffy (https://github.com/amjjd/java-alphanum)
+source_paths:
+  - processing/src/main/java/org/apache/druid/query/ordering/StringComparators.java
+
+---
+
+name: a modified version of the Metamarkets java-util library
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+copyright: Metamarkets Group Inc. (https://github.com/metamx/java-util)
+source_paths:
+  - java-util/
+
+---
+
+name: a modified version of the Metamarkets bytebuffer-collections library
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+copyright: Metamarkets Group Inc. (https://github.com/metamx/bytebuffer-collections)
+source_paths:
+  - processing/src/main/java/org/apache/druid/collections/
+
+---
+
+name: a modified version of the Metamarkets extendedset library
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+copyright: Metamarkets Group Inc. (https://github.com/metamx/extendedset)
+source_paths:
+  - extendedset/
+
+---
+
+name: a modified version of the CONCISE (COmpressed 'N' Composable Integer SEt) library
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+copyright: Alessandro Colantonio (https://sourceforge.net/projects/concise/)
+source_paths:
+  - extendedset/src/main/java/org/apache/druid/extendedset/intset/
+
+---
+
+name: modified portions of the Guava library
+license_category: source
+license_name: Apache License version 2.0
+module: java-core
+copyright: The Guava Authors (https://github.com/google/guava)
+source_paths:
+  - Closer class: core/src/main/java/org/apache/druid/java/util/common/io/Closer.java
+  - Splitter.splitToList() method: core/src/main/java/org/apache/druid/java/util/common/parsers/DelimitedParser.java
+  - DirectExecutorService class: core/src/main/java/org/apache/druid/java/util/common/concurrent/DirectExecutorService.java
+
+---
+
+name: modified versions of the Dockerfile and related configuration files
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+copyright: SequenceIQ's Hadoop Docker image, copyright SequenceIQ, Inc. (https://github.com/sequenceiq/hadoop-docker/)
+source_paths:
+  - examples/quickstart/tutorial/hadoop/docker/
+
+---
+
+name: fixed bins histogram percentile computation code adapted from Netflix Spectator
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+copyright: Netflix, Inc. (https://github.com/Netflix/spectator)
+source_paths:
+  - extensions-core/histogram/src/main/java/org/apache/druid/query/aggregation/histogram/FixedBucketsHistogram.java
+
+---
+
+name: AWS SDK for Java
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.11.199
+libraries:
+  - com.amazonaws: aws-java-sdk-core
+  - com.amazonaws: aws-java-sdk-ec2
+  - com.amazonaws: aws-java-sdk-kms
+  - com.amazonaws: aws-java-sdk-s3
+  - com.amazonaws: jmespath-java
+notice: |
+  AWS SDK for Java
+  Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+  This product includes software developed by
+  Amazon Technologies, Inc (http://www.amazon.com/).
+
+  **********************
+  THIRD PARTY COMPONENTS
+  **********************
+  This software includes third party software subject to the following copyrights:
+  - XML parsing and utility functions from JetS3t - Copyright 2006-2009 James Murty.
+  - PKCS#1 PEM encoded private key parsing and utility functions from oauth.googlecode.com - Copyright 1998-2010 AOL Inc.
+
+  The licenses for these third party components are included in LICENSE.txt
+
+---
+
+name: Esri Geometry API for Java
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.0.0
+libraries:
+  - com.esri.geometry: esri-geometry-api
+
+---
+
+name: ClassMate
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.0
+libraries:
+  - com.fasterxml: classmate
+notices:
+  - classmate: |
+      Java ClassMate library was originally written by Tatu Saloranta (tatu.saloranta@iki.fi)
+
+      Other developers who have contributed code are:
+
+      * Brian Langel
+
+---
+
+name: Jackson
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.6.7
+libraries:
+  - com.fasterxml.jackson.core: jackson-annotations
+  - com.fasterxml.jackson.core: jackson-core
+  - com.fasterxml.jackson.core: jackson-databind
+  - com.fasterxml.jackson.dataformat: jackson-dataformat-cbor
+  - com.fasterxml.jackson.dataformat: jackson-dataformat-smile
+  - com.fasterxml.jackson.datatype: jackson-datatype-guava
+  - com.fasterxml.jackson.datatype: jackson-datatype-joda
+  - com.fasterxml.jackson.jaxrs: jackson-jaxrs-base
+  - com.fasterxml.jackson.jaxrs: jackson-jaxrs-json-provider
+  - com.fasterxml.jackson.jaxrs: jackson-jaxrs-smile-provider
+  - com.fasterxml.jackson.module: jackson-module-jaxb-annotations
+notice: |
+  # Jackson JSON processor
+
+  Jackson is a high-performance, Free/Open Source JSON processing library.
+  It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+  been in development since 2007.
+  It is currently developed by a community of developers, as well as supported
+  commercially by FasterXML.com.
+
+  ## Licensing
+
+  Jackson core and extension components may licensed under different licenses.
+  To find the details that apply to this artifact see the accompanying LICENSE file.
+  For more information, including possible other licensing options, contact
+  FasterXML.com (http://fasterxml.com).
+
+  ## Credits
+
+  A list of contributors may be found from CREDITS file, which is included
+  in some artifacts (usually source distributions); but is always available
+  from the source code management (SCM) system project uses.
+
+---
+
+name: Caffeine
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.5.5
+libraries:
+  - com.github.ben-manes.caffeine: caffeine
+
+---
+
+name: Error Prone Annotations
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.3.2
+libraries:
+  - com.google.errorprone: error_prone_annotations
+
+---
+
+name: Guava
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 16.0.1
+libraries:
+  - com.google.guava: guava
+
+---
+
+name: Guice
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 4.1.0
+libraries:
+  - com.google.inject: guice
+  - com.google.inject.extensions: guice-multibindings
+  - com.google.inject.extensions: guice-servlet
+notices:
+  - guice: |
+      Google Guice - Core Library
+      Copyright 2006-2016 Google, Inc.
+  - guice-multibindings: |
+      Google Guice - Extensions - MultiBindings
+      Copyright 2006-2016 Google, Inc.
+  - guice-servlet: |
+      Google Guice - Extensions - Servlet
+      Copyright 2006-2016 Google, Inc.
+
+---
+
+name: JsonPath
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.3.0
+libraries:
+  - com.jayway.jsonpath: json-path
+
+---
+
+name: LMAX Disruptor
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.3.6
+libraries:
+  - com.lmax: disruptor
+
+---
+
+name: LZF Compressor
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.4
+libraries:
+  - com.ning: compress-lzf
+notices:
+  - compress-lzf: |
+      # Compress LZF
+
+      This library contains efficient implementation of LZF compression format,
+      as well as additional helper classes that build on JDK-provided gzip (deflat)
+      codec.
+
+      ## Licensing
+
+      Library is licensed under Apache License 2.0, as per accompanying LICENSE file.
+
+      ## Credit
+
+      Library has been written by Tatu Saloranta (tatu.saloranta@iki.fi).
+      It was started at Ning, inc., as an official Open Source process used by
+      platform backend, but after initial versions has been developed outside of
+      Ning by supporting community.
+
+      Other contributors include:
+
+      * Jon Hartlaub (first versions of streaming reader/writer; unit tests)
+      * Cedrik Lime: parallel LZF implementation
+
+      Various community members have contributed bug reports, and suggested minor
+      fixes; these can be found from file "VERSION.txt" in SCM.
+
+---
+
+name: OpenCSV
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 4.6
+libraries:
+  - com.opencsv: opencsv
+
+---
+
+name: OkHttp
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.2
+libraries:
+  - com.squareup.okhttp: okhttp
+
+---
+
+name: Netty Reactive Streams
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.0.0
+libraries:
+  - com.typesafe.netty: netty-reactive-streams
+
+---
+
+name: Apache Commons BeanUtils
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.9.3
+libraries:
+  - commons-beanutils: commons-beanutils
+notices:
+  - commons-beanutils: |
+      Apache Commons BeanUtils
+      Copyright 2000-2016 The Apache Software Foundation
+
+---
+
+name: Apache Commons Codec
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.12
+libraries:
+  - commons-codec: commons-codec
+notices:
+  - commons-codec: |
+      Apache Commons Codec
+      Copyright 2002-2017 The Apache Software Foundation
+
+
+      Copyright (C) 2002 Kevin Atkinson (kevina@gnu.org)
+
+      ===============================================================================
+
+      The content of package org.apache.commons.codec.language.bm has been translated
+      from the original php source code available at http://stevemorse.org/phoneticinfo.htm
+      with permission from the original authors.
+      Original source copyright:
+      Copyright (c) 2008 Alexander Beider & Stephen P. Morse.
+
+---
+
+name: Apache Commons Collections
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.2.2
+libraries:
+  - commons-collections: commons-collections
+notices:
+  - commons-collections: |
+      Apache Commons Collections
+      Copyright 2001-2015 The Apache Software Foundation
+
+---
+
+name: Apache Commons IO
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.6
+libraries:
+  - commons-io: commons-io
+notices:
+  - commons-io: |
+      Apache Commons IO
+      Copyright 2002-2017 The Apache Software Foundation
+
+---
+
+name: Apache Commons Lang
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.6
+libraries:
+  - commons-lang: commons-lang
+notices:
+  - commons-lang: |
+      Apache Commons Lang
+      Copyright 2001-2011 The Apache Software Foundation
+
+---
+
+name: Apache Commons Logging
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.1.1
+libraries:
+  - commons-logging: commons-logging
+notices:
+  - commons-logging: |
+      // ------------------------------------------------------------------
+      // NOTICE file corresponding to the section 4d of The Apache License,
+      // Version 2.0, in this case for Commons Logging
+      // ------------------------------------------------------------------
+
+      Commons Logging
+      Copyright 2001-2007 The Apache Software Foundation
+
+      This product includes/uses software(s) developed by 'an unknown organization'
+        - Unnamed - avalon-framework:avalon-framework:jar:4.1.3
+        - Unnamed - log4j:log4j:jar:1.2.12
+        - Unnamed - logkit:logkit:jar:1.0.1
+
+---
+
+name: Apache Commons Net
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.6
+libraries:
+  - commons-net: commons-net
+
+---
+
+name: Apache Commons Collections
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 4.2
+libraries:
+  - org.apache.commons: commons-collections4
+notices:
+  - commons-collections4: |
+      Apache Commons Collections
+      Copyright 2001-2018 The Apache Software Foundation
+
+---
+
+name: Apache Commons Compress
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.18
+libraries:
+  - org.apache.commons: commons-compress
+notices:
+  - commons-compress: |
+      Apache Commons Compress
+      Copyright 2002-2018 The Apache Software Foundation
+
+      The files in the package org.apache.commons.compress.archivers.sevenz
+      were derived from the LZMA SDK, version 9.20 (C/ and CPP/7zip/),
+      which has been placed in the public domain:
+
+      "LZMA SDK is placed in the public domain." (http://www.7-zip.org/sdk.html)
+
+---
+
+name: Apache Commons DBCP
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.0.1
+libraries:
+  - org.apache.commons: commons-dbcp2
+notices:
+  - commons-dbcp2: |
+      Apache Commons DBCP
+      Copyright 2001-2014 The Apache Software Foundation
+
+---
+
+name: Apache Commons Lang
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.8.1
+libraries:
+  - org.apache.commons: commons-lang3
+notices:
+  - commons-lang3: |
+      Apache Commons Lang
+      Copyright 2001-2018 The Apache Software Foundation
+
+---
+
+name: Apache Commons Math
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.6.1
+libraries:
+  - org.apache.commons: commons-math3
+notices:
+  - commons-math3: |
+      Apache Commons Math
+      Copyright 2001-2016 The Apache Software Foundation
+
+      This product includes software developed for Orekit by
+      CS Systèmes d'Information (http://www.c-s.fr/)
+      Copyright 2010-2012 CS Systèmes d'Information
+
+---
+
+name: Apache Commons Pool
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.2
+libraries:
+  - org.apache.commons: commons-pool2
+notices:
+  - commons-pool2: |
+      Apache Commons Pool
+      Copyright 2001-2014 The Apache Software Foundation
+
+      The LinkedBlockingDeque implementation is based on an implementation written by
+      Doug Lea with assistance from members of JCP JSR-166 Expert Group and released
+      to the public domain, as explained at
+      http://creativecommons.org/licenses/publicdomain
+
+---
+
+name: Apache Commons Text
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.3
+libraries:
+  - org.apache.commons: commons-text
+notices:
+  - commons-text: |
+      Apache Commons Text
+      Copyright 2001-2018 The Apache Software Foundation
+
+---
+
+name: Airline
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 0.7
+libraries:
+  - io.airlift: airline
+notices:
+  - airline: |
+      Copyright Notices
+      =================
+
+      Copyright 2011 Dain Sundstrom <dain@iq80.com>
+      Copyright 2010 Cedric Beust <cedric@beust.com>
+
+---
+
+name: DropWizard Metrics Core
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 4.0.0
+libraries:
+  - io.dropwizard.metrics: metrics-core
+
+---
+
+name: Netty
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.10.6.Final
+libraries:
+  - io.netty: netty
+notices:
+  - netty: |
+      ==
+                                  The Netty Project
+                                  =================
+
+      Please visit the Netty web site for more information:
+
+        * http://netty.io/
+
+      Copyright 2011 The Netty Project
+
+      The Netty Project licenses this file to you under the Apache License,
+      version 2.0 (the "License"); you may not use this file except in compliance
+      with the License. You may obtain a copy of the License at:
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+      WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+      License for the specific language governing permissions and limitations
+      under the License.
+
+      Also, please refer to each LICENSE.<component>.txt file, which is located in
+      the 'license' directory of the distribution file, for the license terms of the
+      components that this product depends on.
+
+      -------------------------------------------------------------------------------
+      This product contains the extensions to Java Collections Framework which has
+      been derived from the works by JSR-166 EG, Doug Lea, and Jason T. Greene:
+
+        * LICENSE:
+          * license/LICENSE.jsr166y.txt (Public Domain)
+        * HOMEPAGE:
+          * http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/
+          * http://viewvc.jboss.org/cgi-bin/viewvc.cgi/jbosscache/experimental/jsr166/
+
+      This product contains a modified version of Robert Harder's Public Domain
+      Base64 Encoder and Decoder, which can be obtained at:
+
+        * LICENSE:
+          * license/LICENSE.base64.txt (Public Domain)
+        * HOMEPAGE:
+          * http://iharder.sourceforge.net/current/java/base64/
+
+      This product contains a modified version of 'JZlib', a re-implementation of
+      zlib in pure Java, which can be obtained at:
+
+        * LICENSE:
+          * license/LICENSE.jzlib.txt (BSD Style License)
+        * HOMEPAGE:
+          * http://www.jcraft.com/jzlib/
+
+      This product contains a modified version of 'Webbit', a Java event based
+      WebSocket and HTTP server:
+
+        * LICENSE:
+          * license/LICENSE.webbit.txt (BSD License)
+        * HOMEPAGE:
+          * https://github.com/joewalnes/webbit
+
+      This product optionally depends on 'Protocol Buffers', Google's data
+      interchange format, which can be obtained at:
+
+        * LICENSE:
+          * license/LICENSE.protobuf.txt (New BSD License)
+        * HOMEPAGE:
+          * http://code.google.com/p/protobuf/
+
+      This product optionally depends on 'Bouncy Castle Crypto APIs' to generate
+      a temporary self-signed X.509 certificate when the JVM does not provide the
+      equivalent functionality.  It can be obtained at:
+
+        * LICENSE:
+          * license/LICENSE.bouncycastle.txt (MIT License)
+        * HOMEPAGE:
+          * http://www.bouncycastle.org/
+
+      This product optionally depends on 'SLF4J', a simple logging facade for Java,
+      which can be obtained at:
+
+        * LICENSE:
+          * license/LICENSE.slf4j.txt (MIT License)
+        * HOMEPAGE:
+          * http://www.slf4j.org/
+
+      This product optionally depends on 'Apache Commons Logging', a logging
+      framework, which can be obtained at:
+
+        * LICENSE:
+          * license/LICENSE.commons-logging.txt (Apache License 2.0)
+        * HOMEPAGE:
+          * http://commons.apache.org/logging/
+
+      This product optionally depends on 'Apache Log4J', a logging framework,
+      which can be obtained at:
+
+        * LICENSE:
+          * license/LICENSE.log4j.txt (Apache License 2.0)
+        * HOMEPAGE:
+          * http://logging.apache.org/log4j/
+
+      This product optionally depends on 'JBoss Logging', a logging framework,
+      which can be obtained at:
+
+        * LICENSE:
+          * license/LICENSE.jboss-logging.txt (GNU LGPL 2.1)
+        * HOMEPAGE:
+          * http://anonsvn.jboss.org/repos/common/common-logging-spi/
+
+      This product optionally depends on 'Apache Felix', an open source OSGi
+      framework implementation, which can be obtained at:
+
+        * LICENSE:
+          * license/LICENSE.felix.txt (Apache License 2.0)
+        * HOMEPAGE:
+          * http://felix.apache.org/
+
+---
+
+name: Netty
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 4.1.30.Final
+libraries:
+  - io.netty: netty-buffer
+  - io.netty: netty-codec
+  - io.netty: netty-codec-dns
+  - io.netty: netty-codec-http
+  - io.netty: netty-codec-socks
+  - io.netty: netty-common
+  - io.netty: netty-handler
+  - io.netty: netty-handler-proxy
+  - io.netty: netty-resolver
+  - io.netty: netty-resolver-dns
+  - io.netty: netty-transport
+  - io.netty: netty-transport-native-epoll
+  - io.netty: netty-transport-native-unix-common
+notice: |
+  ==
+                              The Netty Project
+                              =================
+
+  Please visit the Netty web site for more information:
+
+    * http://netty.io/
+
+  Copyright 2014 The Netty Project
+
+  The Netty Project licenses this file to you under the Apache License,
+  version 2.0 (the "License"); you may not use this file except in compliance
+  with the License. You may obtain a copy of the License at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  License for the specific language governing permissions and limitations
+  under the License.
+
+  Also, please refer to each LICENSE.<component>.txt file, which is located in
+  the 'license' directory of the distribution file, for the license terms of the
+  components that this product depends on.
+
+  -------------------------------------------------------------------------------
+  This product contains the extensions to Java Collections Framework which has
+  been derived from the works by JSR-166 EG, Doug Lea, and Jason T. Greene:
+
+    * LICENSE:
+      * license/LICENSE.jsr166y.txt (Public Domain)
+    * HOMEPAGE:
+      * http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/
+      * http://viewvc.jboss.org/cgi-bin/viewvc.cgi/jbosscache/experimental/jsr166/
+
+  This product contains a modified version of Robert Harder's Public Domain
+  Base64 Encoder and Decoder, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.base64.txt (Public Domain)
+    * HOMEPAGE:
+      * http://iharder.sourceforge.net/current/java/base64/
+
+  This product contains a modified portion of 'Webbit', an event based
+  WebSocket and HTTP server, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.webbit.txt (BSD License)
+    * HOMEPAGE:
+      * https://github.com/joewalnes/webbit
+
+  This product contains a modified portion of 'SLF4J', a simple logging
+  facade for Java, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.slf4j.txt (MIT License)
+    * HOMEPAGE:
+      * http://www.slf4j.org/
+
+  This product contains a modified portion of 'Apache Harmony', an open source
+  Java SE, which can be obtained at:
+
+    * NOTICE:
+      * license/NOTICE.harmony.txt
+    * LICENSE:
+      * license/LICENSE.harmony.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * http://archive.apache.org/dist/harmony/
+
+  This product contains a modified portion of 'jbzip2', a Java bzip2 compression
+  and decompression library written by Matthew J. Francis. It can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.jbzip2.txt (MIT License)
+    * HOMEPAGE:
+      * https://code.google.com/p/jbzip2/
+
+  This product contains a modified portion of 'libdivsufsort', a C API library to construct
+  the suffix array and the Burrows-Wheeler transformed string for any input string of
+  a constant-size alphabet written by Yuta Mori. It can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.libdivsufsort.txt (MIT License)
+    * HOMEPAGE:
+      * https://github.com/y-256/libdivsufsort
+
+  This product contains a modified portion of Nitsan Wakart's 'JCTools', Java Concurrency Tools for the JVM,
+   which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.jctools.txt (ASL2 License)
+    * HOMEPAGE:
+      * https://github.com/JCTools/JCTools
+
+  This product optionally depends on 'JZlib', a re-implementation of zlib in
+  pure Java, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.jzlib.txt (BSD style License)
+    * HOMEPAGE:
+      * http://www.jcraft.com/jzlib/
+
+  This product optionally depends on 'Compress-LZF', a Java library for encoding and
+  decoding data in LZF format, written by Tatu Saloranta. It can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.compress-lzf.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * https://github.com/ning/compress
+
+  This product optionally depends on 'lz4', a LZ4 Java compression
+  and decompression library written by Adrien Grand. It can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.lz4.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * https://github.com/jpountz/lz4-java
+
+  This product optionally depends on 'lzma-java', a LZMA Java compression
+  and decompression library, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.lzma-java.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * https://github.com/jponge/lzma-java
+
+  This product contains a modified portion of 'jfastlz', a Java port of FastLZ compression
+  and decompression library written by William Kinney. It can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.jfastlz.txt (MIT License)
+    * HOMEPAGE:
+      * https://code.google.com/p/jfastlz/
+
+  This product contains a modified portion of and optionally depends on 'Protocol Buffers', Google's data
+  interchange format, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.protobuf.txt (New BSD License)
+    * HOMEPAGE:
+      * https://github.com/google/protobuf
+
+  This product optionally depends on 'Bouncy Castle Crypto APIs' to generate
+  a temporary self-signed X.509 certificate when the JVM does not provide the
+  equivalent functionality.  It can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.bouncycastle.txt (MIT License)
+    * HOMEPAGE:
+      * http://www.bouncycastle.org/
+
+  This product optionally depends on 'Snappy', a compression library produced
+  by Google Inc, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.snappy.txt (New BSD License)
+    * HOMEPAGE:
+      * https://github.com/google/snappy
+
+  This product optionally depends on 'JBoss Marshalling', an alternative Java
+  serialization API, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.jboss-marshalling.txt (GNU LGPL 2.1)
+    * HOMEPAGE:
+      * http://www.jboss.org/jbossmarshalling
+
+  This product optionally depends on 'Caliper', Google's micro-
+  benchmarking framework, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.caliper.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * https://github.com/google/caliper
+
+  This product optionally depends on 'Apache Commons Logging', a logging
+  framework, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.commons-logging.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * http://commons.apache.org/logging/
+
+  This product optionally depends on 'Apache Log4J', a logging framework, which
+  can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.log4j.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * http://logging.apache.org/log4j/
+
+  This product optionally depends on 'Aalto XML', an ultra-high performance
+  non-blocking XML processor, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.aalto-xml.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * http://wiki.fasterxml.com/AaltoHome
+
+  This product contains a modified version of 'HPACK', a Java implementation of
+  the HTTP/2 HPACK algorithm written by Twitter. It can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.hpack.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * https://github.com/twitter/hpack
+
+  This product contains a modified portion of 'Apache Commons Lang', a Java library
+  provides utilities for the java.lang API, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.commons-lang.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * https://commons.apache.org/proper/commons-lang/
+
+
+  This product contains the Maven wrapper scripts from 'Maven Wrapper', that provides an easy way to ensure a user has everything necessary to run the Maven build.
+
+    * LICENSE:
+      * license/LICENSE.mvn-wrapper.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * https://github.com/takari/maven-wrapper
+
+---
+
+name: fastutil
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 8.2.3
+libraries:
+  - it.unimi.dsi: fastutil
+
+---
+
+name: Javax Inject
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1
+libraries:
+  - javax.inject: javax.inject
+
+---
+
+name: Bean Validation API
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.1.0.Final
+libraries:
+  - javax.validation: validation-api
+
+---
+
+name: Joda-Time
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.10.2
+libraries:
+  - joda-time: joda-time
+notices:
+  - joda-time: |
+      =============================================================================
+      = NOTICE file corresponding to section 4d of the Apache License Version 2.0 =
+      =============================================================================
+      This product includes software developed by
+      Joda.org (http://www.joda.org/).
+
+---
+
+name: Aggregate Designer Algorithm
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 6.0
+libraries:
+  - net.hydromatic: aggdesigner-algorithm
+notices:
+  - aggdesigner-algorithm: |
+      Aggregate Designer
+
+      Copyright 2006 - 2013 Pentaho Corporation.  All rights reserved.
+      Copyright 2000-2005, 2014-2016 Julian Hyde
+
+---
+
+name: Java Native Access (JNA)
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 4.5.1
+libraries:
+  - net.java.dev.jna: jna
+
+---
+
+name: ASM Based Accessors Helper Used By JSON Smart
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.2
+libraries:
+  - net.minidev: accessors-smart
+
+---
+
+name: JSON Small and Fast Parser
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.3
+libraries:
+  - net.minidev: json-smart
+
+---
+
+name: Spymemcached
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.12.3
+libraries:
+  - net.spy: spymemcached
+
+---
+
+name: jackson-jq
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 0.0.10
+libraries:
+  - net.thisptr: jackson-jq
+
+---
+
+name: Apache Calcite
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.17.0
+libraries:
+  - org.apache.calcite: calcite-core
+  - org.apache.calcite: calcite-linq4j
+notices:
+  - calcite-core: |
+      Calcite Core
+      Copyright 2012-2018 The Apache Software Foundation
+  - calcite-linq4j: |
+      Calcite Linq4j
+      Copyright 2012-2018 The Apache Software Foundation
+
+---
+
+name: Apache Calcite Avatica
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.12.0
+libraries:
+  - org.apache.calcite.avatica: avatica-core
+  - org.apache.calcite.avatica: avatica-metrics
+  - org.apache.calcite.avatica: avatica-server
+notices:
+  - avatica-core: |
+      Apache Calcite Avatica
+      Copyright 2012-2018 The Apache Software Foundation
+  - avatica-metrics: |
+      Apache Calcite Avatica Metrics
+      Copyright 2012-2018 The Apache Software Foundation
+  - avatica-server: |
+      Apache Calcite Avatica Server
+      Copyright 2012-2018 The Apache Software Foundation
+---
+
+name: Apache Curator
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 4.1.0
+libraries:
+  - org.apache.curator: curator-client
+  - org.apache.curator: curator-framework
+  - org.apache.curator: curator-recipes
+  - org.apache.curator: curator-x-discovery
+notices:
+  - curator-client: |
+      Curator Client
+      Copyright 2011-2018 The Apache Software Foundation
+  - curator-framework: |
+      Curator Framework
+      Copyright 2011-2018 The Apache Software Foundation
+  - curator-recipes: |
+      Curator Recipes
+      Copyright 2011-2018 The Apache Software Foundation
+  - curator-x-discovery: |
+      Curator Service Discovery
+      Copyright 2011-2018 The Apache Software Foundation
+
+---
+
+name: Apache Derby
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 10.14.2.0
+libraries:
+  - org.apache.derby: derby
+  - org.apache.derby: derbyclient
+  - org.apache.derby: derbynet
+notice: |
+  =========================================================================
+  ==  NOTICE file corresponding to section 4(d) of the Apache License,
+  ==  Version 2.0, in this case for the Apache Derby distribution.
+  ==
+  ==  DO NOT EDIT THIS FILE DIRECTLY. IT IS GENERATED
+  ==  BY THE buildnotice TARGET IN THE TOP LEVEL build.xml FILE.
+  ==
+  =========================================================================
+
+  Apache Derby
+  Copyright 2004-2018 The Apache Software Foundation
+
+  This product includes software developed by
+  The Apache Software Foundation (http://www.apache.org/).
+
+
+  =========================================================================
+
+  Portions of Derby were originally developed by
+  International Business Machines Corporation and are
+  licensed to the Apache Software Foundation under the
+  "Software Grant and Corporate Contribution License Agreement",
+  informally known as the "Derby CLA".
+  The following copyright notice(s) were affixed to portions of the code
+  with which this file is now or was at one time distributed
+  and are placed here unaltered.
+
+  (C) Copyright 1997,2004 International Business Machines Corporation.  All rights reserved.
+
+  (C) Copyright IBM Corp. 2003.
+
+
+  =========================================================================
+
+
+  The portion of the functionTests under 'nist' was originally
+  developed by the National Institute of Standards and Technology (NIST),
+  an agency of the United States Department of Commerce, and adapted by
+  International Business Machines Corporation in accordance with the NIST
+  Software Acknowledgment and Redistribution document at
+  http://www.itl.nist.gov/div897/ctg/sql_form.htm
+
+
+
+  =========================================================================
+
+
+  The Derby build relies on source files supplied by the Apache Felix
+  project. The following notice covers the Felix files:
+
+    Apache Felix Main
+    Copyright 2008 The Apache Software Foundation
+
+
+    I. Included Software
+
+    This product includes software developed at
+    The Apache Software Foundation (http://www.apache.org/).
+    Licensed under the Apache License 2.0.
+
+    This product includes software developed at
+    The OSGi Alliance (http://www.osgi.org/).
+    Copyright (c) OSGi Alliance (2000, 2007).
+    Licensed under the Apache License 2.0.
+
+    This product includes software from http://kxml.sourceforge.net.
+    Copyright (c) 2002,2003, Stefan Haustein, Oberhausen, Rhld., Germany.
+    Licensed under BSD License.
+
+    II. Used Software
+
+    This product uses software developed at
+    The OSGi Alliance (http://www.osgi.org/).
+    Copyright (c) OSGi Alliance (2000, 2007).
+    Licensed under the Apache License 2.0.
+
+
+    III. License Summary
+    - Apache License 2.0
+    - BSD License
+
+---
+
+name: Apache HttpClient
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 4.5.10
+libraries:
+  - org.apache.httpcomponents: httpclient
+notices:
+  - httpclient: |
+      Apache HttpClient
+      Copyright 1999-2017 The Apache Software Foundation
+
+---
+
+name: Apache HttpClient
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 4.5.2
+libraries:
+  - org.apache.httpcomponents: httpclient
+notices:
+  - httpclient: |
+      Apache HttpClient
+      Copyright 1999-2016 The Apache Software Foundation
+
+---
+
+name: Apache HttpCore
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 4.4.11
+libraries:
+  - org.apache.httpcomponents: httpcore
+notices:
+  - httpcore: |
+      Apache HttpCore
+      Copyright 2005-2019 The Apache Software Foundation
+
+---
+
+name: Apache Log4j
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.5
+libraries:
+  - org.apache.logging.log4j: log4j-1.2-api
+  - org.apache.logging.log4j: log4j-api
+  - org.apache.logging.log4j: log4j-core
+  - org.apache.logging.log4j: log4j-jul
+  - org.apache.logging.log4j: log4j-slf4j-impl
+notices:
+  - log4j-1.2-api: |
+      Apache Log4j 1.x Compatibility API
+      Copyright 1999-2015 Apache Software Foundation
+  - log4j-api: |
+      Apache Log4j API
+      Copyright 1999-2015 Apache Software Foundation
+  - log4j-core: |
+      Apache Log4j Core
+      Copyright 1999-2012 Apache Software Foundation
+
+      ResolverUtil.java
+      Copyright 2005-2006 Tim Fennell
+
+      TypeUtil.java
+      Copyright 2002-2012 Ramnivas Laddad, Juergen Hoeller, Chris Beams
+  - log4j-jul: |
+      Apache Log4j JUL Adapter
+      Copyright 1999-2015 Apache Software Foundation
+  - log4j-slf4j-impl: |
+      Apache Log4j SLF4J Binding
+      Copyright 1999-2015 Apache Software Foundation
+
+---
+
+name: Apache Maven
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.1.1
+libraries:
+  - org.apache.maven: maven-aether-provider
+  - org.apache.maven: maven-model
+  - org.apache.maven: maven-model-builder
+  - org.apache.maven: maven-repository-metadata
+  - org.apache.maven: maven-settings
+  - org.apache.maven: maven-settings-builder
+notices:
+  - maven-aether-provider: |
+      Maven Aether Provider
+      Copyright 2001-2013 The Apache Software Foundation
+  - maven-model: |
+      Maven Model
+      Copyright 2001-2013 The Apache Software Foundation
+  - maven-model-builder: |
+      Maven Model Builder
+      Copyright 2001-2013 The Apache Software Foundation
+  - maven-repository-metadata: |
+      Maven Repository Metadata Model
+      Copyright 2001-2013 The Apache Software Foundation
+  - maven-settings: |
+      Maven Settings
+      Copyright 2001-2013 The Apache Software Foundation
+  - maven-settings-builder: |
+      Maven Settings Builder
+      Copyright 2001-2013 The Apache Software Foundation
+---
+
+name: Apache Maven Artifact
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.6.0
+libraries:
+  - org.apache.maven: maven-artifact
+notices:
+  - maven-artifact: |
+      Maven Artifact
+      Copyright 2001-2018 The Apache Software Foundation
+---
+
+name: Apache Maven Wagon API
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.4
+libraries:
+  - org.apache.maven.wagon: wagon-provider-api
+notices:
+  - wagon-provider-api: |
+      Apache Maven Wagon :: API
+      Copyright 2003-2013 The Apache Software Foundation
+---
+
+name: Apache Yetus Audience Annotations Component
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 0.5.0
+libraries:
+  - org.apache.yetus: audience-annotations
+notices:
+  - audience-annotations: |
+      Apache Yetus - Audience Annotations
+      Copyright 2015-2017 The Apache Software Foundation
+---
+
+name: Apache Zookeeper
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.4.14
+libraries:
+  - org.apache.zookeeper: zookeeper
+notices:
+  - zookeeper: |
+      Apache ZooKeeper
+      Copyright 2009-2019 The Apache Software Foundation
+
+---
+
+name: AsyncHttpClient asynchttpclient
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.5.3
+libraries:
+  - org.asynchttpclient: async-http-client
+  - org.asynchttpclient: async-http-client-netty-utils
+
+---
+
+name: components from Jackson
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.9.13
+libraries:
+  - org.codehaus.jackson: jackson-core-asl
+  - org.codehaus.jackson: jackson-mapper-asl
+notice: |
+  This product currently only contains code developed by authors
+  of specific components, as identified by the source code files;
+  if such notes are missing files have been created by
+  Tatu Saloranta.
+
+  For additional credits (generally to people who reported problems)
+  see CREDITS file.
+
+---
+
+name: Plexus Interpolation API
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.19
+libraries:
+  - org.codehaus.plexus: plexus-interpolation
+
+---
+
+name: Plexus Common Utilities
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.0.15
+libraries:
+  - org.codehaus.plexus: plexus-utils
+notices:
+  - plexus-utils: |
+      This product includes software developed by the Indiana University
+        Extreme! Lab (http://www.extreme.indiana.edu/).
+
+      This product includes software developed by
+      ThoughtWorks (http://www.thoughtworks.com).
+
+      This product includes software developed by
+      javolution (http://javolution.org/).
+
+      This product includes software developed by
+      Rome (https://rome.dev.java.net/).
+---
+
+name: Jetty
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 9.4.10.v20180503
+libraries:
+  - org.eclipse.jetty: jetty-client
+  - org.eclipse.jetty: jetty-continuation
+  - org.eclipse.jetty: jetty-http
+  - org.eclipse.jetty: jetty-io
+  - org.eclipse.jetty: jetty-proxy
+  - org.eclipse.jetty: jetty-security
+  - org.eclipse.jetty: jetty-server
+  - org.eclipse.jetty: jetty-servlet
+  - org.eclipse.jetty: jetty-servlets
+  - org.eclipse.jetty: jetty-util
+notice: |
+  ==============================================================
+   Jetty Web Container
+   Copyright 1995-2018 Mort Bay Consulting Pty Ltd.
+  ==============================================================
+
+  The Jetty Web Container is Copyright Mort Bay Consulting Pty Ltd
+  unless otherwise noted.
+
+  Jetty is dual licensed under both
+
+    * The Apache 2.0 License
+      http://www.apache.org/licenses/LICENSE-2.0.html
+
+        and
+
+    * The Eclipse Public 1.0 License
+      http://www.eclipse.org/legal/epl-v10.html
+
+  Jetty may be distributed under either license.
+
+  ------
+  Eclipse
+
+  The following artifacts are EPL.
+   * org.eclipse.jetty.orbit:org.eclipse.jdt.core
+
+  The following artifacts are EPL and ASL2.
+   * org.eclipse.jetty.orbit:javax.security.auth.message
+
+
+  The following artifacts are EPL and CDDL 1.0.
+   * org.eclipse.jetty.orbit:javax.mail.glassfish
+
+
+  ------
+  Oracle
+
+  The following artifacts are CDDL + GPLv2 with classpath exception.
+  https://glassfish.dev.java.net/nonav/public/CDDL+GPL.html
+
+   * javax.servlet:javax.servlet-api
+   * javax.annotation:javax.annotation-api
+   * javax.transaction:javax.transaction-api
+   * javax.websocket:javax.websocket-api
+
+  ------
+  Oracle OpenJDK
+
+  If ALPN is used to negotiate HTTP/2 connections, then the following
+  artifacts may be included in the distribution or downloaded when ALPN
+  module is selected.
+
+   * java.sun.security.ssl
+
+  These artifacts replace/modify OpenJDK classes.  The modififications
+  are hosted at github and both modified and original are under GPL v2 with
+  classpath exceptions.
+  http://openjdk.java.net/legal/gplv2+ce.html
+
+
+  ------
+  OW2
+
+  The following artifacts are licensed by the OW2 Foundation according to the
+  terms of http://asm.ow2.org/license.html
+
+  org.ow2.asm:asm-commons
+  org.ow2.asm:asm
+
+
+  ------
+  Apache
+
+  The following artifacts are ASL2 licensed.
+
+  org.apache.taglibs:taglibs-standard-spec
+  org.apache.taglibs:taglibs-standard-impl
+
+
+  ------
+  MortBay
+
+  The following artifacts are ASL2 licensed.  Based on selected classes from
+  following Apache Tomcat jars, all ASL2 licensed.
+
+  org.mortbay.jasper:apache-jsp
+    org.apache.tomcat:tomcat-jasper
+    org.apache.tomcat:tomcat-juli
+    org.apache.tomcat:tomcat-jsp-api
+    org.apache.tomcat:tomcat-el-api
+    org.apache.tomcat:tomcat-jasper-el
+    org.apache.tomcat:tomcat-api
+    org.apache.tomcat:tomcat-util-scan
+    org.apache.tomcat:tomcat-util
+
+  org.mortbay.jasper:apache-el
+    org.apache.tomcat:tomcat-jasper-el
+    org.apache.tomcat:tomcat-el-api
+
+
+  ------
+  Mortbay
+
+  The following artifacts are CDDL + GPLv2 with classpath exception.
+
+  https://glassfish.dev.java.net/nonav/public/CDDL+GPL.html
+
+  org.eclipse.jetty.toolchain:jetty-schemas
+
+  ------
+  Assorted
+
+  The UnixCrypt.java code implements the one way cryptography used by
+  Unix systems for simple password protection.  Copyright 1996 Aki Yoshida,
+  modified April 2001  by Iris Van den Broeke, Daniel Deville.
+  Permission to use, copy, modify and distribute UnixCrypt
+  for non-commercial or commercial purposes and without fee is
+  granted provided that the copyright notice appears in all copies.
+
+---
+
+name: JVM Attach API
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.5
+libraries:
+  - org.gridkit.lab: jvm-attach-api
+
+---
+
+name: Hibernate Validator Engine
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 5.1.3.Final
+libraries:
+  - org.hibernate: hibernate-validator
+
+---
+
+name: SIGAR
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.6.5.132
+libraries:
+  - org.hyperic: sigar
+notices:
+  - sigar: |
+      Copyright (c) 2004-2011 VMware, Inc.
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+
+      ADDITIONAL LICENSE INFORMATION:
+
+      Hyperic SIGAR includes some third-party open source components
+      in its distribution. The list below identifies the community or
+      organization and links to their appropriate license terms.
+
+      The Hyperic team would like to thank all the communities
+      of the projects listed below for their contributions.
+
+      ----------------------------------------------------------
+      Components under the Apache License 2.0:
+      ----------------------------------------------------------
+
+      The following components are included without modification:
+
+      - log4j -
+      Information: http://logging.apache.org/
+      License: http://www.apache.org/licenses/LICENSE-2.0
+
+      The following components are included with modification:
+
+      - cpptasks -
+      Information: http://ant-contrib.sourceforge.net/
+      License: http://www.apache.org/licenses/LICENSE-2.0
+
+      - (portions of) APR -
+      Information: http://apr.apache.org/
+      License: http://www.apache.org/licenses/LICENSE-2.0
+
+      ----------------------------------------------------------
+      Components under BSD/MIT Style Licenses:
+      ----------------------------------------------------------
+
+      The following components are included with modification:
+
+      - solaris get_mib2 -
+      Information: ftp://vic.cc.purdue.edu/pub/tools/unix/solaris/get_mib2/
+      License: within src/os/solaris/get_mib2.[ch]
+
+      Copyright 1995 Purdue Research Foundation, West Lafayette, Indiana
+      47907.  All rights reserved.
+
+      Written by Victor A. Abell <abe@cc.purdue.edu>
+
+      This software is not subject to any license of the American Telephone
+      and Telegraph Company or the Regents of the University of California.
+
+      Permission is granted to anyone to use this software for any purpose on
+      any computer system, and to alter it and redistribute it freely, subject
+      to the following restrictions:
+
+      1. Neither Victor A  Abell nor Purdue University are responsible for
+         any consequences of the use of this software.
+
+      2. The origin of this software must not be misrepresented, either by
+         explicit claim or by omission.  Credit to Victor A. Abell and Purdue
+         University must appear in documentation and sources.
+
+      3. Altered versions must be plainly marked as such, and must not be
+         misrepresented as being the original software.
+
+      4. This notice may not be removed or altered.
+
+      - getline by Chris Thewalt -
+      Information: http://tinyurl.com/r438r
+      License: within src/sigar_getline.c
+
+      Copyright (C) 1991, 1992 by Chris Thewalt (thewalt@ce.berkeley.edu)
+
+      Permission to use, copy, modify, and distribute this software
+      for any purpose and without fee is hereby granted, provided
+      that the above copyright notices appear in all copies and that both the
+      copyright notice and this permission notice appear in supporting
+      documentation.  This software is provided "as is" without express or
+      implied warranty.
+
+      - PrintfFormat.java -
+      Information: http://java.sun.com/developer/technicalArticles/Programming/sprintf/PrintfFormat.java
+      License: within bindings/java/src/org/hyperic/sigar/util/PrintfFormat.java
+
+      (c) 2000 Sun Microsystems, Inc.
+      ALL RIGHTS RESERVED
+
+      License Grant-
+
+      Permission to use, copy, modify, and distribute this Software and its
+      documentation for NON-COMMERCIAL or COMMERCIAL purposes and without fee is
+      hereby granted.
+
+      This Software is provided "AS IS".  All express warranties, including any
+      implied warranty of merchantability, satisfactory quality, fitness for a
+      particular purpose, or non-infringement, are disclaimed, except to the extent
+      that such disclaimers are held to be legally invalid.
+
+      You acknowledge that Software is not designed, licensed or intended for use in
+      the design, construction, operation or maintenance of any nuclear facility
+      ("High Risk Activities").  Sun disclaims any express or implied warranty of
+      fitness for such uses.
+
+      Please refer to the file http://www.sun.com/policies/trademarks/ for further
+      important trademark information and to
+      http://java.sun.com/nav/business/index.html for further important licensing
+      information for the Java Technology.
+
+---
+
+name: JBoss Logging 3
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.1.3.GA
+libraries:
+  - org.jboss.logging: jboss-logging
+
+---
+
+name: JDBI
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.63.1
+libraries:
+  - org.jdbi: jdbi
+notices:
+  - jdbi: |
+      Java ClassMate library was originally written by Tatu Saloranta (tatu.saloranta@iki.fi)
+
+      Other developers who have contributed code are:
+
+      * Brian Langel
+---
+
+name: LZ4 Java
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.6.0
+libraries:
+  - org.lz4: lz4-java
+
+---
+
+name: MapDB
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.8
+libraries:
+  - org.mapdb: mapdb
+
+---
+
+name: Objenesis
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.6
+libraries:
+  - org.objenesis: objenesis
+
+---
+
+name: RoaringBitmap
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 0.8.11
+libraries:
+  - org.roaringbitmap: RoaringBitmap
+  - org.roaringbitmap: shims
+
+---
+
+name: Config Magic
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 0.9
+libraries:
+  - org.skife.config: config-magic
+
+---
+
+name: Ion Java
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.2
+libraries:
+  - software.amazon.ion: ion-java
+notices:
+  - ion-java: |
+      Amazon Ion Java
+      Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+---
+
+name: Apache Hadoop
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 2.8.3
+libraries:
+  - org.apache.hadoop: hadoop-annotations
+  - org.apache.hadoop: hadoop-auth
+  - org.apache.hadoop: hadoop-client
+  - org.apache.hadoop: hadoop-common
+  - org.apache.hadoop: hadoop-hdfs-client
+  - org.apache.hadoop: hadoop-mapreduce-client-app
+  - org.apache.hadoop: hadoop-mapreduce-client-common
+  - org.apache.hadoop: hadoop-mapreduce-client-core
+  - org.apache.hadoop: hadoop-mapreduce-client-jobclient
+  - org.apache.hadoop: hadoop-mapreduce-client-shuffle
+  - org.apache.hadoop: hadoop-yarn-api
+  - org.apache.hadoop: hadoop-yarn-client
+  - org.apache.hadoop: hadoop-yarn-common
+  - org.apache.hadoop: hadoop-yarn-server-common
+notice: |
+  The binary distribution of this product bundles binaries of
+  org.iq80.leveldb:leveldb-api (https://github.com/dain/leveldb), which has the
+  following notices:
+  * Copyright 2011 Dain Sundstrom <dain@iq80.com>
+  * Copyright 2011 FuseSource Corp. http://fusesource.com
+
+  The binary distribution of this product bundles binaries of
+  org.fusesource.hawtjni:hawtjni-runtime (https://github.com/fusesource/hawtjni),
+  which has the following notices:
+  * This product includes software developed by FuseSource Corp.
+    http://fusesource.com
+  * This product includes software developed at
+    Progress Software Corporation and/or its  subsidiaries or affiliates.
+  * This product includes software developed by IBM Corporation and others.
+
+  The binary distribution of this product bundles binaries of
+  AWS Java SDK 1.10.6,
+  which has the following notices:
+   * This software includes third party software subject to the following
+   copyrights: - XML parsing and utility functions from JetS3t - Copyright
+   2006-2009 James Murty. - JSON parsing and utility functions from JSON.org -
+   Copyright 2002 JSON.org. - PKCS#1 PEM encoded private key parsing and utility
+   functions from oauth.googlecode.com - Copyright 1998-2010 AOL Inc.
+
+  The binary distribution of this product bundles binaries of
+  Gson 2.2.4,
+  which has the following notices:
+
+                              The Netty Project
+                              =================
+
+  Please visit the Netty web site for more information:
+
+    * http://netty.io/
+
+  Copyright 2014 The Netty Project
+
+  The Netty Project licenses this file to you under the Apache License,
+  version 2.0 (the "License"); you may not use this file except in compliance
+  with the License. You may obtain a copy of the License at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  License for the specific language governing permissions and limitations
+  under the License.
+
+  Also, please refer to each LICENSE.<component>.txt file, which is located in
+  the 'license' directory of the distribution file, for the license terms of the
+  components that this product depends on.
+
+  -------------------------------------------------------------------------------
+  This product contains the extensions to Java Collections Framework which has
+  been derived from the works by JSR-166 EG, Doug Lea, and Jason T. Greene:
+
+    * LICENSE:
+      * license/LICENSE.jsr166y.txt (Public Domain)
+    * HOMEPAGE:
+      * http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/
+      * http://viewvc.jboss.org/cgi-bin/viewvc.cgi/jbosscache/experimental/jsr166/
+
+  This product contains a modified version of Robert Harder's Public Domain
+  Base64 Encoder and Decoder, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.base64.txt (Public Domain)
+    * HOMEPAGE:
+      * http://iharder.sourceforge.net/current/java/base64/
+
+  This product contains a modified portion of 'Webbit', an event based
+  WebSocket and HTTP server, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.webbit.txt (BSD License)
+    * HOMEPAGE:
+      * https://github.com/joewalnes/webbit
+
+  This product contains a modified portion of 'SLF4J', a simple logging
+  facade for Java, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.slf4j.txt (MIT License)
+    * HOMEPAGE:
+      * http://www.slf4j.org/
+
+  This product contains a modified portion of 'ArrayDeque', written by Josh
+  Bloch of Google, Inc:
+
+    * LICENSE:
+      * license/LICENSE.deque.txt (Public Domain)
+
+  This product contains a modified portion of 'Apache Harmony', an open source
+  Java SE, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.harmony.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * http://archive.apache.org/dist/harmony/
+
+  This product contains a modified version of Roland Kuhn's ASL2
+  AbstractNodeQueue, which is based on Dmitriy Vyukov's non-intrusive MPSC queue.
+  It can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.abstractnodequeue.txt (Public Domain)
+    * HOMEPAGE:
+      * https://github.com/akka/akka/blob/wip-2.2.3-for-scala-2.11/akka-actor/src/main/java/akka/dispatch/AbstractNodeQueue.java
+
+  This product contains a modified portion of 'jbzip2', a Java bzip2 compression
+  and decompression library written by Matthew J. Francis. It can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.jbzip2.txt (MIT License)
+    * HOMEPAGE:
+      * https://code.google.com/p/jbzip2/
+
+  This product contains a modified portion of 'libdivsufsort', a C API library to construct
+  the suffix array and the Burrows-Wheeler transformed string for any input string of
+  a constant-size alphabet written by Yuta Mori. It can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.libdivsufsort.txt (MIT License)
+    * HOMEPAGE:
+      * https://code.google.com/p/libdivsufsort/
+
+  This product contains a modified portion of Nitsan Wakart's 'JCTools', Java Concurrency Tools for the JVM,
+   which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.jctools.txt (ASL2 License)
+    * HOMEPAGE:
+      * https://github.com/JCTools/JCTools
+
+  This product optionally depends on 'JZlib', a re-implementation of zlib in
+  pure Java, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.jzlib.txt (BSD style License)
+    * HOMEPAGE:
+      * http://www.jcraft.com/jzlib/
+
+  This product optionally depends on 'Compress-LZF', a Java library for encoding and
+  decoding data in LZF format, written by Tatu Saloranta. It can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.compress-lzf.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * https://github.com/ning/compress
+
+  This product optionally depends on 'lz4', a LZ4 Java compression
+  and decompression library written by Adrien Grand. It can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.lz4.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * https://github.com/jpountz/lz4-java
+
+  This product optionally depends on 'lzma-java', a LZMA Java compression
+  and decompression library, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.lzma-java.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * https://github.com/jponge/lzma-java
+
+  This product contains a modified portion of 'jfastlz', a Java port of FastLZ compression
+  and decompression library written by William Kinney. It can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.jfastlz.txt (MIT License)
+    * HOMEPAGE:
+      * https://code.google.com/p/jfastlz/
+
+  This product contains a modified portion of and optionally depends on 'Protocol Buffers', Google's data
+  interchange format, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.protobuf.txt (New BSD License)
+    * HOMEPAGE:
+      * http://code.google.com/p/protobuf/
+
+  This product optionally depends on 'Bouncy Castle Crypto APIs' to generate
+  a temporary self-signed X.509 certificate when the JVM does not provide the
+  equivalent functionality.  It can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.bouncycastle.txt (MIT License)
+    * HOMEPAGE:
+      * http://www.bouncycastle.org/
+
+  This product optionally depends on 'Snappy', a compression library produced
+  by Google Inc, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.snappy.txt (New BSD License)
+    * HOMEPAGE:
+      * http://code.google.com/p/snappy/
+
+  This product optionally depends on 'JBoss Marshalling', an alternative Java
+  serialization API, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.jboss-marshalling.txt (GNU LGPL 2.1)
+    * HOMEPAGE:
+      * http://www.jboss.org/jbossmarshalling
+
+  This product optionally depends on 'Caliper', Google's micro-
+  benchmarking framework, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.caliper.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * http://code.google.com/p/caliper/
+
+  This product optionally depends on 'Apache Commons Logging', a logging
+  framework, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.commons-logging.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * http://commons.apache.org/logging/
+
+  This product optionally depends on 'Apache Log4J', a logging framework, which
+  can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.log4j.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * http://logging.apache.org/log4j/
+
+  This product optionally depends on 'Aalto XML', an ultra-high performance
+  non-blocking XML processor, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.aalto-xml.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * http://wiki.fasterxml.com/AaltoHome
+
+  This product contains a modified version of 'HPACK', a Java implementation of
+  the HTTP/2 HPACK algorithm written by Twitter. It can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.hpack.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * https://github.com/twitter/hpack
+
+  This product contains a modified portion of 'Apache Commons Lang', a Java library
+  provides utilities for the java.lang API, which can be obtained at:
+
+    * LICENSE:
+      * license/LICENSE.commons-lang.txt (Apache License 2.0)
+    * HOMEPAGE:
+      * https://commons.apache.org/proper/commons-lang/
+
+  The binary distribution of this product bundles binaries of
+  Commons Codec 1.4,
+  which has the following notices:
+   * src/test/org/apache/commons/codec/language/DoubleMetaphoneTest.javacontains test data from http://aspell.net/test/orig/batch0.tab.Copyright (C) 2002 Kevin Atkinson (kevina@gnu.org)
+    ===============================================================================
+    The content of package org.apache.commons.codec.language.bm has been translated
+    from the original php source code available at http://stevemorse.org/phoneticinfo.htm
+    with permission from the original authors.
+    Original source copyright:Copyright (c) 2008 Alexander Beider & Stephen P. Morse.
+
+  The binary distribution of this product bundles binaries of
+  Commons Lang 2.6,
+  which has the following notices:
+   * This product includes software from the Spring Framework,under the Apache License 2.0 (see: StringUtils.containsWhitespace())
+
+  The binary distribution of this product bundles binaries of
+  Apache Log4j 1.2.17,
+  which has the following notices:
+   * ResolverUtil.java
+      Copyright 2005-2006 Tim Fennell
+    Dumbster SMTP test server
+      Copyright 2004 Jason Paul Kitchen
+    TypeUtil.java
+      Copyright 2002-2012 Ramnivas Laddad, Juergen Hoeller, Chris Beams
+
+  The binary distribution of this product bundles binaries of
+  Java Concurrency in Practice book annotations 1.0,
+  which has the following notices:
+   * Copyright (c) 2005 Brian Goetz and Tim Peierls Released under the Creative
+    Commons Attribution License (http://creativecommons.org/licenses/by/2.5)
+    Official home: http://www.jcip.net Any republication or derived work
+    distributed in source code form must include this copyright and license
+    notice.
+
+  The binary distribution of this product bundles binaries of
+  Jetty 6.1.26,
+  which has the following notices:
+   * ==============================================================
+      Jetty Web Container
+      Copyright 1995-2016 Mort Bay Consulting Pty Ltd.
+     ==============================================================
+
+     The Jetty Web Container is Copyright Mort Bay Consulting Pty Ltd
+     unless otherwise noted.
+
+     Jetty is dual licensed under both
+
+       * The Apache 2.0 License
+         http://www.apache.org/licenses/LICENSE-2.0.html
+
+           and
+
+       * The Eclipse Public 1.0 License
+         http://www.eclipse.org/legal/epl-v10.html
+
+     Jetty may be distributed under either license.
+
+     ------
+     Eclipse
+
+     The following artifacts are EPL.
+      * org.eclipse.jetty.orbit:org.eclipse.jdt.core
+
+     The following artifacts are EPL and ASL2.
+      * org.eclipse.jetty.orbit:javax.security.auth.message
+
+
+     The following artifacts are EPL and CDDL 1.0.
+      * org.eclipse.jetty.orbit:javax.mail.glassfish
+
+
+     ------
+     Oracle
+
+     The following artifacts are CDDL + GPLv2 with classpath exception.
+     https://glassfish.dev.java.net/nonav/public/CDDL+GPL.html
+
+      * javax.servlet:javax.servlet-api
+      * javax.annotation:javax.annotation-api
+      * javax.transaction:javax.transaction-api
+      * javax.websocket:javax.websocket-api
+
+     ------
+     Oracle OpenJDK
+
+     If ALPN is used to negotiate HTTP/2 connections, then the following
+     artifacts may be included in the distribution or downloaded when ALPN
+     module is selected.
+
+      * java.sun.security.ssl
+
+     These artifacts replace/modify OpenJDK classes.  The modififications
+     are hosted at github and both modified and original are under GPL v2 with
+     classpath exceptions.
+     http://openjdk.java.net/legal/gplv2+ce.html
+
+
+     ------
+     OW2
+
+     The following artifacts are licensed by the OW2 Foundation according to the
+     terms of http://asm.ow2.org/license.html
+
+     org.ow2.asm:asm-commons
+     org.ow2.asm:asm
+
+
+     ------
+     Apache
+
+     The following artifacts are ASL2 licensed.
+
+     org.apache.taglibs:taglibs-standard-spec
+     org.apache.taglibs:taglibs-standard-impl
+
+
+     ------
+     MortBay
+
+     The following artifacts are ASL2 licensed.  Based on selected classes from
+     following Apache Tomcat jars, all ASL2 licensed.
+
+     org.mortbay.jasper:apache-jsp
+       org.apache.tomcat:tomcat-jasper
+       org.apache.tomcat:tomcat-juli
+       org.apache.tomcat:tomcat-jsp-api
+       org.apache.tomcat:tomcat-el-api
+       org.apache.tomcat:tomcat-jasper-el
+       org.apache.tomcat:tomcat-api
+       org.apache.tomcat:tomcat-util-scan
+       org.apache.tomcat:tomcat-util
+
+     org.mortbay.jasper:apache-el
+       org.apache.tomcat:tomcat-jasper-el
+       org.apache.tomcat:tomcat-el-api
+
+
+     ------
+     Mortbay
+
+     The following artifacts are CDDL + GPLv2 with classpath exception.
+
+     https://glassfish.dev.java.net/nonav/public/CDDL+GPL.html
+
+     org.eclipse.jetty.toolchain:jetty-schemas
+
+     ------
+     Assorted
+
+     The UnixCrypt.java code implements the one way cryptography used by
+     Unix systems for simple password protection.  Copyright 1996 Aki Yoshida,
+     modified April 2001  by Iris Van den Broeke, Daniel Deville.
+     Permission to use, copy, modify and distribute UnixCrypt
+     for non-commercial or commercial purposes and without fee is
+     granted provided that the copyright notice appears in all copies./
+
+  The binary distribution of this product bundles binaries of
+  Snappy for Java 1.0.4.1,
+  which has the following notices:
+   * This product includes software developed by Google
+      Snappy: http://code.google.com/p/snappy/ (New BSD License)
+
+     This product includes software developed by Apache
+      PureJavaCrc32C from apache-hadoop-common http://hadoop.apache.org/
+      (Apache 2.0 license)
+
+     This library containd statically linked libstdc++. This inclusion is allowed by
+     "GCC RUntime Library Exception"
+     http://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html
+
+     == Contributors ==
+       * Tatu Saloranta
+         * Providing benchmark suite
+       * Alec Wysoker
+         * Performance and memory usage improvement
+
+---
+
+name: Gson
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 2.2.4
+libraries:
+  - com.google.code.gson: gson
+
+---
+
+name: Guava
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 11.0.2
+libraries:
+  - com.google.guava: guava
+
+---
+
+name: Nimbus JOSE+JWT
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 3.9
+libraries:
+  - com.nimbusds: nimbus-jose-jwt
+
+---
+
+name: OkHttp
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 2.4.0
+libraries:
+  - com.squareup.okhttp: okhttp
+
+---
+
+name: Okio
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.4.0
+libraries:
+  - com.squareup.okio: okio
+
+---
+
+name: Apache Commons BeanUtils
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.7.0
+libraries:
+  - commons-beanutils: commons-beanutils
+notices:
+  - commons-beanutils: |
+      This product includes software developed by
+      The Apache Software Foundation (http://www.apache.org/).
+
+---
+
+name: Apache Commons BeanUtils
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.8.0
+libraries:
+  - commons-beanutils: commons-beanutils-core
+notices:
+  - common-beanutils-core: |
+      Apache Commons BeanUtils
+      Copyright 2000-2008 The Apache Software Foundation
+
+---
+
+name: Apache Commons Codec
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.4
+libraries:
+  - commons-codec: commons-codec
+notices:
+  - commons-codec: |
+      Apache Commons Codec
+      Copyright 2002-2009 The Apache Software Foundation
+
+      --------------------------------------------------------------------------------
+      Copyright (C) 2002 Kevin Atkinson (kevina@gnu.org). Verbatim copying
+      and distribution of this entire article is permitted in any medium,
+      provided this notice is preserved.
+      --------------------------------------------------------------------------------
+
+---
+
+name: Apache Commons Configuration
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.6
+libraries:
+  - commons-configuration: commons-configuration
+notices:
+  - commons-configuration: |
+      Apache Commons Configuration
+      Copyright 2001-2008 The Apache Software Foundation
+
+---
+
+name: Apache Commons Digester
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.8
+libraries:
+  - commons-digester: commons-digester
+notices:
+  - commons-digester: |
+      Apache Jakarta Commons Digester
+      Copyright 2001-2006 The Apache Software Foundation
+
+---
+
+name: Apache Commons IO
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 2.4
+libraries:
+  - commons-io: commons-io
+notices:
+  - commons-io: |
+      Apache Commons IO
+      Copyright 2002-2012 The Apache Software Foundation
+
+---
+
+name: Apache Commons Logging
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.1.3
+libraries:
+  - commons-logging: commons-logging
+notices:
+  - commons-logging: |
+      Apache Commons Logging
+      Copyright 2003-2013 The Apache Software Foundation
+
+---
+
+name: Apache Commons Net
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 3.1
+libraries:
+  - commons-net: commons-net
+notices:
+  - commons-net: |
+      Apache Commons Net
+      Copyright 2001-2012 The Apache Software Foundation
+
+---
+
+name: Apache Commons Compress
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.4.1
+libraries:
+  - org.apache.commons: commons-compress
+notices:
+  - commons-compress: |
+      Apache Commons Compress
+      Copyright 2002-2012 The Apache Software Foundation
+
+---
+
+name: Apache Commons Math
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 3.1.1
+libraries:
+  - org.apache.commons: commons-math3
+notices:
+  - commons-math3: |
+      Apache Commons Math
+      Copyright 2001-2012 The Apache Software Foundation
+
+      ===============================================================================
+
+      The BracketFinder (package org.apache.commons.math3.optimization.univariate)
+      and PowellOptimizer (package org.apache.commons.math3.optimization.general)
+      classes are based on the Python code in module "optimize.py" (version 0.5)
+      developed by Travis E. Oliphant for the SciPy library (http://www.scipy.org/)
+      Copyright © 2003-2009 SciPy Developers.
+      ===============================================================================
+
+      The LinearConstraint, LinearObjectiveFunction, LinearOptimizer,
+      SimplexSolver and SimplexTableau classes in package
+      org.apache.commons.math3.optimization.linear include software developed by
+      Benjamin McCann (http://www.benmccann.com) and distributed with
+      the following copyright: Copyright 2009 Google Inc.
+      ===============================================================================
+
+      This product includes software developed by the
+      University of Chicago, as Operator of Argonne National
+      Laboratory.
+      The LevenbergMarquardtOptimizer class in package
+      org.apache.commons.math3.optimization.general includes software
+      translated from the lmder, lmpar and qrsolv Fortran routines
+      from the Minpack package
+      Minpack Copyright Notice (1999) University of Chicago.  All rights reserved
+      ===============================================================================
+
+      The GraggBulirschStoerIntegrator class in package
+      org.apache.commons.math3.ode.nonstiff includes software translated
+      from the odex Fortran routine developed by E. Hairer and G. Wanner.
+      Original source copyright:
+      Copyright (c) 2004, Ernst Hairer
+      ===============================================================================
+
+      The MersenneTwister class in package org.apache.commons.math3.random
+      includes software translated from the 2002-01-26 version of
+      the Mersenne-Twister generator written in C by Makoto Matsumoto and Takuji
+      Nishimura. Original source copyright:
+      Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji Nishimura,
+      All rights reserved
+      ===============================================================================
+
+      The HermiteInterpolator class and its corresponding test have been imported from
+      the orekit library distributed under the terms of the Apache 2 licence. Original
+      source copyright:
+      Copyright 2010-2012 CS Systèmes d'Information
+      ===============================================================================
+
+      The creation of the package "o.a.c.m.analysis.integration.gauss" was inspired
+      by an original code donated by Sébastien Brisard.
+      ===============================================================================
+
+
+      The complete text of licenses and disclaimers associated with the the original
+      sources enumerated above at the time of code translation are in the LICENSE.txt
+      file.
+---
+
+name: Netty
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 3.6.2.Final
+libraries:
+  - io.netty: netty
+notices:
+  - netty: |
+      ==
+                                  The Netty Project
+                                  =================
+
+      Please visit the Netty web site for more information:
+
+        * http://netty.io/
+
+      Copyright 2011 The Netty Project
+
+      The Netty Project licenses this file to you under the Apache License,
+      version 2.0 (the "License"); you may not use this file except in compliance
+      with the License. You may obtain a copy of the License at:
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+      WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+      License for the specific language governing permissions and limitations
+      under the License.
+
+      Also, please refer to each LICENSE.<component>.txt file, which is located in
+      the 'license' directory of the distribution file, for the license terms of the
+      components that this product depends on.
+
+      -------------------------------------------------------------------------------
+      This product contains the extensions to Java Collections Framework which has
+      been derived from the works by JSR-166 EG, Doug Lea, and Jason T. Greene:
+
+        * LICENSE:
+          * license/LICENSE.jsr166y.txt (Public Domain)
+        * HOMEPAGE:
+          * http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/
+          * http://viewvc.jboss.org/cgi-bin/viewvc.cgi/jbosscache/experimental/jsr166/
+
+      This product contains a modified version of Robert Harder's Public Domain
+      Base64 Encoder and Decoder, which can be obtained at:
+
+        * LICENSE:
+          * license/LICENSE.base64.txt (Public Domain)
+        * HOMEPAGE:
+          * http://iharder.sourceforge.net/current/java/base64/
+
+      This product contains a modified version of 'JZlib', a re-implementation of
+      zlib in pure Java, which can be obtained at:
+
+        * LICENSE:
+          * license/LICENSE.jzlib.txt (BSD Style License)
+        * HOMEPAGE:
+          * http://www.jcraft.com/jzlib/
+
+      This product optionally depends on 'Protocol Buffers', Google's data
+      interchange format, which can be obtained at:
+
+        * LICENSE:
+          * license/LICENSE.protobuf.txt (New BSD License)
+        * HOMEPAGE:
+          * http://code.google.com/p/protobuf/
+
+      This product optionally depends on 'SLF4J', a simple logging facade for Java,
+      which can be obtained at:
+
+        * LICENSE:
+          * license/LICENSE.slf4j.txt (MIT License)
+        * HOMEPAGE:
+          * http://www.slf4j.org/
+
+      This product optionally depends on 'Apache Commons Logging', a logging
+      framework, which can be obtained at:
+
+        * LICENSE:
+          * license/LICENSE.commons-logging.txt (Apache License 2.0)
+        * HOMEPAGE:
+          * http://commons.apache.org/logging/
+
+      This product optionally depends on 'Apache Log4J', a logging framework,
+      which can be obtained at:
+
+        * LICENSE:
+          * license/LICENSE.log4j.txt (Apache License 2.0)
+        * HOMEPAGE:
+          * http://logging.apache.org/log4j/
+
+      This product optionally depends on 'JBoss Logging', a logging framework,
+      which can be obtained at:
+
+        * LICENSE:
+          * license/LICENSE.jboss-logging.txt (GNU LGPL 2.1)
+        * HOMEPAGE:
+          * http://anonsvn.jboss.org/repos/common/common-logging-spi/
+
+      This product optionally depends on 'Apache Felix', an open source OSGi
+      framework implementation, which can be obtained at:
+
+        * LICENSE:
+          * license/LICENSE.felix.txt (Apache License 2.0)
+        * HOMEPAGE:
+          * http://felix.apache.org/
+
+      This product optionally depends on 'Webbit', a Java event based
+      WebSocket and HTTP server:
+
+        * LICENSE:
+          * license/LICENSE.webbit.txt (BSD License)
+        * HOMEPAGE:
+          * https://github.com/joewalnes/webbit
+
+---
+
+name: Apache Log4j
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.2.17
+libraries:
+  - log4j: log4j
+notices:
+  - log4j: |
+      Apache log4j
+      Copyright 2007 The Apache Software Foundation
+---
+
+name: JSON Small and Fast Parser
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.1.1
+libraries:
+  - net.minidev: json-smart
+
+---
+
+name: Apache Avro
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.7.4
+libraries:
+  - org.apache.avro: avro
+notices:
+  - avro: |
+      Apache Avro
+      Copyright 2009-2013 The Apache Software Foundation
+---
+
+name: Apache Directory
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.0.0-M20
+libraries:
+  - org.apache.directory.api: api-asn1-api
+  - org.apache.directory.api: api-util
+notices:
+  - api-util: |
+      Apache Directory LDAP API Utilities
+      Copyright 2003-2013 The Apache Software Foundation
+---
+
+name: Apache Directory Server
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 2.0.0-M15
+libraries:
+  - org.apache.directory.server: apacheds-i18n
+  - org.apache.directory.server: apacheds-kerberos-codec
+notices:
+  - apacheds-i18n: |
+      ApacheDS I18n
+      Copyright 2003-2013 The Apache Software Foundation
+  - apacheds-kerberos-codec: |
+      ApacheDS Protocol Kerberos Codec
+      Copyright 2003-2013 The Apache Software Foundation
+
+---
+
+name: Apache HTrace
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 4.0.1-incubating
+libraries:
+  - org.apache.htrace: htrace-core4
+notices:
+  - htrace-core4: |
+      htrace-core4
+      Copyright 2015 The Apache Software Foundation
+
+---
+
+name: Apache Zookeeper
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 3.4.6
+libraries:
+  - org.apache.zookeeper: zookeeper
+notices:
+  - zookeeper: |
+      Apache ZooKeeper
+      Copyright 2009-2012 The Apache Software Foundation
+
+---
+
+name: Apache Curator
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 2.7.1
+libraries:
+  - org.apache.curator: curator-client
+  - org.apache.curator: curator-framework
+  - org.apache.curator: curator-recipes
+notices:
+  - curator-client: |
+      Curator Client
+      Copyright 2011-2015 The Apache Software Foundation
+  - curator-framework: |
+      Curator Framework
+      Copyright 2011-2015 The Apache Software Foundation
+  - curator-recipes: |
+      Curator Recipes
+      Copyright 2011-2015 The Apache Software Foundation
+
+---
+
+name: components from Jackson
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.9.13
+libraries:
+  - org.codehaus.jackson: jackson-jaxrs
+  - org.codehaus.jackson: jackson-xc
+notice: |
+  This product currently only contains code developed by authors
+  of specific components, as identified by the source code files;
+  if such notes are missing files have been created by
+  Tatu Saloranta.
+
+  For additional credits (generally to people who reported problems)
+  see CREDITS file.
+
+---
+
+name: Jetty
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 6.1.26
+libraries:
+  - org.mortbay.jetty: jetty-sslengine
+  - org.mortbay.jetty: jetty-util
+notice: |
+  ==============================================================
+   Jetty Web Container
+   Copyright 1995-2009 Mort Bay Consulting Pty Ltd
+  ==============================================================
+
+  The Jetty Web Container is Copyright Mort Bay Consulting Pty Ltd
+  unless otherwise noted. It is dual licensed under the apache 2.0
+  license and eclipse 1.0 license. Jetty may be distributed under
+  either license.
+
+  The javax.servlet package used was sourced from the Apache
+  Software Foundation and is distributed under the apache 2.0
+  license.
+
+---
+
+name: snappy-java
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.0.4.1
+libraries:
+  - org.xerial.snappy: snappy-java
+notices:
+  - snappy-java: |
+      This product includes software developed by Google
+       Snappy: http://code.google.com/p/snappy/ (New BSD License)
+
+
+      This library containd statically linked libstdc++. This inclusion is allowed by
+      "GCC RUntime Library Exception"
+      http://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html
+
+      == Contributors ==
+        * Tatu Saloranta
+          * Providing benchmark suite
+        * Alec Wysoker
+          * Performance and memory usage improvement
+
+---
+
+name: Kafka Schema Registry Client
+version: 3.0.1
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+libraries:
+  - io.confluent: kafka-schema-registry-client
+
+---
+
+name: Apache Velocity Engine
+version: 2.0
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.velocity: velocity-engine-core
+notices:
+  - velocity-engine-core: |
+      Apache Velocity
+
+      Copyright (C) 2000-2007 The Apache Software Foundation
+
+---
+
+name: Apache Avro
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+version: 1.9.0
+libraries:
+  - org.apache.avro: avro
+  - org.apache.avro: avro-mapred
+  - org.apache.avro: avro-ipc
+  - org.apache.avro: avro-ipc-jetty
+notices:
+  - avro: |
+      Apache Avro
+      Copyright 2010-2019 The Apache Software Foundation
+  - avro-ipc: |
+      Apache Avro IPC
+      Copyright 2010-2019 The Apache Software Foundation
+  - avro-ipc-jetty: |
+      Apache Avro IPC Jetty
+      Copyright 2009-2019 The Apache Software Foundation
+  - avro-mapred: |
+      Apache Avro
+      Copyright 2010-2019 The Apache Software Foundation
+
+      Based upon the representations of upstream licensors, it is understood that
+      portions of the mapreduce API included in the Java implementation are licensed
+      from various contributors under one or more contributor license agreements to
+      Odiago, Inc. and were then contributed by Odiago to Apache Avro, which has now
+      made them available under the Apache 2.0 license. The original file header text
+      is:
+
+      | Licensed to Odiago, Inc. under one or more contributor license
+      | agreements.  See the NOTICE file distributed with this work for
+      | additional information regarding copyright ownership.  Odiago, Inc.
+      | licenses this file to you under the Apache License, Version 2.0
+      | (the "License"); you may not use this file except in compliance
+      | with the License.  You may obtain a copy of the License at
+      |
+      |     http://www.apache.org/licenses/LICENSE-2.0
+      |
+      | Unless required by applicable law or agreed to in writing, software
+      | distributed under the License is distributed on an "AS IS" BASIS,
+      | WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+      | implied.  See the License for the specific language governing
+      | permissions and limitations under the License.
+
+      The Odiago NOTICE at the time of the contribution:
+
+      | This product includes software developed by Odiago, Inc.
+      | (http://www.wibidata.com).
+
+---
+
+name: Javax Annotation API
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: CDDL 1.1
+version: 1.3.2
+copyright: Oracle and/or its affiliates
+license_file_path: licenses/bin/javax.annotation-api.CDDL11
+libraries:
+  - javax.annotation: javax.annotation-api
+
+---
+
+name: Schema Repository
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+version: 0.1.3
+libraries:
+  - org.schemarepo: schema-repo-api
+  - org.schemarepo: schema-repo-avro
+  - org.schemarepo: schema-repo-client
+  - org.schemarepo: schema-repo-common
+
+---
+
+name: Gson
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+version: 2.3.1
+libraries:
+  - com.google.code.gson: gson
+
+---
+
+name: Apache Hive
+license_category: binary
+module: extensions/druid-bloom-filter
+license_name: Apache License version 2.0
+version: 2.7.0
+libraries:
+  - org.apache.hive: hive-storage-api
+notices:
+  - hive-storage-api: |
+      Hive Storage API
+      Copyright 2018 The Apache Software Foundation
+
+---
+
+name: DataSketches
+license_category: binary
+module: extensions/druid-datasketches
+license_name: Apache License version 2.0
+version: 0.13.4
+libraries:
+  - com.yahoo.datasketches: sketches-core
+
+---
+
+name: DataSketches
+license_category: binary
+module: extensions/druid-datasketches
+license_name: Apache License version 2.0
+version: 0.12.2
+libraries:
+  - com.yahoo.datasketches: memory
+
+---
+
+name: Jackson
+license_category: binary
+module: extensions/druid-hdfs-storage
+license_name: Apache License version 2.0
+version: 1.9.2
+libraries:
+  - org.codehaus.jackson: jackson-jaxrs
+  - org.codehaus.jackson: jackson-xc
+
+---
+
+name: xmlenc
+license_category: binary
+module: extensions/druid-hdfs-storage
+license_name: BSD-3-Clause License
+version: 0.52
+copyright: Ernst de Haan
+license_file_path: licenses/bin/xmlenc.BSD3
+libraries:
+  - xmlenc: xmlenc
+
+---
+
+name: Apache Kafka
+version: 2.2.1
+license_category: binary
+module: extensions/druid-kafka-indexing-service
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.kafka: kafka-clients
+notices:
+  - kafka-clients: |
+      Apache Kafka
+      Copyright 2018 The Apache Software Foundation.
+
+      This distribution has a binary dependency on jersey, which is available under the CDDL
+      License. The source code of jersey can be found at https://github.com/jersey/jersey/.
+
+---
+
+name: snappy-java
+license_category: binary
+module: extensions/druid-kafka-indexing-service
+license_name: Apache License version 2.0
+version: 1.1.2.6
+libraries:
+  - org.xerial.snappy: snappy-java
+
+---
+
+
+name: AWS SDK for Java
+license_category: binary
+module: extensions/druid-kinesis-indexing-service
+license_name: Apache License version 2.0
+version: 1.11.199
+libraries:
+  - com.amazonaws: aws-java-sdk-kinesis
+  - com.amazonaws: aws-java-sdk-sts
+
+---
+
+name: Apache Parquet
+license_category: binary
+module: extensions/druid-parquet-extensions
+license_name: Apache License version 2.0
+version: 1.10.1
+libraries:
+  - org.apache.parquet: parquet-avro
+  - org.apache.parquet: parquet-column
+  - org.apache.parquet: parquet-common
+  - org.apache.parquet: parquet-encoding
+  - org.apache.parquet: parquet-hadoop
+  - org.apache.parquet: parquet-jackson
+notices:
+  - parquet-avro: |
+      Apache Parquet MR (Incubating)
+      Copyright 2014 The Apache Software Foundation
+
+
+      --------------------------------------------------------------------------------
+
+      This product includes code from Apache Avro, which includes the following in
+      its NOTICE file:
+
+        Apache Avro
+        Copyright 2010-2015 The Apache Software Foundation
+  - parquet-jackson: |
+      This product currently only contains code developed by authors
+      of specific components, as identified by the source code files;
+      if such notes are missing files have been created by
+      Tatu Saloranta.
+
+      For additional credits (generally to people who reported problems)
+      see CREDITS file.
+
+---
+
+name: Apache Parquet Format
+license_category: binary
+module: extensions/druid-parquet-extensions
+license_name: Apache License version 2.0
+version: 2.4.0
+libraries:
+  - org.apache.parquet: parquet-format
+notices:
+  - parquet-format: |
+      Apache Parquet Format
+      Copyright 2017 The Apache Software Foundation
+
+---
+
+name: Protocol Buffers Dynamic Schema
+license_category: binary
+module: extensions/protobuf-extensions
+license_name: Apache License version 2.0
+version: 0.9.3
+libraries:
+  - com.github.os72: protobuf-dynamic
+
+---
+
+name: Gson
+license_category: binary
+module: extensions/protobuf-extensions
+license_name: Apache License version 2.0
+version: 2.7
+libraries:
+  - com.google.code.gson: gson
+
+---
+
+name: Checker Qual
+license_category: binary
+module: java-core
+license_name: MIT License
+version: 2.5.7
+copyright: the Checker Framework developers
+license_file_path: licenses/bin/checker-qual.MIT
+libraries:
+  - org.checkerframework: checker-qual
+
+---
+
+name: JCodings
+license_category: binary
+module: java-core
+license_name: MIT License
+version: 1.0.43
+copyright: JRuby Team
+license_file_path: licenses/bin/jcodings.MIT
+libraries:
+  - org.jruby.jcodings: jcodings
+
+---
+
+name: Joni
+license_category: binary
+module: java-core
+license_name: MIT License
+version: 2.1.27
+copyright: JRuby Team
+license_file_path: licenses/bin/joni.MIT
+libraries:
+  - org.jruby.joni: joni
+
+---
+
+name: JCL 1.2 Implemented Over SLF4J
+license_category: binary
+module: java-core
+license_name: MIT License
+version: 1.7.12
+copyright: QOS.ch
+license_file_path: licenses/bin/jcl-over-slf4j.MIT
+libraries:
+  - org.slf4j: jcl-over-slf4j
+
+---
+
+name: SLF4J API
+license_category: binary
+module: java-core
+license_name: MIT License
+version: 1.7.25
+copyright: QOS.ch
+license_file_path: licenses/bin/slf4j.MIT
+libraries:
+  - org.slf4j: slf4j-api
+
+---
+
+name: SLF4J API
+version: 1.7.10
+license_category: binary
+module: hadoop-client
+license_name: MIT License
+copyright: QOS.ch
+license_file_path: licenses/bin/slf4j.MIT
+libraries:
+  - org.slf4j: slf4j-api
+  - org.slf4j: slf4j-log4j12
+
+---
+
+name: JNI binding for Zstd
+license_category: binary
+module: java-core
+license_name: BSD-2-Clause License
+version: 1.3.3-1
+copyright: Luben Karavelov
+license_file_path: licenses/bin/zstd-jni.BSD2
+libraries:
+  - com.github.luben: zstd-jni
+
+---
+
+name: Zstandard
+license_category: binary
+module: java-core
+license_name: BSD-3-Clause License
+version: 1.3.3
+copyright: Facebook, Inc.
+license_file_path: licenses/bin/zstandard.BSD3
+
+---
+
+name: FindBugs JSR305
+license_category: binary
+module: java-core
+license_name: BSD-3-Clause License
+version: 2.0.1
+copyright: FindBugs
+license_file_path: licenses/bin/jsr305.BSD3
+libraries:
+  - com.google.code.findbugs: jsr305
+skip_dependency_report_check: true
+
+---
+
+name: Protocol Buffers
+license_category: binary
+module: java-core
+license_name: BSD-3-Clause License
+version: 3.1.0
+copyright: Google, Inc.
+license_file_path:
+  - licenses/bin/protobuf-java.BSD3
+  - licenses/bin/protobuf-java-redhat.BSD3
+  - licenses/bin/protobuf-java-bloomberg.BSD3
+libraries:
+  - com.google.protobuf: protobuf-java
+additional_license_statement: except src/google/protobuf/stubs/atomicops_internals_generic_gcc.h and src/google/protobuf/stubs/atomicops_internals_power.h files which are copyrighted by Red Hat Inc and Bloomberg Finance LP, respectively, and available under a BSD-3-Clause
+
+---
+
+name: JLine
+license_category: binary
+module: java-core
+license_name: BSD-3-Clause License
+version: 0.9.94
+copyright: Marc Prud'hommeaux
+license_file_path: licenses/bin/jline.BSD3
+libraries:
+  - jline: jline
+
+---
+
+name: ANTLR 4 Runtime
+license_category: binary
+module: java-core
+license_name: BSD-3-Clause License
+version: 4.5.1
+copyright: The ANTLR Project
+license_file_path: licenses/bin/antlr4-runtime.BSD3
+libraries:
+  - org.antlr: antlr4-runtime
+
+---
+
+name: Janino and Commons Compiler
+license_category: binary
+module: java-core
+license_name: BSD-3-Clause License
+version: 2.7.6
+copyright: Arno Unkrig and TIBCO Software Inc.
+license_file_path: licenses/bin/janino.BSD3
+libraries:
+  - org.codehaus.janino: janino
+  - org.codehaus.janino: commons-compiler
+
+---
+
+name: ASM
+license_category: binary
+module: java-core
+license_name: BSD-3-Clause License
+version: 7.1
+copyright: INRIA, France Telecom
+license_file_path: licenses/bin/asm.BSD3
+libraries:
+  - org.ow2.asm: asm
+  - org.ow2.asm: asm-commons
+  - org.ow2.asm: asm-tree
+  - org.ow2.asm: asm-analysis
+
+---
+
+name: FindBugs JSR305
+license_category: binary
+module: hadoop-client
+license_name: BSD-3-Clause License
+version: 3.0.0
+copyright: FindBugs
+license_file_path: licenses/bin/jsr305.BSD3
+libraries:
+  - com.google.code.findbugs: jsr305
+skip_dependency_report_check: true
+
+---
+
+name: Protocol Buffers
+license_category: binary
+module: hadoop-client
+license_name: BSD-3-Clause License
+version: 2.5.0
+copyright: Google, Inc.
+license_file_path: licenses/bin/protobuf-java.BSD3
+libraries:
+  - com.google.protobuf: protobuf-java
+
+---
+
+name: Paranamer
+license_category: binary
+module: hadoop-client
+license_name: BSD-3-Clause License
+version: 2.3
+copyright: Paul Hammant & ThoughtWorks Inc
+license_file_path: licenses/bin/paranamer.BSD3
+libraries:
+  - com.thoughtworks.paranamer: paranamer
+
+---
+
+name: LevelDB JNI
+license_category: binary
+module: hadoop-client
+license_name: BSD-3-Clause License
+version: 1.8
+copyright: FuseSource Corp.
+license_file_path: licenses/bin/leveldb-jni.BSD3
+libraries:
+  - org.fusesource.leveldbjni: leveldbjni-all
+
+---
+
+name: Paranamer
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: BSD-3-Clause License
+version: 2.7
+copyright: Paul Hammant & ThoughtWorks Inc
+license_file_path: licenses/bin/paranamer.BSD3
+libraries:
+  - com.thoughtworks.paranamer: paranamer
+
+---
+
+name: StringTemplate
+license_category: binary
+module: extensions/druid-lookups-cached-single
+license_name: BSD-3-Clause License
+version: 3.2
+copyright: Terrence Parr
+license_file_path: licenses/bin/antlr-stringtemplate.BSD3
+libraries:
+  - org.antlr: stringtemplate
+
+---
+
+name: ANTLR
+license_category: binary
+module: extensions/druid-lookups-cached-single
+license_name: BSD-3-Clause License
+version: 2.7.7
+copyright: The ANTLR Project
+license_file_path: licenses/bin/antlr.BSD3
+libraries:
+  - antlr: antlr
+
+---
+
+name: PostgreSQL JDBC Driver
+license_category: binary
+module: extensions/postgresql-metadata-storage
+license_name: BSD-3-Clause License
+version: 9.4.1208.jre7
+copyright: PostgreSQL Global Development Group
+license_file_path: licenses/bin/postgresql.BSD3
+libraries:
+  - org.postgresql: postgresql
+
+---
+
+name: Protocol Buffers
+license_category: binary
+module: extensions/druid-protobuf-extensions
+license_name: BSD-3-Clause License
+version: 3.2.0
+copyright: Google, Inc.
+license_file_path: licenses/bin/protobuf-java.BSD3
+libraries:
+  - com.google.protobuf: protobuf-java
+  - com.google.protobuf: protobuf-java-util
+
+---
+
+name: ICU4J
+license_category: binary
+module: java-core
+license_name: ICU License
+version: 54.1.1
+copyright: International Business Machines Corporation and others
+license_file_path: licenses/bin/icu4j.ICU
+libraries:
+  - com.ibm.icu: icu4j
+
+---
+
+name: JavaBeans Activation Framework
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 1.2.0
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.activation.CDDL11
+libraries:
+  - com.sun.activation: javax.activation
+
+---
+
+name: Jersey
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 1.19.3
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/jersey.CDDL11
+libraries:
+  - com.sun.jersey: jersey-core
+  - com.sun.jersey: jersey-server
+  - com.sun.jersey: jersey-servlet
+  - com.sun.jersey: contribs
+  - com.sun.jersey.contribs: jersey-guice
+
+---
+
+name: Expression Language 3.0 API
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 3.0.0
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+libraries:
+  - javax.el: javax.el-api
+
+---
+
+name: Java Servlet API
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 3.1.0
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+libraries:
+  - javax.servlet: javax.servlet-api
+
+---
+
+name: JSR311 API
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 1.1.1
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/jsr311-api.CDDL11
+libraries:
+  - javax.ws.rs: jsr311-api
+
+---
+
+name: Expression Language 3.0
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 3.0.0
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+libraries:
+  - org.glassfish: javax.el
+
+---
+
+name: JAXB Runtime
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 2.3.1
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/jaxb-runtime.CDDL11
+libraries:
+  - org.glassfish.jaxb: jaxb-runtime
+
+---
+
+name: TXW2 Runtime
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 2.3.1
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/jaxb-runtime.CDDL11
+libraries:
+  - org.glassfish.jaxb: txw2
+
+---
+
+name: Extended StAX API
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 1.8
+copyright: Oracle and/or its affiliates
+license_file_path: licenses/bin/jaxb-runtime.CDDL11
+libraries:
+  - org.jvnet.staxex: stax-ex
+
+---
+
+name: Istack Common Utility Code Runtime
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 3.0.7
+copyright: Oracle and/or its affiliates
+license_file_path: licenses/bin/jaxb-runtime.CDDL11
+libraries:
+  - com.sun.istack: istack-commons-runtime
+
+---
+
+name: FastInfoset
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.2.15
+libraries:
+  - com.sun.xml.fastinfoset: FastInfoset
+
+---
+name: Jersey
+license_category: binary
+module: hadoop-client
+license_name: CDDL 1.1
+version: 1.9
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/jersey.CDDL11
+libraries:
+  - com.sun.jersey: jersey-client
+  - com.sun.jersey: jersey-core
+
+---
+
+name: JavaBeans Activation Framework
+license_category: binary
+module: hadoop-client
+license_name: CDDL 1.1
+version: 1.1
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+libraries:
+  - javax.activation: activation
+
+---
+
+name: Java Servlet API
+license_category: binary
+module: hadoop-client
+license_name: CDDL 1.1
+version: 2.5
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+libraries:
+  - javax.servlet: javax.servlet-api
+
+---
+
+name: JAXB
+license_category: binary
+module: hadoop-client
+license_name: CDDL 1.1
+version: 2.2.2
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+libraries:
+  - javax.xml.bind: jaxb-api
+
+---
+
+name: JAXB
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 2.3.1
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+libraries:
+  - javax.xml.bind: jaxb-api
+
+---
+
+name: stax-api
+license_category: binary
+module: hadoop-client
+license_name: CDDL 1.1
+version: 1.0-2
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+libraries:
+  - javax.xml.stream: stax-api
+
+---
+
+name: jsp-api
+license_category: binary
+module: hadoop-client
+license_name: CDDL 1.1
+version: 2.1
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+libraries:
+  - javax.servlet.jsp: jsp-api
+
+---
+
+name: Jersey
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: CDDL 1.1
+version: 1.19.3
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/jersey.CDDL11
+libraries:
+  - com.sun.jersey: jersey-client
+
+---
+
+name: OkHttp Aether Connector
+license_category: binary
+module: java-core
+license_name: Eclipse Public License 1.0
+version: 0.0.9
+copyright: to original author or authors
+license_file_path: licenses/bin/aether-connector-okhttp.EPL1
+libraries:
+  - io.tesla.aether: aether-connector-okhttp
+
+---
+
+name: Tesla Aether
+license_category: binary
+module: java-core
+license_name: Eclipse Public License 1.0
+version: 0.0.5
+copyright: to original author or authors
+license_file_path: licenses/bin/tesla-aether.EPL1
+libraries:
+  - io.tesla.aether: tesla-aether
+
+---
+
+name: Eclipse Aether libraries
+license_category: binary
+module: java-core
+license_name: Eclipse Public License 1.0
+version: 0.9.0.M2
+copyright: Sonatype, Inc.
+license_file_path: licenses/bin/aether-core.EPL1
+libraries:
+  - org.eclipse.aether: aether-api
+  - org.eclipse.aether: aether-connector-file
+  - org.eclipse.aether: aether-impl
+  - org.eclipse.aether: aether-spi
+  - org.eclipse.aether: aether-util
+
+---
+
+name: Rhino
+license_category: binary
+module: java-core
+license_name: Mozilla Public License Version 2.0
+version: 1.7.11
+copyright: Mozilla and individual contributors.
+license_file_path: licenses/bin/rhino.MPL2
+libraries:
+  - org.mozilla: rhino
+
+---
+
+name: \"Java Concurrency In Practice\" Book Annotations
+license_category: binary
+module: hadoop-client
+license_name: Creative Commons Attribution 2.5
+version: 1.0
+copyright: Brian Goetz and Tim Peierls
+license_file_path: licenses/bin/creative-commons-2.5.LICENSE
+libraries:
+  - net.jcip: jcip-annotations
+
+---
+
+name: Reactive Streams
+license_category: binary
+module: java-core
+license_name: Creative Commons CC0
+version: 1.0.2
+license_file_path: licenses/bin/reactive-streams.CC0
+libraries:
+  - org.reactivestreams: reactive-streams
+
+---
+
+name: a smear function adapted from MurmurHash3
+license_category: source
+module: java-core
+license_name: Public Domain
+copyright: Austin Appleby who has placed MurmurHash3 in the public domain (https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp)
+source_paths:
+  - processing/src/main/java/org/apache/druid/query/groupby/epinephelinae/Groupers.java
+
+---
+
+name: AOP Alliance
+license_category: binary
+module: java-core
+license_name: Public Domain
+version: 1.0
+libraries:
+  - aopalliance: aopalliance
+
+---
+
+name: XZ
+license_category: binary
+module: java-core
+license_name: Public Domain
+version: 1.8
+libraries:
+  - org.tukaani: xz
+
+---
+
+name: XZ
+license_category: binary
+module: hadoop-client
+license_name: Public Domain
+version: 1.0
+libraries:
+  - org.tukaani: xz
+
+---
+
+name: Apache ORC libraries
+license_category: binary
+module: extensions/druid-orc-extensions
+license_name: Apache License version 2.0
+version: 1.5.6
+libraries:
+  - org.apache.orc: orc-mapreduce
+  - org.apache.orc: orc-core
+  - org.apache.orc: orc-shims
+notices:
+  - orc-mapreduce: |
+      ORC MapReduce
+      Copyright 2013-2019 The Apache Software Foundation
+  - orc-core: |
+      ORC Core
+      Copyright 2013-2019 The Apache Software Foundation
+  - orc-shims: |
+      ORC Shims
+      Copyright 2013-2019 The Apache Software Foundation
+
+---
+
+name: aircompressor
+license_category: binary
+module: extensions/druid-orc-extensions
+license_name: Apache License version 2.0
+version: "0.10"
+libraries:
+  - io.airlift: aircompressor
+
+---
+
+name: Hive storage API
+license_category: binary
+module: extensions/druid-orc-extensions
+license_name: Apache License version 2.0
+version: 2.6.0
+libraries:
+  - org.apache.hive: hive-storage-api
+notices:
+  - hive-storage-api: |
+      Hive Storage API
+      Copyright 2018 The Apache Software Foundation
+
+---
+
+name: Google Cloud Storage JSON API
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: v1-rev79-1.22.0
+libraries:
+  - com.google.apis: google-api-services-storage
+
+---
+
+name: "Jackson Module: Guice"
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.6.7
+libraries:
+  - com.fasterxml.jackson.module: jackson-module-guice
+
+---
+
+name: Google APIs Client Library For Java
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.22.0
+libraries:
+  - com.google.api-client: google-api-client
+
+---
+
+name: Google HTTP Client Library For Java
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.22.0
+libraries:
+  - com.google.http-client: google-http-client
+  - com.google.http-client: google-http-client-jackson2
+
+---
+
+name: Google OAuth Client Library For Java
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.22.0
+libraries:
+  - com.google.oauth-client: google-oauth-client
+
+---
+
+name: JavaBeans Activation Framework API
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 1.2.0
+copyright: Oracle and/or its affiliates
+license_file_path: licenses/bin/javax.activation-api.CDDL11
+libraries:
+  - javax.activation: javax.activation-api
+
+---
+
+name: Apache Kafka
+license_category: binary
+module: extensions/kafka-extraction-namespace
+license_name: Apache License version 2.0
+version: 2.1.0
+libraries:
+  - org.apache.kafka: kafka_2.12
+  - org.apache.kafka: kafka-clients
+notices:
+  - kafka-clients:
+      Apache Kafka
+      Copyright 2018 The Apache Software Foundation.
+
+      This distribution has a binary dependency on jersey, which is available under the CDDL
+      License. The source code of jersey can be found at https://github.com/jersey/jersey/.
+
+---
+
+name: Metrics Core Library
+license_category: binary
+module: extensions/kafka-extraction-namespace
+license_name: Apache License version 2.0
+version: 2.2.0
+libraries:
+  - com.yammer.metrics: metrics-core
+notices:
+  - metrics-core: |
+      Metrics
+      Copyright 2010-2013 Coda Hale and Yammer, Inc., 2014-2017 Dropwizard Team
+
+      This product includes software developed by Coda Hale and Yammer, Inc.
+---
+
+name: JOpt Simple
+license_category: binary
+module: extensions/kafka-extraction-namespace
+license_name: MIT License
+copyright: Paul R. Holser, Jr.
+version: 3.2
+license_file_path: licenses/bin/jopt-simple.MIT
+libraries:
+  - net.sf.jopt-simple: jopt-simple
+
+---
+
+name: Scala Library
+license_category: binary
+module: extensions/kafka-extraction-namespace
+license_name: Apache License version 2.0
+copyright: LAMP/EPFL and Lightbend, Inc.
+version: 2.12.7
+libraries:
+  - org.scala-lang: scala-library
+
+---
+
+# Web console modules start
+name: "@babel/polyfill"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Sebastian McKenzie
+version: 7.4.4
+license_file_path: licenses/bin/@babel-polyfill.MIT
+
+---
+
+name: "@babel/runtime"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Sebastian McKenzie
+version: 7.5.4
+license_file_path: licenses/bin/@babel-runtime.MIT
+
+---
+
+name: "@blueprintjs/core"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Palantir Technologies
+version: 3.18.0
+
+---
+
+name: "@blueprintjs/icons"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Palantir Technologies
+version: 3.10.0
+
+---
+
+name: "@types/dom4"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Microsoft Corporation.
+version: 2.0.1
+license_file_path: licenses/bin/@types-dom4.MIT
+
+---
+
+name: "asap"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Contributors
+version: 2.0.6
+license_file_path: licenses/bin/asap.MIT
+
+---
+
+name: "axios"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Matt Zabriskie
+version: 0.19.0
+license_file_path: licenses/bin/axios.MIT
+
+---
+
+name: "brace"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Thorsten Lorenz
+version: 0.11.1
+license_file_path: licenses/bin/brace.MIT
+
+---
+
+name: "classnames"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jed Watson
+version: 2.2.6
+license_file_path: licenses/bin/classnames.MIT
+
+---
+
+name: "commander"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: TJ Holowaychuk
+version: 2.20.0
+license_file_path: licenses/bin/commander.MIT
+
+---
+
+name: "copy-to-clipboard"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: sudodoki
+version: 3.2.0
+license_file_path: licenses/bin/copy-to-clipboard.MIT
+
+---
+
+name: "core-js"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Denis Pushkarev
+version: 1.2.7
+license_file_path: licenses/bin/core-js.MIT
+
+---
+
+name: "core-js"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Denis Pushkarev
+version: 2.6.9
+license_file_path: licenses/bin/core-js.MIT
+
+---
+
+name: "core-js"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Denis Pushkarev
+version: 3.1.4
+license_file_path: licenses/bin/core-js.MIT
+
+---
+
+name: "create-react-context"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: James Kyle
+version: 0.2.2
+license_file_path: licenses/bin/create-react-context.MIT
+
+---
+
+name: "d3-array"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.2.4
+license_file_path: licenses/bin/d3-array.BSD3
+
+---
+
+name: "d3-array"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 2.2.0
+license_file_path: licenses/bin/d3-array.BSD3
+
+---
+
+name: "d3-axis"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.12
+license_file_path: licenses/bin/d3-axis.BSD3
+
+---
+
+name: "d3-brush"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.6
+license_file_path: licenses/bin/d3-brush.BSD3
+
+---
+
+name: "d3-chord"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.6
+license_file_path: licenses/bin/d3-chord.BSD3
+
+---
+
+name: "d3-collection"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.7
+license_file_path: licenses/bin/d3-collection.BSD3
+
+---
+
+name: "d3-color"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.2.8
+license_file_path: licenses/bin/d3-color.BSD3
+
+---
+
+name: "d3-contour"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.3.2
+license_file_path: licenses/bin/d3-contour.BSD3
+
+---
+
+name: "d3-dispatch"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.5
+license_file_path: licenses/bin/d3-dispatch.BSD3
+
+---
+
+name: "d3-drag"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.2.3
+license_file_path: licenses/bin/d3-drag.BSD3
+
+---
+
+name: "d3-dsv"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.1.1
+license_file_path: licenses/bin/d3-dsv.BSD3
+
+---
+
+name: "d3-ease"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.5
+license_file_path: licenses/bin/d3-ease.BSD3
+
+---
+
+name: "d3-fetch"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.1.2
+license_file_path: licenses/bin/d3-fetch.BSD3
+
+---
+
+name: "d3-force"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.2.1
+license_file_path: licenses/bin/d3-force.BSD3
+
+---
+
+name: "d3-format"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.3.2
+license_file_path: licenses/bin/d3-format.BSD3
+
+---
+
+name: "d3-geo"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.11.6
+license_file_path: licenses/bin/d3-geo.BSD3
+
+---
+
+name: "d3-hierarchy"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.1.8
+license_file_path: licenses/bin/d3-hierarchy.BSD3
+
+---
+
+name: "d3-interpolate"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.3.2
+license_file_path: licenses/bin/d3-interpolate.BSD3
+
+---
+
+name: "d3-path"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.7
+license_file_path: licenses/bin/d3-path.BSD3
+
+---
+
+name: "d3-polygon"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.5
+license_file_path: licenses/bin/d3-polygon.BSD3
+
+---
+
+name: "d3-quadtree"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.6
+license_file_path: licenses/bin/d3-quadtree.BSD3
+
+---
+
+name: "d3-random"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.1.2
+license_file_path: licenses/bin/d3-random.BSD3
+
+---
+
+name: "d3-scale-chromatic"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.3.3
+license_file_path: licenses/bin/d3-scale-chromatic.BSD3
+
+---
+
+name: "d3-scale"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 2.2.2
+license_file_path: licenses/bin/d3-scale.BSD3
+
+---
+
+name: "d3-selection"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.4.0
+license_file_path: licenses/bin/d3-selection.BSD3
+
+---
+
+name: "d3-shape"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.3.5
+license_file_path: licenses/bin/d3-shape.BSD3
+
+---
+
+name: "d3-time-format"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 2.1.3
+license_file_path: licenses/bin/d3-time-format.BSD3
+
+---
+
+name: "d3-time"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.11
+license_file_path: licenses/bin/d3-time.BSD3
+
+---
+
+name: "d3-timer"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.0.9
+license_file_path: licenses/bin/d3-timer.BSD3
+
+---
+
+name: "d3-transition"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.2.0
+license_file_path: licenses/bin/d3-transition.BSD3
+
+---
+
+name: "d3-voronoi"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.1.4
+license_file_path: licenses/bin/d3-voronoi.BSD3
+
+---
+
+name: "d3-zoom"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.7.3
+license_file_path: licenses/bin/d3-zoom.BSD3
+
+---
+
+name: "d3"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 5.9.7
+license_file_path: licenses/bin/d3.BSD3
+
+---
+
+name: "debug"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: TJ Holowaychuk
+version: 3.1.0
+license_file_path: licenses/bin/debug.MIT
+
+---
+
+name: "diff-match-patch"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Google
+version: 1.0.4
+
+---
+
+name: "dom-helpers"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jason Quense
+version: 3.4.0
+license_file_path: licenses/bin/dom-helpers.MIT
+
+---
+
+name: "dom4"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Andrea Giammarchi
+version: 2.1.5
+license_file_path: licenses/bin/dom4.MIT
+
+---
+
+name: "druid-console"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Tarek Rached
+version: 0.0.2
+
+---
+
+name: "druid-query-toolkit"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Imply Data
+version: 0.3.8
+
+---
+
+name: "encoding"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Andris Reinman
+version: 0.1.12
+license_file_path: licenses/bin/encoding.MIT
+
+---
+
+name: "fbjs"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Facebook, Inc.
+version: 0.8.17
+license_file_path: licenses/bin/fbjs.MIT
+
+---
+
+name: "file-saver"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Eli Grey
+version: 2.0.2
+license_file_path: licenses/bin/file-saver.MIT
+
+---
+
+name: "follow-redirects"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Ruben Verborgh
+version: 1.5.10
+license_file_path: licenses/bin/follow-redirects.MIT
+
+---
+
+name: "gud"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jamie Kyle
+version: 1.0.0
+license_file_path: licenses/bin/gud.MIT
+
+---
+
+name: "has-own-prop"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Sindre Sorhus
+version: 2.0.0
+license_file_path: licenses/bin/has-own-prop.MIT
+
+---
+
+name: "history"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Michael Jackson
+version: 4.9.0
+license_file_path: licenses/bin/history.MIT
+
+---
+
+name: "hjson"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Christian Zangl
+version: 3.1.2
+license_file_path: licenses/bin/hjson.MIT
+
+---
+
+name: "hoist-non-react-statics"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Michael Ridgway
+version: 3.3.0
+license_file_path: licenses/bin/hoist-non-react-statics.BSD3
+
+---
+
+name: "iconv-lite"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Alexander Shtuchkin
+version: 0.4.24
+license_file_path: licenses/bin/iconv-lite.MIT
+
+---
+
+name: "is-buffer"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Feross Aboukhadijeh
+version: 2.0.3
+license_file_path: licenses/bin/is-buffer.MIT
+
+---
+
+name: "is-stream"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Sindre Sorhus
+version: 1.1.0
+license_file_path: licenses/bin/is-stream.MIT
+
+---
+
+name: "isarray"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Julian Gruber
+version: 0.0.1
+license_file_path: licenses/bin/isarray.MIT
+
+---
+
+name: "isomorphic-fetch"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Matt Andrews
+version: 2.2.1
+license_file_path: licenses/bin/isomorphic-fetch.MIT
+
+---
+
+name: "js-tokens"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Simon Lydell
+version: 4.0.0
+license_file_path: licenses/bin/js-tokens.MIT
+
+---
+
+name: "lodash.debounce"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: John-David Dalton
+version: 4.0.8
+license_file_path: licenses/bin/lodash.debounce.MIT
+
+---
+
+name: "lodash.escape"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: John-David Dalton
+version: 4.0.1
+license_file_path: licenses/bin/lodash.escape.MIT
+
+---
+
+name: "lodash.get"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: John-David Dalton
+version: 4.4.2
+license_file_path: licenses/bin/lodash.get.MIT
+
+---
+
+name: "lodash.isequal"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: John-David Dalton
+version: 4.5.0
+license_file_path: licenses/bin/lodash.isequal.MIT
+
+---
+
+name: "loose-envify"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Andres Suarez
+version: 1.4.0
+license_file_path: licenses/bin/loose-envify.MIT
+
+---
+
+name: "memoize-one"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Alex Reardon
+version: 5.0.5
+license_file_path: licenses/bin/memoize-one.MIT
+
+---
+
+name: "mini-create-react-context"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: StringEpsilon
+version: 0.3.2
+license_file_path: licenses/bin/mini-create-react-context.MIT
+
+---
+
+name: "ms"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Zeit, Inc.
+version: 2.0.0
+license_file_path: licenses/bin/ms.MIT
+
+---
+
+name: "node-fetch"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: David Frank
+version: 1.7.3
+license_file_path: licenses/bin/node-fetch.MIT
+
+---
+
+name: "normalize.css"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Nicolas Gallagher and Jonathan Neal
+version: 8.0.1
+license_file_path: licenses/bin/normalize.css.MIT
+
+---
+
+name: "numeral"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Adam Draper
+version: 2.0.6
+license_file_path: licenses/bin/numeral.MIT
+
+---
+
+name: "object-assign"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Sindre Sorhus
+version: 4.1.1
+license_file_path: licenses/bin/object-assign.MIT
+
+---
+
+name: "path-to-regexp"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey (hello@blakeembrey.com)
+version: 1.7.0
+license_file_path: licenses/bin/path-to-regexp.MIT
+
+---
+
+name: "popper.js"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Federico Zivolo
+version: 1.15.0
+license_file_path: licenses/bin/popper.js.MIT
+
+---
+
+name: "promise"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: ForbesLindesay
+version: 7.3.1
+license_file_path: licenses/bin/promise.MIT
+
+---
+
+name: "prop-types"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Facebook, Inc.
+version: 15.7.2
+license_file_path: licenses/bin/prop-types.MIT
+
+---
+
+name: "react-ace"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: James Hrisho
+version: 7.0.2
+license_file_path: licenses/bin/react-ace.MIT
+
+---
+
+name: "react-dom"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Facebook, Inc. and its affiliates.
+version: 16.8.6
+license_file_path: licenses/bin/react-dom.MIT
+
+---
+
+name: "react-is"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Facebook, Inc. and its affiliates.
+version: 16.8.6
+license_file_path: licenses/bin/react-is.MIT
+
+---
+
+name: "react-lifecycles-compat"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Facebook, Inc.
+version: 3.0.4
+license_file_path: licenses/bin/react-lifecycles-compat.MIT
+
+---
+
+name: "react-popper"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Travis Arnold
+version: 1.3.3
+license_file_path: licenses/bin/react-popper.MIT
+
+---
+
+name: "react-router-dom"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: React Training
+version: 5.0.1
+license_file_path: licenses/bin/react-router-dom.MIT
+
+---
+
+name: "react-router"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: React Training
+version: 5.0.1
+license_file_path: licenses/bin/react-router.MIT
+
+---
+
+name: "react-splitter-layout"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Yang Liu
+version: 4.0.0
+license_file_path: licenses/bin/react-splitter-layout.MIT
+
+---
+
+name: "react-table"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Tanner Linsley
+version: 6.10.0
+license_file_path: licenses/bin/react-table.MIT
+
+---
+
+name: "react-transition-group"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: React Community
+version: 2.9.0
+license_file_path: licenses/bin/react-transition-group.BSD3
+
+---
+
+name: "react"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Facebook, Inc. and its affiliates.
+version: 16.8.6
+license_file_path: licenses/bin/react.MIT
+
+---
+
+name: "regenerator-runtime"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Ben Newman
+version: 0.13.3
+license_file_path: licenses/bin/regenerator-runtime.MIT
+
+---
+
+name: "resize-observer-polyfill"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Denis Rul
+version: 1.5.1
+license_file_path: licenses/bin/resize-observer-polyfill.MIT
+
+---
+
+name: "resolve-pathname"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Michael Jackson
+version: 2.2.0
+license_file_path: licenses/bin/resolve-pathname.MIT
+
+---
+
+name: "rw"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.3.3
+license_file_path: licenses/bin/rw.BSD3
+
+---
+
+name: "safer-buffer"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Nikita Skovoroda
+version: 2.1.2
+license_file_path: licenses/bin/safer-buffer.MIT
+
+---
+
+name: "scheduler"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Facebook, Inc. and its affiliates.
+version: 0.13.6
+license_file_path: licenses/bin/scheduler.MIT
+
+---
+
+name: "setimmediate"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: YuzuJS
+version: 1.0.5
+license_file_path: licenses/bin/setimmediate.MIT
+
+---
+
+name: "tiny-invariant"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Alex Reardon
+version: 1.0.5
+license_file_path: licenses/bin/tiny-invariant.MIT
+
+---
+
+name: "tiny-warning"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Alex Reardon
+version: 1.0.3
+license_file_path: licenses/bin/tiny-warning.MIT
+
+---
+
+name: "toggle-selection"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: sudodoki
+version: 1.0.6
+license_file_path: licenses/bin/toggle-selection.MIT
+
+---
+
+name: "tslib"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Microsoft Corp.
+version: 1.10.0
+notice: |
+  /*! *****************************************************************************
+  Copyright (c) Microsoft Corporation. All rights reserved.
+  Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+  this file except in compliance with the License. You may obtain a copy of the
+  License at http://www.apache.org/licenses/LICENSE-2.0
+
+  THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
+  WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
+  MERCHANTABLITY OR NON-INFRINGEMENT.
+
+  See the Apache Version 2.0 License for specific language governing permissions
+  and limitations under the License.
+  ***************************************************************************** */
+
+---
+
+name: "typed-styles"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: lttb
+version: 0.0.7
+license_file_path: licenses/bin/typed-styles.MIT
+
+---
+
+name: "ua-parser-js"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Faisal Salman
+version: 0.7.20
+license_file_path: licenses/bin/ua-parser-js.MIT
+
+---
+
+name: "value-equal"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Michael Jackson
+version: 0.4.0
+license_file_path: licenses/bin/value-equal.MIT
+
+---
+
+name: "warning"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Berkeley Martinez
+version: 4.0.3
+license_file_path: licenses/bin/warning.MIT
+
+---
+
+name: "whatwg-fetch"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: GitHub, Inc.
+version: 3.0.0
+license_file_path: licenses/bin/whatwg-fetch.MIT
+# Web console modules end
+
+---
+
+# Legacy console modules start
+name: jQuery
+license_category: source
+module: web-console
+license_name: MIT License
+version: 1.11.0
+copyright: jQuery Foundation, Inc.
+license_file_path: licenses/src/jquery.MIT
+
+---
+
+name: jQuery UI
+license_category: source
+module: web-console
+license_name: MIT License
+version: 1.9.2
+copyright: jQuery Foundation and other contributors
+license_file_path: licenses/src/jquery-ui.MIT
+
+---
+
+name: demo_table.css and jquery.dataTables.js from DataTables
+license_category: source
+module: web-console
+license_name: BSD-3-Clause License
+version: 1.8.2
+copyright: Allan Jardine.
+license_file_path: licenses/src/datatables.BSD3
+
+---
+
+name: sizzle.js by way of jQuery
+license_category: source
+module: web-console
+license_name: MIT License
+version: 1.11.0
+copyright: jQuery Foundation and other contributors
+license_file_path: licenses/src/sizzle.MIT
+
+---
+
+name: underscore
+license_category: source
+module: web-console
+license_name: MIT License
+version: 1.2.2
+copyright: Jeremy Ashkenas, DocumentCloud
+license_file_path: licenses/src/underscore.MIT
+# Legacy console modules end

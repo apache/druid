@@ -20,7 +20,6 @@
 package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
@@ -33,7 +32,7 @@ import java.util.List;
  */
 public class HadoopTuningConfigTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   @Test
   public void testSerde() throws Exception
@@ -41,6 +40,7 @@ public class HadoopTuningConfigTest
     HadoopTuningConfig expected = new HadoopTuningConfig(
         "/tmp/workingpath",
         "version",
+        null,
         null,
         null,
         null,
@@ -60,16 +60,18 @@ public class HadoopTuningConfigTest
         true,
         null,
         null,
+        null,
         null
     );
 
-    HadoopTuningConfig actual = jsonReadWriteRead(jsonMapper.writeValueAsString(expected), HadoopTuningConfig.class);
+    HadoopTuningConfig actual = jsonReadWriteRead(JSON_MAPPER.writeValueAsString(expected), HadoopTuningConfig.class);
 
     Assert.assertEquals("/tmp/workingpath", actual.getWorkingPath());
     Assert.assertEquals("version", actual.getVersion());
     Assert.assertNotNull(actual.getPartitionsSpec());
     Assert.assertEquals(ImmutableMap.<Long, List<HadoopyShardSpec>>of(), actual.getShardSpecs());
     Assert.assertEquals(new IndexSpec(), actual.getIndexSpec());
+    Assert.assertEquals(new IndexSpec(), actual.getIndexSpecForIntermediatePersists());
     Assert.assertEquals(100, actual.getRowFlushBoundary());
     Assert.assertEquals(true, actual.isLeaveIntermediate());
     Assert.assertEquals(true, actual.isCleanupOnFailure());
@@ -86,10 +88,10 @@ public class HadoopTuningConfigTest
   public static <T> T jsonReadWriteRead(String s, Class<T> klass)
   {
     try {
-      return jsonMapper.readValue(jsonMapper.writeValueAsBytes(jsonMapper.readValue(s, klass)), klass);
+      return JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsBytes(JSON_MAPPER.readValue(s, klass)), klass);
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 }

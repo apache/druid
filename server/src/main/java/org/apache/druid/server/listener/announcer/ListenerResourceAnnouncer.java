@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.listener.announcer;
 
-import com.google.common.base.Throwables;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -83,7 +82,7 @@ public abstract class ListenerResourceAnnouncer
       }
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       announcer.announce(announcePath, ANNOUNCE_BYTES);
       LOG.info("Announcing start time on [%s]", announcePath);

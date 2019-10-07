@@ -27,7 +27,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import org.apache.druid.guice.ManageLifecycleLast;
+import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.indexing.materializedview.DerivativeDataSourceMetadata;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.java.util.common.DateTimes;
@@ -65,11 +65,11 @@ import java.util.stream.Collectors;
  * Read and store derivatives information from dataSource table frequently.
  * When optimize query, DerivativesManager offers the information about derivatives.
  */
-@ManageLifecycleLast
+@ManageLifecycle
 public class DerivativeDataSourceManager 
 {
   private static final EmittingLogger log = new EmittingLogger(DerivativeDataSourceManager.class);
-  private static final AtomicReference<ConcurrentHashMap<String, SortedSet<DerivativeDataSource>>> derivativesRef =
+  private static final AtomicReference<ConcurrentHashMap<String, SortedSet<DerivativeDataSource>>> DERIVATIVES_REF =
       new AtomicReference<>(new ConcurrentHashMap<>());
   private final MaterializedViewConfig config;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
@@ -137,7 +137,7 @@ public class DerivativeDataSourceManager
       started = false;
       future.cancel(true);
       future = null;
-      derivativesRef.set(new ConcurrentHashMap<>());
+      DERIVATIVES_REF.set(new ConcurrentHashMap<>());
       exec.shutdownNow();
       exec = null;
     }
@@ -145,12 +145,12 @@ public class DerivativeDataSourceManager
 
   public static ImmutableSet<DerivativeDataSource> getDerivatives(String datasource)
   {
-    return ImmutableSet.copyOf(derivativesRef.get().getOrDefault(datasource, new TreeSet<>()));
+    return ImmutableSet.copyOf(DERIVATIVES_REF.get().getOrDefault(datasource, new TreeSet<>()));
   }
 
   public static ImmutableMap<String, Set<DerivativeDataSource>> getAllDerivatives()
   {
-    return ImmutableMap.copyOf(derivativesRef.get());
+    return ImmutableMap.copyOf(DERIVATIVES_REF.get());
   }
 
   private void updateDerivatives()
@@ -205,8 +205,8 @@ public class DerivativeDataSourceManager
     }
     ConcurrentHashMap<String, SortedSet<DerivativeDataSource>> current;
     do {
-      current = derivativesRef.get();
-    } while (!derivativesRef.compareAndSet(current, newDerivatives));
+      current = DERIVATIVES_REF.get();
+    } while (!DERIVATIVES_REF.compareAndSet(current, newDerivatives));
   }
 
   /**

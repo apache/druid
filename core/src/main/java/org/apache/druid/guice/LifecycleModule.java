@@ -41,7 +41,8 @@ public class LifecycleModule implements Module
   // the 'stop' method, either failing silently or failing violently and throwing an exception causing an ungraceful exit
   private final LifecycleScope initScope = new LifecycleScope(Lifecycle.Stage.INIT);
   private final LifecycleScope scope = new LifecycleScope(Lifecycle.Stage.NORMAL);
-  private final LifecycleScope lastScope = new LifecycleScope(Lifecycle.Stage.LAST);
+  private final LifecycleScope serverScope = new LifecycleScope(Lifecycle.Stage.SERVER);
+  private final LifecycleScope annoucementsScope = new LifecycleScope(Lifecycle.Stage.ANNOUNCEMENTS);
 
   /**
    * Registers a class to instantiate eagerly.  Classes mentioned here will be pulled out of
@@ -56,7 +57,7 @@ public class LifecycleModule implements Module
    * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
    * is less error-prone.
    *
-   * @param clazz, the class to instantiate
+   * @param clazz the class to instantiate
    * @return this, for chaining.
    */
   public static void register(Binder binder, Class<?> clazz)
@@ -77,7 +78,7 @@ public class LifecycleModule implements Module
    * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
    * is less error-prone.
    *
-   * @param clazz, the class to instantiate
+   * @param clazz the class to instantiate
    * @param annotation The annotation class to register with Guice
    * @return this, for chaining
    */
@@ -118,7 +119,8 @@ public class LifecycleModule implements Module
 
     binder.bindScope(ManageLifecycleInit.class, initScope);
     binder.bindScope(ManageLifecycle.class, scope);
-    binder.bindScope(ManageLifecycleLast.class, lastScope);
+    binder.bindScope(ManageLifecycleServer.class, serverScope);
+    binder.bindScope(ManageLifecycleAnnouncements.class, annoucementsScope);
   }
 
   @Provides @LazySingleton
@@ -140,7 +142,8 @@ public class LifecycleModule implements Module
     };
     initScope.setLifecycle(lifecycle);
     scope.setLifecycle(lifecycle);
-    lastScope.setLifecycle(lifecycle);
+    serverScope.setLifecycle(lifecycle);
+    annoucementsScope.setLifecycle(lifecycle);
 
     return lifecycle;
   }

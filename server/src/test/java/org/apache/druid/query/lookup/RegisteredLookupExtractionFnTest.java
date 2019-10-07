@@ -50,7 +50,7 @@ public class RegisteredLookupExtractionFnTest
   @Test
   public void testSimpleDelegation()
   {
-    final LookupReferencesManager manager = EasyMock.createStrictMock(LookupReferencesManager.class);
+    final LookupExtractorFactoryContainerProvider manager = EasyMock.createStrictMock(LookupReferencesManager.class);
     managerReturnsMap(manager);
     EasyMock.replay(manager);
     final RegisteredLookupExtractionFn fn = new RegisteredLookupExtractionFn(
@@ -75,7 +75,7 @@ public class RegisteredLookupExtractionFnTest
   @Test
   public void testInheritInjective()
   {
-    final LookupReferencesManager manager = EasyMock.createStrictMock(LookupReferencesManager.class);
+    final LookupExtractorFactoryContainerProvider manager = EasyMock.createStrictMock(LookupReferencesManager.class);
     managerReturnsMap(manager);
     EasyMock.replay(manager);
     final RegisteredLookupExtractionFn fn = new RegisteredLookupExtractionFn(
@@ -95,7 +95,7 @@ public class RegisteredLookupExtractionFnTest
   @Test
   public void testMissingDelegation()
   {
-    final LookupReferencesManager manager = EasyMock.createStrictMock(LookupReferencesManager.class);
+    final LookupExtractorFactoryContainerProvider manager = EasyMock.createStrictMock(LookupReferencesManager.class);
     EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(null).once();
     EasyMock.replay(manager);
 
@@ -134,7 +134,7 @@ public class RegisteredLookupExtractionFnTest
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
 
-    final LookupReferencesManager manager = EasyMock.createStrictMock(LookupReferencesManager.class);
+    final LookupExtractorFactoryContainerProvider manager = EasyMock.createStrictMock(LookupReferencesManager.class);
     managerReturnsMap(manager);
     EasyMock.replay(manager);
     final RegisteredLookupExtractionFn fn = new RegisteredLookupExtractionFn(
@@ -159,7 +159,7 @@ public class RegisteredLookupExtractionFnTest
   @Test
   public void testEquals()
   {
-    final LookupReferencesManager manager = EasyMock.createStrictMock(LookupReferencesManager.class);
+    final LookupExtractorFactoryContainerProvider manager = EasyMock.createStrictMock(LookupReferencesManager.class);
     managerReturnsMap(manager);
     EasyMock.replay(manager);
     final RegisteredLookupExtractionFn fn = new RegisteredLookupExtractionFn(
@@ -245,7 +245,7 @@ public class RegisteredLookupExtractionFnTest
     EasyMock.verify(manager);
   }
 
-  private void managerReturnsMap(LookupReferencesManager manager)
+  private void managerReturnsMap(LookupExtractorFactoryContainerProvider manager)
   {
     EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(
         new LookupExtractorFactoryContainer(

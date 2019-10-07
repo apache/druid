@@ -20,14 +20,13 @@
 package org.apache.druid.query;
 
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.context.ResponseContext;
 
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -48,7 +47,7 @@ public class AsyncQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
   {
     final Query<T> query = queryPlus.getQuery();
     final int priority = QueryContexts.getPriority(query);
@@ -80,7 +79,7 @@ public class AsyncQueryRunner<T> implements QueryRunner<T>
           }
         }
         catch (ExecutionException | InterruptedException | TimeoutException ex) {
-          throw Throwables.propagate(ex);
+          throw new RuntimeException(ex);
         }
       }
     });

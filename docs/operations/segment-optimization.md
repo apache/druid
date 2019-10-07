@@ -1,0 +1,98 @@
+---
+id: segment-optimization
+title: "Segment Size Optimization"
+---
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
+
+In Apache Druid (incubating), it's important to optimize the segment size because
+
+  1. Druid stores data in segments. If you're using the [best-effort roll-up](../ingestion/index.md#rollup) mode,
+  increasing the segment size might introduce further aggregation which reduces the dataSource size.
+  2. When a query is submitted, that query is distributed to all Historicals and realtime tasks
+  which hold the input segments of the query. Each process and task picks a thread from its own processing thread pool
+  to process a single segment. If segment sizes are too large, data might not be well distributed between data
+  servers, decreasing the degree of parallelism possible during query processing.
+  At the other extreme where segment sizes are too small, the scheduling
+  overhead of processing a larger number of segments per query can reduce
+  performance, as the threads that process each segment compete for the fixed
+  slots of the processing pool.
+
+It would be best if you can optimize the segment size at ingestion time, but sometimes it's not easy
+especially when it comes to stream ingestion because the amount of data ingested might vary over time. In this case,
+you can create segments with a sub-optimized size first and optimize them later.
+
+You may need to consider the followings to optimize your segments.
+
+  - Number of rows per segment: it's generally recommended for each segment to have around 5 million rows.
+  This setting is usually _more_ important than the below "segment byte size".
+  This is because Druid uses a single thread to process each segment,
+  and thus this setting can directly control how many rows each thread processes,
+  which in turn means how well the query execution is parallelized.
+  - Segment byte size: it's recommended to set 300 ~ 700MB. If this value
+  doesn't match with the "number of rows per segment", please consider optimizing
+  number of rows per segment rather than this value.
+
+> The above recommendation works in general, but the optimal setting can
+> vary based on your workload. For example, if most of your queries
+> are heavy and take a long time to process each row, you may want to make
+> segments smaller so that the query processing can be more parallelized.
+> If you still see some performance issue after optimizing segment size,
+> you may need to find the optimal settings for your workload.
+
+There might be several ways to check if the compaction is necessary. One way
+is using the [System Schema](../querying/sql.html#system-schema). The
+system schema provides several tables about the current system status including the `segments` table.
+By running the below query, you can get the average number of rows and average size for published segments.
+
+```sql
+SELECT
+  "start",
+  "end",
+  version,
+  COUNT(*) AS num_segments,
+  AVG("num_rows") AS avg_num_rows,
+  SUM("num_rows") AS total_num_rows,
+  AVG("size") AS avg_size,
+  SUM("size") AS total_size
+FROM
+  sys.segments A
+WHERE
+  datasource = 'your_dataSource' AND
+  is_published = 1
+GROUP BY 1, 2, 3
+ORDER BY 1, 2, 3 DESC;
+```
+
+Please note that the query result might include overshadowed segments.
+In this case, you may want to see only rows of the max version per interval (pair of `start` and `end`).
+
+Once you find your segments need compaction, you can consider the below two options:
+
+  - Turning on the [automatic compaction of Coordinators](../design/coordinator.html#compacting-segments).
+  The Coordinator periodically submits [compaction tasks](../ingestion/tasks.md#compact) to re-index small segments.
+  To enable the automatic compaction, you need to configure it for each dataSource via Coordinator's dynamic configuration.
+  See [Compaction Configuration API](../operations/api-reference.html#compaction-configuration)
+  and [Compaction Configuration](../configuration/index.html#compaction-dynamic-configuration) for details.
+  - Running periodic Hadoop batch ingestion jobs and using a `dataSource`
+  inputSpec to read from the segments generated by the Kafka indexing tasks. This might be helpful if you want to compact a lot of segments in parallel.
+  Details on how to do this can be found on the [Updating existing data](../ingestion/data-management.md#update) section
+  of the data management page.

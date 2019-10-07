@@ -36,26 +36,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.apache.druid.server.StatusResource.ModuleVersion;
-
-/**
- */
 public class StatusResourceTest
 {
   @Test
   public void testLoadedModules()
   {
 
-    Collection<DruidModule> modules = ImmutableList.of((DruidModule) new InitializationTest.TestDruidModule());
-    List<ModuleVersion> statusResourceModuleList = new StatusResource.Status(modules).getModules();
+    Collection<DruidModule> modules = ImmutableList.of(new InitializationTest.TestDruidModule());
+    List<StatusResource.ModuleVersion> statusResourceModuleList = new StatusResource.Status(modules).getModules();
 
     Assert.assertEquals("Status should have all modules loaded!", modules.size(), statusResourceModuleList.size());
 
     for (DruidModule module : modules) {
-      String moduleName = module.getClass().getCanonicalName();
+      String moduleName = module.getClass().getName();
 
       boolean contains = Boolean.FALSE;
-      for (ModuleVersion version : statusResourceModuleList) {
+      for (StatusResource.ModuleVersion version : statusResourceModuleList) {
         if (version.getName().equals(moduleName)) {
           contains = Boolean.TRUE;
         }
@@ -75,4 +71,3 @@ public class StatusResourceTest
     hiddenProperties.forEach((property) -> Assert.assertNull(returnedProperties.get(property)));
   }
 }
-

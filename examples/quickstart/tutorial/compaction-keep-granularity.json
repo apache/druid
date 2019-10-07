@@ -1,0 +1,10 @@
+{
+  "type": "compact",
+  "dataSource": "compaction-tutorial",
+  "interval": "2015-09-12/2015-09-13",
+  "tuningConfig" : {
+    "type" : "index",
+    "maxRowsPerSegment" : 5000000,
+    "maxRowsInMemory" : 25000
+  }
+}

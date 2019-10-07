@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeoutException;
 
@@ -32,7 +33,8 @@ import java.util.concurrent.TimeoutException;
  *
  * Fields:
  * - "errorCode" is a well-defined errorCode code taken from a specific list (see the static constants). "Unknown exception"
- * represents all wrapped exceptions other than interrupt/timeout/cancellation.
+ * represents all wrapped exceptions other than interrupt, timeout, cancellation, resource limit exceeded, unauthorized
+ * request, and unsupported operation.
  * - "errorMessage" is the toString of the wrapped exception
  * - "errorClass" is the class of the wrapped exception
  * - "host" is the host that the errorCode occurred on
@@ -47,6 +49,7 @@ public class QueryInterruptedException extends RuntimeException
   public static final String QUERY_CANCELLED = "Query cancelled";
   public static final String RESOURCE_LIMIT_EXCEEDED = "Resource limit exceeded";
   public static final String UNAUTHORIZED = "Unauthorized request.";
+  public static final String UNSUPPORTED_OPERATION = "Unsupported operation";
   public static final String UNKNOWN_EXCEPTION = "Unknown exception";
 
   private final String errorCode;
@@ -55,10 +58,10 @@ public class QueryInterruptedException extends RuntimeException
 
   @JsonCreator
   public QueryInterruptedException(
-      @JsonProperty("error") String errorCode,
+      @JsonProperty("error") @Nullable String errorCode,
       @JsonProperty("errorMessage") String errorMessage,
-      @JsonProperty("errorClass") String errorClass,
-      @JsonProperty("host") String host
+      @JsonProperty("errorClass") @Nullable String errorClass,
+      @JsonProperty("host") @Nullable String host
   )
   {
     super(errorMessage);
@@ -86,6 +89,7 @@ public class QueryInterruptedException extends RuntimeException
     this.host = host;
   }
 
+  @Nullable
   @JsonProperty("error")
   public String getErrorCode()
   {
@@ -135,11 +139,14 @@ public class QueryInterruptedException extends RuntimeException
       return QUERY_TIMEOUT;
     } else if (e instanceof ResourceLimitExceededException) {
       return RESOURCE_LIMIT_EXCEEDED;
+    } else if (e instanceof UnsupportedOperationException) {
+      return UNSUPPORTED_OPERATION;
     } else {
       return UNKNOWN_EXCEPTION;
     }
   }
 
+  @Nullable
   private static String getErrorClassFromThrowable(Throwable e)
   {
     if (e instanceof QueryInterruptedException) {
@@ -151,6 +158,7 @@ public class QueryInterruptedException extends RuntimeException
     }
   }
 
+  @Nullable
   private static String getHostFromThrowable(Throwable e)
   {
     if (e instanceof QueryInterruptedException) {

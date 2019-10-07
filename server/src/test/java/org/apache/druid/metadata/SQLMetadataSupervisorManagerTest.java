@@ -22,6 +22,7 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.VersionedSupervisorSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -35,12 +36,13 @@ import org.junit.Test;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 public class SQLMetadataSupervisorManagerTest
 {
-  private static final ObjectMapper mapper = new DefaultObjectMapper();
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
@@ -52,7 +54,24 @@ public class SQLMetadataSupervisorManagerTest
   @BeforeClass
   public static void setupStatic()
   {
-    mapper.registerSubtypes(TestSupervisorSpec.class);
+    MAPPER.registerSubtypes(TestSupervisorSpec.class);
+  }
+
+  @After
+  public void cleanup()
+  {
+    connector.getDBI().withHandle(
+        new HandleCallback<Void>()
+        {
+          @Override
+          public Void withHandle(Handle handle)
+          {
+            handle.createStatement(StringUtils.format("DROP TABLE %s", tablesConfig.getSupervisorTable()))
+                  .execute();
+            return null;
+          }
+        }
+    );
   }
 
   @Before
@@ -62,7 +81,7 @@ public class SQLMetadataSupervisorManagerTest
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createSupervisorsTable();
 
-    supervisorManager = new SQLMetadataSupervisorManager(mapper, connector, Suppliers.ofInstance(tablesConfig));
+    supervisorManager = new SQLMetadataSupervisorManager(MAPPER, connector, Suppliers.ofInstance(tablesConfig));
   }
 
   @Test
@@ -118,20 +137,58 @@ public class SQLMetadataSupervisorManagerTest
     Assert.assertEquals(data2rev2, ((TestSupervisorSpec) latestSpecs.get(supervisor2)).getData());
   }
 
-  @After
-  public void cleanup()
+  @Test
+  public void testSkipDeserializingBadSpecs()
   {
-    connector.getDBI().withHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            handle.createStatement(StringUtils.format("DROP TABLE %s", tablesConfig.getSupervisorTable()))
-                  .execute();
-            return null;
-          }
-        }
-    );
+    final String supervisor1 = "test-supervisor-1";
+    final String supervisor2 = "test-supervisor-2";
+    final Map<String, String> data1rev1 = ImmutableMap.of("key1-1", "value1-1-1", "key1-2", "value1-2-1");
+    final Map<String, String> data1rev2 = ImmutableMap.of("key1-1", "value1-1-2", "key1-2", "value1-2-2");
+
+    supervisorManager.insert(supervisor1, new TestSupervisorSpec(supervisor1, data1rev1));
+    supervisorManager.insert(supervisor2, new BadSupervisorSpec(supervisor2, supervisor2));
+    supervisorManager.insert(supervisor1, new TestSupervisorSpec(supervisor1, data1rev2));
+
+    final Map<String, List<VersionedSupervisorSpec>> allSpecs = supervisorManager.getAll();
+
+    Assert.assertEquals(2, allSpecs.size());
+    List<VersionedSupervisorSpec> specs = allSpecs.get(supervisor1);
+    Assert.assertEquals(2, specs.size());
+    Assert.assertEquals(new TestSupervisorSpec(supervisor1, data1rev2), specs.get(0).getSpec());
+    Assert.assertEquals(new TestSupervisorSpec(supervisor1, data1rev1), specs.get(1).getSpec());
+
+    specs = allSpecs.get(supervisor2);
+    Assert.assertEquals(1, specs.size());
+    Assert.assertNull(specs.get(0).getSpec());
+  }
+
+  private static class BadSupervisorSpec implements SupervisorSpec
+  {
+    private final String id;
+    private final String dataSource;
+
+    private BadSupervisorSpec(String id, String dataSource)
+    {
+      this.id = id;
+      this.dataSource = dataSource;
+    }
+
+    @Override
+    public String getId()
+    {
+      return id;
+    }
+
+    @Override
+    public Supervisor createSupervisor()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<String> getDataSources()
+    {
+      return Collections.singletonList(dataSource);
+    }
   }
 }

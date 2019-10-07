@@ -1,0 +1,366 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`segments-view matches snapshot 1`] = `
+<Fragment>
+  <div
+    className="segments-view app-view"
+  >
+    <ViewControlBar
+      label="Segments"
+    >
+      <RefreshButton
+        localStorageKey="segments-refresh-rate"
+        onRefresh={[Function]}
+      />
+      <Component>
+        Group by
+      </Component>
+      <Blueprint3.ButtonGroup>
+        <Blueprint3.Button
+          active={true}
+          onClick={[Function]}
+        >
+          None
+        </Blueprint3.Button>
+        <Blueprint3.Button
+          active={false}
+          onClick={[Function]}
+        >
+          Interval
+        </Blueprint3.Button>
+      </Blueprint3.ButtonGroup>
+      <Blueprint3.Popover
+        boundary="scrollParent"
+        captureDismiss={false}
+        content={
+          <Blueprint3.Menu>
+            <Blueprint3.MenuItem
+              disabled={true}
+              icon="application"
+              multiline={false}
+              onClick={[Function]}
+              popoverProps={Object {}}
+              shouldDismissPopover={true}
+              text="View SQL query for table"
+            />
+          </Blueprint3.Menu>
+        }
+        defaultIsOpen={false}
+        disabled={false}
+        fill={false}
+        hasBackdrop={false}
+        hoverCloseDelay={300}
+        hoverOpenDelay={150}
+        inheritDarkTheme={true}
+        interactionKind="click"
+        minimal={false}
+        modifiers={Object {}}
+        openOnTargetFocus={true}
+        position="bottom-left"
+        targetTagName="span"
+        transitionDuration={300}
+        usePortal={true}
+        wrapperTagName="span"
+      >
+        <Blueprint3.Button
+          icon="more"
+        />
+      </Blueprint3.Popover>
+      <TableColumnSelector
+        columns={
+          Array [
+            "Segment ID",
+            "Datasource",
+            "Start",
+            "End",
+            "Version",
+            "Partition",
+            "Size",
+            "Num rows",
+            "Replicas",
+            "Is published",
+            "Is realtime",
+            "Is available",
+            "Is overshadowed",
+            "Actions",
+          ]
+        }
+        onChange={[Function]}
+        tableColumnsHidden={Array []}
+      />
+    </ViewControlBar>
+    <ReactTable
+      AggregatedComponent={[Function]}
+      ExpanderComponent={[Function]}
+      FilterComponent={[Function]}
+      LoadingComponent={[Function]}
+      NoDataComponent={[Function]}
+      PadRowComponent={[Function]}
+      PaginationComponent={[Function]}
+      PivotValueComponent={[Function]}
+      ResizerComponent={[Function]}
+      TableComponent={[Function]}
+      TbodyComponent={[Function]}
+      TdComponent={[Function]}
+      TfootComponent={[Function]}
+      ThComponent={[Function]}
+      TheadComponent={[Function]}
+      TrComponent={[Function]}
+      TrGroupComponent={[Function]}
+      aggregatedKey="_aggregated"
+      className=""
+      collapseOnDataChange={true}
+      collapseOnPageChange={true}
+      collapseOnSortingChange={true}
+      column={
+        Object {
+          "Aggregated": undefined,
+          "Cell": undefined,
+          "Expander": undefined,
+          "Filter": undefined,
+          "Footer": undefined,
+          "Header": undefined,
+          "Pivot": undefined,
+          "PivotValue": undefined,
+          "Placeholder": undefined,
+          "aggregate": undefined,
+          "className": "",
+          "filterAll": false,
+          "filterMethod": undefined,
+          "filterable": undefined,
+          "footerClassName": "",
+          "footerStyle": Object {},
+          "getFooterProps": [Function],
+          "getHeaderProps": [Function],
+          "getProps": [Function],
+          "headerClassName": "",
+          "headerStyle": Object {},
+          "minResizeWidth": 11,
+          "minWidth": 100,
+          "resizable": undefined,
+          "show": true,
+          "sortMethod": undefined,
+          "sortable": undefined,
+          "style": Object {},
+        }
+      }
+      columns={
+        Array [
+          Object {
+            "Header": "Segment ID",
+            "accessor": "segment_id",
+            "show": true,
+            "width": 300,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": "Datasource",
+            "accessor": "datasource",
+            "show": true,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": "Interval",
+            "accessor": "interval",
+            "defaultSortDesc": true,
+            "show": false,
+            "width": 120,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": "Start",
+            "accessor": "start",
+            "defaultSortDesc": true,
+            "show": true,
+            "width": 120,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": "End",
+            "accessor": "end",
+            "defaultSortDesc": true,
+            "show": true,
+            "width": 120,
+          },
+          Object {
+            "Header": "Version",
+            "accessor": "version",
+            "defaultSortDesc": true,
+            "show": true,
+            "width": 120,
+          },
+          Object {
+            "Header": "Partition",
+            "accessor": "partition_num",
+            "filterable": false,
+            "show": true,
+            "width": 60,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": "Size",
+            "accessor": "size",
+            "defaultSortDesc": true,
+            "filterable": false,
+            "show": true,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": "Num rows",
+            "accessor": "num_rows",
+            "defaultSortDesc": true,
+            "filterable": false,
+            "show": true,
+          },
+          Object {
+            "Header": "Replicas",
+            "accessor": "num_replicas",
+            "defaultSortDesc": true,
+            "filterable": false,
+            "show": true,
+            "width": 60,
+          },
+          Object {
+            "Filter": [Function],
+            "Header": "Is published",
+            "accessor": [Function],
+            "id": "is_published",
+            "show": true,
+          },
+          Object {
+            "Filter": [Function],
+            "Header": "Is realtime",
+            "accessor": [Function],
+            "id": "is_realtime",
+            "show": true,
+          },
+          Object {
+            "Filter": [Function],
+            "Header": "Is available",
+            "accessor": [Function],
+            "id": "is_available",
+            "show": true,
+          },
+          Object {
+            "Filter": [Function],
+            "Header": "Is overshadowed",
+            "accessor": [Function],
+            "id": "is_overshadowed",
+            "show": true,
+          },
+          Object {
+            "Aggregated": [Function],
+            "Cell": [Function],
+            "Header": "Actions",
+            "accessor": "segment_id",
+            "filterable": false,
+            "id": "actions",
+            "show": true,
+            "width": 70,
+          },
+        ]
+      }
+      data={Array []}
+      defaultExpanded={Object {}}
+      defaultFilterMethod={[Function]}
+      defaultFiltered={Array []}
+      defaultPage={0}
+      defaultPageSize={25}
+      defaultResized={Array []}
+      defaultSortDesc={false}
+      defaultSortMethod={[Function]}
+      defaultSorted={
+        Array [
+          Object {
+            "desc": true,
+            "id": "start",
+          },
+        ]
+      }
+      expanderDefaults={
+        Object {
+          "filterable": false,
+          "resizable": false,
+          "sortable": false,
+          "width": 35,
+        }
+      }
+      filterable={true}
+      filtered={
+        Array [
+          Object {
+            "id": "datasource",
+            "value": "\\"test\\"",
+          },
+        ]
+      }
+      freezeWhenExpanded={false}
+      getLoadingProps={[Function]}
+      getNoDataProps={[Function]}
+      getPaginationProps={[Function]}
+      getProps={[Function]}
+      getResizerProps={[Function]}
+      getTableProps={[Function]}
+      getTbodyProps={[Function]}
+      getTdProps={[Function]}
+      getTfootProps={[Function]}
+      getTfootTdProps={[Function]}
+      getTfootTrProps={[Function]}
+      getTheadFilterProps={[Function]}
+      getTheadFilterThProps={[Function]}
+      getTheadFilterTrProps={[Function]}
+      getTheadGroupProps={[Function]}
+      getTheadGroupThProps={[Function]}
+      getTheadGroupTrProps={[Function]}
+      getTheadProps={[Function]}
+      getTheadThProps={[Function]}
+      getTheadTrProps={[Function]}
+      getTrGroupProps={[Function]}
+      getTrProps={[Function]}
+      groupedByPivotKey="_groupedByPivot"
+      indexKey="_index"
+      loading={true}
+      loadingText="Loading..."
+      manual={true}
+      multiSort={true}
+      nestingLevelKey="_nestingLevel"
+      nextText="Next"
+      noDataText=""
+      ofText=""
+      onFetchData={[Function]}
+      onFilteredChange={[Function]}
+      originalKey="_original"
+      pageJumpText="jump to page"
+      pageSizeOptions={
+        Array [
+          5,
+          10,
+          20,
+          25,
+          50,
+          100,
+        ]
+      }
+      pageText="Page"
+      pages={10000000}
+      pivotBy={Array []}
+      pivotDefaults={Object {}}
+      pivotIDKey="_pivotID"
+      pivotValKey="_pivotVal"
+      previousText="Previous"
+      resizable={true}
+      resolveData={[Function]}
+      rowsSelectorText="rows per page"
+      rowsText="rows"
+      showPageJump={false}
+      showPageSizeOptions={true}
+      showPagination={true}
+      showPaginationBottom={true}
+      showPaginationTop={false}
+      sortable={true}
+      style={Object {}}
+      subRowsKey="_subRows"
+    />
+  </div>
+</Fragment>
+`;

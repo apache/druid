@@ -23,9 +23,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 
 /**
- * A synchronization tool for lifecycled objects (see {@link org.apache.druid.java.util.common.lifecycle.Lifecycle}, that need
- * happens-before between start() and other methods and/or to check that the object was successfully started in other
- * methods.
+ * A synchronization tool for lifecycled objects (see {@link org.apache.druid.java.util.common.lifecycle.Lifecycle},
+ * that need happens-before between start() and other methods and/or to check that the object was successfully started
+ * in other methods.
  *
  * Guarantees in terms of JMM: happens-before between {@link #exitStart()} and {@link #awaitStarted()},
  * exitStart() and {@link #canStop()}, if it returns {@code true}.

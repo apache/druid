@@ -38,13 +38,13 @@ import org.apache.druid.query.aggregation.histogram.FixedBucketsHistogram;
 import org.apache.druid.query.aggregation.histogram.FixedBucketsHistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.histogram.QuantilePostAggregator;
 import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
@@ -67,6 +67,7 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
       RowSignature rowSignature,
+      VirtualColumnRegistry virtualColumnRegistry,
       RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
@@ -230,13 +231,14 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
           numBuckets,
           lowerLimit,
           upperLimit,
-          outlierHandlingMode
+          outlierHandlingMode,
+          false
       );
     } else {
-      final ExpressionVirtualColumn virtualColumn = input.toVirtualColumn(
-          StringUtils.format("%s:v", name),
-          ValueType.FLOAT,
-          plannerContext.getExprMacroTable()
+      VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+          plannerContext,
+          input,
+          SqlTypeName.FLOAT
       );
       virtualColumns.add(virtualColumn);
       aggregatorFactory = new FixedBucketsHistogramAggregatorFactory(
@@ -245,7 +247,8 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
           numBuckets,
           lowerLimit,
           upperLimit,
-          outlierHandlingMode
+          outlierHandlingMode,
+          false
       );
     }
 

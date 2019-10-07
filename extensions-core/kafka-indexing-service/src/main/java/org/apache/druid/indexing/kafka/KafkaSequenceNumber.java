@@ -23,6 +23,8 @@ import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 
 import javax.validation.constraints.NotNull;
 
+// OrderedSequenceNumber.equals() should be used instead.
+@SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
 public class KafkaSequenceNumber extends OrderedSequenceNumber<Long>
 {
   private KafkaSequenceNumber(Long sequenceNumber)

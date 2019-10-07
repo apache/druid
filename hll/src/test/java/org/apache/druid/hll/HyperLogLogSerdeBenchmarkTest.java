@@ -55,7 +55,7 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
     this.NUM_HASHES = num_hashes;
   }
 
-  private static final HashFunction hashFunction = Hashing.murmur3_128();
+  private static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
 
   @Parameterized.Parameters
   public static Collection<Object[]> getParameters()
@@ -216,13 +216,13 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
   {
     Random rand = new Random(758190);
     for (long i = 0; i < NUM_HASHES; ++i) {
-      collector.add(hashFunction.hashLong(rand.nextLong()).asBytes());
+      collector.add(HASH_FUNCTION.hashLong(rand.nextLong()).asBytes());
     }
   }
 
   private static HashCode getHash(final ByteBuffer byteBuffer)
   {
-    Hasher hasher = hashFunction.newHasher();
+    Hasher hasher = HASH_FUNCTION.newHasher();
     while (byteBuffer.position() < byteBuffer.limit()) {
       hasher.putByte(byteBuffer.get());
     }

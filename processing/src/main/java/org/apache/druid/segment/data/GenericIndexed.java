@@ -85,7 +85,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
 
   static final int NULL_VALUE_SIZE_MARKER = -1;
 
-  private static final MetaSerdeHelper<GenericIndexed> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<GenericIndexed> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((GenericIndexed x) -> VERSION_ONE)
       .writeByte(x -> x.allowReverseLookup ? REVERSE_LOOKUP_ALLOWED : REVERSE_LOOKUP_DISALLOWED)
       .writeInt(x -> Ints.checkedCast(x.theBuffer.remaining() + (long) Integer.BYTES))
@@ -198,6 +198,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
   private int logBaseTwoOfElementsPerValueFile;
   private int relativeIndexMask;
 
+  @Nullable
   private final ByteBuffer theBuffer;
 
   /**
@@ -468,7 +469,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     // nothing to close
   }
@@ -553,7 +554,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
 
   private long getSerializedSizeVersionOne()
   {
-    return metaSerdeHelper.size(this) + (long) theBuffer.remaining();
+    return META_SERDE_HELPER.size(this) + (long) theBuffer.remaining();
   }
 
   @Nullable
@@ -611,7 +612,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
 
   private void writeToVersionOne(WritableByteChannel channel) throws IOException
   {
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     Channels.writeFully(channel, theBuffer.asReadOnlyBuffer());
   }
 

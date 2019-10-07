@@ -41,7 +41,7 @@ import java.nio.ByteBuffer;
  */
 public class TestQueryRunners
 {
-  private static final TopNQueryConfig topNConfig = new TopNQueryConfig();
+  private static final TopNQueryConfig TOPN_CONFIG = new TopNQueryConfig();
 
   public static CloseableStupidPool<ByteBuffer> createDefaultNonBlockingPool()
   {
@@ -56,7 +56,7 @@ public class TestQueryRunners
     QueryRunnerFactory factory = new TopNQueryRunnerFactory(
         pool,
         new TopNQueryQueryToolChest(
-            topNConfig,
+            TOPN_CONFIG,
             QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
         ),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER

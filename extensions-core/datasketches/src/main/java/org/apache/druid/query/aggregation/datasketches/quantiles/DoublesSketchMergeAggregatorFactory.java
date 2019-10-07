@@ -45,7 +45,7 @@ public class DoublesSketchMergeAggregatorFactory extends DoublesSketchAggregator
   {
     final ColumnValueSelector<DoublesSketch> selector = metricFactory.makeColumnValueSelector(getFieldName());
     if (selector instanceof NilColumnValueSelector) {
-      return new DoublesSketchNoOpAggregator();
+      return new NoopDoublesSketchAggregator();
     }
     return new DoublesSketchMergeAggregator(selector, getK());
   }
@@ -55,7 +55,7 @@ public class DoublesSketchMergeAggregatorFactory extends DoublesSketchAggregator
   {
     final ColumnValueSelector<DoublesSketch> selector = metricFactory.makeColumnValueSelector(getFieldName());
     if (selector instanceof NilColumnValueSelector) {
-      return new DoublesSketchNoOpBufferAggregator();
+      return new NoopDoublesSketchBufferAggregator();
     }
     return new DoublesSketchMergeBufferAggregator(selector, getK(), getMaxIntermediateSizeWithNulls());
   }

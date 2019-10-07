@@ -57,8 +57,7 @@ public class TaskAnnouncementTest
             new DataSchema("foo", null, new AggregatorFactory[0], null, null, new DefaultObjectMapper()),
             new RealtimeIOConfig(
                 new LocalFirehoseFactory(new File("lol"), "rofl", null),
-                (schema, config, metrics) -> null,
-                null
+                (schema, config, metrics) -> null
             ),
             null
         ),

@@ -40,7 +40,9 @@ public class NilColumnValueSelector implements ColumnValueSelector
     return INSTANCE;
   }
 
-  private NilColumnValueSelector() {}
+  private NilColumnValueSelector()
+  {
+  }
 
   /**
    * always returns 0, if {@link NullHandling#NULL_HANDLING_CONFIG_STRING} is set to true,

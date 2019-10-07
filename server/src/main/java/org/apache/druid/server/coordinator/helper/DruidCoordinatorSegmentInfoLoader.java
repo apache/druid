@@ -19,18 +19,17 @@
 
 package org.apache.druid.server.coordinator.helper;
 
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.client.DataSourcesSnapshot;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.Set;
-
 public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
 {
-  private final DruidCoordinator coordinator;
+  private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorSegmentInfoLoader.class);
 
-  private static final Logger log = new Logger(DruidCoordinatorSegmentInfoLoader.class);
+  private final DruidCoordinator coordinator;
 
   public DruidCoordinatorSegmentInfoLoader(DruidCoordinator coordinator)
   {
@@ -40,21 +39,27 @@ public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    log.info("Starting coordination. Getting available segments.");
+    log.info("Starting coordination. Getting used segments.");
 
-    // Display info about all available segments
-    final Set<DataSegment> availableSegments = coordinator.getOrderedAvailableDataSegments();
+    DataSourcesSnapshot dataSourcesSnapshot = params.getDataSourcesSnapshot();
+    for (DataSegment segment : dataSourcesSnapshot.iterateAllUsedSegmentsInSnapshot()) {
+      if (segment.getSize() < 0) {
+        log.makeAlert("No size on a segment")
+           .addData("segment", segment)
+           .emit();
+      }
+    }
+
+    // Log info about all used segments
     if (log.isDebugEnabled()) {
-      log.debug("Available DataSegments");
-      for (DataSegment dataSegment : availableSegments) {
+      log.debug("Used Segments");
+      for (DataSegment dataSegment : dataSourcesSnapshot.iterateAllUsedSegmentsInSnapshot()) {
         log.debug("  %s", dataSegment);
       }
     }
 
-    log.info("Found [%,d] available segments.", availableSegments.size());
+    log.info("Found [%,d] used segments.", params.getUsedSegments().size());
 
-    return params.buildFromExisting()
-                 .withAvailableSegments(availableSegments)
-                 .build();
+    return params;
   }
 }

@@ -39,5 +39,7 @@ public final class RowIteratorHelper
     }
   }
 
-  private RowIteratorHelper() {}
+  private RowIteratorHelper()
+  {
+  }
 }

@@ -30,5 +30,7 @@ public class NoopServiceEmitter extends ServiceEmitter
   }
 
   @Override
-  public void emit(Event event) {}
+  public void emit(Event event)
+  {
+  }
 }

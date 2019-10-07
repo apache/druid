@@ -26,6 +26,8 @@ import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
+import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -33,18 +35,18 @@ import java.nio.ByteOrder;
  */
 public class MetricHolder
 {
-  private static final byte[] version = new byte[]{0x0};
-  private static final SerializerUtils serializerUtils = new SerializerUtils();
+  private static final byte[] VERSION = new byte[]{0x0};
+  private static final SerializerUtils SERIALIZER_UTILS = new SerializerUtils();
 
   public static MetricHolder fromByteBuffer(ByteBuffer buf)
   {
     final byte ver = buf.get();
-    if (version[0] != ver) {
+    if (VERSION[0] != ver) {
       throw new ISE("Unknown version[%s] of MetricHolder", ver);
     }
 
-    final String metricName = serializerUtils.readString(buf);
-    final String typeName = serializerUtils.readString(buf);
+    final String metricName = SERIALIZER_UTILS.readString(buf);
+    final String typeName = SERIALIZER_UTILS.readString(buf);
     MetricHolder holder = new MetricHolder(metricName, typeName);
 
     switch (holder.type) {
@@ -96,7 +98,9 @@ public class MetricHolder
   private final String name;
   private final String typeName;
   private final MetricType type;
+  @Nullable
   CompressedColumnarFloatsSupplier floatType = null;
+  @Nullable
   GenericIndexed<?> complexType = null;
 
   private MetricHolder(

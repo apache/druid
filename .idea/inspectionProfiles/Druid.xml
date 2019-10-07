@@ -17,7 +17,9 @@
     <inspection_tool class="CatchMayIgnoreException" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="m_ignoreCatchBlocksWithComments" value="false" />
     </inspection_tool>
+    <inspection_tool class="CheckDtdRefs" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
     <inspection_tool class="CheckValidXmlInScriptTagBody" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="CheckXmlFileWithXercesValidator" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
     <inspection_tool class="ClassGetClass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ClassNewInstance" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="CollectionAddedToSelf" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -46,6 +48,7 @@
     <inspection_tool class="EqualsUsesNonFinalVariable" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="EqualsWhichDoesntCheckParameterClass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="EqualsWithItself" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="FieldAccessNotGuarded" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="FieldCanBeLocal" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="EXCLUDE_ANNOS">
         <value>
@@ -56,6 +59,8 @@
       </option>
       <option name="IGNORE_FIELDS_USED_IN_MULTIPLE_METHODS" value="true" />
     </inspection_tool>
+    <inspection_tool class="FieldMayBeFinal" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="FlowJSError" enabled="false" level="Non-TeamCity Error" enabled_by_default="false" />
     <inspection_tool class="ForCanBeForeach" enabled="true" level="WARNING" enabled_by_default="true">
       <scope name="NonGeneratedFiles" level="ERROR" enabled="true">
         <option name="REPORT_INDEXED_LOOP" value="true" />
@@ -77,7 +82,16 @@
     <inspection_tool class="InvalidComparatorMethodReference" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="IteratorHasNextCallsIteratorNext" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="IteratorNextDoesNotThrowNoSuchElementException" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="JSAnnotator" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
+    <inspection_tool class="JSHint" enabled="false" level="Non-TeamCity Error" enabled_by_default="false" />
+    <inspection_tool class="JSLint" enabled="false" level="Non-TeamCity Error" enabled_by_default="false" />
+    <inspection_tool class="JSRedeclarationOfBlockScope" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
+    <inspection_tool class="JSReferencingArgumentsOutsideOfFunction" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
     <inspection_tool class="Java8MapForEach" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="JavadocReference" enabled="true" level="ERROR" enabled_by_default="true">
+      <option name="REPORT_INACCESSIBLE" value="false" />
+    </inspection_tool>
+    <inspection_tool class="Jscs" enabled="false" level="Non-TeamCity Error" enabled_by_default="false" />
     <inspection_tool class="JsonDuplicatePropertyKeys" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="JsonStandardCompliance" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="LengthOneStringInIndexOf" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -119,7 +133,7 @@
     <inspection_tool class="NumberEquality" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ObjectEquality" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="m_ignoreEnums" value="true" />
-      <option name="m_ignoreClassObjects" value="false" />
+      <option name="m_ignoreClassObjects" value="true" />
       <option name="m_ignorePrivateConstructors" value="false" />
     </inspection_tool>
     <inspection_tool class="ObjectEqualsNull" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -268,6 +282,70 @@
         <constraint name="b" within="" contains="" />
         <constraint name="c" within="" contains="" />
       </searchConfiguration>
+      <searchConfiguration name="No need to wrap a collection as unmodifiable before addAll()" text="$c$.addAll(Collections.$unmodifiableMethod$($c2$))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="c" within="" contains="" />
+        <constraint name="unmodifiableMethod" regexp="unmodifiable.*" within="" contains="" />
+        <constraint name="c2" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="No need to copy a collection as immutable before addAll()" text="$m$.addAll($ImmutableCollection$.copyOf($x$))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="m" within="" contains="" />
+        <constraint name="x" maxCount="2147483647" within="" contains="" />
+        <constraint name="ImmutableCollection" regexp="Immutable.*" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="No need to wrap a map as unmodifiable before putAll()" text="$m$.putAll(Collections.$unmodifiableMapMethod$($m2$))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="m" within="" contains="" />
+        <constraint name="m2" within="" contains="" />
+        <constraint name="unmodifiableMapMethod" regexp="unmodifiable.*" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="No need to copy a map to immutable before putAll()" text="$m$.putAll($ImmutableMap$.copyOf($x$))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="m" within="" contains="" />
+        <constraint name="x" maxCount="2147483647" within="" contains="" />
+        <constraint name="ImmutableMap" regexp="Immutable.*" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use map.putIfAbsent(k,v) or map.computeIfAbsent(k,v) where appropriate instead of containsKey() + put(). If computing v is expensive or has side effects use map.computeIfAbsent() instead" created="1558868694225" text="if (!$m$.containsKey($k$)) {&#10;    $m$.put($k$, $v$);&#10;}" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="m" within="" contains="" />
+        <constraint name="k" within="" contains="" />
+        <constraint name="v" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Prohibit Thread.getState() != TERMINATED antipattern" text="$t$.getState()!=Thread.State.$state$" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="t" within="" contains="" />
+        <constraint name="state" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Prohibit Thread.getState() == TERMINATED antipattern" text="$t$.getState()==Thread.State.$state$" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="t" within="" contains="" />
+        <constraint name="state" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use CollectionUtils.mapValues(Map&lt;K,V&gt;, Function&lt;V,V2&gt;)" text="$x$.entrySet().stream().collect(Collectors.toMap($k$ -&gt; $k$.getKey(), $y$))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="x" within="" contains="" />
+        <constraint name="y" within="" contains="" />
+        <constraint name="k" within="" contains="" />
+        <constraint name="__context__" target="true" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use CollectionUtils.mapValues(Map&lt;k,v&gt;, Function&lt;v,v2&gt;)" text="$x$.entrySet().stream().collect(Collectors.toMap(Entry::getKey, $y$))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="x" within="" contains="" />
+        <constraint name="y" within="" contains="" />
+        <constraint name="__context__" target="true" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use CollectionUtils.mapKeys(Map&lt;K,V&gt;, Function&lt;K,K2&gt;)" text="$x$.entrySet().stream().collect(Collectors.toMap($y$, $v$ -&gt; $v$.getValue()))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="x" within="" contains="" />
+        <constraint name="y" within="" contains="" />
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="v" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use CollectionUtils.mapKeys(Map&lt;k,v&gt;, Function&lt;k,k2&gt;)" text="$x$.entrySet().stream().collect(Collectors.toMap($y$, Map.Entry::getValue))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="x" within="" contains="" />
+        <constraint name="y" within="" contains="" />
+        <constraint name="__context__" target="true" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use collections constructors directly" text="Stream.of($x$).collect(Collectors.$m$())" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="m" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
     </inspection_tool>
     <inspection_tool class="SimplifyStreamApiCallChains" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SpellCheckingInspection" enabled="false" level="TYPO" enabled_by_default="false">
@@ -275,8 +353,10 @@
       <option name="processLiterals" value="true" />
       <option name="processComments" value="true" />
     </inspection_tool>
+    <inspection_tool class="StandardJS" enabled="false" level="Non-TeamCity Error" enabled_by_default="false" />
     <inspection_tool class="StaticCallOnSubclass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="StaticFieldReferenceOnSubclass" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="StaticPseudoFunctionalStyleMethod" enabled="true" level="INFORMATION" enabled_by_default="true" />
     <inspection_tool class="StringConcatenationInFormatCall" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="StringConcatenationInMessageFormatCall" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="StringConcatenationMissingWhitespace" enabled="true" level="WARNING" enabled_by_default="true" />
@@ -300,7 +380,7 @@
     </inspection_tool>
     <inspection_tool class="SuspiciousSystemArraycopy" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SuspiciousToArrayCall" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="SyntaxError" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="SyntaxError" enabled="true" level="Non-TeamCity Warning" enabled_by_default="true" />
     <inspection_tool class="TextLabelInSwitchStatement" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ThrowableNotThrown" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ToArrayCallWithZeroLengthArrayArgument" enabled="true" level="WARNING" enabled_by_default="true">
@@ -331,7 +411,10 @@
     <inspection_tool class="UnusedLibrary" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="UseOfPropertiesAsHashtable" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="VariableNotUsedInsideIf" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="XmlHighlighting" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="XmlDuplicatedId" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
+    <inspection_tool class="XmlHighlighting" enabled="true" level="Non-TeamCity Warning" enabled_by_default="true" />
+    <inspection_tool class="XmlInvalidId" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
+    <inspection_tool class="XmlPathReference" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
     <inspection_tool class="unused" enabled="true" level="WARNING" enabled_by_default="true">
       <scope name="UnusedInspectionsScope" level="ERROR" enabled="true">
         <option name="LOCAL_VARIABLE" value="true" />
@@ -356,6 +439,5 @@
       <option name="ADD_SERVLET_TO_ENTRIES" value="true" />
       <option name="ADD_NONJAVA_TO_ENTRIES" value="true" />
     </inspection_tool>
-    <inspection_tool class="FieldAccessNotGuarded" enabled="true" level="ERROR" enabled_by_default="true" />
   </profile>
 </component>

@@ -124,7 +124,7 @@ public class InfluxParser implements Parser<String, Object>
   private Object parseNumber(String raw)
   {
     if (raw.endsWith("i")) {
-      return new Long(raw.substring(0, raw.length() - 1));
+      return Long.valueOf(raw.substring(0, raw.length() - 1));
     }
 
     return new Double(raw);
@@ -161,7 +161,7 @@ public class InfluxParser implements Parser<String, Object>
       dest.put(TIMESTAMP_KEY, 0L);
     } else {
       timestamp = timestamp.substring(0, timestamp.length() - 6);
-      long timestampMillis = new Long(timestamp);
+      final long timestampMillis = Long.valueOf(timestamp);
       dest.put(TIMESTAMP_KEY, timestampMillis);
     }
   }

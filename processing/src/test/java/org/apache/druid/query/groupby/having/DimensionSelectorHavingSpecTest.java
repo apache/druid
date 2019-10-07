@@ -22,28 +22,21 @@ package org.apache.druid.query.groupby.having;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
+import org.apache.druid.query.groupby.ResultRow;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-
-
 public class DimensionSelectorHavingSpecTest
 {
 
-  private Row getTestRow(Object dimensionValue)
+  private ResultRow getTestRow(Object dimensionValue)
   {
-    return new MapBasedRow(0, ImmutableMap.of("dimension", dimensionValue));
+    return ResultRow.of(dimensionValue);
   }
 
   @Test
@@ -58,7 +51,7 @@ public class DimensionSelectorHavingSpecTest
     );
 
     ObjectMapper mapper = new DefaultObjectMapper();
-    assertEquals(dimHavingSpec, mapper.convertValue(dimSelectMap, DimensionSelectorHavingSpec.class));
+    Assert.assertEquals(dimHavingSpec, mapper.convertValue(dimSelectMap, DimensionSelectorHavingSpec.class));
   }
 
   @Test
@@ -83,14 +76,13 @@ public class DimensionSelectorHavingSpecTest
     HavingSpec dimHavingSpec13 = new DimensionSelectorHavingSpec("dim", "value", extractionFn1);
     HavingSpec dimHavingSpec14 = new DimensionSelectorHavingSpec("dim", "value", extractionFn2);
 
-    assertEquals(dimHavingSpec1, dimHavingSpec2);
-    assertNotEquals(dimHavingSpec3, dimHavingSpec4);
-    assertNotEquals(dimHavingSpec5, dimHavingSpec6);
-    assertEquals(dimHavingSpec7, dimHavingSpec8);
-    assertNotEquals(dimHavingSpec9, dimHavingSpec10);
-    assertNotEquals(dimHavingSpec11, dimHavingSpec12);
-    assertNotEquals(dimHavingSpec13, dimHavingSpec14);
-
+    Assert.assertEquals(dimHavingSpec1, dimHavingSpec2);
+    Assert.assertNotEquals(dimHavingSpec3, dimHavingSpec4);
+    Assert.assertNotEquals(dimHavingSpec5, dimHavingSpec6);
+    Assert.assertEquals(dimHavingSpec7, dimHavingSpec8);
+    Assert.assertNotEquals(dimHavingSpec9, dimHavingSpec10);
+    Assert.assertNotEquals(dimHavingSpec11, dimHavingSpec12);
+    Assert.assertNotEquals(dimHavingSpec13, dimHavingSpec14);
   }
 
   @Test
@@ -98,22 +90,23 @@ public class DimensionSelectorHavingSpecTest
   {
     ExtractionFn extractionFn = new RegexDimExtractionFn("^([^,]*),", false, "");
     String expected = "DimensionSelectorHavingSpec{" +
-                                 "dimension='gender'," +
-                                 " value='m'," +
-                                 " extractionFn=regex(/^([^,]*),/, 1)}";
+                      "dimension='gender'," +
+                      " value='m'," +
+                      " extractionFn=regex(/^([^,]*),/, 1)}";
     Assert.assertEquals(expected, new DimensionSelectorHavingSpec("gender", "m", extractionFn).toString());
-    
+
     expected = "DimensionSelectorHavingSpec{" +
-                                 "dimension='gender'," +
-                                 " value='m'," +
-                                 " extractionFn=Identity}";
-    
+               "dimension='gender'," +
+               " value='m'," +
+               " extractionFn=Identity}";
+
     Assert.assertEquals(expected, new DimensionSelectorHavingSpec("gender", "m", null).toString());
   }
 
   @Test(expected = NullPointerException.class)
   public void testNullDimension()
   {
+    //noinspection ResultOfObjectAllocationIgnored (result is not needed)
     new DimensionSelectorHavingSpec(null, "value", null);
   }
 
@@ -121,34 +114,33 @@ public class DimensionSelectorHavingSpecTest
   public void testDimensionFilterSpec()
   {
     DimensionSelectorHavingSpec spec = new DimensionSelectorHavingSpec("dimension", "v", null);
-    assertTrue(spec.eval(getTestRow("v")));
-    assertTrue(spec.eval(getTestRow(ImmutableList.of("v", "v1"))));
-    assertFalse(spec.eval(getTestRow(ImmutableList.of())));
-    assertFalse(spec.eval(getTestRow("v1")));
+    Assert.assertTrue(spec.eval(getTestRow("v")));
+    Assert.assertTrue(spec.eval(getTestRow(ImmutableList.of("v", "v1"))));
+    Assert.assertFalse(spec.eval(getTestRow(ImmutableList.of())));
+    Assert.assertFalse(spec.eval(getTestRow("v1")));
 
     spec = new DimensionSelectorHavingSpec("dimension", null, null);
-    assertTrue(spec.eval(getTestRow(ImmutableList.of())));
-    assertTrue(spec.eval(getTestRow(ImmutableList.of(""))));
-    assertFalse(spec.eval(getTestRow(ImmutableList.of("v"))));
-    assertFalse(spec.eval(getTestRow(ImmutableList.of("v", "v1"))));
+    Assert.assertTrue(spec.eval(getTestRow(ImmutableList.of())));
+    Assert.assertTrue(spec.eval(getTestRow(ImmutableList.of(""))));
+    Assert.assertFalse(spec.eval(getTestRow(ImmutableList.of("v"))));
+    Assert.assertFalse(spec.eval(getTestRow(ImmutableList.of("v", "v1"))));
 
     spec = new DimensionSelectorHavingSpec("dimension", "", null);
-    assertTrue(spec.eval(getTestRow(ImmutableList.of())));
-    assertTrue(spec.eval(getTestRow(ImmutableList.of(""))));
-    assertTrue(spec.eval(getTestRow(ImmutableList.of("v", "v1", ""))));
-    assertFalse(spec.eval(getTestRow(ImmutableList.of("v"))));
-    assertFalse(spec.eval(getTestRow(ImmutableList.of("v", "v1"))));
+    Assert.assertTrue(spec.eval(getTestRow(ImmutableList.of())));
+    Assert.assertTrue(spec.eval(getTestRow(ImmutableList.of(""))));
+    Assert.assertTrue(spec.eval(getTestRow(ImmutableList.of("v", "v1", ""))));
+    Assert.assertFalse(spec.eval(getTestRow(ImmutableList.of("v"))));
+    Assert.assertFalse(spec.eval(getTestRow(ImmutableList.of("v", "v1"))));
 
     ExtractionFn extractionFn = new RegexDimExtractionFn("^([^,]*),", true, "default");
     spec = new DimensionSelectorHavingSpec("dimension", "v", extractionFn);
-    assertTrue(spec.eval(getTestRow(ImmutableList.of("v,v1", "v2,v3"))));
-    assertFalse(spec.eval(getTestRow(ImmutableList.of("v1,v4"))));
-    assertFalse(spec.eval(getTestRow(ImmutableList.of("v"))));
-    assertFalse(spec.eval(getTestRow(ImmutableList.of("v1", "default"))));
-    assertTrue(spec.eval(getTestRow(ImmutableList.of("v,default", "none"))));
-    
-    spec = new DimensionSelectorHavingSpec("dimension", "default", extractionFn);
-    assertTrue(spec.eval(getTestRow(ImmutableList.of("v1,v2", "none")))); 
+    Assert.assertTrue(spec.eval(getTestRow(ImmutableList.of("v,v1", "v2,v3"))));
+    Assert.assertFalse(spec.eval(getTestRow(ImmutableList.of("v1,v4"))));
+    Assert.assertFalse(spec.eval(getTestRow(ImmutableList.of("v"))));
+    Assert.assertFalse(spec.eval(getTestRow(ImmutableList.of("v1", "default"))));
+    Assert.assertTrue(spec.eval(getTestRow(ImmutableList.of("v,default", "none"))));
 
+    spec = new DimensionSelectorHavingSpec("dimension", "default", extractionFn);
+    Assert.assertTrue(spec.eval(getTestRow(ImmutableList.of("v1,v2", "none"))));
   }
 }

@@ -24,8 +24,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import net.spy.memcached.MemcachedClientIF;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.java.util.common.Cleaners;
 import org.apache.druid.java.util.common.logger.Logger;
-import sun.misc.Cleaner;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -43,11 +43,11 @@ final class MemcacheClientPool implements Supplier<ResourceHolder<MemcachedClien
 {
   private static final Logger log = new Logger(MemcacheClientPool.class);
 
-  private static final AtomicLong leakedClients = new AtomicLong(0);
+  private static final AtomicLong LEAKED_CLIENTS = new AtomicLong(0);
 
   public static long leakedClients()
   {
-    return leakedClients.get();
+    return LEAKED_CLIENTS.get();
   }
 
   /**
@@ -93,16 +93,16 @@ final class MemcacheClientPool implements Supplier<ResourceHolder<MemcachedClien
     private final AtomicInteger count = new AtomicInteger(0);
     private final MemcachedClientIF clientIF;
     /**
-     * The point of Cleaner is to be referenced. Action is performed when it becomes unreachable, so it doesn't need
+     * The point of cleanable is to be referenced. Action is performed when it becomes unreachable, so it doesn't need
      * to be used directly.
      */
     @SuppressWarnings("unused")
-    private final Cleaner cleaner;
+    private final Cleaners.Cleanable cleanable;
 
     private CountingHolder(final MemcachedClientIF clientIF)
     {
       this.clientIF = clientIF;
-      cleaner = Cleaner.create(this, new ClientLeakNotifier(count, clientIF));
+      cleanable = Cleaners.register(this, new ClientLeakNotifier(count, clientIF));
     }
   }
 
@@ -153,7 +153,7 @@ final class MemcacheClientPool implements Supplier<ResourceHolder<MemcachedClien
     {
       final int shouldBeZero = count.get();
       if (shouldBeZero != 0) {
-        leakedClients.incrementAndGet();
+        LEAKED_CLIENTS.incrementAndGet();
         log.warn("Expected 0 resource count, got [%d]! Object was[%s].", shouldBeZero, clientIF);
       }
     }

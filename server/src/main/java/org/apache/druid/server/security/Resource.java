@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Resource
 {
+  public static final Resource STATE_RESOURCE = new Resource("STATE", ResourceType.STATE);
+
   private final String name;
   private final ResourceType type;
 

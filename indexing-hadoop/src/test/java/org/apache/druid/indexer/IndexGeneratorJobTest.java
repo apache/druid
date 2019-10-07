@@ -73,20 +73,23 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 
 @RunWith(Parameterized.class)
 public class IndexGeneratorJobTest
 {
-  private static final AggregatorFactory[] aggs1 = {
+  private static final AggregatorFactory[] AGGS1 = {
       new LongSumAggregatorFactory("visited_num", "visited_num"),
       new HyperUniquesAggregatorFactory("unique_hosts", "host")
   };
 
-  private static final AggregatorFactory[] aggs2 = {
+  private static final AggregatorFactory[] AGGS2 = {
       new CountAggregatorFactory("count")
   };
 
@@ -153,7 +156,7 @@ public class IndexGeneratorJobTest
                 ),
                 null,
                 null,
-                aggs1,
+                AGGS1,
                 "website"
             },
             {
@@ -201,7 +204,7 @@ public class IndexGeneratorJobTest
                 ),
                 null,
                 null,
-                aggs1,
+                AGGS1,
                 "website"
             },
             {
@@ -250,7 +253,7 @@ public class IndexGeneratorJobTest
                 ),
                 null,
                 null,
-                aggs1,
+                AGGS1,
                 "website"
             },
             {
@@ -308,7 +311,7 @@ public class IndexGeneratorJobTest
                 ),
                 null,
                 null,
-                aggs1,
+                AGGS1,
                 "website"
             },
             {
@@ -341,7 +344,7 @@ public class IndexGeneratorJobTest
                 ),
                 1, // force 1 row max per index for easier testing
                 null,
-                aggs2,
+                AGGS2,
                 "inherit_dims"
             },
             {
@@ -374,7 +377,7 @@ public class IndexGeneratorJobTest
                 ),
                 1, // force 1 row max per index for easier testing
                 null,
-                aggs2,
+                AGGS2,
                 "inherit_dims2"
             }
         }
@@ -518,9 +521,10 @@ public class IndexGeneratorJobTest
                 null,
                 null,
                 null,
+                null,
                 maxRowsInMemory,
                 maxBytesInMemory,
-                false,
+                true,
                 false,
                 false,
                 false,
@@ -532,6 +536,7 @@ public class IndexGeneratorJobTest
                 null,
                 forceExtendableShardSpecs,
                 false,
+                null,
                 null,
                 null,
                 null
@@ -593,6 +598,13 @@ public class IndexGeneratorJobTest
   {
     Assert.assertTrue(JobHelper.runJobs(ImmutableList.of(job), config));
 
+    final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
+    IndexGeneratorJob
+        .getPublishedSegments(config)
+        .forEach(segment -> intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>())
+                                              .add(segment));
+
+    final Map<Interval, List<File>> intervalToIndexFiles = new HashMap<>();
     int segmentNum = 0;
     for (DateTime currTime = interval.getStart(); currTime.isBefore(interval.getEnd()); currTime = currTime.plusDays(1)) {
       Object[][] shardInfo = shardInfoForEachSegment[segmentNum++];
@@ -613,14 +625,34 @@ public class IndexGeneratorJobTest
         File individualSegmentFolder = new File(segmentOutputFolder, Integer.toString(partitionNum));
         Assert.assertTrue(individualSegmentFolder.exists());
 
-        File descriptor = new File(individualSegmentFolder, "descriptor.json");
         File indexZip = new File(individualSegmentFolder, "index.zip");
-        Assert.assertTrue(descriptor.exists());
         Assert.assertTrue(indexZip.exists());
 
-        DataSegment dataSegment = mapper.readValue(descriptor, DataSegment.class);
+        intervalToIndexFiles.computeIfAbsent(new Interval(currTime, currTime.plusDays(1)), k -> new ArrayList<>())
+                            .add(indexZip);
+      }
+    }
+
+    Assert.assertEquals(intervalToSegments.size(), intervalToIndexFiles.size());
+
+    segmentNum = 0;
+    for (Entry<Interval, List<DataSegment>> entry : intervalToSegments.entrySet()) {
+      final Interval interval = entry.getKey();
+      final List<DataSegment> segments = entry.getValue();
+      final List<File> indexFiles = intervalToIndexFiles.get(interval);
+      Collections.sort(segments);
+      indexFiles.sort(Comparator.comparing(File::getAbsolutePath));
+
+      Assert.assertNotNull(indexFiles);
+      Assert.assertEquals(segments.size(), indexFiles.size());
+
+      Object[][] shardInfo = shardInfoForEachSegment[segmentNum++];
+
+      for (int i = 0; i < segments.size(); i++) {
+        final DataSegment dataSegment = segments.get(i);
+        final File indexZip = indexFiles.get(i);
+
         Assert.assertEquals(config.getSchema().getTuningConfig().getVersion(), dataSegment.getVersion());
-        Assert.assertEquals(new Interval(currTime, currTime.plusDays(1)), dataSegment.getInterval());
         Assert.assertEquals("local", dataSegment.getLoadSpec().get("type"));
         Assert.assertEquals(indexZip.getCanonicalPath(), dataSegment.getLoadSpec().get("path"));
         Assert.assertEquals(Integer.valueOf(9), dataSegment.getBinaryVersion());
@@ -644,15 +676,15 @@ public class IndexGeneratorJobTest
 
         if (forceExtendableShardSpecs) {
           NumberedShardSpec spec = (NumberedShardSpec) dataSegment.getShardSpec();
-          Assert.assertEquals(partitionNum, spec.getPartitionNum());
+          Assert.assertEquals(i, spec.getPartitionNum());
           Assert.assertEquals(shardInfo.length, spec.getPartitions());
         } else if ("hashed".equals(partitionType)) {
-          Integer[] hashShardInfo = (Integer[]) shardInfo[partitionNum];
+          Integer[] hashShardInfo = (Integer[]) shardInfo[i];
           HashBasedNumberedShardSpec spec = (HashBasedNumberedShardSpec) dataSegment.getShardSpec();
           Assert.assertEquals((int) hashShardInfo[0], spec.getPartitionNum());
           Assert.assertEquals((int) hashShardInfo[1], spec.getPartitions());
         } else if ("single".equals(partitionType)) {
-          String[] singleDimensionShardInfo = (String[]) shardInfo[partitionNum];
+          String[] singleDimensionShardInfo = (String[]) shardInfo[i];
           SingleDimensionShardSpec spec = (SingleDimensionShardSpec) dataSegment.getShardSpec();
           Assert.assertEquals(singleDimensionShardInfo[0], spec.getStart());
           Assert.assertEquals(singleDimensionShardInfo[1], spec.getEnd());
@@ -662,5 +694,4 @@ public class IndexGeneratorJobTest
       }
     }
   }
-
 }

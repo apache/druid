@@ -59,9 +59,9 @@ public class NoopSupervisorSpec implements SupervisorSpec
 
   @JsonCreator
   public NoopSupervisorSpec(
-      @Nullable @JsonProperty("id") String id,
-      @Nullable @JsonProperty("dataSources") List<String> datasources,
-      @Nullable @JsonProperty("suspended") Boolean suspended
+      @JsonProperty("id") @Nullable String id,
+      @JsonProperty("dataSources") @Nullable List<String> datasources,
+      @JsonProperty("suspended") @Nullable Boolean suspended
   )
   {
     this.id = id;
@@ -98,10 +98,14 @@ public class NoopSupervisorSpec implements SupervisorSpec
     return new Supervisor()
     {
       @Override
-      public void start() {}
+      public void start()
+      {
+      }
 
       @Override
-      public void stop(boolean stopGracefully) {}
+      public void stop(boolean stopGracefully)
+      {
+      }
 
       @Override
       public SupervisorReport getStatus()
@@ -110,14 +114,21 @@ public class NoopSupervisorSpec implements SupervisorSpec
       }
 
       @Override
-      public void reset(DataSourceMetadata dataSourceMetadata) {}
+      public SupervisorStateManager.State getState()
+      {
+        return SupervisorStateManager.BasicState.RUNNING;
+      }
+
+      @Override
+      public void reset(DataSourceMetadata dataSourceMetadata)
+      {
+      }
 
       @Override
       public void checkpoint(
           @Nullable Integer taskGroupId,
           String baseSequenceName,
-          DataSourceMetadata previousCheckPoint,
-          DataSourceMetadata currentCheckPoint
+          DataSourceMetadata checkpointMetadata
       )
       {
 

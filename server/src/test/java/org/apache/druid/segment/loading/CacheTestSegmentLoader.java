@@ -37,7 +37,6 @@ import java.util.Set;
 */
 public class CacheTestSegmentLoader implements SegmentLoader
 {
-
   private final Set<DataSegment> segmentsInTrash = new HashSet<>();
 
   @Override

@@ -19,39 +19,27 @@
 
 package org.apache.druid.query.aggregation.bloom;
 
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.ColumnValueSelector;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public final class BloomFilterMergeAggregator extends BaseBloomFilterAggregator<ColumnValueSelector<Object>>
+public final class BloomFilterMergeAggregator extends BaseBloomFilterAggregator<ColumnValueSelector<ByteBuffer>>
 {
-  public BloomFilterMergeAggregator(ColumnValueSelector<Object> selector, BloomKFilter collector)
+  BloomFilterMergeAggregator(ColumnValueSelector<ByteBuffer> selector, int maxNumEntries, boolean onHeap)
   {
-    super(selector, collector);
+    super(selector, maxNumEntries, onHeap);
   }
 
   @Override
-  public void aggregate()
+  public void bufferAdd(ByteBuffer buf)
   {
-    Object other = selector.getObject();
-    if (other != null) {
-      if (other instanceof BloomKFilter) {
-        collector.merge((BloomKFilter) other);
-      } else if (other instanceof ByteBuffer) {
-        // fun fact: because bloom filter agg factory deserialize returns a byte buffer to avoid unnecessary serde,
-        // but GroupByQueryEngine (group by v1) ends up trying to merge ByteBuffers from buffer aggs with this agg
-        // instead of the BloomFilterBufferMergeAggregator. fun! Also, it requires a 'ComplexMetricSerde' to be
-        // registered even for query time only aggs, but then never uses it. also fun!
-        try {
-          BloomKFilter otherFilter = BloomKFilter.deserialize((ByteBuffer) other);
-          collector.merge(otherFilter);
-        }
-        catch (IOException ioe) {
-          throw new RuntimeException("Failed to deserialize BloomKFilter", ioe);
-        }
-      }
+    ByteBuffer other = selector.getObject();
+    if (other == null) {
+      // nulls should be empty bloom filters by this point, so encountering a nil column in merge agg is unexpected
+      throw new ISE("WTF?! Unexpected null value in BloomFilterMergeAggregator");
     }
+    BloomKFilter.mergeBloomFilterByteBuffers(buf, buf.position(), other, other.position());
   }
 }

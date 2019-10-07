@@ -22,6 +22,9 @@ package org.apache.druid.data.input.impl;
 import org.apache.commons.io.LineIterator;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowPlusRaw;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.Runnables;
 
 import javax.annotation.Nullable;
@@ -30,8 +33,6 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-/**
- */
 public class FileIteratingFirehose implements Firehose
 {
   private final Iterator<LineIterator> lineIterators;
@@ -61,7 +62,7 @@ public class FileIteratingFirehose implements Firehose
   }
 
   @Override
-  public boolean hasMore()
+  public boolean hasMore() throws IOException
   {
     while ((lineIterator == null || !lineIterator.hasNext()) && lineIterators.hasNext()) {
       lineIterator = getNextLineIterator();
@@ -72,7 +73,7 @@ public class FileIteratingFirehose implements Firehose
 
   @Nullable
   @Override
-  public InputRow nextRow()
+  public InputRow nextRow() throws IOException
   {
     if (!hasMore()) {
       throw new NoSuchElementException();
@@ -81,7 +82,23 @@ public class FileIteratingFirehose implements Firehose
     return parser.parse(lineIterator.next());
   }
 
-  private LineIterator getNextLineIterator()
+  @Override
+  public InputRowPlusRaw nextRowWithRaw() throws IOException
+  {
+    if (!hasMore()) {
+      throw new NoSuchElementException();
+    }
+
+    String raw = lineIterator.next();
+    try {
+      return InputRowPlusRaw.of(parser.parse(raw), StringUtils.toUtf8(raw));
+    }
+    catch (ParseException e) {
+      return InputRowPlusRaw.of(StringUtils.toUtf8(raw), e);
+    }
+  }
+
+  private LineIterator getNextLineIterator() throws IOException
   {
     if (lineIterator != null) {
       lineIterator.close();
@@ -102,7 +119,7 @@ public class FileIteratingFirehose implements Firehose
   public void close() throws IOException
   {
     try (Closeable ignore = closer;
-         Closeable ignore2 = lineIterator != null ? lineIterator::close : null) {
+         Closeable ignore2 = lineIterator) {
       // close both via try-with-resources
     }
   }

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
@@ -54,7 +53,6 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
@@ -541,7 +539,7 @@ public class RealtimePlumber implements Plumber
         }
       }
       catch (InterruptedException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 
@@ -738,7 +736,7 @@ public class RealtimePlumber implements Plumber
     sinkTimeline.add(
         sink.getInterval(),
         sink.getVersion(),
-        new SingleElementPartitionChunk<Sink>(sink)
+        new SingleElementPartitionChunk<>(sink)
     );
     try {
       segmentAnnouncer.announceSegment(sink.getSegment());
@@ -956,14 +954,12 @@ public class RealtimePlumber implements Plumber
       try {
         int numRows = indexToPersist.getIndex().size();
 
-        final IndexSpec indexSpec = config.getIndexSpec();
-
         indexToPersist.getIndex().getMetadata().putAll(metadataElems);
         final File persistedFile = indexMerger.persist(
             indexToPersist.getIndex(),
             interval,
             new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
-            indexSpec,
+            config.getIndexSpecForIntermediatePersists(),
             config.getSegmentWriteOutMediumFactory()
         );
 
@@ -978,7 +974,7 @@ public class RealtimePlumber implements Plumber
            .addData("count", indexToPersist.getCount())
            .emit();
 
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
   }

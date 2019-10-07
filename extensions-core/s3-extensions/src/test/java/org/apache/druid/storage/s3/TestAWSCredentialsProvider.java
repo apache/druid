@@ -26,10 +26,11 @@ import com.google.common.io.Files;
 import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;
+import org.apache.druid.common.aws.AWSModule;
 import org.apache.druid.common.aws.AWSProxyConfig;
-import org.apache.druid.guice.AWSModule;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.easymock.EasyMock;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -38,9 +39,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class TestAWSCredentialsProvider
 {
@@ -60,8 +58,8 @@ public class TestAWSCredentialsProvider
 
     AWSCredentialsProvider provider = awsModule.getAWSCredentialsProvider(config);
     AWSCredentials credentials = provider.getCredentials();
-    assertEquals(credentials.getAWSAccessKeyId(), "accessKeySample");
-    assertEquals(credentials.getAWSSecretKey(), "secretKeySample");
+    Assert.assertEquals("accessKeySample", credentials.getAWSAccessKeyId());
+    Assert.assertEquals("secretKeySample", credentials.getAWSSecretKey());
 
     // try to create
     s3Module.getAmazonS3Client(
@@ -88,11 +86,11 @@ public class TestAWSCredentialsProvider
 
     AWSCredentialsProvider provider = awsModule.getAWSCredentialsProvider(config);
     AWSCredentials credentials = provider.getCredentials();
-    assertTrue(credentials instanceof AWSSessionCredentials);
+    Assert.assertTrue(credentials instanceof AWSSessionCredentials);
     AWSSessionCredentials sessionCredentials = (AWSSessionCredentials) credentials;
-    assertEquals(sessionCredentials.getAWSAccessKeyId(), "accessKeySample");
-    assertEquals(sessionCredentials.getAWSSecretKey(), "secretKeySample");
-    assertEquals(sessionCredentials.getSessionToken(), "sessionTokenSample");
+    Assert.assertEquals("accessKeySample", sessionCredentials.getAWSAccessKeyId());
+    Assert.assertEquals("secretKeySample", sessionCredentials.getAWSSecretKey());
+    Assert.assertEquals("sessionTokenSample", sessionCredentials.getSessionToken());
 
     // try to create
     s3Module.getAmazonS3Client(

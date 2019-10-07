@@ -21,6 +21,7 @@ package org.apache.druid.server.http;
 
 import com.google.common.base.Preconditions;
 import com.google.common.net.HostAndPort;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
 public class HostAndPortWithScheme
@@ -42,9 +43,13 @@ public class HostAndPortWithScheme
   public static HostAndPortWithScheme fromString(String hostPortMaybeSchemeString)
   {
     if (hostPortMaybeSchemeString.startsWith("http")) {
+      int colonIndex = hostPortMaybeSchemeString.indexOf(':');
+      if (colonIndex == -1) {
+        throw new IAE("Invalid host with scheme string: [%s]", hostPortMaybeSchemeString);
+      }
       return HostAndPortWithScheme.fromString(
-          hostPortMaybeSchemeString.substring(0, hostPortMaybeSchemeString.indexOf(':')),
-          hostPortMaybeSchemeString.substring(hostPortMaybeSchemeString.indexOf(':') + 1)
+          hostPortMaybeSchemeString.substring(0, colonIndex),
+          hostPortMaybeSchemeString.substring(colonIndex + 1)
       );
     }
     return HostAndPortWithScheme.fromString("http", hostPortMaybeSchemeString);

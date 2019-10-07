@@ -202,7 +202,8 @@ public class DruidJsonValidator extends GuiceRunnable
     }
     catch (Exception e) {
       LOG.error(e, "INVALID JSON!");
-      throw Throwables.propagate(e);
+      Throwables.propagateIfPossible(e);
+      throw new RuntimeException(e);
     }
   }
 

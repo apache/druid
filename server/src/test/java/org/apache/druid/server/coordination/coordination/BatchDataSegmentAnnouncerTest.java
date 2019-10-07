@@ -22,7 +22,6 @@ package org.apache.druid.server.coordination.coordination;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -51,10 +50,17 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -62,14 +68,15 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class BatchDataSegmentAnnouncerTest
 {
-  private static final String testBasePath = "/test";
-  private static final String testSegmentsPath = "/test/segments/id";
-  private static final Joiner joiner = Joiner.on("/");
+  private static final String TEST_BASE_PATH = "/test";
+  private static final String TEST_SEGMENTS_PATH = "/test/segments/id";
+  private static final Joiner JOINER = Joiner.on("/");
+  private static final int NUM_THREADS = 4;
 
   private TestingCluster testingCluster;
   private CuratorFramework cf;
   private ObjectMapper jsonMapper;
-  private Announcer announcer;
+  private TestAnnouncer announcer;
   private SegmentReader segmentReader;
   private BatchDataSegmentAnnouncer segmentAnnouncer;
   private Set<DataSegment> testSegments;
@@ -78,6 +85,7 @@ public class BatchDataSegmentAnnouncerTest
   private Boolean skipDimensionsAndMetrics;
   private Boolean skipLoadSpec;
 
+  private ExecutorService exec;
 
   @Before
   public void setUp() throws Exception
@@ -92,11 +100,11 @@ public class BatchDataSegmentAnnouncerTest
                                 .build();
     cf.start();
     cf.blockUntilConnected();
-    cf.create().creatingParentsIfNeeded().forPath(testBasePath);
+    cf.create().creatingParentsIfNeeded().forPath(TEST_BASE_PATH);
 
     jsonMapper = TestHelper.makeJsonMapper();
 
-    announcer = new Announcer(
+    announcer = new TestAnnouncer(
         cf,
         Execs.directExecutor()
     );
@@ -146,7 +154,7 @@ public class BatchDataSegmentAnnouncerTest
           @Override
           public String getBase()
           {
-            return testBasePath;
+            return TEST_BASE_PATH;
           }
         },
         announcer,
@@ -157,6 +165,8 @@ public class BatchDataSegmentAnnouncerTest
     for (int i = 0; i < 100; i++) {
       testSegments.add(makeSegment(i));
     }
+
+    exec = Execs.multiThreaded(NUM_THREADS, "BatchDataSegmentAnnouncerTest-%d");
   }
 
   @After
@@ -165,6 +175,7 @@ public class BatchDataSegmentAnnouncerTest
     announcer.stop();
     cf.close();
     testingCluster.stop();
+    exec.shutdownNow();
   }
 
   @Test
@@ -176,17 +187,17 @@ public class BatchDataSegmentAnnouncerTest
 
     segmentAnnouncer.announceSegment(firstSegment);
 
-    List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
+    List<String> zNodes = cf.getChildren().forPath(TEST_SEGMENTS_PATH);
 
     for (String zNode : zNodes) {
-      Set<DataSegment> segments = segmentReader.read(joiner.join(testSegmentsPath, zNode));
+      Set<DataSegment> segments = segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode));
       Assert.assertEquals(segments.iterator().next(), firstSegment);
     }
 
     segmentAnnouncer.announceSegment(secondSegment);
 
     for (String zNode : zNodes) {
-      Set<DataSegment> segments = segmentReader.read(joiner.join(testSegmentsPath, zNode));
+      Set<DataSegment> segments = segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode));
       Assert.assertEquals(Sets.newHashSet(firstSegment, secondSegment), segments);
     }
 
@@ -199,13 +210,13 @@ public class BatchDataSegmentAnnouncerTest
     segmentAnnouncer.unannounceSegment(firstSegment);
 
     for (String zNode : zNodes) {
-      Set<DataSegment> segments = segmentReader.read(joiner.join(testSegmentsPath, zNode));
+      Set<DataSegment> segments = segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode));
       Assert.assertEquals(segments.iterator().next(), secondSegment);
     }
 
     segmentAnnouncer.unannounceSegment(secondSegment);
 
-    Assert.assertTrue(cf.getChildren().forPath(testSegmentsPath).isEmpty());
+    Assert.assertTrue(cf.getChildren().forPath(TEST_SEGMENTS_PATH).isEmpty());
 
     snapshot = segmentAnnouncer.getSegmentChangesSince(
         snapshot.getCounter()
@@ -229,10 +240,10 @@ public class BatchDataSegmentAnnouncerTest
 
     segmentAnnouncer.announceSegment(firstSegment);
 
-    List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
+    List<String> zNodes = cf.getChildren().forPath(TEST_SEGMENTS_PATH);
 
     for (String zNode : zNodes) {
-      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(joiner.join(testSegmentsPath, zNode)));
+      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode)));
       Assert.assertEquals(announcedSegment, firstSegment);
       Assert.assertTrue(announcedSegment.getDimensions().isEmpty());
       Assert.assertTrue(announcedSegment.getMetrics().isEmpty());
@@ -240,7 +251,7 @@ public class BatchDataSegmentAnnouncerTest
 
     segmentAnnouncer.unannounceSegment(firstSegment);
 
-    Assert.assertTrue(cf.getChildren().forPath(testSegmentsPath).isEmpty());
+    Assert.assertTrue(cf.getChildren().forPath(TEST_SEGMENTS_PATH).isEmpty());
   }
 
   @Test
@@ -252,17 +263,17 @@ public class BatchDataSegmentAnnouncerTest
 
     segmentAnnouncer.announceSegment(firstSegment);
 
-    List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
+    List<String> zNodes = cf.getChildren().forPath(TEST_SEGMENTS_PATH);
 
     for (String zNode : zNodes) {
-      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(joiner.join(testSegmentsPath, zNode)));
+      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode)));
       Assert.assertEquals(announcedSegment, firstSegment);
       Assert.assertNull(announcedSegment.getLoadSpec());
     }
 
     segmentAnnouncer.unannounceSegment(firstSegment);
 
-    Assert.assertTrue(cf.getChildren().forPath(testSegmentsPath).isEmpty());
+    Assert.assertTrue(cf.getChildren().forPath(TEST_SEGMENTS_PATH).isEmpty());
   }
 
   @Test
@@ -281,12 +292,12 @@ public class BatchDataSegmentAnnouncerTest
       maxBytesPerNode.set(prevMax);
     }
 
-    List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
+    List<String> zNodes = cf.getChildren().forPath(TEST_SEGMENTS_PATH);
     Assert.assertEquals(20, zNodes.size());
 
     Set<DataSegment> segments = Sets.newHashSet(testSegments);
     for (String zNode : zNodes) {
-      for (DataSegment segment : segmentReader.read(joiner.join(testSegmentsPath, zNode))) {
+      for (DataSegment segment : segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode))) {
         Assert.assertTrue("Invalid segment " + segment, segments.remove(segment));
       }
     }
@@ -299,17 +310,25 @@ public class BatchDataSegmentAnnouncerTest
     testBatchAnnounce(true);
   }
 
+  @Test
+  public void testMultipleBatchAnnounce() throws Exception
+  {
+    for (int i = 0; i < 10; i++) {
+      testBatchAnnounce(false);
+    }
+  }
+
   private void testBatchAnnounce(boolean testHistory) throws Exception
   {
     segmentAnnouncer.announceSegments(testSegments);
 
-    List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
+    List<String> zNodes = cf.getChildren().forPath(TEST_SEGMENTS_PATH);
 
     Assert.assertEquals(2, zNodes.size());
 
     Set<DataSegment> allSegments = new HashSet<>();
     for (String zNode : zNodes) {
-      allSegments.addAll(segmentReader.read(joiner.join(testSegmentsPath, zNode)));
+      allSegments.addAll(segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode)));
     }
     Assert.assertEquals(allSegments, testSegments);
 
@@ -325,7 +344,7 @@ public class BatchDataSegmentAnnouncerTest
 
     segmentAnnouncer.unannounceSegments(testSegments);
 
-    Assert.assertTrue(cf.getChildren().forPath(testSegmentsPath).isEmpty());
+    Assert.assertTrue(cf.getChildren().forPath(TEST_SEGMENTS_PATH).isEmpty());
 
     if (testHistory) {
       snapshot = segmentAnnouncer.getSegmentChangesSince(
@@ -342,11 +361,72 @@ public class BatchDataSegmentAnnouncerTest
     }
   }
 
-  @Test
-  public void testMultipleBatchAnnounce() throws Exception
+  @Test(timeout = 5000L)
+  public void testAnnounceSegmentsWithSameSegmentConcurrently() throws ExecutionException, InterruptedException
   {
-    for (int i = 0; i < 10; i++) {
-      testBatchAnnounce(false);
+    final List<Future> futures = new ArrayList<>(NUM_THREADS);
+
+    for (int i = 0; i < NUM_THREADS; i++) {
+      futures.add(
+          exec.submit(() -> {
+            try {
+              segmentAnnouncer.announceSegments(testSegments);
+            }
+            catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          })
+      );
+    }
+
+    for (Future future : futures) {
+      future.get();
+    }
+
+    // Announcing 100 segments requires 2 nodes because of maxBytesPerNode configuration.
+    Assert.assertEquals(2, announcer.numPathAnnounced.size());
+    for (ConcurrentHashMap<byte[], AtomicInteger> eachMap : announcer.numPathAnnounced.values()) {
+      for (Entry<byte[], AtomicInteger> entry : eachMap.entrySet()) {
+        Assert.assertEquals(1, entry.getValue().get());
+      }
+    }
+  }
+
+  @Test(timeout = 5000L)
+  public void testAnnounceSegmentWithSameSegmentConcurrently() throws ExecutionException, InterruptedException
+  {
+    final List<Future> futures = new ArrayList<>(NUM_THREADS);
+
+    final DataSegment segment1 = makeSegment(0);
+    final DataSegment segment2 = makeSegment(1);
+    final DataSegment segment3 = makeSegment(2);
+    final DataSegment segment4 = makeSegment(3);
+
+    for (int i = 0; i < NUM_THREADS; i++) {
+      futures.add(
+          exec.submit(() -> {
+            try {
+              segmentAnnouncer.announceSegment(segment1);
+              segmentAnnouncer.announceSegment(segment2);
+              segmentAnnouncer.announceSegment(segment3);
+              segmentAnnouncer.announceSegment(segment4);
+            }
+            catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          })
+      );
+    }
+
+    for (Future future : futures) {
+      future.get();
+    }
+
+    Assert.assertEquals(1, announcer.numPathAnnounced.size());
+    for (ConcurrentHashMap<byte[], AtomicInteger> eachMap : announcer.numPathAnnounced.values()) {
+      for (Entry<byte[], AtomicInteger> entry : eachMap.entrySet()) {
+        Assert.assertEquals(1, entry.getValue().get());
+      }
     }
   }
 
@@ -390,10 +470,27 @@ public class BatchDataSegmentAnnouncerTest
         }
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
 
       return new HashSet<>();
+    }
+  }
+
+  private static class TestAnnouncer extends Announcer
+  {
+    private final ConcurrentHashMap<String, ConcurrentHashMap<byte[], AtomicInteger>> numPathAnnounced = new ConcurrentHashMap<>();
+
+    private TestAnnouncer(CuratorFramework curator, ExecutorService exec)
+    {
+      super(curator, exec);
+    }
+
+    @Override
+    public void announce(String path, byte[] bytes, boolean removeParentIfCreated)
+    {
+      numPathAnnounced.computeIfAbsent(path, k -> new ConcurrentHashMap<>()).computeIfAbsent(bytes, k -> new AtomicInteger(0)).incrementAndGet();
+      super.announce(path, bytes, removeParentIfCreated);
     }
   }
 }

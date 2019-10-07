@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.variance;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
@@ -76,7 +77,9 @@ public abstract class VarianceAggregator implements Aggregator
     @Override
     public void aggregate()
     {
-      holder.add(selector.getFloat());
+      if (NullHandling.replaceWithDefault() || !selector.isNull()) {
+        holder.add(selector.getFloat());
+      }
     }
   }
 
@@ -93,7 +96,9 @@ public abstract class VarianceAggregator implements Aggregator
     @Override
     public void aggregate()
     {
-      holder.add(selector.getLong());
+      if (NullHandling.replaceWithDefault() || !selector.isNull()) {
+        holder.add(selector.getLong());
+      }
     }
   }
 

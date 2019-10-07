@@ -29,19 +29,27 @@ import java.util.Map;
  */
 public class ComplexMetrics
 {
-  private static final Map<String, ComplexMetricSerde> complexSerializers = new HashMap<>();
+  private static final Map<String, ComplexMetricSerde> COMPLEX_SERIALIZERS = new HashMap<>();
 
   @Nullable
   public static ComplexMetricSerde getSerdeForType(String type)
   {
-    return complexSerializers.get(type);
+    return COMPLEX_SERIALIZERS.get(type);
   }
 
   public static void registerSerde(String type, ComplexMetricSerde serde)
   {
-    if (complexSerializers.containsKey(type)) {
-      throw new ISE("Serializer for type[%s] already exists.", type);
+    if (COMPLEX_SERIALIZERS.containsKey(type)) {
+      if (!COMPLEX_SERIALIZERS.get(type).getClass().getName().equals(serde.getClass().getName())) {
+        throw new ISE(
+            "Incompatible serializer for type[%s] already exists. Expected [%s], found [%s].",
+            type,
+            serde.getClass().getName(),
+            COMPLEX_SERIALIZERS.get(type).getClass().getName()
+        );
+      }
+    } else {
+      COMPLEX_SERIALIZERS.put(type, serde);
     }
-    complexSerializers.put(type, serde);
   }
 }

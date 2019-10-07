@@ -23,17 +23,21 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
-import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SequenceMetadata;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.utils.CircularBuffer;
@@ -46,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String, String>
@@ -61,7 +66,9 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
       AuthorizerMapper authorizerMapper,
       Optional<ChatHandlerProvider> chatHandlerProvider,
       CircularBuffer<Throwable> savedParseExceptions,
-      RowIngestionMetersFactory rowIngestionMetersFactory
+      RowIngestionMetersFactory rowIngestionMetersFactory,
+      AppenderatorsManager appenderatorsManager,
+      LockGranularity lockGranularityToUse
   )
   {
     super(
@@ -70,14 +77,16 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
         authorizerMapper,
         chatHandlerProvider,
         savedParseExceptions,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager,
+        lockGranularityToUse
     );
     this.task = task;
   }
 
 
   @Override
-  protected String getSequenceNumberToStoreAfterRead(String sequenceNumber)
+  protected String getNextStartOffset(String sequenceNumber)
   {
     return sequenceNumber;
   }
@@ -92,14 +101,14 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   }
 
   @Override
-  protected SeekableStreamPartitions<String, String> deserializeSeekableStreamPartitionsFromMetadata(
+  protected SeekableStreamEndSequenceNumbers<String, String> deserializePartitionsFromMetadata(
       ObjectMapper mapper,
       Object object
   )
   {
     return mapper.convertValue(object, mapper.getTypeFactory().constructParametrizedType(
-        SeekableStreamPartitions.class,
-        SeekableStreamPartitions.class,
+        SeekableStreamEndSequenceNumbers.class,
+        SeekableStreamEndSequenceNumbers.class,
         String.class,
         String.class
     ));
@@ -107,7 +116,7 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
 
   @Override
   protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetadata(
-      SeekableStreamPartitions<String, String> partitions
+      SeekableStreamSequenceNumbers<String, String> partitions
   )
   {
     return new KinesisDataSourceMetadata(partitions);
@@ -123,11 +132,11 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   protected void possiblyResetDataSourceMetadata(
       TaskToolbox toolbox,
       RecordSupplier<String, String> recordSupplier,
-      Set<StreamPartition<String>> assignment,
-      Map<String, String> currOffsets
+      Set<StreamPartition<String>> assignment
   )
   {
     if (!task.getTuningConfig().isSkipSequenceNumberAvailabilityCheck()) {
+      final ConcurrentMap<String, String> currOffsets = getCurrentOffsets();
       for (final StreamPartition<String> streamPartition : assignment) {
         String sequence = currOffsets.get(streamPartition.getPartitionId());
         String earliestSequenceNumber = recordSupplier.getEarliestSequenceNumber(streamPartition);
@@ -159,21 +168,23 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   }
 
   @Override
-  protected boolean isEndSequenceOffsetsExclusive()
+  protected boolean isEndOffsetExclusive()
   {
     return false;
-  }
-
-  @Override
-  protected boolean isStartingSequenceOffsetsExclusive()
-  {
-    return true;
   }
 
   @Override
   protected boolean isEndOfShard(String seqNum)
   {
     return KinesisSequenceNumber.END_OF_SHARD_MARKER.equals(seqNum);
+  }
+
+  @Override
+  public TypeReference<List<SequenceMetadata<String, String>>> getSequenceMetadataTypeReference()
+  {
+    return new TypeReference<List<SequenceMetadata<String, String>>>()
+    {
+    };
   }
 
   @Nullable

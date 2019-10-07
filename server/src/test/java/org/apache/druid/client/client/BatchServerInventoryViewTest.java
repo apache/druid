@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Stopwatch;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
@@ -82,10 +81,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class BatchServerInventoryViewTest
 {
-  private static final String testBasePath = "/test";
+  private static final String TEST_BASE_PATH = "/test";
   public static final DateTime SEGMENT_INTERVAL_START = DateTimes.of("2013-01-01");
   public static final int INITIAL_SEGMENTS = 100;
-  private static final Timing timing = new Timing();
+  private static final Timing TIMING = new Timing();
 
   private TestingCluster testingCluster;
   private CuratorFramework cf;
@@ -114,7 +113,7 @@ public class BatchServerInventoryViewTest
                                 .build();
     cf.start();
     cf.blockUntilConnected();
-    cf.create().creatingParentsIfNeeded().forPath(testBasePath);
+    cf.create().creatingParentsIfNeeded().forPath(TEST_BASE_PATH);
 
     jsonMapper = TestHelper.makeJsonMapper();
 
@@ -139,7 +138,7 @@ public class BatchServerInventoryViewTest
       @Override
       public String getBase()
       {
-        return testBasePath;
+        return TEST_BASE_PATH;
       }
     };
 
@@ -177,7 +176,7 @@ public class BatchServerInventoryViewTest
           @Override
           public String getBase()
           {
-            return testBasePath;
+            return TEST_BASE_PATH;
           }
         },
         cf,
@@ -193,7 +192,7 @@ public class BatchServerInventoryViewTest
           @Override
           public String getBase()
           {
-            return testBasePath;
+            return TEST_BASE_PATH;
           }
         },
         cf,
@@ -238,7 +237,7 @@ public class BatchServerInventoryViewTest
     waitForSync(batchServerInventoryView, testSegments);
 
     DruidServer server = Iterables.get(batchServerInventoryView.getInventory(), 0);
-    Set<DataSegment> segments = Sets.newHashSet(server.getSegments());
+    Set<DataSegment> segments = Sets.newHashSet(server.iterateAllSegments());
 
     Assert.assertEquals(testSegments, segments);
 
@@ -252,7 +251,7 @@ public class BatchServerInventoryViewTest
 
     waitForSync(batchServerInventoryView, testSegments);
 
-    Assert.assertEquals(testSegments, Sets.newHashSet(server.getSegments()));
+    Assert.assertEquals(testSegments, Sets.newHashSet(server.iterateAllSegments()));
 
     segmentAnnouncer.unannounceSegment(segment1);
     segmentAnnouncer.unannounceSegment(segment2);
@@ -261,7 +260,7 @@ public class BatchServerInventoryViewTest
 
     waitForSync(batchServerInventoryView, testSegments);
 
-    Assert.assertEquals(testSegments, Sets.newHashSet(server.getSegments()));
+    Assert.assertEquals(testSegments, Sets.newHashSet(server.iterateAllSegments()));
   }
 
   @Test
@@ -272,7 +271,7 @@ public class BatchServerInventoryViewTest
     waitForSync(filteredBatchServerInventoryView, testSegments);
 
     DruidServer server = Iterables.get(filteredBatchServerInventoryView.getInventory(), 0);
-    Set<DataSegment> segments = Sets.newHashSet(server.getSegments());
+    Set<DataSegment> segments = Sets.newHashSet(server.iterateAllSegments());
 
     Assert.assertEquals(testSegments, segments);
     int prevUpdateCount = inventoryUpdateCounter.get();
@@ -298,7 +297,7 @@ public class BatchServerInventoryViewTest
     waitForSync(filteredBatchServerInventoryView, testSegments);
 
     DruidServer server = Iterables.get(filteredBatchServerInventoryView.getInventory(), 0);
-    Set<DataSegment> segments = Sets.newHashSet(server.getSegments());
+    Set<DataSegment> segments = Sets.newHashSet(server.iterateAllSegments());
 
     Assert.assertEquals(testSegments, segments);
 
@@ -369,7 +368,7 @@ public class BatchServerInventoryViewTest
     testSegments.remove(segment2);
 
     waitForSync(filteredBatchServerInventoryView, testSegments);
-    timing.forWaiting().awaitLatch(removeCallbackLatch);
+    TIMING.forWaiting().awaitLatch(removeCallbackLatch);
 
     EasyMock.verify(callback);
   }
@@ -391,10 +390,10 @@ public class BatchServerInventoryViewTest
   private static void waitForSync(BatchServerInventoryView batchServerInventoryView, Set<DataSegment> testSegments)
       throws Exception
   {
-    final Timing forWaitingTiming = timing.forWaiting();
+    final Timing forWaitingTiming = TIMING.forWaiting();
     Stopwatch stopwatch = Stopwatch.createStarted();
     while (Iterables.isEmpty(batchServerInventoryView.getInventory())
-           || Iterables.size(Iterables.get(batchServerInventoryView.getInventory(), 0).getSegments()) !=
+           || Iterables.size(Iterables.get(batchServerInventoryView.getInventory(), 0).iterateAllSegments()) !=
               testSegments.size()) {
       Thread.sleep(100);
       if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > forWaitingTiming.milliseconds()) {
@@ -406,7 +405,7 @@ public class BatchServerInventoryViewTest
   private void waitForUpdateEvents(int count)
       throws Exception
   {
-    final Timing forWaitingTiming = timing.forWaiting();
+    final Timing forWaitingTiming = TIMING.forWaiting();
     Stopwatch stopwatch = Stopwatch.createStarted();
     while (inventoryUpdateCounter.get() != count) {
       Thread.sleep(100);
@@ -431,7 +430,7 @@ public class BatchServerInventoryViewTest
     waitForSync(batchServerInventoryView, testSegments);
 
     DruidServer server = Iterables.get(batchServerInventoryView.getInventory(), 0);
-    final Set<DataSegment> segments = Sets.newHashSet(server.getSegments());
+    final Set<DataSegment> segments = Sets.newHashSet(server.iterateAllSegments());
 
     Assert.assertEquals(testSegments, segments);
 
@@ -470,7 +469,7 @@ public class BatchServerInventoryViewTest
                         @Override
                         public String getBase()
                         {
-                          return testBasePath;
+                          return TEST_BASE_PATH;
                         }
                       },
                       announcer,
@@ -487,7 +486,7 @@ public class BatchServerInventoryViewTest
                     testSegments.addAll(segments);
                   }
                   catch (Exception e) {
-                    throw Throwables.propagate(e);
+                    throw new RuntimeException(e);
                   }
                   return segmentAnnouncer;
                 }
@@ -499,7 +498,7 @@ public class BatchServerInventoryViewTest
     Assert.assertEquals(INITIAL_SEGMENTS * 2, testSegments.size());
     waitForSync(batchServerInventoryView, testSegments);
 
-    Assert.assertEquals(testSegments, Sets.newHashSet(server.getSegments()));
+    Assert.assertEquals(testSegments, Sets.newHashSet(server.iterateAllSegments()));
 
     for (int i = 0; i < INITIAL_SEGMENTS; ++i) {
       final DataSegment segment = makeSegment(100 + i);
@@ -509,6 +508,6 @@ public class BatchServerInventoryViewTest
 
     waitForSync(batchServerInventoryView, testSegments);
 
-    Assert.assertEquals(testSegments, Sets.newHashSet(server.getSegments()));
+    Assert.assertEquals(testSegments, Sets.newHashSet(server.iterateAllSegments()));
   }
 }

@@ -17,7 +17,13 @@
   ~ under the License.
   -->
 
-[![Build Status](https://travis-ci.org/apache/incubator-druid.svg?branch=master)](https://travis-ci.org/apache/incubator-druid) [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) [![Coverage Status](https://coveralls.io/repos/apache/incubator-druid/badge.svg?branch=master)](https://coveralls.io/r/apache/incubator-druid?branch=master) [![IRC#druid-dev](https://img.shields.io/badge/IRC-druid--dev-blue.svg)](https://webchat.freenode.net?channels=druid-dev)
+[![Slack](https://img.shields.io/badge/slack-%23druid-72eff8?logo=slack)](https://druid.apache.org/community/join-slack)
+[![Build Status](https://travis-ci.org/apache/incubator-druid.svg?branch=master)](https://travis-ci.org/apache/incubator-druid)
+[![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/apache/incubator-druid.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/apache/incubator-druid/context:java)
+[![Coverage Status](https://img.shields.io/codecov/c/gh/apache/incubator-druid)](https://codecov.io/gh/apache/incubator-druid)
+[![Docker](https://img.shields.io/badge/container-docker-blue.svg)](https://hub.docker.com/r/apache/incubator-druid)
+<!--- Following badges are disabled until they can be fixed: -->
+<!--- [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) -->
 
 ## Apache Druid (incubating)
 
@@ -25,49 +31,61 @@ Apache Druid (incubating) is a high performance analytics data store for event-d
 
 *Disclaimer: Apache Druid is an effort undergoing incubation at The Apache Software Foundation (ASF), sponsored by the Apache Incubator. Incubation is required of all newly accepted projects until a further review indicates that the infrastructure, communications, and decision making process have stabilized in a manner consistent with other successful ASF projects. While incubation status is not necessarily a reflection of the completeness or stability of the code, it does indicate that the project has yet to be fully endorsed by the ASF.*
 
-### License
+### Getting started
 
-[Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
+You can get started with Druid with our [quickstart](https://druid.apache.org/docs/latest/tutorials/quickstart.html).
 
-### More Information
+Druid provides a rich set of APIs (via HTTP and [JDBC](https://druid.apache.org/docs/latest/querying/sql.html#jdbc)) for loading, managing, and querying your data.
+You can also interact with Druid via the [built-in console](https://druid.apache.org/docs/latest/operations/druid-console.html) (shown below).
 
-More information about Druid can be found on <http://www.druid.io>.
+#### Load data
+
+[![data loader Kafka](https://user-images.githubusercontent.com/177816/65819337-054eac80-e1d0-11e9-8842-97b92d8c6159.gif)](https://druid.apache.org/docs/latest/ingestion/index.html)
+
+Load [streaming](https://druid.apache.org/docs/latest/ingestion/index.html#streaming) and [batch](https://druid.apache.org/docs/latest/ingestion/index.html#batch) data using a point-and-click wizard to guide you through ingestion setup. Monitor one off tasks and ingestion supervisors.
+
+#### Manage the cluster
+
+[![management](https://user-images.githubusercontent.com/177816/65819338-08499d00-e1d0-11e9-80fe-faee9e9468cb.gif)](https://druid.apache.org/docs/latest/ingestion/data-management.html)
+
+Manage your cluster with ease. Get a view of your datasources, [segments](https://druid.apache.org/docs/latest/design/segments.html), [ingestion tasks](https://druid.apache.org/docs/latest/ingestion/tasks.html), and [servers]() from one convenient location. All powered by [SQL systems tables](https://druid.apache.org/docs/latest/querying/sql.html#metadata-tables) allowing you to see the underlying query for each view.
+
+#### Issue queries
+
+[![query view combo](https://user-images.githubusercontent.com/177816/65819341-0c75ba80-e1d0-11e9-9730-0f2d084defcc.gif)](https://druid.apache.org/docs/latest/querying/sql.html)
+
+Use the built-in query workbench to prototype [DruidSQL](https://druid.apache.org/docs/latest/querying/sql.html) and [native](https://druid.apache.org/docs/latest/querying/querying.html) queries or connect one of the [many tools](https://druid.apache.org/libraries.html) that help you make the most out of Druid.
 
 ### Documentation
 
-You can find the [documentation for the latest Druid release](http://druid.io/docs/latest/) on
-the [project website](http://druid.io/docs/latest/).
+You can find the [documentation for the latest Druid release](https://druid.apache.org/docs/latest/) on
+the [project website](https://druid.apache.org).
 
 If you would like to contribute documentation, please do so under
-`/docs/content` in this repository and submit a pull request.
-
-### Getting Started
-
-You can get started with Druid with our [quickstart](http://druid.io/docs/latest/tutorials/quickstart.html).
-
-### Reporting Issues
-
-If you find any bugs, please file a [GitHub issue](https://github.com/apache/incubator-druid/issues).
+`/docs` in this repository and submit a pull request.
 
 ### Community
 
-The Druid community is in the process of migrating to Apache by way of the Apache Incubator. Eventually, as we proceed
-along this path, our site will move from http://druid.io/ to https://druid.apache.org/.
-
 Community support is available on the
-[druid-user mailing list](https://groups.google.com/forum/#!forum/druid-user)(druid-user@googlegroups.com), which
+[druid-user mailing list](https://groups.google.com/forum/#!forum/druid-user), which
 is hosted at Google Groups.
 
 Development discussions occur on [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org), which
 you can subscribe to by emailing [dev-subscribe@druid.apache.org](mailto:dev-subscribe@druid.apache.org).
 
-We also have a couple people hanging out on IRC in `#druid-dev` on
-`irc.freenode.net`.
+Chat with Druid committers and users in real-time on the `#druid` channel in the Apache Slack team. Please use [this invitation link to join the ASF Slack](https://s.apache.org/slack-invite), and once joined, go into the `#druid` channel.
 
-### Building From Source
+### Building from source
 
-For instructions on building Druid from source, see [docs/content/development/build.md](https://github.com/apache/incubator-druid/blob/master/docs/content/development/build.md)
+Please note that JDK 8 is required to build Druid.
+
+For instructions on building Druid from source, see [docs/development/build.md](docs/development/build.md)
 
 ### Contributing
 
-Please follow the guidelines listed [here](http://druid.io/community/).
+Please follow the [community guidelines](https://druid.apache.org/community/) for contributing.
+
+### License
+
+[Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
+

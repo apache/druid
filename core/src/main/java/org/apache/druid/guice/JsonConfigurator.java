@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.google.inject.ProvisionException;
@@ -167,7 +166,7 @@ public class JsonConfigurator
           }
         }
         catch (NoSuchFieldException e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
 
         messages.add(StringUtils.format("%s - %s", path.toString(), violation.getMessage()));

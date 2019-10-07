@@ -89,7 +89,7 @@ public class EqualDistributionWorkerSelectStrategyTest
                 DateTimes.nowUtc()
             )
         ),
-        new NoopTask(null, null, 1, 0, null, null, null)
+        new NoopTask(null, null, null, 1, 0, null, null, null)
         {
           @Override
           public String getDataSource()
@@ -124,7 +124,7 @@ public class EqualDistributionWorkerSelectStrategyTest
                 DateTimes.nowUtc()
             )
         ),
-        new NoopTask(null, null, 1, 0, null, null, null)
+        new NoopTask(null, null, null, 1, 0, null, null, null)
         {
           @Override
           public String getDataSource()
@@ -139,7 +139,7 @@ public class EqualDistributionWorkerSelectStrategyTest
   @Test
   public void testOneDisableWorkerDifferentUsedCapacity()
   {
-    String DISABLED_VERSION = "";
+    String disabledVersion = "";
     final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null);
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
@@ -147,7 +147,7 @@ public class EqualDistributionWorkerSelectStrategyTest
         ImmutableMap.of(
             "lhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "disableHost", "disableHost", 10, DISABLED_VERSION, WorkerConfig.DEFAULT_TIER), 2,
+                new Worker("http", "disableHost", "disableHost", 10, disabledVersion, WorkerConfig.DEFAULT_TIER), 2,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
@@ -160,7 +160,7 @@ public class EqualDistributionWorkerSelectStrategyTest
                 DateTimes.nowUtc()
             )
         ),
-        new NoopTask(null, null, 1, 0, null, null, null)
+        new NoopTask(null, null, null, 1, 0, null, null, null)
         {
           @Override
           public String getDataSource()
@@ -175,7 +175,7 @@ public class EqualDistributionWorkerSelectStrategyTest
   @Test
   public void testOneDisableWorkerSameUsedCapacity()
   {
-    String DISABLED_VERSION = "";
+    String disabledVersion = "";
     final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null);
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
@@ -183,7 +183,7 @@ public class EqualDistributionWorkerSelectStrategyTest
         ImmutableMap.of(
             "lhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "disableHost", "disableHost", 10, DISABLED_VERSION, WorkerConfig.DEFAULT_TIER), 5,
+                new Worker("http", "disableHost", "disableHost", 10, disabledVersion, WorkerConfig.DEFAULT_TIER), 5,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
@@ -196,7 +196,7 @@ public class EqualDistributionWorkerSelectStrategyTest
                 DateTimes.nowUtc()
             )
         ),
-        new NoopTask(null, null, 1, 0, null, null, null)
+        new NoopTask(null, null, null, 1, 0, null, null, null)
         {
           @Override
           public String getDataSource()
@@ -282,7 +282,7 @@ public class EqualDistributionWorkerSelectStrategyTest
 
   private static NoopTask createDummyTask(final String dataSource)
   {
-    return new NoopTask(null, null, 1, 0, null, null, null)
+    return new NoopTask(null, null, null, 1, 0, null, null, null)
     {
       @Override
       public String getDataSource()

@@ -20,27 +20,29 @@
 package org.apache.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Supplier;
+import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.ColumnSelectorFactory;
+
+import javax.annotation.Nullable;
 
 import java.nio.ByteBuffer;
 import java.util.AbstractList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.function.ToIntFunction;
 
-public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyType>
+public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyType> implements VectorGrouper
 {
   private static final int MIN_INITIAL_BUCKETS = 4;
   private static final int DEFAULT_INITIAL_BUCKETS = 1024;
   private static final float DEFAULT_MAX_LOAD_FACTOR = 0.7f;
 
-  private final AggregatorFactory[] aggregatorFactories;
-  private ByteBuffer buffer;
   private boolean initialized = false;
 
   // The BufferHashGrouper normally sorts by all fields of the grouping key with lexicographic ascending order.
@@ -52,25 +54,30 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   // to get a comparator that uses the ordering defined by the OrderByColumnSpec of a query.
   private final boolean useDefaultSorting;
 
-  // Track the offsets of used buckets using this list.
-  // When a new bucket is initialized by initializeNewBucketKey(), an offset is added to this list.
-  // When expanding the table, the list is reset() and filled with the new offsets of the copied buckets.
-  private ByteBuffer offsetListBuffer;
+  @Nullable
   private ByteBufferIntList offsetList;
+
+  // Scratch objects used by aggregateVector(). Only set if initVectorized() is called.
+  @Nullable
+  private ByteBuffer vKeyBuffer = null;
+  @Nullable
+  private int[] vKeyHashCodes = null;
+  @Nullable
+  private int[] vAggregationPositions = null;
+  @Nullable
+  private int[] vAggregationRows = null;
 
   public BufferHashGrouper(
       final Supplier<ByteBuffer> bufferSupplier,
       final KeySerde<KeyType> keySerde,
-      final ColumnSelectorFactory columnSelectorFactory,
-      final AggregatorFactory[] aggregatorFactories,
+      final AggregatorAdapters aggregators,
       final int bufferGrouperMaxSize,
       final float maxLoadFactor,
       final int initialBuckets,
       final boolean useDefaultSorting
   )
   {
-    super(bufferSupplier, keySerde, aggregatorFactories, bufferGrouperMaxSize);
-    this.aggregatorFactories = aggregatorFactories;
+    super(bufferSupplier, keySerde, aggregators, HASH_SIZE + keySerde.keySize(), bufferGrouperMaxSize);
 
     this.maxLoadFactor = maxLoadFactor > 0 ? maxLoadFactor : DEFAULT_MAX_LOAD_FACTOR;
     this.initialBuckets = initialBuckets > 0 ? Math.max(MIN_INITIAL_BUCKETS, initialBuckets) : DEFAULT_INITIAL_BUCKETS;
@@ -79,14 +86,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
       throw new IAE("Invalid maxLoadFactor[%f], must be < 1.0", maxLoadFactor);
     }
 
-    int offset = HASH_SIZE + keySize;
-    for (int i = 0; i < aggregatorFactories.length; i++) {
-      aggregators[i] = aggregatorFactories[i].factorizeBuffered(columnSelectorFactory);
-      aggregatorOffsets[i] = offset;
-      offset += aggregatorFactories[i].getMaxIntermediateSizeWithNulls();
-    }
-
-    this.bucketSize = offset;
+    this.bucketSize = HASH_SIZE + keySerde.keySize() + aggregators.spaceNeeded();
     this.useDefaultSorting = useDefaultSorting;
   }
 
@@ -94,7 +94,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   public void init()
   {
     if (!initialized) {
-      this.buffer = bufferSupplier.get();
+      ByteBuffer buffer = bufferSupplier.get();
 
       int hashTableSize = ByteBufferHashTable.calculateTableArenaSizeWithPerBucketAdditionalSize(
           buffer.capacity(),
@@ -107,7 +107,10 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
       hashTableBuffer.limit(hashTableSize);
       hashTableBuffer = hashTableBuffer.slice();
 
-      offsetListBuffer = buffer.duplicate();
+      // Track the offsets of used buckets using this list.
+      // When a new bucket is initialized by initializeNewBucketKey(), an offset is added to this list.
+      // When expanding the table, the list is reset() and filled with the new offsets of the copied buckets.
+      ByteBuffer offsetListBuffer = buffer.duplicate();
       offsetListBuffer.position(hashTableSize);
       offsetListBuffer.limit(buffer.capacity());
       offsetListBuffer = offsetListBuffer.slice();
@@ -133,18 +136,115 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   }
 
   @Override
+  public void initVectorized(final int maxVectorSize)
+  {
+    if (!ByteBuffer.class.equals(keySerde.keyClazz())) {
+      throw new ISE("keyClazz[%s] must be ByteBuffer", keySerde.keyClazz());
+    }
+
+    if (keySize % Integer.BYTES != 0) {
+      throw new ISE("keySize[%s] must be a multiple of[%s]", keySize, Integer.BYTES);
+    }
+
+    init();
+
+    this.vKeyBuffer = ByteBuffer.allocate(keySize);
+    this.vKeyHashCodes = new int[maxVectorSize];
+    this.vAggregationPositions = new int[maxVectorSize];
+    this.vAggregationRows = new int[maxVectorSize];
+  }
+
+  @Override
+  public AggregateResult aggregateVector(final int[] keySpace, final int startRow, final int endRow)
+  {
+    final int keyIntSize = keySize / Integer.BYTES;
+    final int numRows = endRow - startRow;
+
+    // Initialize vKeyHashCodes: one int per key.
+    // Does *not* use hashFunction(). This is okay because the API of VectorGrouper does not expose any way of messing
+    // about with hash codes.
+    for (int i = 0, rowStart = 0; i < numRows; i++, rowStart += keyIntSize) {
+      vKeyHashCodes[i] = Groupers.hashIntArray(keySpace, rowStart, keyIntSize);
+    }
+
+    final MutableInt aggregationStartRow = new MutableInt(startRow);
+    final MutableInt aggregationNumRows = new MutableInt(0);
+
+    for (int rowNum = 0, keySpacePosition = 0; rowNum < numRows; rowNum++, keySpacePosition += keyIntSize) {
+      // Copy current key into keyBuffer.
+      vKeyBuffer.rewind();
+      for (int i = 0; i < keyIntSize; i++) {
+        vKeyBuffer.putInt(keySpace[keySpacePosition + i]);
+      }
+      vKeyBuffer.rewind();
+
+      // Find, and if the table is full, expand and find again.
+      int bucket = hashTable.findBucketWithAutoGrowth(
+          vKeyBuffer,
+          vKeyHashCodes[rowNum],
+          () -> {
+            if (aggregationNumRows.intValue() > 0) {
+              doAggregateVector(aggregationStartRow.intValue(), aggregationNumRows.intValue());
+              aggregationStartRow.setValue(aggregationStartRow.intValue() + aggregationNumRows.intValue());
+              aggregationNumRows.setValue(0);
+            }
+          }
+      );
+
+      if (bucket < 0) {
+        // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
+        // be correct.
+
+        // Aggregate any remaining rows.
+        if (aggregationNumRows.intValue() > 0) {
+          doAggregateVector(aggregationStartRow.intValue(), aggregationNumRows.intValue());
+        }
+
+        return Groupers.hashTableFull(rowNum);
+      }
+
+      final int bucketStartOffset = hashTable.getOffsetForBucket(bucket);
+      final boolean bucketWasUsed = hashTable.isBucketUsed(bucket);
+
+      // Set up key and initialize the aggs if this is a new bucket.
+      if (!bucketWasUsed) {
+        hashTable.initializeNewBucketKey(bucket, vKeyBuffer, vKeyHashCodes[rowNum]);
+        aggregators.init(hashTable.getTableBuffer(), bucketStartOffset + baseAggregatorOffset);
+      }
+
+      // Schedule the current row for aggregation.
+      vAggregationPositions[aggregationNumRows.intValue()] = bucketStartOffset + Integer.BYTES + keySize;
+      aggregationNumRows.increment();
+    }
+
+    // Aggregate any remaining rows.
+    if (aggregationNumRows.intValue() > 0) {
+      doAggregateVector(aggregationStartRow.intValue(), aggregationNumRows.intValue());
+    }
+
+    return AggregateResult.ok();
+  }
+
+  @Override
   public boolean isInitialized()
   {
     return initialized;
   }
 
   @Override
-  public void newBucketHook(int bucketOffset)
+  public ToIntFunction<KeyType> hashFunction()
   {
+    return Groupers::hashObject;
   }
 
   @Override
-  public boolean canSkipAggregate(boolean bucketWasUsed, int bucketOffset)
+  public void newBucketHook(int bucketOffset)
+  {
+    // Nothing needed.
+  }
+
+  @Override
+  public boolean canSkipAggregate(int bucketOffset)
   {
     return false;
   }
@@ -152,7 +252,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   @Override
   public void afterAggregateHook(int bucketOffset)
   {
-
+    // Nothing needed.
   }
 
   @Override
@@ -161,6 +261,15 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     offsetList.reset();
     hashTable.reset();
     keySerde.reset();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public CloseableIterator<Entry<ByteBuffer>> iterator()
+  {
+    // Unchecked cast, since this method is only called through the VectorGrouper interface, which uses
+    // ByteBuffer keys (and this is verified in initVectorized).
+    return (CloseableIterator) iterator(false);
   }
 
   @Override
@@ -201,25 +310,23 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
       if (useDefaultSorting) {
         comparator = keySerde.bufferComparator();
       } else {
-        comparator = keySerde.bufferComparatorWithAggregators(aggregatorFactories, aggregatorOffsets);
+        comparator = keySerde.bufferComparatorWithAggregators(
+            aggregators.factories().toArray(new AggregatorFactory[0]),
+            aggregators.aggregatorPositions()
+        );
       }
 
       // Sort offsets in-place.
       Collections.sort(
           wrappedOffsets,
-          new Comparator<Integer>()
-          {
-            @Override
-            public int compare(Integer lhs, Integer rhs)
-            {
-              final ByteBuffer tableBuffer = hashTable.getTableBuffer();
-              return comparator.compare(
-                  tableBuffer,
-                  tableBuffer,
-                  lhs + HASH_SIZE,
-                  rhs + HASH_SIZE
-              );
-            }
+          (lhs, rhs) -> {
+            final ByteBuffer tableBuffer = hashTable.getTableBuffer();
+            return comparator.compare(
+                tableBuffer,
+                tableBuffer,
+                lhs + HASH_SIZE,
+                rhs + HASH_SIZE
+            );
           }
       );
 
@@ -296,6 +403,16 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     }
   }
 
+  private void doAggregateVector(final int startRow, final int numRows)
+  {
+    aggregators.aggregateVector(
+        hashTable.getTableBuffer(),
+        numRows,
+        vAggregationPositions,
+        Groupers.writeAggregationRows(vAggregationRows, startRow, startRow + numRows)
+    );
+  }
+
   private class BufferGrouperBucketUpdateHandler implements ByteBufferHashTable.BucketUpdateHandler
   {
     @Override
@@ -314,14 +431,12 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     public void handleBucketMove(int oldBucketOffset, int newBucketOffset, ByteBuffer oldBuffer, ByteBuffer newBuffer)
     {
       // relocate aggregators (see https://github.com/apache/incubator-druid/pull/4071)
-      for (int i = 0; i < aggregators.length; i++) {
-        aggregators[i].relocate(
-            oldBucketOffset + aggregatorOffsets[i],
-            newBucketOffset + aggregatorOffsets[i],
-            oldBuffer,
-            newBuffer
-        );
-      }
+      aggregators.relocate(
+          oldBucketOffset + baseAggregatorOffset,
+          newBucketOffset + baseAggregatorOffset,
+          oldBuffer,
+          newBuffer
+      );
 
       offsetList.add(newBucketOffset);
     }

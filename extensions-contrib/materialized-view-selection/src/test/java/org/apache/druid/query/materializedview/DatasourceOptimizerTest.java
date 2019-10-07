@@ -42,6 +42,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -69,37 +70,33 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.druid.query.QueryRunnerTestHelper.allGran;
-
-public class DatasourceOptimizerTest extends CuratorTestBase 
+public class DatasourceOptimizerTest extends CuratorTestBase
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
-  private TestDerbyConnector derbyConnector;
   private DerivativeDataSourceManager derivativesManager;
   private DruidServer druidServer;
   private ObjectMapper jsonMapper;
   private ZkPathsConfig zkPathsConfig;
   private DataSourceOptimizer optimizer;
-  private MaterializedViewConfig viewConfig;
   private IndexerSQLMetadataStorageCoordinator metadataStorageCoordinator;
   private BatchServerInventoryView baseView;
   private BrokerServerView brokerServerView;
-  
+
   @Before
   public void setUp() throws Exception
   {
-    derbyConnector = derbyConnectorRule.getConnector();
+    TestDerbyConnector derbyConnector = derbyConnectorRule.getConnector();
     derbyConnector.createDataSourceTable();
     derbyConnector.createSegmentTable();
-    viewConfig = new MaterializedViewConfig();
+    MaterializedViewConfig viewConfig = new MaterializedViewConfig();
     jsonMapper = TestHelper.makeJsonMapper();
     jsonMapper.registerSubtypes(new NamedType(DerivativeDataSourceMetadata.class, "view"));
     metadataStorageCoordinator = EasyMock.createMock(IndexerSQLMetadataStorageCoordinator.class);
     derivativesManager = new DerivativeDataSourceManager(
-        viewConfig, 
-        derbyConnectorRule.metadataTablesConfigSupplier(), 
-        jsonMapper, 
+        viewConfig,
+        derbyConnectorRule.metadataTablesConfigSupplier(),
+        jsonMapper,
         derbyConnector
     );
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
@@ -107,14 +104,14 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector
     );
-   
+
     setupServerAndCurator();
     curator.start();
     curator.blockUntilConnected();
-    
+
     zkPathsConfig = new ZkPathsConfig();
     setupViews();
-    
+
     druidServer = new DruidServer(
         "localhost:1234",
         "localhost:1234",
@@ -127,14 +124,14 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     setupZNodeForServer(druidServer, new ZkPathsConfig(), jsonMapper);
     optimizer = new DataSourceOptimizer(brokerServerView);
   }
-  
+
   @After
-  public void tearDown() throws IOException 
+  public void tearDown() throws IOException
   {
     baseView.stop();
     tearDownServerAndCurator();
   }
-  
+
   @Test(timeout = 60_000L)
   public void testOptimize() throws InterruptedException
   {
@@ -156,10 +153,10 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         ),
         interval -> {
           final DataSegment segment = createDataSegment(
-              "base", 
-              interval, 
+              "base",
+              interval,
               "v1",
-              Lists.newArrayList("dim1", "dim2", "dim3", "dim4"), 
+              Lists.newArrayList("dim1", "dim2", "dim3", "dim4"),
               1024 * 1024
           );
           try {
@@ -180,7 +177,13 @@ public class DatasourceOptimizerTest extends CuratorTestBase
             "2011-04-03/2011-04-04"
         ),
         interval -> {
-          final DataSegment segment = createDataSegment("derivative", interval, "v1", Lists.newArrayList("dim1", "dim2", "dim3"), 1024);
+          final DataSegment segment = createDataSegment(
+              "derivative",
+              interval,
+              "v1",
+              Lists.newArrayList("dim1", "dim2", "dim3"),
+              1024
+          );
           try {
             metadataStorageCoordinator.announceHistoricalSegments(Sets.newHashSet(segment));
             announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
@@ -200,64 +203,58 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     // build user query
     TopNQuery userQuery = new TopNQueryBuilder()
         .dataSource("base")
-        .granularity(allGran)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
         .dimension("dim1")
         .metric("cost")
         .threshold(4)
         .intervals("2011-04-01/2011-04-06")
-        .aggregators(
-            Collections.singletonList(new LongSumAggregatorFactory("cost", "cost"))
-        )
+        .aggregators(new LongSumAggregatorFactory("cost", "cost"))
         .build();
-    
+
     List<Query> expectedQueryAfterOptimizing = Lists.newArrayList(
         new TopNQueryBuilder()
             .dataSource("derivative")
-            .granularity(allGran)
+            .granularity(QueryRunnerTestHelper.ALL_GRAN)
             .dimension("dim1")
             .metric("cost")
             .threshold(4)
             .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-01/2011-04-04"))))
-            .aggregators(
-                Collections.singletonList(new LongSumAggregatorFactory("cost", "cost"))
-            )
+            .aggregators(new LongSumAggregatorFactory("cost", "cost"))
             .build(),
         new TopNQueryBuilder()
             .dataSource("base")
-            .granularity(allGran)
+            .granularity(QueryRunnerTestHelper.ALL_GRAN)
             .dimension("dim1")
             .metric("cost")
             .threshold(4)
             .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-04/2011-04-06"))))
-            .aggregators(
-                Collections.singletonList(new LongSumAggregatorFactory("cost", "cost"))
-            )
+            .aggregators(new LongSumAggregatorFactory("cost", "cost"))
             .build()
     );
     Assert.assertEquals(expectedQueryAfterOptimizing, optimizer.optimize(userQuery));
     derivativesManager.stop();
   }
-  
+
   private DataSegment createDataSegment(String name, String intervalStr, String version, List<String> dims, long size)
   {
     return DataSegment.builder()
-        .dataSource(name)
-        .interval(Intervals.of(intervalStr))
-        .loadSpec(
-            ImmutableMap.of(
-                "type",
-                "local",
-                "path",
-                "somewhere"
-            )
-        )
-        .version(version)
-        .dimensions(dims)
-        .metrics(ImmutableList.of("cost"))
-        .shardSpec(NoneShardSpec.instance())
-        .binaryVersion(9)
-        .size(size)
-        .build();
+                      .dataSource(name)
+                      .interval(Intervals.of(intervalStr))
+                      .loadSpec(
+                          ImmutableMap.of(
+                              "type",
+                              "local",
+                              "path",
+                              "somewhere"
+                          )
+                      )
+                      .version(version)
+                      .dimensions(dims)
+                      .metrics(ImmutableList.of("cost"))
+                      .shardSpec(NoneShardSpec.instance())
+                      .binaryVersion(9)
+                      .size(size)
+                      .build();
   }
 
   private void setupViews() throws Exception
@@ -274,22 +271,19 @@ public class DatasourceOptimizerTest extends CuratorTestBase
               @Override
               public CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
               {
-                CallbackAction res = callback.segmentAdded(server, segment);
-                return res;
+                return callback.segmentAdded(server, segment);
               }
 
               @Override
               public CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
               {
-                CallbackAction res = callback.segmentRemoved(server, segment);
-                return res;
+                return callback.segmentRemoved(server, segment);
               }
 
               @Override
               public CallbackAction segmentViewInitialized()
               {
-                CallbackAction res = callback.segmentViewInitialized();
-                return res;
+                return callback.segmentViewInitialized();
               }
             }
         );
@@ -318,5 +312,4 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     retVal.getFactory().setCodec(retVal);
     return retVal;
   }
-  
 }

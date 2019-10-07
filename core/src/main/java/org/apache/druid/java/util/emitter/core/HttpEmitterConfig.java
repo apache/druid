@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.metadata.PasswordProvider;
 
 import javax.validation.constraints.NotNull;
 
@@ -34,7 +35,9 @@ public class HttpEmitterConfig extends BaseHttpEmittingConfig
   /**
    * For JSON deserialization only. In other cases use {@link Builder}
    */
-  public HttpEmitterConfig() {}
+  public HttpEmitterConfig()
+  {
+  }
 
   public HttpEmitterConfig(BaseHttpEmittingConfig base, String recipientBaseUrl)
   {
@@ -84,7 +87,7 @@ public class HttpEmitterConfig extends BaseHttpEmittingConfig
       return this;
     }
 
-    public Builder setBasicAuthentication(String basicAuthentication)
+    public Builder setBasicAuthentication(PasswordProvider basicAuthentication)
     {
       this.basicAuthentication = basicAuthentication;
       return this;

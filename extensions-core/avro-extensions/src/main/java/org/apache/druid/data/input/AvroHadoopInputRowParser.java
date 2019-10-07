@@ -33,19 +33,16 @@ import java.util.List;
 public class AvroHadoopInputRowParser implements InputRowParser<GenericRecord>
 {
   private final ParseSpec parseSpec;
-  private final boolean fromPigAvroStorage;
   private final ObjectFlattener<GenericRecord> avroFlattener;
   private final MapInputRowParser mapParser;
 
   @JsonCreator
   public AvroHadoopInputRowParser(
-      @JsonProperty("parseSpec") ParseSpec parseSpec,
-      @JsonProperty("fromPigAvroStorage") Boolean fromPigAvroStorage
+      @JsonProperty("parseSpec") ParseSpec parseSpec
   )
   {
     this.parseSpec = parseSpec;
-    this.fromPigAvroStorage = fromPigAvroStorage == null ? false : fromPigAvroStorage;
-    this.avroFlattener = AvroParsers.makeFlattener(parseSpec, this.fromPigAvroStorage, false);
+    this.avroFlattener = AvroParsers.makeFlattener(parseSpec, false);
     this.mapParser = new MapInputRowParser(parseSpec);
   }
 
@@ -62,15 +59,9 @@ public class AvroHadoopInputRowParser implements InputRowParser<GenericRecord>
     return parseSpec;
   }
 
-  @JsonProperty
-  public boolean isFromPigAvroStorage()
-  {
-    return fromPigAvroStorage;
-  }
-
   @Override
   public InputRowParser withParseSpec(ParseSpec parseSpec)
   {
-    return new AvroHadoopInputRowParser(parseSpec, fromPigAvroStorage);
+    return new AvroHadoopInputRowParser(parseSpec);
   }
 }

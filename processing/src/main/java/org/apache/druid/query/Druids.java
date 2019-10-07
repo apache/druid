@@ -204,7 +204,7 @@ public class Druids
 
     public TimeseriesQueryBuilder filters(String dimensionName, String value, String... values)
     {
-      dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null);
+      dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null, null);
       return this;
     }
 
@@ -361,7 +361,7 @@ public class Druids
 
     public SearchQueryBuilder filters(String dimensionName, String value)
     {
-      dimFilter = new SelectorDimFilter(dimensionName, value, null);
+      dimFilter = new SelectorDimFilter(dimensionName, value, null, null);
       return this;
     }
 
@@ -918,12 +918,13 @@ public class Druids
     private QuerySegmentSpec querySegmentSpec;
     private VirtualColumns virtualColumns;
     private Map<String, Object> context;
-    private String resultFormat;
+    private ScanQuery.ResultFormat resultFormat;
     private int batchSize;
     private long limit;
     private DimFilter dimFilter;
     private List<String> columns;
     private Boolean legacy;
+    private ScanQuery.Order order;
 
     public ScanQueryBuilder()
     {
@@ -937,6 +938,7 @@ public class Druids
       dimFilter = null;
       columns = new ArrayList<>();
       legacy = null;
+      order = null;
     }
 
     public ScanQuery build()
@@ -948,6 +950,7 @@ public class Druids
           resultFormat,
           batchSize,
           limit,
+          order,
           dimFilter,
           columns,
           legacy,
@@ -963,11 +966,12 @@ public class Druids
           .virtualColumns(query.getVirtualColumns())
           .resultFormat(query.getResultFormat())
           .batchSize(query.getBatchSize())
-          .limit(query.getLimit())
+          .limit(query.getScanRowsLimit())
           .filters(query.getFilter())
           .columns(query.getColumns())
           .legacy(query.isLegacy())
-          .context(query.getContext());
+          .context(query.getContext())
+          .order(query.getOrder());
     }
 
     public ScanQueryBuilder dataSource(String ds)
@@ -1005,7 +1009,7 @@ public class Druids
       return this;
     }
 
-    public ScanQueryBuilder resultFormat(String r)
+    public ScanQueryBuilder resultFormat(ScanQuery.ResultFormat r)
     {
       resultFormat = r;
       return this;
@@ -1044,6 +1048,12 @@ public class Druids
     public ScanQueryBuilder legacy(Boolean legacy)
     {
       this.legacy = legacy;
+      return this;
+    }
+
+    public ScanQueryBuilder order(ScanQuery.Order order)
+    {
+      this.order = order;
       return this;
     }
   }

@@ -25,7 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
-import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -40,7 +41,7 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   public LongSumAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("expression") String expression,
+      @JsonProperty("expression") @Nullable String expression,
       @JacksonInject ExprMacroTable macroTable
   )
   {
@@ -53,27 +54,42 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   }
 
   @Override
-  protected BaseLongColumnValueSelector selector(ColumnSelectorFactory metricFactory)
+  protected long nullValue()
   {
-    return getLongColumnSelector(
-        metricFactory,
-        0L
-    );
+    return 0L;
   }
 
   @Override
-  protected Aggregator factorize(ColumnSelectorFactory metricFactory, BaseLongColumnValueSelector selector)
+  protected Aggregator buildAggregator(BaseLongColumnValueSelector selector)
   {
     return new LongSumAggregator(selector);
   }
 
   @Override
-  protected BufferAggregator factorizeBuffered(
-      ColumnSelectorFactory metricFactory,
-      BaseLongColumnValueSelector selector
-  )
+  protected BufferAggregator buildBufferAggregator(BaseLongColumnValueSelector selector)
   {
     return new LongSumBufferAggregator(selector);
+  }
+
+  @Override
+  protected VectorValueSelector vectorSelector(VectorColumnSelectorFactory columnSelectorFactory)
+  {
+    return columnSelectorFactory.makeValueSelector(fieldName);
+  }
+
+  @Override
+  protected VectorAggregator factorizeVector(
+      VectorColumnSelectorFactory columnSelectorFactory,
+      VectorValueSelector selector
+  )
+  {
+    return new LongSumVectorAggregator(selector);
+  }
+
+  @Override
+  public boolean canVectorize()
+  {
+    return expression == null;
   }
 
   @Override

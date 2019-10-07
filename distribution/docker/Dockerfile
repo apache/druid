@@ -17,38 +17,49 @@
 # under the License.
 #
 
-FROM maven:3-jdk-8 as builder
+FROM maven:3-jdk-8-slim as builder
+
+RUN export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -qq update \
+    && apt-get -qq -y install --no-install-recommends python3 python3-yaml
 
 COPY . /src
 WORKDIR /src
-RUN mvn install -ff -DskipTests -Dforbiddenapis.skip=true -Pdist -Pbundle-contrib-exts
+RUN mvn -B -ff -q dependency:go-offline \
+      install \
+      -Pdist,bundle-contrib-exts \
+      -DskipTests \
+      -Danimal.sniffer.skip=true \
+      -Dcheckstyle.skip=true \
+      -Denforcer.skip=true \
+      -Dforbiddenapis.skip=true \
+      -Dmaven.javadoc.skip=true \
+      -Dpmd.skip=true \
+      -Dspotbugs.skip=true
 
-RUN \
- VER=$(mvn -B org.apache.maven.plugins:maven-help-plugin:3.1.1:evaluate -Dexpression=project.version -q -DforceStdout=true -f pom.xml 2>/dev/null) \
- && tar -zxf ./distribution/target/apache-druid-${VER}-bin.tar.gz -C /opt \
- && ln -s /opt/apache-druid-${VER} /opt/druid
-
-RUN wget -O /opt/druid/extensions/mysql-metadata-storage/mysql-connector-java-5.1.38.jar http://central.maven.org/maven2/mysql/mysql-connector-java/5.1.38/mysql-connector-java-5.1.38.jar \
- && sha256sum --ignore-missing -c /src/distribution/docker/sha256sums.txt \
- && ln -s /opt/druid/extensions/mysql-metadata-storage/mysql-connector-java-5.1.38.jar /opt/druid/lib
-
-RUN addgroup --gid 1000 druid \
- && adduser --home /opt/druid --shell /bin/sh --no-create-home --uid 1000 --gecos '' --gid 1000 --disabled-password druid \
- && mkdir -p /opt/druid/var \
- && chown -R druid:druid /opt/druid \
- && chmod 775 /opt/druid/var
+RUN VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.1.1:evaluate \
+      -Dexpression=project.version -DforceStdout=true \
+    ) \
+ && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \
+ && ln -s /opt/apache-druid-${VERSION} /opt/druid
 
 FROM amd64/busybox:1.30.0-glibc as busybox
-FROM gcr.io/distroless/java
-LABEL maintainer="Don Bowman <don@agilicus.com>"
+
+FROM gcr.io/distroless/java:8
+LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
 COPY --from=busybox /bin/busybox /busybox/busybox
 RUN ["/busybox/busybox", "--install", "/bin"]
-COPY --from=builder /etc/passwd /etc/passwd
-COPY --from=builder /etc/group /etc/group
-COPY --from=builder --chown=druid /opt /opt
+
+COPY --from=builder /opt /opt
 COPY distribution/docker/druid.sh /druid.sh
-RUN chown -R druid:druid /opt/druid
+
+RUN addgroup -S -g 1000 druid \
+ && adduser -S -u 1000 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid \
+ && mkdir -p /opt/druid/var \
+ && chown -R druid:druid /opt \
+ && chmod 775 /opt/druid/var
+
 USER druid
 VOLUME /opt/druid/var
 WORKDIR /opt/druid

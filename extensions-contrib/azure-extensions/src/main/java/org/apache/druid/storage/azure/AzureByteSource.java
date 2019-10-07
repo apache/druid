@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.azure;
 
-import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.microsoft.azure.storage.StorageException;
 
@@ -55,7 +54,7 @@ public class AzureByteSource extends ByteSource
       if (AzureUtils.AZURE_RETRY.apply(e)) {
         throw new IOException("Recoverable exception", e);
       }
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 }

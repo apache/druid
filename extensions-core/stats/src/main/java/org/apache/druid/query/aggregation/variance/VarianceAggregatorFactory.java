@@ -39,6 +39,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
@@ -52,6 +53,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
 {
   protected final String fieldName;
   protected final String name;
+  @Nullable
   protected final String estimator;
   private final String inputType;
 
@@ -61,8 +63,8 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   public VarianceAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
-      @JsonProperty("estimator") String estimator,
-      @JsonProperty("inputType") String inputType
+      @JsonProperty("estimator") @Nullable String estimator,
+      @JsonProperty("inputType") @Nullable String inputType
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -202,10 +204,11 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     return VarianceAggregatorCollector.COMPARATOR;
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
-    return ((VarianceAggregatorCollector) object).getVariance(isVariancePop);
+    return object == null ? null : ((VarianceAggregatorCollector) object).getVariance(isVariancePop);
   }
 
   @Override
@@ -236,6 +239,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     return name;
   }
 
+  @Nullable
   @JsonProperty
   public String getEstimator()
   {

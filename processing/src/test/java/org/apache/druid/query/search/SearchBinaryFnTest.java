@@ -21,6 +21,7 @@ package org.apache.druid.query.search;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.ordering.StringComparators;
@@ -305,8 +306,11 @@ public class SearchBinaryFnTest
   {
     List<SearchHit> result = new ArrayList<>();
     for (String hit : hits) {
-      int index = hit.indexOf(':');
-      result.add(new SearchHit(hit.substring(0, index), hit.substring(index + 1)));
+      int colonIndex = hit.indexOf(':');
+      if (colonIndex == -1) {
+        throw new IAE("Invalid hit: [%s]", hit);
+      }
+      result.add(new SearchHit(hit.substring(0, colonIndex), hit.substring(colonIndex + 1)));
     }
     Collections.sort(result, comparator);
     return result;

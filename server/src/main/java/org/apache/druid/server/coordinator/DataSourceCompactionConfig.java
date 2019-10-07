@@ -37,13 +37,11 @@ public class DataSourceCompactionConfig
 
   // should be synchronized with Tasks.DEFAULT_MERGE_TASK_PRIORITY
   private static final int DEFAULT_COMPACTION_TASK_PRIORITY = 25;
-  private static final boolean DEFAULT_KEEP_SEGMENT_GRANULARITY = true;
   private static final long DEFAULT_INPUT_SEGMENT_SIZE_BYTES = 400 * 1024 * 1024;
   private static final int DEFAULT_NUM_INPUT_SEGMENTS = 150;
   private static final Period DEFAULT_SKIP_OFFSET_FROM_LATEST = new Period("P1D");
 
   private final String dataSource;
-  private final boolean keepSegmentGranularity;
   private final int taskPriority;
   private final long inputSegmentSizeBytes;
   @Nullable
@@ -60,7 +58,6 @@ public class DataSourceCompactionConfig
   @JsonCreator
   public DataSourceCompactionConfig(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("keepSegmentGranularity") @Nullable Boolean keepSegmentGranularity,
       @JsonProperty("taskPriority") @Nullable Integer taskPriority,
       @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
       @JsonProperty("targetCompactionSizeBytes") @Nullable Long targetCompactionSizeBytes,
@@ -71,25 +68,18 @@ public class DataSourceCompactionConfig
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
-    Preconditions.checkArgument(
-        targetCompactionSizeBytes == null || maxRowsPerSegment == null,
-        "targetCompactionSizeBytes and maxRowsPerSegment in tuningConfig can't be used together"
-    );
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-    this.keepSegmentGranularity = keepSegmentGranularity == null
-                                  ? DEFAULT_KEEP_SEGMENT_GRANULARITY
-                                  : keepSegmentGranularity;
     this.taskPriority = taskPriority == null
                         ? DEFAULT_COMPACTION_TASK_PRIORITY
                         : taskPriority;
     this.inputSegmentSizeBytes = inputSegmentSizeBytes == null
                                  ? DEFAULT_INPUT_SEGMENT_SIZE_BYTES
                                  : inputSegmentSizeBytes;
-    if (targetCompactionSizeBytes == null && maxRowsPerSegment == null) {
-      this.targetCompactionSizeBytes = DEFAULT_TARGET_COMPACTION_SIZE_BYTES;
-    } else {
-      this.targetCompactionSizeBytes = targetCompactionSizeBytes;
-    }
+    this.targetCompactionSizeBytes = getValidTargetCompactionSizeBytes(
+        targetCompactionSizeBytes,
+        maxRowsPerSegment,
+        tuningConfig
+    );
     this.maxRowsPerSegment = maxRowsPerSegment;
     this.maxNumSegmentsToCompact = maxNumSegmentsToCompact == null
                                    ? DEFAULT_NUM_INPUT_SEGMENTS
@@ -104,16 +94,55 @@ public class DataSourceCompactionConfig
     );
   }
 
+  /**
+   * This method is copied from {@code CompactionTask#getValidTargetCompactionSizeBytes}. The only difference is this
+   * method doesn't check 'numShards' which is not supported by {@link UserCompactTuningConfig}.
+   *
+   * Currently, we can't use the same method here because it's in a different module. Until we figure out how to reuse
+   * the same method, this method must be synced with {@code CompactionTask#getValidTargetCompactionSizeBytes}.
+   */
+  @Nullable
+  private static Long getValidTargetCompactionSizeBytes(
+      @Nullable Long targetCompactionSizeBytes,
+      @Nullable Integer maxRowsPerSegment,
+      @Nullable UserCompactTuningConfig tuningConfig
+  )
+  {
+    if (targetCompactionSizeBytes != null) {
+      Preconditions.checkArgument(
+          !hasPartitionConfig(maxRowsPerSegment, tuningConfig),
+          "targetCompactionSizeBytes[%s] cannot be used with maxRowsPerSegment[%s] and maxTotalRows[%s]",
+          targetCompactionSizeBytes,
+          maxRowsPerSegment,
+          tuningConfig == null ? null : tuningConfig.getMaxTotalRows()
+      );
+      return targetCompactionSizeBytes;
+    } else {
+      return hasPartitionConfig(maxRowsPerSegment, tuningConfig) ? null : DEFAULT_TARGET_COMPACTION_SIZE_BYTES;
+    }
+  }
+
+  /**
+   * his method is copied from {@code CompactionTask#hasPartitionConfig}. The two differences are
+   * 1) this method doesn't check 'numShards' which is not supported by {@link UserCompactTuningConfig}, and
+   * 2) this method accepts an additional 'maxRowsPerSegment' parameter since it's not supported by
+   * {@link UserCompactTuningConfig}.
+   *
+   * Currently, we can't use the same method here because it's in a different module. Until we figure out how to reuse
+   * the same method, this method must be synced with {@code CompactionTask#hasPartitionConfig}.
+   */
+  private static boolean hasPartitionConfig(
+      @Nullable Integer maxRowsPerSegment,
+      @Nullable UserCompactTuningConfig tuningConfig
+  )
+  {
+    return maxRowsPerSegment != null || (tuningConfig != null && tuningConfig.getMaxTotalRows() != null);
+  }
+
   @JsonProperty
   public String getDataSource()
   {
     return dataSource;
-  }
-
-  @JsonProperty
-  public boolean isKeepSegmentGranularity()
-  {
-    return keepSegmentGranularity;
   }
 
   @JsonProperty
@@ -178,8 +207,7 @@ public class DataSourceCompactionConfig
       return false;
     }
     DataSourceCompactionConfig that = (DataSourceCompactionConfig) o;
-    return keepSegmentGranularity == that.keepSegmentGranularity &&
-           taskPriority == that.taskPriority &&
+    return taskPriority == that.taskPriority &&
            inputSegmentSizeBytes == that.inputSegmentSizeBytes &&
            maxNumSegmentsToCompact == that.maxNumSegmentsToCompact &&
            Objects.equals(dataSource, that.dataSource) &&
@@ -194,7 +222,6 @@ public class DataSourceCompactionConfig
   {
     return Objects.hash(
         dataSource,
-        keepSegmentGranularity,
         taskPriority,
         inputSegmentSizeBytes,
         targetCompactionSizeBytes,
@@ -210,13 +237,22 @@ public class DataSourceCompactionConfig
     @JsonCreator
     public UserCompactTuningConfig(
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
-        @JsonProperty("maxTotalRows") @Nullable Integer maxTotalRows,
+        @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
+        @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
         @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
         @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
         @JsonProperty("pushTimeout") @Nullable Long pushTimeout
     )
     {
-      super(null, maxRowsInMemory, maxTotalRows, indexSpec, maxPendingPersists, pushTimeout);
+      super(
+          null,
+          maxRowsInMemory,
+          maxBytesInMemory,
+          maxTotalRows,
+          indexSpec,
+          maxPendingPersists,
+          pushTimeout
+      );
     }
 
     @Override

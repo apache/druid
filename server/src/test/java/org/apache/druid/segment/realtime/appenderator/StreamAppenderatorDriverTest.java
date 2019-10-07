@@ -100,7 +100,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   private DataSegmentKiller dataSegmentKiller;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     appenderatorTester = new AppenderatorTester(MAX_ROWS_IN_MEMORY);
     allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);
@@ -133,7 +133,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   {
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
 
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
 
     for (int i = 0; i < ROWS.size(); i++) {
       committerSupplier.setMetadata(i + 1);
@@ -169,7 +169,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   {
     final int numSegments = 3;
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
 
     for (int i = 0; i < numSegments * MAX_ROWS_PER_SEGMENT; i++) {
       committerSupplier.setMetadata(i + 1);
@@ -212,7 +212,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
     segmentHandoffNotifierFactory.disableHandoff();
 
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
 
     for (int i = 0; i < ROWS.size(); i++) {
       committerSupplier.setMetadata(i + 1);
@@ -237,7 +237,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   {
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
 
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
 
     // Add the first row and publish immediately
     {
@@ -305,7 +305,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   {
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
 
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
 
     committerSupplier.setMetadata(1);
     Assert.assertTrue(driver.add(ROWS.get(0), "sequence_0", committerSupplier, false, true).isOk());
@@ -361,12 +361,13 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
 
   static TransactionalSegmentPublisher makeOkPublisher()
   {
-    return (segments, commitMetadata) -> SegmentPublishResult.ok(Collections.emptySet());
+    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
+        SegmentPublishResult.ok(Collections.emptySet());
   }
 
   static TransactionalSegmentPublisher makeFailingPublisher(boolean failWithException)
   {
-    return (segments, commitMetadata) -> {
+    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> {
       final RuntimeException exception = new RuntimeException("test");
       if (failWithException) {
         throw exception;
@@ -428,9 +429,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
       synchronized (counters) {
         DateTime dateTimeTruncated = granularity.bucketStart(row.getTimestamp());
         final long timestampTruncated = dateTimeTruncated.getMillis();
-        if (!counters.containsKey(timestampTruncated)) {
-          counters.put(timestampTruncated, new AtomicInteger());
-        }
+        counters.putIfAbsent(timestampTruncated, new AtomicInteger());
         final int partitionNum = counters.get(timestampTruncated).getAndIncrement();
         return new SegmentIdWithShardSpec(
             dataSource,

@@ -41,7 +41,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,18 +76,15 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
     final CoordinatorStats stats = new CoordinatorStats();
 
     if (dynamicConfig.getMaxCompactionTaskSlots() > 0) {
-      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources = params.getDataSources();
+      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources =
+          params.getUsedSegmentsTimelinesPerDataSource();
       List<DataSourceCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
 
       if (compactionConfigList != null && !compactionConfigList.isEmpty()) {
         Map<String, DataSourceCompactionConfig> compactionConfigs = compactionConfigList
             .stream()
             .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
-        final List<TaskStatusPlus> compactTasks = filterNonCompactTasks(
-            indexingServiceClient.getRunningTasks(),
-            indexingServiceClient.getPendingTasks(),
-            indexingServiceClient.getWaitingTasks()
-        );
+        final List<TaskStatusPlus> compactTasks = filterNonCompactTasks(indexingServiceClient.getActiveTasks());
         // dataSource -> list of intervals of compact tasks
         final Map<String, List<Interval>> compactTaskIntervals = new HashMap<>(compactionConfigList.size());
         for (TaskStatusPlus status : compactTasks) {
@@ -98,13 +94,22 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
           }
           if (COMPACT_TASK_TYPE.equals(response.getPayload().getType())) {
             final ClientCompactQuery compactQuery = (ClientCompactQuery) response.getPayload();
-            final Interval interval = JodaUtils.umbrellaInterval(
-                compactQuery.getSegments()
-                            .stream()
-                            .map(DataSegment::getInterval)
-                            .sorted(Comparators.intervalsByStartThenEnd())
-                            .collect(Collectors.toList())
-            );
+            final Interval interval;
+
+            if (compactQuery.getSegments() != null) {
+              interval = JodaUtils.umbrellaInterval(
+                  compactQuery.getSegments()
+                              .stream()
+                              .map(DataSegment::getInterval)
+                              .sorted(Comparators.intervalsByStartThenEnd())
+                              .collect(Collectors.toList())
+              );
+            } else if (compactQuery.getInterval() != null) {
+              interval = compactQuery.getInterval();
+            } else {
+              throw new ISE("task[%s] has neither 'segments' nor 'interval'", status.getId());
+            }
+
             compactTaskIntervals.computeIfAbsent(status.getDataSource(), k -> new ArrayList<>()).add(interval);
           } else {
             throw new ISE("WTH? task[%s] is not a compactTask?", status.getId());
@@ -146,13 +151,9 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
                  .build();
   }
 
-  @SafeVarargs
-  private static List<TaskStatusPlus> filterNonCompactTasks(List<TaskStatusPlus>...taskStatusStreams)
+  private static List<TaskStatusPlus> filterNonCompactTasks(List<TaskStatusPlus> taskStatuses)
   {
-    final List<TaskStatusPlus> allTaskStatusPlus = new ArrayList<>();
-    Arrays.stream(taskStatusStreams).forEach(allTaskStatusPlus::addAll);
-
-    return allTaskStatusPlus
+    return taskStatuses
         .stream()
         .filter(status -> {
           final String taskType = status.getType();
@@ -175,7 +176,6 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 
     for (; iterator.hasNext() && numSubmittedTasks < numAvailableCompactionTaskSlots; numSubmittedTasks++) {
       final List<DataSegment> segmentsToCompact = iterator.next();
-
       final String dataSourceName = segmentsToCompact.get(0).getDataSource();
 
       if (segmentsToCompact.size() > 1) {
@@ -183,7 +183,6 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
         // make tuningConfig
         final String taskId = indexingServiceClient.compactSegments(
             segmentsToCompact,
-            config.isKeepSegmentGranularity(),
             config.getTargetCompactionSizeBytes(),
             config.getTaskPriority(),
             ClientCompactQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),

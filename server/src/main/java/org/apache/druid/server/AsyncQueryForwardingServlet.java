@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -311,7 +310,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         proxyRequest.getHeaders().put(HttpHeader.CONTENT_LENGTH, String.valueOf(bytes.length));
       }
       catch (JsonProcessingException e) {
-        Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 

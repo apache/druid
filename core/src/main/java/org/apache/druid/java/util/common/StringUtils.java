@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 
 import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
@@ -29,6 +28,7 @@ import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.IllegalFormatException;
 import java.util.Locale;
@@ -80,7 +80,7 @@ public class StringUtils
     }
     catch (UnsupportedEncodingException e) {
       // Should never happen
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -103,7 +103,7 @@ public class StringUtils
     }
     catch (UnsupportedEncodingException e) {
       // Should never happen
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -166,7 +166,7 @@ public class StringUtils
    * @return application/x-www-form-urlencoded format encoded String, but with "+" replaced with "%20".
    */
   @Nullable
-  public static String urlEncode(String s)
+  public static String urlEncode(@Nullable String s)
   {
     if (s == null) {
       return null;
@@ -361,4 +361,130 @@ public class StringUtils
   {
     return BASE64_DECODER.decode(input);
   }
+
+  /**
+   * Returns a string whose value is the concatenation of the
+   * string {@code s} repeated {@code count} times.
+   * <p>
+   * If count or length is zero then the empty string is returned.
+   * <p>
+   * This method may be used to create space padding for
+   * formatting text or zero padding for formatting numbers.
+   *
+   * @param count number of times to repeat
+   *
+   * @return A string composed of this string repeated
+   * {@code count} times or the empty string if count
+   * or length is zero.
+   *
+   * @throws IllegalArgumentException if the {@code count} is negative.
+   * @link https://bugs.openjdk.java.net/browse/JDK-8197594
+   */
+  public static String repeat(String s, int count)
+  {
+    if (count < 0) {
+      throw new IllegalArgumentException("count is negative, " + count);
+    }
+    if (count == 1) {
+      return s;
+    }
+    byte[] value = s.getBytes(StandardCharsets.UTF_8);
+    final int len = value.length;
+    if (len == 0 || count == 0) {
+      return "";
+    }
+    if (len == 1) {
+      final byte[] single = new byte[count];
+      Arrays.fill(single, value[0]);
+      return new String(single, StandardCharsets.UTF_8);
+    }
+    if (Integer.MAX_VALUE / count < len) {
+      throw new RuntimeException("The produced string is too large.");
+    }
+    final int limit = len * count;
+    final byte[] multiple = new byte[limit];
+    System.arraycopy(value, 0, multiple, 0, len);
+    int copied = len;
+    for (; copied < limit - copied; copied <<= 1) {
+      System.arraycopy(multiple, 0, multiple, copied, copied);
+    }
+    System.arraycopy(multiple, 0, multiple, copied, limit - copied);
+    return new String(multiple, StandardCharsets.UTF_8);
+  }
+   
+  /**
+   * Returns the string left-padded with the string pad to a length of len characters.
+   * If str is longer than len, the return value is shortened to len characters.
+   * Lpad and rpad functions are migrated from flink's scala function with minor refactor
+   * https://github.com/apache/flink/blob/master/flink-table/flink-table-planner/src/main/scala/org/apache/flink/table/runtime/functions/ScalarFunctions.scala
+   *
+   * @param base The base string to be padded
+   * @param len The length of padded string
+   * @param pad The pad string
+   * @return the string left-padded with pad to a length of len
+   */
+  public static String lpad(String base, Integer len, String pad)
+  {
+    if (len < 0) {
+      return null;
+    } else if (len == 0) {
+      return "";
+    }
+
+    char[] data = new char[len];
+
+    // The length of the padding needed
+    int pos = Math.max(len - base.length(), 0);
+
+    // Copy the padding
+    for (int i = 0; i < pos; i += pad.length()) {
+      for (int j = 0; j < pad.length() && j < pos - i; j++) {
+        data[i + j] = pad.charAt(j);
+      }
+    }
+
+    // Copy the base
+    for (int i = 0; pos + i < len && i < base.length(); i++) {
+      data[pos + i] = base.charAt(i);
+    }
+
+    return new String(data);
+  }
+
+  /**
+   * Returns the string right-padded with the string pad to a length of len characters.
+   * If str is longer than len, the return value is shortened to len characters. 
+   *
+   * @param base The base string to be padded
+   * @param len The length of padded string
+   * @param pad The pad string
+   * @return the string right-padded with pad to a length of len
+   */
+  public static String rpad(String base, Integer len, String pad)
+  {
+    if (len < 0) {
+      return null;
+    } else if (len == 0) {
+      return "";
+    }
+
+    char[] data = new char[len];
+
+    int pos = 0;
+
+    // Copy the base
+    for ( ; pos < base.length() && pos < len; pos++) {
+      data[pos] = base.charAt(pos);
+    }
+
+    // Copy the padding
+    for ( ; pos < len; pos += pad.length()) {
+      for (int i = 0; i < pad.length() && i < len - pos; i++) {
+        data[pos + i] = pad.charAt(i);
+      }
+    }
+
+    return new String(data);
+  }
+
 }

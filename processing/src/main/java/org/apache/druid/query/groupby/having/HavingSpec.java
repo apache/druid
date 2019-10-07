@@ -21,11 +21,9 @@ package org.apache.druid.query.groupby.having;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.data.input.Row;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.column.ValueType;
-
-import java.util.Map;
+import org.apache.druid.java.util.common.Cacheable;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.ResultRow;
 
 /**
  * A "having" clause that filters aggregated/dimension value. This is similar to SQL's "having"
@@ -44,22 +42,12 @@ import java.util.Map;
     @JsonSubTypes.Type(name = "always", value = AlwaysHavingSpec.class),
     @JsonSubTypes.Type(name = "filter", value = DimFilterHavingSpec.class)
 })
-public interface HavingSpec
+public interface HavingSpec extends Cacheable
 {
-  // Atoms for easy combination, but for now they are mostly useful
-  // for testing.
-  HavingSpec NEVER = new NeverHavingSpec();
-  HavingSpec ALWAYS = new AlwaysHavingSpec();
-
   /**
-   * Informs this HavingSpec that rows passed to "eval" will have a certain signature. Will be called
-   * before "eval".
-   *
-   * @param rowSignature signature of the rows
+   * Informs this HavingSpec that rows passed to "eval" will originate from a particular groupBy query.
    */
-  void setRowSignature(Map<String, ValueType> rowSignature);
-
-  void setAggregators(Map<String, AggregatorFactory> aggregators);
+  void setQuery(GroupByQuery query);
 
   /**
    * Evaluates if a given row satisfies the having spec.
@@ -68,5 +56,5 @@ public interface HavingSpec
    *
    * @return true if the given row satisfies the having spec. False otherwise.
    */
-  boolean eval(Row row);
+  boolean eval(ResultRow row);
 }

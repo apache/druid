@@ -81,9 +81,9 @@ public class VSizeSerdeBenchmark
     File base = new File(this.getClass().getClassLoader().getResource("").toURI());
     dummy = new File(base, "dummy");
     try (Writer writer = Files.newBufferedWriter(dummy.toPath(), StandardCharsets.UTF_8)) {
-      String EMPTY_STRING = "        ";
+      String emptyStr = "        ";
       for (int i = 0; i < values + 10; i++) {
-        writer.write(EMPTY_STRING);
+        writer.write(emptyStr);
       }
     }
 

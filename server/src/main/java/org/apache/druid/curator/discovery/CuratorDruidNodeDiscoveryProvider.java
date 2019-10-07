@@ -21,8 +21,8 @@ package org.apache.druid.curator.discovery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
@@ -43,7 +43,6 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 
-import javax.annotation.concurrent.GuardedBy;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -331,7 +330,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
           runnable.run();
         }
         catch (Exception ex) {
-          log.error(errMsgFormat, args);
+          log.error(ex, errMsgFormat, args);
         }
       });
     }
@@ -398,7 +397,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
         cache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
       }
       catch (Exception ex) {
-        throw Throwables.propagate(ex);
+        throw new RuntimeException(ex);
       }
     }
 

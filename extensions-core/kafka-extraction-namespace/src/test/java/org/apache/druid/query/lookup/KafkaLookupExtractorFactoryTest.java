@@ -23,18 +23,14 @@ import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Bytes;
-import kafka.consumer.ConsumerIterator;
-import kafka.consumer.KafkaStream;
-import kafka.consumer.TopicFilter;
-import kafka.javaapi.consumer.ConsumerConnector;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.lookup.namespace.cache.CacheHandler;
 import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.MockConsumer;
+import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
 import org.junit.Assert;
@@ -52,13 +48,9 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-
-import static org.apache.druid.query.lookup.KafkaLookupExtractorFactory.DEFAULT_STRING_DECODER;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
@@ -81,7 +73,8 @@ public class KafkaLookupExtractorFactoryTest
       "some.property", "some.value"
   );
   private final ObjectMapper mapper = new DefaultObjectMapper();
-  private final NamespaceExtractionCacheManager cacheManager = PowerMock.createStrictMock(NamespaceExtractionCacheManager.class);
+  private final NamespaceExtractionCacheManager cacheManager = PowerMock.createStrictMock(
+      NamespaceExtractionCacheManager.class);
   private final CacheHandler cacheHandler = PowerMock.createStrictMock(CacheHandler.class);
 
 
@@ -200,6 +193,7 @@ public class KafkaLookupExtractorFactoryTest
         DEFAULT_PROPERTIES
     );
     factory1.getMapRef().set(ImmutableMap.of());
+    //noinspection StringConcatenationMissingWhitespace
     final KafkaLookupExtractorFactory factory2 = new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC + "b",
@@ -229,6 +223,7 @@ public class KafkaLookupExtractorFactoryTest
         DEFAULT_PROPERTIES
     )));
 
+    //noinspection StringConcatenationMissingWhitespace
     Assert.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC + "b",
@@ -278,58 +273,34 @@ public class KafkaLookupExtractorFactoryTest
   @Test
   public void testStartStop()
   {
-    final KafkaStream<String, String> kafkaStream = PowerMock.createStrictMock(KafkaStream.class);
-    final ConsumerIterator<String, String> consumerIterator = PowerMock.createStrictMock(ConsumerIterator.class);
-    final ConsumerConnector consumerConnector = PowerMock.createStrictMock(ConsumerConnector.class);
-    EasyMock.expect(consumerConnector.createMessageStreamsByFilter(
-        EasyMock.anyObject(TopicFilter.class),
-        EasyMock.anyInt(),
-        EasyMock.eq(
-            DEFAULT_STRING_DECODER),
-        EasyMock.eq(DEFAULT_STRING_DECODER)
-    )).andReturn(ImmutableList.of(kafkaStream)).once();
-    EasyMock.expect(kafkaStream.iterator()).andReturn(consumerIterator).anyTimes();
-    EasyMock.expect(consumerIterator.hasNext()).andAnswer(getBlockingAnswer()).anyTimes();
+    Consumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
     EasyMock.expect(cacheManager.createCache())
             .andReturn(cacheHandler)
             .once();
-    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<String, String>()).once();
+    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<>()).once();
     cacheHandler.close();
     EasyMock.expectLastCall();
 
-    final AtomicBoolean threadWasInterrupted = new AtomicBoolean(false);
-    consumerConnector.shutdown();
-    EasyMock.expectLastCall().andAnswer(new IAnswer<Object>()
-    {
-      @Override
-      public Object answer()
-      {
-        threadWasInterrupted.set(Thread.currentThread().isInterrupted());
-        return null;
-      }
-    }).times(2);
+    PowerMock.replay(cacheManager, cacheHandler);
 
-    PowerMock.replay(cacheManager, cacheHandler, kafkaStream, consumerConnector, consumerIterator);
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
-        ImmutableMap.of("zookeeper.connect", "localhost"),
+        ImmutableMap.of("bootstrap.servers", "localhost"),
         10_000L,
         false
     )
     {
       @Override
-      ConsumerConnector buildConnector(Properties properties)
+      Consumer<String, String> getConsumer()
       {
-        return consumerConnector;
+        return kafkaConsumer;
       }
     };
 
     Assert.assertTrue(factory.start());
     Assert.assertTrue(factory.close());
     Assert.assertTrue(factory.getFuture().isDone());
-    Assert.assertFalse(threadWasInterrupted.get());
-
     PowerMock.verify(cacheManager, cacheHandler);
   }
 
@@ -340,27 +311,27 @@ public class KafkaLookupExtractorFactoryTest
     EasyMock.expect(cacheManager.createCache())
             .andReturn(cacheHandler)
             .once();
-    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<String, String>()).once();
+    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<>()).once();
     cacheHandler.close();
     EasyMock.expectLastCall();
     PowerMock.replay(cacheManager, cacheHandler);
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
-        ImmutableMap.of("zookeeper.connect", "localhost"),
+        ImmutableMap.of("bootstrap.servers", "localhost"),
         1,
         false
     )
     {
       @Override
-      ConsumerConnector buildConnector(Properties properties)
+      Consumer getConsumer()
       {
         // Lock up
         try {
           Thread.currentThread().join();
         }
         catch (InterruptedException e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
         throw new RuntimeException("shouldn't make it here");
       }
@@ -374,37 +345,24 @@ public class KafkaLookupExtractorFactoryTest
   @Test
   public void testStartStopStart()
   {
-    final KafkaStream<String, String> kafkaStream = PowerMock.createStrictMock(KafkaStream.class);
-    final ConsumerIterator<String, String> consumerIterator = PowerMock.createStrictMock(ConsumerIterator.class);
-    final ConsumerConnector consumerConnector = PowerMock.createStrictMock(ConsumerConnector.class);
-    EasyMock.expect(consumerConnector.createMessageStreamsByFilter(
-        EasyMock.anyObject(TopicFilter.class),
-        EasyMock.anyInt(),
-        EasyMock.eq(
-            DEFAULT_STRING_DECODER),
-        EasyMock.eq(DEFAULT_STRING_DECODER)
-    )).andReturn(ImmutableList.of(kafkaStream)).once();
-    EasyMock.expect(kafkaStream.iterator()).andReturn(consumerIterator).anyTimes();
-    EasyMock.expect(consumerIterator.hasNext()).andAnswer(getBlockingAnswer()).anyTimes();
+    Consumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
     EasyMock.expect(cacheManager.createCache())
             .andReturn(cacheHandler)
             .once();
-    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<String, String>()).once();
+    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<>()).once();
     cacheHandler.close();
     EasyMock.expectLastCall().once();
-    consumerConnector.shutdown();
-    EasyMock.expectLastCall().times(2);
-    PowerMock.replay(cacheManager, cacheHandler, kafkaStream, consumerConnector, consumerIterator);
+    PowerMock.replay(cacheManager, cacheHandler);
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
-        ImmutableMap.of("zookeeper.connect", "localhost")
+        ImmutableMap.of("bootstrap.servers", "localhost")
     )
     {
       @Override
-      ConsumerConnector buildConnector(Properties properties)
+      Consumer<String, String> getConsumer()
       {
-        return consumerConnector;
+        return kafkaConsumer;
       }
     };
     Assert.assertTrue(factory.start());
@@ -414,41 +372,28 @@ public class KafkaLookupExtractorFactoryTest
   }
 
   @Test
-  public void testStartStartStop()
+  public void testStartStartStopStop()
   {
-    final KafkaStream<String, String> kafkaStream = PowerMock.createStrictMock(KafkaStream.class);
-    final ConsumerIterator<String, String> consumerIterator = PowerMock.createStrictMock(ConsumerIterator.class);
-    final ConsumerConnector consumerConnector = PowerMock.createStrictMock(ConsumerConnector.class);
-    EasyMock.expect(consumerConnector.createMessageStreamsByFilter(
-        EasyMock.anyObject(TopicFilter.class),
-        EasyMock.anyInt(),
-        EasyMock.eq(
-            DEFAULT_STRING_DECODER),
-        EasyMock.eq(DEFAULT_STRING_DECODER)
-    )).andReturn(ImmutableList.of(kafkaStream)).once();
-    EasyMock.expect(kafkaStream.iterator()).andReturn(consumerIterator).anyTimes();
-    EasyMock.expect(consumerIterator.hasNext()).andAnswer(getBlockingAnswer()).anyTimes();
+    Consumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
     EasyMock.expect(cacheManager.createCache())
             .andReturn(cacheHandler)
             .once();
-    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<String, String>()).once();
+    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<>()).once();
     cacheHandler.close();
     EasyMock.expectLastCall().once();
-    consumerConnector.shutdown();
-    EasyMock.expectLastCall().times(3);
-    PowerMock.replay(cacheManager, cacheHandler, kafkaStream, consumerConnector, consumerIterator);
+    PowerMock.replay(cacheManager, cacheHandler);
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
-        ImmutableMap.of("zookeeper.connect", "localhost"),
+        ImmutableMap.of("bootstrap.servers", "localhost"),
         10_000L,
         false
     )
     {
       @Override
-      ConsumerConnector buildConnector(Properties properties)
+      Consumer<String, String> getConsumer()
       {
-        return consumerConnector;
+        return kafkaConsumer;
       }
     };
     Assert.assertTrue(factory.start());
@@ -461,7 +406,12 @@ public class KafkaLookupExtractorFactoryTest
   @Test
   public void testStartFailsOnMissingConnect()
   {
-    expectedException.expectMessage("zookeeper.connect required property");
+    expectedException.expectMessage("bootstrap.servers required property");
+    EasyMock.expect(cacheManager.createCache())
+            .andReturn(cacheHandler)
+            .once();
+    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<>()).once();
+    cacheHandler.close();
     PowerMock.replay(cacheManager);
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,
@@ -478,7 +428,12 @@ public class KafkaLookupExtractorFactoryTest
   {
     expectedException.expectMessage(
         "Cannot set kafka property [group.id]. Property is randomly generated for you. Found");
-    PowerMock.replay(cacheManager);
+    EasyMock.expect(cacheManager.createCache())
+            .andReturn(cacheHandler)
+            .once();
+    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<>());
+    cacheHandler.close();
+    PowerMock.replay(cacheManager, cacheHandler);
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
@@ -494,6 +449,12 @@ public class KafkaLookupExtractorFactoryTest
   {
     expectedException.expectMessage(
         "Cannot set kafka property [auto.offset.reset]. Property will be forced to [smallest]. Found ");
+    EasyMock.expect(cacheManager.createCache())
+            .andReturn(cacheHandler)
+            .once();
+    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<>()).once();
+    cacheHandler.close();
+    EasyMock.expectLastCall();
     PowerMock.replay(cacheManager);
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,
@@ -541,25 +502,13 @@ public class KafkaLookupExtractorFactoryTest
     Assert.assertEquals(injective, otherFactory.isInjective());
   }
 
-  @Test
-  public void testDefaultDecoder()
-  {
-    final String str = "some string";
-    Assert.assertEquals(str, DEFAULT_STRING_DECODER.fromBytes(StringUtils.toUtf8(str)));
-  }
-
   private IAnswer<Boolean> getBlockingAnswer()
   {
-    return new IAnswer<Boolean>()
-    {
-      @Override
-      public Boolean answer() throws Throwable
-      {
-        Thread.sleep(60000);
-        Assert.fail("Test failed to complete within 60000ms");
+    return () -> {
+      Thread.sleep(60000);
+      Assert.fail("Test failed to complete within 60000ms");
 
-        return false;
-      }
+      return false;
     };
   }
 }

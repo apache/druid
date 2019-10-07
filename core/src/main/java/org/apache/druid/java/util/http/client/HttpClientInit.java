@@ -19,7 +19,6 @@
 
 package org.apache.druid.java.util.http.client;
 
-import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
@@ -106,7 +105,7 @@ public class HttpClientInit
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -151,22 +150,22 @@ public class HttpClientInit
       return sslContext;
     }
     catch (CertificateException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     catch (NoSuchAlgorithmException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     catch (KeyStoreException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     catch (KeyManagementException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     catch (FileNotFoundException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     finally {
       CloseQuietly.close(in);
@@ -223,7 +222,7 @@ public class HttpClientInit
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     return bootstrap;

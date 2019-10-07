@@ -192,7 +192,7 @@ public class WorkerResource
       return Response.status(501)
                      .entity(StringUtils.format(
                          "Log streaming not supported by [%s]",
-                         taskRunner.getClass().getCanonicalName()
+                         taskRunner.getClass().getName()
                      ))
                      .build();
     }

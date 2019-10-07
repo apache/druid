@@ -258,7 +258,9 @@ public class ConcurrentGrouperTest
         }
 
         @Override
-        public void reset() {}
+        public void reset()
+        {
+        }
       };
     }
 

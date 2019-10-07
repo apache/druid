@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.rel;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
-import org.apache.calcite.interpreter.BindableConvention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -126,19 +125,6 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
   public DruidQuery toDruidQueryForExplaining()
   {
     throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public DruidUnionRel asBindable()
-  {
-    return new DruidUnionRel(
-        getCluster(),
-        getTraitSet().replace(BindableConvention.INSTANCE),
-        getQueryMaker(),
-        rowType,
-        rels.stream().map(rel -> RelOptRule.convert(rel, BindableConvention.INSTANCE)).collect(Collectors.toList()),
-        limit
-    );
   }
 
   @Override

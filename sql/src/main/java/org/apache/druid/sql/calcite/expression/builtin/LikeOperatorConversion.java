@@ -26,10 +26,12 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
@@ -55,6 +57,7 @@ public class LikeOperatorConversion extends DirectOperatorConversion
   public DimFilter toDruidFilter(
       PlannerContext plannerContext,
       RowSignature rowSignature,
+      @Nullable VirtualColumnRegistry virtualColumnRegistry,
       RexNode rexNode
   )
   {
@@ -64,14 +67,32 @@ public class LikeOperatorConversion extends DirectOperatorConversion
         rowSignature,
         operands.get(0)
     );
-    if (druidExpression == null || !druidExpression.isSimpleExtraction()) {
+    if (druidExpression == null) {
       return null;
     }
-    return new LikeDimFilter(
-        druidExpression.getSimpleExtraction().getColumn(),
-        RexLiteral.stringValue(operands.get(1)),
-        operands.size() > 2 ? RexLiteral.stringValue(operands.get(2)) : null,
-        druidExpression.getSimpleExtraction().getExtractionFn()
-    );
+
+    if (druidExpression.isSimpleExtraction()) {
+      return new LikeDimFilter(
+          druidExpression.getSimpleExtraction().getColumn(),
+          RexLiteral.stringValue(operands.get(1)),
+          operands.size() > 2 ? RexLiteral.stringValue(operands.get(2)) : null,
+          druidExpression.getSimpleExtraction().getExtractionFn()
+      );
+    } else if (virtualColumnRegistry != null) {
+      VirtualColumn v = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+          plannerContext,
+          druidExpression,
+          operands.get(0).getType().getSqlTypeName()
+      );
+
+      return new LikeDimFilter(
+          v.getOutputName(),
+          RexLiteral.stringValue(operands.get(1)),
+          operands.size() > 2 ? RexLiteral.stringValue(operands.get(2)) : null,
+          null
+      );
+    } else {
+      return null;
+    }
   }
 }

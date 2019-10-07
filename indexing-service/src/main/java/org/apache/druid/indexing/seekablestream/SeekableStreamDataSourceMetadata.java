@@ -19,32 +19,28 @@
 
 package org.apache.druid.indexing.seekablestream;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.java.util.common.IAE;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 public abstract class SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>
     implements DataSourceMetadata
 {
-  private final SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> seekableStreamPartitions;
+  private final SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> seekableStreamSequenceNumbers;
 
-  @JsonCreator
   public SeekableStreamDataSourceMetadata(
-      @JsonProperty("partitions") SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> seekableStreamPartitions
+      SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> seekableStreamSequenceNumbers
   )
   {
-    this.seekableStreamPartitions = seekableStreamPartitions;
+    this.seekableStreamSequenceNumbers = seekableStreamSequenceNumbers;
   }
 
   @JsonProperty("partitions")
-  public SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> getSeekableStreamPartitions()
+  public SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> getSeekableStreamSequenceNumbers()
   {
-    return seekableStreamPartitions;
+    return seekableStreamSequenceNumbers;
   }
 
   @Override
@@ -63,74 +59,40 @@ public abstract class SeekableStreamDataSourceMetadata<PartitionIdType, Sequence
     return plus(other).equals(other.plus(this));
   }
 
-
   @Override
   public DataSourceMetadata plus(DataSourceMetadata other)
   {
-    if (!(this.getClass().isInstance(other))) {
+    if (this.getClass() != other.getClass()) {
       throw new IAE(
           "Expected instance of %s, got %s",
-          this.getClass().getCanonicalName(),
-          other.getClass().getCanonicalName()
+          this.getClass().getName(),
+          other.getClass().getName()
       );
     }
 
-    @SuppressWarnings("unchecked")
-    final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> that = (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) other;
+    //noinspection unchecked
+    final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> that =
+        (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) other;
 
-    if (that.getSeekableStreamPartitions().getStream().equals(seekableStreamPartitions.getStream())) {
-      // Same stream, merge sequences.
-      final Map<PartitionIdType, SequenceOffsetType> newMap = new HashMap<>();
-
-      for (Map.Entry<PartitionIdType, SequenceOffsetType> entry : seekableStreamPartitions.getPartitionSequenceNumberMap()
-                                                                                          .entrySet()) {
-        newMap.put(entry.getKey(), entry.getValue());
-      }
-
-      for (Map.Entry<PartitionIdType, SequenceOffsetType> entry : that.getSeekableStreamPartitions()
-                                                                      .getPartitionSequenceNumberMap()
-                                                                      .entrySet()) {
-        newMap.put(entry.getKey(), entry.getValue());
-      }
-
-      return createConcreteDataSourceMetaData(seekableStreamPartitions.getStream(), newMap);
-    } else {
-      // Different stream, prefer "other".
-      return other;
-    }
+    return createConcreteDataSourceMetaData(seekableStreamSequenceNumbers.plus(that.seekableStreamSequenceNumbers));
   }
-
 
   @Override
   public DataSourceMetadata minus(DataSourceMetadata other)
   {
-    if (!(this.getClass().isInstance(other))) {
+    if (this.getClass() != other.getClass()) {
       throw new IAE(
           "Expected instance of %s, got %s",
-          this.getClass().getCanonicalName(),
-          other.getClass().getCanonicalName()
+          this.getClass().getName(),
+          other.getClass().getName()
       );
     }
 
-    @SuppressWarnings("unchecked")
-    final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> that = (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) other;
+    //noinspection unchecked
+    final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> that =
+        (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) other;
 
-    if (that.getSeekableStreamPartitions().getStream().equals(seekableStreamPartitions.getStream())) {
-      // Same stream, remove partitions present in "that" from "this"
-      final Map<PartitionIdType, SequenceOffsetType> newMap = new HashMap<>();
-
-      for (Map.Entry<PartitionIdType, SequenceOffsetType> entry : seekableStreamPartitions.getPartitionSequenceNumberMap()
-                                                                                          .entrySet()) {
-        if (!that.getSeekableStreamPartitions().getPartitionSequenceNumberMap().containsKey(entry.getKey())) {
-          newMap.put(entry.getKey(), entry.getValue());
-        }
-      }
-
-      return createConcreteDataSourceMetaData(seekableStreamPartitions.getStream(), newMap);
-    } else {
-      // Different stream, prefer "this".
-      return this;
-    }
+    return createConcreteDataSourceMetaData(seekableStreamSequenceNumbers.minus(that.seekableStreamSequenceNumbers));
   }
 
   @Override
@@ -143,25 +105,24 @@ public abstract class SeekableStreamDataSourceMetadata<PartitionIdType, Sequence
       return false;
     }
     SeekableStreamDataSourceMetadata that = (SeekableStreamDataSourceMetadata) o;
-    return Objects.equals(getSeekableStreamPartitions(), that.getSeekableStreamPartitions());
+    return Objects.equals(getSeekableStreamSequenceNumbers(), that.getSeekableStreamSequenceNumbers());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(getSeekableStreamPartitions());
+    return seekableStreamSequenceNumbers.hashCode();
   }
 
   @Override
   public String toString()
   {
-    return "SeekableStreamDataSourceMetadata{" +
-           "SeekableStreamPartitions=" + getSeekableStreamPartitions() +
+    return getClass().getSimpleName() + "{" +
+           "SeekableStreamStartSequenceNumbers=" + getSeekableStreamSequenceNumbers() +
            '}';
   }
 
   protected abstract SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createConcreteDataSourceMetaData(
-      String streamId,
-      Map<PartitionIdType, SequenceOffsetType> newMap
+      SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> seekableStreamSequenceNumbers
   );
 }

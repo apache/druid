@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -28,6 +27,7 @@ import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.ResultRow;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -115,7 +115,7 @@ public class DoublesSketchAggregatorTest
   @Test
   public void ingestingSketches() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_sketch_data.tsv").getFile()),
         String.join(
             "\n",
@@ -162,22 +162,22 @@ public class DoublesSketchAggregatorTest
             "}"
         )
     );
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
+    ResultRow row = results.get(0);
 
-    Object nonExistentSketchObject = row.getRaw("non_existent_sketch");
+    Object nonExistentSketchObject = row.get(1);
     Assert.assertTrue(nonExistentSketchObject instanceof Long);
     long nonExistentSketchValue = (long) nonExistentSketchObject;
     Assert.assertEquals(0, nonExistentSketchValue);
 
-    Object sketchObject = row.getRaw("sketch");
+    Object sketchObject = row.get(0);
     Assert.assertTrue(sketchObject instanceof Long);
     long sketchValue = (long) sketchObject;
     Assert.assertEquals(400, sketchValue);
 
     // post agg
-    Object quantilesObject = row.getRaw("quantiles");
+    Object quantilesObject = row.get(2);
     Assert.assertTrue(quantilesObject instanceof double[]);
     double[] quantiles = (double[]) quantilesObject;
     Assert.assertEquals(0, quantiles[0], 0.05); // min value
@@ -185,7 +185,7 @@ public class DoublesSketchAggregatorTest
     Assert.assertEquals(1, quantiles[2], 0.05); // max value
 
     // post agg
-    Object histogramObject = row.getRaw("histogram");
+    Object histogramObject = row.get(3);
     Assert.assertTrue(histogramObject instanceof double[]);
     double[] histogram = (double[]) histogramObject;
     for (final double bin : histogram) {
@@ -197,7 +197,7 @@ public class DoublesSketchAggregatorTest
   @Test
   public void buildingSketchesAtIngestionTime() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),
         String.join(
             "\n",
@@ -238,17 +238,17 @@ public class DoublesSketchAggregatorTest
             "}"
         )
     );
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
+    ResultRow row = results.get(0);
 
-    Object sketchObject = row.getRaw("sketch");
+    Object sketchObject = row.get(0);
     Assert.assertTrue(sketchObject instanceof Long);
     long sketchValue = (long) sketchObject;
     Assert.assertEquals(400, sketchValue);
 
     // post agg
-    Object quantilesObject = row.getRaw("quantiles");
+    Object quantilesObject = row.get(2);
     Assert.assertTrue(quantilesObject instanceof double[]);
     double[] quantiles = (double[]) quantilesObject;
     Assert.assertEquals(0, quantiles[0], 0.05); // min value
@@ -256,7 +256,7 @@ public class DoublesSketchAggregatorTest
     Assert.assertEquals(1, quantiles[2], 0.05); // max value
 
     // post agg
-    Object histogramObject = row.getRaw("histogram");
+    Object histogramObject = row.get(3);
     Assert.assertTrue(histogramObject instanceof double[]);
     double[] histogram = (double[]) histogramObject;
     Assert.assertEquals(4, histogram.length);
@@ -268,7 +268,7 @@ public class DoublesSketchAggregatorTest
   @Test
   public void buildingSketchesAtQueryTime() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),
         String.join(
             "\n",
@@ -309,22 +309,22 @@ public class DoublesSketchAggregatorTest
             "}"
         )
     );
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
+    ResultRow row = results.get(0);
 
-    Object sketchObject = row.getRaw("sketch");
+    Object sketchObject = row.get(0);
     Assert.assertTrue(sketchObject instanceof Long);
     long sketchValue = (long) sketchObject;
     Assert.assertEquals(400, sketchValue);
 
     // post agg
-    Object quantileObject = row.getRaw("quantile");
+    Object quantileObject = row.get(1);
     Assert.assertTrue(quantileObject instanceof Double);
     Assert.assertEquals(0.5, (double) quantileObject, 0.05); // median value
 
     // post agg
-    Object quantilesObject = row.getRaw("quantiles");
+    Object quantilesObject = row.get(2);
     Assert.assertTrue(quantilesObject instanceof double[]);
     double[] quantiles = (double[]) quantilesObject;
     Assert.assertEquals(0, quantiles[0], 0.05); // min value
@@ -332,7 +332,7 @@ public class DoublesSketchAggregatorTest
     Assert.assertEquals(1, quantiles[2], 0.05); // max value
 
     // post agg
-    Object histogramObject = row.getRaw("histogram");
+    Object histogramObject = row.get(3);
     Assert.assertTrue(histogramObject instanceof double[]);
     double[] histogram = (double[]) histogramObject;
     for (final double bin : histogram) {
@@ -342,9 +342,9 @@ public class DoublesSketchAggregatorTest
   }
 
   @Test
-  public void QueryingDataWithFieldNameValueAsFloatInsteadOfSketch() throws Exception
+  public void queryingDataWithFieldNameValueAsFloatInsteadOfSketch() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),
         String.join(
             "\n",
@@ -385,22 +385,22 @@ public class DoublesSketchAggregatorTest
             "}"
         )
     );
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
+    ResultRow row = results.get(0);
 
-    Object sketchObject = row.getRaw("sketch");
+    Object sketchObject = row.get(0);
     Assert.assertTrue(sketchObject instanceof Long);
     long sketchValue = (long) sketchObject;
     Assert.assertEquals(400, sketchValue);
 
     // post agg
-    Object quantileObject = row.getRaw("quantile");
+    Object quantileObject = row.get(1);
     Assert.assertTrue(quantileObject instanceof Double);
     Assert.assertEquals(0.5, (double) quantileObject, 0.05); // median value
 
     // post agg
-    Object quantilesObject = row.getRaw("quantiles");
+    Object quantilesObject = row.get(2);
     Assert.assertTrue(quantilesObject instanceof double[]);
     double[] quantiles = (double[]) quantilesObject;
     Assert.assertEquals(0, quantiles[0], 0.05); // min value
@@ -408,7 +408,7 @@ public class DoublesSketchAggregatorTest
     Assert.assertEquals(1, quantiles[2], 0.05); // max value
 
     // post agg
-    Object histogramObject = row.getRaw("histogram");
+    Object histogramObject = row.get(3);
     Assert.assertTrue(histogramObject instanceof double[]);
     double[] histogram = (double[]) histogramObject;
     for (final double bin : histogram) {
@@ -418,9 +418,9 @@ public class DoublesSketchAggregatorTest
   }
 
   @Test
-  public void TimeSeriesQueryInputAsFloat() throws Exception
+  public void timeSeriesQueryInputAsFloat() throws Exception
   {
-    Sequence<Row> seq = timeSeriesHelper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = timeSeriesHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),
         String.join(
             "\n",
@@ -460,7 +460,7 @@ public class DoublesSketchAggregatorTest
             "}"
         )
     );
-    List<Row> results = seq.toList();
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
   }
 }

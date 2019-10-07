@@ -19,30 +19,26 @@
 
 package org.apache.druid.benchmark.query;
 
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.datagen.SegmentGenerator;
-import org.apache.druid.data.input.Row;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.NoopEscalator;
-import org.apache.druid.sql.SqlLifecycle;
-import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -64,39 +60,112 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.io.File;
-import java.util.HashMap;
+import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Benchmark that compares the same groupBy query through the native query layer and through the SQL layer.
+ * Benchmark that tests various SQL queries.
  */
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 15)
-@Measurement(iterations = 30)
+@Measurement(iterations = 25)
 public class SqlBenchmark
 {
-  @Param({"200000", "1000000"})
-  private int rowsPerSegment;
+  static {
+    Calcites.setSystemProperties();
+  }
 
   private static final Logger log = new Logger(SqlBenchmark.class);
 
-  private File tmpDir;
-  private SegmentGenerator segmentGenerator;
-  private SpecificSegmentsQuerySegmentWalker walker;
-  private SqlLifecycleFactory sqlLifecycleFactory;
-  private GroupByQuery groupByQuery;
-  private String sqlQuery;
-  private Closer resourceCloser;
+  private static final List<String> QUERIES = ImmutableList.of(
+      // 0, 1, 2, 3: Timeseries, unfiltered
+      "SELECT COUNT(*) FROM foo",
+      "SELECT COUNT(DISTINCT hyper) FROM foo",
+      "SELECT SUM(sumLongSequential), SUM(sumFloatNormal) FROM foo",
+      "SELECT FLOOR(__time TO MINUTE), SUM(sumLongSequential), SUM(sumFloatNormal) FROM foo GROUP BY 1",
+
+      // 4: Timeseries, low selectivity filter (90% of rows match)
+      "SELECT SUM(sumLongSequential), SUM(sumFloatNormal) FROM foo WHERE dimSequential NOT LIKE '%3'",
+
+      // 5: Timeseries, high selectivity filter (0.1% of rows match)
+      "SELECT SUM(sumLongSequential), SUM(sumFloatNormal) FROM foo WHERE dimSequential = '311'",
+
+      // 6: Timeseries, mixing low selectivity index-capable filter (90% of rows match) + cursor filter
+      "SELECT SUM(sumLongSequential), SUM(sumFloatNormal) FROM foo\n"
+      + "WHERE dimSequential NOT LIKE '%3' AND maxLongUniform > 10",
+
+      // 7: Timeseries, low selectivity toplevel filter (90%), high selectivity filtered aggregator (0.1%)
+      "SELECT\n"
+      + "  SUM(sumLongSequential) FILTER(WHERE dimSequential = '311'),\n"
+      + "  SUM(sumFloatNormal)\n"
+      + "FROM foo\n"
+      + "WHERE dimSequential NOT LIKE '%3'",
+
+      // 8: Timeseries, no toplevel filter, various filtered aggregators with clauses repeated.
+      "SELECT\n"
+      + "  SUM(sumLongSequential) FILTER(WHERE dimSequential = '311'),\n"
+      + "  SUM(sumLongSequential) FILTER(WHERE dimSequential <> '311'),\n"
+      + "  SUM(sumLongSequential) FILTER(WHERE dimSequential LIKE '%3'),\n"
+      + "  SUM(sumLongSequential) FILTER(WHERE dimSequential NOT LIKE '%3'),\n"
+      + "  SUM(sumLongSequential),\n"
+      + "  SUM(sumFloatNormal) FILTER(WHERE dimSequential = '311'),\n"
+      + "  SUM(sumFloatNormal) FILTER(WHERE dimSequential <> '311'),\n"
+      + "  SUM(sumFloatNormal) FILTER(WHERE dimSequential LIKE '%3'),\n"
+      + "  SUM(sumFloatNormal) FILTER(WHERE dimSequential NOT LIKE '%3'),\n"
+      + "  SUM(sumFloatNormal),\n"
+      + "  COUNT(*) FILTER(WHERE dimSequential = '311'),\n"
+      + "  COUNT(*) FILTER(WHERE dimSequential <> '311'),\n"
+      + "  COUNT(*) FILTER(WHERE dimSequential LIKE '%3'),\n"
+      + "  COUNT(*) FILTER(WHERE dimSequential NOT LIKE '%3'),\n"
+      + "  COUNT(*)\n"
+      + "FROM foo",
+
+      // 9: Timeseries, toplevel time filter, time-comparison filtered aggregators
+      "SELECT\n"
+      + "  SUM(sumLongSequential)\n"
+      + "    FILTER(WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-01 12:00:00'),\n"
+      + "  SUM(sumLongSequential)\n"
+      + "    FILTER(WHERE __time >= TIMESTAMP '2000-01-01 12:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00')\n"
+      + "FROM foo\n"
+      + "WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00'",
+
+      // 10, 11: GroupBy two strings, unfiltered, unordered
+      "SELECT dimSequential, dimZipf, SUM(sumLongSequential) FROM foo GROUP BY 1, 2",
+      "SELECT dimSequential, dimZipf, SUM(sumLongSequential), COUNT(*) FROM foo GROUP BY 1, 2",
+
+      // 12, 13, 14: GroupBy one string, unfiltered, various aggregator configurations
+      "SELECT dimZipf FROM foo GROUP BY 1",
+      "SELECT dimZipf, COUNT(*) FROM foo GROUP BY 1 ORDER BY COUNT(*) DESC",
+      "SELECT dimZipf, SUM(sumLongSequential), COUNT(*) FROM foo GROUP BY 1 ORDER BY COUNT(*) DESC",
+
+      // 15, 16: GroupBy long, unfiltered, unordered; with and without aggregators
+      "SELECT maxLongUniform FROM foo GROUP BY 1",
+      "SELECT maxLongUniform, SUM(sumLongSequential), COUNT(*) FROM foo GROUP BY 1",
+
+      // 17, 18: GroupBy long, filter by long, unordered; with and without aggregators
+      "SELECT maxLongUniform FROM foo WHERE maxLongUniform > 10 GROUP BY 1",
+      "SELECT maxLongUniform, SUM(sumLongSequential), COUNT(*) FROM foo WHERE maxLongUniform > 10 GROUP BY 1"
+  );
+
+  @Param({"5000000"})
+  private int rowsPerSegment;
+
+  @Param({"false", "force"})
+  private String vectorize;
+
+  @Param({"10", "15"})
+  private String query;
+
+  @Nullable
+  private PlannerFactory plannerFactory;
+  private Closer closer = Closer.create();
 
   @Setup(Level.Trial)
   public void setup()
   {
-    tmpDir = Files.createTempDir();
-    log.info("Starting benchmark setup using tmpDir[%s], rows[%,d].", tmpDir, rowsPerSegment);
-
     final BenchmarkSchemaInfo schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get("basic");
 
     final DataSegment dataSegment = DataSegment.builder()
@@ -106,90 +175,55 @@ public class SqlBenchmark
                                                .shardSpec(new LinearShardSpec(0))
                                                .build();
 
-    this.segmentGenerator = new SegmentGenerator();
-
-    final QueryableIndex index = segmentGenerator.generate(dataSegment, schemaInfo, Granularities.NONE, rowsPerSegment);
-    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
-        .createQueryRunnerFactoryConglomerate();
-    final QueryRunnerFactoryConglomerate conglomerate = conglomerateCloserPair.lhs;
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
+
+    final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
+    log.info("Starting benchmark setup using cacheDir[%s], rows[%,d].", segmentGenerator.getCacheDir(), rowsPerSegment);
+    final QueryableIndex index = segmentGenerator.generate(dataSegment, schemaInfo, Granularities.NONE, rowsPerSegment);
+
+    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerate = CalciteTests.createQueryRunnerFactoryConglomerate();
+    closer.register(conglomerate.rhs);
+
+    final SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(conglomerate.lhs).add(
+        dataSegment,
+        index
+    );
+    closer.register(walker);
+
+    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate.lhs, walker, plannerConfig);
     final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
-    this.walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(dataSegment, index);
-    final PlannerFactory plannerFactory = new PlannerFactory(
+
+    plannerFactory = new PlannerFactory(
         druidSchema,
         systemSchema,
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate.lhs),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper()
     );
-    this.sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(plannerFactory);
-    groupByQuery = GroupByQuery
-        .builder()
-        .setDataSource("foo")
-        .setInterval(Intervals.ETERNITY)
-        .setDimensions(new DefaultDimensionSpec("dimZipf", "d0"), new DefaultDimensionSpec("dimSequential", "d1"))
-        .setAggregatorSpecs(new CountAggregatorFactory("c"))
-        .setGranularity(Granularities.ALL)
-        .build();
-
-    sqlQuery = "SELECT\n"
-               + "  dimZipf AS d0,"
-               + "  dimSequential AS d1,\n"
-               + "  COUNT(*) AS c\n"
-               + "FROM druid.foo\n"
-               + "GROUP BY dimZipf, dimSequential";
   }
 
   @TearDown(Level.Trial)
   public void tearDown() throws Exception
   {
-    if (walker != null) {
-      walker.close();
-      walker = null;
-    }
-
-    if (segmentGenerator != null) {
-      segmentGenerator.close();
-      segmentGenerator = null;
-    }
-
-    if (resourceCloser != null) {
-      resourceCloser.close();
-    }
-
-    if (tmpDir != null) {
-      FileUtils.deleteDirectory(tmpDir);
-    }
+    closer.close();
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  public void queryNative(Blackhole blackhole)
+  public void querySql(Blackhole blackhole) throws Exception
   {
-    final Sequence<Row> resultSequence = QueryPlus.wrap(groupByQuery).run(walker, new HashMap<>());
-    final List<Row> resultList = resultSequence.toList();
-
-    for (Row row : resultList) {
-      blackhole.consume(row);
+    final Map<String, Object> context = ImmutableMap.of("vectorize", vectorize);
+    final AuthenticationResult authenticationResult = NoopEscalator.getInstance()
+                                                                   .createEscalatedAuthenticationResult();
+    try (final DruidPlanner planner = plannerFactory.createPlanner(context, authenticationResult)) {
+      final PlannerResult plannerResult = planner.plan(QUERIES.get(Integer.parseInt(query)));
+      final Sequence<Object[]> resultSequence = plannerResult.run();
+      final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
+      blackhole.consume(lastRow);
     }
-  }
-
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  public void queryPlanner(Blackhole blackhole) throws Exception
-  {
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
-    final List<Object[]> results = sqlLifecycle.runSimple(
-        sqlQuery,
-        null,
-        NoopEscalator.getInstance().createEscalatedAuthenticationResult()
-    ).toList();
-    blackhole.consume(results);
   }
 }

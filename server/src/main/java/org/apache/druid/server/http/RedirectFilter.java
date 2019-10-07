@@ -50,7 +50,9 @@ public class RedirectFilter implements Filter
   }
 
   @Override
-  public void init(FilterConfig filterConfig) {}
+  public void init(FilterConfig filterConfig)
+  {
+  }
 
   @Override
   public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
@@ -85,5 +87,7 @@ public class RedirectFilter implements Filter
   }
 
   @Override
-  public void destroy() {}
+  public void destroy()
+  {
+  }
 }

@@ -35,6 +35,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
@@ -89,6 +90,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -132,14 +134,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     public boolean isUseApproximateCountDistinct()
     {
       return false;
-    }
-  };
-  public static final PlannerConfig PLANNER_CONFIG_FALLBACK = new PlannerConfig()
-  {
-    @Override
-    public boolean isUseFallback()
-    {
-      return true;
     }
   };
   public static final PlannerConfig PLANNER_CONFIG_SINGLE_NESTING_ONLY = new PlannerConfig()
@@ -230,6 +224,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  public boolean cannotVectorize = false;
+  public boolean skipVectorize = false;
+
   public SpecificSegmentsQuerySegmentWalker walker = null;
   public QueryLogHook queryLogHook;
 
@@ -243,70 +241,70 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   }
 
   // Generate timestamps for expected results
-  public static long T(final String timeString)
+  public static long timestamp(final String timeString)
   {
     return Calcites.jodaToCalciteTimestamp(DateTimes.of(timeString), DateTimeZone.UTC);
   }
 
   // Generate timestamps for expected results
-  public static long T(final String timeString, final String timeZoneString)
+  public static long timestamp(final String timeString, final String timeZoneString)
   {
     final DateTimeZone timeZone = DateTimes.inferTzFromString(timeZoneString);
     return Calcites.jodaToCalciteTimestamp(new DateTime(timeString, timeZone), timeZone);
   }
 
   // Generate day numbers for expected results
-  public static int D(final String dayString)
+  public static int day(final String dayString)
   {
-    return (int) (Intervals.utc(T("1970"), T(dayString)).toDurationMillis() / (86400L * 1000L));
+    return (int) (Intervals.utc(timestamp("1970"), timestamp(dayString)).toDurationMillis() / (86400L * 1000L));
   }
 
-  public static QuerySegmentSpec QSS(final Interval... intervals)
+  public static QuerySegmentSpec querySegmentSpec(final Interval... intervals)
   {
     return new MultipleIntervalSegmentSpec(Arrays.asList(intervals));
   }
 
-  public static AndDimFilter AND(DimFilter... filters)
+  public static AndDimFilter and(DimFilter... filters)
   {
     return new AndDimFilter(Arrays.asList(filters));
   }
 
-  public static OrDimFilter OR(DimFilter... filters)
+  public static OrDimFilter or(DimFilter... filters)
   {
     return new OrDimFilter(Arrays.asList(filters));
   }
 
-  public static NotDimFilter NOT(DimFilter filter)
+  public static NotDimFilter not(DimFilter filter)
   {
     return new NotDimFilter(filter);
   }
 
-  public static InDimFilter IN(String dimension, List<String> values, ExtractionFn extractionFn)
+  public static InDimFilter in(String dimension, List<String> values, ExtractionFn extractionFn)
   {
     return new InDimFilter(dimension, values, extractionFn);
   }
 
-  public static SelectorDimFilter SELECTOR(final String fieldName, final String value, final ExtractionFn extractionFn)
+  public static SelectorDimFilter selector(final String fieldName, final String value, final ExtractionFn extractionFn)
   {
     return new SelectorDimFilter(fieldName, value, extractionFn);
   }
 
-  public static ExpressionDimFilter EXPRESSION_FILTER(final String expression)
+  public static ExpressionDimFilter expressionFilter(final String expression)
   {
     return new ExpressionDimFilter(expression, CalciteTests.createExprMacroTable());
   }
 
-  public static DimFilter NUMERIC_SELECTOR(
+  public static DimFilter numericSelector(
       final String fieldName,
       final String value,
       final ExtractionFn extractionFn
   )
   {
     // We use Bound filters for numeric equality to achieve "10.0" = "10"
-    return BOUND(fieldName, value, value, false, false, extractionFn, StringComparators.NUMERIC);
+    return bound(fieldName, value, value, false, false, extractionFn, StringComparators.NUMERIC);
   }
 
-  public static BoundDimFilter BOUND(
+  public static BoundDimFilter bound(
       final String fieldName,
       final String lower,
       final String upper,
@@ -319,7 +317,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new BoundDimFilter(fieldName, lower, upper, lowerStrict, upperStrict, null, extractionFn, comparator);
   }
 
-  public static BoundDimFilter TIME_BOUND(final Object intervalObj)
+  public static BoundDimFilter timeBound(final Object intervalObj)
   {
     final Interval interval = new Interval(intervalObj, ISOChronology.getInstanceUTC());
     return new BoundDimFilter(
@@ -329,32 +327,32 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         false,
         true,
         null,
-        null,
+        null, 
         StringComparators.NUMERIC
     );
   }
 
-  public static CascadeExtractionFn CASCADE(final ExtractionFn... fns)
+  public static CascadeExtractionFn cascade(final ExtractionFn... fns)
   {
     return new CascadeExtractionFn(fns);
   }
 
-  public static List<DimensionSpec> DIMS(final DimensionSpec... dimensionSpecs)
+  public static List<DimensionSpec> dimensions(final DimensionSpec... dimensionSpecs)
   {
     return Arrays.asList(dimensionSpecs);
   }
 
-  public static List<AggregatorFactory> AGGS(final AggregatorFactory... aggregators)
+  public static List<AggregatorFactory> aggregators(final AggregatorFactory... aggregators)
   {
     return Arrays.asList(aggregators);
   }
 
-  public static DimFilterHavingSpec HAVING(final DimFilter filter)
+  public static DimFilterHavingSpec having(final DimFilter filter)
   {
     return new DimFilterHavingSpec(filter, true);
   }
 
-  public static ExpressionVirtualColumn EXPRESSION_VIRTUAL_COLUMN(
+  public static ExpressionVirtualColumn expressionVirtualColumn(
       final String name,
       final String expression,
       final ValueType outputType
@@ -363,14 +361,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new ExpressionVirtualColumn(name, expression, outputType, CalciteTests.createExprMacroTable());
   }
 
-  public static ExpressionPostAggregator EXPRESSION_POST_AGG(final String name, final String expression)
+  public static ExpressionPostAggregator expressionPostAgg(final String name, final String expression)
   {
     return new ExpressionPostAggregator(name, expression, null, CalciteTests.createExprMacroTable());
   }
 
   public static Druids.ScanQueryBuilder newScanQueryBuilder()
   {
-    return new Druids.ScanQueryBuilder().resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+    return new Druids.ScanQueryBuilder().resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                            .legacy(false);
   }
 
@@ -501,6 +499,19 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     testQuery(plannerConfig, QUERY_CONTEXT_DEFAULT, sql, authenticationResult, expectedQueries, expectedResults);
   }
 
+  private Query recursivelyOverrideContext(final Query q, final Map<String, Object> context)
+  {
+    final Query q2;
+    if (q.getDataSource() instanceof QueryDataSource) {
+      final Query subQuery = ((QueryDataSource) q.getDataSource()).getQuery();
+      q2 = q.withDataSource(new QueryDataSource(recursivelyOverrideContext(subQuery, context)));
+    } else {
+      q2 = q;
+    }
+
+    return q2.withOverriddenContext(context);
+  }
+
   public void testQuery(
       final PlannerConfig plannerConfig,
       final Map<String, Object> queryContext,
@@ -511,9 +522,38 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   ) throws Exception
   {
     log.info("SQL: %s", sql);
-    queryLogHook.clearRecordedQueries();
-    final List<Object[]> plannerResults = getResults(plannerConfig, queryContext, sql, authenticationResult);
-    verifyResults(sql, expectedQueries, expectedResults, plannerResults);
+
+    final List<String> vectorizeValues = new ArrayList<>();
+
+    vectorizeValues.add("false");
+
+    if (!skipVectorize) {
+      vectorizeValues.add("force");
+    }
+
+    for (final String vectorize : vectorizeValues) {
+      queryLogHook.clearRecordedQueries();
+
+      final Map<String, Object> theQueryContext = new HashMap<>(queryContext);
+      theQueryContext.put("vectorize", vectorize);
+
+      if (!"false".equals(vectorize)) {
+        theQueryContext.put("vectorSize", 2); // Small vector size to ensure we use more than one.
+      }
+
+      final List<Query> theQueries = new ArrayList<>();
+      for (Query query : expectedQueries) {
+        theQueries.add(recursivelyOverrideContext(query, theQueryContext));
+      }
+
+      if (cannotVectorize && "force".equals(vectorize)) {
+        expectedException.expect(RuntimeException.class);
+        expectedException.expectMessage("Cannot vectorize");
+      }
+
+      final List<Object[]> plannerResults = getResults(plannerConfig, theQueryContext, sql, authenticationResult);
+      verifyResults(sql, theQueries, expectedResults, plannerResults);
+    }
   }
 
   public List<Object[]> getResults(
@@ -615,5 +655,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         );
       }
     }
+  }
+
+  protected void cannotVectorize()
+  {
+    cannotVectorize = true;
+  }
+
+  protected void skipVectorize()
+  {
+    skipVectorize = true;
   }
 }

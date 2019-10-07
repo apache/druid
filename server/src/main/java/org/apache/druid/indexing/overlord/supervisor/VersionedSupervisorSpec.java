@@ -22,19 +22,26 @@ package org.apache.druid.indexing.overlord.supervisor;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.annotation.Nullable;
+
 public class VersionedSupervisorSpec
 {
+  @Nullable
   private final SupervisorSpec spec;
   private final String version;
 
   @JsonCreator
-  public VersionedSupervisorSpec(@JsonProperty("spec") SupervisorSpec spec, @JsonProperty("version") String version)
+  public VersionedSupervisorSpec(
+      @JsonProperty("spec") @Nullable SupervisorSpec spec,
+      @JsonProperty("version") String version
+  )
   {
     this.spec = spec;
     this.version = version;
   }
 
   @JsonProperty
+  @Nullable
   public SupervisorSpec getSpec()
   {
     return spec;

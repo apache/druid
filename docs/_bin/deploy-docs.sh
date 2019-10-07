@@ -88,6 +88,9 @@ remote=$(git -C "$druid" config --local --get "remote.$origin.url")
 git clone -q --depth 1 --branch $branch $remote "$src"
 
 if [ -n "$opt_docs" ] ; then
+  # Check for broken links
+  "$src/docs/_bin/broken-link-check.py" "$src/docs/content" "$src/docs/_redirects.json"
+
   # Copy docs
   mkdir -p $target/docs/$version
   rsync -a --delete "$src/docs/content/" $target/docs/$version

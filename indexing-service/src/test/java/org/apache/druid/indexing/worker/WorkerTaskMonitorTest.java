@@ -39,7 +39,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.task.NoopTestTaskFileWriter;
+import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import org.apache.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
@@ -47,9 +47,6 @@ import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
-import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
-import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.IndexerZkConfig;
@@ -63,17 +60,17 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
+ *
  */
 public class WorkerTaskMonitorTest
 {
-  private static final Joiner joiner = Joiner.on("/");
-  private static final String basePath = "/test/druid";
-  private static final String tasksPath = StringUtils.format("%s/indexer/tasks/worker", basePath);
-  private static final String statusPath = StringUtils.format("%s/indexer/status/worker", basePath);
+  private static final Joiner JOINER = Joiner.on("/");
+  private static final String BASE_PATH = "/test/druid";
+  private static final String TASKS_PATH = StringUtils.format("%s/indexer/tasks/worker", BASE_PATH);
+  private static final String STATUS_PATH = StringUtils.format("%s/indexer/status/worker", BASE_PATH);
   private static final DruidNode DUMMY_NODE = new DruidNode("dummy", "dummy", false, 9000, null, true, false);
 
   private TestingCluster testingCluster;
@@ -109,7 +106,7 @@ public class WorkerTaskMonitorTest
                                 .build();
     cf.start();
     cf.blockUntilConnected();
-    cf.create().creatingParentsIfNeeded().forPath(basePath);
+    cf.create().creatingParentsIfNeeded().forPath(BASE_PATH);
 
     worker = new Worker(
         "http",
@@ -128,7 +125,7 @@ public class WorkerTaskMonitorTest
               @Override
               public String getBase()
               {
-                return basePath;
+                return BASE_PATH;
               }
             }, null, null, null, null
         ),
@@ -158,6 +155,7 @@ public class WorkerTaskMonitorTest
         null,
         false,
         null,
+        null,
         null
     );
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
@@ -170,21 +168,10 @@ public class WorkerTaskMonitorTest
         new SingleTaskBackgroundRunner(
             new TaskToolboxFactory(
                 taskConfig,
+                null,
                 taskActionClientFactory,
-                null, null, null, null, null, null, null, notifierFactory, null, null, null, new SegmentLoaderFactory(
-                new SegmentLoaderLocalCacheManager(
-                    null,
-                    new SegmentLoaderConfig()
-                    {
-                      @Override
-                      public List<StorageLocationConfig> getLocations()
-                      {
-                        return new ArrayList<>();
-                      }
-                    },
-                    jsonMapper
-                )
-            ),
+                null, null, null, null, null, null, null, notifierFactory, null, null, null,
+                new SegmentLoaderFactory(null, jsonMapper),
                 jsonMapper,
                 indexIO,
                 null,
@@ -195,7 +182,8 @@ public class WorkerTaskMonitorTest
                 null,
                 null,
                 null,
-                new NoopTestTaskFileWriter()
+                new NoopTestTaskReportFileWriter(),
+                null
             ),
             taskConfig,
             new NoopServiceEmitter(),
@@ -229,7 +217,7 @@ public class WorkerTaskMonitorTest
               public boolean isValid()
               {
                 try {
-                  return cf.checkExists().forPath(joiner.join(tasksPath, task.getId())) == null;
+                  return cf.checkExists().forPath(JOINER.join(TASKS_PATH, task.getId())) == null;
                 }
                 catch (Exception e) {
                   return false;
@@ -241,7 +229,7 @@ public class WorkerTaskMonitorTest
 
     cf.create()
       .creatingParentsIfNeeded()
-      .forPath(joiner.join(tasksPath, task.getId()), jsonMapper.writeValueAsBytes(task));
+      .forPath(JOINER.join(TASKS_PATH, task.getId()), jsonMapper.writeValueAsBytes(task));
 
     Assert.assertTrue(
         TestUtils.conditionValid(
@@ -251,7 +239,7 @@ public class WorkerTaskMonitorTest
               public boolean isValid()
               {
                 try {
-                  final byte[] bytes = cf.getData().forPath(joiner.join(statusPath, task.getId()));
+                  final byte[] bytes = cf.getData().forPath(JOINER.join(STATUS_PATH, task.getId()));
                   final TaskAnnouncement announcement = jsonMapper.readValue(
                       bytes,
                       TaskAnnouncement.class
@@ -267,7 +255,7 @@ public class WorkerTaskMonitorTest
     );
 
     TaskAnnouncement taskAnnouncement = jsonMapper.readValue(
-        cf.getData().forPath(joiner.join(statusPath, task.getId())), TaskAnnouncement.class
+        cf.getData().forPath(JOINER.join(STATUS_PATH, task.getId())), TaskAnnouncement.class
     );
 
     Assert.assertEquals(task.getId(), taskAnnouncement.getTaskStatus().getId());
@@ -279,7 +267,7 @@ public class WorkerTaskMonitorTest
   {
     cf.create()
       .creatingParentsIfNeeded()
-      .forPath(joiner.join(tasksPath, task.getId()), jsonMapper.writeValueAsBytes(task));
+      .forPath(JOINER.join(TASKS_PATH, task.getId()), jsonMapper.writeValueAsBytes(task));
 
     Assert.assertTrue(
         TestUtils.conditionValid(
@@ -289,7 +277,7 @@ public class WorkerTaskMonitorTest
               public boolean isValid()
               {
                 try {
-                  final byte[] bytes = cf.getData().forPath(joiner.join(statusPath, task.getId()));
+                  final byte[] bytes = cf.getData().forPath(JOINER.join(STATUS_PATH, task.getId()));
                   final TaskAnnouncement announcement = jsonMapper.readValue(
                       bytes,
                       TaskAnnouncement.class
@@ -319,7 +307,7 @@ public class WorkerTaskMonitorTest
 
     cf.create()
       .creatingParentsIfNeeded()
-      .forPath(joiner.join(tasksPath, task.getId()), jsonMapper.writeValueAsBytes(task));
+      .forPath(JOINER.join(TASKS_PATH, task.getId()), jsonMapper.writeValueAsBytes(task));
 
     Assert.assertTrue(
         TestUtils.conditionValid(
@@ -329,7 +317,7 @@ public class WorkerTaskMonitorTest
               public boolean isValid()
               {
                 try {
-                  return cf.checkExists().forPath(joiner.join(statusPath, task.getId())) != null;
+                  return cf.checkExists().forPath(JOINER.join(STATUS_PATH, task.getId())) != null;
                 }
                 catch (Exception e) {
                   return false;
@@ -353,7 +341,7 @@ public class WorkerTaskMonitorTest
   {
     cf.create()
       .creatingParentsIfNeeded()
-      .forPath(joiner.join(tasksPath, task.getId()), jsonMapper.writeValueAsBytes(task));
+      .forPath(JOINER.join(TASKS_PATH, task.getId()), jsonMapper.writeValueAsBytes(task));
 
     Assert.assertTrue(
         TestUtils.conditionValid(
@@ -363,7 +351,7 @@ public class WorkerTaskMonitorTest
               public boolean isValid()
               {
                 try {
-                  return cf.checkExists().forPath(joiner.join(statusPath, task.getId())) != null;
+                  return cf.checkExists().forPath(JOINER.join(STATUS_PATH, task.getId())) != null;
                 }
                 catch (Exception e) {
                   return false;
@@ -373,7 +361,7 @@ public class WorkerTaskMonitorTest
         )
     );
     // ephemeral owner is 0 is created node is PERSISTENT
-    Assert.assertEquals(0, cf.checkExists().forPath(joiner.join(statusPath, task.getId())).getEphemeralOwner());
+    Assert.assertEquals(0, cf.checkExists().forPath(JOINER.join(STATUS_PATH, task.getId())).getEphemeralOwner());
 
   }
 }

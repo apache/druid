@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.MappedSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.BySegmentSkippingQueryRunner;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
@@ -50,6 +49,8 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
@@ -66,6 +67,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.BinaryOperator;
 
 public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAnalysis, SegmentMetadataQuery>
 {
@@ -73,6 +75,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   {
   };
   private static final byte[] SEGMENT_METADATA_CACHE_PREFIX = new byte[]{0x4};
+  private static final byte SEGMENT_METADATA_QUERY = 0x16;
   private static final Function<SegmentAnalysis, SegmentAnalysis> MERGE_TRANSFORM_FN = new Function<SegmentAnalysis, SegmentAnalysis>()
   {
     @Override
@@ -110,7 +113,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       public Sequence<SegmentAnalysis> doRun(
           QueryRunner<SegmentAnalysis> baseRunner,
           QueryPlus<SegmentAnalysis> queryPlus,
-          Map<String, Object> context
+          ResponseContext context
       )
       {
         SegmentMetadataQuery updatedQuery = ((SegmentMetadataQuery) queryPlus.getQuery()).withFinalizedAnalysisTypes(config);
@@ -135,16 +138,9 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         return query.getResultOrdering(); // No two elements should be equal, so it should never merge
       }
 
-      private BinaryFn<SegmentAnalysis, SegmentAnalysis, SegmentAnalysis> createMergeFn(final SegmentMetadataQuery inQ)
+      private BinaryOperator<SegmentAnalysis> createMergeFn(final SegmentMetadataQuery inQ)
       {
-        return new BinaryFn<SegmentAnalysis, SegmentAnalysis, SegmentAnalysis>()
-        {
-          @Override
-          public SegmentAnalysis apply(SegmentAnalysis arg1, SegmentAnalysis arg2)
-          {
-            return mergeAnalyses(arg1, arg2, inQ.isLenientAggregatorMerge());
-          }
-        };
+        return (arg1, arg2) -> mergeAnalyses(arg1, arg2, inQ.isLenientAggregatorMerge());
       }
     };
   }
@@ -192,6 +188,16 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
                          .put(includerBytes)
                          .put(analysisTypesBytes)
                          .array();
+      }
+
+      @Override
+      public byte[] computeResultLevelCacheKey(SegmentMetadataQuery query)
+      {
+        // need to include query "merge" and "lenientAggregatorMerge" for result level cache key
+        return new CacheKeyBuilder(SEGMENT_METADATA_QUERY).appendByteArray(computeCacheKey(query))
+                                                          .appendBoolean(query.isMerge())
+                                                          .appendBoolean(query.isLenientAggregatorMerge())
+                                                          .build();
       }
 
       @Override

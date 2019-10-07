@@ -100,9 +100,9 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
           throw new SegmentLoadingException("Unable to kill segment, failed to delete [%s]", segmentPath.toString());
         }
 
-        if (!fs.delete(descriptorPath, false)) {
-          throw new SegmentLoadingException("Unable to kill segment, failed to delete [%s]", descriptorPath.toString());
-        }
+        // descriptor.json is a file to store segment metadata in deep storage. This file is deprecated and not stored
+        // anymore, but we still delete them if exists.
+        fs.delete(descriptorPath, false);
 
         removeEmptyParentDirectories(fs, segmentPath, zipParts.length > 1 ? 2 : 3);
       }

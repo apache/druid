@@ -20,7 +20,6 @@
 package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -52,7 +51,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
@@ -132,7 +130,7 @@ public class JettyQosTest extends BaseJettyTest
               ListenableFuture<StatusResponseHolder> go =
                   slowClient.go(
                       new Request(HttpMethod.GET, new URL("http://localhost:" + port + "/slow/hello")),
-                      new StatusResponseHandler(Charset.defaultCharset())
+                      StatusResponseHandler.getInstance()
                   );
               go.get();
               slowCount.incrementAndGet();
@@ -143,7 +141,7 @@ public class JettyQosTest extends BaseJettyTest
             }
             catch (Exception e) {
               e.printStackTrace();
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
           }
         }
@@ -167,7 +165,7 @@ public class JettyQosTest extends BaseJettyTest
               ListenableFuture<StatusResponseHolder> go =
                   fastClient.go(
                       new Request(HttpMethod.GET, new URL("http://localhost:" + port + "/default")),
-                      new StatusResponseHandler(Charset.defaultCharset())
+                    StatusResponseHandler.getInstance()
                   );
               go.get();
               fastCount.incrementAndGet();
@@ -179,7 +177,7 @@ public class JettyQosTest extends BaseJettyTest
             }
             catch (Exception e) {
               e.printStackTrace();
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
           }
         }

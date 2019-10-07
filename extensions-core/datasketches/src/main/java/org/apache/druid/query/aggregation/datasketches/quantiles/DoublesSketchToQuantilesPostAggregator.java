@@ -75,6 +75,11 @@ public class DoublesSketchToQuantilesPostAggregator implements PostAggregator
   public Object compute(final Map<String, Object> combinedAggregators)
   {
     final DoublesSketch sketch = (DoublesSketch) field.compute(combinedAggregators);
+    if (sketch.isEmpty()) {
+      final double[] quantiles = new double[fractions.length];
+      Arrays.fill(quantiles, Double.NaN);
+      return quantiles;
+    }
     return sketch.getQuantiles(fractions);
   }
 

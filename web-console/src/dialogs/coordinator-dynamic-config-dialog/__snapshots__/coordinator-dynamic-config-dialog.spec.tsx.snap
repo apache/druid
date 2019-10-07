@@ -1,0 +1,114 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`coordinator dynamic config matches snapshot 1`] = `
+<div
+  class="bp3-portal"
+>
+  <div
+    class="bp3-overlay bp3-overlay-open bp3-overlay-scroll-container"
+  >
+    <div
+      class="bp3-overlay-backdrop bp3-overlay-appear bp3-overlay-appear-active"
+    />
+    <div
+      class="bp3-dialog-container bp3-overlay-content bp3-overlay-appear bp3-overlay-appear-active"
+      tabindex="0"
+    >
+      <div
+        class="bp3-dialog snitch-dialog coordinator-dynamic-config-dialog"
+      >
+        <div
+          class="bp3-dialog-header"
+        >
+          <h4
+            class="bp3-heading"
+          >
+            Coordinator dynamic config
+          </h4>
+          <button
+            aria-label="Close"
+            class="bp3-button bp3-minimal bp3-dialog-close-button"
+            type="button"
+          >
+            <span
+              class="bp3-icon bp3-icon-small-cross"
+              icon="small-cross"
+            >
+              <svg
+                data-icon="small-cross"
+                height="20"
+                viewBox="0 0 20 20"
+                width="20"
+              >
+                <desc>
+                  small-cross
+                </desc>
+                <path
+                  d="M11.41 10l3.29-3.29c.19-.18.3-.43.3-.71a1.003 1.003 0 00-1.71-.71L10 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42L8.59 10 5.3 13.29c-.19.18-.3.43-.3.71a1.003 1.003 0 001.71.71l3.29-3.3 3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71L11.41 10z"
+                  fill-rule="evenodd"
+                />
+              </svg>
+            </span>
+          </button>
+        </div>
+        <div
+          class="bp3-dialog-body"
+        >
+          <p>
+            Edit the coordinator dynamic configuration on the fly. For more information please refer to the
+             
+            <a
+              href="https://druid.apache.org/docs/latest/configuration/index.html#dynamic-configuration"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              documentation
+            </a>
+            .
+          </p>
+          <div
+            class="auto-form"
+          />
+        </div>
+        <div
+          class="bp3-dialog-footer"
+        >
+          <div
+            class="bp3-dialog-footer-actions"
+          >
+            <button
+              class="bp3-button bp3-intent-primary"
+              type="button"
+            >
+              <span
+                class="bp3-button-text"
+              >
+                Next
+              </span>
+              <span
+                class="bp3-icon bp3-icon-arrow-right"
+                icon="arrow-right"
+              >
+                <svg
+                  data-icon="arrow-right"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  width="16"
+                >
+                  <desc>
+                    arrow-right
+                  </desc>
+                  <path
+                    d="M14.7 7.29l-5-5a.965.965 0 00-.71-.3 1.003 1.003 0 00-.71 1.71l3.29 3.29H1.99c-.55 0-1 .45-1 1s.45 1 1 1h9.59l-3.29 3.29a1.003 1.003 0 001.42 1.42l5-5c.18-.18.29-.43.29-.71s-.12-.52-.3-.7z"
+                    fill-rule="evenodd"
+                  />
+                </svg>
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

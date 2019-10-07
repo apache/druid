@@ -45,6 +45,15 @@ public interface DataSourceMetadata
   boolean isValidStart();
 
   /**
+   * As in {@link IndexerMetadataStorageCoordinator#announceHistoricalSegments}, this class can represent start and
+   * end of a sequence.
+   *
+   * This method converts itself into the one for start of a sequence. Most implementations can simply return
+   * {@code this}.
+   */
+  DataSourceMetadata asStartMetadata();
+
+  /**
    * Returns true if any information present in this instance matches analogous information from "other" and
    * so they are conflict-free. In other words, "one.plus(two)" and "two.plus(one)" should return equal
    * instances if "one" matches "two".

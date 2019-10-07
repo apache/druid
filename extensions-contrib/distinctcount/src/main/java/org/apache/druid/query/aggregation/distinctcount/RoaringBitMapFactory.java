@@ -25,14 +25,16 @@ import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 
 public class RoaringBitMapFactory implements BitMapFactory
 {
-  private static final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
+  private static final BitmapFactory BITMAP_FACTORY = new RoaringBitmapFactory();
 
-  public RoaringBitMapFactory() {}
+  public RoaringBitMapFactory()
+  {
+  }
 
   @Override
   public MutableBitmap makeEmptyMutableBitmap()
   {
-    return bitmapFactory.makeEmptyMutableBitmap();
+    return BITMAP_FACTORY.makeEmptyMutableBitmap();
   }
 
   @Override

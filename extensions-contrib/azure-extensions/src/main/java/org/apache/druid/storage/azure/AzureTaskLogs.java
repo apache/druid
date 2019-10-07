@@ -20,7 +20,6 @@
 package org.apache.druid.storage.azure;
 
 import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import com.microsoft.azure.storage.StorageException;
@@ -54,18 +53,18 @@ public class AzureTaskLogs implements TaskLogs
   {
     final String taskKey = getTaskLogKey(taskid);
     log.info("Pushing task log %s to: %s", logFile, taskKey);
-    pushTaskFile(taskid, logFile, taskKey);
+    pushTaskFile(logFile, taskKey);
   }
 
   @Override
-  public void pushTaskReports(String taskid, File reportFile) throws IOException
+  public void pushTaskReports(String taskid, File reportFile)
   {
     final String taskKey = getTaskReportsKey(taskid);
     log.info("Pushing task reports %s to: %s", reportFile, taskKey);
-    pushTaskFile(taskid, reportFile, taskKey);
+    pushTaskFile(reportFile, taskKey);
   }
 
-  private void pushTaskFile(final String taskId, final File logFile, String taskKey)
+  private void pushTaskFile(final File logFile, String taskKey)
   {
     try {
       AzureUtils.retryAzureOperation(
@@ -77,7 +76,7 @@ public class AzureTaskLogs implements TaskLogs
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

@@ -88,6 +88,7 @@ import java.util.Map;
 public class HllSketchSqlAggregatorTest extends CalciteTestBase
 {
   private static final String DATA_SOURCE = "foo";
+  private static final boolean ROUND = true;
 
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
@@ -140,7 +141,8 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                                                              "hllsketch_dim1",
                                                              "dim1",
                                                              null,
-                                                             null
+                                                             null,
+                                                             ROUND
                                                          )
                                                      )
                                                      .withRollup(false)
@@ -246,13 +248,13 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
               .granularity(Granularities.ALL)
               .virtualColumns(
                   new ExpressionVirtualColumn(
-                      "a3:v",
+                      "v0",
                       "substring(\"dim2\", 0, 1)",
                       ValueType.STRING,
                       TestExprMacroTable.INSTANCE
                   ),
                   new ExpressionVirtualColumn(
-                      "a4:v",
+                      "v1",
                       "concat(substring(\"dim2\", 0, 1),'x')",
                       ValueType.STRING,
                       TestExprMacroTable.INSTANCE
@@ -265,31 +267,35 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                           "a1",
                           "dim2",
                           null,
-                          null
+                          null,
+                          ROUND
                       ),
                       new FilteredAggregatorFactory(
                           new HllSketchBuildAggregatorFactory(
                               "a2",
                               "dim2",
                               null,
-                              null
+                              null,
+                              ROUND
                           ),
-                          BaseCalciteQueryTest.NOT(BaseCalciteQueryTest.SELECTOR("dim2", "", null))
+                          BaseCalciteQueryTest.not(BaseCalciteQueryTest.selector("dim2", "", null))
                       ),
                       new HllSketchBuildAggregatorFactory(
                           "a3",
-                          "a3:v",
+                          "v0",
                           null,
-                          null
+                          null,
+                          ROUND
                       ),
                       new HllSketchBuildAggregatorFactory(
                           "a4",
-                          "a4:v",
+                          "v1",
                           null,
-                          null
+                          null,
+                          ROUND
                       ),
-                      new HllSketchMergeAggregatorFactory("a5", "hllsketch_dim1", 21, "HLL_8"),
-                      new HllSketchMergeAggregatorFactory("a6", "hllsketch_dim1", null, null)
+                      new HllSketchMergeAggregatorFactory("a5", "hllsketch_dim1", 21, "HLL_8", ROUND),
+                      new HllSketchMergeAggregatorFactory("a6", "hllsketch_dim1", null, null, ROUND)
                   )
               )
               .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
@@ -306,7 +312,11 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
 
     final String sql = "SELECT\n"
                        + "  AVG(u)\n"
-                       + "FROM (SELECT FLOOR(__time TO DAY), APPROX_COUNT_DISTINCT_DS_HLL(cnt) AS u FROM druid.foo GROUP BY 1)";
+                       + "FROM ("
+                       + "  SELECT FLOOR(__time TO DAY), APPROX_COUNT_DISTINCT_DS_HLL(cnt) AS u\n"
+                       + "  FROM druid.foo\n"
+                       + "  GROUP BY 1\n"
+                       + ")";
 
     // Verify results
     final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
@@ -330,7 +340,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                                                      .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(
                                                          new ExpressionVirtualColumn(
-                                                             "d0:v",
+                                                             "v0",
                                                              "timestamp_floor(\"__time\",'P1D',null,'UTC')",
                                                              ValueType.LONG,
                                                              TestExprMacroTable.INSTANCE
@@ -339,8 +349,8 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                                                      .setDimensions(
                                                          Collections.singletonList(
                                                              new DefaultDimensionSpec(
-                                                                 "d0:v",
-                                                                 "d0",
+                                                                 "v0",
+                                                                 "v0",
                                                                  ValueType.LONG
                                                              )
                                                          )
@@ -351,7 +361,8 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                                                                  "a0:a",
                                                                  "cnt",
                                                                  null,
-                                                                 null
+                                                                 null,
+                                                                 ROUND
                                                              )
                                                          )
                                                      )
@@ -389,5 +400,23 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
 
     // Verify query
     Assert.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testApproxCountDistinctHllSketchIsRounded() throws Exception
+  {
+    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+
+    final String sql = "SELECT"
+                       + "   dim2,"
+                       + "   APPROX_COUNT_DISTINCT_DS_HLL(m1)"
+                       + " FROM druid.foo"
+                       + " GROUP BY dim2"
+                       + " HAVING APPROX_COUNT_DISTINCT_DS_HLL(m1) = 2";
+
+    // Verify results
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final int expected = NullHandling.replaceWithDefault() ? 1 : 2;
+    Assert.assertEquals(expected, results.size());
   }
 }

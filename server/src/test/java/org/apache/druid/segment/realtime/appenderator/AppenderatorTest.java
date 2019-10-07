@@ -37,6 +37,9 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
@@ -58,9 +61,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class AppenderatorTest
 {
   private static final List<SegmentIdWithShardSpec> IDENTIFIERS = ImmutableList.of(
-      SI("2000/2001", "A", 0),
-      SI("2000/2001", "A", 1),
-      SI("2001/2002", "A", 0)
+      si("2000/2001", "A", 0),
+      si("2000/2001", "A", 1),
+      si("2001/2002", "A", 0)
   );
 
   @Test
@@ -83,21 +86,21 @@ public class AppenderatorTest
       commitMetadata.put("x", "1");
       Assert.assertEquals(
           1,
-          appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier)
+          appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier)
                       .getNumRowsInSegment()
       );
 
       commitMetadata.put("x", "2");
       Assert.assertEquals(
           2,
-          appenderator.add(IDENTIFIERS.get(0), IR("2000", "bar", 2), committerSupplier)
+          appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar", 2), committerSupplier)
                       .getNumRowsInSegment()
       );
 
       commitMetadata.put("x", "3");
       Assert.assertEquals(
           1,
-          appenderator.add(IDENTIFIERS.get(1), IR("2000", "qux", 4), committerSupplier)
+          appenderator.add(IDENTIFIERS.get(1), ir("2000", "qux", 4), committerSupplier)
                       .getNumRowsInSegment()
       );
 
@@ -173,14 +176,14 @@ public class AppenderatorTest
       };
 
       appenderator.startJob();
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
       //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 10 (dimsKeySize) = 138 + 1 byte when null handling is enabled
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
       Assert.assertEquals(
           138 + nullHandlingOverhead,
           ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
-      appenderator.add(IDENTIFIERS.get(1), IR("2000", "bar", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
       Assert.assertEquals(
           138 + nullHandlingOverhead,
           ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
@@ -216,11 +219,11 @@ public class AppenderatorTest
       };
 
       appenderator.startJob();
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
       //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 10 (dimsKeySize) = 138
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
       Assert.assertEquals(138 + nullHandlingOverhead, ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory());
-      appenderator.add(IDENTIFIERS.get(1), IR("2000", "bar", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
       Assert.assertEquals(
           276 + 2 * nullHandlingOverhead,
           ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
@@ -258,7 +261,7 @@ public class AppenderatorTest
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.startJob();
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
       //we still calculate the size even when ignoring it to make persist decision
       int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
       Assert.assertEquals(
@@ -266,7 +269,7 @@ public class AppenderatorTest
           ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.add(IDENTIFIERS.get(1), IR("2000", "bar", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
       Assert.assertEquals(
           276 + 2 * nullHandlingOverhead,
           ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
@@ -310,17 +313,17 @@ public class AppenderatorTest
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.startJob();
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
       Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.add(IDENTIFIERS.get(1), IR("2000", "bar", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
       Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.add(IDENTIFIERS.get(1), IR("2000", "bar", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
       Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "baz", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "baz", 1), committerSupplier);
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.add(IDENTIFIERS.get(1), IR("2000", "qux", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "qux", 1), committerSupplier);
       Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "bob", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "bob", 1), committerSupplier);
       Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.persistAll(committerSupplier.get());
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
@@ -356,17 +359,17 @@ public class AppenderatorTest
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.startJob();
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier, false);
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier, false);
       Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.add(IDENTIFIERS.get(1), IR("2000", "bar", 1), committerSupplier, false);
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier, false);
       Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.add(IDENTIFIERS.get(1), IR("2000", "bar", 1), committerSupplier, false);
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier, false);
       Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "baz", 1), committerSupplier, false);
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "baz", 1), committerSupplier, false);
       Assert.assertEquals(3, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.add(IDENTIFIERS.get(1), IR("2000", "qux", 1), committerSupplier, false);
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "qux", 1), committerSupplier, false);
       Assert.assertEquals(4, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "bob", 1), committerSupplier, false);
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "bob", 1), committerSupplier, false);
       Assert.assertEquals(5, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.persistAll(committerSupplier.get());
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
@@ -409,15 +412,15 @@ public class AppenderatorTest
 
       appenderator.startJob();
       eventCount.incrementAndGet();
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
       eventCount.incrementAndGet();
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "bar", 2), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar", 2), committerSupplier);
       eventCount.incrementAndGet();
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "baz", 3), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "baz", 3), committerSupplier);
       eventCount.incrementAndGet();
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "qux", 4), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "qux", 4), committerSupplier);
       eventCount.incrementAndGet();
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "bob", 5), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "bob", 5), committerSupplier);
       appenderator.close();
 
       try (final AppenderatorTester tester2 = new AppenderatorTester(
@@ -445,9 +448,9 @@ public class AppenderatorTest
       Assert.assertEquals(0, appenderator.getTotalRowCount());
       appenderator.startJob();
       Assert.assertEquals(0, appenderator.getTotalRowCount());
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
       Assert.assertEquals(1, appenderator.getTotalRowCount());
-      appenderator.add(IDENTIFIERS.get(1), IR("2000", "bar", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
       Assert.assertEquals(2, appenderator.getTotalRowCount());
 
       appenderator.persistAll(committerSupplier.get()).get();
@@ -457,13 +460,13 @@ public class AppenderatorTest
       appenderator.drop(IDENTIFIERS.get(1)).get();
       Assert.assertEquals(0, appenderator.getTotalRowCount());
 
-      appenderator.add(IDENTIFIERS.get(2), IR("2001", "bar", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(2), ir("2001", "bar", 1), committerSupplier);
       Assert.assertEquals(1, appenderator.getTotalRowCount());
-      appenderator.add(IDENTIFIERS.get(2), IR("2001", "baz", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(2), ir("2001", "baz", 1), committerSupplier);
       Assert.assertEquals(2, appenderator.getTotalRowCount());
-      appenderator.add(IDENTIFIERS.get(2), IR("2001", "qux", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(2), ir("2001", "qux", 1), committerSupplier);
       Assert.assertEquals(3, appenderator.getTotalRowCount());
-      appenderator.add(IDENTIFIERS.get(2), IR("2001", "bob", 1), committerSupplier);
+      appenderator.add(IDENTIFIERS.get(2), ir("2001", "bob", 1), committerSupplier);
       Assert.assertEquals(4, appenderator.getTotalRowCount());
 
       appenderator.persistAll(committerSupplier.get()).get();
@@ -483,13 +486,13 @@ public class AppenderatorTest
       final Appenderator appenderator = tester.getAppenderator();
 
       appenderator.startJob();
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), Suppliers.ofInstance(Committers.nil()));
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 2), Suppliers.ofInstance(Committers.nil()));
-      appenderator.add(IDENTIFIERS.get(1), IR("2000", "foo", 4), Suppliers.ofInstance(Committers.nil()));
-      appenderator.add(IDENTIFIERS.get(2), IR("2001", "foo", 8), Suppliers.ofInstance(Committers.nil()));
-      appenderator.add(IDENTIFIERS.get(2), IR("2001T01", "foo", 16), Suppliers.ofInstance(Committers.nil()));
-      appenderator.add(IDENTIFIERS.get(2), IR("2001T02", "foo", 32), Suppliers.ofInstance(Committers.nil()));
-      appenderator.add(IDENTIFIERS.get(2), IR("2001T03", "foo", 64), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 2), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "foo", 4), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), ir("2001", "foo", 8), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), ir("2001T01", "foo", 16), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), ir("2001T02", "foo", 32), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), ir("2001T03", "foo", 64), Suppliers.ofInstance(Committers.nil()));
 
       // Query1: 2000/2001
       final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
@@ -505,7 +508,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results1 =
-          QueryPlus.wrap(query1).run(appenderator, ImmutableMap.of()).toList();
+          QueryPlus.wrap(query1).run(appenderator, ResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           "query1",
           ImmutableList.of(
@@ -531,7 +534,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results2 =
-          QueryPlus.wrap(query2).run(appenderator, ImmutableMap.of()).toList();
+          QueryPlus.wrap(query2).run(appenderator, ResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           "query2",
           ImmutableList.of(
@@ -561,7 +564,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results3 =
-          QueryPlus.wrap(query3).run(appenderator, ImmutableMap.of()).toList();
+          QueryPlus.wrap(query3).run(appenderator, ResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           ImmutableList.of(
               new Result<>(
@@ -595,7 +598,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results4 =
-          QueryPlus.wrap(query4).run(appenderator, ImmutableMap.of()).toList();
+          QueryPlus.wrap(query4).run(appenderator, ResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           ImmutableList.of(
               new Result<>(
@@ -619,13 +622,13 @@ public class AppenderatorTest
       final Appenderator appenderator = tester.getAppenderator();
 
       appenderator.startJob();
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), Suppliers.ofInstance(Committers.nil()));
-      appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 2), Suppliers.ofInstance(Committers.nil()));
-      appenderator.add(IDENTIFIERS.get(1), IR("2000", "foo", 4), Suppliers.ofInstance(Committers.nil()));
-      appenderator.add(IDENTIFIERS.get(2), IR("2001", "foo", 8), Suppliers.ofInstance(Committers.nil()));
-      appenderator.add(IDENTIFIERS.get(2), IR("2001T01", "foo", 16), Suppliers.ofInstance(Committers.nil()));
-      appenderator.add(IDENTIFIERS.get(2), IR("2001T02", "foo", 32), Suppliers.ofInstance(Committers.nil()));
-      appenderator.add(IDENTIFIERS.get(2), IR("2001T03", "foo", 64), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 2), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "foo", 4), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), ir("2001", "foo", 8), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), ir("2001T01", "foo", 16), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), ir("2001T02", "foo", 32), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), ir("2001T03", "foo", 64), Suppliers.ofInstance(Committers.nil()));
 
       // Query1: segment #2
       final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
@@ -651,7 +654,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results1 =
-          QueryPlus.wrap(query1).run(appenderator, ImmutableMap.of()).toList();
+          QueryPlus.wrap(query1).run(appenderator, ResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           "query1",
           ImmutableList.of(
@@ -687,7 +690,7 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results2 =
-          QueryPlus.wrap(query2).run(appenderator, ImmutableMap.of()).toList();
+          QueryPlus.wrap(query2).run(appenderator, ResponseContext.createEmpty()).toList();
       Assert.assertEquals(
           "query2",
           ImmutableList.of(
@@ -728,9 +731,9 @@ public class AppenderatorTest
                                            .build();
 
       final List<Result<TimeseriesResultValue>> results3 =
-          QueryPlus.wrap(query3).run(appenderator, ImmutableMap.of()).toList();
+          QueryPlus.wrap(query3).run(appenderator, ResponseContext.createEmpty()).toList();
       Assert.assertEquals(
-          "query2",
+          "query3",
           ImmutableList.of(
               new Result<>(
                   DateTimes.of("2001"),
@@ -739,10 +742,46 @@ public class AppenderatorTest
           ),
           results3
       );
+
+      final ScanQuery query4 = Druids.newScanQueryBuilder()
+                                     .dataSource(AppenderatorTester.DATASOURCE)
+                                     .intervals(
+                                         new MultipleSpecificSegmentSpec(
+                                             ImmutableList.of(
+                                                 new SegmentDescriptor(
+                                                     Intervals.of("2001/PT1H"),
+                                                     IDENTIFIERS.get(2).getVersion(),
+                                                     IDENTIFIERS.get(2).getShardSpec().getPartitionNum()
+                                                 ),
+                                                 new SegmentDescriptor(
+                                                     Intervals.of("2001T03/PT1H"),
+                                                     IDENTIFIERS.get(2).getVersion(),
+                                                     IDENTIFIERS.get(2).getShardSpec().getPartitionNum()
+                                                 )
+                                             )
+                                         )
+                                     )
+                                     .order(ScanQuery.Order.ASCENDING)
+                                     .batchSize(10)
+                                     .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                     .build();
+      final List<ScanResultValue> results4 =
+          QueryPlus.wrap(query4).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(2, results4.size()); // 2 segments, 1 row per segment
+      Assert.assertArrayEquals(new String[]{"__time", "dim", "count", "met"}, results4.get(0).getColumns().toArray());
+      Assert.assertArrayEquals(
+          new Object[]{DateTimes.of("2001").getMillis(), "foo", 1L, 8L},
+          ((List<Object>) ((List<Object>) results4.get(0).getEvents()).get(0)).toArray()
+      );
+      Assert.assertArrayEquals(new String[]{"__time", "dim", "count", "met"}, results4.get(0).getColumns().toArray());
+      Assert.assertArrayEquals(
+          new Object[]{DateTimes.of("2001T03").getMillis(), "foo", 1L, 64L},
+          ((List<Object>) ((List<Object>) results4.get(1).getEvents()).get(0)).toArray()
+      );
     }
   }
 
-  private static SegmentIdWithShardSpec SI(String interval, String version, int partitionNum)
+  private static SegmentIdWithShardSpec si(String interval, String version, int partitionNum)
   {
     return new SegmentIdWithShardSpec(
         AppenderatorTester.DATASOURCE,
@@ -752,7 +791,7 @@ public class AppenderatorTest
     );
   }
 
-  static InputRow IR(String ts, String dim, long met)
+  static InputRow ir(String ts, String dim, long met)
   {
     return new MapBasedInputRow(
         DateTimes.of(ts).getMillis(),

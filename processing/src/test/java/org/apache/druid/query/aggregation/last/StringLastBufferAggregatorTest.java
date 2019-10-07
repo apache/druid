@@ -45,7 +45,7 @@ public class StringLastBufferAggregatorTest
   }
 
   @Test
-  public void testBufferAggregate() throws Exception
+  public void testBufferAggregate()
   {
 
     final long[] timestamps = {1526724600L, 1526724700L, 1526724800L, 1526725900L, 1526725000L};
@@ -89,7 +89,7 @@ public class StringLastBufferAggregatorTest
   }
 
   @Test
-  public void testNullBufferAggregate() throws Exception
+  public void testNullBufferAggregate()
   {
 
     final long[] timestamps = {1111L, 2222L, 6666L, 4444L, 5555L};

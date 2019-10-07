@@ -21,7 +21,6 @@ package org.apache.druid.indexing.kinesis.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskTuningConfig;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -49,6 +48,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
+      @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
       @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
@@ -81,6 +81,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         basePersistDirectory,
         maxPendingPersists,
         indexSpec,
+        indexSpecForIntermediatePersists,
         buildV9Directly,
         reportParseExceptions,
         handoffConditionTimeout,
@@ -180,7 +181,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   }
 
   @Override
-  public SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig()
+  public KinesisIndexTaskTuningConfig convertToTaskTuningConfig()
   {
     return new KinesisIndexTaskTuningConfig(
         getMaxRowsInMemory(),
@@ -191,6 +192,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getBasePersistDirectory(),
         getMaxPendingPersists(),
         getIndexSpec(),
+        getIndexSpecForIntermediatePersists(),
         true,
         isReportParseExceptions(),
         getHandoffConditionTimeout(),

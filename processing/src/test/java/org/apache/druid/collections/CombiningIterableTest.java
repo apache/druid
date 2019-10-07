@@ -20,7 +20,6 @@
 package org.apache.druid.collections;
 
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.Result;
 import org.junit.Assert;
 import org.junit.Test;
@@ -39,42 +38,30 @@ public class CombiningIterableTest
   public void testMerge()
   {
     List<Result<Object>> resultsBefore = Arrays.asList(
-        new Result<Object>(DateTimes.of("2011-01-01"), 1L),
-        new Result<Object>(DateTimes.of("2011-01-01"), 2L)
+        new Result<>(DateTimes.of("2011-01-01"), 1L),
+        new Result<>(DateTimes.of("2011-01-01"), 2L)
     );
 
     Iterable<Result<Object>> expectedResults = Collections.singletonList(
-        new Result<Object>(DateTimes.of("2011-01-01"), 3L)
+        new Result<>(DateTimes.of("2011-01-01"), 3L)
     );
 
     Iterable<Result<Object>> resultsAfter = CombiningIterable.create(
         resultsBefore,
-        new Comparator<Result<Object>>()
-        {
-          @Override
-          public int compare(Result<Object> r1, Result<Object> r2)
-          {
-            return r1.getTimestamp().compareTo(r2.getTimestamp());
+        Comparator.comparing(Result::getTimestamp),
+        (arg1, arg2) -> {
+          if (arg1 == null) {
+            return arg2;
           }
-        },
-        new BinaryFn<Result<Object>, Result<Object>, Result<Object>>()
-        {
-          @Override
-          public Result<Object> apply(final Result<Object> arg1, final Result<Object> arg2)
-          {
-            if (arg1 == null) {
-              return arg2;
-            }
 
-            if (arg2 == null) {
-              return arg1;
-            }
-
-            return new Result<Object>(
-                arg1.getTimestamp(),
-                ((Long) arg1.getValue()).longValue() + ((Long) arg2.getValue()).longValue()
-            );
+          if (arg2 == null) {
+            return arg1;
           }
+
+          return new Result<>(
+              arg1.getTimestamp(),
+              ((Long) arg1.getValue()).longValue() + ((Long) arg2.getValue()).longValue()
+          );
         }
     );
 

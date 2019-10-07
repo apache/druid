@@ -21,7 +21,6 @@ package org.apache.druid.server.lookup.namespace.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -263,13 +262,13 @@ public class CacheSchedulerTest
                         testDelete();
                       }
                       catch (Exception e) {
-                        throw Throwables.propagate(e);
+                        throw new RuntimeException(e);
                       }
                     }
                   }
                   catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    throw Throwables.propagate(e);
+                    throw new RuntimeException(e);
                   }
                 }
               }
@@ -333,7 +332,7 @@ public class CacheSchedulerTest
     }
     catch (ExecutionException e) {
       if (!future.isCancelled()) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 

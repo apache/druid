@@ -22,7 +22,6 @@ package org.apache.druid.indexing.overlord.hrtr;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -48,6 +47,7 @@ import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -88,7 +88,7 @@ public class HttpRemoteTaskRunnerTest
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
@@ -118,7 +118,8 @@ public class HttpRemoteTaskRunnerTest
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
           WorkerHolder.Listener listener,
-          Worker worker
+          Worker worker,
+          List<TaskAnnouncement> knownAnnouncements
       )
       {
         return HttpRemoteTaskRunnerTest.createWorkerHolder(
@@ -128,6 +129,7 @@ public class HttpRemoteTaskRunnerTest
             workersSyncExec,
             listener,
             worker,
+            ImmutableList.of(),
             ImmutableList.of(),
             ImmutableMap.of(),
             new AtomicInteger(),
@@ -179,7 +181,7 @@ public class HttpRemoteTaskRunnerTest
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
@@ -213,7 +215,8 @@ public class HttpRemoteTaskRunnerTest
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
           WorkerHolder.Listener listener,
-          Worker worker
+          Worker worker,
+          List<TaskAnnouncement> knownAnnouncements
       )
       {
         return HttpRemoteTaskRunnerTest.createWorkerHolder(
@@ -223,6 +226,7 @@ public class HttpRemoteTaskRunnerTest
             workersSyncExec,
             listener,
             worker,
+            ImmutableList.of(),
             ImmutableList.of(),
             ImmutableMap.of(task1, ImmutableList.of()), //no announcements would be received for task1
             new AtomicInteger(),
@@ -269,7 +273,7 @@ public class HttpRemoteTaskRunnerTest
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
@@ -315,7 +319,8 @@ public class HttpRemoteTaskRunnerTest
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
           WorkerHolder.Listener listener,
-          Worker worker
+          Worker worker,
+          List<TaskAnnouncement> knownAnnouncements
       )
       {
         if (workerHolders.containsKey(worker.getHost())) {
@@ -325,7 +330,8 @@ public class HttpRemoteTaskRunnerTest
               config,
               workersSyncExec,
               listener,
-              worker
+              worker,
+              knownAnnouncements
           );
         } else {
           throw new ISE("No WorkerHolder for [%s].", worker.getHost());
@@ -348,13 +354,14 @@ public class HttpRemoteTaskRunnerTest
 
     workerHolders.put(
         "host:1234",
-        (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
+        (mapper, httpClient, config, exec, listener, worker, knownAnnouncements) -> createWorkerHolder(
             mapper,
             httpClient,
             config,
             exec,
             listener,
             worker,
+            knownAnnouncements,
             ImmutableList.of(
                 TaskAnnouncement.create(
                     task1,
@@ -422,7 +429,7 @@ public class HttpRemoteTaskRunnerTest
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
@@ -454,7 +461,8 @@ public class HttpRemoteTaskRunnerTest
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
           WorkerHolder.Listener listener,
-          Worker worker
+          Worker worker,
+          List<TaskAnnouncement> knownAnnouncements
       )
       {
         if (workerHolders.containsKey(worker.getHost())) {
@@ -464,7 +472,8 @@ public class HttpRemoteTaskRunnerTest
               config,
               workersSyncExec,
               listener,
-              worker
+              worker,
+              knownAnnouncements
           );
         } else {
           throw new ISE("No WorkerHolder for [%s].", worker.getHost());
@@ -487,13 +496,14 @@ public class HttpRemoteTaskRunnerTest
 
     workerHolders.put(
         "host:1234",
-        (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
+        (mapper, httpClient, config, exec, listener, worker, knownAnnouncements) -> createWorkerHolder(
             mapper,
             httpClient,
             config,
             exec,
             listener,
             worker,
+            knownAnnouncements,
             ImmutableList.of(),
             ImmutableMap.of(
                 task1, ImmutableList.of(
@@ -552,19 +562,15 @@ public class HttpRemoteTaskRunnerTest
 
     workerHolders.put(
         "host:1234",
-        (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
+        (mapper, httpClient, config, exec, listener, worker, knownAnnouncements) -> createWorkerHolder(
             mapper,
             httpClient,
             config,
             exec,
             listener,
             worker,
+            knownAnnouncements,
             ImmutableList.of(
-                TaskAnnouncement.create(
-                    task1,
-                    TaskStatus.success(task1.getId()),
-                    TaskLocation.create("host", 1234, 1235)
-                ),
                 TaskAnnouncement.create(
                     task2,
                     TaskStatus.running(task2.getId()),
@@ -598,7 +604,7 @@ public class HttpRemoteTaskRunnerTest
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
@@ -630,7 +636,8 @@ public class HttpRemoteTaskRunnerTest
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
           WorkerHolder.Listener listener,
-          Worker worker
+          Worker worker,
+          List<TaskAnnouncement> knownAnnouncements
       )
       {
         if (workerHolders.containsKey(worker.getHost())) {
@@ -640,7 +647,8 @@ public class HttpRemoteTaskRunnerTest
               config,
               workersSyncExec,
               listener,
-              worker
+              worker,
+              knownAnnouncements
           );
         } else {
           throw new ISE("No WorkerHolder for [%s].", worker.getHost());
@@ -661,13 +669,14 @@ public class HttpRemoteTaskRunnerTest
 
     workerHolders.put(
         "host:1234",
-        (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
+        (mapper, httpClient, config, exec, listener, worker, knownAnnouncements) -> createWorkerHolder(
             mapper,
             httpClient,
             config,
             exec,
             listener,
             worker,
+            knownAnnouncements,
             ImmutableList.of(),
             ImmutableMap.of(
                 task1, ImmutableList.of(
@@ -727,13 +736,14 @@ public class HttpRemoteTaskRunnerTest
 
     workerHolders.put(
         "host:1234",
-        (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
+        (mapper, httpClient, config, exec, listener, worker, knownAnnouncements) -> createWorkerHolder(
             mapper,
             httpClient,
             config,
             exec,
             listener,
             worker,
+            knownAnnouncements,
             ImmutableList.of(
                 TaskAnnouncement.create(
                     task1,
@@ -772,7 +782,7 @@ public class HttpRemoteTaskRunnerTest
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
@@ -807,7 +817,8 @@ public class HttpRemoteTaskRunnerTest
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
           WorkerHolder.Listener listener,
-          Worker worker
+          Worker worker,
+          List<TaskAnnouncement> knownAnnouncements
       )
       {
         if (workerHolders.containsKey(worker.getHost())) {
@@ -817,7 +828,8 @@ public class HttpRemoteTaskRunnerTest
               config,
               workersSyncExec,
               listener,
-              worker
+              worker,
+              knownAnnouncements
           );
         } else {
           throw new ISE("No WorkerHolder for [%s].", worker.getHost());
@@ -839,13 +851,14 @@ public class HttpRemoteTaskRunnerTest
 
     workerHolders.put(
         "host1:8080",
-        (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
+        (mapper, httpClient, config, exec, listener, worker, knownAnnouncements) -> createWorkerHolder(
             mapper,
             httpClient,
             config,
             exec,
             listener,
             worker,
+            knownAnnouncements,
             ImmutableList.of(),
             ImmutableMap.of(
                 task1, ImmutableList.of(
@@ -882,13 +895,14 @@ public class HttpRemoteTaskRunnerTest
 
     workerHolders.put(
         "host2:8080",
-        (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
+        (mapper, httpClient, config, exec, listener, worker, knownAnnouncements) -> createWorkerHolder(
             mapper,
             httpClient,
             config,
             exec,
             listener,
             worker,
+            knownAnnouncements,
             ImmutableList.of(),
             ImmutableMap.of(task2, ImmutableList.of()),
             ticks,
@@ -912,13 +926,14 @@ public class HttpRemoteTaskRunnerTest
 
     workerHolders.put(
         "host3:8080",
-        (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
+        (mapper, httpClient, config, exec, listener, worker, knownAnnouncements) -> createWorkerHolder(
             mapper,
             httpClient,
             config,
             exec,
             listener,
             worker,
+            knownAnnouncements,
             ImmutableList.of(),
             ImmutableMap.of(),
             new AtomicInteger(),
@@ -1207,7 +1222,7 @@ public class HttpRemoteTaskRunnerTest
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
@@ -1268,6 +1283,7 @@ public class HttpRemoteTaskRunnerTest
       ScheduledExecutorService workersSyncExec,
       WorkerHolder.Listener listener,
       Worker worker,
+      List<TaskAnnouncement> knownAnnouncements,
 
       // simulates task announcements received from worker on first sync call for the tasks that are already
       // running/completed on the worker.
@@ -1285,10 +1301,20 @@ public class HttpRemoteTaskRunnerTest
       Set<String> actualShutdowns
   )
   {
-    return new WorkerHolder(smileMapper, httpClient, config, workersSyncExec, listener, worker)
+    return new WorkerHolder(smileMapper, httpClient, config, workersSyncExec, listener, worker, knownAnnouncements)
     {
-      private final String workerHost = worker.getHost().substring(0, worker.getHost().indexOf(':'));
-      private final int workerPort = Integer.parseInt(worker.getHost().substring(worker.getHost().indexOf(':') + 1));
+      private final String workerHost;
+      private final int workerPort;
+
+      {
+        String hostAndPort = worker.getHost();
+        int colonIndex = hostAndPort.indexOf(':');
+        if (colonIndex == -1) {
+          throw new IAE("Invalid host and port: [%s]", colonIndex);
+        }
+        workerHost = hostAndPort.substring(0, colonIndex);
+        workerPort = Integer.parseInt(hostAndPort.substring(colonIndex + 1));
+      }
 
       @Override
       public void start()
@@ -1328,7 +1354,7 @@ public class HttpRemoteTaskRunnerTest
           Thread.sleep(500);
         }
         catch (InterruptedException ex) {
-          throw Throwables.propagate(ex);
+          throw new RuntimeException(ex);
         }
 
         if (toImmutable().getCurrCapacityUsed() > worker.getCapacity()) {
@@ -1371,7 +1397,7 @@ public class HttpRemoteTaskRunnerTest
                   Thread.sleep(100);
                 }
                 catch (InterruptedException ex) {
-                  throw Throwables.propagate(ex);
+                  throw new RuntimeException(ex);
                 }
 
                 tasksSnapshotRef.get().put(announcement.getTaskId(), announcement);
@@ -1419,7 +1445,8 @@ public class HttpRemoteTaskRunnerTest
         HttpRemoteTaskRunnerConfig config,
         ScheduledExecutorService workersSyncExec,
         WorkerHolder.Listener listener,
-        Worker worker
+        Worker worker,
+        List<TaskAnnouncement> knownAnnouncements
     );
   }
 }

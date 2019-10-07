@@ -21,36 +21,46 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.CuratorWatcher;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.SegmentChangeRequestNoop;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Use {@link HttpLoadQueuePeon} instead.
+ * <p>
+ * Objects of this class can be accessed by multiple threads. State wise, this class
+ * is thread safe and callers of the public methods can expect thread safe behavior.
+ * Though, like a typical object being accessed by multiple threads,
+ * callers shouldn't expect strict consistency in results between two calls
+ * of the same or different methods.
  */
 @Deprecated
 public class CuratorLoadQueuePeon extends LoadQueuePeon
@@ -59,39 +69,47 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   private static final int DROP = 0;
   private static final int LOAD = 1;
 
-  private static void executeCallbacks(List<LoadPeonCallback> callbacks)
-  {
-    for (LoadPeonCallback callback : callbacks) {
-      if (callback != null) {
-        callback.execute();
-      }
-    }
-  }
-
   private final CuratorFramework curator;
   private final String basePath;
   private final ObjectMapper jsonMapper;
   private final ScheduledExecutorService processingExecutor;
+
+  /**
+   * Threadpool with daemon threads that execute callback actions associated
+   * with loading or dropping segments.
+   */
   private final ExecutorService callBackExecutor;
   private final DruidCoordinatorConfig config;
 
   private final AtomicLong queuedSize = new AtomicLong(0);
   private final AtomicInteger failedAssignCount = new AtomicInteger(0);
 
+  /**
+   * Needs to be thread safe since it can be concurrently accessed via
+   * {@link #loadSegment(DataSegment, LoadPeonCallback)}, {@link #actionCompleted(SegmentHolder)},
+   * {@link #getSegmentsToLoad()} and {@link #stop()}
+   */
   private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToLoad = new ConcurrentSkipListMap<>(
-      DruidCoordinator.SEGMENT_COMPARATOR
+      DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
+
+  /**
+   * Needs to be thread safe since it can be concurrently accessed via
+   * {@link #dropSegment(DataSegment, LoadPeonCallback)}, {@link #actionCompleted(SegmentHolder)},
+   * {@link #getSegmentsToDrop()} and {@link #stop()}
+   */
   private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToDrop = new ConcurrentSkipListMap<>(
-      DruidCoordinator.SEGMENT_COMPARATOR
+      DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
+
+  /**
+   * Needs to be thread safe since it can be concurrently accessed via
+   * {@link #markSegmentToDrop(DataSegment)}}, {@link #unmarkSegmentToDrop(DataSegment)}}
+   * and {@link #getSegmentsToDrop()}
+   */
   private final ConcurrentSkipListSet<DataSegment> segmentsMarkedToDrop = new ConcurrentSkipListSet<>(
-      DruidCoordinator.SEGMENT_COMPARATOR
+      DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
-
-  private final Object lock = new Object();
-
-  private volatile SegmentHolder currentlyProcessing = null;
-  private boolean stopped = false;
 
   CuratorLoadQueuePeon(
       CuratorFramework curator,
@@ -150,61 +168,30 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   }
 
   @Override
-  public void loadSegment(final DataSegment segment, final LoadPeonCallback callback)
+  public void loadSegment(final DataSegment segment, @Nullable final LoadPeonCallback callback)
   {
-    synchronized (lock) {
-      if ((currentlyProcessing != null) &&
-          currentlyProcessing.getSegmentId().equals(segment.getId())) {
-        if (callback != null) {
-          currentlyProcessing.addCallback(callback);
-        }
-        return;
-      }
+    SegmentHolder segmentHolder = new SegmentHolder(segment, LOAD, Collections.singletonList(callback));
+    final SegmentHolder existingHolder = segmentsToLoad.putIfAbsent(segment, segmentHolder);
+    if (existingHolder != null) {
+      existingHolder.addCallback(callback);
+      return;
     }
-
-    synchronized (lock) {
-      final SegmentHolder existingHolder = segmentsToLoad.get(segment);
-      if (existingHolder != null) {
-        if ((callback != null)) {
-          existingHolder.addCallback(callback);
-        }
-        return;
-      }
-    }
-
     log.debug("Asking server peon[%s] to load segment[%s]", basePath, segment.getId());
     queuedSize.addAndGet(segment.getSize());
-    segmentsToLoad.put(segment, new SegmentHolder(segment, LOAD, Collections.singletonList(callback)));
+    processingExecutor.submit(new SegmentChangeProcessor(segmentHolder));
   }
 
   @Override
-  public void dropSegment(
-      final DataSegment segment,
-      final LoadPeonCallback callback
-  )
+  public void dropSegment(final DataSegment segment, @Nullable final LoadPeonCallback callback)
   {
-    synchronized (lock) {
-      if ((currentlyProcessing != null) &&
-          currentlyProcessing.getSegmentId().equals(segment.getId())) {
-        if (callback != null) {
-          currentlyProcessing.addCallback(callback);
-        }
-        return;
-      }
+    SegmentHolder segmentHolder = new SegmentHolder(segment, DROP, Collections.singletonList(callback));
+    final SegmentHolder existingHolder = segmentsToDrop.putIfAbsent(segment, segmentHolder);
+    if (existingHolder != null) {
+      existingHolder.addCallback(callback);
+      return;
     }
-
-    synchronized (lock) {
-      final SegmentHolder existingHolder = segmentsToDrop.get(segment);
-      if (existingHolder != null) {
-        if (callback != null) {
-          existingHolder.addCallback(callback);
-        }
-        return;
-      }
-    }
-
     log.debug("Asking server peon[%s] to drop segment[%s]", basePath, segment.getId());
-    segmentsToDrop.put(segment, new SegmentHolder(segment, DROP, Collections.singletonList(callback)));
+    processingExecutor.submit(new SegmentChangeProcessor(segmentHolder));
   }
 
   @Override
@@ -219,206 +206,197 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     segmentsMarkedToDrop.remove(dataSegment);
   }
 
-  private void processSegmentChangeRequest()
+  private class SegmentChangeProcessor implements Runnable
   {
-    if (currentlyProcessing != null) {
-      log.debug(
-          "Server[%s] skipping processSegmentChangeRequest because something is currently loading[%s].",
-          basePath,
-          currentlyProcessing.getSegmentId()
-      );
+    private final SegmentHolder segmentHolder;
 
-      return;
+    private SegmentChangeProcessor(SegmentHolder segmentHolder)
+    {
+      this.segmentHolder = segmentHolder;
     }
 
-    if (!segmentsToDrop.isEmpty()) {
-      currentlyProcessing = segmentsToDrop.firstEntry().getValue();
-      log.debug("Server[%s] dropping [%s]", basePath, currentlyProcessing.getSegmentId());
-    } else if (!segmentsToLoad.isEmpty()) {
-      currentlyProcessing = segmentsToLoad.firstEntry().getValue();
-      log.debug("Server[%s] loading [%s]", basePath, currentlyProcessing.getSegmentId());
-    } else {
-      return;
+    @Override
+    public void run()
+    {
+      try {
+        final String path = ZKPaths.makePath(basePath, segmentHolder.getSegmentIdentifier());
+        final byte[] payload = jsonMapper.writeValueAsBytes(segmentHolder.getChangeRequest());
+        curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, payload);
+        log.debug(
+            "ZKNode created for server to [%s] %s [%s]",
+            basePath,
+            segmentHolder.getType() == LOAD ? "load" : "drop",
+            segmentHolder.getSegmentIdentifier()
+        );
+        final ScheduledFuture<?> nodeDeletedCheck = scheduleNodeDeletedCheck(path);
+        final Stat stat = curator.checkExists().usingWatcher(
+            (CuratorWatcher) watchedEvent -> {
+              switch (watchedEvent.getType()) {
+                case NodeDeleted:
+                  // Cancel the check node deleted task since we have already
+                  // been notified by the zk watcher
+                  nodeDeletedCheck.cancel(true);
+                  entryRemoved(segmentHolder, watchedEvent.getPath());
+                  break;
+                default:
+                  // do nothing
+              }
+            }
+        ).forPath(path);
+
+        if (stat == null) {
+          final byte[] noopPayload = jsonMapper.writeValueAsBytes(new SegmentChangeRequestNoop());
+
+          // Create a node and then delete it to remove the registered watcher.  This is a work-around for
+          // a zookeeper race condition.  Specifically, when you set a watcher, it fires on the next event
+          // that happens for that node.  If no events happen, the watcher stays registered foreverz.
+          // Couple that with the fact that you cannot set a watcher when you create a node, but what we
+          // want is to create a node and then watch for it to get deleted.  The solution is that you *can*
+          // set a watcher when you check to see if it exists so, we first create the node and then set a
+          // watcher on its existence.  However, if already does not exist by the time the existence check
+          // returns, then the watcher that was set will never fire (nobody will ever create the node
+          // again) and thus lead to a slow, but real, memory leak.  So, we create another node to cause
+          // that watcher to fire and delete it right away.
+          //
+          // We do not create the existence watcher first, because then it will fire when we create the
+          // node and we'll have the same race when trying to refresh that watcher.
+          curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, noopPayload);
+          entryRemoved(segmentHolder, path);
+        }
+      }
+      catch (KeeperException.NodeExistsException ne) {
+        // This is expected when historicals haven't yet picked up processing this segment and coordinator
+        // tries reassigning it to the same node.
+        log.warn(ne, "ZK node already exists because segment change request hasn't yet been processed");
+        failAssign(segmentHolder);
+      }
+      catch (Exception e) {
+        failAssign(segmentHolder, e);
+      }
     }
 
-    try {
-      final String path = ZKPaths.makePath(basePath, currentlyProcessing.getSegmentId().toString());
-      final byte[] payload = jsonMapper.writeValueAsBytes(currentlyProcessing.getChangeRequest());
-      curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, payload);
-
-      processingExecutor.schedule(
+    @Nonnull
+    private ScheduledFuture<?> scheduleNodeDeletedCheck(String path)
+    {
+      return processingExecutor.schedule(
           () -> {
             try {
               if (curator.checkExists().forPath(path) != null) {
-                failAssign(new ISE("%s was never removed! Failing this operation!", path));
+                failAssign(segmentHolder, new ISE("%s was never removed! Failing this operation!", path));
+              } else {
+                log.debug("%s detected to be removed. ", path);
               }
             }
             catch (Exception e) {
-              failAssign(e);
+              log.error(e, "Exception caught and ignored when checking whether zk node was deleted");
+              failAssign(segmentHolder, e);
             }
           },
           config.getLoadTimeoutDelay().getMillis(),
           TimeUnit.MILLISECONDS
       );
-
-      final Stat stat = curator.checkExists().usingWatcher(
-          (CuratorWatcher) watchedEvent -> {
-            switch (watchedEvent.getType()) {
-              case NodeDeleted:
-                entryRemoved(watchedEvent.getPath());
-                break;
-              default:
-                // do nothing
-            }
-          }
-      ).forPath(path);
-
-      if (stat == null) {
-        final byte[] noopPayload = jsonMapper.writeValueAsBytes(new SegmentChangeRequestNoop());
-
-        // Create a node and then delete it to remove the registered watcher.  This is a work-around for
-        // a zookeeper race condition.  Specifically, when you set a watcher, it fires on the next event
-        // that happens for that node.  If no events happen, the watcher stays registered foreverz.
-        // Couple that with the fact that you cannot set a watcher when you create a node, but what we
-        // want is to create a node and then watch for it to get deleted.  The solution is that you *can*
-        // set a watcher when you check to see if it exists so, we first create the node and then set a
-        // watcher on its existence.  However, if already does not exist by the time the existence check
-        // returns, then the watcher that was set will never fire (nobody will ever create the node
-        // again) and thus lead to a slow, but real, memory leak.  So, we create another node to cause
-        // that watcher to fire and delete it right away.
-        //
-        // We do not create the existence watcher first, because then it will fire when we create the
-        // node and we'll have the same race when trying to refresh that watcher.
-        curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, noopPayload);
-
-        entryRemoved(path);
-      }
-    }
-    catch (Exception e) {
-      failAssign(e);
     }
   }
 
-  private void actionCompleted()
+  private void actionCompleted(SegmentHolder segmentHolder)
   {
-    if (currentlyProcessing != null) {
-      switch (currentlyProcessing.getType()) {
-        case LOAD:
-          segmentsToLoad.remove(currentlyProcessing.getSegment());
-          queuedSize.addAndGet(-currentlyProcessing.getSegmentSize());
-          break;
-        case DROP:
-          segmentsToDrop.remove(currentlyProcessing.getSegment());
-          break;
-        default:
-          throw new UnsupportedOperationException();
-      }
-
-      final List<LoadPeonCallback> callbacks = currentlyProcessing.getCallbacks();
-      currentlyProcessing = null;
-      callBackExecutor.execute(
-          () -> executeCallbacks(callbacks)
-      );
+    switch (segmentHolder.getType()) {
+      case LOAD:
+        segmentsToLoad.remove(segmentHolder.getSegment());
+        queuedSize.addAndGet(-segmentHolder.getSegmentSize());
+        break;
+      case DROP:
+        segmentsToDrop.remove(segmentHolder.getSegment());
+        break;
+      default:
+        throw new UnsupportedOperationException();
     }
+    executeCallbacks(segmentHolder);
   }
+
 
   @Override
   public void start()
   {
-    ScheduledExecutors.scheduleAtFixedRate(
-        processingExecutor,
-        config.getLoadQueuePeonRepeatDelay(),
-        config.getLoadQueuePeonRepeatDelay(),
-        () -> {
-          processSegmentChangeRequest();
-
-          if (stopped) {
-            return ScheduledExecutors.Signal.STOP;
-          } else {
-            return ScheduledExecutors.Signal.REPEAT;
-          }
-        }
-    );
   }
 
   @Override
   public void stop()
   {
-    synchronized (lock) {
-      if (currentlyProcessing != null) {
-        executeCallbacks(currentlyProcessing.getCallbacks());
-        currentlyProcessing = null;
-      }
-
-      if (!segmentsToDrop.isEmpty()) {
-        for (SegmentHolder holder : segmentsToDrop.values()) {
-          executeCallbacks(holder.getCallbacks());
-        }
-      }
-      segmentsToDrop.clear();
-
-      if (!segmentsToLoad.isEmpty()) {
-        for (SegmentHolder holder : segmentsToLoad.values()) {
-          executeCallbacks(holder.getCallbacks());
-        }
-      }
-      segmentsToLoad.clear();
-
-      queuedSize.set(0L);
-      failedAssignCount.set(0);
-      stopped = true;
+    for (SegmentHolder holder : segmentsToDrop.values()) {
+      executeCallbacks(holder);
     }
+    segmentsToDrop.clear();
+
+    for (SegmentHolder holder : segmentsToLoad.values()) {
+      executeCallbacks(holder);
+    }
+    segmentsToLoad.clear();
+
+    queuedSize.set(0L);
+    failedAssignCount.set(0);
   }
 
-  private void entryRemoved(String path)
+  private void entryRemoved(SegmentHolder segmentHolder, String path)
   {
-    synchronized (lock) {
-      if (currentlyProcessing == null) {
-        log.warn("Server[%s] an entry[%s] was removed even though it wasn't loading!?", basePath, path);
-        return;
-      }
-      if (!ZKPaths.getNodeFromPath(path).equals(currentlyProcessing.getSegmentId().toString())) {
-        log.warn(
-            "Server[%s] entry [%s] was removed even though it's not what is currently loading[%s]",
-            basePath, path, currentlyProcessing
-        );
-        return;
-      }
-      log.debug(
-          "Server[%s] done processing %s of segment [%s]",
-          basePath,
-          currentlyProcessing.getType() == LOAD ? "load" : "drop",
-          path
+    if (!ZKPaths.getNodeFromPath(path).equals(segmentHolder.getSegmentIdentifier())) {
+      log.warn(
+          "Server[%s] entry [%s] was removed even though it's not what is currently loading[%s]",
+          basePath, path, segmentHolder
       );
-      actionCompleted();
+      return;
     }
+    actionCompleted(segmentHolder);
+    log.debug(
+        "Server[%s] done processing %s of segment [%s]",
+        basePath,
+        segmentHolder.getType() == LOAD ? "load" : "drop",
+        path
+    );
   }
 
-  private void failAssign(Exception e)
+  private void failAssign(SegmentHolder segmentHolder)
   {
-    synchronized (lock) {
-      log.error(e, "Server[%s], throwable caught when submitting [%s].", basePath, currentlyProcessing);
-      failedAssignCount.getAndIncrement();
-      // Act like it was completed so that the coordinator gives it to someone else
-      actionCompleted();
-    }
+    failAssign(segmentHolder, null);
   }
+
+  private void failAssign(SegmentHolder segmentHolder, Exception e)
+  {
+    if (e != null) {
+      log.error(e, "Server[%s], throwable caught when submitting [%s].", basePath, segmentHolder);
+    }
+    failedAssignCount.getAndIncrement();
+    // Act like it was completed so that the coordinator gives it to someone else
+    actionCompleted(segmentHolder);
+  }
+
 
   private static class SegmentHolder
   {
     private final DataSegment segment;
     private final DataSegmentChangeRequest changeRequest;
     private final int type;
+    // Guaranteed to store only non-null elements
     private final List<LoadPeonCallback> callbacks = new ArrayList<>();
 
-    private SegmentHolder(DataSegment segment, int type, Collection<LoadPeonCallback> callbacks)
+    private SegmentHolder(
+        DataSegment segment,
+        int type,
+        Collection<LoadPeonCallback> callbacksParam
+    )
     {
       this.segment = segment;
       this.type = type;
       this.changeRequest = (type == LOAD)
                            ? new SegmentChangeRequestLoad(segment)
                            : new SegmentChangeRequestDrop(segment);
-      this.callbacks.addAll(callbacks);
+      Iterator<LoadPeonCallback> itr = callbacksParam.iterator();
+      while (itr.hasNext()) {
+        LoadPeonCallback c = itr.next();
+        if (c != null) {
+          callbacks.add(c);
+        }
+      }
     }
 
     public DataSegment getSegment()
@@ -431,9 +409,9 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       return type;
     }
 
-    public SegmentId getSegmentId()
+    public String getSegmentIdentifier()
     {
-      return segment.getId();
+      return segment.getId().toString();
     }
 
     public long getSegmentSize()
@@ -441,24 +419,20 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       return segment.getSize();
     }
 
-    public void addCallbacks(Collection<LoadPeonCallback> newCallbacks)
+    public void addCallback(@Nullable LoadPeonCallback newCallback)
     {
-      synchronized (callbacks) {
-        callbacks.addAll(newCallbacks);
+      if (newCallback != null) {
+        synchronized (callbacks) {
+          callbacks.add(newCallback);
+        }
       }
     }
 
-    public void addCallback(LoadPeonCallback newCallback)
+    List<LoadPeonCallback> snapshotCallbacks()
     {
       synchronized (callbacks) {
-        callbacks.add(newCallback);
-      }
-    }
-
-    public List<LoadPeonCallback> getCallbacks()
-    {
-      synchronized (callbacks) {
-        return callbacks;
+        // Return an immutable copy so that callers don't have to worry about concurrent modification
+        return ImmutableList.copyOf(callbacks);
       }
     }
 
@@ -471,6 +445,13 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     public String toString()
     {
       return changeRequest.toString();
+    }
+  }
+
+  private void executeCallbacks(SegmentHolder holder)
+  {
+    for (LoadPeonCallback callback : holder.snapshotCallbacks()) {
+      callBackExecutor.submit(() -> callback.execute());
     }
   }
 }

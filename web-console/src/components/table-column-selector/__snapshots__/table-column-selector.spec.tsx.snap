@@ -1,0 +1,41 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`table column matches snapshot 1`] = `
+<span
+  class="bp3-popover-wrapper table-column-selector"
+>
+  <span
+    class="bp3-popover-target"
+  >
+    <button
+      class="bp3-button"
+      type="button"
+    >
+      <span
+        class="bp3-button-text"
+      >
+        Columns
+      </span>
+      <span
+        class="bp3-icon bp3-icon-caret-down"
+        icon="caret-down"
+      >
+        <svg
+          data-icon="caret-down"
+          height="16"
+          viewBox="0 0 16 16"
+          width="16"
+        >
+          <desc>
+            caret-down
+          </desc>
+          <path
+            d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+            fill-rule="evenodd"
+          />
+        </svg>
+      </span>
+    </button>
+  </span>
+</span>
+`;

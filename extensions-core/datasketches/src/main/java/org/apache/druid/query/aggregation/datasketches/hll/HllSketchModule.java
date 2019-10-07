@@ -36,7 +36,6 @@ import java.util.List;
 /**
  * This module is to support count-distinct operations using {@link HllSketch}.
  * See <a href="https://datasketches.github.io/docs/HLL/HLL.html">HyperLogLog Sketch documentation</a>
- * @author Alexander Saydakov
  */
 public class HllSketchModule implements DruidModule
 {
@@ -73,14 +72,8 @@ public class HllSketchModule implements DruidModule
   @VisibleForTesting
   public static void registerSerde()
   {
-    if (ComplexMetrics.getSerdeForType(TYPE_NAME) == null) {
-      ComplexMetrics.registerSerde(TYPE_NAME, new HllSketchMergeComplexMetricSerde());
-    }
-    if (ComplexMetrics.getSerdeForType(BUILD_TYPE_NAME) == null) {
-      ComplexMetrics.registerSerde(BUILD_TYPE_NAME, new HllSketchBuildComplexMetricSerde());
-    }
-    if (ComplexMetrics.getSerdeForType(MERGE_TYPE_NAME) == null) {
-      ComplexMetrics.registerSerde(MERGE_TYPE_NAME, new HllSketchMergeComplexMetricSerde());
-    }
+    ComplexMetrics.registerSerde(TYPE_NAME, new HllSketchMergeComplexMetricSerde());
+    ComplexMetrics.registerSerde(BUILD_TYPE_NAME, new HllSketchBuildComplexMetricSerde());
+    ComplexMetrics.registerSerde(MERGE_TYPE_NAME, new HllSketchMergeComplexMetricSerde());
   }
 }

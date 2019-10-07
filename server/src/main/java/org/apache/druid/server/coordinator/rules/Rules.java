@@ -40,5 +40,7 @@ public class Rules
     }
   }
 
-  private Rules() {}
+  private Rules()
+  {
+  }
 }

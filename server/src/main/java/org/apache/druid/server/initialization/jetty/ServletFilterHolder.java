@@ -21,6 +21,7 @@ package org.apache.druid.server.initialization.jetty;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
+import javax.annotation.Nullable;
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import java.util.EnumSet;
@@ -38,7 +39,6 @@ import java.util.Map;
 @ExtensionPoint
 public interface ServletFilterHolder
 {
-
   /**
    * Get the Filter object that should be added to the servlet.
    *
@@ -68,16 +68,30 @@ public interface ServletFilterHolder
   Map<String, String> getInitParameters();
 
   /**
+   * This method is deprecated, please implement {@link #getPaths()}.
+   *
    * The path that this Filter should apply to
    *
    * @return the path that this Filter should apply to
    */
+  @Deprecated
   String getPath();
+
+  /**
+   * The paths that this Filter should apply to
+   *
+   * @return the paths that this Filter should apply to
+   */
+  default String[] getPaths()
+  {
+    return new String[]{getPath()};
+  }
 
   /**
    * The dispatcher type that this Filter should apply to
    *
    * @return the enumeration of DispatcherTypes that this Filter should apply to
    */
+  @Nullable
   EnumSet<DispatcherType> getDispatcherType();
 }

@@ -21,12 +21,15 @@ package org.apache.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowPlusRaw;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -37,10 +40,14 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Creates firehoses that shut off at a particular time. Useful for limiting the lifespan of a realtime job.
+ *
+ * Each {@link Firehose} created by this factory spins up and manages one thread for calling {@link Firehose#close()}
+ * asynchronously at the specified {@link #shutoffTime}.
  */
 public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowParser>
 {
   private static final EmittingLogger log = new EmittingLogger(FirehoseFactory.class);
+
   private final FirehoseFactory delegateFactory;
   private final DateTime shutoffTime;
 
@@ -57,37 +64,39 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
   @Override
   public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
   {
-    return new TimedShutoffFirehose(parser, temporaryDirectory);
+    return new TimedShutoffFirehose(parser, temporaryDirectory, false);
+  }
+
+  @Override
+  public Firehose connectForSampler(InputRowParser parser, File temporaryDirectory) throws IOException
+  {
+    return new TimedShutoffFirehose(parser, temporaryDirectory, true);
   }
 
   class TimedShutoffFirehose implements Firehose
   {
     private final Firehose firehose;
-    private final ScheduledExecutorService exec;
-    private final Object shutdownLock = new Object();
-    private volatile boolean shutdown = false;
+    private final ScheduledExecutorService shutdownExec;
+    @GuardedBy("this")
+    private boolean closed = false;
 
-    TimedShutoffFirehose(InputRowParser parser, File temporaryDirectory) throws IOException
+    TimedShutoffFirehose(InputRowParser parser, File temporaryDirectory, boolean sampling) throws IOException
     {
-      firehose = delegateFactory.connect(parser, temporaryDirectory);
+      firehose = sampling
+                 ? delegateFactory.connectForSampler(parser, temporaryDirectory)
+                 : delegateFactory.connect(parser, temporaryDirectory);
 
-      exec = Execs.scheduledSingleThreaded("timed-shutoff-firehose-%d");
+      shutdownExec = Execs.scheduledSingleThreaded("timed-shutoff-firehose-%d");
 
-      exec.schedule(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              log.info("Closing delegate firehose.");
+      shutdownExec.schedule(
+          () -> {
+            log.info("Closing delegate firehose.");
 
-              shutdown = true;
-              try {
-                firehose.close();
-              }
-              catch (IOException e) {
-                log.warn(e, "Failed to close delegate firehose, ignoring.");
-              }
+            try {
+              TimedShutoffFirehose.this.close();
+            }
+            catch (IOException e) {
+              log.warn(e, "Failed to close delegate firehose, ignoring.");
             }
           },
           shutoffTime.getMillis() - System.currentTimeMillis(),
@@ -98,16 +107,22 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
     }
 
     @Override
-    public boolean hasMore()
+    public boolean hasMore() throws IOException
     {
       return firehose.hasMore();
     }
 
     @Nullable
     @Override
-    public InputRow nextRow()
+    public InputRow nextRow() throws IOException
     {
       return firehose.nextRow();
+    }
+
+    @Override
+    public InputRowPlusRaw nextRowWithRaw() throws IOException
+    {
+      return firehose.nextRowWithRaw();
     }
 
     @Override
@@ -116,14 +131,16 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
       return firehose.commit();
     }
 
+    /**
+     * This method is synchronized because it might be called concurrently from multiple threads: from {@link
+     * #shutdownExec}, and explicitly on this Firehose object.
+     */
     @Override
-    public void close() throws IOException
+    public synchronized void close() throws IOException
     {
-      synchronized (shutdownLock) {
-        if (!shutdown) {
-          shutdown = true;
-          firehose.close();
-        }
+      if (!closed) {
+        closed = true;
+        CloseableUtils.closeBoth(firehose, shutdownExec::shutdownNow);
       }
     }
   }

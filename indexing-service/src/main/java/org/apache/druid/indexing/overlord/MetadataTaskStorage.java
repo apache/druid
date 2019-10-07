@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
@@ -146,7 +145,7 @@ public class MetadataTaskStorage implements TaskStorage
       if (e instanceof EntryExistsException) {
         throw (EntryExistsException) e;
       } else {
-        Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
   }
@@ -193,10 +192,23 @@ public class MetadataTaskStorage implements TaskStorage
     // filter out taskInfo with a null 'task' which should only happen in practice if we are missing a jackson module
     // and don't know what to do with the payload, so we won't be able to make use of it anyway
     return handler.getActiveTaskInfo(null)
-           .stream()
-           .filter(taskInfo -> taskInfo.getStatus().isRunnable() && taskInfo.getTask() != null)
-           .map(TaskInfo::getTask)
-           .collect(Collectors.toList());
+                  .stream()
+                  .filter(taskInfo -> taskInfo.getStatus().isRunnable() && taskInfo.getTask() != null)
+                  .map(TaskInfo::getTask)
+                  .collect(Collectors.toList());
+  }
+
+  @Override
+  public List<Task> getActiveTasksByDatasource(String datasource)
+  {
+    List<TaskInfo<Task, TaskStatus>> activeTaskInfos = handler.getActiveTaskInfo(datasource);
+    ImmutableList.Builder<Task> tasksBuilder = ImmutableList.builder();
+    for (TaskInfo<Task, TaskStatus> taskInfo : activeTaskInfos) {
+      if (taskInfo.getStatus().isRunnable() && taskInfo.getTask() != null) {
+        tasksBuilder.add(taskInfo.getTask());
+      }
+    }
+    return tasksBuilder.build();
   }
 
   @Override
@@ -216,7 +228,8 @@ public class MetadataTaskStorage implements TaskStorage
   {
     return ImmutableList.copyOf(
         handler.getCompletedTaskInfo(
-            DateTimes.nowUtc().minus(durationBeforeNow == null ? config.getRecentlyFinishedThreshold() : durationBeforeNow),
+            DateTimes.nowUtc()
+                     .minus(durationBeforeNow == null ? config.getRecentlyFinishedThreshold() : durationBeforeNow),
             maxTaskStatuses,
             datasource
         )

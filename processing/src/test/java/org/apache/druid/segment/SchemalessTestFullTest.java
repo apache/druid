@@ -67,7 +67,6 @@ import org.junit.runners.Parameterized;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -90,7 +89,7 @@ public class SchemalessTestFullTest
 
   final SchemalessIndexTest schemalessIndexTest;
   final String dataSource = "testing";
-  final Granularity allGran = Granularities.ALL;
+  final Granularity ALL_GRAN = Granularities.ALL;
   final String marketDimension = "market";
   final String qualityDimension = "quality";
   final String placementDimension = "placement";
@@ -1449,7 +1448,7 @@ public class SchemalessTestFullTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(dataSource)
-                                  .granularity(allGran)
+                                  .granularity(ALL_GRAN)
                                   .intervals(fullOnInterval)
                                   .aggregators(
                                       Lists.newArrayList(
@@ -1466,8 +1465,7 @@ public class SchemalessTestFullTest
                                   .build();
 
     failMsg += " timeseries ";
-    HashMap<String, Object> context = new HashMap<>();
-    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 
@@ -1479,7 +1477,7 @@ public class SchemalessTestFullTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(dataSource)
-                                  .granularity(allGran)
+                                  .granularity(ALL_GRAN)
                                   .intervals(fullOnInterval)
                                   .filters(marketDimension, "spot")
                                   .aggregators(
@@ -1497,8 +1495,7 @@ public class SchemalessTestFullTest
                                   .build();
 
     failMsg += " filtered timeseries ";
-    HashMap<String, Object> context = new HashMap<>();
-    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 
@@ -1508,7 +1505,7 @@ public class SchemalessTestFullTest
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(dataSource)
-        .granularity(allGran)
+        .granularity(ALL_GRAN)
         .dimension(marketDimension)
         .metric(indexMetric)
         .threshold(3)
@@ -1524,12 +1521,11 @@ public class SchemalessTestFullTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(addRowsIndexConstant))
+        .postAggregators(addRowsIndexConstant)
         .build();
 
     failMsg += " topN ";
-    HashMap<String, Object> context = new HashMap<>();
-    Iterable<Result<TopNResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<TopNResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
 
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
@@ -1540,7 +1536,7 @@ public class SchemalessTestFullTest
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(dataSource)
-        .granularity(allGran)
+        .granularity(ALL_GRAN)
         .dimension(marketDimension)
         .filters(marketDimension, "spot")
         .metric(indexMetric)
@@ -1557,12 +1553,11 @@ public class SchemalessTestFullTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(addRowsIndexConstant))
+        .postAggregators(addRowsIndexConstant)
         .build();
 
     failMsg += " filtered topN ";
-    HashMap<String, Object> context = new HashMap<>();
-    Iterable<Result<TopNResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<TopNResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 
@@ -1570,14 +1565,13 @@ public class SchemalessTestFullTest
   {
     SearchQuery query = Druids.newSearchQueryBuilder()
                               .dataSource(dataSource)
-                              .granularity(allGran)
+                              .granularity(ALL_GRAN)
                               .intervals(fullOnInterval)
                               .query("a")
                               .build();
 
     failMsg += " search ";
-    HashMap<String, Object> context = new HashMap<>();
-    Iterable<Result<SearchResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<SearchResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 
@@ -1585,15 +1579,14 @@ public class SchemalessTestFullTest
   {
     SearchQuery query = Druids.newSearchQueryBuilder()
                               .dataSource(dataSource)
-                              .granularity(allGran)
+                              .granularity(ALL_GRAN)
                               .filters(marketDimension, "spot")
                               .intervals(fullOnInterval)
                               .query("a")
                               .build();
 
     failMsg += " filtered search ";
-    HashMap<String, Object> context = new HashMap<>();
-    Iterable<Result<SearchResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<SearchResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 
@@ -1608,8 +1601,7 @@ public class SchemalessTestFullTest
                                     .build();
 
     failMsg += " timeBoundary ";
-    HashMap<String, Object> context = new HashMap<>();
-    Iterable<Result<TimeBoundaryResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<TimeBoundaryResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 }

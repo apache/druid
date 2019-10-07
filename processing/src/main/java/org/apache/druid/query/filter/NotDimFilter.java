@@ -27,8 +27,8 @@ import com.google.common.collect.RangeSet;
 import org.apache.druid.segment.filter.NotFilter;
 
 import java.nio.ByteBuffer;
-import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -102,7 +102,7 @@ public class NotDimFilter implements DimFilter
   }
 
   @Override
-  public HashSet<String> getRequiredColumns()
+  public Set<String> getRequiredColumns()
   {
     return field.getRequiredColumns();
   }

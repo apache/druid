@@ -26,6 +26,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
@@ -39,47 +40,38 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Collections;
 
-import static org.apache.druid.query.QueryRunnerTestHelper.addRowsIndexConstant;
-import static org.apache.druid.query.QueryRunnerTestHelper.allGran;
-import static org.apache.druid.query.QueryRunnerTestHelper.commonDoubleAggregators;
-import static org.apache.druid.query.QueryRunnerTestHelper.dataSource;
-import static org.apache.druid.query.QueryRunnerTestHelper.fullOnIntervalSpec;
-import static org.apache.druid.query.QueryRunnerTestHelper.indexMetric;
-import static org.apache.druid.query.QueryRunnerTestHelper.marketDimension;
-
-public class MaterializedViewQueryTest 
+public class MaterializedViewQueryTest
 {
-  private static final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+  private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
   private DataSourceOptimizer optimizer;
 
   @Before
-  public void setUp() 
+  public void setUp()
   {
-    jsonMapper.registerSubtypes(new NamedType(MaterializedViewQuery.class, MaterializedViewQuery.TYPE));
+    JSON_MAPPER.registerSubtypes(new NamedType(MaterializedViewQuery.class, MaterializedViewQuery.TYPE));
     optimizer = EasyMock.createMock(DataSourceOptimizer.class);
-    jsonMapper.setInjectableValues(
+    JSON_MAPPER.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), LookupEnabledTestExprMacroTable.INSTANCE)
             .addValue(DataSourceOptimizer.class, optimizer)
     );
   }
-  
+
   @Test
   public void testQuerySerialization() throws IOException
   {
     TopNQuery topNQuery = new TopNQueryBuilder()
-        .dataSource(dataSource)
-        .granularity(allGran)
-        .dimension(marketDimension)
-        .metric(indexMetric)
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .metric(QueryRunnerTestHelper.INDEX_METRIC)
         .threshold(4)
-        .intervals(fullOnIntervalSpec)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
-                    commonDoubleAggregators,
+                    QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -87,14 +79,14 @@ public class MaterializedViewQueryTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
     MaterializedViewQuery query = new MaterializedViewQuery(topNQuery, optimizer);
-    String json = jsonMapper.writeValueAsString(query);
-    Query serdeQuery = jsonMapper.readValue(json, Query.class);
+    String json = JSON_MAPPER.writeValueAsString(query);
+    Query serdeQuery = JSON_MAPPER.readValue(json, Query.class);
     Assert.assertEquals(query, serdeQuery);
-    Assert.assertEquals(new TableDataSource(dataSource), query.getDataSource());
-    Assert.assertEquals(allGran, query.getGranularity());
-    Assert.assertEquals(fullOnIntervalSpec.getIntervals(), query.getIntervals());
+    Assert.assertEquals(new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE), query.getDataSource());
+    Assert.assertEquals(QueryRunnerTestHelper.ALL_GRAN, query.getGranularity());
+    Assert.assertEquals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC.getIntervals(), query.getIntervals());
   }
 }

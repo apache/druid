@@ -20,8 +20,8 @@
 package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.asynchttpclient.AsyncHttpClient;
 
-import javax.annotation.concurrent.GuardedBy;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.net.URI;
@@ -177,7 +176,7 @@ public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter
           if (thrown != null) {
             e.addSuppressed(thrown);
           }
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
         if (thrown == null) {
           thrown = e;
@@ -189,7 +188,7 @@ public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter
       }
     }
     if (thrown != null) {
-      throw Throwables.propagate(thrown);
+      throw new RuntimeException(thrown);
     }
   }
 

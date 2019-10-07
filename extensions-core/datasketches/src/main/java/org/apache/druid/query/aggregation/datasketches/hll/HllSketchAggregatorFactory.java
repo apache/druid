@@ -37,11 +37,9 @@ import java.util.Objects;
 
 /**
  * Base class for both build and merge factories
- * @author Alexander Saydakov
  */
 public abstract class HllSketchAggregatorFactory extends AggregatorFactory
 {
-
   public static final int DEFAULT_LG_K = 12;
   public static final TgtHllType DEFAULT_TGT_HLL_TYPE = TgtHllType.HLL_4;
 
@@ -52,18 +50,21 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   private final String fieldName;
   private final int lgK;
   private final TgtHllType tgtHllType;
+  private final boolean round;
 
   HllSketchAggregatorFactory(
       final String name,
       final String fieldName,
       @Nullable final Integer lgK,
-      @Nullable final String tgtHllType
+      @Nullable final String tgtHllType,
+      final boolean round
   )
   {
     this.name = Objects.requireNonNull(name);
     this.fieldName = Objects.requireNonNull(fieldName);
     this.lgK = lgK == null ? DEFAULT_LG_K : lgK;
     this.tgtHllType = tgtHllType == null ? DEFAULT_TGT_HLL_TYPE : TgtHllType.valueOf(tgtHllType);
+    this.round = round;
   }
 
   @Override
@@ -91,6 +92,12 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
     return tgtHllType.toString();
   }
 
+  @JsonProperty
+  public boolean isRound()
+  {
+    return round;
+  }
+
   @Override
   public List<String> requiredFields()
   {
@@ -104,7 +111,9 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.singletonList(new HllSketchBuildAggregatorFactory(fieldName, fieldName, lgK, tgtHllType.toString()));
+    return Collections.singletonList(
+        new HllSketchBuildAggregatorFactory(fieldName, fieldName, lgK, tgtHllType.toString(), round)
+    );
   }
 
   @Override
@@ -158,11 +167,21 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
     };
   }
 
+  @Nullable
   @Override
-  public Double finalizeComputation(final Object object)
+  public Object finalizeComputation(@Nullable final Object object)
   {
+    if (object == null) {
+      return null;
+    }
     final HllSketch sketch = (HllSketch) object;
-    return sketch.getEstimate();
+    final double estimate = sketch.getEstimate();
+
+    if (round) {
+      return Math.round(estimate);
+    } else {
+      return estimate;
+    }
   }
 
   @Override
@@ -174,14 +193,14 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new HllSketchMergeAggregatorFactory(getName(), getName(), getLgK(), getTgtHllType());
+    return new HllSketchMergeAggregatorFactory(getName(), getName(), getLgK(), getTgtHllType(), isRound());
   }
 
   @Override
   public byte[] getCacheKey()
   {
     return new CacheKeyBuilder(getCacheTypeId()).appendString(name).appendString(fieldName)
-        .appendInt(lgK).appendInt(tgtHllType.ordinal()).build();
+                                                .appendInt(lgK).appendInt(tgtHllType.ordinal()).build();
   }
 
   @Override
@@ -206,6 +225,9 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
     if (!tgtHllType.equals(that.tgtHllType)) {
       return false;
     }
+    if (round != that.round) {
+      return false;
+    }
     return true;
   }
 
@@ -219,11 +241,12 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   public String toString()
   {
     return getClass().getSimpleName() + " {"
-        + "name=" + name
-        + "fieldName=" + fieldName
-        + "lgK=" + lgK
-        + "tgtHllType=" + tgtHllType
-        + "}";
+           + " name=" + name
+           + ", fieldName=" + fieldName
+           + ", lgK=" + lgK
+           + ", tgtHllType=" + tgtHllType
+           + ", round=" + round
+           + " }";
   }
 
   protected abstract byte getCacheTypeId();

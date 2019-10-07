@@ -22,7 +22,6 @@ package org.apache.druid.indexing.worker.executor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
@@ -38,6 +37,8 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.metadata.PasswordProvider;
+import org.apache.druid.metadata.PasswordProviderRedactionMixIn;
 
 import java.io.File;
 import java.io.IOException;
@@ -81,7 +82,7 @@ public class ExecutorLifecycle
     this.taskConfig = taskConfig;
     this.taskActionClientFactory = taskActionClientFactory;
     this.taskRunner = taskRunner;
-    this.jsonMapper = jsonMapper;
+    this.jsonMapper = jsonMapper.copy().addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
   }
 
   @LifecycleStart
@@ -100,7 +101,7 @@ public class ExecutorLifecycle
       );
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     // Avoid running the same task twice on the same machine by locking the task base directory.
@@ -137,7 +138,7 @@ public class ExecutorLifecycle
       }
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     if (taskExecutorConfig.isParentStreamDefined()) {
@@ -198,7 +199,7 @@ public class ExecutorLifecycle
               return taskStatus;
             }
             catch (Exception e) {
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
           }
         }
@@ -211,7 +212,7 @@ public class ExecutorLifecycle
       statusFuture.get();
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

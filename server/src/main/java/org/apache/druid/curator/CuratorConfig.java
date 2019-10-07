@@ -26,16 +26,20 @@ import org.apache.druid.metadata.PasswordProvider;
 
 import javax.validation.constraints.Min;
 
-/**
- */
 public class CuratorConfig
 {
-  @JsonProperty("host")
+  static final String HOST = "host";
+  @JsonProperty(HOST)
   private String zkHosts = "localhost";
 
   @JsonProperty("sessionTimeoutMs")
   @Min(0)
-  private int zkSessionTimeoutMs = 30000;
+  private int zkSessionTimeoutMs = 30_000;
+
+  static final String CONNECTION_TIMEOUT_MS = "connectionTimeoutMs";
+  @JsonProperty(CONNECTION_TIMEOUT_MS)
+  @Min(0)
+  private int zkConnectionTimeoutMs = 15_000;  // same as Curator default: https://git.io/fjhhr
 
   @JsonProperty("compress")
   private boolean enableCompression = true;
@@ -62,7 +66,7 @@ public class CuratorConfig
     this.zkHosts = zkHosts;
   }
 
-  public Integer getZkSessionTimeoutMs()
+  public int getZkSessionTimeoutMs()
   {
     return zkSessionTimeoutMs;
   }
@@ -70,6 +74,16 @@ public class CuratorConfig
   public void setZkSessionTimeoutMs(Integer zkSessionTimeoutMs)
   {
     this.zkSessionTimeoutMs = zkSessionTimeoutMs;
+  }
+
+  public int getZkConnectionTimeoutMs()
+  {
+    return zkConnectionTimeoutMs;
+  }
+
+  public void setZkConnectionTimeoutMs(Integer zkConnectionTimeoutMs)
+  {
+    this.zkConnectionTimeoutMs = zkConnectionTimeoutMs;
   }
 
   public boolean getEnableCompression()
@@ -108,5 +122,4 @@ public class CuratorConfig
   {
     return authScheme;
   }
-
 }

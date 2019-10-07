@@ -43,7 +43,6 @@ import org.joda.time.Interval;
     @JsonSubTypes.Type(name = IntervalBroadcastDistributionRule.TYPE, value = IntervalBroadcastDistributionRule.class),
     @JsonSubTypes.Type(name = PeriodBroadcastDistributionRule.TYPE, value = PeriodBroadcastDistributionRule.class)
 })
-
 public interface Rule
 {
   String getType();
@@ -52,5 +51,16 @@ public interface Rule
 
   boolean appliesTo(Interval interval, DateTime referenceTimestamp);
 
+  /**
+   * {@link DruidCoordinatorRuntimeParams#getUsedSegments()} must not be called in Rule's code, because the used
+   * segments are not specified for the {@link DruidCoordinatorRuntimeParams} passed into Rule's code. This is because
+   * {@link DruidCoordinatorRuntimeParams} entangles two slightly different (nonexistent yet) abstractions:
+   * "DruidCoordinatorHelperParams" and "RuleParams" which contain params that only {@link
+   * org.apache.druid.server.coordinator.helper.DruidCoordinatorHelper}s and Rules need, respectively.
+   * For example, {@link org.apache.druid.server.coordinator.ReplicationThrottler} needs to belong only to "RuleParams",
+   * but not "DruidCoordinatorHelperParams". The opposite for the collection of used segments.
+   *
+   * See https://github.com/apache/incubator-druid/issues/7228
+   */
   CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment);
 }

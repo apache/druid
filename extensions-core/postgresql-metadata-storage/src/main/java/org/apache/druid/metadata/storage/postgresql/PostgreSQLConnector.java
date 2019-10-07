@@ -20,21 +20,26 @@
 package org.apache.druid.metadata.storage.postgresql;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.MetadataCASUpdate;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.postgresql.PGProperty;
+import org.postgresql.util.PSQLException;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.StringMapper;
 
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
+import java.util.List;
 
 public class PostgreSQLConnector extends SQLMetadataConnector
 {
@@ -42,17 +47,23 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   private static final String PAYLOAD_TYPE = "BYTEA";
   private static final String SERIAL_TYPE = "BIGSERIAL";
   private static final String QUOTE_STRING = "\\\"";
+  private static final String PSQL_SERIALIZATION_FAILURE_MSG =
+      "ERROR: could not serialize access due to concurrent update";
+  private static final String PSQL_SERIALIZATION_FAILURE_SQL_STATE = "40001";
   public static final int DEFAULT_STREAMING_RESULT_SIZE = 100;
 
   private final DBI dbi;
 
   private volatile Boolean canUpsert;
 
+  private final String dbTableSchema;
+  
   @Inject
   public PostgreSQLConnector(
       Supplier<MetadataStorageConnectorConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
-      PostgreSQLConnectorConfig connectorConfig
+      PostgreSQLConnectorConfig connectorConfig,
+      PostgreSQLTablesConfig tablesConfig
   )
   {
     super(config, dbTables);
@@ -104,7 +115,8 @@ public class PostgreSQLConnector extends SQLMetadataConnector
     }
 
     this.dbi = new DBI(datasource);
-
+    this.dbTableSchema = tablesConfig.getDbTableSchema();
+    
     log.info("Configured PostgreSQL as metadata storage");
   }
 
@@ -146,12 +158,13 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   public boolean tableExists(final Handle handle, final String tableName)
   {
     return !handle.createQuery(
-        "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename ILIKE :tableName"
+        "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = :dbTableSchema AND tablename ILIKE :tableName"
     )
-                 .bind("tableName", tableName)
-                 .map(StringMapper.FIRST)
-                 .list()
-                 .isEmpty();
+                  .bind("dbTableSchema", dbTableSchema)
+                  .bind("tableName", tableName)
+                  .map(StringMapper.FIRST)
+                  .list()
+                  .isEmpty();
   }
 
   @Override
@@ -184,10 +197,14 @@ public class PostgreSQLConnector extends SQLMetadataConnector
             } else {
               handle.createStatement(
                   StringUtils.format(
-                      "BEGIN;\n" +
-                      "LOCK TABLE %1$s IN SHARE ROW EXCLUSIVE MODE;\n" +
-                      "WITH upsert AS (UPDATE %1$s SET %3$s=:value WHERE %2$s=:key RETURNING *)\n" +
-                      "    INSERT INTO %1$s (%2$s, %3$s) SELECT :key, :value WHERE NOT EXISTS (SELECT * FROM upsert)\n;" +
+                      "BEGIN;\n"
+                      +
+                      "LOCK TABLE %1$s IN SHARE ROW EXCLUSIVE MODE;\n"
+                      +
+                      "WITH upsert AS (UPDATE %1$s SET %3$s=:value WHERE %2$s=:key RETURNING *)\n"
+                      +
+                      "    INSERT INTO %1$s (%2$s, %3$s) SELECT :key, :value WHERE NOT EXISTS (SELECT * FROM upsert)\n;"
+                      +
                       "COMMIT;",
                       tableName,
                       keyColumn,
@@ -202,6 +219,45 @@ public class PostgreSQLConnector extends SQLMetadataConnector
           }
         }
     );
+  }
+
+  @Override
+  public boolean compareAndSwap(List<MetadataCASUpdate> updates)
+  {
+    try {
+      return super.compareAndSwap(updates);
+    }
+    catch (CallbackFailedException cfe) {
+      Throwable root = Throwables.getRootCause(cfe);
+      if (checkRootCauseForPSQLSerializationFailure(root)) {
+        return false;
+      } else {
+        throw cfe;
+      }
+    }
+  }
+
+  /**
+   * Used by compareAndSwap to check if the transaction was terminated because of concurrent updates.
+   *
+   * The parent implementation's compareAndSwap transaction has isolation level REPEATABLE_READ.
+   * In Postgres, such transactions will be canceled when another transaction commits a conflicting update:
+   * https://www.postgresql.org/docs/10/transaction-iso.html#XACT-REPEATABLE-READ
+   *
+   * When this occurs, we need to retry the transaction from the beginning: by returning false in compareAndSwap,
+   * the calling code will attempt retries.
+   */
+  private boolean checkRootCauseForPSQLSerializationFailure(
+      Throwable root
+  )
+  {
+    if (root instanceof PSQLException) {
+      PSQLException psqlException = (PSQLException) root;
+      return PSQL_SERIALIZATION_FAILURE_SQL_STATE.equals(psqlException.getSQLState()) &&
+             PSQL_SERIALIZATION_FAILURE_MSG.equals(psqlException.getMessage());
+    } else {
+      return false;
+    }
   }
 
   @Override

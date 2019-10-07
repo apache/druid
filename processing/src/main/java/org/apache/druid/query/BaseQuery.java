@@ -40,9 +40,10 @@ import java.util.Objects;
 import java.util.TreeMap;
 
 /**
+ *
  */
 @ExtensionPoint
-public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
+public abstract class BaseQuery<T> implements Query<T>
 {
   public static void checkInterrupted()
   {
@@ -216,10 +217,16 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     return overridden;
   }
 
+  /**
+   * Default implementation of {@link Query#getResultOrdering()} that uses {@link Ordering#natural()}.
+   *
+   * If your query result type T is not Comparable, you must override this method.
+   */
   @Override
+  @SuppressWarnings("unchecked") // assumes T is Comparable; see method javadoc
   public Ordering<T> getResultOrdering()
   {
-    Ordering<T> retVal = Ordering.natural();
+    Ordering retVal = Ordering.natural();
     return descending ? retVal.reverse() : retVal;
   }
 

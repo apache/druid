@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -43,6 +42,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -173,7 +173,7 @@ public class AppenderatorPlumber implements Plumber
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+      public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
       {
         return queryPlus.run(appenderator, responseContext);
       }
@@ -223,7 +223,7 @@ public class AppenderatorPlumber implements Plumber
       }
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     finally {
       stopped = true;

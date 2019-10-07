@@ -29,8 +29,8 @@ import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.AbstractTextFilesFirehoseFactory;
 import org.apache.druid.data.input.impl.StringInputRowParser;
-import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.utils.CompressionUtils;
 
 import java.io.File;
 import java.io.IOException;

@@ -22,7 +22,6 @@ package org.apache.druid.server.coordination;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.cache.CacheConfig;
@@ -55,6 +54,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchResultValue;
 import org.apache.druid.segment.AbstractSegment;
@@ -81,10 +81,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -417,7 +415,7 @@ public class ServerManagerTest
       factory.clearAdapters();
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -447,8 +445,7 @@ public class ServerManagerTest
           @Override
           public void run()
           {
-            Map<String, Object> context = new HashMap<String, Object>();
-            Sequence<Result<SearchResultValue>> seq = runner.run(QueryPlus.wrap(query), context);
+            Sequence<Result<SearchResultValue>> seq = runner.run(QueryPlus.wrap(query));
             seq.toList();
             Iterator<SegmentForTesting> adaptersIter = factory.getAdapters().iterator();
 
@@ -582,7 +579,7 @@ public class ServerManagerTest
     @Override
     public QueryMetrics<Query<?>> makeMetrics(QueryType query)
     {
-      return new DefaultQueryMetrics<>(new DefaultObjectMapper());
+      return new DefaultQueryMetrics<>();
     }
 
     @Override
@@ -685,7 +682,7 @@ public class ServerManagerTest
     }
 
     @Override
-    public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+    public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
     {
       return new BlockingSequence<>(runner.run(queryPlus, responseContext), waitLatch, waitYieldLatch, notifyLatch);
     }
@@ -724,7 +721,7 @@ public class ServerManagerTest
         waitYieldLatch.await(1000, TimeUnit.MILLISECONDS);
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
 
       final Yielder<OutType> baseYielder = baseSequence.toYielder(initValue, accumulator);
@@ -737,7 +734,7 @@ public class ServerManagerTest
             waitLatch.await(1000, TimeUnit.MILLISECONDS);
           }
           catch (Exception e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
           }
           return baseYielder.get();
         }

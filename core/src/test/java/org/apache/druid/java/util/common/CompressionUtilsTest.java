@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Predicates;
-import com.google.common.base.Throwables;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
@@ -29,6 +28,7 @@ import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream
 import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorOutputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
 import org.apache.commons.compress.compressors.zstandard.ZstdCompressorOutputStream;
+import org.apache.druid.utils.CompressionUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -62,36 +62,36 @@ import java.util.zip.ZipOutputStream;
 
 public class CompressionUtilsTest
 {
-  private static final String content;
-  private static final byte[] expected;
-  private static final byte[] gzBytes;
+  private static final String CONTENT;
+  private static final byte[] EXPECTED;
+  private static final byte[] GZ_BYTES;
 
   static {
     final StringBuilder builder = new StringBuilder();
-    try (InputStream stream = CompressionUtilsTest.class.getClassLoader().getResourceAsStream("loremipsum.txt")) {
+    try (InputStream stream = CompressionUtilsTest.class.getClassLoader().getResourceAsStream("white-rabbit.txt")) {
       final Iterator<String> it = new Scanner(
           new InputStreamReader(stream, StandardCharsets.UTF_8)
-      ).useDelimiter(Pattern.quote("|"));
+      ).useDelimiter(Pattern.quote(System.lineSeparator()));
       while (it.hasNext()) {
         builder.append(it.next());
       }
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
-    content = builder.toString();
-    expected = StringUtils.toUtf8(content);
+    CONTENT = builder.toString();
+    EXPECTED = StringUtils.toUtf8(CONTENT);
 
-    final ByteArrayOutputStream gzByteStream = new ByteArrayOutputStream(expected.length);
+    final ByteArrayOutputStream gzByteStream = new ByteArrayOutputStream(EXPECTED.length);
     try (GZIPOutputStream outputStream = new GZIPOutputStream(gzByteStream)) {
-      try (ByteArrayInputStream in = new ByteArrayInputStream(expected)) {
+      try (ByteArrayInputStream in = new ByteArrayInputStream(EXPECTED)) {
         ByteStreams.copy(in, outputStream);
       }
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
-    gzBytes = gzByteStream.toByteArray();
+    GZ_BYTES = gzByteStream.toByteArray();
   }
 
   @Rule
@@ -101,9 +101,9 @@ public class CompressionUtilsTest
 
   public static void assertGoodDataStream(InputStream stream) throws IOException
   {
-    try (final ByteArrayOutputStream bos = new ByteArrayOutputStream(expected.length)) {
+    try (final ByteArrayOutputStream bos = new ByteArrayOutputStream(EXPECTED.length)) {
       ByteStreams.copy(stream, bos);
-      Assert.assertArrayEquals(expected, bos.toByteArray());
+      Assert.assertArrayEquals(EXPECTED, bos.toByteArray());
     }
   }
 
@@ -113,7 +113,7 @@ public class CompressionUtilsTest
     testDir = temporaryFolder.newFolder("testDir");
     testFile = new File(testDir, "test.dat");
     try (OutputStream outputStream = new FileOutputStream(testFile)) {
-      outputStream.write(StringUtils.toUtf8(content));
+      outputStream.write(StringUtils.toUtf8(CONTENT));
     }
     Assert.assertTrue(testFile.getParentFile().equals(testDir));
   }
@@ -353,7 +353,7 @@ public class CompressionUtilsTest
 
     File evilZip = new File(tmpDir, "evil.zip");
     java.nio.file.Files.deleteIfExists(evilZip.toPath());
-    CompressionUtils.makeEvilZip(evilZip);
+    CompressionUtilsTest.makeEvilZip(evilZip);
 
     try {
       CompressionUtils.unzip(evilZip, tmpDir);
@@ -376,7 +376,7 @@ public class CompressionUtilsTest
 
     File evilZip = new File(tmpDir, "evil.zip");
     java.nio.file.Files.deleteIfExists(evilZip.toPath());
-    CompressionUtils.makeEvilZip(evilZip);
+    CompressionUtilsTest.makeEvilZip(evilZip);
 
     try {
       CompressionUtils.unzip(new FileInputStream(evilZip), tmpDir);
@@ -395,35 +395,35 @@ public class CompressionUtilsTest
   {
     try (OutputStream outputStream = new FileOutputStream(testFile)) {
       Assert.assertEquals(
-          gzBytes.length,
+          GZ_BYTES.length,
           ByteStreams.copy(
-              new ZeroRemainingInputStream(new ByteArrayInputStream(gzBytes)),
+              new ZeroRemainingInputStream(new ByteArrayInputStream(GZ_BYTES)),
               outputStream
           )
       );
       Assert.assertEquals(
-          gzBytes.length,
+          GZ_BYTES.length,
           ByteStreams.copy(
-              new ZeroRemainingInputStream(new ByteArrayInputStream(gzBytes)),
+              new ZeroRemainingInputStream(new ByteArrayInputStream(GZ_BYTES)),
               outputStream
           )
       );
       Assert.assertEquals(
-          gzBytes.length,
+          GZ_BYTES.length,
           ByteStreams.copy(
-              new ZeroRemainingInputStream(new ByteArrayInputStream(gzBytes)),
+              new ZeroRemainingInputStream(new ByteArrayInputStream(GZ_BYTES)),
               outputStream
           )
       );
     }
-    Assert.assertEquals(gzBytes.length * 3, testFile.length());
+    Assert.assertEquals(GZ_BYTES.length * 3, testFile.length());
     try (InputStream inputStream = new ZeroRemainingInputStream(new FileInputStream(testFile))) {
       for (int i = 0; i < 3; ++i) {
-        final byte[] bytes = new byte[gzBytes.length];
+        final byte[] bytes = new byte[GZ_BYTES.length];
         Assert.assertEquals(bytes.length, inputStream.read(bytes));
         Assert.assertArrayEquals(
             StringUtils.format("Failed on range %d", i),
-            gzBytes,
+            GZ_BYTES,
             bytes
         );
       }
@@ -435,10 +435,10 @@ public class CompressionUtilsTest
   // http://bugs.java.com/bugdatabase/view_bug.do?bug_id=7036144
   public void testGunzipBug() throws IOException
   {
-    final ByteArrayOutputStream tripleGzByteStream = new ByteArrayOutputStream(gzBytes.length * 3);
-    tripleGzByteStream.write(gzBytes);
-    tripleGzByteStream.write(gzBytes);
-    tripleGzByteStream.write(gzBytes);
+    final ByteArrayOutputStream tripleGzByteStream = new ByteArrayOutputStream(GZ_BYTES.length * 3);
+    tripleGzByteStream.write(GZ_BYTES);
+    tripleGzByteStream.write(GZ_BYTES);
+    tripleGzByteStream.write(GZ_BYTES);
     try (final InputStream inputStream = new GZIPInputStream(
         new ZeroRemainingInputStream(
             new ByteArrayInputStream(
@@ -446,17 +446,17 @@ public class CompressionUtilsTest
             )
         )
     )) {
-      try (final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(expected.length * 3)) {
+      try (final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(EXPECTED.length * 3)) {
         Assert.assertEquals(
             "Read terminated too soon (bug 7036144)",
-            expected.length * 3,
+            EXPECTED.length * 3,
             ByteStreams.copy(inputStream, outputStream)
         );
         final byte[] found = outputStream.toByteArray();
-        Assert.assertEquals(expected.length * 3, found.length);
-        Assert.assertArrayEquals(expected, Arrays.copyOfRange(found, expected.length * 0, expected.length * 1));
-        Assert.assertArrayEquals(expected, Arrays.copyOfRange(found, expected.length * 1, expected.length * 2));
-        Assert.assertArrayEquals(expected, Arrays.copyOfRange(found, expected.length * 2, expected.length * 3));
+        Assert.assertEquals(EXPECTED.length * 3, found.length);
+        Assert.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 0, EXPECTED.length * 1));
+        Assert.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 1, EXPECTED.length * 2));
+        Assert.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 2, EXPECTED.length * 3));
       }
     }
   }
@@ -468,10 +468,10 @@ public class CompressionUtilsTest
     testFile.delete();
     Assert.assertFalse(testFile.exists());
 
-    final ByteArrayOutputStream tripleGzByteStream = new ByteArrayOutputStream(gzBytes.length * 3);
-    tripleGzByteStream.write(gzBytes);
-    tripleGzByteStream.write(gzBytes);
-    tripleGzByteStream.write(gzBytes);
+    final ByteArrayOutputStream tripleGzByteStream = new ByteArrayOutputStream(GZ_BYTES.length * 3);
+    tripleGzByteStream.write(GZ_BYTES);
+    tripleGzByteStream.write(GZ_BYTES);
+    tripleGzByteStream.write(GZ_BYTES);
 
     final ByteSource inputStreamFactory = new ByteSource()
     {
@@ -482,20 +482,20 @@ public class CompressionUtilsTest
       }
     };
 
-    Assert.assertEquals((long) (expected.length * 3), CompressionUtils.gunzip(inputStreamFactory, testFile).size());
+    Assert.assertEquals((long) (EXPECTED.length * 3), CompressionUtils.gunzip(inputStreamFactory, testFile).size());
 
     try (final InputStream inputStream = new FileInputStream(testFile)) {
-      try (final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(expected.length * 3)) {
+      try (final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(EXPECTED.length * 3)) {
         Assert.assertEquals(
             "Read terminated too soon (7036144)",
-            expected.length * 3,
+            EXPECTED.length * 3,
             ByteStreams.copy(inputStream, outputStream)
         );
         final byte[] found = outputStream.toByteArray();
-        Assert.assertEquals(expected.length * 3, found.length);
-        Assert.assertArrayEquals(expected, Arrays.copyOfRange(found, expected.length * 0, expected.length * 1));
-        Assert.assertArrayEquals(expected, Arrays.copyOfRange(found, expected.length * 1, expected.length * 2));
-        Assert.assertArrayEquals(expected, Arrays.copyOfRange(found, expected.length * 2, expected.length * 3));
+        Assert.assertEquals(EXPECTED.length * 3, found.length);
+        Assert.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 0, EXPECTED.length * 1));
+        Assert.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 1, EXPECTED.length * 2));
+        Assert.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 2, EXPECTED.length * 3));
       }
     }
   }
@@ -505,14 +505,14 @@ public class CompressionUtilsTest
   public void testGunzipBugStreamWorkarround() throws IOException
   {
 
-    final ByteArrayOutputStream tripleGzByteStream = new ByteArrayOutputStream(gzBytes.length * 3);
-    tripleGzByteStream.write(gzBytes);
-    tripleGzByteStream.write(gzBytes);
-    tripleGzByteStream.write(gzBytes);
+    final ByteArrayOutputStream tripleGzByteStream = new ByteArrayOutputStream(GZ_BYTES.length * 3);
+    tripleGzByteStream.write(GZ_BYTES);
+    tripleGzByteStream.write(GZ_BYTES);
+    tripleGzByteStream.write(GZ_BYTES);
 
-    try (ByteArrayOutputStream bos = new ByteArrayOutputStream(expected.length * 3)) {
+    try (ByteArrayOutputStream bos = new ByteArrayOutputStream(EXPECTED.length * 3)) {
       Assert.assertEquals(
-          expected.length * 3,
+          EXPECTED.length * 3,
           CompressionUtils.gunzip(
               new ZeroRemainingInputStream(
                   new ByteArrayInputStream(tripleGzByteStream.toByteArray())
@@ -520,10 +520,10 @@ public class CompressionUtilsTest
           )
       );
       final byte[] found = bos.toByteArray();
-      Assert.assertEquals(expected.length * 3, found.length);
-      Assert.assertArrayEquals(expected, Arrays.copyOfRange(found, expected.length * 0, expected.length * 1));
-      Assert.assertArrayEquals(expected, Arrays.copyOfRange(found, expected.length * 1, expected.length * 2));
-      Assert.assertArrayEquals(expected, Arrays.copyOfRange(found, expected.length * 2, expected.length * 3));
+      Assert.assertEquals(EXPECTED.length * 3, found.length);
+      Assert.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 0, EXPECTED.length * 1));
+      Assert.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 1, EXPECTED.length * 2));
+      Assert.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 2, EXPECTED.length * 3));
     }
   }
 
@@ -704,7 +704,7 @@ public class CompressionUtilsTest
     @Override
     public int read(byte b[]) throws IOException
     {
-      final int len = Math.min(b.length, gzBytes.length - pos.get() % gzBytes.length);
+      final int len = Math.min(b.length, GZ_BYTES.length - pos.get() % GZ_BYTES.length);
       pos.addAndGet(len);
       return read(b, 0, len);
     }
@@ -719,7 +719,7 @@ public class CompressionUtilsTest
     @Override
     public int read(byte b[], int off, int len) throws IOException
     {
-      final int l = Math.min(len, gzBytes.length - pos.get() % gzBytes.length);
+      final int l = Math.min(len, GZ_BYTES.length - pos.get() % GZ_BYTES.length);
       pos.addAndGet(l);
       return super.read(b, off, l);
     }
@@ -729,5 +729,17 @@ public class CompressionUtilsTest
     {
       return 0;
     }
+  }
+
+  // Helper method for unit tests (for checking that we fixed https://snyk.io/research/zip-slip-vulnerability)
+  public static void makeEvilZip(File outputFile) throws IOException
+  {
+    ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(outputFile));
+    ZipEntry zipEntry = new ZipEntry("../../../../../../../../../../../../../../../tmp/evil.txt");
+    zipOutputStream.putNextEntry(zipEntry);
+    byte[] output = StringUtils.toUtf8("evil text");
+    zipOutputStream.write(output);
+    zipOutputStream.closeEntry();
+    zipOutputStream.close();
   }
 }

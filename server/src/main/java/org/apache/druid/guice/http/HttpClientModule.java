@@ -150,7 +150,7 @@ public class HttpClientModule implements Module
 
       HttpClient client = HttpClientInit.createClient(
           builder.build(),
-          LifecycleUtils.asMmxLifecycle(getLifecycleProvider().get())
+          getLifecycleProvider().get()
       );
 
       if (isEscalated) {

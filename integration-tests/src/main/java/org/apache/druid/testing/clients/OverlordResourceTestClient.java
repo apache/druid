@@ -22,7 +22,6 @@ package org.apache.druid.testing.clients;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskState;
@@ -42,7 +41,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -53,7 +51,6 @@ public class OverlordResourceTestClient
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private final String indexer;
-  private final StatusResponseHandler responseHandler;
 
   @Inject
   OverlordResourceTestClient(
@@ -65,7 +62,6 @@ public class OverlordResourceTestClient
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
     this.indexer = config.getIndexerUrl();
-    this.responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
   }
 
   private String getIndexerURL()
@@ -87,7 +83,7 @@ public class OverlordResourceTestClient
                         "application/json",
                         StringUtils.toUtf8(task)
                     ),
-                responseHandler
+                StatusResponseHandler.getInstance()
             ).get();
             if (!response.getStatus().equals(HttpResponseStatus.OK)) {
               throw new ISE(
@@ -108,7 +104,7 @@ public class OverlordResourceTestClient
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -134,7 +130,7 @@ public class OverlordResourceTestClient
       return taskStatusResponse.getStatus().getStatusCode();
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -153,6 +149,11 @@ public class OverlordResourceTestClient
     return getTasks("pendingTasks");
   }
 
+  public List<TaskResponseObject> getCompleteTasksForDataSource(final String dataSource)
+  {
+    return getTasks(StringUtils.format("tasks?state=complete&datasource=%s", StringUtils.urlEncode(dataSource)));
+  }
+
   private List<TaskResponseObject> getTasks(String identifier)
   {
     try {
@@ -168,7 +169,7 @@ public class OverlordResourceTestClient
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -208,7 +209,7 @@ public class OverlordResourceTestClient
                   "application/json",
                   StringUtils.toUtf8(spec)
               ),
-          responseHandler
+          StatusResponseHandler.getInstance()
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
@@ -225,7 +226,7 @@ public class OverlordResourceTestClient
       return id;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -233,8 +234,15 @@ public class OverlordResourceTestClient
   {
     try {
       StatusResponseHolder response = httpClient.go(
-          new Request(HttpMethod.POST, new URL(StringUtils.format("%ssupervisor/%s/shutdown", getIndexerURL(), StringUtils.urlEncode(id)))),
-          responseHandler
+          new Request(
+              HttpMethod.POST,
+              new URL(StringUtils.format(
+                  "%ssupervisor/%s/shutdown",
+                  getIndexerURL(),
+                  StringUtils.urlEncode(id)
+              ))
+          ),
+          StatusResponseHandler.getInstance()
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
@@ -246,7 +254,7 @@ public class OverlordResourceTestClient
       LOG.info("Shutdown supervisor with id[%s]", id);
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -254,7 +262,7 @@ public class OverlordResourceTestClient
   {
     try {
       StatusResponseHolder response = this.httpClient
-          .go(new Request(method, new URL(url)), responseHandler).get();
+          .go(new Request(method, new URL(url)), StatusResponseHandler.getInstance()).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE("Error while making request to indexer [%s %s]", response.getStatus(), response.getContent());
       }
@@ -262,7 +270,7 @@ public class OverlordResourceTestClient
     }
     catch (Exception e) {
       LOG.error(e, "Exception while sending request");
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

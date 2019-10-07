@@ -1,0 +1,212 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`lookups view matches snapshot 1`] = `
+<div
+  className="lookups-view app-view"
+>
+  <ViewControlBar
+    label="Lookups"
+  >
+    <RefreshButton
+      localStorageKey="lookups-refresh-rate"
+      onRefresh={[Function]}
+    />
+    <Blueprint3.Button
+      icon="plus"
+      onClick={[Function]}
+      text="Add lookup"
+    />
+    <TableColumnSelector
+      columns={
+        Array [
+          "Lookup name",
+          "Tier",
+          "Type",
+          "Version",
+          "Actions",
+        ]
+      }
+      onChange={[Function]}
+      tableColumnsHidden={Array []}
+    />
+  </ViewControlBar>
+  <ReactTable
+    AggregatedComponent={[Function]}
+    ExpanderComponent={[Function]}
+    FilterComponent={[Function]}
+    LoadingComponent={[Function]}
+    NoDataComponent={[Function]}
+    PadRowComponent={[Function]}
+    PaginationComponent={[Function]}
+    PivotValueComponent={[Function]}
+    ResizerComponent={[Function]}
+    TableComponent={[Function]}
+    TbodyComponent={[Function]}
+    TdComponent={[Function]}
+    TfootComponent={[Function]}
+    ThComponent={[Function]}
+    TheadComponent={[Function]}
+    TrComponent={[Function]}
+    TrGroupComponent={[Function]}
+    aggregatedKey="_aggregated"
+    className=""
+    collapseOnDataChange={true}
+    collapseOnPageChange={true}
+    collapseOnSortingChange={true}
+    column={
+      Object {
+        "Aggregated": undefined,
+        "Cell": undefined,
+        "Expander": undefined,
+        "Filter": undefined,
+        "Footer": undefined,
+        "Header": undefined,
+        "Pivot": undefined,
+        "PivotValue": undefined,
+        "Placeholder": undefined,
+        "aggregate": undefined,
+        "className": "",
+        "filterAll": false,
+        "filterMethod": undefined,
+        "filterable": undefined,
+        "footerClassName": "",
+        "footerStyle": Object {},
+        "getFooterProps": [Function],
+        "getHeaderProps": [Function],
+        "getProps": [Function],
+        "headerClassName": "",
+        "headerStyle": Object {},
+        "minResizeWidth": 11,
+        "minWidth": 100,
+        "resizable": undefined,
+        "show": true,
+        "sortMethod": undefined,
+        "sortable": undefined,
+        "style": Object {},
+      }
+    }
+    columns={
+      Array [
+        Object {
+          "Header": "Lookup name",
+          "accessor": "id",
+          "filterable": true,
+          "id": "lookup_name",
+          "show": true,
+        },
+        Object {
+          "Header": "Tier",
+          "accessor": "tier",
+          "filterable": true,
+          "id": "tier",
+          "show": true,
+        },
+        Object {
+          "Header": "Type",
+          "accessor": "spec.type",
+          "filterable": true,
+          "id": "type",
+          "show": true,
+        },
+        Object {
+          "Header": "Version",
+          "accessor": "version",
+          "filterable": true,
+          "id": "version",
+          "show": true,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Actions",
+          "accessor": [Function],
+          "filterable": false,
+          "id": "actions",
+          "show": true,
+          "width": 70,
+        },
+      ]
+    }
+    data={Array []}
+    defaultExpanded={Object {}}
+    defaultFilterMethod={[Function]}
+    defaultFiltered={Array []}
+    defaultPage={0}
+    defaultPageSize={50}
+    defaultResized={Array []}
+    defaultSortDesc={false}
+    defaultSortMethod={[Function]}
+    defaultSorted={Array []}
+    expanderDefaults={
+      Object {
+        "filterable": false,
+        "resizable": false,
+        "sortable": false,
+        "width": 35,
+      }
+    }
+    filterable={true}
+    freezeWhenExpanded={false}
+    getLoadingProps={[Function]}
+    getNoDataProps={[Function]}
+    getPaginationProps={[Function]}
+    getProps={[Function]}
+    getResizerProps={[Function]}
+    getTableProps={[Function]}
+    getTbodyProps={[Function]}
+    getTdProps={[Function]}
+    getTfootProps={[Function]}
+    getTfootTdProps={[Function]}
+    getTfootTrProps={[Function]}
+    getTheadFilterProps={[Function]}
+    getTheadFilterThProps={[Function]}
+    getTheadFilterTrProps={[Function]}
+    getTheadGroupProps={[Function]}
+    getTheadGroupThProps={[Function]}
+    getTheadGroupTrProps={[Function]}
+    getTheadProps={[Function]}
+    getTheadThProps={[Function]}
+    getTheadTrProps={[Function]}
+    getTrGroupProps={[Function]}
+    getTrProps={[Function]}
+    groupedByPivotKey="_groupedByPivot"
+    indexKey="_index"
+    loading={true}
+    loadingText="Loading..."
+    multiSort={true}
+    nestingLevelKey="_nestingLevel"
+    nextText="Next"
+    noDataText=""
+    ofText="of"
+    onFetchData={[Function]}
+    originalKey="_original"
+    pageJumpText="jump to page"
+    pageSizeOptions={
+      Array [
+        5,
+        10,
+        20,
+        25,
+        50,
+        100,
+      ]
+    }
+    pageText="Page"
+    pivotDefaults={Object {}}
+    pivotIDKey="_pivotID"
+    pivotValKey="_pivotVal"
+    previousText="Previous"
+    resizable={true}
+    resolveData={[Function]}
+    rowsSelectorText="rows per page"
+    rowsText="rows"
+    showPageJump={true}
+    showPageSizeOptions={true}
+    showPagination={true}
+    showPaginationBottom={true}
+    showPaginationTop={false}
+    sortable={true}
+    style={Object {}}
+    subRowsKey="_subRows"
+  />
+</div>
+`;

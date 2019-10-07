@@ -31,7 +31,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
-        <version>0.15.0-incubating-SNAPSHOT</version>
+        <version>0.17.0-incubating-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -77,6 +77,27 @@
                     <failIfNoFiles>false</failIfNoFiles>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.8</version>
+                <executions>
+                    <execution>
+                        <phase>prepare-package</phase>
+                        <configuration>
+                            <target>
+                                <concat destfile="${project.build.directory}/../../README.BINARY">
+                                    <fileset file="${project.build.directory}/../../README" />
+                                    <fileset file="${project.build.directory}/../../LABELS" />
+                                </concat>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
@@ -95,6 +116,50 @@
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
                         <executions>
+                            <execution>
+                                <id>generate-readme</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${project.basedir}/bin/build-textfile-readme.sh</executable>
+                                    <arguments>
+                                        <argument>${project.basedir}/../</argument>
+                                        <argument>${project.parent.version}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>generate-binary-license</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${project.basedir}/bin/generate-binary-license.py</executable>
+                                    <arguments>
+                                        <argument>${project.parent.basedir}/licenses/APACHE2</argument>
+                                        <argument>${project.parent.basedir}/licenses.yaml</argument>
+                                        <argument>${project.parent.basedir}/LICENSE.BINARY</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>generate-binary-notice</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${project.basedir}/bin/generate-binary-notice.py</executable>
+                                    <arguments>
+                                        <argument>${project.parent.basedir}/NOTICE</argument>
+                                        <argument>${project.parent.basedir}/licenses.yaml</argument>
+                                        <argument>${project.parent.basedir}/NOTICE.BINARY</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
                             <execution>
                                 <id>pull-deps</id>
                                 <phase>package</phase>
@@ -133,8 +198,6 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-histogram</argument>
                                         <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions:druid-kafka-eight</argument>
-                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-kafka-extraction-namespace</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-kafka-indexing-service</argument>
@@ -149,6 +212,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:mysql-metadata-storage</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-orc-extensions</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-parquet-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:postgresql-metadata-storage</argument>
@@ -157,9 +222,11 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-s3-extensions</argument>
                                         <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions:druid-stats</argument>
+                                        <argument>org.apache.druid.extensions:druid-ec2-extensions</argument>
                                         <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions:druid-examples</argument>
+                                        <argument>org.apache.druid.extensions:druid-google-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-stats</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:simple-client-sslcontext</argument>
                                         <argument>-c</argument>
@@ -209,6 +276,43 @@
             <id>apache-release</id>
             <build>
                 <plugins>
+                    <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>generate-licenses-report</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${project.basedir}/bin/generate-license-dependency-reports.py</executable>
+                                    <arguments>
+                                        <argument>${project.basedir}/../</argument>
+                                        <argument>${project.basedir}/target</argument>
+                                        <argument>--clean-maven-artifact-transfer</argument>
+                                        <argument>--parallel</argument>
+                                        <argument>2</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>check-licenses</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${project.basedir}/bin/check-licenses.py</executable>
+                                    <arguments>
+                                        <argument>${project.parent.basedir}/licenses.yaml</argument>
+                                        <argument>${project.basedir}/target/license-reports</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-assembly-plugin</artifactId>
@@ -269,6 +373,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:ambari-metrics-emitter</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:dropwizard-emitter</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-azure-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-cassandra-storage</argument>
@@ -277,15 +383,11 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-distinctcount</argument>
                                         <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-rocketmq</argument>
-                                        <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-google-extensions</argument>
-                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:graphite-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-influx-extensions</argument>
                                         <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-kafka-eight-simple-consumer</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-influxdb-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:kafka-emitter</argument>
                                         <argument>-c</argument>
@@ -294,10 +396,6 @@
                                         <argument>org.apache.druid.extensions.contrib:materialized-view-selection</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-opentsdb-emitter</argument>
-                                        <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-orc-extensions</argument>
-                                        <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-rabbitmq</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-redis-cache</argument>
                                         <argument>-c</argument>
@@ -310,6 +408,10 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-time-min-max</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-virtual-columns</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-moving-average-query</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-tdigestsketch</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

@@ -21,7 +21,6 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.java.util.common.Pair;
@@ -66,6 +65,12 @@ public class SupervisorManager
     return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.rhs);
   }
 
+  public Optional<SupervisorStateManager.State> getSupervisorState(String id)
+  {
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+    return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getState());
+  }
+
   public boolean createOrUpdateAndStartSupervisor(SupervisorSpec spec)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
@@ -102,26 +107,6 @@ public class SupervisorManager
     }
   }
 
-  public void stopAndRemoveAllSupervisors()
-  {
-    Preconditions.checkState(started, "SupervisorManager not started");
-
-    synchronized (lock) {
-      Preconditions.checkState(started, "SupervisorManager not started");
-      supervisors.keySet().forEach(id -> possiblyStopAndRemoveSupervisorInternal(id, true));
-    }
-  }
-
-  public void suspendOrResumeAllSupervisors(boolean suspend)
-  {
-    Preconditions.checkState(started, "SupervisorManager not started");
-
-    synchronized (lock) {
-      Preconditions.checkState(started, "SupervisorManager not started");
-      supervisors.keySet().forEach(id -> possiblySuspendOrResumeSupervisorInternal(id, suspend));
-    }
-  }
-
   @LifecycleStart
   public void start()
   {
@@ -130,8 +115,8 @@ public class SupervisorManager
 
     synchronized (lock) {
       Map<String, SupervisorSpec> supervisors = metadataSupervisorManager.getLatest();
-      for (String id : supervisors.keySet()) {
-        SupervisorSpec spec = supervisors.get(id);
+      for (Map.Entry<String, SupervisorSpec> supervisor : supervisors.entrySet()) {
+        final SupervisorSpec spec = supervisor.getValue();
         if (!(spec instanceof NoopSupervisorSpec)) {
           try {
             createAndStartSupervisorInternal(spec, false);
@@ -184,6 +169,12 @@ public class SupervisorManager
     return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getStats());
   }
 
+  public Optional<Boolean> isSupervisorHealthy(String id)
+  {
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+    return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.isHealthy());
+  }
+
   public boolean resetSupervisor(String id, @Nullable DataSourceMetadata dataSourceMetadata)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
@@ -203,8 +194,7 @@ public class SupervisorManager
       String supervisorId,
       @Nullable Integer taskGroupId,
       String baseSequenceName,
-      DataSourceMetadata previousDataSourceMetadata,
-      DataSourceMetadata currentDataSourceMetadata
+      DataSourceMetadata previousDataSourceMetadata
   )
   {
     try {
@@ -215,7 +205,7 @@ public class SupervisorManager
 
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
 
-      supervisor.lhs.checkpoint(taskGroupId, baseSequenceName, previousDataSourceMetadata, currentDataSourceMetadata);
+      supervisor.lhs.checkpoint(taskGroupId, baseSequenceName, previousDataSourceMetadata);
       return true;
     }
     catch (Exception e) {
@@ -302,7 +292,7 @@ public class SupervisorManager
       if (persistSpec) {
         metadataSupervisorManager.insert(id, new NoopSupervisorSpec(null, spec.getDataSources()));
       }
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     supervisors.put(id, Pair.of(supervisor, spec));

@@ -847,6 +847,52 @@ public class LookupCoordinatorManagerTest
   }
 
   @Test
+  public void testDeleteTier()
+  {
+    final LookupExtractorFactoryMapContainer foo1 = new LookupExtractorFactoryMapContainer(
+        "v0",
+        ImmutableMap.of("lookup", "foo1")
+    );
+
+    final LookupExtractorFactoryMapContainer foo2 = new LookupExtractorFactoryMapContainer(
+        "v0",
+        ImmutableMap.of("lookup", "foo2")
+    );
+    final LookupCoordinatorManager manager = new LookupCoordinatorManager(
+        client,
+        druidNodeDiscoveryProvider,
+        mapper,
+        configManager,
+        lookupCoordinatorManagerConfig
+    )
+    {
+      @Override
+      public Map<String, Map<String, LookupExtractorFactoryMapContainer>> getKnownLookups()
+      {
+        return ImmutableMap.of(LOOKUP_TIER, ImmutableMap.of(
+            "foo1", foo1,
+            "foo2", foo2
+        ));
+      }
+    };
+    manager.start();
+    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
+    EasyMock.reset(configManager);
+    EasyMock.expect(
+        configManager.set(
+            EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+            EasyMock.eq(
+                ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of()
+            ),
+            EasyMock.eq(auditInfo)
+        )
+    ).andReturn(SetResult.ok()).once();
+    EasyMock.replay(configManager);
+    Assert.assertTrue(manager.deleteTier(LOOKUP_TIER, auditInfo));
+    EasyMock.verify(configManager);
+  }
+
+  @Test
   public void testDeleteLookup()
   {
     final LookupExtractorFactoryMapContainer ignore = new LookupExtractorFactoryMapContainer(
@@ -887,6 +933,47 @@ public class LookupCoordinatorManagerTest
                         "ignore", ignore
                     )
                 )
+            ),
+            EasyMock.eq(auditInfo)
+        )
+    ).andReturn(SetResult.ok()).once();
+    EasyMock.replay(configManager);
+    Assert.assertTrue(manager.deleteLookup(LOOKUP_TIER, "foo", auditInfo));
+    EasyMock.verify(configManager);
+  }
+
+
+  @Test
+  public void testDeleteLastLookup()
+  {
+    final LookupExtractorFactoryMapContainer lookup = new LookupExtractorFactoryMapContainer(
+        "v0",
+        ImmutableMap.of("lookup", "foo")
+    );
+    final LookupCoordinatorManager manager = new LookupCoordinatorManager(
+        client,
+        druidNodeDiscoveryProvider,
+        mapper,
+        configManager,
+        lookupCoordinatorManagerConfig
+    )
+    {
+      @Override
+      public Map<String, Map<String, LookupExtractorFactoryMapContainer>> getKnownLookups()
+      {
+        return ImmutableMap.of(LOOKUP_TIER, ImmutableMap.of(
+            "foo", lookup
+        ));
+      }
+    };
+    manager.start();
+    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
+    EasyMock.reset(configManager);
+    EasyMock.expect(
+        configManager.set(
+            EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+            EasyMock.eq(
+                ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of()
             ),
             EasyMock.eq(auditInfo)
         )
@@ -1051,6 +1138,10 @@ public class LookupCoordinatorManagerTest
     HostAndPortWithScheme host2 = HostAndPortWithScheme.fromParts("http", "host2", 3456);
 
     EasyMock.reset(lookupNodeDiscovery);
+    EasyMock
+        .expect(lookupNodeDiscovery.getAllTiers())
+        .andReturn(ImmutableSet.of("tier1"))
+        .once();
     EasyMock
         .expect(lookupNodeDiscovery.getNodesInTier("tier1"))
         .andReturn(ImmutableList.of(host1, host2))

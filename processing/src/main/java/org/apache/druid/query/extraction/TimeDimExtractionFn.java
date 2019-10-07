@@ -33,6 +33,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.util.Date;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -84,8 +85,8 @@ public class TimeDimExtractionFn extends DimExtractionFn
     } else {
       final ThreadLocal<Function<String, String>> threadLocal = ThreadLocal.withInitial(
           () -> {
-            final SimpleDateFormat parser = new SimpleDateFormat(timeFormat);
-            final SimpleDateFormat formatter = new SimpleDateFormat(resultFormat);
+            final SimpleDateFormat parser = new SimpleDateFormat(timeFormat, Locale.ENGLISH);
+            final SimpleDateFormat formatter = new SimpleDateFormat(resultFormat, Locale.ENGLISH);
             parser.setLenient(true);
 
             return value -> {

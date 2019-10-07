@@ -47,7 +47,7 @@ public class AnnouncerModule implements Module
   }
 
   @Provides
-  @ManageLifecycle
+  @ManageLifecycleAnnouncements
   public Announcer getAnnouncer(CuratorFramework curator)
   {
     return new Announcer(curator, Execs.singleThreaded("Announcer-%s"));

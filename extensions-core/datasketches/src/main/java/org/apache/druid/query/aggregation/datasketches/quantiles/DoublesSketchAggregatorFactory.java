@@ -90,13 +90,13 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
         && ValueType.isNumeric(metricFactory.getColumnCapabilities(fieldName).getType())) {
       final ColumnValueSelector<Double> selector = metricFactory.makeColumnValueSelector(fieldName);
       if (selector instanceof NilColumnValueSelector) {
-        return new DoublesSketchNoOpAggregator();
+        return new NoopDoublesSketchAggregator();
       }
       return new DoublesSketchBuildAggregator(selector, k);
     }
     final ColumnValueSelector<DoublesSketch> selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector instanceof NilColumnValueSelector) {
-      return new DoublesSketchNoOpAggregator();
+      return new NoopDoublesSketchAggregator();
     }
     return new DoublesSketchMergeAggregator(selector, k);
   }
@@ -108,13 +108,13 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
         && ValueType.isNumeric(metricFactory.getColumnCapabilities(fieldName).getType())) {
       final ColumnValueSelector<Double> selector = metricFactory.makeColumnValueSelector(fieldName);
       if (selector instanceof NilColumnValueSelector) {
-        return new DoublesSketchNoOpBufferAggregator();
+        return new NoopDoublesSketchBufferAggregator();
       }
       return new DoublesSketchBuildBufferAggregator(selector, k, getMaxIntermediateSizeWithNulls());
     }
     final ColumnValueSelector<DoublesSketch> selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector instanceof NilColumnValueSelector) {
-      return new DoublesSketchNoOpBufferAggregator();
+      return new NoopDoublesSketchBufferAggregator();
     }
     return new DoublesSketchMergeBufferAggregator(selector, k, getMaxIntermediateSizeWithNulls());
   }
@@ -240,10 +240,11 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
     }
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(final Object object)
+  public Object finalizeComputation(@Nullable final Object object)
   {
-    return ((DoublesSketch) object).getN();
+    return object == null ? null : ((DoublesSketch) object).getN();
   }
 
   @Override

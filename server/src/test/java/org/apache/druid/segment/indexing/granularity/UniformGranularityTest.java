@@ -21,7 +21,6 @@ package org.apache.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -40,7 +39,7 @@ import java.util.SortedSet;
 
 public class UniformGranularityTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JOSN_MAPPER = new DefaultObjectMapper();
 
   @Test
   public void testSimple()
@@ -131,7 +130,7 @@ public class UniformGranularityTest
     );
 
     try {
-      final GranularitySpec rtSpec = jsonMapper.readValue(jsonMapper.writeValueAsString(spec), GranularitySpec.class);
+      final GranularitySpec rtSpec = JOSN_MAPPER.readValue(JOSN_MAPPER.writeValueAsString(spec), GranularitySpec.class);
       Assert.assertEquals(
           "Round-trip bucketIntervals",
           spec.bucketIntervals(),
@@ -144,7 +143,7 @@ public class UniformGranularityTest
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

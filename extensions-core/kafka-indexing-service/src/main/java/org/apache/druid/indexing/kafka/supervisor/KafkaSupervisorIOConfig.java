@@ -38,7 +38,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 
   private final Map<String, Object> consumerProperties;
   private final long pollTimeout;
-  private final boolean skipOffsetGaps;
+
 
   @JsonCreator
   public KafkaSupervisorIOConfig(
@@ -53,8 +53,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("useEarliestOffset") Boolean useEarliestOffset,
       @JsonProperty("completionTimeout") Period completionTimeout,
       @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod,
-      @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
-      @JsonProperty("skipOffsetGaps") Boolean skipOffsetGaps
+      @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod
   )
   {
     super(
@@ -76,7 +75,6 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         StringUtils.format("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
     );
     this.pollTimeout = pollTimeout != null ? pollTimeout : DEFAULT_POLL_TIMEOUT_MILLIS;
-    this.skipOffsetGaps = skipOffsetGaps != null ? skipOffsetGaps : false;
   }
 
   @JsonProperty
@@ -103,12 +101,6 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     return isUseEarliestSequenceNumber();
   }
 
-  @JsonProperty
-  public boolean isSkipOffsetGaps()
-  {
-    return skipOffsetGaps;
-  }
-
   @Override
   public String toString()
   {
@@ -125,7 +117,6 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", completionTimeout=" + getCompletionTimeout() +
            ", earlyMessageRejectionPeriod=" + getEarlyMessageRejectionPeriod() +
            ", lateMessageRejectionPeriod=" + getLateMessageRejectionPeriod() +
-           ", skipOffsetGaps=" + skipOffsetGaps +
            '}';
   }
 

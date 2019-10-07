@@ -51,7 +51,7 @@ public class TimestampSpecTest
   @Test
   public void testContextualTimestampList()
   {
-    String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
+    String dateFormat = "yyyy-MM-dd'T'HH:mm:ss";
     String[] dates = new String[]{
         "2000-01-01T05:00:00",
         "2000-01-01T05:00:01",
@@ -59,7 +59,7 @@ public class TimestampSpecTest
         "2000-01-01T05:00:02",
         "2000-01-01T05:00:03",
         };
-    TimestampSpec spec = new TimestampSpec("TIMEstamp", DATE_FORMAT, null);
+    TimestampSpec spec = new TimestampSpec("TIMEstamp", dateFormat, null);
 
     DateTimes.UtcFormatter formatter = DateTimes.wrapFormatter(ISODateTimeFormat.dateHourMinuteSecond());
 

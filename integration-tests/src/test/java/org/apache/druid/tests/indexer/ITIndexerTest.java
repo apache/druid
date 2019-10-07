@@ -20,38 +20,42 @@
 package org.apache.druid.tests.indexer;
 
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import java.io.Closeable;
 
+@Test(groups = TestNGGroup.BATCH_INDEX)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITIndexerTest extends AbstractITBatchIndexTest
 {
-  private static String INDEX_TASK = "/indexer/wikipedia_index_task.json";
-  private static String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
-  private static String INDEX_DATASOURCE = "wikipedia_index_test";
+  private static final String INDEX_TASK = "/indexer/wikipedia_index_task.json";
+  private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
+  private static final String INDEX_DATASOURCE = "wikipedia_index_test";
 
-  private static String REINDEX_TASK = "/indexer/wikipedia_reindex_task.json";
-  private static String REINDEX_DATASOURCE = "wikipedia_reindex_test";
+  private static final String REINDEX_TASK = "/indexer/wikipedia_reindex_task.json";
+  private static final String REINDEX_QUERIES_RESOURCE = "/indexer/wikipedia_reindex_queries.json";
+  private static final String REINDEX_DATASOURCE = "wikipedia_reindex_test";
 
   @Test
   public void testIndexData() throws Exception
   {
     try (
-        final Closeable indexCloseable = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
-        final Closeable reindexCloseable = unloader(REINDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
+        final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
+        final Closeable ignored2 = unloader(REINDEX_DATASOURCE + config.getExtraDatasourceNameSuffix())
     ) {
-      doIndexTestTest(
+      doIndexTest(
           INDEX_DATASOURCE,
           INDEX_TASK,
-          INDEX_QUERIES_RESOURCE
+          INDEX_QUERIES_RESOURCE,
+          false
       );
       doReindexTest(
           INDEX_DATASOURCE,
           REINDEX_DATASOURCE,
           REINDEX_TASK,
-          INDEX_QUERIES_RESOURCE
+          REINDEX_QUERIES_RESOURCE
       );
     }
   }

@@ -55,8 +55,10 @@ public interface BalancerStrategy
   /**
    * Pick the best segment to move from one of the supplied set of servers according to the balancing strategy.
    * @param serverHolders set of historicals to consider for moving segments
-   * @return {@link BalancerSegmentHolder} containing segment to move and server it current resides on
+   * @return {@link BalancerSegmentHolder} containing segment to move and server it currently resides on, or null if
+   *         there are no segments to pick from (i. e. all provided serverHolders are empty).
    */
+  @Nullable
   BalancerSegmentHolder pickSegmentToMove(List<ServerHolder> serverHolders);
 
   /**

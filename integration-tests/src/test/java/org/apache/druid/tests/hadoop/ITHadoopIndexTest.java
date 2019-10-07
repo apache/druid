@@ -19,21 +19,20 @@
 
 package org.apache.druid.tests.hadoop;
 
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-import java.util.concurrent.Callable;
-
+@Test(groups = TestNGGroup.HADOOP_INDEX)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITHadoopIndexTest extends AbstractIndexerTest
 {
@@ -65,12 +64,12 @@ public class ITHadoopIndexTest extends AbstractIndexerTest
 
     try {
       LOG.info("indexerFile name: [%s]", BATCH_TASK);
-      indexerSpec = getTaskAsString(BATCH_TASK);
+      indexerSpec = getResourceAsString(BATCH_TASK);
       indexerSpec = StringUtils.replace(indexerSpec, "%%HADOOP_TEST_PATH%%", hadoopDir);
     }
     catch (Exception e) {
       LOG.error("could not read and modify indexer file: %s", e.getMessage());
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     try {
@@ -78,15 +77,7 @@ public class ITHadoopIndexTest extends AbstractIndexerTest
       LOG.info("TaskID for loading index task %s", taskID);
       indexer.waitUntilTaskCompletes(taskID, 10000, 120);
       RetryUtil.retryUntil(
-          new Callable<Boolean>()
-          {
-            @Override
-            public Boolean call()
-            {
-              return coordinator.areSegmentsLoaded(BATCH_DATASOURCE);
-
-            }
-          },
+          () -> coordinator.areSegmentsLoaded(BATCH_DATASOURCE),
           true,
           20000,
           10,
@@ -95,7 +86,7 @@ public class ITHadoopIndexTest extends AbstractIndexerTest
     }
     catch (Exception e) {
       LOG.error("data could not be loaded: %s", e.getMessage());
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

@@ -22,7 +22,6 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -45,10 +44,10 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
@@ -69,6 +68,7 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -82,7 +82,6 @@ import java.util.stream.StreamSupport;
 public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStorageCoordinator
 {
   private static final Logger log = new Logger(IndexerSQLMetadataStorageCoordinator.class);
-  private static final int ALLOCATE_SEGMENT_QUIET_TRIES = 3;
 
   private final ObjectMapper jsonMapper;
   private final MetadataStorageTablesConfig dbTables;
@@ -251,8 +250,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public SegmentPublishResult announceHistoricalSegments(
       final Set<DataSegment> segments,
-      final DataSourceMetadata startMetadata,
-      final DataSourceMetadata endMetadata
+      @Nullable final DataSourceMetadata startMetadata,
+      @Nullable final DataSourceMetadata endMetadata
   ) throws IOException
   {
     if (segments.isEmpty()) {
@@ -347,6 +346,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final String sequenceName,
       @Nullable final String previousSegmentId,
       final Interval interval,
+      final ShardSpecFactory shardSpecFactory,
       final String maxVersion,
       final boolean skipSegmentLineageCheck
   )
@@ -354,12 +354,19 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Preconditions.checkNotNull(dataSource, "dataSource");
     Preconditions.checkNotNull(sequenceName, "sequenceName");
     Preconditions.checkNotNull(interval, "interval");
-    Preconditions.checkNotNull(maxVersion, "maxVersion");
+    Preconditions.checkNotNull(maxVersion, "version");
 
     return connector.retryWithHandle(
         handle -> {
           if (skipSegmentLineageCheck) {
-            return allocatePendingSegment(handle, dataSource, sequenceName, interval, maxVersion);
+            return allocatePendingSegment(
+                handle,
+                dataSource,
+                sequenceName,
+                interval,
+                shardSpecFactory,
+                maxVersion
+            );
           } else {
             return allocatePendingSegmentWithSegmentLineageCheck(
                 handle,
@@ -367,6 +374,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 sequenceName,
                 previousSegmentId,
                 interval,
+                shardSpecFactory,
                 maxVersion
             );
           }
@@ -381,6 +389,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final String sequenceName,
       @Nullable final String previousSegmentId,
       final Interval interval,
+      final ShardSpecFactory shardSpecFactory,
       final String maxVersion
   ) throws IOException
   {
@@ -408,7 +417,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return result.segmentIdentifier;
     }
 
-    final SegmentIdWithShardSpec newIdentifier = createNewSegment(handle, dataSource, interval, maxVersion);
+    final SegmentIdWithShardSpec newIdentifier = createNewSegment(
+        handle,
+        dataSource,
+        interval,
+        shardSpecFactory,
+        maxVersion
+    );
     if (newIdentifier == null) {
       return null;
     }
@@ -448,6 +463,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final String dataSource,
       final String sequenceName,
       final Interval interval,
+      final ShardSpecFactory shardSpecFactory,
       final String maxVersion
   ) throws IOException
   {
@@ -477,7 +493,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return result.segmentIdentifier;
     }
 
-    final SegmentIdWithShardSpec newIdentifier = createNewSegment(handle, dataSource, interval, maxVersion);
+    final SegmentIdWithShardSpec newIdentifier = createNewSegment(
+        handle,
+        dataSource,
+        interval,
+        shardSpecFactory,
+        maxVersion
+    );
     if (newIdentifier == null) {
       return null;
     }
@@ -616,13 +638,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Handle handle,
       final String dataSource,
       final Interval interval,
+      final ShardSpecFactory shardSpecFactory,
       final String maxVersion
   ) throws IOException
   {
-    // Make up a pending segment based on existing segments and pending segments in the DB. This works
-    // assuming that all tasks inserting segments at a particular point in time are going through the
-    // allocatePendingSegment flow. This should be assured through some other mechanism (like task locks).
-
     final List<TimelineObjectHolder<String, DataSegment>> existingChunks = getTimelineForIntervalsWithHandle(
         handle,
         dataSource,
@@ -632,24 +651,36 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     if (existingChunks.size() > 1) {
       // Not possible to expand more than one chunk with a single segment.
       log.warn(
-          "Cannot allocate new segment for dataSource[%s], interval[%s], maxVersion[%s]: already have [%,d] chunks.",
+          "Cannot allocate new segment for dataSource[%s], interval[%s]: already have [%,d] chunks.",
           dataSource,
           interval,
-          maxVersion,
           existingChunks.size()
       );
       return null;
+
     } else {
+      if (existingChunks
+          .stream()
+          .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
+          .anyMatch(chunk -> !chunk.getObject().getShardSpec().isCompatible(shardSpecFactory.getShardSpecClass()))) {
+        // All existing segments should have a compatible shardSpec with shardSpecFactory.
+        return null;
+      }
+
+      // max partitionId of the SAME shardSpec
       SegmentIdWithShardSpec maxId = null;
 
       if (!existingChunks.isEmpty()) {
         TimelineObjectHolder<String, DataSegment> existingHolder = Iterables.getOnlyElement(existingChunks);
-        for (PartitionChunk<DataSegment> existing : existingHolder.getObject()) {
-          if (maxId == null ||
-              maxId.getShardSpec().getPartitionNum() < existing.getObject().getShardSpec().getPartitionNum()) {
-            maxId = SegmentIdWithShardSpec.fromDataSegment(existing.getObject());
-          }
-        }
+
+        maxId = StreamSupport.stream(existingHolder.getObject().spliterator(), false)
+                             // Here we check only the segments of the same shardSpec to find out the max partitionId.
+                             // Note that OverwriteShardSpec has the higher range for partitionId than others.
+                             // See PartitionIds.
+                             .filter(chunk -> chunk.getObject().getShardSpec().getClass() == shardSpecFactory.getShardSpecClass())
+                             .max(Comparator.comparing(chunk -> chunk.getObject().getShardSpec().getPartitionNum()))
+                             .map(chunk -> SegmentIdWithShardSpec.fromDataSegment(chunk.getObject()))
+                             .orElse(null);
       }
 
       final List<SegmentIdWithShardSpec> pendings = getPendingSegmentsForIntervalWithHandle(
@@ -658,22 +689,35 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           interval
       );
 
-      for (SegmentIdWithShardSpec pending : pendings) {
-        if (maxId == null ||
-            pending.getVersion().compareTo(maxId.getVersion()) > 0 ||
-            (pending.getVersion().equals(maxId.getVersion())
-             && pending.getShardSpec().getPartitionNum() > maxId.getShardSpec().getPartitionNum())) {
-          maxId = pending;
-        }
+      if (maxId != null) {
+        pendings.add(maxId);
+      }
+
+      maxId = pendings.stream()
+                      .filter(id -> id.getShardSpec().getClass() == shardSpecFactory.getShardSpecClass())
+                      .max((id1, id2) -> {
+                        final int versionCompare = id1.getVersion().compareTo(id2.getVersion());
+                        if (versionCompare != 0) {
+                          return versionCompare;
+                        } else {
+                          return Integer.compare(id1.getShardSpec().getPartitionNum(), id2.getShardSpec().getPartitionNum());
+                        }
+                      })
+                      .orElse(null);
+
+      // Find the major version of existing segments
+      @Nullable final String versionOfExistingChunks;
+      if (!existingChunks.isEmpty()) {
+        versionOfExistingChunks = existingChunks.get(0).getVersion();
+      } else if (!pendings.isEmpty()) {
+        versionOfExistingChunks = pendings.get(0).getVersion();
+      } else {
+        versionOfExistingChunks = null;
       }
 
       if (maxId == null) {
-        return new SegmentIdWithShardSpec(
-            dataSource,
-            interval,
-            maxVersion,
-            new NumberedShardSpec(0, 0)
-        );
+        final ShardSpec shardSpec = shardSpecFactory.create(jsonMapper, null);
+        return new SegmentIdWithShardSpec(dataSource, interval, versionOfExistingChunks == null ? maxVersion : versionOfExistingChunks, shardSpec);
       } else if (!maxId.getInterval().equals(interval) || maxId.getVersion().compareTo(maxVersion) > 0) {
         log.warn(
             "Cannot allocate new segment for dataSource[%s], interval[%s], maxVersion[%s]: conflicting segment[%s].",
@@ -683,33 +727,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             maxId
         );
         return null;
-      } else if (maxId.getShardSpec() instanceof LinearShardSpec) {
-        return new SegmentIdWithShardSpec(
-            dataSource,
-            maxId.getInterval(),
-            maxId.getVersion(),
-            new LinearShardSpec(maxId.getShardSpec().getPartitionNum() + 1)
-        );
-      } else if (maxId.getShardSpec() instanceof NumberedShardSpec) {
-        return new SegmentIdWithShardSpec(
-            dataSource,
-            maxId.getInterval(),
-            maxId.getVersion(),
-            new NumberedShardSpec(
-                maxId.getShardSpec().getPartitionNum() + 1,
-                ((NumberedShardSpec) maxId.getShardSpec()).getPartitions()
-            )
-        );
       } else {
-        log.warn(
-            "Cannot allocate new segment for dataSource[%s], interval[%s], maxVersion[%s]: ShardSpec class[%s] used by [%s].",
+        final ShardSpec newShardSpec = shardSpecFactory.create(jsonMapper, maxId.getShardSpec());
+        return new SegmentIdWithShardSpec(
             dataSource,
-            interval,
-            maxVersion,
-            maxId.getShardSpec().getClass(),
-            maxId
+            maxId.getInterval(),
+            Preconditions.checkNotNull(versionOfExistingChunks, "versionOfExistingChunks"),
+            newShardSpec
         );
-        return null;
       }
     }
   }
@@ -753,7 +778,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
       // Avoiding ON DUPLICATE KEY since it's not portable.
       // Avoiding try/catch since it may cause inadvertent transaction-splitting.
-      handle.createStatement(
+      final int numRowsInserted = handle.createStatement(
           StringUtils.format(
               "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
               + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
@@ -772,7 +797,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             .bind("payload", jsonMapper.writeValueAsBytes(segment))
             .execute();
 
-      log.info("Published segment [%s] to DB with used flag [%s]", segment.getId(), used);
+      if (numRowsInserted == 1) {
+        log.info("Published segment [%s] to DB with used flag [%s], json[%s]", segment.getId(), used, jsonMapper.writeValueAsString(segment));
+      } else if (numRowsInserted == 0) {
+        throw new ISE("Failed to publish segment[%s] to DB with used flag[%s], json[%s]", segment.getId(), used, jsonMapper.writeValueAsString(segment));
+      } else {
+        throw new ISE("WTH? numRowsInserted[%s] is larger than 1 after inserting segment[%s] with used flag[%s], json[%s]", numRowsInserted, segment.getId(), used, jsonMapper.writeValueAsString(segment));
+      }
     }
     catch (Exception e) {
       log.error(e, "Exception inserting segment [%s] with used flag [%s] into DB", segment.getId(), used);
@@ -813,7 +844,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return jsonMapper.readValue(bytes, DataSourceMetadata.class);
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -878,17 +909,30 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       oldCommitMetadataFromDb = jsonMapper.readValue(oldCommitMetadataBytesFromDb, DataSourceMetadata.class);
     }
 
-    final boolean startMetadataMatchesExisting = oldCommitMetadataFromDb == null
-                                                 ? startMetadata.isValidStart()
-                                                 : startMetadata.matches(oldCommitMetadataFromDb);
+    final boolean startMetadataMatchesExisting;
+
+    if (oldCommitMetadataFromDb == null) {
+      startMetadataMatchesExisting = startMetadata.isValidStart();
+    } else {
+      // Checking against the last committed metadata.
+      // Converting the last one into start metadata for checking since only the same type of metadata can be matched.
+      // Even though kafka/kinesis indexing services use different sequenceNumber types for representing
+      // start and end sequenceNumbers, the below conversion is fine because the new start sequenceNumbers are supposed
+      // to be same with end sequenceNumbers of the last commit.
+      startMetadataMatchesExisting = startMetadata.asStartMetadata().matches(oldCommitMetadataFromDb.asStartMetadata());
+    }
 
     if (!startMetadataMatchesExisting) {
       // Not in the desired start state.
-      log.info("Not updating metadata, existing state is not the expected start state.");
-      log.debug("Existing database state [%s], request's start metadata [%s]", oldCommitMetadataFromDb, startMetadata);
+      log.error(
+          "Not updating metadata, existing state[%s] in metadata store doesn't match to the new start state[%s].",
+          oldCommitMetadataFromDb,
+          startMetadata
+      );
       return DataSourceMetadataUpdateResult.FAILURE;
     }
 
+    // Only endOffsets should be stored in metadata store
     final DataSourceMetadata newCommitMetadata = oldCommitMetadataFromDb == null
                                                  ? endMetadata
                                                  : oldCommitMetadataFromDb.plus(endMetadata);
@@ -1102,7 +1146,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                           return accumulator;
                         }
                         catch (Exception e) {
-                          throw Throwables.propagate(e);
+                          throw new RuntimeException(e);
                         }
                       }
                     }

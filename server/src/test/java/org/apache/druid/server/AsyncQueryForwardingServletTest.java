@@ -49,6 +49,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.initialization.BaseJettyTest;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.log.NoopRequestLogger;
@@ -84,6 +85,7 @@ import java.net.URL;
 import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.zip.Deflater;
 
 public class AsyncQueryForwardingServletTest extends BaseJettyTest
 {
@@ -253,7 +255,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         null,
         new NoopServiceEmitter(),
         new NoopRequestLogger(),
-        new DefaultGenericQueryMetricsFactory(jsonMapper),
+        new DefaultGenericQueryMetricsFactory(),
         new AuthenticatorMapper(ImmutableMap.of())
     )
     {
@@ -345,7 +347,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
               injector.getInstance(DruidHttpClientConfig.class),
               new NoopServiceEmitter(),
               new NoopRequestLogger(),
-              new DefaultGenericQueryMetricsFactory(jsonMapper),
+              new DefaultGenericQueryMetricsFactory(),
               new AuthenticatorMapper(ImmutableMap.of())
           )
           {
@@ -369,7 +371,12 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       root.addFilter(GuiceFilter.class, "/exception/*", null);
 
       final HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(root, 4096, -1)});
+      handlerList.setHandlers(
+          new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(
+              root,
+              ServerConfig.DEFAULT_GZIP_INFLATE_BUFFER_SIZE,
+              Deflater.DEFAULT_COMPRESSION)}
+      );
       server.setHandler(handlerList);
     }
   }

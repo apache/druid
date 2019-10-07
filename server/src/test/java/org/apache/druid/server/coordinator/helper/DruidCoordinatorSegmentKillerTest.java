@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.MetadataSegmentManager;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.easymock.EasyMock;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -37,34 +38,34 @@ import java.util.List;
 public class DruidCoordinatorSegmentKillerTest
 {
   @Test
-  public void testFindIntervalForKillTask()
+  public void testFindIntervalForKill()
   {
-    testFindIntervalForKillTask(null, null);
-    testFindIntervalForKillTask(ImmutableList.of(), null);
+    testFindIntervalForKill(null, null);
+    testFindIntervalForKill(ImmutableList.of(), null);
 
-    testFindIntervalForKillTask(ImmutableList.of(Intervals.of("2014/2015")), Intervals.of("2014/2015"));
+    testFindIntervalForKill(ImmutableList.of(Intervals.of("2014/2015")), Intervals.of("2014/2015"));
 
-    testFindIntervalForKillTask(
+    testFindIntervalForKill(
         ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2016/2017")),
         Intervals.of("2014/2017")
     );
 
-    testFindIntervalForKillTask(
+    testFindIntervalForKill(
         ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2015/2016")),
         Intervals.of("2014/2016")
     );
 
-    testFindIntervalForKillTask(
+    testFindIntervalForKill(
         ImmutableList.of(Intervals.of("2015/2016"), Intervals.of("2014/2015")),
         Intervals.of("2014/2016")
     );
 
-    testFindIntervalForKillTask(
+    testFindIntervalForKill(
         ImmutableList.of(Intervals.of("2015/2017"), Intervals.of("2014/2016")),
         Intervals.of("2014/2017")
     );
 
-    testFindIntervalForKillTask(
+    testFindIntervalForKill(
         ImmutableList.of(
             Intervals.of("2015/2019"),
             Intervals.of("2014/2016"),
@@ -73,7 +74,7 @@ public class DruidCoordinatorSegmentKillerTest
         Intervals.of("2014/2020")
     );
 
-    testFindIntervalForKillTask(
+    testFindIntervalForKill(
         ImmutableList.of(
             Intervals.of("2015/2019"),
             Intervals.of("2014/2016"),
@@ -84,23 +85,21 @@ public class DruidCoordinatorSegmentKillerTest
     );
   }
 
-  private void testFindIntervalForKillTask(List<Interval> segmentManagerResult, Interval expected)
+  private void testFindIntervalForKill(List<Interval> segmentIntervals, Interval expected)
   {
-    MetadataSegmentManager segmentManager = EasyMock.createMock(MetadataSegmentManager.class);
+    MetadataSegmentManager segmentsMetadata = EasyMock.createMock(MetadataSegmentManager.class);
     EasyMock.expect(
-        segmentManager.getUnusedSegmentIntervals(
+        segmentsMetadata.getUnusedSegmentIntervals(
             EasyMock.anyString(),
-            EasyMock.anyObject(Interval.class),
+            EasyMock.anyObject(DateTime.class),
             EasyMock.anyInt()
         )
-    ).andReturn(
-        segmentManagerResult
-    );
-    EasyMock.replay(segmentManager);
+    ).andReturn(segmentIntervals);
+    EasyMock.replay(segmentsMetadata);
     IndexingServiceClient indexingServiceClient = EasyMock.createMock(IndexingServiceClient.class);
 
     DruidCoordinatorSegmentKiller coordinatorSegmentKiller = new DruidCoordinatorSegmentKiller(
-        segmentManager,
+        segmentsMetadata,
         indexingServiceClient,
         new TestDruidCoordinatorConfig(
             null,
@@ -111,15 +110,13 @@ public class DruidCoordinatorSegmentKillerTest
             Duration.parse("PT86400S"),
             1000,
             null,
-            false,
-            false,
             Duration.ZERO
         )
     );
 
     Assert.assertEquals(
         expected,
-        coordinatorSegmentKiller.findIntervalForKillTask("test", 10000)
+        coordinatorSegmentKiller.findIntervalForKill("test", 10000)
     );
   }
 }

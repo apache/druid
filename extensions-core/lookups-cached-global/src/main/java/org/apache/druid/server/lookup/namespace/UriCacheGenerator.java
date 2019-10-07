@@ -23,7 +23,6 @@ import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.data.input.MapPopulator;
-import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -32,6 +31,7 @@ import org.apache.druid.query.lookup.namespace.CacheGenerator;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
 import org.apache.druid.segment.loading.URIDataPuller;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
+import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
 import java.io.FileNotFoundException;

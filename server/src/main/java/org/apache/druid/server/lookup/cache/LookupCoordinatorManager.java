@@ -85,7 +85,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- *
+ * Managers {@link org.apache.druid.query.lookup.LookupExtractorFactoryContainer} specifications, distributing them
+ * to {@link org.apache.druid.query.lookup.LookupReferencesManager} around the cluster by monitoring the lookup
+ * announce path for servers and utilizing their {@link org.apache.druid.query.lookup.LookupListeningResource} API
+ * to load, drop, and update lookups around the cluster.
  */
 public class LookupCoordinatorManager
 {
@@ -252,6 +255,27 @@ public class LookupCoordinatorManager
     return lookupMapConfigRef.get();
   }
 
+  public boolean deleteTier(final String tier, AuditInfo auditInfo)
+  {
+    Preconditions.checkState(lifecycleLock.awaitStarted(5, TimeUnit.SECONDS), "not started");
+
+    synchronized (this) {
+      final Map<String, Map<String, LookupExtractorFactoryMapContainer>> priorSpec = getKnownLookups();
+      if (priorSpec == null) {
+        LOG.warn("Requested delete tier [%s]. But no lookups exist!", tier);
+        return false;
+      }
+      final Map<String, Map<String, LookupExtractorFactoryMapContainer>> updateSpec = new HashMap<>(priorSpec);
+
+      if (updateSpec.remove(tier) == null) {
+        LOG.warn("Requested delete of tier [%s] that does not exist!", tier);
+        return false;
+      }
+
+      return configManager.set(LOOKUP_CONFIG_KEY, updateSpec, auditInfo).isOk();
+    }
+  }
+
   public boolean deleteLookup(final String tier, final String lookup, AuditInfo auditInfo)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(5, TimeUnit.SECONDS), "not started");
@@ -276,7 +300,12 @@ public class LookupCoordinatorManager
 
       final Map<String, LookupExtractorFactoryMapContainer> updateTierSpec = new HashMap<>(priorTierSpec);
       updateTierSpec.remove(lookup);
-      updateSpec.put(tier, updateTierSpec);
+
+      if (updateTierSpec.isEmpty()) {
+        updateSpec.remove(tier);
+      } else {
+        updateSpec.put(tier, updateTierSpec);
+      }
       return configManager.set(LOOKUP_CONFIG_KEY, updateSpec, auditInfo).isOk();
     }
   }
@@ -528,16 +557,27 @@ public class LookupCoordinatorManager
 
     try {
       List<ListenableFuture<Map.Entry>> futures = new ArrayList<>();
-      for (Map.Entry<String, Map<String, LookupExtractorFactoryMapContainer>> tierEntry : allLookupTiers.entrySet()) {
 
-        LOG.debug("Starting lookup mgmt for tier [%s].", tierEntry.getKey());
+      Set<String> discoveredLookupTiers = lookupNodeDiscovery.getAllTiers();
 
-        final Map<String, LookupExtractorFactoryMapContainer> tierLookups = tierEntry.getValue();
-        for (final HostAndPortWithScheme node : lookupNodeDiscovery.getNodesInTier(tierEntry.getKey())) {
+      // Check and Log warnings about lookups configured by user in DB but no nodes discovered to load those.
+      for (String tierInDB : allLookupTiers.keySet()) {
+        if (!discoveredLookupTiers.contains(tierInDB) &&
+            !allLookupTiers.getOrDefault(tierInDB, ImmutableMap.of()).isEmpty()) {
+          LOG.warn("Found lookups for tier [%s] in DB, but no nodes discovered for it", tierInDB);
+        }
+      }
+
+      for (String tier : discoveredLookupTiers) {
+
+        LOG.debug("Starting lookup mgmt for tier [%s].", tier);
+
+        final Map<String, LookupExtractorFactoryMapContainer> tierLookups = allLookupTiers.getOrDefault(tier, ImmutableMap.of());
+        for (final HostAndPortWithScheme node : lookupNodeDiscovery.getNodesInTier(tier)) {
 
           LOG.debug(
               "Starting lookup mgmt for tier [%s] and host [%s:%s:%s].",
-              tierEntry.getKey(),
+              tier,
               node.getScheme(),
               node.getHostText(),
               node.getPort()

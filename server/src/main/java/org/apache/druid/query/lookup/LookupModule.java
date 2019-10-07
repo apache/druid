@@ -19,24 +19,13 @@
 
 package org.apache.druid.query.lookup;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Provides;
-import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.curator.utils.ZKPaths;
-import org.apache.druid.common.utils.ServletResourceUtils;
-import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.Jerseys;
@@ -44,38 +33,20 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.dimension.LookupDimensionSpec;
 import org.apache.druid.query.expression.LookupExprMacro;
-import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.http.HostAndPortWithScheme;
-import org.apache.druid.server.http.security.ConfigResourceFilter;
-import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.initialization.jetty.JettyBindings;
-import org.apache.druid.server.listener.announcer.ListenerResourceAnnouncer;
-import org.apache.druid.server.listener.announcer.ListeningAnnouncerConfig;
-import org.apache.druid.server.listener.resource.AbstractListenerHandler;
 import org.apache.druid.server.listener.resource.ListenerResource;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 
-import javax.ws.rs.Path;
-import javax.ws.rs.core.Response;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class LookupModule implements DruidModule
 {
   static final String PROPERTY_BASE = "druid.lookup";
   public static final String FAILED_UPDATES_KEY = "failedUpdates";
+  public static final int LOOKUP_LISTENER_QOS_MAX_REQUESTS = 2;
 
   public static String getTierListenerPath(String tier)
   {
@@ -98,6 +69,7 @@ public class LookupModule implements DruidModule
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, PROPERTY_BASE, LookupConfig.class);
+    binder.bind(LookupExtractorFactoryContainerProvider.class).to(LookupReferencesManager.class);
     LifecycleModule.register(binder, LookupReferencesManager.class);
     JsonConfigProvider.bind(binder, PROPERTY_BASE, LookupListeningAnnouncerConfig.class);
     Jerseys.addResource(binder, LookupListeningResource.class);
@@ -109,7 +81,7 @@ public class LookupModule implements DruidModule
     JettyBindings.addQosFilter(
         binder,
         ListenerResource.BASE_PATH + "/" + LookupCoordinatorManager.LOOKUP_LISTEN_ANNOUNCE_KEY,
-        2 // 1 for "normal" operation and 1 for "emergency" or other
+        LOOKUP_LISTENER_QOS_MAX_REQUESTS // 1 for "normal" operation and 1 for "emergency" or other
     );
   }
 
@@ -121,152 +93,3 @@ public class LookupModule implements DruidModule
   }
 }
 
-@Path(ListenerResource.BASE_PATH + "/" + LookupCoordinatorManager.LOOKUP_LISTEN_ANNOUNCE_KEY)
-@ResourceFilters(ConfigResourceFilter.class)
-class LookupListeningResource extends ListenerResource
-{
-  private static final Logger LOG = new Logger(LookupListeningResource.class);
-
-  private static final TypeReference<LookupsState<LookupExtractorFactoryContainer>> LOOKUPS_STATE_TYPE_REFERENCE =
-      new TypeReference<LookupsState<LookupExtractorFactoryContainer>>()
-      {
-      };
-
-  @Inject
-  public LookupListeningResource(
-      final @Json ObjectMapper jsonMapper,
-      final @Smile ObjectMapper smileMapper,
-      final LookupReferencesManager manager
-  )
-  {
-    super(
-        jsonMapper,
-        smileMapper,
-        new AbstractListenerHandler<LookupExtractorFactory>(new TypeReference<LookupExtractorFactory>()
-        {
-        })
-        {
-          @Override
-          public Response handleUpdates(InputStream inputStream, ObjectMapper mapper)
-          {
-            final LookupsState<LookupExtractorFactoryContainer> state;
-            try {
-              state = mapper.readValue(inputStream, LOOKUPS_STATE_TYPE_REFERENCE);
-            }
-            catch (final IOException ex) {
-              LOG.debug(ex, "Bad request");
-              return Response.status(Response.Status.BAD_REQUEST)
-                             .entity(ServletResourceUtils.sanitizeException(ex))
-                             .build();
-            }
-
-            try {
-              state.getToLoad().forEach(manager::add);
-              state.getToDrop().forEach(manager::remove);
-
-              return Response.status(Response.Status.ACCEPTED).entity(manager.getAllLookupsState()).build();
-            }
-            catch (Exception e) {
-              LOG.error(e, "Error handling request");
-              return Response.serverError().entity(ServletResourceUtils.sanitizeException(e)).build();
-            }
-          }
-
-          @Override
-          public Object post(final Map<String, LookupExtractorFactory> lookups)
-          {
-            final Map<String, LookupExtractorFactory> failedUpdates = new HashMap<>();
-            for (final String name : lookups.keySet()) {
-
-              final LookupExtractorFactoryContainer factoryContainer = new LookupExtractorFactoryContainer(
-                  null,
-                  lookups.get(name)
-              );
-
-              manager.add(name, factoryContainer);
-            }
-            return ImmutableMap.of("status", "accepted", LookupModule.FAILED_UPDATES_KEY, failedUpdates);
-          }
-
-          @Override
-          public Object get(String id)
-          {
-            return manager.get(id);
-          }
-
-          @Override
-          public LookupsState<LookupExtractorFactoryContainer> getAll()
-          {
-            return manager.getAllLookupsState();
-          }
-
-          @Override
-          public Object delete(String id)
-          {
-            manager.remove(id);
-            return id;
-          }
-        }
-    );
-  }
-}
-
-@Deprecated
-class LookupResourceListenerAnnouncer extends ListenerResourceAnnouncer
-{
-  @Inject
-  public LookupResourceListenerAnnouncer(
-      Announcer announcer,
-      LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig,
-      @Self DruidNode node
-  )
-  {
-    super(
-        announcer,
-        lookupListeningAnnouncerConfig,
-        lookupListeningAnnouncerConfig.getLookupKey(),
-        HostAndPortWithScheme.fromString(node.getServiceScheme(), node.getHostAndPortToUse())
-    );
-  }
-}
-
-
-class LookupListeningAnnouncerConfig extends ListeningAnnouncerConfig
-{
-  public static final String DEFAULT_TIER = "__default";
-  private final DataSourceTaskIdHolder dataSourceTaskIdHolder;
-  @JsonProperty("lookupTier")
-  private String lookupTier = null;
-  @JsonProperty("lookupTierIsDatasource")
-  private boolean lookupTierIsDatasource = false;
-
-  @JsonCreator
-  public LookupListeningAnnouncerConfig(
-      @JacksonInject ZkPathsConfig zkPathsConfig,
-      @JacksonInject DataSourceTaskIdHolder dataSourceTaskIdHolder
-  )
-  {
-    super(zkPathsConfig);
-    this.dataSourceTaskIdHolder = dataSourceTaskIdHolder;
-  }
-
-  public String getLookupTier()
-  {
-    Preconditions.checkArgument(
-        !(lookupTierIsDatasource && null != lookupTier),
-        "Cannot specify both `lookupTier` and `lookupTierIsDatasource`"
-    );
-    final String lookupTier = lookupTierIsDatasource ? dataSourceTaskIdHolder.getDataSource() : this.lookupTier;
-
-    return Preconditions.checkNotNull(
-        lookupTier == null ? DEFAULT_TIER : StringUtils.emptyToNullNonDruidDataString(lookupTier),
-        "Cannot have empty lookup tier from %s",
-        lookupTierIsDatasource ? "bound value" : LookupModule.PROPERTY_BASE
-    );
-  }
-
-  public String getLookupKey()
-  {
-    return LookupModule.getTierListenerPath(getLookupTier());
-  }
-}

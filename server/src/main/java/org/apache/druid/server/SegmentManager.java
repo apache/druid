@@ -32,12 +32,12 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
+import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 /**
  * This class is responsible for managing data sources and their states like timeline, total segment size, and number of
@@ -115,8 +115,7 @@ public class SegmentManager
    */
   public Map<String, Long> getDataSourceSizes()
   {
-    return dataSources.entrySet().stream()
-                      .collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getTotalSegmentSize()));
+    return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getTotalSegmentSize);
   }
 
   /**
@@ -127,8 +126,7 @@ public class SegmentManager
    */
   public Map<String, Long> getDataSourceCounts()
   {
-    return dataSources.entrySet().stream()
-                      .collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getNumSegments()));
+    return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getNumSegments);
   }
 
   public boolean isSegmentCached(final DataSegment segment)
@@ -171,13 +169,15 @@ public class SegmentManager
           );
 
           if ((entry != null) && (entry.getChunk(segment.getShardSpec().getPartitionNum()) != null)) {
-            log.warn("Told to load a adapter for a segment[%s] that already exists", segment.getId());
+            log.warn("Told to load an adapter for segment[%s] that already exists", segment.getId());
             resultSupplier.set(false);
           } else {
             loadedIntervals.add(
                 segment.getInterval(),
                 segment.getVersion(),
-                segment.getShardSpec().createChunk(new ReferenceCountingSegment(adapter))
+                segment.getShardSpec().createChunk(
+                    ReferenceCountingSegment.wrapSegment(adapter, segment.getShardSpec())
+                )
             );
             dataSourceState.addSegment(segment);
             resultSupplier.set(true);
@@ -216,14 +216,18 @@ public class SegmentManager
         (dataSourceName, dataSourceState) -> {
           if (dataSourceState == null) {
             log.info("Told to delete a queryable for a dataSource[%s] that doesn't exist.", dataSourceName);
+            return null;
           } else {
             final VersionedIntervalTimeline<String, ReferenceCountingSegment> loadedIntervals =
                 dataSourceState.getTimeline();
 
+            final ShardSpec shardSpec = segment.getShardSpec();
             final PartitionChunk<ReferenceCountingSegment> removed = loadedIntervals.remove(
                 segment.getInterval(),
                 segment.getVersion(),
-                segment.getShardSpec().createChunk(null)
+                // remove() internally searches for a partitionChunk to remove which is *equal* to the given
+                // partitionChunk. Note that partitionChunk.equals() checks only the partitionNum, but not the object.
+                segment.getShardSpec().createChunk(ReferenceCountingSegment.wrapSegment(null, shardSpec))
             );
             final ReferenceCountingSegment oldQueryable = (removed == null) ? null : removed.getObject();
 
@@ -234,16 +238,16 @@ public class SegmentManager
               oldQueryable.close();
             } else {
               log.info(
-                  "Told to delete a queryable on dataSource[%s] for interval[%s] and version [%s] that I don't have.",
+                  "Told to delete a queryable on dataSource[%s] for interval[%s] and version[%s] that I don't have.",
                   dataSourceName,
                   segment.getInterval(),
                   segment.getVersion()
               );
             }
-          }
 
-          // Returning null removes the entry of dataSource from the map
-          return dataSourceState == null || dataSourceState.isEmpty() ? null : dataSourceState;
+            // Returning null removes the entry of dataSource from the map
+            return dataSourceState.isEmpty() ? null : dataSourceState;
+          }
         }
     );
 
