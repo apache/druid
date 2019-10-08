@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import com.yahoo.sketches.hll.HllSketch;
+import org.apache.datasketches.hll.HllSketch;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.io.BufferedWriter;
