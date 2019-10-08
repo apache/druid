@@ -50,8 +50,7 @@ export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusD
     };
     this.showStatusQueryManager = new QueryManager({
       processQuery: async () => {
-        const endpoint = UrlBaser.base(`/status`);
-        const resp = await axios.get(endpoint);
+        const resp = await axios.get(`/status`);
         return resp.data;
       },
       onStateChange: ({ result, loading }) => {

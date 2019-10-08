@@ -31,6 +31,8 @@ import {
   Icon,
   IconName,
   Intent,
+  Menu,
+  MenuItem,
   Popover,
   Switch,
   TextArea,
@@ -2325,6 +2327,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 ]}
                 model={spec}
                 onChange={s => this.updateSpec(s)}
+                onFinalize={() => {
+                  setTimeout(() => {
+                    this.queryForSchema();
+                  }, 10);
+                }}
               />
             </>
           )}
@@ -2443,6 +2450,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     };
 
     if (selectedDimensionSpec) {
+      const curDimensions =
+        deepGet(spec, `dataSchema.parser.parseSpec.dimensionsSpec.dimensions`) || EMPTY_ARRAY;
+
       return (
         <div className="edit-controls">
           <AutoForm
@@ -2470,11 +2480,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <Button
                 icon={IconNames.TRASH}
                 intent={Intent.DANGER}
+                disabled={curDimensions.length <= 1}
                 onClick={() => {
-                  const curDimensions =
-                    deepGet(spec, `dataSchema.parser.parseSpec.dimensionsSpec.dimensions`) ||
-                    EMPTY_ARRAY;
-                  if (curDimensions.length <= 1) return; // Guard against removing the last dimension, ToDo: some better feedback here would be good
+                  if (curDimensions.length <= 1) return; // Guard against removing the last dimension
 
                   this.updateSpec(
                     deepDelete(
