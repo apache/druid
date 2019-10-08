@@ -143,7 +143,7 @@ public class DBCredentialsValidatorTest
     String password = "badpassword";
 
     expectedException.expect(BasicSecurityAuthenticationException.class);
-    expectedException.expectMessage("User DB authentication failed username[userA].");
+    expectedException.expectMessage("User metadata store authentication failed username[userA].");
     validator.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray());
   }
 }

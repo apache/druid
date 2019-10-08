@@ -82,8 +82,8 @@ public class MetadataStoreCredentialsValidator implements CredentialsValidator
     if (Arrays.equals(recalculatedHash, credentials.getHash())) {
       return new AuthenticationResult(username, authorizerName, authenticatorName, null);
     } else {
-      LOG.debug("Password incorrect for DB user %s", username);
-      throw new BasicSecurityAuthenticationException("User DB authentication failed username[%s].", username);
+      LOG.debug("Password incorrect for metadata store user %s", username);
+      throw new BasicSecurityAuthenticationException("User metadata store authentication failed username[%s].", username);
     }
   }
 }
