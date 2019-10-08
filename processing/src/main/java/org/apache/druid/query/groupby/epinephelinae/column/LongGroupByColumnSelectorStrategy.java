@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.groupby.epinephelinae.column;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.groupby.epinephelinae.GrouperBufferComparatorUtils;
