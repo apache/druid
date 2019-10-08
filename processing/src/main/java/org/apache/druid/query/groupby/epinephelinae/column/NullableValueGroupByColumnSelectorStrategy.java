@@ -98,7 +98,7 @@ public class NullableValueGroupByColumnSelectorStrategy implements GroupByColumn
   {
     return GrouperBufferComparatorUtils.makeNullHandlingBufferComparatorForNumericData(
         keyBufferPosition,
-        delegate.bufferComparator(keyBufferPosition, stringComparator)
+        delegate.bufferComparator(keyBufferPosition + Byte.BYTES, stringComparator)
     );
   }
 
