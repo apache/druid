@@ -184,7 +184,7 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
       String met1
   )
   {
-    return Collections.singletonList(jb(timestamp, dim1,dim2, dimLong, dimFloat, met1));
+    return Collections.singletonList(jb(timestamp, dim1, dim2, dimLong, dimFloat, met1));
   }
 
   protected File getSegmentDirectory()

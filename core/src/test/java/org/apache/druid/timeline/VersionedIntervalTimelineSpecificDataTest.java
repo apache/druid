@@ -42,10 +42,9 @@ import java.util.Collections;
  * This test class is separated from {@link VersionedIntervalTimelineTest} because it populates specific data for tests
  * in {@link #setUp()}.
  */
-public class VersionedIntervalTimelineSpecificDataTest extends VersionedIntervalTimelineTest
+public class VersionedIntervalTimelineSpecificDataTest extends VersionedIntervalTimelineTestBase
 {
   @Before
-  @Override
   public void setUp()
   {
     timeline = makeStringIntegerTimeline();
