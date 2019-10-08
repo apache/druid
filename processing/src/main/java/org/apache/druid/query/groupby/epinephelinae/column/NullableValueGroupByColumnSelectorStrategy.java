@@ -22,6 +22,7 @@ package org.apache.druid.query.groupby.epinephelinae.column;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
+import org.apache.druid.query.groupby.epinephelinae.GrouperBufferComparatorUtils;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -95,7 +96,10 @@ public class NullableValueGroupByColumnSelectorStrategy implements GroupByColumn
       @Nullable StringComparator stringComparator
   )
   {
-    return delegate.bufferComparator(keyBufferPosition, stringComparator);
+    return GrouperBufferComparatorUtils.makeNullHandlingBufferComparatorForNumericData(
+        keyBufferPosition,
+        delegate.bufferComparator(keyBufferPosition, stringComparator)
+    );
   }
 
   @Override

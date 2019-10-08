@@ -97,19 +97,10 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   @Override
   public Grouper.BufferComparator bufferComparator(int keyBufferPosition, @Nullable StringComparator stringComparator)
   {
-    Grouper.BufferComparator comparator = GrouperBufferComparatorUtils.makeBufferComparatorForDouble(
+    return GrouperBufferComparatorUtils.makeBufferComparatorForDouble(
         keyBufferPosition,
         true,
         stringComparator
     );
-
-    if (NullHandling.sqlCompatible()) {
-      return GrouperBufferComparatorUtils.makeNullHandlingBufferComparatorForNumericData(
-          keyBufferPosition,
-          comparator
-      );
-    } else {
-      return comparator;
-    }
   }
 }

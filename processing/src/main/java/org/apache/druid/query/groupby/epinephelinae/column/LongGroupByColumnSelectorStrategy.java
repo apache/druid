@@ -75,20 +75,11 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
       @Nullable StringComparator stringComparator
   )
   {
-    Grouper.BufferComparator comparator = GrouperBufferComparatorUtils.makeBufferComparatorForLong(
+    return GrouperBufferComparatorUtils.makeBufferComparatorForLong(
         keyBufferPosition,
         true,
         stringComparator
     );
-
-    if (NullHandling.sqlCompatible()) {
-      return GrouperBufferComparatorUtils.makeNullHandlingBufferComparatorForNumericData(
-          keyBufferPosition,
-          comparator
-      );
-    } else {
-      return comparator;
-    }
   }
 
   @Override

@@ -75,20 +75,11 @@ public class FloatGroupByColumnSelectorStrategy implements GroupByColumnSelector
       @Nullable StringComparator stringComparator
   )
   {
-    Grouper.BufferComparator comparator = GrouperBufferComparatorUtils.makeBufferComparatorForFloat(
+    return GrouperBufferComparatorUtils.makeBufferComparatorForFloat(
         keyBufferPosition,
         true,
         stringComparator
     );
-
-    if (NullHandling.sqlCompatible()) {
-      return GrouperBufferComparatorUtils.makeNullHandlingBufferComparatorForNumericData(
-          keyBufferPosition,
-          comparator
-      );
-    } else {
-      return comparator;
-    }
   }
 
   @Override

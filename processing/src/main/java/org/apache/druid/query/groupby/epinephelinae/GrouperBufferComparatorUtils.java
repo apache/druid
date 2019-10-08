@@ -423,8 +423,8 @@ public class GrouperBufferComparatorUtils
       return delegate.compare(
           lhsBuffer,
           rhsBuffer,
-          lhsPosition,
-          rhsPosition
+          lhsPosition + Byte.BYTES,
+          rhsPosition + Byte.BYTES
       );
     };
   }

@@ -935,13 +935,8 @@ public class GroupByQueryEngineV2
       Grouper.BufferComparator[] dimComparators = new Grouper.BufferComparator[dims.length];
 
       for (int i = 0; i < dims.length; i++) {
-        final StringComparator stringComparator;
-        if (limitSpec != null) {
-          final String dimName = query.getDimensions().get(i).getOutputName();
-          stringComparator = DefaultLimitSpec.getComparatorForDimName(limitSpec, dimName);
-        } else {
-          stringComparator = null;
-        }
+        final String dimName = query.getDimensions().get(i).getOutputName();
+        StringComparator stringComparator = DefaultLimitSpec.getComparatorForDimName(limitSpec, dimName);
         dimComparators[i] = dims[i].getColumnSelectorStrategy().bufferComparator(
             dims[i].getKeyBufferPosition(),
             stringComparator
