@@ -44,6 +44,7 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.ShardSpecFactory;
+import org.assertj.core.api.Assertions;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -510,42 +511,32 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     coordinator.announceHistoricalSegments(SEGMENTS);
     coordinator.announceHistoricalSegments(ImmutableSet.of(defaultSegment3));
 
-    Assert.assertEquals(
-        SEGMENTS,
-        ImmutableSet.copyOf(
-            coordinator.getUsedSegmentsForIntervals(
-                defaultSegment.getDataSource(),
-                ImmutableList.of(defaultSegment.getInterval()),
-                Segments.ONLY_VISIBLE
-            )
+    Assertions.assertThat(
+        coordinator.getUsedSegmentsForIntervals(
+            defaultSegment.getDataSource(),
+            ImmutableList.of(defaultSegment.getInterval()),
+            Segments.ONLY_VISIBLE
         )
-    );
+    ).containsOnlyOnce(SEGMENTS.toArray(new DataSegment[0]));
 
-    Assert.assertEquals(
-        ImmutableSet.of(defaultSegment3),
-        ImmutableSet.copyOf(
-            coordinator.getUsedSegmentsForIntervals(
-                defaultSegment.getDataSource(),
-                ImmutableList.of(defaultSegment3.getInterval()),
-                Segments.ONLY_VISIBLE
-            )
+    Assertions.assertThat(
+        coordinator.getUsedSegmentsForIntervals(
+            defaultSegment.getDataSource(),
+            ImmutableList.of(defaultSegment3.getInterval()),
+            Segments.ONLY_VISIBLE
         )
-    );
+    ).containsOnlyOnce(defaultSegment3);
 
-    Assert.assertEquals(
-        ImmutableSet.of(defaultSegment, defaultSegment2, defaultSegment3),
-        ImmutableSet.copyOf(
-            coordinator.getUsedSegmentsForIntervals(
-                defaultSegment.getDataSource(),
-                ImmutableList.of(defaultSegment.getInterval(), defaultSegment3.getInterval()),
-                Segments.ONLY_VISIBLE
-            )
+    Assertions.assertThat(
+        coordinator.getUsedSegmentsForIntervals(
+            defaultSegment.getDataSource(),
+            ImmutableList.of(defaultSegment.getInterval(), defaultSegment3.getInterval()),
+            Segments.ONLY_VISIBLE
         )
-    );
+    ).containsOnlyOnce(defaultSegment, defaultSegment2, defaultSegment3);
 
     //case to check no duplication if two intervals overlapped with the interval of same segment.
-    Assert.assertEquals(
-        ImmutableList.of(defaultSegment3),
+    Assertions.assertThat(
         coordinator.getUsedSegmentsForIntervals(
             defaultSegment.getDataSource(),
             ImmutableList.of(
@@ -554,7 +545,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             ),
             Segments.ONLY_VISIBLE
         )
-    );
+    ).containsOnlyOnce(defaultSegment3);
   }
 
   @Test
