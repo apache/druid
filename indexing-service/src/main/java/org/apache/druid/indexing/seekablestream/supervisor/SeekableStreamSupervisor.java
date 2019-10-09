@@ -1967,6 +1967,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           boolean success = indexerMetadataStorageCoordinator.resetDataSourceMetadata(dataSource, cleanedMetadata);
           if (success) {
             removeExpiredPartitionsFromMemory(expiredPartitions);
+          } else {
+            log.error("Failed to update datasource metadata[%s] with expired partitions removed", cleanedMetadata);
           }
         }
         catch (IOException ioe) {
