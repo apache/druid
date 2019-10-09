@@ -225,6 +225,14 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     // not yet implemented, see issue #6739
   }
 
+
+  /**
+   * We try to parse the shard number of the shard ID, using a BigInteger because the Kinesis shard ID can be
+   * up to 128 characters. The shard number is used preferentially because it provides a fixed and easily predictable
+   * mapping from shard to task group number.
+   *
+   * If we can't parse the shard number from the ID, then we fall back to hashing the shard ID string.
+   */
   @Override
   protected int getTaskGroupIdForPartition(String partitionId)
   {
