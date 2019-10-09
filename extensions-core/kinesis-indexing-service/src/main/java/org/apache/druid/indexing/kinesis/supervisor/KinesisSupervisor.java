@@ -225,7 +225,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     // not yet implemented, see issue #6739
   }
 
-
   /**
    * We try to parse the shard number of the shard ID, using a BigInteger because the Kinesis shard ID can be
    * up to 128 characters. The shard number is used preferentially because it provides a fixed and easily predictable
@@ -240,26 +239,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       partitionIds.add(partitionId);
     }
 
-    BigInteger numberFromShardId = extractShardNumberFromShardId(partitionId);
-    if (numberFromShardId != null) {
-      BigInteger taskCountAsBigInt = BigInteger.valueOf(spec.getIoConfig().getTaskCount());
-      return Math.abs(numberFromShardId.mod(taskCountAsBigInt).intValue());
-    } else {
-      return Math.abs(getHashIntFromShardId(partitionId) % spec.getIoConfig().getTaskCount());
-    }
-  }
-
-  private BigInteger extractShardNumberFromShardId(String shardId)
-  {
-    String numOnly = StringUtils.replace(shardId, "shardId-", "");
-    try {
-      // Kinesis shard ID length can be up to 128 characters
-      // https://docs.aws.amazon.com/kinesis/latest/APIReference/API_ListShards.html
-      return new BigInteger(numOnly);
-    }
-    catch (NumberFormatException e) {
-      return null;
-    }
+    return Math.abs(getHashIntFromShardId(partitionId) % spec.getIoConfig().getTaskCount());
   }
 
   private int getHashIntFromShardId(String shardId)
