@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
@@ -70,6 +71,7 @@ import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegment.CompactionState;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
@@ -382,11 +384,15 @@ public class AppenderatorImpl implements Appenderator
     Sink retVal = sinks.get(identifier);
 
     if (retVal == null) {
+      final Map<String, Object> indexSpecMap = objectMapper.convertValue(
+          tuningConfig.getIndexSpec(),
+          new TypeReference<Map<String, Object>>() {}
+      );
       retVal = new Sink(
           identifier.getInterval(),
           schema,
           identifier.getShardSpec(),
-          reingestion ? tuningConfig.getPartitionsSpec() : null,
+          reingestion ? new CompactionState(tuningConfig.getPartitionsSpec(), indexSpecMap) : null,
           identifier.getVersion(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,

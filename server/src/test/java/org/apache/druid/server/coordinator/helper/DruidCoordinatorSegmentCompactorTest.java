@@ -37,6 +37,7 @@ import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegment.CompactionState;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -96,9 +97,12 @@ public class DruidCoordinatorSegmentCompactorTest
             segments.get(0).getDimensions(),
             segments.get(0).getMetrics(),
             new NumberedShardSpec(i, 0),
-            new DynamicPartitionsSpec(
-                tuningConfig.getMaxRowsPerSegment(),
-                tuningConfig.getMaxTotalRowsOr(Long.MAX_VALUE)
+            new CompactionState(
+                new DynamicPartitionsSpec(
+                    tuningConfig.getMaxRowsPerSegment(),
+                    tuningConfig.getMaxTotalRowsOr(Long.MAX_VALUE)
+                ),
+                Collections.emptyMap()
             ),
             1,
             segmentSize

@@ -28,7 +28,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.test.utils.ImmutableDruidDataSourceTestUtils;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegment.PruneSpecs;
+import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -48,7 +48,7 @@ public class ImmutableDruidDataSourceTest
     final ImmutableDruidDataSource dataSource = getImmutableDruidDataSource(segment);
 
     final ObjectMapper objectMapper = new DefaultObjectMapper()
-        .setInjectableValues(new Std().addValue(PruneSpecs.class, PruneSpecs.DEFAULT));
+        .setInjectableValues(new Std().addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT));
     final String json = objectMapper.writeValueAsString(dataSource);
 
     ImmutableDruidDataSourceTestUtils.assertEquals(dataSource, objectMapper.readValue(json,
@@ -94,7 +94,7 @@ public class ImmutableDruidDataSourceTest
         null,
         1,
         100L,
-        PruneSpecs.DEFAULT
+        PruneSpecsHolder.DEFAULT
     );
   }
 

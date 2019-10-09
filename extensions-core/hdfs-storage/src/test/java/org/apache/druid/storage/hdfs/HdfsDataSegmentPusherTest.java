@@ -43,7 +43,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegment.PruneSpecs;
+import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.hadoop.conf.Configuration;
@@ -80,7 +80,7 @@ public class HdfsDataSegmentPusherTest
     objectMapper = new TestObjectMapper();
     InjectableValues.Std injectableValues = new InjectableValues.Std();
     injectableValues.addValue(ObjectMapper.class, objectMapper);
-    injectableValues.addValue(PruneSpecs.class, PruneSpecs.DEFAULT);
+    injectableValues.addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT);
     objectMapper.setInjectableValues(injectableValues);
   }
 

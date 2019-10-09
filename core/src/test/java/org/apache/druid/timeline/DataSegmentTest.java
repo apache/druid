@@ -30,7 +30,8 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.apache.druid.timeline.DataSegment.PruneSpecs;
+import org.apache.druid.timeline.DataSegment.CompactionState;
+import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -104,7 +105,7 @@ public class DataSegmentTest
   public void setUp()
   {
     InjectableValues.Std injectableValues = new InjectableValues.Std();
-    injectableValues.addValue(PruneSpecs.class, PruneSpecs.DEFAULT);
+    injectableValues.addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT);
     MAPPER.setInjectableValues(injectableValues);
   }
 
@@ -123,7 +124,10 @@ public class DataSegmentTest
         Arrays.asList("dim1", "dim2"),
         Arrays.asList("met1", "met2"),
         new NumberedShardSpec(3, 0),
-        new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
+        new CompactionState(
+            new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
+            ImmutableMap.of()
+        ),
         TEST_VERSION,
         1
     );

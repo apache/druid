@@ -39,6 +39,6 @@ import java.lang.annotation.Target;
 @Target({ElementType.PARAMETER, ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @BindingAnnotation
-public @interface PrunePartitionsSpec
+public @interface PruneLastCompactionState
 {
 }

@@ -64,7 +64,7 @@ import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppendera
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
-import org.apache.druid.timeline.PrunePartitionsSpec;
+import org.apache.druid.timeline.PruneLastCompactionState;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -97,7 +97,7 @@ public class CliMiddleManager extends ServerRunnable
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/middlemanager");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8291);
-            binder.bindConstant().annotatedWith(PrunePartitionsSpec.class).to(true);
+            binder.bindConstant().annotatedWith(PruneLastCompactionState.class).to(true);
 
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
 

@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegment.PruneSpecs;
+import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -35,7 +35,7 @@ import java.io.IOException;
 public class SegmentPublishResultTest
 {
   private final ObjectMapper objectMapper = new DefaultObjectMapper()
-      .setInjectableValues(new Std().addValue(PruneSpecs.class, PruneSpecs.DEFAULT));
+      .setInjectableValues(new Std().addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT));
 
   @Test
   public void testSerdeOkResult() throws IOException

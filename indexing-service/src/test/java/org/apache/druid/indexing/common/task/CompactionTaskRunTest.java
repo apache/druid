@@ -57,6 +57,7 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegment.CompactionState;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
@@ -193,8 +194,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
           segments.get(i).getInterval()
       );
       Assert.assertEquals(
-          new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-          segments.get(i).getCompactionPartitionsSpec()
+          new CompactionState(new DynamicPartitionsSpec(5000000, Long.MAX_VALUE), Collections.emptyMap()),
+          segments.get(i).getLastCompactionState()
       );
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(

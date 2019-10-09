@@ -38,6 +38,7 @@ import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegment.CompactionState;
 import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
@@ -65,7 +66,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   private final DataSchema schema;
   private final ShardSpec shardSpec;
   @Nullable
-  private final PartitionsSpec compactionPartitionsSpec;
+  private final CompactionState compactionState;
   private final String version;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
@@ -107,7 +108,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       Interval interval,
       DataSchema schema,
       ShardSpec shardSpec,
-      @Nullable PartitionsSpec compactionPartitionsSpec,
+      @Nullable CompactionState compactionState,
       String version,
       int maxRowsInMemory,
       long maxBytesInMemory,
@@ -119,7 +120,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         interval,
         schema,
         shardSpec,
-        compactionPartitionsSpec,
+        compactionState,
         version,
         maxRowsInMemory,
         maxBytesInMemory,
@@ -133,7 +134,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       Interval interval,
       DataSchema schema,
       ShardSpec shardSpec,
-      @Nullable PartitionsSpec compactionPartitionsSpec,
+      @Nullable CompactionState compactionState,
       String version,
       int maxRowsInMemory,
       long maxBytesInMemory,
@@ -144,7 +145,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   {
     this.schema = schema;
     this.shardSpec = shardSpec;
-    this.compactionPartitionsSpec = compactionPartitionsSpec;
+    this.compactionState = compactionState;
     this.interval = interval;
     this.version = version;
     this.maxRowsInMemory = maxRowsInMemory;
@@ -278,7 +279,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         Collections.emptyList(),
         Lists.transform(Arrays.asList(schema.getAggregators()), AggregatorFactory::getName),
         shardSpec,
-        compactionPartitionsSpec,
+        compactionState,
         null,
         0
     );

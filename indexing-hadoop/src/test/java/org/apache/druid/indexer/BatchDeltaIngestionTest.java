@@ -53,7 +53,7 @@ import org.apache.druid.segment.realtime.firehose.IngestSegmentFirehose;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegment.PruneSpecs;
+import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -83,7 +83,7 @@ public class BatchDeltaIngestionTest
     MAPPER.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
     InjectableValues inject = new InjectableValues.Std()
         .addValue(ObjectMapper.class, MAPPER)
-        .addValue(PruneSpecs.class, PruneSpecs.DEFAULT);
+        .addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT);
     MAPPER.setInjectableValues(inject);
     INDEX_IO = HadoopDruidIndexerConfig.INDEX_IO;
 
