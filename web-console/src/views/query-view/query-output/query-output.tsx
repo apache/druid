@@ -73,17 +73,14 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
               accessor: String(i),
               Cell: row => {
                 const value = row.value;
-                const popover = (
+                if (!value) return value == null ? null : value;
+                return (
                   <div>
                     <Popover content={this.getRowActions(value, h)}>
                       <div>{value}</div>
                     </Popover>
                   </div>
                 );
-                if (value) {
-                  return popover;
-                }
-                return value;
               },
               className:
                 aggregateColumns && aggregateColumns.includes(h) ? 'aggregate-column' : undefined,
