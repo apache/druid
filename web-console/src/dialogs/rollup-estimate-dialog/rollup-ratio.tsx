@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import { Dialog } from '@blueprintjs/core';
 import axios from 'axios';
 import {
   HeaderRows,
@@ -29,7 +28,6 @@ import {
 import Hjson from 'hjson';
 import memoizeOne from 'memoize-one';
 import * as React from 'react';
-import ReactTable from 'react-table';
 
 import { SQL_FUNCTIONS } from '../../../lib/sql-docs';
 import { Loader } from '../../components/index';
@@ -37,8 +35,6 @@ import { getDruidErrorMessage, QueryManager } from '../../utils/index';
 import { isEmptyContext, QueryContext } from '../../utils/query-context';
 import { QueryView } from '../../views/index';
 import { QueryExtraInfoData } from '../../views/query-view/query-extra-info/query-extra-info';
-
-import { RollupRatio } from './rollup-ratio';
 
 const parserRaw = sqlParserFactory(SQL_FUNCTIONS.map(sqlFunction => sqlFunction.name));
 
@@ -51,7 +47,7 @@ const parser = memoizeOne((sql: string) => {
 });
 
 interface QueryWithContext {
-  queryString: string;
+  rollupQueryString: string;
   queryContext: QueryContext;
   wrapQueryLimit: number | undefined;
 }
@@ -62,55 +58,47 @@ interface QueryResult {
   parsedQuery?: SqlQuery;
 }
 
-export interface RollupEstimateDialogProps {
+export interface RollupRatioProps {
+  queryColumns: string[];
   datasource: string;
-  onClose: () => void;
 }
 
-export interface RollupEstimateDialogState {
-  queryString: string;
-  queryContext: QueryContext;
-  queryColumns?: string[];
-  wrapQueryLimit: number | undefined;
-  loading: boolean;
+export interface RollupRatioState {
+  rollupQueryString: string;
   result?: QueryResult;
+  queryContext: QueryContext;
+  loading: boolean;
   error?: string;
 }
 
-export class RollupEstimateDialog extends React.PureComponent<
-  RollupEstimateDialogProps,
-  RollupEstimateDialogState
-> {
+export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRatioState> {
   private sqlQueryManager: QueryManager<QueryWithContext, QueryResult>;
-
-  constructor(props: RollupEstimateDialogProps, context: any) {
+  constructor(props: RollupRatioProps, context: any) {
+    // Temporary query as original needs to be escape with quotes
     super(props, context);
     this.state = {
-      // Rename some of these variables
-      queryString: `SELECT * FROM "${props.datasource}"`,
       queryContext: {},
-      queryColumns: [],
-      wrapQueryLimit: 20,
+      rollupQueryString: `SELECT COUNT("${this.props.queryColumns[1]}") / COUNT(DISTINCT "${this.props.queryColumns[1]}") * 1.0 FROM ${this.props.datasource}`,
       loading: false,
     };
-
     this.sqlQueryManager = new QueryManager({
+      // Clean up this function along with renaming some variables
       processQuery: async (queryWithContext: QueryWithContext): Promise<QueryResult> => {
-        const { queryString, queryContext, wrapQueryLimit } = queryWithContext;
+        const { rollupQueryString, queryContext, wrapQueryLimit } = queryWithContext;
         let parsedQuery: SqlQuery | undefined;
         let jsonQuery: any;
-        // Note: Might need to clean this function up and delete some imports
+
         try {
-          parsedQuery = parser(queryString);
+          parsedQuery = parser(rollupQueryString);
         } catch {}
 
         if (!(parsedQuery instanceof SqlQuery)) {
           parsedQuery = undefined;
         }
-        if (QueryView.isJsonLike(queryString)) {
-          jsonQuery = Hjson.parse(queryString);
+        if (QueryView.isJsonLike(rollupQueryString)) {
+          jsonQuery = Hjson.parse(rollupQueryString);
         } else {
-          const actualQuery = QueryView.wrapInLimitIfNeeded(queryString, wrapQueryLimit);
+          const actualQuery = QueryView.wrapInLimitIfNeeded(rollupQueryString, wrapQueryLimit);
 
           jsonQuery = {
             query: actualQuery,
@@ -173,59 +161,17 @@ export class RollupEstimateDialog extends React.PureComponent<
           result,
           loading,
           error,
-          queryColumns: result ? result.queryResult.header : [],
         });
       },
     });
   }
-
   componentDidMount() {
-    // Do something when component unmounts
-    const { queryString, queryContext, wrapQueryLimit } = this.state;
-    this.sqlQueryManager.runQuery({ queryString, queryContext, wrapQueryLimit });
+    const { rollupQueryString, queryContext } = this.state;
+    this.sqlQueryManager.runQuery({ rollupQueryString, queryContext, wrapQueryLimit: 1 });
   }
   render(): JSX.Element {
-    // Plan to separate main and control components
-    const { datasource, onClose } = this.props;
-    const { result, loading, queryColumns } = this.state;
-    console.log(result);
-    console.log(queryColumns);
+    const { loading, result } = this.state;
     if (loading) return <Loader />;
-    return (
-      <Dialog
-        isOpen={datasource !== undefined}
-        onClose={onClose}
-        canOutsideClickClose={false}
-        title={'Estimate your rollup ratio'}
-      >
-        <ReactTable
-          data={result ? result.queryResult.rows : []}
-          loading={loading}
-          columns={(result ? result.queryResult.header : []).map((h: any, i) => {
-            // Need to clean this up and clickable columns for deselect, will have to update queryColumns too
-            return {
-              Header: () => {
-                return <div>{h}</div>;
-              },
-              headerClassName: h,
-              accessor: String(i),
-              Cell: row => {
-                const value = row.value;
-                const popover = (
-                  <div>
-                    <div>{value}</div>
-                  </div>
-                );
-                if (value) {
-                  return popover;
-                }
-                return value;
-              },
-            };
-          })}
-        />
-        <RollupRatio datasource={datasource} queryColumns={queryColumns ? queryColumns : []} />
-      </Dialog>
-    );
+    return <div>{result ? result.queryResult.rows : []}</div>;
   }
 }
