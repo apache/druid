@@ -80,15 +80,6 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
-        <!--
-             jackson-core-asl is needed for Hadoop/HDFS, but not pulled in transitively from hadoop dependencies.
-             The library is currently pulled in transitively from Curator 4.1.0, but we include this dependency
-             explicitly here, as later Curator versions such as 4.2.0 do not depend on jackson-core-asl.
-         -->
-        <dependency>
-            <groupId>org.codehaus.jackson</groupId>
-            <artifactId>jackson-core-asl</artifactId>
-        </dependency>
         <dependency>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
