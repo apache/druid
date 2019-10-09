@@ -2617,8 +2617,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
 
     EasyMock.expect(recordSupplier.poll(EasyMock.anyLong()))
             .andReturn(records.subList(2, 5)).once()
-            .andReturn(eosRecord).once()
-    ;
+            .andReturn(eosRecord).once();
 
     recordSupplier.close();
     EasyMock.expectLastCall().once();
