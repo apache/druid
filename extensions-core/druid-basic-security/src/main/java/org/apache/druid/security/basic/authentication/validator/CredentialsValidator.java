@@ -17,18 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.security.basic.authentication.db.cache;
+package org.apache.druid.security.basic.authentication.validator;
 
-/**
- * Sends a notification to druid services, containing updated authenticator user map state.
- */
-public interface BasicAuthenticatorCacheNotifier
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.server.security.AuthenticationResult;
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = MetadataStoreCredentialsValidator.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "metadata", value = MetadataStoreCredentialsValidator.class),
+    @JsonSubTypes.Type(name = "ldap", value = LDAPCredentialsValidator.class),
+})
+public interface CredentialsValidator
 {
-  /**
-   * Send the user map state contained in updatedUserMap to all non-coordinator Druid services
-   *
-   * @param updatedAuthenticatorPrefix Name of authenticator being updated
-   * @param updatedUserMap User map state
-   */
-  void addUserUpdate(String updatedAuthenticatorPrefix, byte[] updatedUserMap);
+  AuthenticationResult validateCredentials(
+      String authenticatorName,
+      String authorizerName,
+      String username,
+      char[] password
+  );
 }

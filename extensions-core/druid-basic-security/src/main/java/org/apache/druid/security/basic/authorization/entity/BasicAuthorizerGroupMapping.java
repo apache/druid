@@ -17,24 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.security.basic.authentication.entity;
+package org.apache.druid.security.basic.authorization.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class BasicAuthenticatorUser
+import java.util.HashSet;
+import java.util.Set;
+
+public class BasicAuthorizerGroupMapping
 {
   private final String name;
-  private final BasicAuthenticatorCredentials credentials;
+  private final String groupPattern;
+  private final Set<String> roles;
 
   @JsonCreator
-  public BasicAuthenticatorUser(
+  public BasicAuthorizerGroupMapping(
       @JsonProperty("name") String name,
-      @JsonProperty("credentials") BasicAuthenticatorCredentials credentials
+      @JsonProperty("groupPattern") String groupPattern,
+      @JsonProperty("roles") Set<String> roles
   )
   {
     this.name = name;
-    this.credentials = credentials;
+    this.groupPattern = groupPattern;
+    this.roles = roles == null ? new HashSet<>() : roles;
   }
 
   @JsonProperty
@@ -44,9 +50,15 @@ public class BasicAuthenticatorUser
   }
 
   @JsonProperty
-  public BasicAuthenticatorCredentials getCredentials()
+  public String getGroupPattern()
   {
-    return credentials;
+    return groupPattern;
+  }
+
+  @JsonProperty
+  public Set<String> getRoles()
+  {
+    return roles;
   }
 
   @Override
@@ -55,21 +67,31 @@ public class BasicAuthenticatorUser
     if (this == o) {
       return true;
     }
-    if (o == null || !getClass().equals(o.getClass())) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
 
-    BasicAuthenticatorUser that = (BasicAuthenticatorUser) o;
+    BasicAuthorizerGroupMapping that = (BasicAuthorizerGroupMapping) o;
 
-    return (getName() != null ? getName().equals(that.getName()) : that.getName() == null)
-           && (getCredentials() != null ? getCredentials().equals(that.getCredentials()) : that.getCredentials() == null);
+    if (getName() != null ? !getName().equals(that.getName()) : that.getName() != null) {
+      return false;
+    }
+
+    if (getGroupPattern() != null ? !getGroupPattern().equals(that.getGroupPattern()) : that.getGroupPattern() != null) {
+      return false;
+    }
+
+    return getRoles() != null ? getRoles().equals(that.getRoles()) : that.getRoles() == null;
+
   }
 
   @Override
   public int hashCode()
   {
     int result = getName() != null ? getName().hashCode() : 0;
-    result = 31 * result + (getCredentials() != null ? getCredentials().hashCode() : 0);
+    result = 31 * result
+             + (getGroupPattern() != null ? getGroupPattern().hashCode() : 0)
+             + (getRoles() != null ? getRoles().hashCode() : 0);
     return result;
   }
 }

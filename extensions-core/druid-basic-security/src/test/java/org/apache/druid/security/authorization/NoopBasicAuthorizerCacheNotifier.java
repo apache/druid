@@ -24,7 +24,13 @@ import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCac
 public class NoopBasicAuthorizerCacheNotifier implements BasicAuthorizerCacheNotifier
 {
   @Override
-  public void addUpdate(String authorizerPrefix, byte[] userAndRoleMap)
+  public void addUpdateUser(String authorizerPrefix, byte[] userAndRoleMap)
+  {
+
+  }
+
+  @Override
+  public void addUpdateGroupMapping(String authorizerPrefix, byte[] groupMappingAndRoleMap)
   {
 
   }

@@ -17,18 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.security.basic.authentication.db.cache;
+package org.apache.druid.security.basic;
+
+import org.apache.druid.java.util.common.StringUtils;
 
 /**
- * Sends a notification to druid services, containing updated authenticator user map state.
+ * Throw this when a request is unauthorized and we want to send a 401 response back.
  */
-public interface BasicAuthenticatorCacheNotifier
+public class BasicSecurityAuthenticationException extends IllegalArgumentException
 {
-  /**
-   * Send the user map state contained in updatedUserMap to all non-coordinator Druid services
-   *
-   * @param updatedAuthenticatorPrefix Name of authenticator being updated
-   * @param updatedUserMap User map state
-   */
-  void addUserUpdate(String updatedAuthenticatorPrefix, byte[] updatedUserMap);
+  public BasicSecurityAuthenticationException(String formatText, Object... arguments)
+  {
+    super(StringUtils.nonStrictFormat(formatText, arguments));
+  }
+
+  public BasicSecurityAuthenticationException(Throwable t, String formatText, Object... arguments)
+  {
+    super(StringUtils.nonStrictFormat(formatText, arguments), t);
+  }
 }
