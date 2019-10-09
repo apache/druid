@@ -162,12 +162,11 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 
   /**
    * Each compaction task can run a parallel indexing task. When we count the number of current running
-   * compaction tasks, we should count the sub tasks of parallel indexing task as well. However, we currently
-   * don't have a way to get the number of current running sub tasks except poking each supervisor task,
-   * which is complex to handle all kinds of failures.
-   * Here, instead, we compute a rough number of running sub tasks by summing maxNumConcurrentSubTasks
-   * in tuningConfig of each supervisor task. The result will be a conservatively estimated number of sub tasks
-   * which should be ok since it won't affect to the performance of other ingestion types.
+   * compaction tasks, we should count the sub tasks of the parallel indexing task as well. However, we currently
+   * don't have a good way to get the number of current running sub tasks except poking each supervisor task,
+   * which is complex to handle all kinds of failures. Here, we simply return {@code maxNumConcurrentSubTasks} instead
+   * to estimate the number of sub tasks conservatively. This should be ok since it won't affect to the performance of
+   * other ingestion types.
    */
   private int findNumMaxConcurrentSubTasks(@Nullable ClientCompactQueryTuningConfig tuningConfig)
   {
@@ -222,6 +221,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
             taskId,
             Iterables.transform(segmentsToCompact, DataSegment::getId)
         );
+        // Count the compaction task itself + its sub tasks
         numSubmittedTasks += findNumMaxConcurrentSubTasks(config.getTuningConfig()) + 1;
       } else if (segmentsToCompact.size() == 1) {
         throw new ISE("Found one segments[%s] to compact", segmentsToCompact);

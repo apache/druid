@@ -54,21 +54,31 @@ public class ClientCompactQueryTuningConfig
       @Nullable Integer maxRowsPerSegment
   )
   {
-    return new ClientCompactQueryTuningConfig(
-        maxRowsPerSegment,
-        userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getMaxRowsInMemory(),
-        userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getMaxBytesInMemory(),
-        userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getMaxTotalRows(),
-        userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getSplitHintSpec(),
-        userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getIndexSpec(),
-        userCompactionTaskQueryTuningConfig == null
-        ? null
-        : userCompactionTaskQueryTuningConfig.getMaxPendingPersists(),
-        userCompactionTaskQueryTuningConfig == null ? null : userCompactionTaskQueryTuningConfig.getPushTimeout(),
-        userCompactionTaskQueryTuningConfig == null
-        ?
-        null : userCompactionTaskQueryTuningConfig.getMaxNumConcurrentSubTasks()
-    );
+    if (userCompactionTaskQueryTuningConfig == null) {
+      return new ClientCompactQueryTuningConfig(
+          maxRowsPerSegment,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
+    } else {
+      return new ClientCompactQueryTuningConfig(
+          maxRowsPerSegment,
+          userCompactionTaskQueryTuningConfig.getMaxRowsInMemory(),
+          userCompactionTaskQueryTuningConfig.getMaxBytesInMemory(),
+          userCompactionTaskQueryTuningConfig.getMaxTotalRows(),
+          userCompactionTaskQueryTuningConfig.getSplitHintSpec(),
+          userCompactionTaskQueryTuningConfig.getIndexSpec(),
+          userCompactionTaskQueryTuningConfig.getMaxPendingPersists(),
+          userCompactionTaskQueryTuningConfig.getPushTimeout(),
+          userCompactionTaskQueryTuningConfig.getMaxNumConcurrentSubTasks()
+      );
+    }
   }
 
   @JsonCreator
