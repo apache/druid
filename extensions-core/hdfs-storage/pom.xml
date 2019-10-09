@@ -355,15 +355,19 @@
         <artifactId>hadoop-hdfs-client</artifactId>
         <scope>runtime</scope>
       </dependency>
+      <!--
+        jackson-jaxrs and jackson-xc are not pulled in transitively, but are sometimes needed when using HDFS
+        with Hadoop batch ingestion. We explicitly include these dependencies here.
+      -->
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-jaxrs</artifactId>
-        <version>1.9.13</version>
+        <version>${codehaus.jackson.version}</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-xc</artifactId>
-        <version>1.9.13</version>
+        <version>${codehaus.jackson.version}</version>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
