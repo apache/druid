@@ -2870,11 +2870,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         ));
   }
 
-  protected IndexerMetadataStorageCoordinator getIndexerMetadataStorageCoordinator()
-  {
-    return indexerMetadataStorageCoordinator;
-  }
-
   private OrderedSequenceNumber<SequenceOffsetType> makeSequenceNumber(SequenceOffsetType seq)
   {
     return makeSequenceNumber(seq, false);
