@@ -209,6 +209,10 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/overShadowed/count`|Number of overShadowed segments.||Varies.|
 |`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|datasource.|0|
 |`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|tier, datasource.|0|
+|`tier/historical/count`|Number of available historical nodes in each tier.|tier.|Varies.|
+|`tier/replication/factor`|Configured maximum replication factor in each tier.|tier.|Varies.|
+|`tier/required/capacity`|Total capacity in bytes required in each tier.|tier.|Varies.|
+|`tier/total/capacity`|Total capacity in bytes available in each tier.|tier.|Varies.|
 
 If `emitBalancingStats` is set to `true` in the Coordinator [dynamic configuration](../configuration/index.html#dynamic-configuration), then [log entries](../configuration/logging.md) for class `org.apache.druid.server.coordinator.helper.DruidCoordinatorLogger` will have extra information on balancing decisions.
 
