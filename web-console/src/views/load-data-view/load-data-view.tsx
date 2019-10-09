@@ -31,8 +31,6 @@ import {
   Icon,
   IconName,
   Intent,
-  Menu,
-  MenuItem,
   Popover,
   Switch,
   TextArea,
