@@ -787,5 +787,63 @@
                 </plugins>
             </build>
         </profile>
+        <profile>
+            <!-- Bundle the subset of community extensions we care about. -->
+            <id>bundle-contrib-pinterest</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>pull-deps-contrib-pinterest</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>java</executable>
+                                    <arguments>
+                                        <argument>-classpath</argument>
+                                        <classpath />
+                                        <argument>-Ddruid.extensions.loadList=[]</argument>
+                                        <argument>-Ddruid.extensions.directory=${project.build.directory}/extensions
+                                        </argument>
+                                        <argument>
+                                            -Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop-dependencies
+                                        </argument>
+                                        <argument>org.apache.druid.cli.Main</argument>
+                                        <argument>tools</argument>
+                                        <argument>pull-deps</argument>
+                                        <argument>--defaultVersion</argument>
+                                        <argument>${project.parent.version}</argument>
+                                        <argument>-l</argument>
+                                        <argument>${settings.localRepository}</argument>
+                                        <argument>--no-default-hadoop</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-distinctcount</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:statsd-emitter</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-thrift-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-time-min-max</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-virtual-columns</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-name-numbered-shard-spec</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-knox-password-provider</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-hash-name-numbered-shard-spec</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 </project>
