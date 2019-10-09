@@ -273,7 +273,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
   }
 
-
   @Test
   public void testMultiTask() throws Exception
   {
@@ -3951,10 +3950,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
 
-    supervisorRecordSupplier.addBannedId(SHARD_ID0);
-    EasyMock.expectLastCall()
-            .anyTimes();
-
     Capture<Task> postSplitCaptured = Capture.newInstance(CaptureType.ALL);
 
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -4401,13 +4396,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-
-    supervisorRecordSupplier.addBannedId(SHARD_ID0);
-    EasyMock.expectLastCall()
-            .anyTimes();
-    supervisorRecordSupplier.addBannedId(SHARD_ID1);
-    EasyMock.expectLastCall()
-            .anyTimes();
 
     Capture<Task> postMergeCaptured = Capture.newInstance(CaptureType.ALL);
 

@@ -58,10 +58,9 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.utils.RandomIdUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.DimensionHandlerUtils;
 import org.joda.time.DateTime;
 
-import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -70,7 +69,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -234,26 +232,24 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       partitionIds.add(partitionId);
     }
 
-    Integer intForModulo = extractShardNumberFromShardId(partitionId);
-    if (intForModulo == null) {
-      intForModulo = getHashIntFromShardId(partitionId);
+    BigInteger numberFromShardId = extractShardNumberFromShardId(partitionId);
+    if (numberFromShardId != null) {
+      BigInteger taskCountAsBigInt = BigInteger.valueOf(spec.getIoConfig().getTaskCount());
+      return Math.abs(numberFromShardId.mod(taskCountAsBigInt).intValue());
+    } else {
+      return Math.abs(getHashIntFromShardId(partitionId) % spec.getIoConfig().getTaskCount());
     }
-
-    return Math.abs(intForModulo % spec.getIoConfig().getTaskCount());
   }
 
-  private Integer extractShardNumberFromShardId(String shardId)
+  private BigInteger extractShardNumberFromShardId(String shardId)
   {
     String numOnly = StringUtils.replace(shardId, "shardId-", "");
     try {
-      Long shardNum = DimensionHandlerUtils.convertObjectToLong(numOnly);
-      if (shardNum != null) {
-        return shardNum.intValue();
-      } else {
-        return null;
-      }
+      // Kinesis shard ID length can be up to 128 characters
+      // https://docs.aws.amazon.com/kinesis/latest/APIReference/API_ListShards.html
+      return new BigInteger(numOnly);
     }
-    catch (Exception e) {
+    catch (NumberFormatException e) {
       return null;
     }
   }
@@ -358,7 +354,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
-  protected Map<String, OrderedSequenceNumber<String>> filterDeadShardsFromStartingOffsets(
+  protected Map<String, OrderedSequenceNumber<String>> filterExpiredPartitionsFromStartingOffsets(
       Map<String, OrderedSequenceNumber<String>> startingOffsets
   )
   {
@@ -367,26 +363,34 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       if (!entry.getValue().get().equals(KinesisSequenceNumber.END_OF_SHARD_MARKER)) {
         filteredOffsets.put(entry.getKey(), entry.getValue());
       } else {
-        log.info("Excluding shard[%s] because it has reached EOS.", entry.getKey());
+        log.debug("Excluding shard[%s] because it has reached EOS.", entry.getKey());
       }
     }
     return filteredOffsets;
   }
 
   @Override
-  protected void cleanupDeadShards(Set<String> expiredShards)
+  protected boolean supportsPartitionExpiration()
   {
-    log.info("Cleaning up dead shards: " + expiredShards);
+    return true;
+  }
 
-    final KinesisDataSourceMetadata dataSourceMetadata =
-        (KinesisDataSourceMetadata) getIndexerMetadataStorageCoordinator().getDataSourceMetadata(dataSource);
+  @Override
+  protected KinesisDataSourceMetadata createDataSourceMetadataWithoutExpiredPartitions(
+      SeekableStreamDataSourceMetadata<String, String> currentMetadata,
+      Set<String> expiredPartitionIds
+  )
+  {
+    log.info("Cleaning up dead shards: " + expiredPartitionIds);
+
+    final KinesisDataSourceMetadata dataSourceMetadata = (KinesisDataSourceMetadata) currentMetadata;
 
     SeekableStreamSequenceNumbers<String, String> old = dataSourceMetadata.getSeekableStreamSequenceNumbers();
 
     Map<String, String> oldPartitionSequenceNumberMap = old.getPartitionSequenceNumberMap();
     Map<String, String> newPartitionSequenceNumberMap = new HashMap<>();
     for (Map.Entry<String, String> entry : oldPartitionSequenceNumberMap.entrySet()) {
-      if (!expiredShards.contains(entry.getKey())) {
+      if (!expiredPartitionIds.contains(entry.getKey())) {
         newPartitionSequenceNumberMap.put(entry.getKey(), entry.getValue());
       }
     }
@@ -397,7 +401,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       newExclusiveStartPartitions = new HashSet<>();
       oldExclusiveStartPartitions = ((SeekableStreamStartSequenceNumbers<String, String>) old).getExclusivePartitions();
       for (String partitionId : oldExclusiveStartPartitions) {
-        if (!expiredShards.contains(partitionId)) {
+        if (!expiredPartitionIds.contains(partitionId)) {
           newExclusiveStartPartitions.add(partitionId);
         }
       }
@@ -421,29 +425,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       );
     }
 
-    try {
-      boolean success = getIndexerMetadataStorageCoordinator().resetDataSourceMetadata(
-          dataSource,
-          new KinesisDataSourceMetadata(newSequences)
-      );
-      log.info("cleanupDeadShardsFromMetadata result: " + success);
-      if (success) {
-        removeDeadShardsFromMemory(expiredShards);
-      }
-    }
-    catch (IOException ioe) {
-      throw new RuntimeException(ioe);
-    }
-  }
-
-  public void removeDeadShardsFromMemory(Set<String> expiredShards)
-  {
-    partitionIds.removeAll(expiredShards);
-
-    for (ConcurrentHashMap<String, String> partitionGroup : partitionGroups.values()) {
-      for (String expiredShard : expiredShards) {
-        partitionGroup.remove(expiredShard);
-      }
-    }
+    return new KinesisDataSourceMetadata(newSequences);
   }
 }

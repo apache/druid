@@ -1847,9 +1847,43 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected abstract String baseTaskName();
 
-  protected void cleanupDeadShards(Set<PartitionIdType> expiredShards)
+  protected boolean supportsPartitionExpiration()
   {
+    return false;
+  }
 
+  /**
+   *
+   * Some seekable stream systems such as Kinesis allow partitions to expire. When this occurs, the supervisor should
+   * remove the expired partitions from saved metadata and from the partition groups stored in memory.
+   *
+   * @param currentMetadata The current DataSourceMetadata from metadata storage
+   * @param expiredPartitionIds The set of expired partition IDs.
+   * @return currentMetadata but with any expired partitions removed.
+   */
+  protected SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetadataWithoutExpiredPartitions(
+      SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentMetadata,
+      Set<PartitionIdType> expiredPartitionIds
+  )
+  {
+    throw new UnsupportedOperationException("This supervisor type does not support partition expiration.");
+  }
+
+  /**
+   * Removes a set of expired partition IDs from partitionIds and partitionGroups. This is called after
+   * successfully removing expired partitions from metadata, for supervisor types that support partition expiration.
+   *
+   * @param expiredPartitionIds Set of expired partition IDs.
+   */
+  private void removeExpiredPartitionsFromMemory(Set<PartitionIdType> expiredPartitionIds)
+  {
+    partitionIds.removeAll(expiredPartitionIds);
+
+    for (ConcurrentHashMap<PartitionIdType, SequenceOffsetType> partitionGroup : partitionGroups.values()) {
+      for (PartitionIdType expiredShard : expiredPartitionIds) {
+        partitionGroup.remove(expiredShard);
+      }
+    }
   }
 
   private boolean updatePartitionDataFromStream()
@@ -1912,16 +1946,33 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-    // Look for expired shards and remove them from metadata storage and the partition groups
-    Set<PartitionIdType> expiredShards = new HashSet<>();
-    for (PartitionIdType partitionTd : closedPartitions) {
-      if (!partitionIds.contains(partitionTd)) {
-        expiredShards.add(partitionTd);
+    if (supportsPartitionExpiration()) {
+      // Look for expired shards and remove them from metadata storage and the partition groups
+      Set<PartitionIdType> expiredPartitions = new HashSet<>();
+      for (PartitionIdType partitionTd : closedPartitions) {
+        if (!partitionIds.contains(partitionTd)) {
+          expiredPartitions.add(partitionTd);
+        }
       }
-    }
 
-    if (expiredShards.size() > 0) {
-      cleanupDeadShards(expiredShards);
+      if (expiredPartitions.size() > 0) {
+        @SuppressWarnings("unchecked")
+        SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentMetdata =
+            (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) indexerMetadataStorageCoordinator.getDataSourceMetadata(
+                dataSource);
+        SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> cleanedMetadata =
+            createDataSourceMetadataWithoutExpiredPartitions(currentMetdata, expiredPartitions);
+
+        try {
+          boolean success = indexerMetadataStorageCoordinator.resetDataSourceMetadata(dataSource, cleanedMetadata);
+          if (success) {
+            removeExpiredPartitionsFromMemory(expiredPartitions);
+          }
+        }
+        catch (IOException ioe) {
+          throw new RuntimeException(ioe);
+        }
+      }
     }
 
     return true;
@@ -2403,7 +2454,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
   }
 
-  protected Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> filterDeadShardsFromStartingOffsets(
+  /**
+   * If the seekable stream system supported by this supervisor allows for partition expiration, expired partitions
+   * should be removed from the starting offsets sent to the tasks.
+   *
+   * @param startingOffsets
+   * @return
+   */
+  protected Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> filterExpiredPartitionsFromStartingOffsets(
       Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> startingOffsets
   )
   {
@@ -2437,8 +2495,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         final Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> unfilteredStartingOffsets =
             generateStartingSequencesForPartitionGroup(groupId);
 
-        final Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> startingOffsets =
-            filterDeadShardsFromStartingOffsets(unfilteredStartingOffsets);
+        final Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> startingOffsets;
+        if (supportsPartitionExpiration()) {
+          startingOffsets = filterExpiredPartitionsFromStartingOffsets(unfilteredStartingOffsets);
+        } else {
+          startingOffsets = unfilteredStartingOffsets;
+        }
 
         ImmutableMap<PartitionIdType, SequenceOffsetType> simpleStartingOffsets = startingOffsets
             .entrySet()
@@ -2450,15 +2512,20 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                 )
             );
 
-        ImmutableMap<PartitionIdType, SequenceOffsetType> simpleUnfilteredStartingOffsets = unfilteredStartingOffsets
-            .entrySet()
-            .stream()
-            .filter(x -> x.getValue().get() != null)
-            .collect(
-                Collectors.collectingAndThen(
-                    Collectors.toMap(Entry::getKey, x -> x.getValue().get()), ImmutableMap::copyOf
-                )
-            );
+        ImmutableMap<PartitionIdType, SequenceOffsetType> simpleUnfilteredStartingOffsets;
+        if (supportsPartitionExpiration()) {
+          simpleUnfilteredStartingOffsets = unfilteredStartingOffsets
+              .entrySet()
+              .stream()
+              .filter(x -> x.getValue().get() != null)
+              .collect(
+                  Collectors.collectingAndThen(
+                      Collectors.toMap(Entry::getKey, x -> x.getValue().get()), ImmutableMap::copyOf
+                  )
+              );
+        } else {
+          simpleUnfilteredStartingOffsets = simpleStartingOffsets;
+        }
 
         Set<PartitionIdType> exclusiveStartSequenceNumberPartitions = !useExclusiveStartingSequence
                                                                       ? Collections.emptySet()
