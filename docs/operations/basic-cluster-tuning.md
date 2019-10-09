@@ -420,7 +420,7 @@ Enabling process termination on out-of-memory errors is useful as well, since th
 
 `ExitOnOutOfMemoryError` flag is only supported starting JDK 8u92 . For older versions, `-XX:OnOutOfMemoryError='kill -9 %p'` can be used.
 
-`MaxDirectMemorySize` restricts JVM from allocating more than specified limit, by setting it to unlimited JVM restriction is lifted and OS level memory limits would still be effective. It's still important to make sure that Druid is not configured to allocate more off-heap memory than your machine has available. Important settings here include druid.processing.numThreads, druid.processing.numMergeBuffers, and druid.processing.buffer.sizeBytes.
+`MaxDirectMemorySize` restricts JVM from allocating more than specified limit, by setting it to unlimited JVM restriction is lifted and OS level memory limits would still be effective. It's still important to make sure that Druid is not configured to allocate more off-heap memory than your machine has available. Important settings here include `druid.processing.numThreads`, `druid.processing.numMergeBuffers`, and `druid.processing.buffer.sizeBytes`.
 
 Please note that above flags are general guidelines only. Be cautious and feel free to change them if necessary for the specific deployment.
 
@@ -455,7 +455,7 @@ For Historical, MiddleManager, and Indexer processes (and for really large clust
 
 ##### ulimit
 
-The limit on the number of open files can be set permanantly by editing `/etc/security/limits.conf`. This value should be substantially greater than the number of segment files that will exist on the server.
+The limit on the number of open files can be set permanently by editing `/etc/security/limits.conf`. This value should be substantially greater than the number of segment files that will exist on the server.
 
 ##### max_map_count
 
