@@ -233,10 +233,10 @@ public class LookupCoordinatorManager
             for (Map.Entry<String, LookupExtractorFactoryMapContainer> e : updateTierSpec.entrySet()) {
               if (updatedTierSpec.containsKey(e.getKey()) && !e.getValue().replaces(updatedTierSpec.get(e.getKey()))) {
                 throw new IAE(
-                    "given update for lookup [%s]:[%s] can't replace existing spec [%s].",
+                    "given update for lookup [%s]:[%s] can't replace existing spec's version [%s].",
                     tier,
                     e.getKey(),
-                    updatedTierSpec.get(e.getKey())
+                    updatedTierSpec.get(e.getKey()).getVersion()
                 );
               }
             }
