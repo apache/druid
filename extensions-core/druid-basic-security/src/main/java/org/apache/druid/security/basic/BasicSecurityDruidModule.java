@@ -32,6 +32,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.http.client.NettyHttpClient;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.BasicHTTPEscalator;
 import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
@@ -72,14 +73,19 @@ public class BasicSecurityDruidModule implements DruidModule
   {
     JsonConfigProvider.bind(binder, "druid.auth.basic.common", BasicAuthCommonCacheConfig.class);
     JsonConfigProvider.bind(binder, "druid.auth.basic.composition", BasicAuthClassCompositionConfig.class);
+    JsonConfigProvider.bind(binder, "druid.auth.basic.ssl", BasicAuthSSLConfig.class);
 
     LifecycleModule.register(binder, BasicAuthenticatorMetadataStorageUpdater.class);
     LifecycleModule.register(binder, BasicAuthorizerMetadataStorageUpdater.class);
     LifecycleModule.register(binder, BasicAuthenticatorCacheManager.class);
     LifecycleModule.register(binder, BasicAuthorizerCacheManager.class);
+    LifecycleModule.register(binder, BasicAuthenticatorCacheNotifier.class);
+    LifecycleModule.register(binder, BasicAuthorizerCacheNotifier.class);
 
     Jerseys.addResource(binder, BasicAuthenticatorResource.class);
     Jerseys.addResource(binder, BasicAuthorizerResource.class);
+
+    binder.requestStaticInjection(BasicSecuritySSLSocketFactory.class);
   }
 
   @Provides
@@ -201,7 +207,7 @@ public class BasicSecurityDruidModule implements DruidModule
         NoopBasicAuthorizerCacheNotifier.class
     );
   }
-
+  
   @Override
   public List<? extends Module> getJacksonModules()
   {
@@ -209,7 +215,8 @@ public class BasicSecurityDruidModule implements DruidModule
         new SimpleModule("BasicDruidSecurity").registerSubtypes(
             BasicHTTPAuthenticator.class,
             BasicHTTPEscalator.class,
-            BasicRoleBasedAuthorizer.class
+            BasicRoleBasedAuthorizer.class,
+            NettyHttpClient.class
         )
     );
   }

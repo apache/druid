@@ -537,7 +537,7 @@ exports[`tasks view matches snapshot 1`] = `
               "Header": "Task ID",
               "accessor": "task_id",
               "show": true,
-              "width": 300,
+              "width": 500,
             },
             Object {
               "Aggregated": [Function],
@@ -551,6 +551,7 @@ exports[`tasks view matches snapshot 1`] = `
               "Header": "Type",
               "accessor": "type",
               "show": true,
+              "width": 140,
             },
             Object {
               "Cell": [Function],
@@ -570,7 +571,7 @@ exports[`tasks view matches snapshot 1`] = `
               "Header": "Created time",
               "accessor": "created_time",
               "show": true,
-              "width": 120,
+              "width": 190,
             },
             Object {
               "Cell": [Function],
@@ -589,6 +590,7 @@ exports[`tasks view matches snapshot 1`] = `
               "accessor": "duration",
               "filterable": false,
               "show": true,
+              "width": 70,
             },
             Object {
               "Aggregated": [Function],

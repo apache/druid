@@ -49,6 +49,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 
+import javax.annotation.Nullable;
+
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -705,7 +707,7 @@ public class JobHelper
       final Configuration configuration,
       final File outDir,
       final Progressable progressable,
-      final RetryPolicy retryPolicy
+      @Nullable final RetryPolicy retryPolicy
   ) throws IOException
   {
     final RetryPolicy effectiveRetryPolicy;

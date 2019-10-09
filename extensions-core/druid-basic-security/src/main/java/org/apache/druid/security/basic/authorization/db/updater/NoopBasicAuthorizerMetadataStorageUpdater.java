@@ -19,6 +19,7 @@
 
 package org.apache.druid.security.basic.authorization.db.updater;
 
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import org.apache.druid.server.security.ResourceAction;
@@ -44,6 +45,16 @@ public class NoopBasicAuthorizerMetadataStorageUpdater implements BasicAuthorize
   }
 
   @Override
+  public void createGroupMapping(String prefix, BasicAuthorizerGroupMapping groupMapping)
+  {
+  }
+
+  @Override
+  public void deleteGroupMapping(String prefix, String groupMappingName)
+  {
+  }
+
+  @Override
   public void createRole(String prefix, String roleName)
   {
   }
@@ -54,12 +65,22 @@ public class NoopBasicAuthorizerMetadataStorageUpdater implements BasicAuthorize
   }
 
   @Override
-  public void assignRole(String prefix, String userName, String roleName)
+  public void assignUserRole(String prefix, String userName, String roleName)
   {
   }
 
   @Override
-  public void unassignRole(String prefix, String userName, String roleName)
+  public void unassignUserRole(String prefix, String userName, String roleName)
+  {
+  }
+
+  @Override
+  public void assignGroupMappingRole(String prefix, String groupMappingName, String roleName)
+  {
+  }
+
+  @Override
+  public void unassignGroupMappingRole(String prefix, String groupMappingName, String roleName)
   {
   }
 
@@ -70,6 +91,12 @@ public class NoopBasicAuthorizerMetadataStorageUpdater implements BasicAuthorize
 
   @Override
   public Map<String, BasicAuthorizerUser> getCachedUserMap(String prefix)
+  {
+    return Collections.emptyMap();
+  }
+
+  @Override
+  public Map<String, BasicAuthorizerGroupMapping> getCachedGroupMappingMap(String prefix)
   {
     return Collections.emptyMap();
   }
@@ -88,6 +115,12 @@ public class NoopBasicAuthorizerMetadataStorageUpdater implements BasicAuthorize
 
   @Override
   public byte[] getCurrentRoleMapBytes(String prefix)
+  {
+    return new byte[0];
+  }
+
+  @Override
+  public byte[] getCurrentGroupMappingMapBytes(String prefix)
   {
     return new byte[0];
   }

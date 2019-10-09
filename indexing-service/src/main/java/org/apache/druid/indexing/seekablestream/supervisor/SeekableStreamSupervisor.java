@@ -1293,11 +1293,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     int taskCount = 0;
     List<String> futureTaskIds = new ArrayList<>();
     List<ListenableFuture<Boolean>> futures = new ArrayList<>();
-    List<Task> tasks = taskStorage.getActiveTasks();
+    List<Task> tasks = taskStorage.getActiveTasksByDatasource(dataSource);
+
     final Map<Integer, TaskGroup> taskGroupsToVerify = new HashMap<>();
 
     for (Task task : tasks) {
-      if (!doesTaskTypeMatchSupervisor(task) || !dataSource.equals(task.getDataSource())) {
+      if (!doesTaskTypeMatchSupervisor(task)) {
         continue;
       }
 

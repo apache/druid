@@ -54,6 +54,8 @@ Double.NEGATIVE_INFINITY
 Double.NEGATIVE_INFINITY.
 Double.POSITIVE_INFINITY
 Double.POSITIVE_INFINITY.
+Dropwizard
+dropwizard
 DruidSQL
 EC2
 EMR
@@ -76,6 +78,7 @@ Homebrew
 HyperLogLog
 IANA
 IETF
+IP
 IPv4
 IS0
 ISO-8601
@@ -89,6 +92,7 @@ JDK
 JDK7
 JDK8
 JKS
+JMX
 JRE
 JS
 JSON
@@ -565,6 +569,18 @@ authorizerName
 druid_system
 pollingPeriod
 roleName
+LDAP
+ldap
+MyBasicMetadataAuthenticator
+MyBasicLDAPAuthenticator
+MyBasicMetadataAuthorizer
+MyBasicLDAPAuthorizer
+credentialsValidator
+sAMAccountName
+objectClass
+initialAdminRole
+adminGroupMapping
+groupMappingName
  - ../docs/development/extensions-core/druid-kerberos.md
 8Kb
 HttpComponents
@@ -759,6 +775,7 @@ statsd-emitter
 coords
 dimName
 maxCoords
+Mb
 minCoords
  - ../docs/development/javascript.md
 Metaspace
@@ -1551,6 +1568,7 @@ java.class.path
 java.io.tmpdir
 javaOpts
 javaOptsArray
+leastBytesUsed
 loadList
 loadqueuepeon
 loadspec
@@ -1574,6 +1592,7 @@ queryType
 remoteTaskRunnerConfig
 rendezvousHash
 resultsets
+roundRobin
 runtime.properties
 runtime.properties.
 s3
