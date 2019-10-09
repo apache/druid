@@ -823,6 +823,7 @@ listDelimiter
 timestampSpec
  - ../docs/ingestion/data-management.md
 1GB
+IOConfig
 compactionTask
 compactionTasks
 ingestSegmentFirehose
