@@ -3150,7 +3150,7 @@ name: Gson
 license_category: binary
 module: extensions/protobuf-extensions
 license_name: Apache License version 2.0
-version: 2.7
+version: 2.8.5
 libraries:
   - com.google.code.gson: gson
 
