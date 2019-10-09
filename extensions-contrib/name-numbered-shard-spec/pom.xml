@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <groupId>org.apache.druid.extensions.contrib</groupId>
-    <artifactId>druid-hash-name-numbered-shard-spec</artifactId>
-    <name>druid-hash-name-numbered-shard-spec</name>
-    <description>druid-hash-name-numbered-shard-spec</description>
+    <artifactId>druid-name-numbered-shard-spec</artifactId>
+    <name>druid-name-numbered-shard-spec</name>
+    <description>druid-name-numbered-shard-spec</description>
 
     <parent>
         <artifactId>druid</artifactId>
@@ -27,15 +27,14 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
+            <groupId>org.easymock</groupId>
+            <artifactId>easymock</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.druid.extensions.contrib</groupId>
-            <artifactId>druid-name-numbered-shard-spec</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>compile</scope>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
