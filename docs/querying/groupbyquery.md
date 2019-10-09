@@ -267,26 +267,26 @@ as the index, so the aggregated values in the array can be accessed directly wit
 
 When using groupBy v2, three parameters control resource usage and limits:
 
-- druid.processing.buffer.sizeBytes: size of the off-heap hash table used for aggregation, per query, in bytes. At
-most druid.processing.numMergeBuffers of these will be created at once, which also serves as an upper limit on the
+- `druid.processing.buffer.sizeBytes`: size of the off-heap hash table used for aggregation, per query, in bytes. At
+most `druid.processing.numMergeBuffers` of these will be created at once, which also serves as an upper limit on the
 number of concurrently running groupBy queries.
-- druid.query.groupBy.maxMergingDictionarySize: size of the on-heap dictionary used when grouping on strings, per query,
+- `druid.query.groupBy.maxMergingDictionarySize`: size of the on-heap dictionary used when grouping on strings, per query,
 in bytes. Note that this is based on a rough estimate of the dictionary size, not the actual size.
-- druid.query.groupBy.maxOnDiskStorage: amount of space on disk used for aggregation, per query, in bytes. By default,
+- `druid.query.groupBy.maxOnDiskStorage`: amount of space on disk used for aggregation, per query, in bytes. By default,
 this is 0, which means aggregation will not use disk.
 
-If maxOnDiskStorage is 0 (the default) then a query that exceeds either the on-heap dictionary limit, or the off-heap
+If `maxOnDiskStorage` is 0 (the default) then a query that exceeds either the on-heap dictionary limit, or the off-heap
 aggregation table limit, will fail with a "Resource limit exceeded" error describing the limit that was exceeded.
 
-If maxOnDiskStorage is greater than 0, queries that exceed the in-memory limits will start using disk for aggregation.
+If `maxOnDiskStorage` is greater than 0, queries that exceed the in-memory limits will start using disk for aggregation.
 In this case, when either the on-heap dictionary or off-heap hash table fills up, partially aggregated records will be
 sorted and flushed to disk. Then, both in-memory structures will be cleared out for further aggregation. Queries that
-then go on to exceed maxOnDiskStorage will fail with a "Resource limit exceeded" error indicating that they ran out of
+then go on to exceed `maxOnDiskStorage` will fail with a "Resource limit exceeded" error indicating that they ran out of
 disk space.
 
 With groupBy v2, cluster operators should make sure that the off-heap hash tables and on-heap merging dictionaries
 will not exceed available memory for the maximum possible concurrent query load (given by
-druid.processing.numMergeBuffers). See the [basic cluster tuning guide](../operations/basic-cluster-tuning.md) 
+`druid.processing.numMergeBuffers`). See the [basic cluster tuning guide](../operations/basic-cluster-tuning.md) 
 for more details about direct memory usage, organized by Druid process type.
 
 Brokers do not need merge buffers for basic groupBy queries. Queries with subqueries (using a `query` dataSource) require one merge buffer if there is a single subquery, or two merge buffers if there is more than one layer of nested subqueries. Queries with [subtotals](groupbyquery.html#more-on-subtotalsspec) need one merge buffer. These can stack on top of each other: a groupBy query with multiple layers of nested subqueries, and that also uses subtotals, will need three merge buffers.
@@ -294,7 +294,7 @@ Brokers do not need merge buffers for basic groupBy queries. Queries with subque
 Historicals and ingestion tasks need one merge buffer for each groupBy query, unless [parallel combination](groupbyquery.html#parallel-combine) is enabled, in which case they need two merge buffers per query.
 
 When using groupBy v1, all aggregation is done on-heap, and resource limits are done through the parameter
-druid.query.groupBy.maxResults. This is a cap on the maximum number of results in a result set. Queries that exceed
+`druid.query.groupBy.maxResults`. This is a cap on the maximum number of results in a result set. Queries that exceed
 this limit will fail with a "Resource limit exceeded" error indicating they exceeded their row limit. Cluster
 operators should make sure that the on-heap aggregations will not exceed available JVM heap space for the expected
 concurrent query load.
