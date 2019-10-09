@@ -83,7 +83,7 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 {
-  private static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
+  private static final HashFunction HASH_FUNCTION = Hashing.sha1();
 
   private static final EmittingLogger log = new EmittingLogger(KinesisSupervisor.class);
 
