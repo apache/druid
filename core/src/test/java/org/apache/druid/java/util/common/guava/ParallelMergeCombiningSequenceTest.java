@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BinaryOperator;
 
@@ -143,7 +144,7 @@ public class ParallelMergeCombiningSequenceTest
     if (!currentBatch.isDrained()) {
       outputQueue.offer(currentBatch);
     }
-    outputQueue.offer(new ParallelMergeCombiningSequence.ResultBatch<>());
+    outputQueue.offer(ParallelMergeCombiningSequence.ResultBatch.TERMINAL);
 
     rawYielder.close();
     cursor.close();
@@ -153,7 +154,7 @@ public class ParallelMergeCombiningSequenceTest
     Sequence<IntPair> queueAsSequence = ParallelMergeCombiningSequence.makeOutputSequenceForQueue(
         outputQueue,
         true,
-        System.currentTimeMillis() + 10_000,
+        System.nanoTime() + TimeUnit.NANOSECONDS.convert(10_000, TimeUnit.MILLISECONDS),
         new ParallelMergeCombiningSequence.CancellationGizmo()
     );
 
@@ -214,7 +215,7 @@ public class ParallelMergeCombiningSequenceTest
     if (!currentBatch.isDrained()) {
       outputQueue.offer(currentBatch);
     }
-    outputQueue.offer(new ParallelMergeCombiningSequence.ResultBatch<>());
+    outputQueue.offer(ParallelMergeCombiningSequence.ResultBatch.TERMINAL);
 
     rawYielder.close();
     cursor.close();

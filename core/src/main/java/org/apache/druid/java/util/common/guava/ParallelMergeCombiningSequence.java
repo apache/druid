@@ -307,7 +307,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       }
       catch (Exception ex) {
         cancellationGizmo.cancel(ex);
-        out.offer(new ResultBatch<>());
+        out.offer(ResultBatch.TERMINAL);
       }
     }
 
@@ -551,19 +551,19 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           // if we got the cancellation signal, go ahead and write terminal value into output queue to help gracefully
           // allow downstream stuff to stop
           LOG.debug("cancelled after %s tasks", recursionDepth);
-          outputQueue.offer(new ResultBatch<>());
+          outputQueue.offer(ResultBatch.TERMINAL);
         } else {
           // if priority queue is empty, push the final accumulated value into the output batch and push it out
           outputBatch.add(currentCombinedValue);
           outputQueue.offer(outputBatch);
           // ... and the terminal value to indicate the blocking queue holding the values is complete
-          outputQueue.offer(new ResultBatch<>());
+          outputQueue.offer(ResultBatch.TERMINAL);
           LOG.debug("merge combine complete after %s tasks", recursionDepth);
         }
       }
       catch (Exception ex) {
         cancellationGizmo.cancel(ex);
-        outputQueue.offer(new ResultBatch<>());
+        outputQueue.offer(ResultBatch.TERMINAL);
       }
     }
   }
@@ -638,12 +638,12 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               cancellationGizmo
           ));
         } else {
-          outputQueue.offer(new ResultBatch<>());
+          outputQueue.offer(ResultBatch.TERMINAL);
         }
       }
       catch (Exception ex) {
         cancellationGizmo.cancel(ex);
-        outputQueue.offer(new ResultBatch<>());
+        outputQueue.offer(ResultBatch.TERMINAL);
       }
     }
   }
@@ -720,6 +720,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    */
   static class ResultBatch<E>
   {
+    static final ResultBatch TERMINAL = new ResultBatch();
+
     @Nullable
     private final Queue<E> values;
     private final boolean isTerminal;
@@ -730,7 +732,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       this.isTerminal = false;
     }
 
-    ResultBatch()
+    private ResultBatch()
     {
       this.values = null;
       this.isTerminal = true;
