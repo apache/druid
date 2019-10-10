@@ -29,7 +29,7 @@ public abstract class SimpleDoubleBufferAggregator implements BufferAggregator
 {
   final BaseDoubleColumnValueSelector selector;
 
-  SimpleDoubleBufferAggregator(BaseDoubleColumnValueSelector selector)
+  public SimpleDoubleBufferAggregator(BaseDoubleColumnValueSelector selector)
   {
     this.selector = selector;
   }

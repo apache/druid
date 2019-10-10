@@ -33,7 +33,7 @@ import org.apache.druid.timeline.DataSegment;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -42,9 +42,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SegmentLoaderLocalCacheManager implements SegmentLoader
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentLoaderLocalCacheManager.class);
-  private static final Comparator<StorageLocation> COMPARATOR = Comparator
-      .comparingLong(StorageLocation::availableSizeBytes)
-      .reversed();
 
   private final IndexIO indexIO;
   private final SegmentLoaderConfig config;
@@ -77,6 +74,8 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
    */
   private final ConcurrentHashMap<DataSegment, ReferenceCountingLock> segmentLocks = new ConcurrentHashMap<>();
 
+  private final StorageLocationSelectorStrategy strategy;
+
   // Note that we only create this via injection in historical and realtime nodes. Peons create these
   // objects via SegmentLoaderFactory objects, so that they can store segments in task-specific
   // directories rather than statically configured directories.
@@ -101,7 +100,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
           )
       );
     }
-    locations.sort(COMPARATOR);
+    this.strategy = config.getStorageLocationSelectorStrategy(locations);
   }
 
   @Override
@@ -175,10 +174,17 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
    * location may fail because of IO failure, most likely in two cases:<p>
    * 1. druid don't have the write access to this location, most likely the administrator doesn't config it correctly<p>
    * 2. disk failure, druid can't read/write to this disk anymore
+   *
+   * Locations are fetched using {@link StorageLocationSelectorStrategy}.
    */
   private StorageLocation loadSegmentWithRetry(DataSegment segment, String storageDirStr) throws SegmentLoadingException
   {
-    for (StorageLocation loc : locations) {
+    Iterator<StorageLocation> locationsIterator = strategy.getLocations();
+
+    while (locationsIterator.hasNext()) {
+
+      StorageLocation loc = locationsIterator.next();
+
       File storageDir = loc.reserve(storageDirStr, segment);
       if (storageDir != null) {
         try {

@@ -339,15 +339,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     return Response.ok(events).build();
   }
 
-  @GET
-  @Path("/rowStats")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response getRowStats(
-      @Context final HttpServletRequest req,
-      @QueryParam("full") String full
-  )
+  private Map<String, Object> doGetRowStats(String full)
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     Map<String, Object> returnMap = new HashMap<>();
     Map<String, Object> totalsMap = new HashMap<>();
     Map<String, Object> averagesMap = new HashMap<>();
@@ -396,6 +389,44 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     returnMap.put("totals", totalsMap);
     returnMap.put("movingAverages", averagesMap);
+    return returnMap;
+  }
+
+  @GET
+  @Path("/rowStats")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getRowStats(
+      @Context final HttpServletRequest req,
+      @QueryParam("full") String full
+  )
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    return Response.ok(doGetRowStats(full)).build();
+  }
+
+  @GET
+  @Path("/liveReports")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getLiveReports(
+      @Context final HttpServletRequest req,
+      @QueryParam("full") String full
+  )
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    Map<String, Object> returnMap = new HashMap<>();
+    Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
+    Map<String, Object> payload = new HashMap<>();
+    Map<String, Object> events = getTaskCompletionUnparseableEvents();
+
+    payload.put("ingestionState", ingestionState);
+    payload.put("unparseableEvents", events);
+    payload.put("rowStats", doGetRowStats(full));
+
+    ingestionStatsAndErrors.put("taskId", getId());
+    ingestionStatsAndErrors.put("payload", payload);
+    ingestionStatsAndErrors.put("type", "ingestionStatsAndErrors");
+
+    returnMap.put("ingestionStatsAndErrors", ingestionStatsAndErrors);
     return Response.ok(returnMap).build();
   }
 
@@ -462,7 +493,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       } else {
         dataSchema = ingestionSchema.getDataSchema();
       }
-
       ingestionState = IngestionState.BUILD_SEGMENTS;
       return generateAndPublishSegments(
           toolbox,
@@ -958,7 +988,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
      *
      * @param interval interval for shardSpec
      * @param row      input row
-     *
      * @return a shardSpec
      */
     ShardSpec getShardSpec(Interval interval, InputRow row)

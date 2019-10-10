@@ -120,6 +120,12 @@ public class CoordinatorStats
                 .addTo(tier, value);
   }
 
+  public void accumulateMaxTieredStat(final String statName, final String tier, final long value)
+  {
+    perTierStats.computeIfAbsent(statName, ignored -> new Object2LongOpenHashMap<>())
+                .mergeLong(tier, value, Math::max);
+  }
+
   public void addToDataSourceStat(String statName, String dataSource, long value)
   {
     perDataSourceStats.computeIfAbsent(statName, k -> new Object2LongOpenHashMap<>())

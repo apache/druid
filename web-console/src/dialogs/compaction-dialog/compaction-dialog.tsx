@@ -97,18 +97,6 @@ export class CompactionDialog extends React.PureComponent<
               ),
             },
             {
-              name: 'maxNumSegmentsToCompact',
-              type: 'number',
-              defaultValue: 150,
-              info: (
-                <p>
-                  Maximum number of segments to compact together per compaction task. Since a time
-                  chunk must be processed in its entirety, if a time chunk has a total number of
-                  segments greater than this parameter, compaction will not run for that time chunk.
-                </p>
-              ),
-            },
-            {
               name: 'skipOffsetFromLatest',
               type: 'string',
               defaultValue: 'P1D',
