@@ -26,8 +26,26 @@ package org.apache.druid.security.basic.authorization.db.cache;
  */
 public class NoopBasicAuthorizerCacheNotifier implements BasicAuthorizerCacheNotifier
 {
+  /**
+   * Send the user map state contained in updatedUserMap to all non-coordinator Druid services
+   *
+   * @param authorizerPrefix Name of authorizer being updated
+   * @param userAndRoleMap   User/role map state
+   */
   @Override
-  public void addUpdate(String authorizerPrefix, byte[] userAndRoleMap)
+  public void addUpdateUser(String authorizerPrefix, byte[] userAndRoleMap)
+  {
+    // Do nothing as this is a noop implementation
+  }
+
+  /**
+   * Send the groupMapping map state contained in updatedGroupMappingMap to all non-coordinator Druid services
+   *
+   * @param authorizerPrefix       Name of authorizer being updated
+   * @param groupMappingAndRoleMap Group/role map state
+   */
+  @Override
+  public void addUpdateGroupMapping(String authorizerPrefix, byte[] groupMappingAndRoleMap)
   {
     // Do nothing as this is a noop implementation
   }

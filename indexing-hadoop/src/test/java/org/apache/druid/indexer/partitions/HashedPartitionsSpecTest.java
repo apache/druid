@@ -24,11 +24,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.util.Collections;
 import java.util.List;
@@ -37,9 +36,6 @@ import java.util.Map;
 public class HashedPartitionsSpecTest
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
 
   @Test
   public void havingTargetRowsPerSegmentOnly()
@@ -130,7 +126,11 @@ public class HashedPartitionsSpecTest
         Assert.fail(reasonPrefix + " did not throw exception");
       }
       catch (RuntimeException e) {
-        String expectedMessage = "At most one of " + first + " or " + second + " must be present";
+        final String expectedMessage = StringUtils.format(
+            "At most one of [Property{name='%s', value=100}] or [Property{name='%s', value=100}] must be present",
+            first,
+            second
+        );
         Assert.assertThat(
             reasonPrefix + " has wrong failure message",
             e.getMessage(),

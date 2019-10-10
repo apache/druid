@@ -95,7 +95,6 @@
       "operations/alerts",
       "operations/other-hadoop",
       "operations/http-compression",
-      "operations/recommendations",
       "operations/tls-support",
       "operations/password-provider",
       "operations/dump-segment",

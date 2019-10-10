@@ -179,7 +179,7 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
   }
 
   @Override
-  public Response authenticatorUpdateListener(String authenticatorName, byte[] serializedUserMap)
+  public Response authenticatorUserUpdateListener(String authenticatorName, byte[] serializedUserMap)
   {
     return Response.status(Response.Status.NOT_FOUND).build();
   }
@@ -189,9 +189,8 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
   {
     Map<String, Boolean> loadStatus = new HashMap<>();
     authenticatorMap.forEach(
-        (authenticatorName, authenticator) -> {
-          loadStatus.put(authenticatorName, storageUpdater.getCachedUserMap(authenticatorName) != null);
-        }
+        (authenticatorName, authenticator) ->
+          loadStatus.put(authenticatorName, storageUpdater.getCachedUserMap(authenticatorName) != null)
     );
     return Response.ok(loadStatus).build();
   }

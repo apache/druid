@@ -74,7 +74,7 @@ public class SingleDimensionPartitionsSpecTest
     new Tester()
         .targetRowsPerSegment(1)
         .targetPartitionSize(1)
-        .testIllegalArgumentException("At most one of targetRowsPerSegment or targetPartitionSize must be present");
+        .testIllegalArgumentException("At most one of [Property{name='targetRowsPerSegment', value=1}] or [Property{name='targetPartitionSize', value=1}] must be present");
   }
 
   @Test
@@ -83,7 +83,7 @@ public class SingleDimensionPartitionsSpecTest
     new Tester()
         .maxRowsPerSegment(1)
         .maxPartitionSize(1)
-        .testIllegalArgumentException("At most one of maxRowsPerSegment or maxPartitionSize must be present");
+        .testIllegalArgumentException("At most one of [Property{name='maxRowsPerSegment', value=1}] or [Property{name='maxPartitionSize', value=1}] must be present");
   }
 
   @Test
