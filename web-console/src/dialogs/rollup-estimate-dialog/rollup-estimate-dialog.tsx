@@ -40,6 +40,8 @@ import { QueryExtraInfoData } from '../../views/query-view/query-extra-info/quer
 
 import { RollupRatio } from './rollup-ratio';
 
+import './rollup-estimate-dialog.scss';
+
 const parserRaw = sqlParserFactory(SQL_FUNCTIONS.map(sqlFunction => sqlFunction.name));
 
 const parser = memoizeOne((sql: string) => {
@@ -193,6 +195,7 @@ export class RollupEstimateDialog extends React.PureComponent<
     if (loading) return <Loader />;
     return (
       <Dialog
+        className="rollup-estimate-dialog"
         isOpen={datasource !== undefined}
         onClose={onClose}
         canOutsideClickClose={false}
@@ -223,6 +226,8 @@ export class RollupEstimateDialog extends React.PureComponent<
               },
             };
           })}
+          showPageSizeOptions={false}
+          showPagination={false}
         />
         <RollupRatio datasource={datasource} queryColumns={queryColumns ? queryColumns : []} />
       </Dialog>

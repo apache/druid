@@ -36,6 +36,8 @@ import { isEmptyContext, QueryContext } from '../../utils/query-context';
 import { QueryView } from '../../views/index';
 import { QueryExtraInfoData } from '../../views/query-view/query-extra-info/query-extra-info';
 
+import './rollup-ratio.scss';
+
 const parserRaw = sqlParserFactory(SQL_FUNCTIONS.map(sqlFunction => sqlFunction.name));
 
 const parser = memoizeOne((sql: string) => {
@@ -74,7 +76,7 @@ export interface RollupRatioState {
 export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRatioState> {
   private sqlQueryManager: QueryManager<QueryWithContext, QueryResult>;
   constructor(props: RollupRatioProps, context: any) {
-    // Temporary query as original needs to be escape with quotes
+    // Temporary query as original needs to be escape with quotes and converted to Druid
     super(props, context);
     this.state = {
       queryContext: {},
@@ -172,6 +174,10 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
   render(): JSX.Element {
     const { loading, result } = this.state;
     if (loading) return <Loader />;
-    return <div>{result ? result.queryResult.rows : []}</div>;
+    return (
+      <div className="rollup-ratio">
+        Your rollup ratio is {result ? result.queryResult.rows : []}
+      </div>
+    );
   }
 }
