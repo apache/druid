@@ -35,6 +35,7 @@ public class PrometheusEmitterConfig
   Pattern pattern = Pattern.compile("[a-zA-Z_:][a-zA-Z0-9_:]*");
 
   @JsonProperty
+  @Nullable
   private final String namespace;
 
   @JsonProperty
@@ -52,7 +53,7 @@ public class PrometheusEmitterConfig
   )
   {
     this.namespace = namespace != null ? namespace : "druid";
-    Preconditions.checkArgument(pattern.matcher(namespace).matches(), "Invalid namespace " + namespace);
+    Preconditions.checkArgument(pattern.matcher(this.namespace).matches(), "Invalid namespace " + this.namespace);
     this.dimensionMapPath = dimensionMapPath;
     this.port = Preconditions.checkNotNull(port, "Prometheus server port cannot be null.");
   }
