@@ -399,8 +399,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           );
         } else if (ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() <= 1) {
           LOG.warn(
-              "maxNumConcurrentSubTasks[%s] is less than 1. Running sequentially. Please set maxNumConcurrentSubTasks "
-              + "to something higher than 1 if you want to run in parallel ingestion mode.",
+              "maxNumConcurrentSubTasks[%s] is less than or equal to 1. Running sequentially. "
+              + "Please set maxNumConcurrentSubTasks to something higher than 1 if you want to run in parallel "
+              + "ingestion mode.",
               ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks()
           );
         } else {
