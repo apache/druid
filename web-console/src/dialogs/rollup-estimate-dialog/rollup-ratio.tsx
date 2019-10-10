@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { Callout } from '@blueprintjs/core';
 import axios from 'axios';
 import {
   HeaderRows,
@@ -80,7 +81,7 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
     super(props, context);
     this.state = {
       queryContext: {},
-      rollupQueryString: `SELECT COUNT("${this.props.queryColumns[1]}") / COUNT(DISTINCT "${this.props.queryColumns[1]}") * 1.0 FROM ${this.props.datasource}`,
+      rollupQueryString: `SELECT COUNT("${this.props.queryColumns[1]}") / COUNT(DISTINCT "${this.props.queryColumns[1]}") * 1.0 FROM "${this.props.datasource}"`,
       loading: false,
     };
     this.sqlQueryManager = new QueryManager({
@@ -176,7 +177,13 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
     if (loading) return <Loader />;
     return (
       <div className="rollup-ratio">
-        Your rollup ratio is {result ? result.queryResult.rows : []}
+        <Callout>
+          <p>
+            You may select any column to exclude them from your rollup preview. This will update
+            your rollup ratio.{' '}
+          </p>
+          <p>Your rollup ratio is currently: {result ? result.queryResult.rows : []}</p>
+        </Callout>
       </div>
     );
   }

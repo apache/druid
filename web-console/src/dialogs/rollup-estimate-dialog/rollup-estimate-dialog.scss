@@ -27,14 +27,18 @@
       'main next';
     .bp3-dialog-header {
       grid-area: navi;
+      margin-bottom: 10px;
     }
     .ReactTable {
       grid-area: main;
       overflow: auto;
       .rt-th {
+        cursor: pointer;
         background: rgba(38, 170, 201, 0.5);
       }
-
+      .selected {
+        background: rgba(128, 128, 128, 0.5);
+      }
       .rt-td {
         background: rgba(38, 170, 201, 0.1);
       }

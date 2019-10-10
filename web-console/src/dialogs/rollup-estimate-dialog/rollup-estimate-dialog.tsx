@@ -72,7 +72,7 @@ export interface RollupEstimateDialogProps {
 export interface RollupEstimateDialogState {
   queryString: string;
   queryContext: QueryContext;
-  queryColumns?: string[];
+  queryColumns: string[];
   wrapQueryLimit: number | undefined;
   loading: boolean;
   result?: QueryResult;
@@ -181,6 +181,20 @@ export class RollupEstimateDialog extends React.PureComponent<
     });
   }
 
+  updateColumns(columnName: string) {
+    const { queryColumns } = this.state;
+    if (!queryColumns.includes(columnName)) {
+      queryColumns.push(columnName);
+      this.setState({ queryColumns });
+    } else {
+      const indexOfColumn = queryColumns.indexOf(columnName);
+      queryColumns.splice(indexOfColumn, 1);
+      this.setState({ queryColumns });
+    }
+    console.log('please');
+    console.log(queryColumns);
+  }
+
   componentDidMount() {
     // Do something when component unmounts
     const { queryString, queryContext, wrapQueryLimit } = this.state;
@@ -208,9 +222,9 @@ export class RollupEstimateDialog extends React.PureComponent<
             // Need to clean this up and clickable columns for deselect, will have to update queryColumns too
             return {
               Header: () => {
-                return <div>{h}</div>;
+                return <div onClick={() => this.updateColumns(h)}>{h}</div>;
               },
-              headerClassName: h,
+              headerClassName: queryColumns.includes(h) ? h : 'selected',
               accessor: String(i),
               Cell: row => {
                 const value = row.value;
@@ -228,9 +242,18 @@ export class RollupEstimateDialog extends React.PureComponent<
           })}
           showPageSizeOptions={false}
           showPagination={false}
+          sortable={false}
         />
         <RollupRatio datasource={datasource} queryColumns={queryColumns ? queryColumns : []} />
       </Dialog>
     );
   }
 }
+/*
+Todo:
+1. Clickable columns 
+2. Correct query to calculate rollup ratio based on rollup/non-rollup data
+3. Bucket time column for non-rolled data
+4. Clean up code
+
+*/
