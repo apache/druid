@@ -61,11 +61,15 @@ public class PrometheusEmitter implements Emitter
   @Override
   public void start()
   {
-    try {
-      server = new HTTPServer(config.getPort());
-    }
-    catch (IOException e) {
-      log.error(e, "Unable to start prometheus HTTPServer");
+    if (server == null) {
+      try {
+        server = new HTTPServer(config.getPort());
+      }
+      catch (IOException e) {
+        log.error(e, "Unable to start prometheus HTTPServer");
+      }
+    } else {
+      log.error("HTTPServer is already started");
     }
   }
 
