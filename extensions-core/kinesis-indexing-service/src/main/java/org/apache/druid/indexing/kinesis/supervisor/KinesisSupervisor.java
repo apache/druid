@@ -378,7 +378,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       }
     }
 
-    Set<String> oldExclusiveStartPartitions = null;
+    Set<String> oldExclusiveStartPartitions;
     Set<String> newExclusiveStartPartitions = null;
     if (old instanceof SeekableStreamStartSequenceNumbers) {
       newExclusiveStartPartitions = new HashSet<>();
