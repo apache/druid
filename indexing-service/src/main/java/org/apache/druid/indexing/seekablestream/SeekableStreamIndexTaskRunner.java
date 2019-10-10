@@ -768,10 +768,14 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         status = Status.PUBLISHING;
       }
 
-      for (int i = 0; i < sequences.size(); i++) {
-        final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata = sequences.get(i);
+      // We need to copy sequences here, because the success callback in publishAndRegisterHandoff removes items from
+      // the sequence list. If a publish finishes before we finish iterating through the sequence list, we can
+      // end up skipping some sequences.
+      List<SequenceMetadata<PartitionIdType, SequenceOffsetType>> sequencesSnapshot = new ArrayList<>(sequences);
+      for (int i = 0; i < sequencesSnapshot.size(); i++) {
+        final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata = sequencesSnapshot.get(i);
         if (!publishingSequences.contains(sequenceMetadata.getSequenceName())) {
-          final boolean isLast = i == (sequences.size() - 1);
+          final boolean isLast = i == (sequencesSnapshot.size() - 1);
           if (isLast) {
             // Shorten endOffsets of the last sequence to match currOffsets.
             sequenceMetadata.setEndOffsets(currOffsets);
