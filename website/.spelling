@@ -87,6 +87,7 @@ IndexSpec
 IndexTask
 InfluxDB
 Integer.MAX_VALUE
+JBOD
 JDBC
 JDK
 JDK7
@@ -247,6 +248,7 @@ lookback
 lookups
 mapreduce
 masse
+max_map_count
 memcached
 mergeable
 metadata
@@ -336,6 +338,7 @@ timestamp
 timestamps
 tradeoffs
 tsv
+ulimit
 unannounce
 unannouncements
 unary
@@ -820,6 +823,7 @@ listDelimiter
 timestampSpec
  - ../docs/ingestion/data-management.md
 1GB
+IOConfig
 compactionTask
 compactionTasks
 ingestSegmentFirehose

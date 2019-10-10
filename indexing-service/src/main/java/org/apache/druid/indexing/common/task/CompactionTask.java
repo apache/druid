@@ -28,6 +28,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
@@ -41,6 +42,8 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.NoopInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
+import org.apache.druid.indexer.Checks;
+import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -55,7 +58,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngesti
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Numbers;
@@ -123,8 +125,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   private static final Logger log = new Logger(CompactionTask.class);
   private static final String TYPE = "compact";
 
-  private final Interval interval;
-  private final List<DataSegment> segments;
+  private final CompactionIOConfig ioConfig;
   @Nullable
   private final DimensionsSpec dimensionsSpec;
   @Nullable
@@ -177,8 +178,9 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JsonProperty("id") final String id,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("dataSource") final String dataSource,
-      @JsonProperty("interval") @Nullable final Interval interval,
-      @JsonProperty("segments") @Nullable final List<DataSegment> segments,
+      @JsonProperty("interval") @Deprecated @Nullable final Interval interval,
+      @JsonProperty("segments") @Deprecated @Nullable final List<DataSegment> segments,
+      @JsonProperty("ioConfig") @Nullable CompactionIOConfig ioConfig,
       @JsonProperty("dimensions") @Nullable final DimensionsSpec dimensions,
       @JsonProperty("dimensionsSpec") @Nullable final DimensionsSpec dimensionsSpec,
       @JsonProperty("metricsSpec") @Nullable final AggregatorFactory[] metricsSpec,
@@ -198,22 +200,32 @@ public class CompactionTask extends AbstractBatchIndexTask
   )
   {
     super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context);
-    Preconditions.checkArgument(interval != null || segments != null, "interval or segments should be specified");
-    Preconditions.checkArgument(interval == null || segments == null, "one of interval and segments should be null");
 
-    if (interval != null && interval.toDurationMillis() == 0) {
-      throw new IAE("Interval[%s] is empty, must specify a nonempty interval", interval);
+    Checks.checkOneNotNullOrEmpty(
+        ImmutableList.of(
+            new Property<>("ioConfig", ioConfig),
+            new Property<>("interval", interval),
+            new Property<>("segments", segments)
+        )
+    );
+
+    if (ioConfig != null) {
+      this.ioConfig = ioConfig;
+    } else if (interval != null) {
+      this.ioConfig = new CompactionIOConfig(new CompactionIntervalSpec(interval, null));
+    } else {
+      // We already checked segments is not null or empty above.
+      //noinspection ConstantConditions
+      this.ioConfig = new CompactionIOConfig(SpecificSegmentsSpec.fromSegments(segments));
     }
 
-    this.interval = interval;
-    this.segments = segments;
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
     this.metricsSpec = metricsSpec;
     this.segmentGranularity = segmentGranularity;
     this.targetCompactionSizeBytes = targetCompactionSizeBytes;
     this.tuningConfig = tuningConfig;
     this.jsonMapper = jsonMapper;
-    this.segmentProvider = segments == null ? new SegmentProvider(dataSource, interval) : new SegmentProvider(segments);
+    this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
     this.partitionConfigurationManager = new PartitionConfigurationManager(targetCompactionSizeBytes, tuningConfig);
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = chatHandlerProvider;
@@ -226,15 +238,9 @@ public class CompactionTask extends AbstractBatchIndexTask
   }
 
   @JsonProperty
-  public Interval getInterval()
+  public CompactionIOConfig getIoConfig()
   {
-    return interval;
-  }
-
-  @JsonProperty
-  public List<DataSegment> getSegments()
-  {
-    return segments;
+    return ioConfig;
   }
 
   @JsonProperty
@@ -346,7 +352,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         .collect(Collectors.toList());
 
     if (indexTaskSpecs.isEmpty()) {
-      log.warn("Interval[%s] has no segments, nothing to do.", interval);
+      log.warn("Can't find segments from inputSpec[%s], nothing to do.", ioConfig.getInputSpec());
       return TaskStatus.failure(getId());
     } else {
       registerResourceCloserOnAbnormalExit(currentSubTaskHolder);
@@ -781,36 +787,14 @@ public class CompactionTask extends AbstractBatchIndexTask
   static class SegmentProvider
   {
     private final String dataSource;
+    private final CompactionInputSpec inputSpec;
     private final Interval interval;
-    @Nullable
-    private final List<DataSegment> segments;
 
-    SegmentProvider(String dataSource, Interval interval)
+    SegmentProvider(String dataSource, CompactionInputSpec inputSpec)
     {
       this.dataSource = Preconditions.checkNotNull(dataSource);
-      this.interval = Preconditions.checkNotNull(interval);
-      this.segments = null;
-    }
-
-    SegmentProvider(List<DataSegment> segments)
-    {
-      Preconditions.checkArgument(segments != null && !segments.isEmpty());
-      final String dataSource = segments.get(0).getDataSource();
-      Preconditions.checkArgument(
-          segments.stream().allMatch(segment -> segment.getDataSource().equals(dataSource)),
-          "segments should have the same dataSource"
-      );
-      this.dataSource = dataSource;
-      this.segments = segments;
-      this.interval = JodaUtils.umbrellaInterval(
-          segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
-      );
-    }
-
-    @Nullable
-    List<DataSegment> getSegments()
-    {
-      return segments;
+      this.inputSpec = inputSpec;
+      this.interval = inputSpec.findInterval(dataSource);
     }
 
     List<DataSegment> checkAndGetSegments(TaskActionClient actionClient) throws IOException
@@ -827,24 +811,11 @@ public class CompactionTask extends AbstractBatchIndexTask
           .map(PartitionChunk::getObject)
           .collect(Collectors.toList());
 
-      if (segments != null) {
-        Collections.sort(latestSegments);
-        Collections.sort(segments);
-
-        if (!latestSegments.equals(segments)) {
-          final List<DataSegment> unknownSegments = segments.stream()
-                                                            .filter(segment -> !latestSegments.contains(segment))
-                                                            .collect(Collectors.toList());
-          final List<DataSegment> missingSegments = latestSegments.stream()
-                                                                  .filter(segment -> !segments.contains(segment))
-                                                                  .collect(Collectors.toList());
-          throw new ISE(
-              "Specified segments in the spec are different from the current used segments. "
-              + "There are unknown segments[%s] and missing segments[%s] in the spec.",
-              unknownSegments,
-              missingSegments
-          );
-        }
+      if (!inputSpec.validateSegments(latestSegments)) {
+        throw new ISE(
+            "Specified segments in the spec are different from the current used segments. "
+            + "Possibly new segments would have been added or some segments have been unpublished."
+        );
       }
       return latestSegments;
     }
@@ -976,10 +947,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     private final RetryPolicyFactory retryPolicyFactory;
     private final AppenderatorsManager appenderatorsManager;
 
-    @Nullable
-    private Interval interval;
-    @Nullable
-    private List<DataSegment> segments;
+    private CompactionIOConfig ioConfig;
     @Nullable
     private DimensionsSpec dimensionsSpec;
     @Nullable
@@ -1020,13 +988,17 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     public Builder interval(Interval interval)
     {
-      this.interval = interval;
-      return this;
+      return inputSpec(new CompactionIntervalSpec(interval, null));
     }
 
     public Builder segments(List<DataSegment> segments)
     {
-      this.segments = segments;
+      return inputSpec(SpecificSegmentsSpec.fromSegments(segments));
+    }
+
+    public Builder inputSpec(CompactionInputSpec inputSpec)
+    {
+      this.ioConfig = new CompactionIOConfig(inputSpec);
       return this;
     }
 
@@ -1072,8 +1044,9 @@ public class CompactionTask extends AbstractBatchIndexTask
           null,
           null,
           dataSource,
-          interval,
-          segments,
+          null,
+          null,
+          ioConfig,
           null,
           dimensionsSpec,
           metricsSpec,

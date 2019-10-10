@@ -52,7 +52,6 @@ public class DataSourceCompactionConfigTest
         500L,
         100L,
         null,
-        20,
         new Period(3600),
         null,
         ImmutableMap.of("key", "val")
@@ -65,7 +64,6 @@ public class DataSourceCompactionConfigTest
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
     Assert.assertEquals(config.getTargetCompactionSizeBytes(), fromJson.getTargetCompactionSizeBytes());
     Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
-    Assert.assertEquals(config.getMaxNumSegmentsToCompact(), fromJson.getMaxNumSegmentsToCompact());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
@@ -80,7 +78,6 @@ public class DataSourceCompactionConfigTest
         500L,
         null,
         30,
-        20,
         new Period(3600),
         null,
         ImmutableMap.of("key", "val")
@@ -93,7 +90,6 @@ public class DataSourceCompactionConfigTest
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
     Assert.assertNull(fromJson.getTargetCompactionSizeBytes());
     Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
-    Assert.assertEquals(config.getMaxNumSegmentsToCompact(), fromJson.getMaxNumSegmentsToCompact());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
@@ -119,7 +115,6 @@ public class DataSourceCompactionConfigTest
         500L,
         null,
         null,
-        20,
         new Period(3600),
         new UserCompactTuningConfig(
             null,
@@ -141,7 +136,6 @@ public class DataSourceCompactionConfigTest
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
     Assert.assertNull(fromJson.getTargetCompactionSizeBytes());
     Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
-    Assert.assertEquals(config.getMaxNumSegmentsToCompact(), fromJson.getMaxNumSegmentsToCompact());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
@@ -160,7 +154,6 @@ public class DataSourceCompactionConfigTest
         500L,
         10000L,
         1000,
-        20,
         new Period(3600),
         null,
         ImmutableMap.of("key", "val")
@@ -180,7 +173,6 @@ public class DataSourceCompactionConfigTest
         500L,
         10000L,
         null,
-        20,
         new Period(3600),
         new UserCompactTuningConfig(
             null,
@@ -205,7 +197,6 @@ public class DataSourceCompactionConfigTest
         500L,
         null,
         10000,
-        20,
         new Period(3600),
         new UserCompactTuningConfig(
             null,
@@ -228,7 +219,6 @@ public class DataSourceCompactionConfigTest
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
     Assert.assertNull(fromJson.getTargetCompactionSizeBytes());
     Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
-    Assert.assertEquals(config.getMaxNumSegmentsToCompact(), fromJson.getMaxNumSegmentsToCompact());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());

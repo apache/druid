@@ -39,7 +39,6 @@ public class DataSourceCompactionConfig
   // should be synchronized with Tasks.DEFAULT_MERGE_TASK_PRIORITY
   private static final int DEFAULT_COMPACTION_TASK_PRIORITY = 25;
   private static final long DEFAULT_INPUT_SEGMENT_SIZE_BYTES = 400 * 1024 * 1024;
-  private static final int DEFAULT_NUM_INPUT_SEGMENTS = 150;
   private static final Period DEFAULT_SKIP_OFFSET_FROM_LATEST = new Period("P1D");
 
   private final String dataSource;
@@ -51,7 +50,6 @@ public class DataSourceCompactionConfig
   // RemoteTaskRunnerConfig.maxZnodeBytes.
   @Nullable
   private final Integer maxRowsPerSegment;
-  private final int maxNumSegmentsToCompact;
   private final Period skipOffsetFromLatest;
   private final UserCompactTuningConfig tuningConfig;
   private final Map<String, Object> taskContext;
@@ -63,7 +61,6 @@ public class DataSourceCompactionConfig
       @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
       @JsonProperty("targetCompactionSizeBytes") @Nullable Long targetCompactionSizeBytes,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
-      @JsonProperty("maxNumSegmentsToCompact") @Nullable Integer maxNumSegmentsToCompact,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
       @JsonProperty("tuningConfig") @Nullable UserCompactTuningConfig tuningConfig,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
@@ -82,17 +79,9 @@ public class DataSourceCompactionConfig
         tuningConfig
     );
     this.maxRowsPerSegment = maxRowsPerSegment;
-    this.maxNumSegmentsToCompact = maxNumSegmentsToCompact == null
-                                   ? DEFAULT_NUM_INPUT_SEGMENTS
-                                   : maxNumSegmentsToCompact;
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
     this.tuningConfig = tuningConfig;
     this.taskContext = taskContext;
-
-    Preconditions.checkArgument(
-        this.maxNumSegmentsToCompact > 1,
-        "numTargetCompactionSegments should be larger than 1"
-    );
   }
 
   /**
@@ -159,12 +148,6 @@ public class DataSourceCompactionConfig
   }
 
   @JsonProperty
-  public int getMaxNumSegmentsToCompact()
-  {
-    return maxNumSegmentsToCompact;
-  }
-
-  @JsonProperty
   @Nullable
   public Long getTargetCompactionSizeBytes()
   {
@@ -210,7 +193,6 @@ public class DataSourceCompactionConfig
     DataSourceCompactionConfig that = (DataSourceCompactionConfig) o;
     return taskPriority == that.taskPriority &&
            inputSegmentSizeBytes == that.inputSegmentSizeBytes &&
-           maxNumSegmentsToCompact == that.maxNumSegmentsToCompact &&
            Objects.equals(dataSource, that.dataSource) &&
            Objects.equals(targetCompactionSizeBytes, that.targetCompactionSizeBytes) &&
            Objects.equals(skipOffsetFromLatest, that.skipOffsetFromLatest) &&
@@ -226,7 +208,6 @@ public class DataSourceCompactionConfig
         taskPriority,
         inputSegmentSizeBytes,
         targetCompactionSizeBytes,
-        maxNumSegmentsToCompact,
         skipOffsetFromLatest,
         tuningConfig,
         taskContext

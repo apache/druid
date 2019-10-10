@@ -17,32 +17,40 @@
  * under the License.
  */
 
-package org.apache.druid.indexer.partitions;
+package org.apache.druid.client.indexing;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
 
 /**
- * Convenience class for holding a pair of string key and templated value.
+ * IOConfig for {@link ClientCompactQuery}.
+ *
+ * Should be synchronized with org.apache.druid.indexing.common.task.CompactionIOConfig.
  */
-class Property<T>
+public class ClientCompactionIOConfig
 {
-  private final String name;
-  private final T value;
+  private static final String TYPE = "compact";
 
-  Property(String name, T value)
+  private final ClientCompactionIntervalSpec inputSpec;
+
+  @JsonCreator
+  public ClientCompactionIOConfig(@JsonProperty("inputSpec") ClientCompactionIntervalSpec inputSpec)
   {
-    this.name = name;
-    this.value = value;
+    this.inputSpec = inputSpec;
   }
 
-  public String getName()
+  @JsonProperty
+  public String getType()
   {
-    return name;
+    return TYPE;
   }
 
-  public T getValue()
+  @JsonProperty
+  public ClientCompactionIntervalSpec getInputSpec()
   {
-    return value;
+    return inputSpec;
   }
 
   @Override
@@ -54,14 +62,21 @@ class Property<T>
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    Property<?> property = (Property<?>) o;
-    return Objects.equals(name, property.name) &&
-           Objects.equals(value, property.value);
+    ClientCompactionIOConfig that = (ClientCompactionIOConfig) o;
+    return Objects.equals(inputSpec, that.inputSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, value);
+    return Objects.hash(inputSpec);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ClientCompactionIOConfig{" +
+           "inputSpec=" + inputSpec +
+           '}';
   }
 }

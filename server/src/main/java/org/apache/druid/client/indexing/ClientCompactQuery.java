@@ -21,11 +21,8 @@ package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.timeline.DataSegment;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -36,8 +33,7 @@ import java.util.Objects;
 public class ClientCompactQuery implements ClientQuery
 {
   private final String dataSource;
-  private final List<DataSegment> segments;
-  private final Interval interval;
+  private final ClientCompactionIOConfig ioConfig;
   @Nullable
   private final Long targetCompactionSizeBytes;
   private final ClientCompactQueryTuningConfig tuningConfig;
@@ -46,16 +42,14 @@ public class ClientCompactQuery implements ClientQuery
   @JsonCreator
   public ClientCompactQuery(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") @Nullable final Interval interval,
-      @JsonProperty("segments") @Nullable final List<DataSegment> segments,
+      @JsonProperty("ioConfig") ClientCompactionIOConfig ioConfig,
       @JsonProperty("targetCompactionSizeBytes") @Nullable Long targetCompactionSizeBytes,
       @JsonProperty("tuningConfig") ClientCompactQueryTuningConfig tuningConfig,
       @JsonProperty("context") Map<String, Object> context
   )
   {
     this.dataSource = dataSource;
-    this.segments = segments;
-    this.interval = interval;
+    this.ioConfig = ioConfig;
     this.targetCompactionSizeBytes = targetCompactionSizeBytes;
     this.tuningConfig = tuningConfig;
     this.context = context;
@@ -76,15 +70,9 @@ public class ClientCompactQuery implements ClientQuery
   }
 
   @JsonProperty
-  public List<DataSegment> getSegments()
+  public ClientCompactionIOConfig getIoConfig()
   {
-    return segments;
-  }
-
-  @JsonProperty
-  public Interval getInterval()
-  {
-    return interval;
+    return ioConfig;
   }
 
   @JsonProperty
@@ -117,8 +105,7 @@ public class ClientCompactQuery implements ClientQuery
     }
     ClientCompactQuery that = (ClientCompactQuery) o;
     return Objects.equals(dataSource, that.dataSource) &&
-           Objects.equals(segments, that.segments) &&
-           Objects.equals(interval, that.interval) &&
+           Objects.equals(ioConfig, that.ioConfig) &&
            Objects.equals(targetCompactionSizeBytes, that.targetCompactionSizeBytes) &&
            Objects.equals(tuningConfig, that.tuningConfig) &&
            Objects.equals(context, that.context);
@@ -127,23 +114,15 @@ public class ClientCompactQuery implements ClientQuery
   @Override
   public int hashCode()
   {
-    return Objects.hash(
-        dataSource,
-        segments,
-        interval,
-        targetCompactionSizeBytes,
-        tuningConfig,
-        context
-    );
+    return Objects.hash(dataSource, ioConfig, targetCompactionSizeBytes, tuningConfig, context);
   }
 
   @Override
   public String toString()
   {
-    return getClass().getSimpleName() + "{" +
+    return "ClientCompactQuery{" +
            "dataSource='" + dataSource + '\'' +
-           ", segments=" + segments +
-           ", interval=" + interval +
+           ", ioConfig=" + ioConfig +
            ", targetCompactionSizeBytes=" + targetCompactionSizeBytes +
            ", tuningConfig=" + tuningConfig +
            ", context=" + context +
