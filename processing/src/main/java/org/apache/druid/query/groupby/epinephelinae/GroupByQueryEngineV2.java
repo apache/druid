@@ -53,7 +53,7 @@ import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.ordering.StringComparator;
-import org.apache.druid.query.search.QueryVectorizationConfig;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
@@ -113,7 +113,7 @@ public class GroupByQueryEngineV2
       @Nullable final StorageAdapter storageAdapter,
       final NonBlockingPool<ByteBuffer> intermediateResultsBufferPool,
       final GroupByQueryConfig querySpecificConfig,
-      final QueryVectorizationConfig vectorizationConfig
+      final QueryConfig vectorizationConfig
   )
   {
     if (storageAdapter == null) {

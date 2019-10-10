@@ -61,7 +61,7 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
-import org.apache.druid.query.search.QueryVectorizationConfig;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.IndexIO;
@@ -395,7 +395,7 @@ public class GroupByTypeInterfaceBenchmark
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
-            QueryVectorizationConfig::new,
+            QueryConfig::new,
             bufferPool,
             mergePool,
             new ObjectMapper(new SmileFactory()),

@@ -17,15 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.query.search;
+package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
-public class QueryVectorizationConfig
+/**
+ * A user configuration holder for all query types.
+ * Any query-specific configurations should go to their own configuration.
+ *
+ * @see org.apache.druid.query.groupby.GroupByQueryConfig
+ * @see org.apache.druid.query.search.SearchQueryConfig
+ * @see org.apache.druid.query.topn.TopNQueryConfig
+ * @see org.apache.druid.query.metadata.SegmentMetadataQueryConfig
+ * @see org.apache.druid.query.select.SelectQueryConfig
+ * @see org.apache.druid.query.scan.ScanQueryConfig
+ */
+public class QueryConfig
 {
   @JsonProperty
   private Vectorize vectorize = QueryContexts.DEFAULT_VECTORIZE;
@@ -43,9 +52,9 @@ public class QueryVectorizationConfig
     return vectorSize;
   }
 
-  public QueryVectorizationConfig withOverrides(final Query<?> query)
+  public QueryConfig withOverrides(final Query<?> query)
   {
-    final QueryVectorizationConfig newConfig = new QueryVectorizationConfig();
+    final QueryConfig newConfig = new QueryConfig();
     newConfig.vectorize = QueryContexts.getVectorize(query, vectorize);
     newConfig.vectorSize = QueryContexts.getVectorSize(query, vectorSize);
     return newConfig;

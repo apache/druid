@@ -69,7 +69,7 @@ import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.query.search.QueryVectorizationConfig;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.IndexIO;
@@ -387,8 +387,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final Supplier<QueryVectorizationConfig> vectorizationConfigSupplier = Suppliers.ofInstance(
-        new QueryVectorizationConfig()
+    final Supplier<QueryConfig> vectorizationConfigSupplier = Suppliers.ofInstance(
+        new QueryConfig()
     );
     final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
         configSupplier,

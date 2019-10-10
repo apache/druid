@@ -120,7 +120,7 @@ import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
-import org.apache.druid.query.search.QueryVectorizationConfig;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -394,7 +394,7 @@ public class GroupByQueryRunnerTest
         new GroupByStrategyV2(
             processingConfig,
             configSupplier,
-            Suppliers.ofInstance(new QueryVectorizationConfig()),
+            Suppliers.ofInstance(new QueryConfig()),
             bufferPool,
             mergeBufferPool,
             mapper,

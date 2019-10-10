@@ -41,7 +41,7 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
-import org.apache.druid.query.search.QueryVectorizationConfig;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.timeline.SegmentId;
@@ -99,7 +99,7 @@ public class MapVirtualColumnGroupByTest
               }
             },
             GroupByQueryConfig::new,
-            QueryVectorizationConfig::new,
+            QueryConfig::new,
             new StupidPool<>("map-virtual-column-groupby-test", () -> ByteBuffer.allocate(1024)),
             new DefaultBlockingPool<>(() -> ByteBuffer.allocate(1024), 1),
             new DefaultObjectMapper(),

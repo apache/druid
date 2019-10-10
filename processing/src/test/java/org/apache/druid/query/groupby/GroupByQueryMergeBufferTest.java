@@ -40,7 +40,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
-import org.apache.druid.query.search.QueryVectorizationConfig;
+import org.apache.druid.query.QueryConfig;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -148,7 +148,7 @@ public class GroupByQueryMergeBufferTest
         new GroupByStrategyV2(
             PROCESSING_CONFIG,
             configSupplier,
-            Suppliers.ofInstance(new QueryVectorizationConfig()),
+            Suppliers.ofInstance(new QueryConfig()),
             BUFFER_POOL,
             MERGE_BUFFER_POOL,
             mapper,

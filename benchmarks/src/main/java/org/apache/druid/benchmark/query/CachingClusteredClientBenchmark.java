@@ -86,7 +86,7 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
-import org.apache.druid.query.search.QueryVectorizationConfig;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -336,7 +336,7 @@ public class CachingClusteredClientBenchmark
         new GroupByStrategyV2(
             processingConfig,
             configSupplier,
-            QueryVectorizationConfig::new,
+            QueryConfig::new,
             bufferPool,
             mergeBufferPool,
             mapper,

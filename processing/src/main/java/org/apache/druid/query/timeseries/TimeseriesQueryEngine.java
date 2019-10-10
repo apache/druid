@@ -39,7 +39,7 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.search.QueryVectorizationConfig;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
@@ -59,7 +59,7 @@ import java.util.Objects;
  */
 public class TimeseriesQueryEngine
 {
-  private final Supplier<QueryVectorizationConfig> vectorizationConfigSupplier;
+  private final Supplier<QueryConfig> vectorizationConfigSupplier;
   private final NonBlockingPool<ByteBuffer> bufferPool;
 
   /**
@@ -68,13 +68,13 @@ public class TimeseriesQueryEngine
   @VisibleForTesting
   public TimeseriesQueryEngine()
   {
-    this.vectorizationConfigSupplier = Suppliers.ofInstance(new QueryVectorizationConfig());
+    this.vectorizationConfigSupplier = Suppliers.ofInstance(new QueryConfig());
     this.bufferPool = new StupidPool<>("dummy", () -> ByteBuffer.allocate(1000000));
   }
 
   @Inject
   public TimeseriesQueryEngine(
-      final Supplier<QueryVectorizationConfig> vectorizationConfigSupplier,
+      final Supplier<QueryConfig> vectorizationConfigSupplier,
       final @Global NonBlockingPool<ByteBuffer> bufferPool
   )
   {
@@ -94,7 +94,7 @@ public class TimeseriesQueryEngine
       );
     }
 
-    final QueryVectorizationConfig vectorizationConfigToUse = vectorizationConfigSupplier.get().withOverrides(query);
+    final QueryConfig vectorizationConfigToUse = vectorizationConfigSupplier.get().withOverrides(query);
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
     final Interval interval = Iterables.getOnlyElement(query.getIntervals());
     final Granularity gran = query.getGranularity();
@@ -123,7 +123,7 @@ public class TimeseriesQueryEngine
 
   private Sequence<Result<TimeseriesResultValue>> processVectorized(
       final TimeseriesQuery query,
-      final QueryVectorizationConfig vectorizationConfig,
+      final QueryConfig vectorizationConfig,
       final StorageAdapter adapter,
       @Nullable final Filter filter,
       final Interval queryInterval,

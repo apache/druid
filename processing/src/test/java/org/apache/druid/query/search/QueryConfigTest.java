@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.query.TableDataSource;
@@ -35,7 +36,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-public class QueryVectorizationConfigTest
+public class QueryConfigTest
 {
   @Test
   public void testSerde() throws IOException
@@ -45,7 +46,7 @@ public class QueryVectorizationConfigTest
                         + "\"vectorize\" : \"force\","
                         + "\"vectorSize\" : 1"
                         + "}";
-    final QueryVectorizationConfig config = mapper.readValue(json, QueryVectorizationConfig.class);
+    final QueryConfig config = mapper.readValue(json, QueryConfig.class);
     Assert.assertEquals(Vectorize.FORCE, config.getVectorize());
     Assert.assertEquals(1, config.getVectorSize());
   }
@@ -53,7 +54,7 @@ public class QueryVectorizationConfigTest
   @Test
   public void testDefault()
   {
-    final QueryVectorizationConfig config = new QueryVectorizationConfig();
+    final QueryConfig config = new QueryConfig();
     Assert.assertEquals(QueryContexts.DEFAULT_VECTORIZE, config.getVectorize());
     Assert.assertEquals(QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE, config.getVectorSize());
   }
@@ -72,7 +73,7 @@ public class QueryVectorizationConfigTest
             QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE * 2
         )
     );
-    final QueryVectorizationConfig config = new QueryVectorizationConfig().withOverrides(query);
+    final QueryConfig config = new QueryConfig().withOverrides(query);
     Assert.assertEquals(Vectorize.TRUE, config.getVectorize());
     Assert.assertEquals(QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE * 2, config.getVectorSize());
   }

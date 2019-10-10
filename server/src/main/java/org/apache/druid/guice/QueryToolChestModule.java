@@ -44,7 +44,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
 import org.apache.druid.query.search.DefaultSearchQueryMetricsFactory;
-import org.apache.druid.query.search.QueryVectorizationConfig;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchQueryConfig;
 import org.apache.druid.query.search.SearchQueryMetricsFactory;
@@ -104,7 +104,7 @@ public class QueryToolChestModule implements Module
 
     binder.bind(QueryToolChestWarehouse.class).to(MapQueryToolChestWarehouse.class);
 
-    JsonConfigProvider.bind(binder, "druid.query", QueryVectorizationConfig.class);
+    JsonConfigProvider.bind(binder, "druid.query", QueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.groupBy", GroupByQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.search", SearchQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.topN", TopNQueryConfig.class);

@@ -39,7 +39,7 @@ import org.apache.druid.query.groupby.epinephelinae.CloseableGrouperIterator;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
-import org.apache.druid.query.search.QueryVectorizationConfig;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.StorageAdapter;
@@ -97,7 +97,7 @@ public class VectorGroupByEngine
       @Nullable final Filter filter,
       final Interval interval,
       final GroupByQueryConfig config,
-      final QueryVectorizationConfig vectorizationConfig
+      final QueryConfig vectorizationConfig
   )
   {
     if (!canVectorize(query, storageAdapter, filter)) {
