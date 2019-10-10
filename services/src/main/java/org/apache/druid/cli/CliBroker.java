@@ -56,8 +56,8 @@ import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.router.TieredBrokerConfig;
 import org.apache.druid.sql.guice.SqlModule;
-import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.PruneLastCompactionState;
+import org.apache.druid.timeline.PruneLoadSpec;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
