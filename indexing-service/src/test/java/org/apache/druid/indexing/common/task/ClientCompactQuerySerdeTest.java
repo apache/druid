@@ -27,6 +27,8 @@ import org.apache.druid.client.indexing.ClientCompactQuery;
 import org.apache.druid.client.indexing.ClientCompactQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
+import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
@@ -162,6 +164,7 @@ public class ClientCompactQuerySerdeTest
                   binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
                   binder.bind(SegmentLoaderFactory.class).toInstance(new SegmentLoaderFactory(null, objectMapper));
                   binder.bind(AppenderatorsManager.class).toInstance(APPENDERATORS_MANAGER);
+                  binder.bind(IndexingServiceClient.class).toInstance(new NoopIndexingServiceClient());
                 }
             )
         )
