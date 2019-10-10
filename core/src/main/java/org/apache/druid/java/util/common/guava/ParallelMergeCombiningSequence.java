@@ -57,7 +57,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   private final BinaryOperator<T> combineFn;
   private final int queueSize;
   private final boolean hasTimeout;
-  private final long timeoutAt;
+  private final long timeoutAtNanos;
   private final int queryPriority; // not currently used :(
   private final int yieldAfter;
   private final int batchSize;
@@ -82,7 +82,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     this.orderingFn = orderingFn;
     this.combineFn = combineFn;
     this.hasTimeout = hasTimeout;
-    this.timeoutAt = System.currentTimeMillis() + timeoutMillis;
+    this.timeoutAtNanos = System.nanoTime() + TimeUnit.NANOSECONDS.convert(timeoutMillis, TimeUnit.MILLISECONDS);
     this.queryPriority = queryPriority;
     this.parallelism = parallelism;
     this.yieldAfter = yieldAfter;
@@ -109,11 +109,11 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         yieldAfter,
         batchSize,
         hasTimeout,
-        timeoutAt,
+        timeoutAtNanos,
         cancellationGizmo
     );
     workerPool.execute(finalMergeAction);
-    Sequence<T> finalOutSequence = makeOutputSequenceForQueue(outputQueue, hasTimeout, timeoutAt, cancellationGizmo);
+    Sequence<T> finalOutSequence = makeOutputSequenceForQueue(outputQueue, hasTimeout, timeoutAtNanos, cancellationGizmo);
     return finalOutSequence.toYielder(initValue, accumulator);
   }
 
@@ -124,7 +124,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   static <T> Sequence<T> makeOutputSequenceForQueue(
       BlockingQueue<ResultBatch<T>> queue,
       boolean hasTimeout,
-      long timeoutAt,
+      long timeoutAtNanos,
       CancellationGizmo cancellationGizmo
   )
   {
@@ -141,8 +141,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               @Override
               public boolean hasNext()
               {
-                final int thisTimeout = Ints.checkedCast(timeoutAt - System.currentTimeMillis());
-                if (thisTimeout < 0) {
+                final long thisTimeoutNanos = timeoutAtNanos - System.nanoTime();
+                if (thisTimeoutNanos < 0) {
                   throw new RE(new TimeoutException("Sequence iterator timed out"));
                 }
 
@@ -152,7 +152,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
                 try {
                   if (currentBatch == null || currentBatch.isDrained()) {
                     if (hasTimeout) {
-                      currentBatch = queue.poll(thisTimeout, TimeUnit.MILLISECONDS);
+                      currentBatch = queue.poll(thisTimeoutNanos, TimeUnit.NANOSECONDS);
                     } else {
                       currentBatch = queue.take();
                     }
@@ -206,7 +206,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         }
     );
   }
-
 
   /**
    * This {@link RecursiveAction} is the initial task of the parallel merge-combine process. Capacity and input sequence
@@ -277,7 +276,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         // if we have a small number of sequences to merge, or computed paralellism is too low, do not run in parallel,
         // just serially perform the merge-combine with a single task
         if (sequences.size() < 4 || parallelTaskCount < 2) {
-          LOG.info(
+          LOG.debug(
               "Input sequence count (%s) or available parallel merge task count (%s) too small to perform parallel"
               + " merge-combine, performing serially with a single merge-combine task",
               sequences.size(),
@@ -302,7 +301,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           getPool().execute(blockForInputsAction);
         } else {
           // 2 layer parallel merge done in fjp
-          LOG.info("Spawning %s parallel merge-combine tasks for %s sequences", parallelTaskCount, sequences.size());
+          LOG.debug("Spawning %s parallel merge-combine tasks for %s sequences", parallelTaskCount, sequences.size());
           spawnParallelTasks(parallelTaskCount);
         }
       }
@@ -372,10 +371,13 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
      */
     int computeNumTasks()
     {
+      final int availableProcessors = JvmUtils.getRuntimeInfo().getAvailableProcessors();
+      final int runningThreadCount = getPool().getRunningThreadCount();
+      final int submissionCount = getPool().getQueuedSubmissionCount();
       // max is minimum of either number of processors or user suggested parallelism
-      final int maxParallelism = Math.min(JvmUtils.getRuntimeInfo().getAvailableProcessors(), parallelism);
+      final int maxParallelism = Math.min(availableProcessors, parallelism);
       // adjust max to be no more than total pool parallelism less the number of running threads + submitted tasks
-      final int utilizationEstimate = getPool().getRunningThreadCount() + getPool().getQueuedSubmissionCount();
+      final int utilizationEstimate = runningThreadCount + submissionCount;
       // minimum of 'max computed parallelism' and pool parallelism less current 'utilization estimate'
       final int computedParallelism = Math.min(maxParallelism, getPool().getParallelism() - utilizationEstimate);
       // compute total number of layer 1 'parallel' tasks, the final merge task will take the remaining slot
@@ -383,7 +385,24 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           (int) Math.floor((double) sequences.size() / 2.0),
           computedParallelism - 1
       );
-      return computedOptimalParallelism;
+
+      final int computedNumParallelTasks = Math.max(computedOptimalParallelism, 1);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Computed parallel tasks: [%s]; ForkJoinPool details - processors: [%s] parallelism: [%s] "
+                  + "active threads: [%s] running threads: [%s] queued submissions: [%s] queued tasks: [%s] "
+                  + "pool size: [%s] steal count: [%s]",
+                  computedNumParallelTasks,
+                  availableProcessors,
+                  parallelism,
+                  getPool().getActiveThreadCount(),
+                  runningThreadCount,
+                  submissionCount,
+                  getPool().getQueuedTaskCount(),
+                  getPool().getPoolSize(),
+                  getPool().getStealCount()
+        );
+      }
+      return computedNumParallelTasks;
     }
   }
 
@@ -400,7 +419,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    * task completes and executes a new task to continue where it left off. This value is initially set by the
    * {@link MergeCombinePartitioningAction} to a default value, but after that this process is timed to try and compute
    * an 'optimal' number of rows to yield to achieve a task runtime of ~10ms, on the assumption that the time to process
-   * n results will be approximately the same.
+   * n results will be approximately the same. 'recursionDepth' is used to track how many times a task has continued
+   * executing, and utilized to compute a cumulative moving average of task run time per amount yielded in order to
+   * 'smooth' out the continual adjustment.
    */
   private static class MergeCombineAction<T> extends RecursiveAction
   {
@@ -411,7 +432,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     private final T initialValue;
     private final int yieldAfter;
     private final int batchSize;
-    private final int depth;
+    private final int recursionDepth;
     private final CancellationGizmo cancellationGizmo;
 
     private MergeCombineAction(
@@ -422,7 +443,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         T initialValue,
         int yieldAfter,
         int batchSize,
-        int depth,
+        int recursionDepth,
         CancellationGizmo cancellationGizmo
     )
     {
@@ -433,7 +454,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       this.initialValue = initialValue;
       this.yieldAfter = yieldAfter;
       this.batchSize = batchSize;
-      this.depth = depth;
+      this.recursionDepth = recursionDepth;
       this.cancellationGizmo = cancellationGizmo;
     }
 
@@ -505,9 +526,16 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               1L
           );
           final double nextYieldAfter = Math.max(10.0 * ((double) yieldAfter / elapsedMillis), 1.0);
-          final double cumulativeMovingAverage = (nextYieldAfter + (depth * yieldAfter)) / (depth + 1);
+          final double cumulativeMovingAverage = (nextYieldAfter + (recursionDepth * yieldAfter)) / (recursionDepth + 1);
           final int adjustedNextYieldAfter = (int) Math.ceil(cumulativeMovingAverage);
 
+          LOG.debug(
+              "task %s yielded %s results ran for %s millis, next task yielding every %s operations",
+              recursionDepth,
+              yieldAfter,
+              elapsedMillis,
+              nextYieldAfter
+          );
           getPool().execute(new MergeCombineAction<>(
               pQueue,
               outputQueue,
@@ -516,12 +544,13 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               currentCombinedValue,
               adjustedNextYieldAfter,
               batchSize,
-              depth + 1,
+              recursionDepth + 1,
               cancellationGizmo
           ));
         } else if (cancellationGizmo.isCancelled()) {
           // if we got the cancellation signal, go ahead and write terminal value into output queue to help gracefully
           // allow downstream stuff to stop
+          LOG.debug("cancelled after %s tasks", recursionDepth);
           outputQueue.offer(new ResultBatch<>());
         } else {
           // if priority queue is empty, push the final accumulated value into the output batch and push it out
@@ -529,6 +558,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           outputQueue.offer(outputBatch);
           // ... and the terminal value to indicate the blocking queue holding the values is complete
           outputQueue.offer(new ResultBatch<>());
+          LOG.debug("merge combine complete after %s tasks", recursionDepth);
         }
       }
       catch (Exception ex) {
@@ -627,15 +657,15 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   static class QueuePusher<E> implements ForkJoinPool.ManagedBlocker
   {
     final boolean hasTimeout;
-    final long timeoutAt;
+    final long timeoutAtNanos;
     final BlockingQueue<E> queue;
     volatile E item = null;
 
-    QueuePusher(BlockingQueue<E> q, boolean hasTimeout, long timeoutAt)
+    QueuePusher(BlockingQueue<E> q, boolean hasTimeout, long timeoutAtNanos)
     {
       this.queue = q;
       this.hasTimeout = hasTimeout;
-      this.timeoutAt = timeoutAt;
+      this.timeoutAtNanos = timeoutAtNanos;
     }
 
     @Override
@@ -644,11 +674,11 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       boolean success = false;
       if (item != null) {
         if (hasTimeout) {
-          final int thisTimeout = Ints.checkedCast(timeoutAt - System.currentTimeMillis());
-          if (thisTimeout < 0) {
+          final long thisTimeoutNanos = timeoutAtNanos - System.nanoTime();
+          if (thisTimeoutNanos < 0) {
             throw new RE(new TimeoutException("QueuePusher timed out offering data"));
           }
-          success = queue.offer(item, thisTimeout, TimeUnit.MILLISECONDS);
+          success = queue.offer(item, thisTimeoutNanos, TimeUnit.NANOSECONDS);
         } else {
           success = queue.offer(item);
         }
@@ -949,19 +979,19 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   {
     final BlockingQueue<ResultBatch<E>> queue;
     final boolean hasTimeout;
-    final long timeoutAt;
+    final long timeoutAtNanos;
 
     BlockingQueueuBatchedResultsCursor(
         BlockingQueue<ResultBatch<E>> blockingQueue,
         Ordering<E> ordering,
         boolean hasTimeout,
-        long timeoutAt
+        long timeoutAtNanos
     )
     {
       super(ordering);
       this.queue = blockingQueue;
       this.hasTimeout = hasTimeout;
-      this.timeoutAt = timeoutAt;
+      this.timeoutAtNanos = timeoutAtNanos;
     }
 
     @Override
@@ -998,11 +1028,11 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     {
       if (resultBatch == null || resultBatch.isDrained()) {
         if (hasTimeout) {
-          final int thisTimeout = Ints.checkedCast(timeoutAt - System.currentTimeMillis());
-          if (thisTimeout < 0) {
+          final long thisTimeoutNanos = timeoutAtNanos - System.nanoTime();
+          if (thisTimeoutNanos < 0) {
             throw new RE(new TimeoutException("BlockingQueue cursor timed out waiting for data"));
           }
-          resultBatch = queue.poll(thisTimeout, TimeUnit.MILLISECONDS);
+          resultBatch = queue.poll(thisTimeoutNanos, TimeUnit.NANOSECONDS);
         } else {
           resultBatch = queue.take();
         }
