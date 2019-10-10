@@ -28,12 +28,12 @@ import java.lang.annotation.Target;
 
 /**
  * This annnotation is used to inject a boolean parameter into a {@link DataSegment} constructor, which prescribes to
- * drop deserialized "compactionPartitionsSpec" and don't store it in a field of a {@link DataSegment}.
- * "compactionPartitionsSpec" is used only on the coordinator, peons, and indexers.
+ * drop deserialized "lastCompactionState" and don't store it in a field of a {@link DataSegment}.
+ * "lastCompactionState" is used only on the coordinator, peons, and indexers.
  *
- * - In auto compaction of the coordinator, "compactionPartitionsSpec" is used to determine whether the given
+ * - In auto compaction of the coordinator, "lastCompactionState" is used to determine whether the given
  *   segment needs further compaction or not.
- * - In parallel indexing, "compactionPartitionsSpec" should be serialized and deserialized properly when
+ * - In parallel indexing, "lastCompactionState" should be serialized and deserialized properly when
  *   the sub tasks report the pushed segments to the supervisor task.
  */
 @Target({ElementType.PARAMETER, ElementType.FIELD})

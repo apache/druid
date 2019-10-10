@@ -114,6 +114,19 @@ public class CompactionTaskRunTest extends IngestionTestBase
       false,
       0
   );
+  private static final CompactionState DEFAULT_COMPACTION_STATE = new CompactionState(
+      new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
+      ImmutableMap.of(
+          "bitmap",
+          ImmutableMap.of("type", "concise"),
+          "dimensionCompression",
+          "lz4",
+          "metricCompression",
+          "lz4",
+          "longEncoding",
+          "longs"
+      )
+  );
 
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -194,22 +207,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
-      Assert.assertEquals(
-          new CompactionState(
-              new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-              ImmutableMap.of(
-                  "bitmap",
-                  ImmutableMap.of("type", "concise"),
-                  "dimensionCompression",
-                  "lz4",
-                  "metricCompression",
-                  "lz4",
-                  "longEncoding",
-                  "longs"
-              )
-          ),
-          segments.get(i).getLastCompactionState()
-      );
+      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
             new NumberedOverwriteShardSpec(32768, 0, 2, (short) 1, (short) 1),
@@ -254,22 +252,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
-      Assert.assertEquals(
-          new CompactionState(
-              new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-              ImmutableMap.of(
-                  "bitmap",
-                  ImmutableMap.of("type", "concise"),
-                  "dimensionCompression",
-                  "lz4",
-                  "metricCompression",
-                  "lz4",
-                  "longEncoding",
-                  "longs"
-              )
-          ),
-          segments.get(i).getLastCompactionState()
-      );
+      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
             new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1),
@@ -296,22 +279,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
-      Assert.assertEquals(
-          new CompactionState(
-              new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-              ImmutableMap.of(
-                  "bitmap",
-                  ImmutableMap.of("type", "concise"),
-                  "dimensionCompression",
-                  "lz4",
-                  "metricCompression",
-                  "lz4",
-                  "longEncoding",
-                  "longs"
-              )
-          ),
-          segments.get(i).getLastCompactionState()
-      );
+      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
             new NumberedOverwriteShardSpec(
@@ -415,22 +383,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
-      Assert.assertEquals(
-          new CompactionState(
-              new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-              ImmutableMap.of(
-                  "bitmap",
-                  ImmutableMap.of("type", "concise"),
-                  "dimensionCompression",
-                  "lz4",
-                  "metricCompression",
-                  "lz4",
-                  "longEncoding",
-                  "longs"
-              )
-          ),
-          segments.get(i).getLastCompactionState()
-      );
+      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
             new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1),
@@ -475,22 +428,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
     Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(0).getShardSpec());
-    Assert.assertEquals(
-        new CompactionState(
-            new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-            ImmutableMap.of(
-                "bitmap",
-                ImmutableMap.of("type", "concise"),
-                "dimensionCompression",
-                "lz4",
-                "metricCompression",
-                "lz4",
-                "longEncoding",
-                "longs"
-            )
-        ),
-        segments.get(0).getLastCompactionState()
-    );
+    Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(0).getLastCompactionState());
 
     // hour segmentGranularity
     final CompactionTask compactionTask2 = builder
@@ -508,22 +446,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     for (int i = 0; i < 3; i++) {
       Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
       Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
-      Assert.assertEquals(
-          new CompactionState(
-              new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-              ImmutableMap.of(
-                  "bitmap",
-                  ImmutableMap.of("type", "concise"),
-                  "dimensionCompression",
-                  "lz4",
-                  "metricCompression",
-                  "lz4",
-                  "longEncoding",
-                  "longs"
-              )
-          ),
-          segments.get(i).getLastCompactionState()
-      );
+      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
     }
   }
 

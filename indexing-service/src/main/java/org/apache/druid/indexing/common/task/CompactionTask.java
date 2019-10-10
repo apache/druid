@@ -45,6 +45,7 @@ import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -796,24 +797,21 @@ public class CompactionTask extends AbstractBatchIndexTask
     @Nullable
     IndexTuningConfig computeTuningConfig()
     {
-      // Setting maxTotalRows to Long.MAX_VALUE to respect the computed maxRowsPerSegment.
-      // If this is set to something too small, compactionTask can generate small segments
-      // which need to be compacted again, which in turn making auto compaction stuck in the same interval.
       IndexTuningConfig newTuningConfig = tuningConfig == null
                                           ? IndexTuningConfig.createDefault()
                                           : tuningConfig;
-      newTuningConfig = newTuningConfig.withPartitionsSpec(newTuningConfig.getGivenOrDefaultPartitionsSpec());
-      if (newTuningConfig.getPartitionsSpec() instanceof DynamicPartitionsSpec) {
-        final DynamicPartitionsSpec dynamicPartitionsSpec = (DynamicPartitionsSpec) newTuningConfig.getPartitionsSpec();
-        return newTuningConfig.withPartitionsSpec(
-            new DynamicPartitionsSpec(
-                dynamicPartitionsSpec.getMaxRowsPerSegment(),
-                dynamicPartitionsSpec.getMaxTotalRowsOr(Long.MAX_VALUE)
-            )
+      PartitionsSpec partitionsSpec = newTuningConfig.getGivenOrDefaultPartitionsSpec();
+      if (partitionsSpec instanceof DynamicPartitionsSpec) {
+        final DynamicPartitionsSpec dynamicPartitionsSpec = (DynamicPartitionsSpec) partitionsSpec;
+        partitionsSpec = new DynamicPartitionsSpec(
+            dynamicPartitionsSpec.getMaxRowsPerSegment(),
+            // Setting maxTotalRows to Long.MAX_VALUE to respect the computed maxRowsPerSegment.
+            // If this is set to something too small, compactionTask can generate small segments
+            // which need to be compacted again, which in turn making auto compaction stuck in the same interval.
+            dynamicPartitionsSpec.getMaxTotalRowsOr(Long.MAX_VALUE)
         );
-      } else {
-        return newTuningConfig;
       }
+      return newTuningConfig.withPartitionsSpec(partitionsSpec);
     }
   }
 

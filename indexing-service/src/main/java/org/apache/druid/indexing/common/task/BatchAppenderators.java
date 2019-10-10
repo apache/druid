@@ -67,11 +67,17 @@ public final class BatchAppenderators
       DataSegmentPusher segmentPusher
   )
   {
+    final boolean isReingest;
+    if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
+      isReingest = dataSchema.getDataSource().equals(((IngestSegmentFirehoseFactory) firehoseFactory).getDataSource());
+    } else {
+      isReingest = false;
+    }
     return appenderatorsManager.createOfflineAppenderatorForTask(
         taskId,
         dataSchema,
         appenderatorConfig.withBasePersistDirectory(toolbox.getPersistDir()),
-        firehoseFactory instanceof IngestSegmentFirehoseFactory,
+        isReingest,
         metrics,
         segmentPusher,
         toolbox.getObjectMapper(),

@@ -214,7 +214,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
               .filter(holder -> {
                 final List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holder.getObject().iterator());
                 final long partitionBytes = chunks.stream().mapToLong(chunk -> chunk.getObject().getSize()).sum();
-                return chunks.size() > 0
+                return !chunks.isEmpty()
                        && partitionBytes > 0
                        && interval.contains(chunks.get(0).getObject().getInterval());
               })
@@ -328,7 +328,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     while (compactibleTimelineObjectHolderCursor.hasNext()) {
       final SegmentsToCompact candidates = new SegmentsToCompact(compactibleTimelineObjectHolderCursor.next());
 
-      if (candidates.getNumSegments() > 0) {
+      if (!candidates.isEmpty()) {
         final boolean isCompactibleSize = candidates.getTotalSize() <= inputSegmentSize;
         final boolean needsCompaction = needsCompaction(config, candidates);
 

@@ -63,7 +63,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
    */
 
   /**
-   * This class is needed for optional injection of pruneLoadSpec, see
+   * This class is needed for optional injection of pruneLoadSpec and pruneLastCompactionState, see
    * github.com/google/guice/wiki/FrequentlyAskedQuestions#how-can-i-inject-optional-parameters-into-a-constructor
    */
   @VisibleForTesting
@@ -547,7 +547,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.dimensions = segment.getDimensions();
       this.metrics = segment.getMetrics();
       this.shardSpec = segment.getShardSpec();
-      this.lastCompactionState = segment.lastCompactionState;
+      this.lastCompactionState = segment.getLastCompactionState();
       this.binaryVersion = segment.getBinaryVersion();
       this.size = segment.getSize();
     }
