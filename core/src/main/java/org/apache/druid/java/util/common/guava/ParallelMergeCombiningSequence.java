@@ -21,7 +21,6 @@ package org.apache.druid.java.util.common.guava;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.JvmUtils;
@@ -401,7 +400,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
                 getPool().getPoolSize(),
                 getPool().getStealCount()
       );
-      
+
       return computedNumParallelTasks;
     }
   }
