@@ -533,7 +533,7 @@ GROUP BY 1`;
       this.datasourceQueryManager.rerunLastQuery();
     } catch (e) {
       AppToaster.show({
-        message: e,
+        message: getDruidErrorMessage(e),
         intent: Intent.DANGER,
       });
     }
@@ -556,7 +556,7 @@ GROUP BY 1`;
             );
           } catch (e) {
             AppToaster.show({
-              message: e,
+              message: getDruidErrorMessage(e),
               intent: Intent.DANGER,
             });
           }
