@@ -70,8 +70,8 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegment.CompactionState;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 

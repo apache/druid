@@ -34,7 +34,6 @@ import com.google.common.collect.Interners;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import org.apache.druid.guice.annotations.PublicApi;
-import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.jackson.CommaListJoinDeserializer;
 import org.apache.druid.jackson.CommaListJoinSerializer;
 import org.apache.druid.query.SegmentDescriptor;
@@ -45,7 +44,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -74,64 +72,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
 
     @Inject(optional = true) @PruneLoadSpec boolean pruneLoadSpec = false;
     @Inject(optional = true) @PruneLastCompactionState boolean pruneLastCompactionState = false;
-  }
-
-  public static class CompactionState
-  {
-    private final PartitionsSpec partitionsSpec;
-    // org.apache.druid.segment.IndexSpec cannot be used here to avoid the dependency cycle
-    private final Map<String, Object> indexSpec;
-
-    @JsonCreator
-    public CompactionState(
-        @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
-        @JsonProperty("indexSpec") Map<String, Object> indexSpec
-    )
-    {
-      this.partitionsSpec = partitionsSpec;
-      this.indexSpec = indexSpec;
-    }
-
-    @JsonProperty
-    public PartitionsSpec getPartitionsSpec()
-    {
-      return partitionsSpec;
-    }
-
-    @JsonProperty
-    public Map<String, Object> getIndexSpec()
-    {
-      return indexSpec;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      CompactionState that = (CompactionState) o;
-      return Objects.equals(partitionsSpec, that.partitionsSpec) &&
-             Objects.equals(indexSpec, that.indexSpec);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(partitionsSpec, indexSpec);
-    }
-
-    @Override
-    public String toString()
-    {
-      return "CompactionState{" +
-             "partitionsSpec=" + partitionsSpec +
-             ", indexSpec=" + indexSpec +
-             '}';
-    }
   }
 
   private static final Interner<String> STRING_INTERNER = Interners.newWeakInterner();
