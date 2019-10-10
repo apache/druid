@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.helper;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
@@ -56,14 +57,18 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
   private static final String COMPACT_TASK_TYPE = "compact";
   private static final Logger LOG = new Logger(DruidCoordinatorSegmentCompactor.class);
 
-  private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy();
+  private final CompactionSegmentSearchPolicy policy;
   private final IndexingServiceClient indexingServiceClient;
 
   private Object2LongMap<String> remainingSegmentSizeBytes;
 
   @Inject
-  public DruidCoordinatorSegmentCompactor(IndexingServiceClient indexingServiceClient)
+  public DruidCoordinatorSegmentCompactor(
+      ObjectMapper objectMapper,
+      IndexingServiceClient indexingServiceClient
+  )
   {
+    this.policy = new NewestSegmentFirstPolicy(objectMapper);
     this.indexingServiceClient = indexingServiceClient;
   }
 

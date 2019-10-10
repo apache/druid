@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
@@ -194,7 +195,19 @@ public class CompactionTaskRunTest extends IngestionTestBase
           segments.get(i).getInterval()
       );
       Assert.assertEquals(
-          new CompactionState(new DynamicPartitionsSpec(5000000, Long.MAX_VALUE), Collections.emptyMap()),
+          new CompactionState(
+              new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
+              ImmutableMap.of(
+                  "bitmap",
+                  ImmutableMap.of("type", "concise"),
+                  "dimensionCompression",
+                  "lz4",
+                  "metricCompression",
+                  "lz4",
+                  "longEncoding",
+                  "longs"
+              )
+          ),
           segments.get(i).getLastCompactionState()
       );
       if (lockGranularity == LockGranularity.SEGMENT) {
@@ -242,8 +255,20 @@ public class CompactionTaskRunTest extends IngestionTestBase
           segments.get(i).getInterval()
       );
       Assert.assertEquals(
-          new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-          segments.get(i).getCompactionPartitionsSpec()
+          new CompactionState(
+              new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
+              ImmutableMap.of(
+                  "bitmap",
+                  ImmutableMap.of("type", "concise"),
+                  "dimensionCompression",
+                  "lz4",
+                  "metricCompression",
+                  "lz4",
+                  "longEncoding",
+                  "longs"
+              )
+          ),
+          segments.get(i).getLastCompactionState()
       );
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
@@ -272,8 +297,20 @@ public class CompactionTaskRunTest extends IngestionTestBase
           segments.get(i).getInterval()
       );
       Assert.assertEquals(
-          new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-          segments.get(i).getCompactionPartitionsSpec()
+          new CompactionState(
+              new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
+              ImmutableMap.of(
+                  "bitmap",
+                  ImmutableMap.of("type", "concise"),
+                  "dimensionCompression",
+                  "lz4",
+                  "metricCompression",
+                  "lz4",
+                  "longEncoding",
+                  "longs"
+              )
+          ),
+          segments.get(i).getLastCompactionState()
       );
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
@@ -379,8 +416,20 @@ public class CompactionTaskRunTest extends IngestionTestBase
           segments.get(i).getInterval()
       );
       Assert.assertEquals(
-          new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-          segments.get(i).getCompactionPartitionsSpec()
+          new CompactionState(
+              new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
+              ImmutableMap.of(
+                  "bitmap",
+                  ImmutableMap.of("type", "concise"),
+                  "dimensionCompression",
+                  "lz4",
+                  "metricCompression",
+                  "lz4",
+                  "longEncoding",
+                  "longs"
+              )
+          ),
+          segments.get(i).getLastCompactionState()
       );
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
@@ -427,8 +476,20 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
     Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(0).getShardSpec());
     Assert.assertEquals(
-        new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-        segments.get(0).getCompactionPartitionsSpec()
+        new CompactionState(
+            new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
+            ImmutableMap.of(
+                "bitmap",
+                ImmutableMap.of("type", "concise"),
+                "dimensionCompression",
+                "lz4",
+                "metricCompression",
+                "lz4",
+                "longEncoding",
+                "longs"
+            )
+        ),
+        segments.get(0).getLastCompactionState()
     );
 
     // hour segmentGranularity
@@ -448,8 +509,20 @@ public class CompactionTaskRunTest extends IngestionTestBase
       Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
       Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
       Assert.assertEquals(
-          new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-          segments.get(i).getCompactionPartitionsSpec()
+          new CompactionState(
+              new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
+              ImmutableMap.of(
+                  "bitmap",
+                  ImmutableMap.of("type", "concise"),
+                  "dimensionCompression",
+                  "lz4",
+                  "metricCompression",
+                  "lz4",
+                  "longEncoding",
+                  "longs"
+              )
+          ),
+          segments.get(i).getLastCompactionState()
       );
     }
   }

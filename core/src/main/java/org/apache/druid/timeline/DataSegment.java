@@ -360,11 +360,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     return shardSpec;
   }
 
-  public PartitionsSpec getCompactionPartitionsSpec()
-  {
-    return null;
-  }
-
   @Nullable
   @JsonProperty
   public CompactionState getLastCompactionState()

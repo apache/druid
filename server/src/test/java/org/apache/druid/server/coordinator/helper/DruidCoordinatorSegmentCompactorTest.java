@@ -29,6 +29,7 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
@@ -102,7 +103,16 @@ public class DruidCoordinatorSegmentCompactorTest
                     tuningConfig.getMaxRowsPerSegment(),
                     tuningConfig.getMaxTotalRowsOr(Long.MAX_VALUE)
                 ),
-                Collections.emptyMap()
+                ImmutableMap.of(
+                    "bitmap",
+                    ImmutableMap.of("type", "concise"),
+                    "dimensionCompression",
+                    "lz4",
+                    "metricCompression",
+                    "lz4",
+                    "longEncoding",
+                    "longs"
+                )
             ),
             1,
             segmentSize
@@ -185,7 +195,10 @@ public class DruidCoordinatorSegmentCompactorTest
   @Test
   public void testRun()
   {
-    final DruidCoordinatorSegmentCompactor compactor = new DruidCoordinatorSegmentCompactor(indexingServiceClient);
+    final DruidCoordinatorSegmentCompactor compactor = new DruidCoordinatorSegmentCompactor(
+        new DefaultObjectMapper(),
+        indexingServiceClient
+    );
 
     final Supplier<String> expectedVersionSupplier = new Supplier<String>()
     {
