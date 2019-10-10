@@ -22,7 +22,6 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import com.google.common.io.Files;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -60,6 +59,7 @@ import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
@@ -294,7 +294,7 @@ public class JobHelper
   {
     log.info("Uploading jar to path[%s]", path);
     try (OutputStream os = fs.create(path)) {
-      Files.asByteSource(jarFile).copyTo(os);
+      Files.copy(jarFile.toPath(), os);
     }
   }
 
@@ -365,7 +365,7 @@ public class JobHelper
   public static void writeJobIdToFile(String hadoopJobIdFileName, String hadoopJobId)
   {
     if (hadoopJobId != null && hadoopJobIdFileName != null) {
-      try (final OutputStream out = java.nio.file.Files.newOutputStream(Paths.get(hadoopJobIdFileName))) {
+      try (final OutputStream out = Files.newOutputStream(Paths.get(hadoopJobIdFileName))) {
         HadoopDruidIndexerConfig.JSON_MAPPER.writeValue(
             new OutputStreamWriter(out, StandardCharsets.UTF_8),
             hadoopJobId
@@ -549,7 +549,7 @@ public class JobHelper
       List<String> filesToCopy = Arrays.asList(baseDir.list());
       for (String fileName : filesToCopy) {
         final File fileToCopy = new File(baseDir, fileName);
-        if (java.nio.file.Files.isRegularFile(fileToCopy.toPath())) {
+        if (Files.isRegularFile(fileToCopy.toPath())) {
           size += copyFileToZipStream(fileToCopy, outputStream, progressable);
         } else {
           log.warn("File at [%s] is not a regular file! skipping as part of zip", fileToCopy.getPath());
