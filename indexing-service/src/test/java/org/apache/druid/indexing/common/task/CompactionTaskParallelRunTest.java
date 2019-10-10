@@ -143,8 +143,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         null,
         null,
         DATA_SOURCE,
-        Intervals.of("2014-01-01/2014-01-02"),
-        null,
+        new CompactionIOConfig(new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null)),
         null,
         null,
         null,
@@ -255,12 +254,11 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   {
     private final IndexingServiceClient indexingServiceClient;
 
-    public TestCompactionTask(
+    TestCompactionTask(
         String id,
         TaskResource taskResource,
         String dataSource,
-        @Nullable Interval interval,
-        @Nullable List<DataSegment> segments,
+        @Nullable CompactionIOConfig ioConfig,
         @Nullable DimensionsSpec dimensions,
         @Nullable DimensionsSpec dimensionsSpec,
         @Nullable AggregatorFactory[] metricsSpec,
@@ -283,8 +281,9 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           id,
           taskResource,
           dataSource,
-          interval,
-          segments,
+          null,
+          null,
+          ioConfig,
           dimensions,
           dimensionsSpec,
           metricsSpec,
