@@ -42,6 +42,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
+import org.apache.druid.query.search.QueryVectorizationConfig;
 import org.hamcrest.CoreMatchers;
 import org.junit.AfterClass;
 import org.junit.Rule;
@@ -110,6 +111,7 @@ public class GroupByQueryRunnerFailureTest
         new GroupByStrategyV2(
             DEFAULT_PROCESSING_CONFIG,
             configSupplier,
+            Suppliers.ofInstance(new QueryVectorizationConfig()),
             BUFFER_POOL,
             MERGE_BUFFER_POOL,
             mapper,

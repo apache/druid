@@ -66,6 +66,7 @@ import org.apache.druid.query.groupby.epinephelinae.GroupByRowProcessor;
 import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
+import org.apache.druid.query.search.QueryVectorizationConfig;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.StorageAdapter;
 
@@ -89,6 +90,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
   private final DruidProcessingConfig processingConfig;
   private final Supplier<GroupByQueryConfig> configSupplier;
+  private final Supplier<QueryVectorizationConfig> vectorizationConfigSupplier;
   private final NonBlockingPool<ByteBuffer> bufferPool;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
   private final ObjectMapper spillMapper;
@@ -98,6 +100,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   public GroupByStrategyV2(
       DruidProcessingConfig processingConfig,
       Supplier<GroupByQueryConfig> configSupplier,
+      Supplier<QueryVectorizationConfig> vectorizationConfigSupplier,
       @Global NonBlockingPool<ByteBuffer> bufferPool,
       @Merging BlockingPool<ByteBuffer> mergeBufferPool,
       @Smile ObjectMapper spillMapper,
@@ -106,6 +109,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   {
     this.processingConfig = processingConfig;
     this.configSupplier = configSupplier;
+    this.vectorizationConfigSupplier = vectorizationConfigSupplier;
     this.bufferPool = bufferPool;
     this.mergeBufferPool = mergeBufferPool;
     this.spillMapper = spillMapper;
@@ -582,7 +586,13 @@ public class GroupByStrategyV2 implements GroupByStrategy
   @Override
   public Sequence<ResultRow> process(GroupByQuery query, StorageAdapter storageAdapter)
   {
-    return GroupByQueryEngineV2.process(query, storageAdapter, bufferPool, configSupplier.get().withOverrides(query));
+    return GroupByQueryEngineV2.process(
+        query,
+        storageAdapter,
+        bufferPool,
+        configSupplier.get().withOverrides(query),
+        vectorizationConfigSupplier.get().withOverrides(query)
+    );
   }
 
   @Override

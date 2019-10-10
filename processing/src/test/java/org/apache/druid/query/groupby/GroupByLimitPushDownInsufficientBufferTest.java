@@ -64,6 +64,7 @@ import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.search.QueryVectorizationConfig;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.IndexIO;
@@ -352,8 +353,10 @@ public class GroupByLimitPushDownInsufficientBufferTest
       }
     };
 
-
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+    final Supplier<QueryVectorizationConfig> vectorizationConfigSupplier = Suppliers.ofInstance(
+        new QueryVectorizationConfig()
+    );
     final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
         configSupplier,
         new GroupByStrategyV1(
@@ -365,6 +368,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
+            vectorizationConfigSupplier,
             bufferPool,
             mergePool,
             new ObjectMapper(new SmileFactory()),
@@ -383,6 +387,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         new GroupByStrategyV2(
             tooSmallDruidProcessingConfig,
             configSupplier,
+            vectorizationConfigSupplier,
             bufferPool,
             tooSmallMergePool,
             new ObjectMapper(new SmileFactory()),

@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.ColumnSelectorPlus;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
@@ -54,6 +53,7 @@ import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.ordering.StringComparator;
+import org.apache.druid.query.search.QueryVectorizationConfig;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
@@ -112,7 +112,8 @@ public class GroupByQueryEngineV2
       final GroupByQuery query,
       @Nullable final StorageAdapter storageAdapter,
       final NonBlockingPool<ByteBuffer> intermediateResultsBufferPool,
-      final GroupByQueryConfig querySpecificConfig
+      final GroupByQueryConfig querySpecificConfig,
+      final QueryVectorizationConfig vectorizationConfig
   )
   {
     if (storageAdapter == null) {
@@ -139,7 +140,7 @@ public class GroupByQueryEngineV2
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
     final Interval interval = Iterables.getOnlyElement(query.getIntervals());
 
-    final boolean doVectorize = QueryContexts.getVectorize(query).shouldVectorize(
+    final boolean doVectorize = vectorizationConfig.getVectorize().shouldVectorize(
         VectorGroupByEngine.canVectorize(query, storageAdapter, filter)
     );
 
@@ -153,7 +154,8 @@ public class GroupByQueryEngineV2
           fudgeTimestamp,
           filter,
           interval,
-          querySpecificConfig
+          querySpecificConfig,
+          vectorizationConfig
       );
     } else {
       result = processNonVectorized(
