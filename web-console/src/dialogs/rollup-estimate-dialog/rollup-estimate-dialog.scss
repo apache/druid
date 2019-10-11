@@ -18,7 +18,7 @@
 
 .rollup-estimate-dialog {
   &.bp3-dialog {
-    width: 100%;
+    width: 90%;
     position: absolute;
     display: grid;
     grid-template-areas:
@@ -32,15 +32,17 @@
     .ReactTable {
       grid-area: main;
       overflow: auto;
+      margin: 10px;
       .rt-th {
         cursor: pointer;
         background: rgba(38, 170, 201, 0.5);
       }
-      .selected {
-        background: rgba(128, 128, 128, 0.5);
-      }
+
       .rt-td {
         background: rgba(38, 170, 201, 0.1);
+      }
+      .selected {
+        background: rgba(128, 128, 128, 0.5);
       }
     }
   }

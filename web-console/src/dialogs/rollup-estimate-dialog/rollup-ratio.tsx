@@ -174,6 +174,8 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
   }
   render(): JSX.Element {
     const { loading, result } = this.state;
+    const { queryColumns } = this.props;
+    console.log(queryColumns);
     if (loading) return <Loader />;
     return (
       <div className="rollup-ratio">

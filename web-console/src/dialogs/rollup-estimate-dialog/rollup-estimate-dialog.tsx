@@ -183,16 +183,14 @@ export class RollupEstimateDialog extends React.PureComponent<
 
   updateColumns(columnName: string) {
     const { queryColumns } = this.state;
+    const newQueryColumns = queryColumns.slice();
     if (!queryColumns.includes(columnName)) {
-      queryColumns.push(columnName);
-      this.setState({ queryColumns });
+      newQueryColumns.push(columnName);
     } else {
-      const indexOfColumn = queryColumns.indexOf(columnName);
-      queryColumns.splice(indexOfColumn, 1);
-      this.setState({ queryColumns });
+      const indexOfColumn = newQueryColumns.indexOf(columnName);
+      newQueryColumns.splice(indexOfColumn, 1);
     }
-    console.log('please');
-    console.log(queryColumns);
+    this.setState({ queryColumns: newQueryColumns });
   }
 
   componentDidMount() {
@@ -204,8 +202,6 @@ export class RollupEstimateDialog extends React.PureComponent<
     // Plan to separate main and control components
     const { datasource, onClose } = this.props;
     const { result, loading, queryColumns } = this.state;
-    console.log(result);
-    console.log(queryColumns);
     if (loading) return <Loader />;
     return (
       <Dialog
@@ -220,24 +216,23 @@ export class RollupEstimateDialog extends React.PureComponent<
           loading={loading}
           columns={(result ? result.queryResult.header : []).map((h: any, i) => {
             // Need to clean this up and clickable columns for deselect, will have to update queryColumns too
+
             return {
               Header: () => {
-                return <div onClick={() => this.updateColumns(h)}>{h}</div>;
+                return (
+                  <div
+                    onClick={() => {
+                      this.updateColumns(h);
+                    }}
+                  >
+                    {h}
+                  </div>
+                );
               },
               headerClassName: queryColumns.includes(h) ? h : 'selected',
               accessor: String(i),
-              Cell: row => {
-                const value = row.value;
-                const popover = (
-                  <div>
-                    <div>{value}</div>
-                  </div>
-                );
-                if (value) {
-                  return popover;
-                }
-                return value;
-              },
+              className: queryColumns.includes(h) ? h : 'selected',
+              Cell: row => <div> {row.value}</div>,
             };
           })}
           showPageSizeOptions={false}
