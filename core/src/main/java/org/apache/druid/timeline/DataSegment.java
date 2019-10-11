@@ -536,7 +536,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
 
     public Builder lastCompactionState(CompactionState compactionState)
     {
-      this.lastCompactionState = lastCompactionState;
+      this.lastCompactionState = compactionState;
       return this;
     }
 
