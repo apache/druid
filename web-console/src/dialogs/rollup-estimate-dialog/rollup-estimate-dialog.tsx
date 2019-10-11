@@ -203,6 +203,7 @@ export class RollupEstimateDialog extends React.PureComponent<
     const { datasource, onClose } = this.props;
     const { result, loading, queryColumns } = this.state;
     if (loading) return <Loader />;
+    console.log(result);
     return (
       <Dialog
         className="rollup-estimate-dialog"
@@ -215,7 +216,7 @@ export class RollupEstimateDialog extends React.PureComponent<
           data={result ? result.queryResult.rows : []}
           loading={loading}
           columns={(result ? result.queryResult.header : []).map((h: any, i) => {
-            // Need to clean this up and clickable columns for deselect, will have to update queryColumns too
+            // Need to clean this up
 
             return {
               Header: () => {
@@ -246,7 +247,6 @@ export class RollupEstimateDialog extends React.PureComponent<
 }
 /*
 Todo:
-1. Clickable columns 
 2. Correct query to calculate rollup ratio based on rollup/non-rollup data
 3. Bucket time column for non-rolled data
 4. Clean up code

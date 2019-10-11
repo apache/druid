@@ -77,20 +77,94 @@ export interface RollupRatioState {
 export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRatioState> {
   private sqlQueryManager: QueryManager<QueryWithContext, QueryResult>;
   constructor(props: RollupRatioProps, context: any) {
-    // Temporary query as original needs to be escape with quotes and converted to Druid
     super(props, context);
     this.state = {
       queryContext: {},
-      rollupQueryString: `SELECT COUNT("${this.props.queryColumns[1]}") / COUNT(DISTINCT "${this.props.queryColumns[1]}") * 1.0 FROM "${this.props.datasource}"`,
+      rollupQueryString: `
+{
+  "queryType": "timeseries",
+  "dataSource": {
+    "type": "table",
+    "name": "${props.datasource}"
+  },
+  "intervals": {
+    "type": "intervals",
+    "intervals": [
+      "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+    ]
+  },
+  "descending": false,
+  "virtualColumns": [
+    {
+      "type": "expression",
+      "name": "v0",
+      "expression": "concat(${props.queryColumns})",
+      "outputType": "STRING"
+    }
+  ],
+  "filter": null,
+  "granularity": {
+    "type": "all"
+  },
+  "aggregations": [
+    {
+      "type": "filtered",
+      "aggregator": {
+        "type": "count",
+        "name": "a0"
+      },
+      "filter": {
+        "type": "not",
+        "field": {
+          "type": "selector",
+          "dimension": "v0",
+          "value": null,
+          "extractionFn": null
+        }
+      },
+      "name": "a0"
+    },
+    {
+      "type": "cardinality",
+      "name": "a1",
+      "fields": [
+        {
+          "type": "default",
+          "dimension": "v0",
+          "outputName": "v0",
+          "outputType": "STRING"
+        }
+      ],
+      "byRow": true,
+      "round": true
+    }
+  ],
+  "postAggregations": [
+    {
+      "type": "expression",
+      "name": "p0",
+      "expression": "((\\"a0\\" / \\"a1\\") * 1.0)",
+      "ordering": null
+    }
+  ],
+  "limit": 2147483647,
+  "context": {
+    "skipEmptyBuckets": true,
+    "sqlQueryId": "5b534ba2-be62-4e5a-bb6b-c3c4aef416bf"
+  }
+}
+      `,
+      // rollupQueryString: `SELECT COUNT("${this.props.queryColumns[1]}") / COUNT(DISTINCT "${this.props.queryColumns[1]}") * 1.0 FROM "${this.props.datasource}"`,
       loading: false,
     };
     this.sqlQueryManager = new QueryManager({
       // Clean up this function along with renaming some variables
       processQuery: async (queryWithContext: QueryWithContext): Promise<QueryResult> => {
         const { rollupQueryString, queryContext, wrapQueryLimit } = queryWithContext;
+        console.log(this.state.rollupQueryString);
+
         let parsedQuery: SqlQuery | undefined;
         let jsonQuery: any;
-
         try {
           parsedQuery = parser(rollupQueryString);
         } catch {}
@@ -172,11 +246,98 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
     const { rollupQueryString, queryContext } = this.state;
     this.sqlQueryManager.runQuery({ rollupQueryString, queryContext, wrapQueryLimit: 1 });
   }
+
+  componentDidUpdate(prevProps: RollupRatioProps) {
+    const { queryColumns } = this.props;
+    const { rollupQueryString, queryContext } = this.state;
+    if (prevProps.queryColumns !== queryColumns) {
+      this.setState({
+        rollupQueryString: `
+{
+  "queryType": "timeseries",
+  "dataSource": {
+    "type": "table",
+    "name": ${this.props.datasource}
+  },
+  "intervals": {
+    "type": "intervals",
+    "intervals": [
+      "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+    ]
+  },
+  "descending": false,
+  "virtualColumns": [
+    {
+      "type": "expression",
+      "name": "v0",
+      "expression": "concat(${this.props.queryColumns})",
+      "outputType": "STRING"
+    }
+  ],
+  "filter": null,
+  "granularity": {
+    "type": "all"
+  },
+  "aggregations": [
+    {
+      "type": "filtered",
+      "aggregator": {
+        "type": "count",
+        "name": "a0"
+      },
+      "filter": {
+        "type": "not",
+        "field": {
+          "type": "selector",
+          "dimension": "v0",
+          "value": null,
+          "extractionFn": null
+        }
+      },
+      "name": "a0"
+    },
+    {
+      "type": "cardinality",
+      "name": "a1",
+      "fields": [
+        {
+          "type": "default",
+          "dimension": "v0",
+          "outputName": "v0",
+          "outputType": "STRING"
+        }
+      ],
+      "byRow": true,
+      "round": true
+    }
+  ],
+  "postAggregations": [
+    {
+      "type": "expression",
+      "name": "p0",
+      "expression": "((\\"a0\\" / \\"a1\\") * 1.0)",
+      "ordering": null
+    }
+  ],
+  "limit": 2147483647,
+  "context": {
+    "skipEmptyBuckets": true,
+    "sqlQueryId": "5b534ba2-be62-4e5a-bb6b-c3c4aef416bf"
+  }
+} 
+`,
+      });
+      this.sqlQueryManager.runQuery({ rollupQueryString, queryContext, wrapQueryLimit: 1 });
+    }
+  }
+
   render(): JSX.Element {
     const { loading, result } = this.state;
-    const { queryColumns } = this.props;
-    console.log(queryColumns);
+    // const { queryColumns } = this.props;
+    // console.log(queryColumns);
     if (loading) return <Loader />;
+    console.log(result);
+    // console.log(rollupQueryString);
     return (
       <div className="rollup-ratio">
         <Callout>
@@ -184,7 +345,7 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
             You may select any column to exclude them from your rollup preview. This will update
             your rollup ratio.{' '}
           </p>
-          <p>Your rollup ratio is currently: {result ? result.queryResult.rows : []}</p>
+          <p>Your rollup ratio is currently: {result ? result.queryResult.rows[0][1] : []}</p>
         </Callout>
       </div>
     );
