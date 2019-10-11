@@ -41,6 +41,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BinaryOperator;
 
 /**
@@ -1061,30 +1062,25 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    */
   static class CancellationGizmo
   {
-    // volatile instead of AtomicBoolean because it is never unset
-    private volatile boolean cancelled;
-    private volatile Exception exception;
+    private final AtomicReference<Exception> exception = new AtomicReference<>(null);
 
     void cancel(Exception ex)
     {
-      if (cancelled) {
-        return;
-      }
-      cancelled = true;
-      exception = ex;
+      exception.compareAndSet(null, ex);
     }
 
     boolean isCancelled()
     {
-      return cancelled;
+      return exception.get() != null;
     }
 
     RuntimeException getRuntimeException()
     {
-      if (exception instanceof RuntimeException) {
-        return (RuntimeException) exception;
+      Exception ex = exception.get();
+      if (ex instanceof RuntimeException) {
+        return (RuntimeException) ex;
       }
-      return new RE(exception);
+      return new RE(ex);
     }
   }
 }

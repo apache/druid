@@ -41,6 +41,11 @@ The query context is used for various query configuration parameters. The follow
 |maxQueuedBytes       | `druid.broker.http.maxQueuedBytes`        | Maximum number of bytes queued per query before exerting backpressure on the channel to the data server. Similar to `maxScatterGatherBytes`, except unlike that configuration, this one will trigger backpressure rather than query failure. Zero means disabled.|
 |serializeDateTimeAsLong| `false`       | If true, DateTime is serialized as long in the result returned by Broker and the data transportation between Broker and compute process|
 |serializeDateTimeAsLongInner| `false`  | If true, DateTime is serialized as long in the data transportation between Broker and compute process|
+|enableParallelMerge|`true`|Enable parallel result merging on the Broker. See [Broker configuration](../configuration/index.html#broker) for more details.|
+|parallelMergeParallelism|`druid.processing.numMergePoolThreads`|Maximum number of parallel threads to use for parallel result merging on the Broker. See [Broker configuration](../configuration/index.html#broker) for more details.|
+|parallelMergeInitialYieldRows|`druid.processing.mergePoolTaskInitialYieldRows`|Number of rows to yield per ForkJoinPool merge task for parallel result merging on the Broker, before forking off a new task to continue merging sequences. See [Broker configuration](../configuration/index.html#broker) for more details.|
+|parallelMergeSmallBatchRows|`druid.processing.mergePoolTaskInitialYieldRows`|Size of result batches to operate on in ForkJoinPool merge tasks for parallel result merging on the Broker. See [Broker configuration](../configuration/index.html#broker) for more details.|
+
 
 In addition, some query types offer context parameters specific to that query type.
 

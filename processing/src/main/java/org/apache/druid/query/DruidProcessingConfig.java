@@ -160,7 +160,21 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     return DEFAULT_NUM_THREADS;
   }
 
+  public int getNumThreadsMergePool()
+  {
+    int numThreadsConfigured = getNumThreadsMergePoolConfigured();
+    if (numThreadsConfigured != DEFAULT_NUM_THREADS) {
+      return numThreadsConfigured;
+    } else {
+      return (int) Math.ceil(JvmUtils.getRuntimeInfo().getAvailableProcessors() * 1.5);
+    }
+  }
 
+  @Config(value = "${base_path}.mergePoolAwaitShutdownMillis")
+  public long getMergePoolAwaitShutdownMillis()
+  {
+    return DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS;
+  }
 
   @Config(value = "${base_path}.mergePoolDefaultMaxParallelism")
   public int getMergePoolDefaultMaxParallelism()
@@ -179,20 +193,5 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   {
     return DEFAULT_PARALLEL_MERGE_SMALL_BATCH_ROWS;
   }
-
-  public int getNumThreadsMergePool()
-  {
-    int numThreadsConfigured = getNumThreadsMergePoolConfigured();
-    if (numThreadsConfigured != DEFAULT_NUM_THREADS) {
-      return numThreadsConfigured;
-    } else {
-      return (int) Math.ceil(JvmUtils.getRuntimeInfo().getAvailableProcessors() * 1.5);
-    }
-  }
-
-  @Config(value = "${base_path}.mergePoolAwaitShutdownMillis")
-  public long getMergePoolAwaitShutdownMillis()
-  {
-    return DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS;
-  }
 }
+
