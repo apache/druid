@@ -162,11 +162,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
                   }
 
                   if (cancellationGizmo.isCancelled()) {
-                    if (cancellationGizmo.getRuntimeException() != null) {
-                      throw cancellationGizmo.getRuntimeException();
-                    } else {
-                      throw new RuntimeException("Failed to merge results, unknown error");
-                    }
+                    throw cancellationGizmo.getRuntimeException();
                   }
 
                   if (currentBatch.isTerminalResult()) {
@@ -183,11 +179,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               public T next()
               {
                 if (cancellationGizmo.isCancelled()) {
-                  if (cancellationGizmo.getRuntimeException() != null) {
-                    throw cancellationGizmo.getRuntimeException();
-                  } else {
-                    throw new RuntimeException("Failed to merge results, unknown error");
-                  }
+                  throw cancellationGizmo.getRuntimeException();
                 }
 
                 if (currentBatch == null || currentBatch.isDrained() || currentBatch.isTerminalResult()) {
@@ -865,7 +857,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         throw new RuntimeException("Failed to load next batch of results", e);
       }
     }
-
 
     public void close()
     {

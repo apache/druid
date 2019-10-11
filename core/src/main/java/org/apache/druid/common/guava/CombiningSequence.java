@@ -227,7 +227,7 @@ public class CombiningSequence<T> implements Sequence<T>
     }
   }
 
-  class CombiningAccumulator<OutType> implements Accumulator<T, T>
+  private class CombiningAccumulator<OutType> implements Accumulator<T, T>
   {
     private OutType retVal;
     private final Accumulator<OutType, T> accumulator;
