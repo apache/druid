@@ -40,6 +40,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * The purpose of this class is to host the common static methods used in {@link VersionedIntervalTimelineTest} and
+ * {@link VersionedIntervalTimelineSpecificDataTest}. When Druid style allows static imports in tests, this
+ * functionality should be moved to {@link VersionedIntervalTimelineTest} and then used statically from {@link
+ * VersionedIntervalTimelineSpecificDataTest}.
+ */
 public class VersionedIntervalTimelineTestBase
 {
   static void assertValues(
