@@ -30,12 +30,11 @@ import java.util.Map;
 public interface BasicAuthenticatorCacheManager
 {
   /**
-   * Update this cache manager's local state with fresh information pushed by the coordinator.
-   *
+   * Update this cache manager's local state of user map with fresh information pushed by the coordinator.
    * @param authenticatorPrefix The name of the authenticator this update applies to.
    * @param serializedUserMap The updated, serialized user map
    */
-  void handleAuthenticatorUpdate(String authenticatorPrefix, byte[] serializedUserMap);
+  void handleAuthenticatorUserMapUpdate(String authenticatorPrefix, byte[] serializedUserMap);
 
   /**
    * Return the cache manager's local view of the user map for the authenticator named `authenticatorPrefix`.

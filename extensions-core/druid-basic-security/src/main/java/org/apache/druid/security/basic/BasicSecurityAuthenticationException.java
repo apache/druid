@@ -17,51 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.indexer.partitions;
+package org.apache.druid.security.basic;
 
-import java.util.Objects;
+import org.apache.druid.java.util.common.StringUtils;
 
 /**
- * Convenience class for holding a pair of string key and templated value.
+ * Throw this when a request is unauthorized and we want to send a 401 response back.
  */
-class Property<T>
+public class BasicSecurityAuthenticationException extends IllegalArgumentException
 {
-  private final String name;
-  private final T value;
-
-  Property(String name, T value)
+  public BasicSecurityAuthenticationException(String formatText, Object... arguments)
   {
-    this.name = name;
-    this.value = value;
+    super(StringUtils.nonStrictFormat(formatText, arguments));
   }
 
-  public String getName()
+  public BasicSecurityAuthenticationException(Throwable t, String formatText, Object... arguments)
   {
-    return name;
-  }
-
-  public T getValue()
-  {
-    return value;
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    Property<?> property = (Property<?>) o;
-    return Objects.equals(name, property.name) &&
-           Objects.equals(value, property.value);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(name, value);
+    super(StringUtils.nonStrictFormat(formatText, arguments), t);
   }
 }

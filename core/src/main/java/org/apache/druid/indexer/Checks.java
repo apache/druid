@@ -17,20 +17,41 @@
  * under the License.
  */
 
-package org.apache.druid.indexer.partitions;
+package org.apache.druid.indexer;
+
+import org.apache.druid.java.util.common.IAE;
+
+import java.util.List;
 
 /**
  * Various helper methods useful for checking the validity of arguments to spec constructors.
  */
-class Checks
+public final class Checks
 {
+  public static <T> Property<T> checkOneNotNullOrEmpty(List<Property<T>> properties)
+  {
+    Property<T> nonNullProperty = null;
+    for (Property<T> property : properties) {
+      if (!property.isValueNullOrEmptyCollection()) {
+        if (nonNullProperty == null) {
+          nonNullProperty = property;
+        } else {
+          throw new IAE("At most one of %s must be present", properties);
+        }
+      }
+    }
+    if (nonNullProperty == null) {
+      throw new IAE("At most one of %s must be present", properties);
+    }
+    return nonNullProperty;
+  }
+
   /**
    * @return Non-null value, or first one if both are null. -1 is interpreted as null for historical reasons.
    */
-  @SuppressWarnings("VariableNotUsedInsideIf")  // false positive: checked for 'null' not used inside 'if
-  static Property<Integer> checkAtMostOneNotNull(Property<Integer> property1, Property<Integer> property2)
+  public static <T> Property<T> checkAtMostOneNotNull(Property<T> property1, Property<T> property2)
   {
-    final Property<Integer> property;
+    final Property<T> property;
 
     boolean isNull1 = property1.getValue() == null;
     boolean isNull2 = property2.getValue() == null;
@@ -42,9 +63,7 @@ class Checks
     } else if (isNull2) {
       property = property1;
     } else {
-      throw new IllegalArgumentException(
-          "At most one of " + property1.getName() + " or " + property2.getName() + " must be present"
-      );
+      throw new IAE("At most one of [%s] or [%s] must be present", property1, property2);
     }
 
     return property;
@@ -53,10 +72,14 @@ class Checks
   /**
    * @return Non-null value, or first one if both are null. -1 is interpreted as null for historical reasons.
    */
-  static Property<Integer> checkAtMostOneNotNull(String name1, Integer value1, String name2, Integer value2)
+  public static <T> Property<T> checkAtMostOneNotNull(String name1, T value1, String name2, T value2)
   {
-    Property<Integer> property1 = new Property<>(name1, value1);
-    Property<Integer> property2 = new Property<>(name2, value2);
+    Property<T> property1 = new Property<>(name1, value1);
+    Property<T> property2 = new Property<>(name2, value2);
     return checkAtMostOneNotNull(property1, property2);
+  }
+
+  private Checks()
+  {
   }
 }

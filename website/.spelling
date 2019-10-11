@@ -87,6 +87,7 @@ IndexSpec
 IndexTask
 InfluxDB
 Integer.MAX_VALUE
+JBOD
 JDBC
 JDK
 JDK7
@@ -247,6 +248,7 @@ lookback
 lookups
 mapreduce
 masse
+max_map_count
 memcached
 mergeable
 metadata
@@ -336,6 +338,7 @@ timestamp
 timestamps
 tradeoffs
 tsv
+ulimit
 unannounce
 unannouncements
 unary
@@ -569,6 +572,18 @@ authorizerName
 druid_system
 pollingPeriod
 roleName
+LDAP
+ldap
+MyBasicMetadataAuthenticator
+MyBasicLDAPAuthenticator
+MyBasicMetadataAuthorizer
+MyBasicLDAPAuthorizer
+credentialsValidator
+sAMAccountName
+objectClass
+initialAdminRole
+adminGroupMapping
+groupMappingName
  - ../docs/development/extensions-core/druid-kerberos.md
 8Kb
 HttpComponents
@@ -808,6 +823,7 @@ listDelimiter
 timestampSpec
  - ../docs/ingestion/data-management.md
 1GB
+IOConfig
 compactionTask
 compactionTasks
 ingestSegmentFirehose

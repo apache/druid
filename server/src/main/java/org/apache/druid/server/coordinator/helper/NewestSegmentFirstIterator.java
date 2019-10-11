@@ -259,19 +259,17 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   {
     final long inputSegmentSize = config.getInputSegmentSizeBytes();
     final @Nullable Long targetCompactionSizeBytes = config.getTargetCompactionSizeBytes();
-    final int maxNumSegmentsToCompact = config.getMaxNumSegmentsToCompact();
 
     // Finds segments to compact together while iterating timeline from latest to oldest
     while (compactibleTimelineObjectHolderCursor.hasNext()) {
       final SegmentsToCompact candidates = new SegmentsToCompact(compactibleTimelineObjectHolderCursor.next());
       final boolean isCompactibleSize = candidates.getTotalSize() <= inputSegmentSize;
-      final boolean isCompactibleNum = candidates.getNumSegments() <= maxNumSegmentsToCompact;
       final boolean needsCompaction = SegmentCompactorUtil.needsCompaction(
           targetCompactionSizeBytes,
           candidates.segments
       );
 
-      if (isCompactibleSize && isCompactibleNum && needsCompaction) {
+      if (isCompactibleSize && needsCompaction) {
         return candidates;
       } else {
         if (!isCompactibleSize) {
@@ -282,18 +280,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
               candidates.segments.get(0).getDataSource(),
               candidates.segments.get(0).getInterval(),
               inputSegmentSize
-          );
-        }
-        if (!isCompactibleNum) {
-          log.warn(
-              "Number of segments[%d] for datasource[%s] and interval[%s] is larger than "
-              + "maxNumSegmentsToCompact[%d]. If you see lots of shards are being skipped due to too many "
-              + "segments, consider increasing 'numTargetCompactionSegments' and "
-              + "'druid.indexer.runner.maxZnodeBytes'. Continue to the next interval.",
-              candidates.getNumSegments(),
-              candidates.segments.get(0).getDataSource(),
-              candidates.segments.get(0).getInterval(),
-              maxNumSegmentsToCompact
           );
         }
         if (!needsCompaction) {
