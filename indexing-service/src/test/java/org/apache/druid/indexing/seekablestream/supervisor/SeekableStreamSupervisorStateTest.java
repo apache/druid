@@ -914,6 +914,12 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
+    protected boolean isShardExpirationMarker(String seqNum)
+    {
+      return false;
+    }
+
+    @Override
     protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
     {
       return false;

@@ -24,7 +24,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
@@ -60,7 +59,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -68,6 +66,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -234,13 +233,38 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       partitionIds.add(partitionId);
     }
 
-    return Math.abs(getHashIntFromShardId(partitionId) % spec.getIoConfig().getTaskCount());
+    return getTaskGroupIdForPartitionWithProvidedList(partitionId, partitionIds);
   }
 
-  private int getHashIntFromShardId(String shardId)
+  private int getTaskGroupIdForPartitionWithProvidedList(String partitionId, List<String> availablePartitions)
   {
-    HashCode hashCode = HASH_FUNCTION.hashString(shardId, StandardCharsets.UTF_8);
-    return hashCode.asInt();
+    return availablePartitions.indexOf(partitionId) % spec.getIoConfig().getTaskCount();
+  }
+
+  @Override
+  protected Map<Integer, ConcurrentHashMap<String, String>> recomputePartitionGroupsForExpiration(
+      Set<String> availablePartitions
+  )
+  {
+    List<String> availablePartitionsList = new ArrayList<>(availablePartitions);
+
+    Map<Integer, ConcurrentHashMap<String, String>> newPartitionGroups = new HashMap<>();
+
+    for (ConcurrentHashMap<String, String> oldGroup : partitionGroups.values()) {
+      for (Map.Entry<String, String> partitionOffsetMapping : oldGroup.entrySet()) {
+        String partitionId = partitionOffsetMapping.getKey();
+        if (availablePartitions.contains(partitionId)) {
+          int newTaskGroupId = getTaskGroupIdForPartitionWithProvidedList(partitionId, availablePartitionsList);
+          Map<String, String> partitionMap = newPartitionGroups.computeIfAbsent(
+              newTaskGroupId,
+              k -> new ConcurrentHashMap<>()
+          );
+          partitionMap.put(partitionId, partitionOffsetMapping.getValue());
+        }
+      }
+    }
+
+    return newPartitionGroups;
   }
 
   @Override
@@ -331,6 +355,12 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
+  protected boolean isShardExpirationMarker(String seqNum)
+  {
+    return KinesisSequenceNumber.EXPIRED_MARKER.equals(seqNum);
+  }
+
+  @Override
   protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
   {
     return true;
@@ -359,12 +389,11 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
-  protected KinesisDataSourceMetadata createDataSourceMetadataWithoutExpiredPartitions(
-      SeekableStreamDataSourceMetadata<String, String> currentMetadata,
-      Set<String> expiredPartitionIds
+  protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetadataWithExpiredPartitions(
+      SeekableStreamDataSourceMetadata<String, String> currentMetadata, Set<String> expiredPartitionIds
   )
   {
-    log.info("Cleaning up dead shards: " + expiredPartitionIds);
+    log.info("Marking expired shards in metadata: " + expiredPartitionIds);
 
     final KinesisDataSourceMetadata dataSourceMetadata = (KinesisDataSourceMetadata) currentMetadata;
 
@@ -375,6 +404,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     for (Map.Entry<String, String> entry : oldPartitionSequenceNumberMap.entrySet()) {
       if (!expiredPartitionIds.contains(entry.getKey())) {
         newPartitionSequenceNumberMap.put(entry.getKey(), entry.getValue());
+      } else {
+        newPartitionSequenceNumberMap.put(entry.getKey(), KinesisSequenceNumber.EXPIRED_MARKER);
       }
     }
 
