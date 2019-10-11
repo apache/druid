@@ -1436,7 +1436,7 @@ The broker uses processing configs for nested groupBy queries. And, if you use g
 |`druid.processing.fifo`|If the processing queue should treat tasks of equal priority in a FIFO manner|`false`|
 |`druid.processing.tmpDir`|Path where temporary files created while processing a query should be stored. If specified, this configuration takes priority over the default `java.io.tmpdir` path.|path represented by `java.io.tmpdir`|
 |`druid.processing.useParallelMergePool`|Enable automatic parallel merging for Brokers on a dedicated async ForkJoinPool. If `false`, instead merges will be done serially on the `HTTP` thread pool.|`true`|
-|`druid.processing.numMergePoolThreads`|Size of ForkJoinPool|`druid.processing.numThreads * 1.5`|
+|`druid.processing.numMergePoolThreads`|Size of ForkJoinPool|`druid.processing.numThreads * 1.5` (rounded up)|
 |`druid.processing.mergePoolAwaitShutdownMillis`|Time to wait for merge ForkJoinPool tasks to complete before ungracefully stopping on process shutdown in milliseconds.|`60_000`|
 |`druid.processing.mergePoolDefaultMaxParallelism`|Default per query maximum number of parallel merge tasks.|`unlimited`|
 |`druid.processing.mergePoolTaskInitialYieldRows`|Number of rows to yield per ForkJoinPool merge task, before forking off a new task to continue merging sequences.|`1024`|

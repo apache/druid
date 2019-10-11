@@ -164,6 +164,7 @@ aggregator
 aggregators
 ambari
 analytics
+async
 authorizer
 authorizers
 autocomplete
@@ -1264,10 +1265,14 @@ druid.broker.cache.useCache
 druid.broker.cache.useResultLevelCache
 druid.historical.cache.populateCache
 druid.historical.cache.useCache
+enableParallelMerge
 floatSum
 maxQueuedBytes
 maxScatterGatherBytes
 minTopNThreshold
+parallelMergeInitialYieldRows
+parallelMergeParallelism
+parallelMergeSmallBatchRows
 populateCache
 populateResultLevelCache
 queryId
