@@ -465,6 +465,71 @@
                             </execution>
                         </executions>
                     </plugin>
+                    <!-- Declaring docker build here since it should only happen if we're bundling a dist. -->
+                    <plugin>
+                        <!-- Copied from the old Optimus pom.xml. I'm not convinced this is the best way to do this. -->
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>1.7</version>
+                        <!-- build docker image when package -Ddocker.build -->
+                        <executions>
+                            <execution>
+                                <id>check-docker-build</id>
+                                <phase>package</phase>
+                                <configuration>
+                                    <target>
+                                        <condition else="false" property="docker.build.skip" value="true">
+                                            <or>
+                                                <not>
+                                                    <available file="Dockerfile"/>
+                                                </not>
+                                                <not>
+                                                    <isset property="docker.build"/>
+                                                </not>
+                                            </or>
+                                        </condition>
+                                    </target>
+                                    <exportAntProperties>true</exportAntProperties>
+                                </configuration>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>build-docker</id>
+                                <phase>package</phase>
+                                <configuration>
+                                    <target>
+                                        <echo>building docker image for ${project.parent.artifactId}</echo>
+                                        <exec executable="docker" failonerror="true">
+                                            <arg value="build"/>
+                                            <arg value="--quiet"/>
+                                            <arg value="--tag"/>
+                                            <arg value="${project.parent.artifactId}"/>
+                                            <arg value="--tag"/>
+                                            <arg value="${docker.repository}${project.parent.artifactId}"/>
+                                            <arg value="."/>
+                                            <redirector>
+                                                <errorfilterchain>
+                                                    <linecontains negate="true">
+                                                        <contains value="Sending build context to Docker daemon"/>
+                                                    </linecontains>
+                                                </errorfilterchain>
+                                            </redirector>
+                                        </exec>
+                                        <echo>docker image ${docker.repository}${project.parent.artifactId}:latest
+                                            successfully created
+                                        </echo>
+
+                                    </target>
+                                    <skip>${docker.build.skip}</skip>
+                                </configuration>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
                 </plugins>
             </build>
         </profile>
