@@ -102,26 +102,6 @@
             </includes>
         </fileSet>
     </fileSets>
-    <files>
-        <file>
-            <source>../LICENSE.BINARY</source>
-            <outputDirectory>.</outputDirectory>
-            <destName>LICENSE</destName>
-            <lineEnding>keep</lineEnding>
-        </file>
-        <file>
-            <source>../NOTICE.BINARY</source>
-            <outputDirectory>.</outputDirectory>
-            <destName>NOTICE</destName>
-            <lineEnding>keep</lineEnding>
-        </file>
-        <file>
-            <source>../README.BINARY</source>
-            <outputDirectory>.</outputDirectory>
-            <destName>README</destName>
-            <lineEnding>keep</lineEnding>
-        </file>
-    </files>
     <dependencySets>
         <dependencySet>
             <useProjectArtifact>false</useProjectArtifact>
