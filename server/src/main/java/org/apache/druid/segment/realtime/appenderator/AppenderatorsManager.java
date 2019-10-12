@@ -86,7 +86,7 @@ public interface AppenderatorsManager
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
-      boolean reingestion,
+      boolean storeCompactionState,
       FireDepartmentMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,

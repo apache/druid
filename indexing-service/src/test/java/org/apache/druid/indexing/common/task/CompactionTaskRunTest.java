@@ -749,6 +749,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
 
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
+    task.addToContext(Tasks.STORE_COMPACTION_STATE_KEY, true);
     if (task.isReady(box.getTaskActionClient())) {
       if (readyLatchToCountDown != null) {
         readyLatchToCountDown.countDown();

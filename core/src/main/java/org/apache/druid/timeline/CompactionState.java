@@ -26,10 +26,22 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * This class describes what compaction task spec was used to create a given segment.
+ * The compaction task is a task that reads Druid segments and overwrites them with new ones. Since this task always
+ * reads segments in the same order, the same task spec will always create the same set of segments
+ * (not same segment ID, but same content).
+ *
+ * Note that this class doesn't include all fields in the compaction task spec. Only the configurations that can
+ * affect the content of segment should be included.
+ *
+ * @see DataSegment#lastCompactionState
+ */
 public class CompactionState
 {
   private final PartitionsSpec partitionsSpec;
-  // org.apache.druid.segment.IndexSpec cannot be used here to avoid the dependency cycle
+  // org.apache.druid.segment.IndexSpec cannot be used here because it's in the 'processing' module which
+  // has a dependency on the 'core' module where this class is.
   private final Map<String, Object> indexSpec;
 
   @JsonCreator

@@ -86,7 +86,7 @@ public class Appenderators
   public static Appenderator createOffline(
       DataSchema schema,
       AppenderatorConfig config,
-      boolean reingestion,
+      boolean storeCompactionState,
       FireDepartmentMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
@@ -97,7 +97,7 @@ public class Appenderators
     return new AppenderatorImpl(
         schema,
         config,
-        reingestion,
+        storeCompactionState,
         metrics,
         dataSegmentPusher,
         objectMapper,

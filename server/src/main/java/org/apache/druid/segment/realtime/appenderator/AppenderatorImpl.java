@@ -110,7 +110,7 @@ public class AppenderatorImpl implements Appenderator
 
   private final DataSchema schema;
   private final AppenderatorConfig tuningConfig;
-  private final boolean reingestion;
+  private final boolean storeCompactionState;
   private final FireDepartmentMetrics metrics;
   private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper objectMapper;
@@ -164,7 +164,7 @@ public class AppenderatorImpl implements Appenderator
   AppenderatorImpl(
       DataSchema schema,
       AppenderatorConfig tuningConfig,
-      boolean reingestion,
+      boolean storeCompactionState,
       FireDepartmentMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
@@ -177,7 +177,7 @@ public class AppenderatorImpl implements Appenderator
   {
     this.schema = Preconditions.checkNotNull(schema, "schema");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
-    this.reingestion = reingestion;
+    this.storeCompactionState = storeCompactionState;
     this.metrics = Preconditions.checkNotNull(metrics, "metrics");
     this.dataSegmentPusher = Preconditions.checkNotNull(dataSegmentPusher, "dataSegmentPusher");
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
@@ -392,7 +392,7 @@ public class AppenderatorImpl implements Appenderator
           identifier.getInterval(),
           schema,
           identifier.getShardSpec(),
-          reingestion ? new CompactionState(tuningConfig.getPartitionsSpec(), indexSpecMap) : null,
+          storeCompactionState ? new CompactionState(tuningConfig.getPartitionsSpec(), indexSpecMap) : null,
           identifier.getVersion(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,

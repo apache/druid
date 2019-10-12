@@ -418,7 +418,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
         toolbox,
         dataSchema,
         tuningConfig,
-        firehoseFactory
+        getContextValue(Tasks.STORE_COMPACTION_STATE_KEY, Tasks.DEFAULT_STORE_COMPACTION_STATE)
     );
     boolean exceptionOccurred = false;
     try (

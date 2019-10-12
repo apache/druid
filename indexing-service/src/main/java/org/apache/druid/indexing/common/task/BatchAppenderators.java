@@ -19,10 +19,8 @@
 
 package org.apache.druid.indexing.common.task;
 
-import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
@@ -41,7 +39,7 @@ public final class BatchAppenderators
       TaskToolbox toolbox,
       DataSchema dataSchema,
       AppenderatorConfig appenderatorConfig,
-      FirehoseFactory firehoseFactory
+      boolean storeCompactionState
   )
   {
     return newAppenderator(
@@ -51,8 +49,8 @@ public final class BatchAppenderators
         toolbox,
         dataSchema,
         appenderatorConfig,
-        firehoseFactory,
-        toolbox.getSegmentPusher()
+        toolbox.getSegmentPusher(),
+        storeCompactionState
     );
   }
 
@@ -63,21 +61,15 @@ public final class BatchAppenderators
       TaskToolbox toolbox,
       DataSchema dataSchema,
       AppenderatorConfig appenderatorConfig,
-      FirehoseFactory firehoseFactory,
-      DataSegmentPusher segmentPusher
+      DataSegmentPusher segmentPusher,
+      boolean storeCompactionState
   )
   {
-    final boolean isReingest;
-    if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
-      isReingest = dataSchema.getDataSource().equals(((IngestSegmentFirehoseFactory) firehoseFactory).getDataSource());
-    } else {
-      isReingest = false;
-    }
     return appenderatorsManager.createOfflineAppenderatorForTask(
         taskId,
         dataSchema,
         appenderatorConfig.withBasePersistDirectory(toolbox.getPersistDir()),
-        isReingest,
+        storeCompactionState,
         metrics,
         segmentPusher,
         toolbox.getObjectMapper(),

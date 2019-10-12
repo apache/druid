@@ -90,6 +90,14 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   private final List<String> dimensions;
   private final List<String> metrics;
   private final ShardSpec shardSpec;
+
+  /**
+   * Stores some configurations of the compaction task which created this segment.
+   * This field is filled in the metadata store only when "storeCompactionState" is set true in the context of the
+   * compaction task which is false by default.
+   * Also, this field can be pruned in many Druid modules when this class is loaded from the metadata store.
+   * See {@link PruneLastCompactionState} for details.
+   */
   @Nullable
   private final CompactionState lastCompactionState;
   private final long size;

@@ -38,6 +38,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -52,6 +53,8 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 
   // Should be synced with CompactionTask.TYPE
   private static final String COMPACT_TASK_TYPE = "compact";
+  // Should be synced with Tasks.STORE_COMPACTION_STATE_KEY
+  private static final String STORE_COMPACTION_STATE_KEY = "storeCompactionState";
   private static final Logger LOG = new Logger(DruidCoordinatorSegmentCompactor.class);
 
   private final CompactionSegmentSearchPolicy policy;
@@ -172,7 +175,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
             segmentsToCompact,
             config.getTaskPriority(),
             ClientCompactQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
-            config.getTaskContext()
+            newAutoCompactionContext(config.getTaskContext())
         );
         LOG.info(
             "Submitted a compactTask[%s] for segments %s",
@@ -185,6 +188,15 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
     }
 
     return makeStats(numSubmittedTasks, iterator);
+  }
+
+  private Map<String, Object> newAutoCompactionContext(@Nullable Map<String, Object> configuredContext)
+  {
+    final Map<String, Object> newContext = configuredContext == null
+                                           ? new HashMap<>()
+                                           : new HashMap<>(configuredContext);
+    newContext.put(STORE_COMPACTION_STATE_KEY, true);
+    return newContext;
   }
 
   private CoordinatorStats makeStats(int numCompactionTasks, CompactionSegmentIterator iterator)

@@ -874,7 +874,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         toolbox,
         dataSchema,
         tuningConfig,
-        firehoseFactory
+        getContextValue(Tasks.STORE_COMPACTION_STATE_KEY, Tasks.DEFAULT_STORE_COMPACTION_STATE)
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {

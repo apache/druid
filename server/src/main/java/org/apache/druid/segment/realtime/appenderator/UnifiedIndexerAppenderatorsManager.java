@@ -186,7 +186,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
-      boolean reingestion,
+      boolean storeCompactionState,
       FireDepartmentMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
@@ -203,7 +203,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       Appenderator appenderator = Appenderators.createOffline(
           schema,
           rewriteAppenderatorConfigMemoryLimits(config),
-          reingestion,
+          storeCompactionState,
           metrics,
           dataSegmentPusher,
           objectMapper,
