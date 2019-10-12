@@ -43,6 +43,7 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.InsufficientResourcesException;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
@@ -66,7 +67,6 @@ import org.apache.druid.query.groupby.epinephelinae.GroupByRowProcessor;
 import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
-import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.StorageAdapter;
 
