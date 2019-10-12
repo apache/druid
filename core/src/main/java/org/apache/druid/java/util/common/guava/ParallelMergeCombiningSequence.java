@@ -204,7 +204,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    * count permitting, it will partition the input set of {@link Sequence} to do 2 layer parallel merge.
    *
    * For the first layer, the partitions of input sequences are each wrapped in {@link YielderBatchedResultsCursor}, and
-   * for each partition a {@link PrepareMergeCombineInputsAction} will be executed to to wait for each of the yielders to
+   * for each partition a {@link PrepareMergeCombineInputsAction} will be executed to wait for each of the yielders to
    * yield {@link ResultBatch}. After the cursors all have an initial set of results, the
    * {@link PrepareMergeCombineInputsAction} will execute a {@link MergeCombineAction}
    * to perform the actual work of merging sequences and combining results. The merged and combined output of each
@@ -303,7 +303,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       }
     }
 
-    void spawnParallelTasks(int parallelMergeTasks)
+    private void spawnParallelTasks(int parallelMergeTasks)
     {
       List<RecursiveAction> tasks = new ArrayList<>();
       List<BlockingQueue<ResultBatch<T>>> intermediaryOutputs = new ArrayList<>(parallelMergeTasks);
@@ -361,7 +361,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
      * {@link ForkJoinPool} utilization. A return value of 1 or less indicates that a serial merge will be done on
      * the pool instead.
      */
-    int computeNumTasks()
+    private int computeNumTasks()
     {
       final int availableProcessors = JvmUtils.getRuntimeInfo().getAvailableProcessors();
       final int runningThreadCount = getPool().getRunningThreadCount();
@@ -373,6 +373,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       // minimum of 'max computed parallelism' and pool parallelism less current 'utilization estimate'
       final int computedParallelism = Math.min(maxParallelism, getPool().getParallelism() - utilizationEstimate);
       // compute total number of layer 1 'parallel' tasks, the final merge task will take the remaining slot
+      // we divide the sequences by 2 because we need at least 2 sequences per partition for it to make sense to need
+      // an additional parallel task to compute the merge
       final int computedOptimalParallelism = Math.min(
           (int) Math.floor((double) sequences.size() / 2.0),
           computedParallelism - 1
@@ -407,13 +409,13 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    * order for a {@link PriorityQueue}, and as a comparison to determine if 'same' ordered results need to be combined
    * with a supplied {@link BinaryOperator} combining function.
    *
-   * This task takes a 'yieldAfter' parameter which controls how many input result rows will be processed before this
-   * task completes and executes a new task to continue where it left off. This value is initially set by the
+   * This task takes a {@link #yieldAfter} parameter which controls how many input result rows will be processed before
+   * this task completes and executes a new task to continue where it left off. This value is initially set by the
    * {@link MergeCombinePartitioningAction} to a default value, but after that this process is timed to try and compute
    * an 'optimal' number of rows to yield to achieve a task runtime of ~10ms, on the assumption that the time to process
-   * n results will be approximately the same. 'recursionDepth' is used to track how many times a task has continued
-   * executing, and utilized to compute a cumulative moving average of task run time per amount yielded in order to
-   * 'smooth' out the continual adjustment.
+   * n results will be approximately the same. {@link #recursionDepth} is used to track how many times a task has
+   * continued executing, and utilized to compute a cumulative moving average of task run time per amount yielded in
+   * order to 'smooth' out the continual adjustment.
    */
   private static class MergeCombineAction<T> extends RecursiveAction
   {
@@ -687,15 +689,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       return item == null;
     }
 
-    void addItem(E item)
-    {
-      this.item = item;
-    }
-
     public void offer(E item)
     {
       try {
-        addItem(item);
+        this.item = item;
         ForkJoinPool.managedBlock(this);
       }
       catch (InterruptedException e) {
@@ -716,18 +713,15 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
     @Nullable
     private final Queue<E> values;
-    private final boolean isTerminal;
 
     ResultBatch(int batchSize)
     {
       this.values = new ArrayDeque<>(batchSize);
-      this.isTerminal = false;
     }
 
     private ResultBatch()
     {
       this.values = null;
-      this.isTerminal = true;
     }
 
     public void add(E in)
@@ -750,12 +744,12 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
     boolean isDrained()
     {
-      return !isTerminal && values.isEmpty();
+      return values != null && values.isEmpty();
     }
 
     boolean isTerminalResult()
     {
-      return isTerminal;
+      return values == null;
     }
 
     /**
@@ -771,11 +765,11 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
             @Override
             public ResultBatch<E> accumulate(ResultBatch<E> accumulated, E in)
             {
+              accumulated.add(in);
               count++;
               if (count % batchSize == 0) {
                 yield();
               }
-              accumulated.add(in);
               return accumulated;
             }
           }
@@ -897,19 +891,19 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    */
   static class YielderBatchedResultsCursor<E> extends BatchedResultsCursor<E>
   {
-    final SequenceBatcher<E> sequenceYielder;
+    final SequenceBatcher<E> batcher;
     Yielder<ResultBatch<E>> yielder;
 
-    YielderBatchedResultsCursor(SequenceBatcher<E> sequenceYielder, Ordering<E> ordering)
+    YielderBatchedResultsCursor(SequenceBatcher<E> batcher, Ordering<E> ordering)
     {
       super(ordering);
-      this.sequenceYielder = sequenceYielder;
+      this.batcher = batcher;
     }
 
     @Override
     public void initialize()
     {
-      yielder = sequenceYielder.getBatchYielder();
+      yielder = batcher.getBatchYielder();
       resultBatch = yielder.get();
     }
 
