@@ -282,7 +282,7 @@ public class DataSchemaTest
     expectedException.expect(CoreMatchers.instanceOf(IllegalArgumentException.class));
     expectedException.expectCause(CoreMatchers.instanceOf(JsonMappingException.class));
     expectedException.expectMessage(
-        "Instantiation of [simple type, class org.apache.druid.data.input.impl.StringInputRowParser] value failed: parseSpec"
+        "Cannot construct instance of `org.apache.druid.data.input.impl.StringInputRowParser`, problem: parseSpec"
     );
 
     // Jackson creates a default type parser (StringInputRowParser) for an invalid type.
