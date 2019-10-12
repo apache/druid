@@ -23,6 +23,8 @@
 ACL
 APIs
 AWS
+AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
+AWS_CONTAINER_CREDENTIALS_FULL_URI
 Actian
 Authorizer
 Avatica
@@ -58,6 +60,8 @@ Dropwizard
 dropwizard
 DruidSQL
 EC2
+EC2ContainerCredentialsProviderWrapper
+ECS
 EMR
 EMRFS
 ETL
