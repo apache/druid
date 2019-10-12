@@ -90,6 +90,7 @@
         <jersey.version>1.19.3</jersey.version>
         <!-- jackson 2.7.x causes injection error and 2.8.x can't be used because avatica is using 2.6.3 -->
         <jackson.version>2.6.7</jackson.version>
+        <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.5</log4j.version>
         <netty3.version>3.10.6.Final</netty3.version>
         <!-- Spark updated in https://github.com/apache/spark/pull/19884 -->
@@ -909,12 +910,12 @@
             <dependency>
                 <groupId>org.codehaus.jackson</groupId>
                 <artifactId>jackson-core-asl</artifactId>
-                <version>1.9.13</version>
+                <version>${codehaus.jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.codehaus.jackson</groupId>
                 <artifactId>jackson-mapper-asl</artifactId>
-                <version>1.9.13</version>
+                <version>${codehaus.jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>javax.servlet</groupId>

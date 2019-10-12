@@ -23,11 +23,15 @@ import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.Grouper;
+import org.apache.druid.query.ordering.StringComparator;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.data.IndexedInts;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +50,11 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
 
   {
     reverseDictionary.defaultReturnValue(-1);
+  }
+
+  public DictionaryBuildingStringGroupByColumnSelectorStrategy()
+  {
+    super(null);
   }
 
   @Override
@@ -115,5 +124,18 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
     } else {
       return dictId;
     }
+  }
+
+  @Override
+  public Grouper.BufferComparator bufferComparator(int keyBufferPosition, @Nullable StringComparator stringComparator)
+  {
+    final StringComparator realComparator = stringComparator == null ?
+                                            StringComparators.LEXICOGRAPHIC :
+                                            stringComparator;
+    return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
+      String lhsStr = dictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition));
+      String rhsStr = dictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition));
+      return realComparator.compare(lhsStr, rhsStr);
+    };
   }
 }

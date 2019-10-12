@@ -42,9 +42,8 @@ import java.util.concurrent.TimeUnit;
 @ManageLifecycle
 public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenticatorCacheNotifier
 {
-
   private final LifecycleLock lifecycleLock = new LifecycleLock();
-  private CommonCacheNotifier cacheNotifier;
+  private final CommonCacheNotifier userCacheNotifier;
 
   @Inject
   public CoordinatorBasicAuthenticatorCacheNotifier(
@@ -53,7 +52,7 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
       @EscalatedClient HttpClient httpClient
   )
   {
-    cacheNotifier = new CommonCacheNotifier(
+    userCacheNotifier = new CommonCacheNotifier(
         initAuthenticatorConfigMap(authenticatorMapper),
         discoveryProvider,
         httpClient,
@@ -66,11 +65,11 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
   public void start()
   {
     if (!lifecycleLock.canStart()) {
-      throw new ISE("can't start.");
+      throw new ISE("Can't start.");
     }
 
     try {
-      cacheNotifier.start();
+      userCacheNotifier.start();
       lifecycleLock.started();
     }
     finally {
@@ -85,7 +84,7 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
       return;
     }
     try {
-      cacheNotifier.stop();
+      userCacheNotifier.stop();
     }
     finally {
       lifecycleLock.exitStop();
@@ -93,10 +92,10 @@ public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenti
   }
 
   @Override
-  public void addUpdate(String updatedAuthorizerPrefix, byte[] updatedUserMap)
+  public void addUserUpdate(String updatedAuthenticatorPrefix, byte[] updatedUserMap)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
-    cacheNotifier.addUpdate(updatedAuthorizerPrefix, updatedUserMap);
+    userCacheNotifier.addUpdate(updatedAuthenticatorPrefix, updatedUserMap);
   }
 
   private Map<String, BasicAuthDBConfig> initAuthenticatorConfigMap(AuthenticatorMapper mapper)
