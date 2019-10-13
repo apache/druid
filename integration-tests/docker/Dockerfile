@@ -86,4 +86,4 @@ EXPOSE 8300 8301 8302 8303 8304 8305
 EXPOSE 9092 9093
 
 WORKDIR /var/lib/druid
-ENTRYPOINT export HOST_IP="$(resolveip -s $HOSTNAME)" && /tls/generate-server-certs-and-keystores.sh && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+ENTRYPOINT export HOST_IP="$(curl ifconfig.me)" && /tls/generate-server-certs-and-keystores.sh && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

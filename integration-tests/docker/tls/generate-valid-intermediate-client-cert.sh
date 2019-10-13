@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export DOCKER_HOST_IP=$(resolveip -s $HOSTNAME)
+export DOCKER_HOST_IP=$(curl ifconfig.me)
 
 cat <<EOT > ca_intermediate.conf
 [req]

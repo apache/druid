@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export DOCKER_HOST_IP=$(resolveip -s $HOSTNAME)
+export DOCKER_HOST_IP=$(curl ifconfig.me)
 
 # Generate a client cert with an incorrect hostname for testing
 cat <<EOT > invalid_hostname_csr.conf
