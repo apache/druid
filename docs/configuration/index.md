@@ -992,8 +992,8 @@ This strategy is a variant of `Equal Distribution`, which support `workerCategor
 |`type`|`equalDistributionWithCategorySpec`.|required; must be `equalDistributionWithCategorySpec`|
 |`workerCategorySpec`|[Worker Category Spec](#workercategoryspec) object|null (no worker category spec)|
 
-Example: specify tasks default to run on _c1_ whose task
-type is "index_kafka", while dataSource "ds1" run on _c2_.
+Example: specify tasks default to run on **c1** whose task
+type is "index_kafka", while dataSource "ds1" run on **c2**.
 
 ```json
 {
@@ -1039,7 +1039,9 @@ This strategy is a variant of `Fill Capacity`, which support `workerCategorySpec
 
 > Before using the _equalDistributionWithCategorySpec_ and _fillCapacityWithCategorySpec_ strategies, you must upgrade overlord and all MiddleManagers to the version that support this feature.
 
-###### Javascript<a id="javascript-worker-select-strategy"></a>
+<a name="javascript-worker-select-strategy"></a>
+
+###### JavaScript
 
 Allows defining arbitrary logic for selecting workers to run task using a JavaScript function.
 The function is passed remoteTaskRunnerConfig, map of workerId to available workers and task to be executed and returns the workerId on which the task should be run or null if the task cannot be run.
@@ -1081,7 +1083,7 @@ field. If not provided, the default is to not use it at all.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`categoryMap`|A JSON map object mapping a task type String name to a [CategoryConfig](#categoryconfig) object, by which you can specify category config for different task type.|{}|
-|`strong`|With weak workerCategorySpec (the default), tasks for a dataSource may be assigned to other middleManagers if the middleManagers specified in `categoryMap` are not able to run all pending tasks in the queue for that dataSource. With strong workerCategorySpec, tasks for a dataSource will only ever be assigned to their specified middleManagers, and will wait in the pending queue if necessary.|false|
+|`strong`|With weak workerCategorySpec (the default), tasks for a dataSource may be assigned to other MiddleManagers if the MiddleManagers specified in `categoryMap` are not able to run all pending tasks in the queue for that dataSource. With strong workerCategorySpec, tasks for a dataSource will only ever be assigned to their specified MiddleManagers, and will wait in the pending queue if necessary.|false|
 
 ###### CategoryConfig
 

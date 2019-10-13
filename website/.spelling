@@ -1628,3 +1628,11 @@ isUnpatrolled
 metroCode
 regionIsoCode
 regionName
+taskType
+index_kafka
+ds1
+equalDistributionWithCategorySpec
+fillCapacityWithCategorySpec
+WorkerCategorySpec
+workerCategorySpec
+CategoryConfig
