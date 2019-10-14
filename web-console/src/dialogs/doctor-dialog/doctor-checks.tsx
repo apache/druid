@@ -55,7 +55,9 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
       try {
         status = (await axios.get(`/status`)).data;
       } catch (e) {
-        controls.addIssue(`Did not get a /status response, is the cluster running? ${e.message}`);
+        controls.addIssue(
+          `Did not get a /status response, is the cluster running? Got: ${e.message}`,
+        );
         controls.terminateChecks();
         return;
       }
@@ -260,7 +262,7 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
         sqlResult = await queryDruidSql({ query: `SELECT 1 + 1 AS "two"` });
       } catch (e) {
         controls.addIssue(
-          `Could not query SQL "${e.message}" ensure that "druid.sql.enable" is set to "true"`,
+          `Could not query SQL ensure that "druid.sql.enable" is set to "true". Got: ${e.message}`,
         );
         return;
       }
@@ -283,7 +285,7 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
 FROM sys.servers`,
         });
       } catch (e) {
-        controls.addIssue(`Could not run a sys.servers query "${e.message}"`);
+        controls.addIssue(`Could not run a sys.servers query. Got: ${e.message}`);
         return;
       }
 
@@ -312,7 +314,7 @@ WHERE "server_type" = 'historical' AND "curr_size" * 1.0 / "max_size" > 0.95
 ORDER BY "server" DESC`,
         });
       } catch (e) {
-        controls.addIssue(`Could not run a sys.servers query "${e.message}"`);
+        controls.addIssue(`Could not run a sys.servers query. Got: ${e.message}`);
         return;
       }
 

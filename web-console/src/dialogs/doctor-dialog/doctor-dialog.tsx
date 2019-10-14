@@ -42,15 +42,26 @@ export interface DoctorDialogState {
 }
 
 export class DoctorDialog extends React.PureComponent<DoctorDialogProps, DoctorDialogState> {
+  private mounted = false;
+
   constructor(props: DoctorDialogProps, context: any) {
     super(props, context);
     this.state = {};
+  }
+
+  componentDidMount(): void {
+    this.mounted = true;
+  }
+
+  componentWillUnmount(): void {
+    this.mounted = false;
   }
 
   async doChecks() {
     this.setState({ currentCheckIndex: 0, diagnoses: [] });
 
     const addToDiagnoses = (diagnosis: Diagnosis) => {
+      if (!this.mounted) return;
       this.setState(oldState => ({
         diagnoses: (oldState.diagnoses || []).concat(diagnosis),
       }));
@@ -97,7 +108,7 @@ export class DoctorDialog extends React.PureComponent<DoctorDialogProps, DoctorD
       // Slow down a bit so that the user can read the test name
       await delay(500);
 
-      if (terminateChecks) break;
+      if (terminateChecks || !this.mounted) break;
     }
 
     this.setState({ currentCheckIndex: undefined });
@@ -124,7 +135,7 @@ export class DoctorDialog extends React.PureComponent<DoctorDialogProps, DoctorD
               <Callout
                 key={i}
                 className="diagnosis"
-                intent={diagnosis.type === 'suggestion' ? Intent.WARNING : Intent.DANGER}
+                intent={diagnosis.type === 'suggestion' ? Intent.NONE : Intent.WARNING}
               >
                 {diagnosis.message}
               </Callout>
