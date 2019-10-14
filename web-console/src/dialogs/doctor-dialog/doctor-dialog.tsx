@@ -135,6 +135,7 @@ export class DoctorDialog extends React.PureComponent<DoctorDialogProps, DoctorD
               <Callout
                 key={i}
                 className="diagnosis"
+                icon={diagnosis.type === 'suggestion' ? IconNames.FLAG : IconNames.WARNING_SIGN}
                 intent={diagnosis.type === 'suggestion' ? Intent.NONE : Intent.WARNING}
               >
                 {diagnosis.message}
