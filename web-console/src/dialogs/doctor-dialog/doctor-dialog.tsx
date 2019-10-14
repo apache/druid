@@ -20,7 +20,7 @@ import { Button, Callout, Classes, Dialog, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
-import { delay } from '../../utils';
+import { delay, pluralIfNeeded } from '../../utils';
 
 import { DOCTOR_CHECKS } from './doctor-checks';
 
@@ -113,7 +113,7 @@ export class DoctorDialog extends React.PureComponent<DoctorDialogProps, DoctorD
           DOCTOR_CHECKS[currentCheckIndex].name
         }`;
       } else {
-        note = 'All checks completed';
+        note = `All ${pluralIfNeeded(DOCTOR_CHECKS.length, 'check')} completed`;
       }
 
       return (
