@@ -34,6 +34,7 @@ import React from 'react';
 
 import { AboutDialog } from '../../dialogs/about-dialog/about-dialog';
 import { CoordinatorDynamicConfigDialog } from '../../dialogs/coordinator-dynamic-config-dialog/coordinator-dynamic-config-dialog';
+import { DoctorDialog } from '../../dialogs/doctor-dialog/doctor-dialog';
 import { OverlordDynamicConfigDialog } from '../../dialogs/overlord-dynamic-config-dialog/overlord-dynamic-config-dialog';
 import {
   DRUID_ASF_SLACK,
@@ -63,6 +64,7 @@ export interface HeaderBarProps {
 
 export interface HeaderBarState {
   aboutDialogOpen: boolean;
+  doctorDialogOpen: boolean;
   coordinatorDynamicConfigDialogOpen: boolean;
   overlordDynamicConfigDialogOpen: boolean;
 }
@@ -72,6 +74,7 @@ export class HeaderBar extends React.PureComponent<HeaderBarProps, HeaderBarStat
     super(props);
     this.state = {
       aboutDialogOpen: false,
+      doctorDialogOpen: false,
       coordinatorDynamicConfigDialogOpen: false,
       overlordDynamicConfigDialogOpen: false,
     };
@@ -132,6 +135,7 @@ export class HeaderBar extends React.PureComponent<HeaderBarProps, HeaderBarStat
     const { active, hideLegacy } = this.props;
     const {
       aboutDialogOpen,
+      doctorDialogOpen,
       coordinatorDynamicConfigDialogOpen,
       overlordDynamicConfigDialogOpen,
     } = this.state;
@@ -176,6 +180,11 @@ export class HeaderBar extends React.PureComponent<HeaderBarProps, HeaderBarStat
 
     const configMenu = (
       <Menu>
+        <MenuItem
+          icon={IconNames.PULSE}
+          text="Druid Doctor"
+          onClick={() => this.setState({ doctorDialogOpen: true })}
+        />
         <MenuItem
           icon={IconNames.SETTINGS}
           text="Coordinator dynamic config"
@@ -264,6 +273,9 @@ export class HeaderBar extends React.PureComponent<HeaderBarProps, HeaderBarStat
         </NavbarGroup>
         {aboutDialogOpen && (
           <AboutDialog onClose={() => this.setState({ aboutDialogOpen: false })} />
+        )}
+        {doctorDialogOpen && (
+          <DoctorDialog onClose={() => this.setState({ doctorDialogOpen: false })} />
         )}
         {coordinatorDynamicConfigDialogOpen && (
           <CoordinatorDynamicConfigDialog

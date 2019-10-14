@@ -38,6 +38,7 @@ export class AboutDialog extends React.PureComponent<AboutDialogProps> {
 
     return (
       <Dialog
+        className="about-dialog"
         icon={IconNames.GRAPH}
         onClose={onClose}
         title="Apache Druid"
