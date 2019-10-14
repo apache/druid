@@ -29,6 +29,8 @@ import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.service.UnitEvent;
+import org.apache.druid.metadata.DefaultPasswordProvider;
+import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.utils.CompressionUtils;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Request;
@@ -175,7 +177,7 @@ public class EmitterTest
     return emitter;
   }
 
-  private HttpPostEmitter manualFlushEmitterWithBasicAuthenticationAndNewlineSeparating(String authentication)
+  private HttpPostEmitter manualFlushEmitterWithBasicAuthenticationAndNewlineSeparating(PasswordProvider authentication)
   {
     HttpEmitterConfig config = new HttpEmitterConfig.Builder(TARGET_URL)
         .setFlushMillis(Long.MAX_VALUE)
@@ -439,7 +441,7 @@ public class EmitterTest
         new UnitEvent("test", 1),
         new UnitEvent("test", 2)
     );
-    emitter = manualFlushEmitterWithBasicAuthenticationAndNewlineSeparating("foo:bar");
+    emitter = manualFlushEmitterWithBasicAuthenticationAndNewlineSeparating(new DefaultPasswordProvider("foo:bar"));
 
     httpClient.setGoHandler(
         new GoHandler()

@@ -43,7 +43,7 @@ public class HttpEmitterConfigTest
     Assert.assertEquals(60000, config.getFlushMillis());
     Assert.assertEquals(500, config.getFlushCount());
     Assert.assertEquals("http://example.com/", config.getRecipientBaseUrl());
-    Assert.assertEquals(null, config.getBasicAuthentication());
+    Assert.assertNull(config.getBasicAuthentication());
     Assert.assertEquals(BatchingStrategy.ARRAY, config.getBatchingStrategy());
     Pair<Integer, Integer> batchConfigPair = BaseHttpEmittingConfig.getDefaultBatchSizeAndLimit(
         Runtime.getRuntime().maxMemory()
@@ -67,7 +67,7 @@ public class HttpEmitterConfigTest
     Assert.assertEquals(60000, config.getFlushMillis());
     Assert.assertEquals(300, config.getFlushCount());
     Assert.assertEquals("http://example.com/", config.getRecipientBaseUrl());
-    Assert.assertEquals(null, config.getBasicAuthentication());
+    Assert.assertNull(config.getBasicAuthentication());
     Assert.assertEquals(BatchingStrategy.ARRAY, config.getBatchingStrategy());
     Pair<Integer, Integer> batchConfigPair = BaseHttpEmittingConfig.getDefaultBatchSizeAndLimit(
         Runtime.getRuntime().maxMemory()
@@ -103,7 +103,7 @@ public class HttpEmitterConfigTest
     Assert.assertEquals(1, config.getFlushMillis());
     Assert.assertEquals(2, config.getFlushCount());
     Assert.assertEquals("http://example.com/", config.getRecipientBaseUrl());
-    Assert.assertEquals("a:b", config.getBasicAuthentication());
+    Assert.assertEquals("a:b", config.getBasicAuthentication().getPassword());
     Assert.assertEquals(BatchingStrategy.NEWLINES, config.getBatchingStrategy());
     Assert.assertEquals(4, config.getMaxBatchSize());
     Assert.assertEquals(1000, config.getFlushTimeOut());
@@ -133,7 +133,7 @@ public class HttpEmitterConfigTest
     Assert.assertEquals(1, config.getFlushMillis());
     Assert.assertEquals(2, config.getFlushCount());
     Assert.assertEquals("http://example.com/", config.getRecipientBaseUrl());
-    Assert.assertEquals("a:b", config.getBasicAuthentication());
+    Assert.assertEquals("a:b", config.getBasicAuthentication().getPassword());
     Assert.assertEquals(BatchingStrategy.NEWLINES, config.getBatchingStrategy());
     Assert.assertEquals(4, config.getMaxBatchSize());
     Assert.assertEquals(1000, config.getFlushTimeOut());

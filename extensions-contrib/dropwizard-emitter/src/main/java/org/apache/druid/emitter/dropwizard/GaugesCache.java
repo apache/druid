@@ -17,51 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.indexer.partitions;
+package org.apache.druid.emitter.dropwizard;
 
-import java.util.Objects;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-/**
- * Convenience class for holding a pair of string key and templated value.
- */
-class Property<T>
+class GaugesCache<K, V> extends LinkedHashMap<K, V>
 {
-  private final String name;
-  private final T value;
+  private int capacity;
 
-  Property(String name, T value)
+  public GaugesCache(int capacity)
   {
-    this.name = name;
-    this.value = value;
-  }
-
-  public String getName()
-  {
-    return name;
-  }
-
-  public T getValue()
-  {
-    return value;
+    this.capacity = capacity;
   }
 
   @Override
-  public boolean equals(Object o)
+  protected boolean removeEldestEntry(Map.Entry<K, V> eldest)
   {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    Property<?> property = (Property<?>) o;
-    return Objects.equals(name, property.name) &&
-           Objects.equals(value, property.value);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(name, value);
+    return this.size() > this.capacity;
   }
 }

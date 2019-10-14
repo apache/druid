@@ -54,23 +54,23 @@ public class SimpleTestIndex
       MULTI_VALUE_DOUBLE_AS_STRING_DIM
   );
 
-  private static Supplier<IncrementalIndex> realtimeIndex = Suppliers.memoize(
+  private static final Supplier<IncrementalIndex> REALTIME_INDEX = Suppliers.memoize(
       () -> makeRealtimeIndex()
   );
 
-  private static Supplier<QueryableIndex> mmappedIndex = Suppliers.memoize(
-      () -> TestIndex.persistRealtimeAndLoadMMapped(realtimeIndex.get())
+  private static final Supplier<QueryableIndex> MMAPPED_INDEX = Suppliers.memoize(
+      () -> TestIndex.persistRealtimeAndLoadMMapped(REALTIME_INDEX.get())
   );
 
 
   public static IncrementalIndex getIncrementalTestIndex()
   {
-    return realtimeIndex.get();
+    return REALTIME_INDEX.get();
   }
 
   public static QueryableIndex getMMappedTestIndex()
   {
-    return mmappedIndex.get();
+    return MMAPPED_INDEX.get();
   }
 
   private static IncrementalIndex makeRealtimeIndex()
