@@ -250,5 +250,7 @@ Todo:
 2. Correct query to calculate rollup ratio based on rollup/non-rollup data
 3. Bucket time column for non-rolled data
 4. Clean up code
+5. Separate ratio from Callout, put name of datasource at top
+6. Error handling with division of 0
 
 */
