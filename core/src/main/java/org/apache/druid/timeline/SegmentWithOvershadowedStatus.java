@@ -45,7 +45,9 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
       @JsonProperty("overshadowed") boolean overshadowed
   )
   {
-    // Jackson will overwrite dataSegment if needed (even though the field is final)
+    // Using @JsonUnwrapped with @JsonCreator is not currently possible:
+    // https://github.com/FasterXML/jackson-databind/issues/1467. However, if the JSON payload  contains an unwrapped
+    // DataSegment, Jackson will overwrite dataSegment (even though the field is final).
     this(null, overshadowed);
   }
 
