@@ -22,7 +22,6 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
@@ -203,12 +202,13 @@ public class TaskStatus
   @Override
   public String toString()
   {
-    return Objects.toStringHelper(this)
-                  .add("id", id)
-                  .add("status", status)
-                  .add("duration", duration)
-                  .add("errorMsg", errorMsg)
-                  .toString();
+    return "TaskStatus{" +
+           "id='" + id + '\'' +
+           ", status=" + status +
+           ", duration=" + duration +
+           ", errorMsg='" + errorMsg + '\'' +
+           ", location=" + location +
+           '}';
   }
 
   @Override
@@ -221,15 +221,16 @@ public class TaskStatus
       return false;
     }
     TaskStatus that = (TaskStatus) o;
-    return getDuration() == that.getDuration() &&
-           java.util.Objects.equals(getId(), that.getId()) &&
+    return duration == that.duration &&
+           id.equals(that.id) &&
            status == that.status &&
-           java.util.Objects.equals(getErrorMsg(), that.getErrorMsg());
+           errorMsg.equals(that.errorMsg) &&
+           location.equals(that.location);
   }
 
   @Override
   public int hashCode()
   {
-    return java.util.Objects.hash(getId(), status, getDuration(), getErrorMsg());
+    return java.util.Objects.hash(id, status, duration, errorMsg, location);
   }
 }

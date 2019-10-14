@@ -89,7 +89,7 @@ public class ListenerResourceAnnouncerTest extends CuratorTestBase
       }
     });
     Assert.assertNotNull(curator.checkExists().forPath(announcePath));
-    final String nodePath = ZKPaths.makePath(announcePath, StringUtils.format("%s:%s", node.getScheme(), node.getHostText()));
+    final String nodePath = ZKPaths.makePath(announcePath, StringUtils.format("%s:%s", node.getScheme(), node.getHost()));
     Assert.assertNotNull(curator.checkExists().forPath(nodePath));
     Assert.assertEquals(Long.BYTES, curator.getData().decompressed().forPath(nodePath).length);
     Assert.assertNull(curator.checkExists()
@@ -123,7 +123,7 @@ public class ListenerResourceAnnouncerTest extends CuratorTestBase
 
 
     announcer.announce(
-        EasyMock.eq(ZKPaths.makePath(announcePath, StringUtils.format("%s:%s", node.getScheme(), node.getHostText()))),
+        EasyMock.eq(ZKPaths.makePath(announcePath, StringUtils.format("%s:%s", node.getScheme(), node.getHost()))),
         EasyMock.aryEq(resourceAnnouncer.getAnnounceBytes())
     );
     EasyMock.expectLastCall().once();

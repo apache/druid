@@ -72,9 +72,9 @@ public class HostAndPortWithScheme
     return scheme;
   }
 
-  public String getHostText()
+  public String getHost()
   {
-    return hostAndPort.getHostText();
+    return hostAndPort.getHost();
   }
 
   public int getPort()

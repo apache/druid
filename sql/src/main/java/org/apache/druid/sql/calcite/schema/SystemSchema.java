@@ -795,7 +795,7 @@ public class SystemSchema extends AbstractSchema
       return null;
     }
 
-    return HostAndPort.fromString(hostAndPort).getHostText();
+    return HostAndPort.fromString(hostAndPort).getHost();
   }
 
   private static int extractPort(@Nullable final String hostAndPort)
