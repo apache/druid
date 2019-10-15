@@ -354,7 +354,7 @@ ORDER BY "server" DESC`,
     },
   },
   {
-    name: 'Check for time chunks that could benefit from compaction',
+    name: 'Look for time chunks that could benefit from compaction',
     check: async controls => {
       // Check for any time chunks where there is more than 1 segment and avg segment size is less than 100MB
       const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
