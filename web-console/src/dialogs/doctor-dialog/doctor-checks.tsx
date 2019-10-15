@@ -34,14 +34,20 @@ export interface DoctorCheck {
 }
 
 const RUNTIME_PROPERTIES_ALL_NODES_MUST_AGREE_ON: string[] = [
+  'user.timezone',
   'druid.zk.service.host',
-  'druid.storage.type',
-  'druid.indexer.logs.type',
-  'druid.metadata.storage.type',
-  'druid.metadata.storage.connector.connectURI',
 ];
 
-const RUNTIME_PROPERTIES_ALL_NODES_SHOULD_AGREE_ON: string[] = ['java.version', 'user.timezone'];
+const RUNTIME_PROPERTIES_ALL_NODES_SHOULD_AGREE_ON: string[] = ['java.version'];
+
+// In the future (when we can query other nodes) is will also be cool to check:
+// 'druid.storage.type' <=> historicals, overlords, mm
+// 'druid.indexer.logs.type' <=> overlord, mm, + peons
+
+const RUNTIME_PROPERTIES_MASTER_NODES_SHOULD_AGREE_ON: string[] = [
+  'druid.metadata.storage.type', // overlord + coordinator
+  'druid.metadata.storage.connector.connectURI',
+];
 
 export const DOCTOR_CHECKS: DoctorCheck[] = [
   // -------------------------------------
@@ -96,8 +102,12 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
         );
       }
 
-      // Questions:
-      // Should we check that "user.timezone" === "UTC" ?
+      // Check that "user.timezone"
+      if (properties['user.timezone'] && properties['user.timezone'] !== 'UTC') {
+        controls.addSuggestion(
+          `It looks like "user.timezone" is set to ${properties['user.timezone']}, it is recommended to set this to "UTC"`,
+        );
+      }
     },
   },
 
@@ -196,6 +206,14 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
           );
         }
       }
+
+      for (const prop of RUNTIME_PROPERTIES_MASTER_NODES_SHOULD_AGREE_ON) {
+        if (coordinatorProperties[prop] !== overlordProperties[prop]) {
+          controls.addSuggestion(
+            `The Coordinator and Overlord do not agree on the "${prop}" runtime property ("${coordinatorProperties[prop]}" vs "${overlordProperties[prop]}")`,
+          );
+        }
+      }
     },
   },
 
@@ -262,8 +280,9 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
         sqlResult = await queryDruidSql({ query: `SELECT 1 + 1 AS "two"` });
       } catch (e) {
         controls.addIssue(
-          `Could not query SQL ensure that "druid.sql.enable" is set to "true". Got: ${e.message}`,
+          `Could not query SQL ensure that "druid.sql.enable" is set to "true" and that there are Broker nodes. Got: ${e.message}`,
         );
+        controls.terminateChecks();
         return;
       }
 
@@ -273,34 +292,29 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
     },
   },
   {
-    name: 'Verify that there are broker and historical nodes',
+    name: 'Verify that there are historical nodes',
     check: async controls => {
       // Make sure that there are broker and historical nodes reported from sys.servers
       let sqlResult: any[];
       try {
         sqlResult = await queryDruidSql({
           query: `SELECT
-  COUNT(*) FILTER (WHERE "server_type" = 'broker') AS "brokers",
-  COUNT(*) FILTER (WHERE "server_type" = 'historical') AS "historicals"
-FROM sys.servers`,
+  COUNT(*) AS "historicals"
+FROM sys.servers
+WHERE "server_type" = 'historical'`,
         });
       } catch (e) {
         controls.addIssue(`Could not run a sys.servers query. Got: ${e.message}`);
         return;
       }
 
-      if (sqlResult.length === 1) {
-        if (sqlResult[0]['brokers'] === 0) {
-          controls.addIssue(`There do not appear to be any broker nodes.`);
-        }
-        if (sqlResult[0]['historicals'] === 0) {
-          controls.addIssue(`There do not appear to be any historical nodes.`);
-        }
+      if (sqlResult.length === 1 && sqlResult[0]['historicals'] === 0) {
+        controls.addIssue(`There do not appear to be any historical nodes.`);
       }
     },
   },
   {
-    name: 'Verify that the historicals are not too full',
+    name: 'Verify that the historicals are not overfilled',
     check: async controls => {
       // Make sure that no nodes are reported that are over 95% capacity
       let sqlResult: any[];
@@ -310,7 +324,7 @@ FROM sys.servers`,
   "server",
   "curr_size" * 1.0 / "max_size" AS "fill"
 FROM sys.servers
-WHERE "server_type" = 'historical' AND "curr_size" * 1.0 / "max_size" > 0.95
+WHERE "server_type" = 'historical' AND "curr_size" * 1.0 / "max_size" > 0.9
 ORDER BY "server" DESC`,
         });
       } catch (e) {
@@ -323,15 +337,17 @@ ORDER BY "server" DESC`,
       }
 
       for (const server of sqlResult) {
-        if (server['fill'] > 0.99) {
+        if (server['fill'] > 0.95) {
           controls.addIssue(
-            `Server "${server['server']}" appears to be over 99% full (${formatPercent(
+            `Server "${server['server']}" appears to be over 95% full (is ${formatPercent(
               server,
             )}%). Increase capacity.`,
           );
         } else {
           controls.addSuggestion(
-            `Server "${server['server']}" appears to be over 99% full (${formatPercent(server)}%)`,
+            `Server "${server['server']}" appears to be over 90% full (is ${formatPercent(
+              server,
+            )}%)`,
           );
         }
       }
@@ -352,13 +368,12 @@ FROM (
   SELECT
     "datasource", "start", "end",
     AVG("size") AS "avg_segment_size_in_time_chunk",
-    sum("size") AS "total_size",
-    count(*) AS "num_segments"
+    SUM("size") AS "total_size",
+    COUNT(*) AS "num_segments"
   FROM sys.segments
   WHERE is_published = 1 AND "start" < '${dayAgo}'
   GROUP BY 1, 2, 3
   HAVING "num_segments" > 1 AND "total_size" > 1 AND "avg_segment_size_in_time_chunk" < 100000000
-  ORDER BY "avg_segment_size_in_time_chunk"
 ) 
 GROUP BY 1
 ORDER BY "num_bad_time_chunks"`,
@@ -367,15 +382,39 @@ ORDER BY "num_bad_time_chunks"`,
         return;
       }
 
-      for (const datasource of sqlResult) {
-        controls.addSuggestion(
-          `Datasource "${
-            datasource['datasource']
-          }" could benefit from compaction as it has ${pluralIfNeeded(
-            datasource['num_bad_time_chunks'],
-            'time chunk',
-          )} that have multiple small segments.`,
+      if (sqlResult.length) {
+        // Grab the auto-compaction definitions and ignore dataSources that already have auto-compaction
+        let compactionResult: any;
+        try {
+          compactionResult = (await axios.get('/druid/coordinator/v1/config/compaction')).data;
+        } catch (e) {
+          controls.addIssue(`Could not get compaction config. Something is wrong.`);
+          return;
+        }
+
+        if (!compactionResult.compactionConfigs) return;
+
+        if (!Array.isArray(compactionResult.compactionConfigs)) {
+          controls.addIssue(`Got invalid value from compaction config. Something is wrong.`);
+          return;
+        }
+
+        const dataSourcesWithCompaction = compactionResult.compactionConfigs.map(
+          (d: any) => d.dataSource,
         );
+
+        sqlResult = sqlResult.filter(d => !dataSourcesWithCompaction.includes(d['datasource']));
+
+        for (const datasource of sqlResult) {
+          controls.addSuggestion(
+            `Datasource "${
+              datasource['datasource']
+            }" could benefit from auto-compaction as it has ${pluralIfNeeded(
+              datasource['num_bad_time_chunks'],
+              'time chunk',
+            )} that have multiple small segments that could be compacted.`,
+          );
+        }
       }
     },
   },

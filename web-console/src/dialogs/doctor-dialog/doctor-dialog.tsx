@@ -39,6 +39,7 @@ export interface DoctorDialogProps {
 export interface DoctorDialogState {
   currentCheckIndex?: number;
   diagnoses?: Diagnosis[];
+  earlyTermination?: string;
 }
 
 export class DoctorDialog extends React.PureComponent<DoctorDialogProps, DoctorDialogState> {
@@ -68,10 +69,15 @@ export class DoctorDialog extends React.PureComponent<DoctorDialogProps, DoctorD
     };
 
     for (let i = 0; i < DOCTOR_CHECKS.length; i++) {
+      if (!this.mounted) return;
       this.setState({ currentCheckIndex: i });
       const check = DOCTOR_CHECKS[i];
       let terminateChecks = false;
 
+      // Slow down a bit so that the user can read the test name
+      await delay(500);
+
+      if (!this.mounted) return;
       try {
         await check.check({
           addSuggestion: (message: string) => {
@@ -89,10 +95,9 @@ export class DoctorDialog extends React.PureComponent<DoctorDialogProps, DoctorD
             });
           },
           terminateChecks: () => {
-            addToDiagnoses({
-              type: 'issue',
-              check: check.name,
-              message: `${check.name} early terminated the check suite`,
+            if (!this.mounted) return;
+            this.setState({
+              earlyTermination: `${check.name} early terminated the check suite`,
             });
             terminateChecks = true;
           },
@@ -105,17 +110,15 @@ export class DoctorDialog extends React.PureComponent<DoctorDialogProps, DoctorD
         });
       }
 
-      // Slow down a bit so that the user can read the test name
-      await delay(500);
-
-      if (terminateChecks || !this.mounted) break;
+      if (terminateChecks) break;
     }
 
+    if (!this.mounted) return;
     this.setState({ currentCheckIndex: undefined });
   }
 
   renderContent() {
-    const { diagnoses, currentCheckIndex } = this.state;
+    const { diagnoses, currentCheckIndex, earlyTermination } = this.state;
 
     if (diagnoses) {
       let note: string;
@@ -123,6 +126,8 @@ export class DoctorDialog extends React.PureComponent<DoctorDialogProps, DoctorD
         note = `Running check ${currentCheckIndex + 1}/${DOCTOR_CHECKS.length}: ${
           DOCTOR_CHECKS[currentCheckIndex].name
         }`;
+      } else if (earlyTermination) {
+        note = `Checks stopped abruptly`;
       } else {
         note = `All ${pluralIfNeeded(DOCTOR_CHECKS.length, 'check')} completed`;
       }
@@ -142,7 +147,12 @@ export class DoctorDialog extends React.PureComponent<DoctorDialogProps, DoctorD
               </Callout>
             );
           })}
-          {currentCheckIndex == null && diagnoses.length === 0 && (
+          {earlyTermination && (
+            <Callout className="diagnosis" intent={Intent.DANGER}>
+              {earlyTermination}
+            </Callout>
+          )}
+          {!earlyTermination && currentCheckIndex == null && diagnoses.length === 0 && (
             <Callout className="diagnosis" intent={Intent.SUCCESS}>
               No issues detected
             </Callout>
