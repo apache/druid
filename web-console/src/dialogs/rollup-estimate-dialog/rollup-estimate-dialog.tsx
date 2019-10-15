@@ -210,7 +210,7 @@ export class RollupEstimateDialog extends React.PureComponent<
         isOpen={datasource !== undefined}
         onClose={onClose}
         canOutsideClickClose={false}
-        title={'Estimate your rollup ratio'}
+        title={`Estimate your rollup ratio: ${datasource}`}
       >
         <ReactTable
           data={result ? result.queryResult.rows : []}
