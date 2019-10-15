@@ -46,7 +46,7 @@ public interface BasicAuthenticatorResourceHandler
   Response refreshAll();
 
   // non-coordinator methods
-  Response authenticatorUpdateListener(String authenticatorName, byte[] serializedUserMap);
+  Response authenticatorUserUpdateListener(String authenticatorName, byte[] serializedUserMap);
 
   // common methods
   Response getLoadStatus();

@@ -78,14 +78,6 @@
                 <artifactId>httpcore</artifactId>
               </exclusion>
               <exclusion>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-core-asl</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-mapper-asl</artifactId>
-              </exclusion>
-              <exclusion>
                 <groupId>org.apache.zookeeper</groupId>
                 <artifactId>zookeeper</artifactId>
               </exclusion>
@@ -184,14 +176,6 @@
             <exclusion>
               <groupId>org.apache.httpcomponents</groupId>
               <artifactId>httpcore</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.codehaus.jackson</groupId>
-              <artifactId>jackson-core-asl</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.codehaus.jackson</groupId>
-              <artifactId>jackson-mapper-asl</artifactId>
             </exclusion>
             <exclusion>
               <groupId>org.apache.zookeeper</groupId>

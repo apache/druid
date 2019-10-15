@@ -93,8 +93,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
     return runTask(
         new ClientCompactQuery(
             dataSource,
-            null,
-            segments,
+            new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments)),
             targetCompactionSizeBytes,
             tuningConfig,
             context

@@ -211,7 +211,7 @@ public class BasicAuthenticatorResource
   }
 
   /**
-   * Listen for update notifications for the auth storage
+   * Listen for users update notifications for the auth storage
    */
   @POST
   @Path("/listen/{authenticatorName}")
@@ -224,6 +224,6 @@ public class BasicAuthenticatorResource
       byte[] serializedUserMap
   )
   {
-    return handler.authenticatorUpdateListener(authenticatorName, serializedUserMap);
+    return handler.authenticatorUserUpdateListener(authenticatorName, serializedUserMap);
   }
 }
