@@ -1900,6 +1900,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
 
     if (partitionIdsFromSupplierWithoutPreviouslyExpiredPartitions.size() != partitionIdsFromSupplier.size()) {
+      // this should never happen, but we check for it and exclude the expired partitions if they somehow reappear
       log.warn(
           "Previously expired partitions [%s] were present in the current list [%s] from the record supplier.",
           previouslyExpiredPartitions,
@@ -2018,7 +2019,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
       validateMetadataPartitionExpiration(newlyExpiredPartitions, currentMetadata, cleanedMetadata);
 
-      // Compute new partition groups, only including partitions from metadata that are
+      // Compute new partition groups, only including partitions that are
       // still in partitionIdsFromSupplier
       Map<Integer, ConcurrentHashMap<PartitionIdType, SequenceOffsetType>> newPartitionGroups =
           recomputePartitionGroupsForExpiration(partitionIdsFromSupplier);

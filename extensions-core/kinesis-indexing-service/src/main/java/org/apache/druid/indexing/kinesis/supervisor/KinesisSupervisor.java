@@ -409,9 +409,11 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       }
     }
 
-    Set<String> oldExclusiveStartPartitions;
-    Set<String> newExclusiveStartPartitions = null;
+    SeekableStreamSequenceNumbers<String, String> newSequences;
     if (old instanceof SeekableStreamStartSequenceNumbers) {
+      Set<String> oldExclusiveStartPartitions;
+      Set<String> newExclusiveStartPartitions;
+
       newExclusiveStartPartitions = new HashSet<>();
       oldExclusiveStartPartitions = ((SeekableStreamStartSequenceNumbers<String, String>) old).getExclusivePartitions();
       for (String partitionId : oldExclusiveStartPartitions) {
@@ -419,10 +421,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
           newExclusiveStartPartitions.add(partitionId);
         }
       }
-    }
 
-    SeekableStreamSequenceNumbers<String, String> newSequences;
-    if (old instanceof SeekableStreamStartSequenceNumbers) {
       newSequences = new SeekableStreamStartSequenceNumbers<String, String>(
           old.getStream(),
           null,
