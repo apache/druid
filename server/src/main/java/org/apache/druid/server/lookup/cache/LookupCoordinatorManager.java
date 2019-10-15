@@ -579,7 +579,7 @@ public class LookupCoordinatorManager
               "Starting lookup mgmt for tier [%s] and host [%s:%s:%s].",
               tier,
               node.getScheme(),
-              node.getHost(),
+              node.getHostText(),
               node.getPort()
           );
 
@@ -590,7 +590,7 @@ public class LookupCoordinatorManager
                       return new AbstractMap.SimpleImmutableEntry<>(node.getHostAndPort(), doLookupManagementOnNode(node, tierLookups));
                     }
                     catch (InterruptedException ex) {
-                      LOG.warn(ex, "lookup management on node [%s:%s:%s] interrupted.", node.getScheme(), node.getHost(), node.getPort());
+                      LOG.warn(ex, "lookup management on node [%s:%s:%s] interrupted.", node.getScheme(), node.getHostText(), node.getPort());
                       return null;
                     }
                     catch (Exception ex) {
@@ -598,7 +598,7 @@ public class LookupCoordinatorManager
                           ex,
                           "Failed to finish lookup management on node [%s:%s:%s]",
                           node.getScheme(),
-                          node.getHost(),
+                          node.getHostText(),
                           node.getPort()
                       ).emit();
                       return null;
@@ -729,7 +729,7 @@ public class LookupCoordinatorManager
   {
     return new URL(
         druidNode.getScheme(),
-        druidNode.getHost(),
+        druidNode.getHostText(),
         druidNode.getPortOrDefault(-1),
         LOOKUP_BASE_REQUEST_PATH
     );
@@ -739,7 +739,7 @@ public class LookupCoordinatorManager
   {
     return new URL(
         druidNode.getScheme(),
-        druidNode.getHost(),
+        druidNode.getHostText(),
         druidNode.getPortOrDefault(-1),
         LOOKUP_UPDATE_REQUEST_PATH
     );

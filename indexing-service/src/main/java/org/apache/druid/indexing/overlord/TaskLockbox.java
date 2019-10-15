@@ -1114,10 +1114,10 @@ public class TaskLockbox
     @Override
     public String toString()
     {
-      return "TaskLockPosse{" +
-             "taskLock=" + taskLock +
-             ", taskIds=" + taskIds +
-             '}';
+      return Objects.toStringHelper(this)
+                    .add("taskLock", taskLock)
+                    .add("taskIds", taskIds)
+                    .toString();
     }
   }
 }

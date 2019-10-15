@@ -257,7 +257,7 @@ name: Guava
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 25.1-jre
+version: 16.0.1
 libraries:
   - com.google.guava: guava
 
@@ -2384,13 +2384,27 @@ name: Apache Commons BeanUtils
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 1.9.3
+version: 1.7.0
 libraries:
   - commons-beanutils: commons-beanutils
 notices:
   - commons-beanutils: |
       This product includes software developed by
       The Apache Software Foundation (http://www.apache.org/).
+
+---
+
+name: Apache Commons BeanUtils
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 1.8.0
+libraries:
+  - commons-beanutils: commons-beanutils-core
+notices:
+  - common-beanutils-core: |
+      Apache Commons BeanUtils
+      Copyright 2000-2008 The Apache Software Foundation
 
 ---
 
@@ -2488,7 +2502,7 @@ name: Apache Commons Compress
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 1.18
+version: 1.4.1
 libraries:
   - org.apache.commons: commons-compress
 notices:
