@@ -255,7 +255,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         String partitionId = partitionOffsetMapping.getKey();
         if (availablePartitions.contains(partitionId)) {
           int newTaskGroupId = getTaskGroupIdForPartitionWithProvidedList(partitionId, availablePartitionsList);
-          Map<String, String> partitionMap = newPartitionGroups.computeIfAbsent(
+          ConcurrentHashMap<String, String> partitionMap = newPartitionGroups.computeIfAbsent(
               newTaskGroupId,
               k -> new ConcurrentHashMap<>()
           );
