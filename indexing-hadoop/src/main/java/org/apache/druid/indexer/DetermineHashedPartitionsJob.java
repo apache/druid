@@ -264,8 +264,11 @@ public class DetermineHashedPartitionsJob implements Jobby
   public static class DetermineCardinalityMapper extends HadoopDruidIndexerMapper<LongWritable, BytesWritable>
   {
     private static HashFunction hashFunction = Hashing.murmur3_128();
+    @Nullable
     private Granularity rollupGranularity = null;
+    @Nullable
     private Map<Interval, HyperLogLogCollector> hyperLogLogs;
+    @Nullable
     private HadoopDruidIndexerConfig config;
     private boolean determineIntervals;
 
@@ -349,6 +352,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       extends Reducer<LongWritable, BytesWritable, NullWritable, NullWritable>
   {
     private final List<Interval> intervals = new ArrayList<>();
+    @Nullable
     protected HadoopDruidIndexerConfig config = null;
     private boolean determineIntervals;
 
@@ -429,8 +433,10 @@ public class DetermineHashedPartitionsJob implements Jobby
   public static class DetermineHashedPartitionsPartitioner
       extends Partitioner<LongWritable, BytesWritable> implements Configurable
   {
+    @Nullable
     private Configuration config;
     private boolean determineIntervals;
+    @Nullable
     private Map<LongWritable, Integer> reducerLookup;
 
     @Override

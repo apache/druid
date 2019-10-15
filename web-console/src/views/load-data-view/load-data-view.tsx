@@ -97,6 +97,7 @@ import {
   hasParallelAbility,
   IngestionComboTypeWithExtra,
   IngestionSpec,
+  invalidIoConfig,
   invalidTuningConfig,
   IoConfig,
   isColumnTimestampSpec,
@@ -231,7 +232,7 @@ const VIEW_TITLE: Record<Step, string> = {
   partition: 'Partition',
   tuning: 'Tune',
   publish: 'Publish',
-  spec: 'Edit JSON spec',
+  spec: 'Edit spec',
   loading: 'Loading',
 };
 
@@ -1988,6 +1989,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             fields={getFilterFormFields()}
             model={selectedFilter}
             onChange={f => this.setState({ selectedFilter: f })}
+            showCustom={f => !['selector', 'in', 'regex', 'like', 'not'].includes(f.type)}
           />
           <div className="controls-buttons">
             <Button
@@ -2323,6 +2325,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 ]}
                 model={spec}
                 onChange={s => this.updateSpec(s)}
+                onFinalize={() => {
+                  setTimeout(() => {
+                    this.queryForSchema();
+                  }, 10);
+                }}
               />
             </>
           )}
@@ -2441,6 +2448,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     };
 
     if (selectedDimensionSpec) {
+      const curDimensions =
+        deepGet(spec, `dataSchema.parser.parseSpec.dimensionsSpec.dimensions`) || EMPTY_ARRAY;
+
       return (
         <div className="edit-controls">
           <AutoForm
@@ -2468,11 +2478,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <Button
                 icon={IconNames.TRASH}
                 intent={Intent.DANGER}
+                disabled={curDimensions.length <= 1}
                 onClick={() => {
-                  const curDimensions =
-                    deepGet(spec, `dataSchema.parser.parseSpec.dimensionsSpec.dimensions`) ||
-                    EMPTY_ARRAY;
-                  if (curDimensions.length <= 1) return; // Guard against removing the last dimension, ToDo: some better feedback here would be good
+                  if (curDimensions.length <= 1) return; // Guard against removing the last dimension
 
                   this.updateSpec(
                     deepDelete(
@@ -2612,6 +2620,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 type: 'string',
                 suggestions: ['HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR'],
                 defined: (g: GranularitySpec) => g.type === 'uniform',
+                required: true,
                 info: (
                   <>
                     The granularity to create time chunks at. Multiple segments can be created per
@@ -2624,14 +2633,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             ]}
             model={granularitySpec}
             onChange={g => this.updateSpec(deepSet(spec, 'dataSchema.granularitySpec', g))}
-          />
-        </div>
-        <div className="other">
-          <H5>Secondary partitioning</H5>
-          <AutoForm
-            fields={getPartitionRelatedTuningSpecFormFields(getSpecType(spec) || 'index')}
-            model={tuningConfig}
-            onChange={t => this.updateSpec(deepSet(spec, 'tuningConfig', t))}
           />
           <AutoForm
             fields={[
@@ -2653,6 +2654,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             onChange={s => this.updateSpec(s)}
           />
         </div>
+        <div className="other">
+          <H5>Secondary partitioning</H5>
+          <AutoForm
+            fields={getPartitionRelatedTuningSpecFormFields(getSpecType(spec) || 'index')}
+            model={tuningConfig}
+            onChange={t => this.updateSpec(deepSet(spec, 'tuningConfig', t))}
+          />
+        </div>
         <div className="control">
           <Callout className="intro">
             <p className="optional">Optional</p>
@@ -2661,7 +2670,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderParallelPickerIfNeeded()}
         </div>
         {this.renderNextBar({
-          disabled: invalidTuningConfig(tuningConfig, granularitySpec.intervals),
+          disabled:
+            !granularitySpec.segmentGranularity ||
+            invalidTuningConfig(tuningConfig, granularitySpec.intervals),
         })}
       </>
     );
@@ -2722,7 +2733,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           </Callout>
           {this.renderParallelPickerIfNeeded()}
         </div>
-        {this.renderNextBar({})}
+        {this.renderNextBar({
+          disabled: invalidIoConfig(ioConfig),
+        })}
       </>
     );
   }
@@ -2782,6 +2795,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'ioConfig.appendToExisting',
                 label: 'Append to existing',
                 type: 'boolean',
+                defaultValue: false,
                 defined: spec => !deepGet(spec, 'tuningConfig.forceGuaranteedRollup'),
                 info: (
                   <>
@@ -2803,8 +2817,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'tuningConfig.logParseExceptions',
                 label: 'Log parse exceptions',
                 type: 'boolean',
-                disabled: parallel,
                 defaultValue: false,
+                disabled: parallel,
                 info: (
                   <>
                     If true, log an error message when a parsing exception occurs, containing

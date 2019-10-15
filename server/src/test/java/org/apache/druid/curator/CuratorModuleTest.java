@@ -147,10 +147,16 @@ public final class CuratorModuleTest
 
     // org.apache.curator.framework.impl.CuratorFrameworkImpl logs "Background retry gave up" unhandled error twice
     List<LogEvent> loggingEvents = logger.getLogEvents();
-    Assert.assertFalse(loggingEvents.isEmpty());
-    LogEvent logEvent = loggingEvents.get(0);
-    Assert.assertEquals(Level.ERROR, logEvent.getLevel());
-    Assert.assertEquals("Unhandled error in Curator Framework", logEvent.getMessage().getFormattedMessage());
+    Assert.assertTrue(
+        "Logging events: " + loggingEvents,
+        loggingEvents.stream()
+                     .anyMatch(l ->
+                                   l.getLevel().equals(Level.ERROR)
+                                   && l.getMessage()
+                                       .getFormattedMessage()
+                                       .equals("Unhandled error in Curator Framework")
+                     )
+    );
   }
 
   @Ignore("Verifies changes in https://github.com/apache/incubator-druid/pull/8458, but overkill for regular testing")
@@ -187,7 +193,7 @@ public final class CuratorModuleTest
     CuratorFramework curatorFramework = injector.getInstance(CuratorFramework.class);
     RetryPolicy retryPolicy = curatorFramework.getZookeeperClient().getRetryPolicy();
     Assert.assertThat(retryPolicy, CoreMatchers.instanceOf(ExponentialBackoffRetry.class));
-    RetryPolicy adjustedRetryPolicy = adjustRetryPolicy((BoundedExponentialBackoffRetry) retryPolicy, 0);
+    RetryPolicy adjustedRetryPolicy = adjustRetryPolicy((BoundedExponentialBackoffRetry) retryPolicy, maxRetries);
     curatorFramework.getZookeeperClient().setRetryPolicy(adjustedRetryPolicy);
     return curatorFramework;
   }

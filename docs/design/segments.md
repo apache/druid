@@ -29,7 +29,7 @@ interval, where the time interval is configurable in the
 `segmentGranularity` parameter of the
 [`granularitySpec`](../ingestion/index.md#granularityspec).  For Druid to
 operate well under heavy query load, it is important for the segment
-file size to be within the recommended range of 300mb-700mb. If your
+file size to be within the recommended range of 300MB-700MB. If your
 segment files are larger than this range, then consider either
 changing the granularity of the time interval or partitioning your
 data and tweaking the `targetPartitionSize` in your `partitionsSpec`
@@ -73,8 +73,7 @@ indexes* allow for quick filtering operations (specifically, bitmaps
 are convenient for quickly applying AND and OR operators). Finally,
 the list of values in 2 is needed for *group by* and *TopN*
 queries. In other words, queries that solely aggregate metrics based
-on filters do not need to touch the list of dimension values stored in
-2.
+on filters do not need to touch the list of dimension values stored in 2.
 
 To get a concrete sense of these data structures, consider the ‘page’
 column from the example data above.  The three data structures that
@@ -180,7 +179,7 @@ Each column is stored as two parts:
 1.  A Jackson-serialized ColumnDescriptor
 2.  The rest of the binary for the column
 
-A ColumnDescriptor is essentially an object that allows us to use jackson’s polymorphic deserialization to add new and interesting methods of serialization with minimal impact to the code. It consists of some metadata about the column (what type is it, is it multi-value, etc.) and then a list of serde logic that can deserialize the rest of the binary.
+A ColumnDescriptor is essentially an object that allows us to use Jackson's polymorphic deserialization to add new and interesting methods of serialization with minimal impact to the code. It consists of some metadata about the column (what type is it, is it multi-value, etc.) and then a list of serialization/deserialization logic that can deserialize the rest of the binary.
 
 ## Sharding Data to Create Segments
 
@@ -216,7 +215,7 @@ foo_2015-01-01/2015-01-02_v1_1
 foo_2015-01-01/2015-01-02_v1_2
 ```
 
-In the example segments above, the dataSource = foo, interval = 2015-01-01/2015-01-02, version = v1, partitionNum = 0.
+In the example segments above, the `dataSource = foo`, `interval = 2015-01-01/2015-01-02`, `version = v1`, and `partitionNum = 0`.
 If at some later point in time, you reindex the data with a new schema, the newly created segments will have a higher version id.
 
 ```

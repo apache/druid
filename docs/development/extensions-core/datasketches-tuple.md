@@ -51,7 +51,7 @@ druid.extensions.loadList=["druid-datasketches"]
 |fieldName|A String for the name of the input field.|yes|
 |nominalEntries|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Must be a power of 2. See the [Theta sketch accuracy](https://datasketches.github.io/docs/Theta/ThetaErrorTable.html) for details. |no, defaults to 16384|
 |numberOfValues|Number of values associated with each distinct key. |no, defaults to 1|
-|metricCoulumns|If building sketches from raw data, an array of names of the input columns containing numeric vaues to be associated with each distinct key.|no, defaults to empty array|
+|metricColumns|If building sketches from raw data, an array of names of the input columns containing numeric values to be associated with each distinct key.|no, defaults to empty array|
 
 ### Post Aggregators
 
@@ -118,7 +118,7 @@ Returns a list of variance values from a given ArrayOfDoublesSketch. The result 
 
 #### Quantiles sketch from a column
 
-Returns a quanitles DoublesSketch constructed from a given column of values from a given ArrayOfDoublesSketch using optional parameter k that determines the accuracy and size of the quantiles sketch. See [Quantiles Sketch Module](datasketches-quantiles.html)
+Returns a quantiles DoublesSketch constructed from a given column of values from a given ArrayOfDoublesSketch using optional parameter k that determines the accuracy and size of the quantiles sketch. See [Quantiles Sketch Module](datasketches-quantiles.html)
 
 * The column number is 1-based and is optional (the default is 1).
 * The parameter k is optional (the default is defined in the sketch library).

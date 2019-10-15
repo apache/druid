@@ -19,11 +19,14 @@
 
 package org.apache.druid.indexer;
 
+import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 
 public interface TaskMetricsGetter
 {
   List<String> getKeys();
+  @Nullable
   Map<String, Number> getTotalMetrics();
 }
