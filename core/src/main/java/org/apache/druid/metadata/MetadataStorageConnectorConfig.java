@@ -89,13 +89,14 @@ public class MetadataStorageConnectorConfig
         String loc = tokens[1];
         String dbName = "";
         if (tokens.length > 2) {
-          dbName = ":" + tokens[2];
+          dbName = tokens[2];
         }
         String uri = Files.readAllLines(Paths.get(loc)).get(0); // Form: jdbc:mysql://<host>:<port>/
         String connectionString = uri + dbName;
         cachedURI = connectionString;
         return connectionString;
-      } catch (IOException e) {
+      }
+      catch (IOException e) {
         return cachedURI;
       }
     }
