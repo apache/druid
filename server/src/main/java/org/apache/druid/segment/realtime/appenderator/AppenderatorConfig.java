@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
@@ -59,6 +60,8 @@ public interface AppenderatorConfig
   {
     throw new UnsupportedOperationException("maxTotalRows is not implemented.");
   }
+
+  PartitionsSpec getPartitionsSpec();
 
   /**
    * Period that sets frequency to persist to local storage if no other thresholds are met

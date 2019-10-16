@@ -249,7 +249,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         null,
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
-        new TestDruidLeaderSelector()
+        new TestDruidLeaderSelector(),
+        null
     );
   }
 
@@ -546,7 +547,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         null,
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
-        new TestDruidLeaderSelector()
+        new TestDruidLeaderSelector(),
+        null
     );
   }
 
