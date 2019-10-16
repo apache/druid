@@ -48,7 +48,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DoublesSketchSqlAggregator implements SqlAggregator
+public class DoublesSketchObjectSqlAggregator implements SqlAggregator
 {
   private static final SqlAggFunction FUNCTION_INSTANCE = new DoublesSketchSqlAggFunction();
   private static final String NAME = "DS_QUANTILES_SKETCH";

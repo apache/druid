@@ -24,18 +24,13 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlAggFunction;
-import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.type.InferTypes;
-import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
-import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
+import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.VirtualColumn;
@@ -54,17 +49,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class ThetaSketchSqlAggregator implements SqlAggregator
+public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
 {
-  private static final SqlAggFunction FUNCTION_INSTANCE = new ThetaSketchObjectSqlAggFunction();
-  private static final String NAME = "DS_THETA";
-
-  @Override
-  public SqlAggFunction calciteFunction()
-  {
-    return FUNCTION_INSTANCE;
-  }
-
   @Nullable
   @Override
   public Aggregation toDruidAggregation(
@@ -154,36 +140,18 @@ public class ThetaSketchSqlAggregator implements SqlAggregator
       );
     }
 
-    return Aggregation.create(
+    return toAggregation(
+        name,
+        finalizeAggregations,
         virtualColumns,
-        Collections.singletonList(aggregatorFactory),
-        null
+        aggregatorFactory
     );
   }
 
-  private static class ThetaSketchObjectSqlAggFunction extends SqlAggFunction
-  {
-    private static final String SIGNATURE = "'" + NAME + "(column, size)'\n";
-
-    ThetaSketchObjectSqlAggFunction()
-    {
-      super(
-          NAME,
-          null,
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.OTHER),
-          InferTypes.VARCHAR_1024,
-          OperandTypes.or(
-              OperandTypes.ANY,
-              OperandTypes.and(
-                  OperandTypes.sequence(SIGNATURE, OperandTypes.ANY, OperandTypes.LITERAL),
-                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
-              )
-          ),
-          SqlFunctionCategory.USER_DEFINED_FUNCTION,
-          false,
-          false
-      );
-    }
-  }
+  protected abstract Aggregation toAggregation(
+      final String name,
+      final boolean finalizeAggregations,
+      final List<VirtualColumn> virtualColumns,
+      final AggregatorFactory aggregatorFactory
+  );
 }

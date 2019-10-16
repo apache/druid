@@ -174,7 +174,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
         ImmutableSet.of(
             new HllSketchApproxCountDistinctSqlAggregator(),
-            new HllSketchSqlAggregator()
+            new HllSketchObjectSqlAggregator()
         ),
         ImmutableSet.of(
             new HllSketchEstimateOperatorConversion(),

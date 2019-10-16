@@ -127,7 +127,6 @@ public class HllSketchToEstimatePostAggregator implements PostAggregator
   public byte[] getCacheKey()
   {
     return new CacheKeyBuilder(PostAggregatorIds.HLL_SKETCH_TO_ESTIMATE_CACHE_TYPE_ID)
-        .appendString(name)
         .appendCacheable(field)
         .build();
   }

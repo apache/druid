@@ -27,7 +27,7 @@ import com.google.inject.Binder;
 import com.yahoo.sketches.hll.HllSketch;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctSqlAggregator;
-import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchObjectSqlAggregator;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.sql.guice.SqlBindings;
 
@@ -55,7 +55,7 @@ public class HllSketchModule implements DruidModule
   {
     registerSerde();
     SqlBindings.addAggregator(binder, HllSketchApproxCountDistinctSqlAggregator.class);
-    SqlBindings.addAggregator(binder, HllSketchSqlAggregator.class);
+    SqlBindings.addAggregator(binder, HllSketchObjectSqlAggregator.class);
   }
 
   @Override

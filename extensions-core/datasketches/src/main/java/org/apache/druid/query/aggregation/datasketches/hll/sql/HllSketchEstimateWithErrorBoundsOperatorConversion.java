@@ -23,6 +23,7 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -41,7 +42,7 @@ import java.util.List;
 
 public class HllSketchEstimateWithErrorBoundsOperatorConversion extends DirectOperatorConversion
 {
-  private static String FUNCTION_NAME = "HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS";
+  private static final String FUNCTION_NAME = "HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS";
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.INTEGER)
@@ -88,6 +89,10 @@ public class HllSketchEstimateWithErrorBoundsOperatorConversion extends DirectOp
     );
 
     if (firstOperand == null) {
+      return null;
+    }
+
+    if (!operands.get(1).isA(SqlKind.LITERAL)) {
       return null;
     }
 

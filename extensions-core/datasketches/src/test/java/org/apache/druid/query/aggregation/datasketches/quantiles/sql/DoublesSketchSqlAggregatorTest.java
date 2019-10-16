@@ -168,7 +168,7 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
         ImmutableSet.of(
             new DoublesSketchApproxQuantileSqlAggregator(),
-            new DoublesSketchSqlAggregator()
+            new DoublesSketchObjectSqlAggregator()
         ),
         ImmutableSet.of(
             new DoublesSketchQuantileOperatorConversion()

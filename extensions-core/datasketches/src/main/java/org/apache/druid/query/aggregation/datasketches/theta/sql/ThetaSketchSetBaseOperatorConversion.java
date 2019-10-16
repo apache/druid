@@ -28,6 +28,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.sql.type.SqlOperandCountRanges;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -91,9 +92,12 @@ public abstract class ThetaSketchSetBaseOperatorConversion implements SqlOperato
       if (convertedPostAgg == null) {
         if (operandCounter == 0) {
           try {
+            if (!operand.isA(SqlKind.LITERAL)) {
+              return null;
+            }
             size = RexLiteral.intValue(operand);
           }
-          catch (RuntimeException re) {
+          catch (ClassCastException cce) {
             return null;
           }
         } else {
@@ -122,15 +126,12 @@ public abstract class ThetaSketchSetBaseOperatorConversion implements SqlOperato
             factory -> Calcites.createSqlType(factory, SqlTypeName.OTHER)
         ),
         null,
-        OperandTypes.VARIADIC,
+        OperandTypes.variadic(SqlOperandCountRanges.from(2)),
         SqlFunctionCategory.USER_DEFINED_FUNCTION
     );
   }
 
-  public String getSetOperationName()
-  {
-    throw new UnsupportedOperationException("getSetOperationName() is not implemented.");
-  }
+  public abstract String getSetOperationName();
 
   public String getFunctionName()
   {

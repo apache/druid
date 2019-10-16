@@ -28,6 +28,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.sql.type.SqlOperandCountRanges;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchUnionPostAggregator;
@@ -52,7 +53,7 @@ public class HllSketchSetUnionOperatorConversion implements SqlOperatorConversio
           factory -> Calcites.createSqlType(factory, SqlTypeName.OTHER)
       ),
       null,
-      OperandTypes.VARIADIC,
+      OperandTypes.variadic(SqlOperandCountRanges.from(2)),
       SqlFunctionCategory.USER_DEFINED_FUNCTION
   );
 
@@ -101,13 +102,19 @@ public class HllSketchSetUnionOperatorConversion implements SqlOperatorConversio
       );
       if (convertedPostAgg == null) {
         if (operandCounter == 0) {
+          if (!operand.isA(SqlKind.LITERAL)) {
+            return null;
+          }
           try {
             lgK = RexLiteral.intValue(operand);
           }
-          catch (RuntimeException re) {
+          catch (ClassCastException re) {
             return null;
           }
         } else if (operandCounter == 1) {
+          if (!operand.isA(SqlKind.LITERAL)) {
+            return null;
+          }
           // both lgK and tgtHllType must be specified
           if (lgK == null) {
             return null;
@@ -115,7 +122,7 @@ public class HllSketchSetUnionOperatorConversion implements SqlOperatorConversio
           try {
             tgtHllType = RexLiteral.stringValue(operand);
           }
-          catch (RuntimeException re) {
+          catch (ClassCastException re) {
             return null;
           }
         } else {

@@ -31,7 +31,7 @@ import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchEsti
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSetIntersectOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSetNotOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSetUnionOperatorConversion;
-import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchObjectSqlAggregator;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.sql.guice.SqlBindings;
 
@@ -55,7 +55,7 @@ public class SketchModule implements DruidModule
   {
     registerSerde();
     SqlBindings.addAggregator(binder, ThetaSketchApproxCountDistinctSqlAggregator.class);
-    SqlBindings.addAggregator(binder, ThetaSketchSqlAggregator.class);
+    SqlBindings.addAggregator(binder, ThetaSketchObjectSqlAggregator.class);
 
     SqlBindings.addOperatorConversion(binder, ThetaSketchEstimateOperatorConversion.class);
     SqlBindings.addOperatorConversion(binder, ThetaSketchEstimateWithErrorBoundsOperatorConversion.class);

@@ -40,7 +40,7 @@ import java.util.List;
 
 public class HllSketchToStringOperatorConversion extends DirectOperatorConversion
 {
-  private static String FUNCTION_NAME = "HLL_SKETCH_TO_STRING";
+  private static final String FUNCTION_NAME = "HLL_SKETCH_TO_STRING";
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypes(SqlTypeFamily.ANY)

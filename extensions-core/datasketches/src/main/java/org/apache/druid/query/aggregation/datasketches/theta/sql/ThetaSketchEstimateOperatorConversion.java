@@ -40,7 +40,7 @@ import java.util.List;
 
 public class ThetaSketchEstimateOperatorConversion extends DirectOperatorConversion
 {
-  private static String FUNCTION_NAME = "THETA_SKETCH_ESTIMATE";
+  private static final String FUNCTION_NAME = "THETA_SKETCH_ESTIMATE";
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypes(SqlTypeFamily.ANY)

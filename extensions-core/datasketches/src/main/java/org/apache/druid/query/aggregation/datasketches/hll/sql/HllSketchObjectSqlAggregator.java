@@ -28,7 +28,6 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -36,10 +35,10 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import java.util.Collections;
 import java.util.List;
 
-public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlAggregator implements SqlAggregator
+public class HllSketchObjectSqlAggregator extends HllSketchBaseSqlAggregator implements SqlAggregator
 {
-  private static final SqlAggFunction FUNCTION_INSTANCE = new HllSketchApproxCountDistinctSqlAggFunction();
-  private static final String NAME = "APPROX_COUNT_DISTINCT_DS_HLL";
+  private static final SqlAggFunction FUNCTION_INSTANCE = new HllSketchSqlAggFunction();
+  private static final String NAME = "DS_HLL";
 
   @Override
   public SqlAggFunction calciteFunction()
@@ -58,24 +57,21 @@ public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlA
     return Aggregation.create(
         virtualColumns,
         Collections.singletonList(aggregatorFactory),
-        finalizeAggregations ? new FinalizingFieldAccessPostAggregator(
-            name,
-            aggregatorFactory.getName()
-        ) : null
+        null
     );
   }
 
-  private static class HllSketchApproxCountDistinctSqlAggFunction extends SqlAggFunction
+  private static class HllSketchSqlAggFunction extends SqlAggFunction
   {
     private static final String SIGNATURE = "'" + NAME + "(column, lgK, tgtHllType)'\n";
 
-    HllSketchApproxCountDistinctSqlAggFunction()
+    HllSketchSqlAggFunction()
     {
       super(
           NAME,
           null,
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.BIGINT),
+          ReturnTypes.explicit(SqlTypeName.OTHER),
           InferTypes.VARCHAR_1024,
           OperandTypes.or(
               OperandTypes.ANY,
@@ -84,7 +80,7 @@ public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlA
                   OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING)
               )
           ),
-          SqlFunctionCategory.NUMERIC,
+          SqlFunctionCategory.USER_DEFINED_FUNCTION,
           false,
           false
       );

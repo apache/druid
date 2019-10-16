@@ -171,7 +171,7 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
         ImmutableSet.of(
             new ThetaSketchApproxCountDistinctSqlAggregator(),
-            new ThetaSketchSqlAggregator()
+            new ThetaSketchObjectSqlAggregator()
         ),
         ImmutableSet.of(
             new ThetaSketchEstimateOperatorConversion(),
