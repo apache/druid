@@ -78,6 +78,12 @@ public class InlineFirehoseFactory implements FiniteFirehoseFactory<StringInputR
   }
 
   @Override
+  public boolean isSplittable()
+  {
+    return false;
+  }
+
+  @Override
   public Stream<InputSplit<String>> getSplits()
   {
     return Stream.of(new InputSplit<>(data));
