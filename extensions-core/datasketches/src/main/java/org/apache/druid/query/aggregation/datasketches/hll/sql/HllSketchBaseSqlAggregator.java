@@ -167,9 +167,9 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
   }
 
   protected abstract Aggregation toAggregation(
-      final String name,
-      final boolean finalizeAggregations,
-      final List<VirtualColumn> virtualColumns,
-      final AggregatorFactory aggregatorFactory
+      String name,
+      boolean finalizeAggregations,
+      List<VirtualColumn> virtualColumns,
+      AggregatorFactory aggregatorFactory
   );
 }

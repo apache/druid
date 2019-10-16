@@ -28,10 +28,10 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchApproxCountDistinctSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchEstimateOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchEstimateWithErrorBoundsOperatorConversion;
+import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchObjectSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSetIntersectOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSetNotOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSetUnionOperatorConversion;
-import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchObjectSqlAggregator;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.sql.guice.SqlBindings;
 

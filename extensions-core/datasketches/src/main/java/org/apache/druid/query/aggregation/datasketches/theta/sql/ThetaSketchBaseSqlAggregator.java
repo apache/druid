@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
-import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.VirtualColumn;
@@ -46,7 +45,6 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
@@ -149,9 +147,9 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
   }
 
   protected abstract Aggregation toAggregation(
-      final String name,
-      final boolean finalizeAggregations,
-      final List<VirtualColumn> virtualColumns,
-      final AggregatorFactory aggregatorFactory
+      String name,
+      boolean finalizeAggregations,
+      List<VirtualColumn> virtualColumns,
+      AggregatorFactory aggregatorFactory
   );
 }
