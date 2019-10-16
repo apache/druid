@@ -212,7 +212,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     this.shardSpec = (shardSpec == null) ? new NumberedShardSpec(0, 1) : shardSpec;
     this.lastCompactionState = pruneSpecsHolder.pruneLastCompactionState
                                ? null
-                               : prepareCompactionPartitionsSpec(lastCompactionState);
+                               : prepareCompactionState(lastCompactionState);
     this.binaryVersion = binaryVersion;
     this.size = size;
   }
@@ -232,7 +232,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   }
 
   @Nullable
-  private CompactionState prepareCompactionPartitionsSpec(@Nullable CompactionState lastCompactionState)
+  private CompactionState prepareCompactionState(@Nullable CompactionState lastCompactionState)
   {
     if (lastCompactionState == null) {
       return null;
