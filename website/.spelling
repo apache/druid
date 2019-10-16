@@ -1648,3 +1648,4 @@ isUnpatrolled
 metroCode
 regionIsoCode
 regionName
+repartitionTransitionDuration
