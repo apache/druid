@@ -17,49 +17,14 @@
  */
 
 import { Callout } from '@blueprintjs/core';
-import axios from 'axios';
-import {
-  HeaderRows,
-  isFirstRowHeader,
-  normalizeQueryResult,
-  shouldIncludeTimestamp,
-  sqlParserFactory,
-  SqlQuery,
-} from 'druid-query-toolkit';
-import Hjson from 'hjson';
-import memoizeOne from 'memoize-one';
+import { HeaderRows, normalizeQueryResult } from 'druid-query-toolkit';
 import * as React from 'react';
 
-import { SQL_FUNCTIONS } from '../../../lib/sql-docs';
 import { Loader } from '../../components/index';
-import { getDruidErrorMessage, QueryManager } from '../../utils/index';
-import { isEmptyContext, QueryContext } from '../../utils/query-context';
-import { QueryView } from '../../views/index';
-import { QueryExtraInfoData } from '../../views/query-view/query-extra-info/query-extra-info';
+import { getDruidErrorMessage, queryDruidRune, QueryManager } from '../../utils/index';
+import { QueryContext } from '../../utils/query-context';
 
 import './rollup-ratio.scss';
-
-const parserRaw = sqlParserFactory(SQL_FUNCTIONS.map(sqlFunction => sqlFunction.name));
-
-const parser = memoizeOne((sql: string) => {
-  try {
-    return parserRaw(sql);
-  } catch {
-    return;
-  }
-});
-
-interface QueryWithContext {
-  rollupQueryString: string;
-  queryContext: QueryContext;
-  wrapQueryLimit: number | undefined;
-}
-
-interface QueryResult {
-  queryResult: HeaderRows;
-  queryExtraInfo: QueryExtraInfoData;
-  parsedQuery?: SqlQuery;
-}
 
 export interface RollupRatioProps {
   queryColumns: string[];
@@ -68,14 +33,14 @@ export interface RollupRatioProps {
 
 export interface RollupRatioState {
   rollupQueryString: string;
-  result?: QueryResult;
+  result?: HeaderRows;
   queryContext: QueryContext;
   loading: boolean;
   error?: string;
 }
 
 export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRatioState> {
-  private sqlQueryManager: QueryManager<QueryWithContext, QueryResult>;
+  private druidQueryManager: QueryManager<null, HeaderRows>;
   constructor(props: RollupRatioProps, context: any) {
     super(props, context);
     this.state = {
@@ -130,84 +95,56 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
       // rollupQueryString: `SELECT COUNT("${this.props.queryColumns[1]}") / COUNT(DISTINCT "${this.props.queryColumns[1]}") * 1.0 FROM "${this.props.datasource}"`,
       loading: false,
     };
-    this.sqlQueryManager = new QueryManager({
-      // Clean up this function along with renaming some variables
-      processQuery: async (queryWithContext: QueryWithContext): Promise<QueryResult> => {
-        const { rollupQueryString, queryContext, wrapQueryLimit } = queryWithContext;
-        console.log(rollupQueryString);
-
-        let parsedQuery: SqlQuery | undefined;
-        let jsonQuery: any;
+    this.druidQueryManager = new QueryManager({
+      processQuery: async (): Promise<HeaderRows> => {
+        const { datasource, queryColumns } = this.props;
+        let rawQueryResult: any;
         try {
-          parsedQuery = parser(rollupQueryString);
-        } catch {}
+          const timeseriesResponse = await queryDruidRune({
+            queryType: 'timeseries',
+            dataSource: datasource,
+            intervals: ['2013-01-01/2020-01-01'],
+            descending: false,
+            filter: null,
+            granularity: { type: 'all' },
+            aggregations: [
+              { type: 'count', name: 'a0' },
+              {
+                type: 'cardinality',
+                name: 'a1',
+                fields: queryColumns,
+                byRow: true,
+              },
+            ],
+            postAggregations: [
+              {
+                type: 'expression',
+                name: 'p0',
+                expression: '(("a0" / "a1") * 1.0)',
+                ordering: null,
+              },
+            ],
+            limit: 10,
+            context: { skipEmptyBuckets: true, sqlQueryId: '37382db2-d30f-43a0-86ec-49dbc48b97b8' },
+          });
+          console.log(timeseriesResponse);
 
-        if (!(parsedQuery instanceof SqlQuery)) {
-          parsedQuery = undefined;
-        }
-        if (QueryView.isJsonLike(rollupQueryString)) {
-          jsonQuery = Hjson.parse(rollupQueryString);
-        } else {
-          const actualQuery = QueryView.wrapInLimitIfNeeded(rollupQueryString, wrapQueryLimit);
-
-          jsonQuery = {
-            query: actualQuery,
-            resultFormat: 'array',
-            header: true,
-          };
-        }
-
-        if (!isEmptyContext(queryContext)) {
-          jsonQuery.context = Object.assign(jsonQuery.context || {}, queryContext);
-        }
-
-        let rawQueryResult: unknown;
-        let queryId: string | undefined;
-        let sqlQueryId: string | undefined;
-        const startTime = new Date();
-        let endTime: Date;
-        if (!jsonQuery.queryType && typeof jsonQuery.query === 'string') {
-          try {
-            const sqlResultResp = await axios.post('/druid/v2/sql', jsonQuery);
-            endTime = new Date();
-            rawQueryResult = sqlResultResp.data;
-            sqlQueryId = sqlResultResp.headers['x-druid-sql-query-id'];
-          } catch (e) {
-            throw new Error(getDruidErrorMessage(e));
+          if (Array.isArray(timeseriesResponse) && timeseriesResponse.length === 1) {
+            rawQueryResult = timeseriesResponse;
+            console.log(rawQueryResult);
+          } else {
+            throw new Error(`unexpected response from segmentMetadata query`);
           }
-        } else {
-          try {
-            const runeResultResp = await axios.post('/druid/v2', jsonQuery);
-            endTime = new Date();
-            rawQueryResult = runeResultResp.data;
-            queryId = runeResultResp.headers['x-druid-query-id'];
-          } catch (e) {
-            throw new Error(getDruidErrorMessage(e));
-          }
+        } catch (e) {
+          throw new Error(getDruidErrorMessage(e));
         }
 
-        const queryResult = normalizeQueryResult(
-          rawQueryResult,
-          shouldIncludeTimestamp(jsonQuery),
-          isFirstRowHeader(jsonQuery),
-        );
+        const queryResult = normalizeQueryResult(rawQueryResult);
 
         console.log(queryResult);
-        return {
-          queryResult,
-          queryExtraInfo: {
-            queryId,
-            sqlQueryId,
-            startTime,
-            endTime,
-            numResults: queryResult.rows.length,
-            wrapQueryLimit,
-          },
-          parsedQuery,
-        };
+        return queryResult;
       },
       onStateChange: ({ result, loading, error }) => {
-        console.log(result ? result.queryResult.rows : []);
         this.setState({
           result,
           loading,
@@ -217,8 +154,7 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
     });
   }
   componentDidMount() {
-    const { rollupQueryString, queryContext } = this.state;
-    this.sqlQueryManager.runQuery({ rollupQueryString, queryContext, wrapQueryLimit: 1 });
+    this.druidQueryManager.runQuery(null);
   }
 
   componentDidUpdate(prevProps: RollupRatioProps) {
@@ -275,8 +211,7 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
 `,
         },
         () => {
-          const { rollupQueryString, queryContext } = this.state;
-          this.sqlQueryManager.runQuery({ rollupQueryString, queryContext, wrapQueryLimit: 1 });
+          this.druidQueryManager.runQuery(null);
         },
       );
     }
@@ -296,7 +231,7 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
             You may select any column to exclude them from your rollup preview. This will update
             your rollup ratio.{' '}
           </p>
-          <p>Your rollup ratio is currently: {result ? result.queryResult.rows[0][1] : []}</p>
+          <p>Your rollup ratio is currently: {result ? result.rows[0][1] : []}</p>
         </Callout>
       </div>
     );

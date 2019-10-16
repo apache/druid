@@ -17,52 +17,16 @@
  */
 
 import { Dialog } from '@blueprintjs/core';
-import axios from 'axios';
-import {
-  HeaderRows,
-  isFirstRowHeader,
-  normalizeQueryResult,
-  shouldIncludeTimestamp,
-  sqlParserFactory,
-  SqlQuery,
-} from 'druid-query-toolkit';
-import Hjson from 'hjson';
-import memoizeOne from 'memoize-one';
+import { HeaderRows, normalizeQueryResult } from 'druid-query-toolkit';
 import * as React from 'react';
 import ReactTable from 'react-table';
 
-import { SQL_FUNCTIONS } from '../../../lib/sql-docs';
 import { Loader } from '../../components/index';
-import { getDruidErrorMessage, QueryManager } from '../../utils/index';
-import { isEmptyContext, QueryContext } from '../../utils/query-context';
-import { QueryView } from '../../views/index';
-import { QueryExtraInfoData } from '../../views/query-view/query-extra-info/query-extra-info';
+import { getDruidErrorMessage, queryDruidRune, QueryManager } from '../../utils/index';
 
 import { RollupRatio } from './rollup-ratio';
 
 import './rollup-estimate-dialog.scss';
-
-const parserRaw = sqlParserFactory(SQL_FUNCTIONS.map(sqlFunction => sqlFunction.name));
-
-const parser = memoizeOne((sql: string) => {
-  try {
-    return parserRaw(sql);
-  } catch {
-    return;
-  }
-});
-
-interface QueryWithContext {
-  queryString: string;
-  queryContext: QueryContext;
-  wrapQueryLimit: number | undefined;
-}
-
-interface QueryResult {
-  queryResult: HeaderRows;
-  queryExtraInfo: QueryExtraInfoData;
-  parsedQuery?: SqlQuery;
-}
 
 export interface RollupEstimateDialogProps {
   datasource: string;
@@ -70,12 +34,9 @@ export interface RollupEstimateDialogProps {
 }
 
 export interface RollupEstimateDialogState {
-  queryString: string;
-  queryContext: QueryContext;
   queryColumns: string[];
-  wrapQueryLimit: number | undefined;
   loading: boolean;
-  result?: QueryResult;
+  result?: HeaderRows;
   error?: string;
 }
 
@@ -83,99 +44,85 @@ export class RollupEstimateDialog extends React.PureComponent<
   RollupEstimateDialogProps,
   RollupEstimateDialogState
 > {
-  private sqlQueryManager: QueryManager<QueryWithContext, QueryResult>;
+  private druidQueryManager: QueryManager<null, HeaderRows>;
 
   constructor(props: RollupEstimateDialogProps, context: any) {
     super(props, context);
     this.state = {
       // Rename some of these variables
-      queryString: `SELECT * FROM "${props.datasource}"`,
-      queryContext: {},
+      //       queryString: `
+      // {
+      //   "queryType":"segmentMetadata",
+      //   "dataSource":"${props.datasource}",
+      //   "intervals":["2013-01-01/2020-01-01"],
+      //   "analysisTypes": ["queryGranularity", "aggregators", "rollup"],
+      //   "lenientAggregatorMerge": true,
+      //   "merge": true
+      // }
+      //       `,
+
       queryColumns: [],
-      wrapQueryLimit: 20,
       loading: false,
     };
 
-    this.sqlQueryManager = new QueryManager({
-      processQuery: async (queryWithContext: QueryWithContext): Promise<QueryResult> => {
-        const { queryString, queryContext, wrapQueryLimit } = queryWithContext;
-        let parsedQuery: SqlQuery | undefined;
-        let jsonQuery: any;
-        // Note: Might need to clean this function up and delete some imports
+    this.druidQueryManager = new QueryManager({
+      processQuery: async (): Promise<HeaderRows> => {
+        const { datasource } = this.props;
+        let rawQueryResult: any;
         try {
-          parsedQuery = parser(queryString);
-        } catch {}
+          const segmentMetadataResponse = await queryDruidRune({
+            queryType: 'segmentMetadata',
+            dataSource: datasource,
+            intervals: ['2013-01-01/2020-01-01'],
+            merge: true,
+            lenientAggregatorMerge: true,
+            analysisTypes: ['timestampSpec', 'queryGranularity', 'aggregators', 'rollup'],
+          });
 
-        if (!(parsedQuery instanceof SqlQuery)) {
-          parsedQuery = undefined;
-        }
-        if (QueryView.isJsonLike(queryString)) {
-          jsonQuery = Hjson.parse(queryString);
-        } else {
-          const actualQuery = QueryView.wrapInLimitIfNeeded(queryString, wrapQueryLimit);
-
-          jsonQuery = {
-            query: actualQuery,
-            resultFormat: 'array',
-            header: true,
-          };
-        }
-
-        if (!isEmptyContext(queryContext)) {
-          jsonQuery.context = Object.assign(jsonQuery.context || {}, queryContext);
-        }
-
-        let rawQueryResult: unknown;
-        let queryId: string | undefined;
-        let sqlQueryId: string | undefined;
-        const startTime = new Date();
-        let endTime: Date;
-        if (!jsonQuery.queryType && typeof jsonQuery.query === 'string') {
-          try {
-            const sqlResultResp = await axios.post('/druid/v2/sql', jsonQuery);
-            endTime = new Date();
-            rawQueryResult = sqlResultResp.data;
-            sqlQueryId = sqlResultResp.headers['x-druid-sql-query-id'];
-          } catch (e) {
-            throw new Error(getDruidErrorMessage(e));
+          if (Array.isArray(segmentMetadataResponse) && segmentMetadataResponse.length === 1) {
+            const segmentMetadataResponse0 = segmentMetadataResponse[0];
+            // console.log(segmentMetadataResponse0.aggregators);
+            // console.log(segmentMetadataResponse0.columns);
+            // console.log(
+            //   Object.keys(segmentMetadataResponse0.columns).filter((column: any) =>
+            //     Object.keys(segmentMetadataResponse0.aggregators).includes(column),
+            //   ),
+            // );
+            try {
+              const previewDataResponse = await queryDruidRune({
+                queryType: 'scan',
+                dataSource: datasource,
+                intervals: ['2013-01-01/2020-01-01'],
+                resultFormat: 'compactedList',
+                limit: 20,
+                columns: Object.keys(segmentMetadataResponse0.columns).filter(
+                  (column: any) =>
+                    !Object.keys(segmentMetadataResponse0.aggregators).includes(column),
+                ),
+              });
+              console.log(previewDataResponse);
+              rawQueryResult = previewDataResponse;
+            } catch (e) {
+              throw new Error(getDruidErrorMessage(e));
+            }
+          } else {
+            throw new Error(`unexpected response from segmentMetadata query`);
           }
-        } else {
-          try {
-            const runeResultResp = await axios.post('/druid/v2', jsonQuery);
-            endTime = new Date();
-            rawQueryResult = runeResultResp.data;
-            queryId = runeResultResp.headers['x-druid-query-id'];
-          } catch (e) {
-            throw new Error(getDruidErrorMessage(e));
-          }
+        } catch (e) {
+          throw new Error(getDruidErrorMessage(e));
         }
 
-        const queryResult = normalizeQueryResult(
-          rawQueryResult,
-          shouldIncludeTimestamp(jsonQuery),
-          isFirstRowHeader(jsonQuery),
-        );
+        const queryResult = normalizeQueryResult(rawQueryResult);
 
-        console.log(queryResult);
-        return {
-          queryResult,
-          queryExtraInfo: {
-            queryId,
-            sqlQueryId,
-            startTime,
-            endTime,
-            numResults: queryResult.rows.length,
-            wrapQueryLimit,
-          },
-          parsedQuery,
-        };
+        // console.log(rawQueryResult);
+        return queryResult;
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
           result,
           loading,
           error,
-          queryColumns: result ? result.queryResult.header : [],
+          queryColumns: result ? result.header : [],
         });
       },
     });
@@ -195,15 +142,14 @@ export class RollupEstimateDialog extends React.PureComponent<
 
   componentDidMount() {
     // Do something when component unmounts
-    const { queryString, queryContext, wrapQueryLimit } = this.state;
-    this.sqlQueryManager.runQuery({ queryString, queryContext, wrapQueryLimit });
+    this.druidQueryManager.runQuery(null);
   }
   render(): JSX.Element {
     // Plan to separate main and control components
     const { datasource, onClose } = this.props;
     const { result, loading, queryColumns } = this.state;
     if (loading) return <Loader />;
-    console.log(result);
+    // console.log(result);
     return (
       <Dialog
         className="rollup-estimate-dialog"
@@ -213,9 +159,9 @@ export class RollupEstimateDialog extends React.PureComponent<
         title={`Estimate your rollup ratio: ${datasource}`}
       >
         <ReactTable
-          data={result ? result.queryResult.rows : []}
+          data={result ? result.rows : []}
           loading={loading}
-          columns={(result ? result.queryResult.header : []).map((h: any, i) => {
+          columns={(result ? result.header : []).map((h: any, i) => {
             // Need to clean this up
 
             return {
