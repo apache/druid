@@ -1961,13 +1961,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // repartitioning quickly by creating new tasks
       for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
         if (!taskGroup.taskIds().isEmpty()) {
-          // a new partition was added and we are managing active tasks - set an early publish time 2 minutes in the
-          // future to give things time to settle
-          earlyStopTime = DateTimes.nowUtc().plusMinutes(2);
+          // Partitions have changed and we are managing active tasks - set an early publish time
+          // at the current time + repartitionTransitionDuration.
+          // This allows time for the stream to start writing to the new partitions after repartitioning.
+          // For Kinesis ingestion, this cooldown time is particularly useful, lowering the possibility of
+          // the new shards being empty, which can cause issues presently
+          // (see https://github.com/apache/incubator-druid/issues/7600)
+          earlyStopTime = DateTimes.nowUtc().plus(tuningConfig.getRepartitionTransitionDuration());
           log.info(
-              "Previous partition set [%s] has changed to [%s] - requesting that tasks stop in 2 minutes at [%s]",
+              "Previous partition set [%s] has changed to [%s] - requesting that tasks stop after [%s] at [%s]",
               previousPartitionIds,
               partitionIds,
+              tuningConfig.getRepartitionTransitionDuration(),
               earlyStopTime
           );
           break;
