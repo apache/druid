@@ -38,7 +38,7 @@ import java.io.IOException;
  * any) run out.
  *
  * Concurrency:
- * The three methods {@link #hasMore()} and {@link #nextRow()} are all called from the same thread.
+ * The two methods {@link #hasMore()} and {@link #nextRow()} are all called from the same thread.
  * {@link #close()} might be called concurrently from a thread different from the thread calling {@link #hasMore()}
  * and {@link #nextRow()}.
  * </p>
