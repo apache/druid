@@ -54,13 +54,14 @@ Druid creates necessary sub-folders to store data and index under this newly cre
 
 Edit common.runtime.properties at conf/druid/_common/common.runtime.properties to include the HDFS properties. Folders used for the location are same as the ones used for example above.
 
-### common_runtime_properties
+### common.runtime.properties
 
+```properties
 # Deep storage
 #
 # For HDFS:
- druid.storage.type=hdfs
- druid.storage.storageDirectory=/druid/segments
+druid.storage.type=hdfs
+druid.storage.storageDirectory=/druid/segments
 # OR
 # druid.storage.storageDirectory=/apps/druid/segments
 
@@ -77,7 +78,7 @@ druid.indexer.logs.directory=/druid/indexing-logs
 
 Note: Comment out Local storage and S3 Storage parameters in the file
 
-Also include hdfs-storage core extension to conf/druid/_common/common.runtime.
+Also include hdfs-storage core extension to `conf/druid/_common/common.runtime.properties`
 
 ```properties
 #
