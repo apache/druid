@@ -26,7 +26,6 @@ import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.utils.Runnables;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -138,12 +137,6 @@ public class CombiningFirehoseFactoryTest
         public InputRow nextRow()
         {
           return iterator.next();
-        }
-
-        @Override
-        public Runnable commit()
-        {
-          return Runnables.getNoopRunnable();
         }
 
         @Override

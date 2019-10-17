@@ -351,7 +351,7 @@ public class RealtimeIndexTask extends AbstractTask
 
     this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, metrics);
 
-    Supplier<Committer> committerSupplier = null;
+    final Supplier<Committer> committerSupplier = Committers.nilSupplier();
     final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
 
     LookupNodeService lookupNodeService = getContextValue(CTX_KEY_LOOKUP_TIER) == null ?
@@ -387,7 +387,6 @@ public class RealtimeIndexTask extends AbstractTask
       synchronized (this) {
         if (!gracefullyStopped) {
           firehose = firehoseFactory.connect(spec.getDataSchema().getParser(), firehoseTempDir);
-          committerSupplier = Committers.supplierFromFirehose(firehose);
         }
       }
 
