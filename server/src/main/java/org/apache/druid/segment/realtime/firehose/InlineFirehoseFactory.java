@@ -22,19 +22,21 @@ package org.apache.druid.segment.realtime.firehose;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
-import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 /**
  * Creates firehose that produces data inlined in its own spec
  */
-public class InlineFirehoseFactory implements FirehoseFactory<StringInputRowParser>
+public class InlineFirehoseFactory implements FiniteFirehoseFactory<StringInputRowParser, String>
 {
   private final String data;
 
@@ -73,5 +75,29 @@ public class InlineFirehoseFactory implements FirehoseFactory<StringInputRowPars
   public int hashCode()
   {
     return Objects.hash(data);
+  }
+
+  @Override
+  public boolean isSplittable()
+  {
+    return false;
+  }
+
+  @Override
+  public Stream<InputSplit<String>> getSplits()
+  {
+    return Stream.of(new InputSplit<>(data));
+  }
+
+  @Override
+  public int getNumSplits()
+  {
+    return 1;
+  }
+
+  @Override
+  public FiniteFirehoseFactory<StringInputRowParser, String> withSplit(InputSplit<String> split)
+  {
+    return new InlineFirehoseFactory(split.get());
   }
 }
