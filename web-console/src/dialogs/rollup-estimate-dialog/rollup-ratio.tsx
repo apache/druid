@@ -50,13 +50,13 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
     };
     this.druidQueryManager = new QueryManager({
       processQuery: async (): Promise<HeaderRows> => {
-        const { datasource, queryColumns } = this.props;
+        const { datasource, queryColumns, interval } = this.props;
         let rawQueryResult: any;
         try {
           const timeseriesResponse = await queryDruidRune({
             queryType: 'timeseries',
             dataSource: datasource,
-            intervals: ['2013-01-01/2020-01-01'],
+            intervals: [interval],
             descending: false,
             filter: null,
             granularity: { type: 'all' },
