@@ -102,7 +102,14 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
         );
       }
 
-      // Check that "user.timezone"
+      // Check "file.encoding"
+      if (properties['file.encoding'] && properties['file.encoding'] !== 'UTF-8') {
+        controls.addSuggestion(
+          `It looks like "file.encoding" is set to ${properties['file.encoding']}, it is recommended to set this to "UTF-8"`,
+        );
+      }
+
+      // Check "user.timezone"
       if (properties['user.timezone'] && properties['user.timezone'] !== 'UTC') {
         controls.addSuggestion(
           `It looks like "user.timezone" is set to ${properties['user.timezone']}, it is recommended to set this to "UTC"`,
