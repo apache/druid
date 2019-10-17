@@ -27,7 +27,11 @@ import com.google.inject.Binder;
 import com.yahoo.sketches.hll.HllSketch;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchEstimateOperatorConversion;
+import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchEstimateWithErrorBoundsOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchObjectSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchSetUnionOperatorConversion;
+import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchToStringOperatorConversion;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.sql.guice.SqlBindings;
 
@@ -56,6 +60,11 @@ public class HllSketchModule implements DruidModule
     registerSerde();
     SqlBindings.addAggregator(binder, HllSketchApproxCountDistinctSqlAggregator.class);
     SqlBindings.addAggregator(binder, HllSketchObjectSqlAggregator.class);
+
+    SqlBindings.addOperatorConversion(binder, HllSketchEstimateOperatorConversion.class);
+    SqlBindings.addOperatorConversion(binder, HllSketchEstimateWithErrorBoundsOperatorConversion.class);
+    SqlBindings.addOperatorConversion(binder, HllSketchSetUnionOperatorConversion.class);
+    SqlBindings.addOperatorConversion(binder, HllSketchToStringOperatorConversion.class);
   }
 
   @Override
