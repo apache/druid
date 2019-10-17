@@ -28,6 +28,13 @@ import { RollupRatio } from './rollup-ratio';
 
 import './rollup-estimate-dialog.scss';
 
+const CURRENT_YEAR = new Date().getUTCFullYear();
+
+interface QueryResult {
+  queryResult: HeaderRows;
+  rollupRatio: number;
+}
+
 export interface RollupEstimateDialogProps {
   datasource: string;
   onClose: () => void;
@@ -35,8 +42,10 @@ export interface RollupEstimateDialogProps {
 
 export interface RollupEstimateDialogState {
   queryColumns: string[];
+  rollupRatio: number;
+  interval: string;
   loading: boolean;
-  result?: HeaderRows;
+  result?: QueryResult;
   error?: string;
 }
 
@@ -44,7 +53,7 @@ export class RollupEstimateDialog extends React.PureComponent<
   RollupEstimateDialogProps,
   RollupEstimateDialogState
 > {
-  private druidQueryManager: QueryManager<null, HeaderRows>;
+  private druidQueryManager: QueryManager<null, QueryResult>;
 
   constructor(props: RollupEstimateDialogProps, context: any) {
     super(props, context);
@@ -60,39 +69,72 @@ export class RollupEstimateDialog extends React.PureComponent<
       //   "merge": true
       // }
       //       `,
-
+      rollupRatio: -1,
+      interval: `${CURRENT_YEAR - 10}-01-01/${CURRENT_YEAR + 1}-01-01`,
       queryColumns: [],
       loading: false,
     };
 
     this.druidQueryManager = new QueryManager({
-      processQuery: async (): Promise<HeaderRows> => {
+      processQuery: async (): Promise<QueryResult> => {
+        const { interval } = this.state;
         const { datasource } = this.props;
         let rawQueryResult: any;
+        let rollupRatio: any = -1;
         try {
           const segmentMetadataResponse = await queryDruidRune({
             queryType: 'segmentMetadata',
             dataSource: datasource,
-            intervals: ['2013-01-01/2020-01-01'],
+            intervals: [`${interval}`],
             merge: true,
             lenientAggregatorMerge: true,
             analysisTypes: ['timestampSpec', 'queryGranularity', 'aggregators', 'rollup'],
           });
 
           if (Array.isArray(segmentMetadataResponse) && segmentMetadataResponse.length === 1) {
+            // Get preview of data source
             const segmentMetadataResponse0 = segmentMetadataResponse[0];
-            // console.log(segmentMetadataResponse0.aggregators);
-            // console.log(segmentMetadataResponse0.columns);
-            // console.log(
-            //   Object.keys(segmentMetadataResponse0.columns).filter((column: any) =>
-            //     Object.keys(segmentMetadataResponse0.aggregators).includes(column),
-            //   ),
-            // );
+            if (segmentMetadataResponse0.rollup) {
+              try {
+                const rollupRatioResponse = await queryDruidRune({
+                  queryType: 'timeseries',
+                  dataSource: datasource,
+                  intervals: [`${interval}`],
+                  filter: null,
+                  granularity: { type: 'all' },
+                  aggregations: [
+                    {
+                      type: 'longSum',
+                      name: 'a0',
+                      fieldName: 'count',
+                    },
+                    {
+                      type: 'count',
+                      name: 'a1',
+                    },
+                  ],
+                  postAggregations: [
+                    {
+                      type: 'expression',
+                      name: 'p0',
+                      expression: '(("a0" / "a1") * 1.0)',
+                      ordering: null,
+                    },
+                  ],
+                });
+                console.log(rollupRatioResponse[0].result.p0);
+                console.log('come on');
+                rollupRatio = rollupRatioResponse[0].result.p0;
+              } catch (e) {
+                throw new Error(getDruidErrorMessage(e));
+              }
+            }
+            console.log(rollupRatio);
             try {
               const previewDataResponse = await queryDruidRune({
                 queryType: 'scan',
                 dataSource: datasource,
-                intervals: ['2013-01-01/2020-01-01'],
+                intervals: [`${interval}`],
                 resultFormat: 'compactedList',
                 limit: 20,
                 columns: Object.keys(segmentMetadataResponse0.columns).filter(
@@ -113,16 +155,15 @@ export class RollupEstimateDialog extends React.PureComponent<
         }
 
         const queryResult = normalizeQueryResult(rawQueryResult);
-
-        // console.log(rawQueryResult);
-        return queryResult;
+        return { queryResult, rollupRatio };
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
           result,
           loading,
           error,
-          queryColumns: result ? result.header : [],
+          queryColumns: result ? result.queryResult.header : [],
+          rollupRatio: result ? result.rollupRatio : -1,
         });
       },
     });
@@ -140,6 +181,13 @@ export class RollupEstimateDialog extends React.PureComponent<
     this.setState({ queryColumns: newQueryColumns });
   }
 
+  updateInterval(newInterval: string) {
+    this.setState({ interval: newInterval }, () => {
+      console.log(this.state.interval);
+      this.druidQueryManager.runQuery(null);
+    });
+  }
+
   componentDidMount() {
     // Do something when component unmounts
     this.druidQueryManager.runQuery(null);
@@ -147,7 +195,7 @@ export class RollupEstimateDialog extends React.PureComponent<
   render(): JSX.Element {
     // Plan to separate main and control components
     const { datasource, onClose } = this.props;
-    const { result, loading, queryColumns } = this.state;
+    const { interval, result, loading, queryColumns, rollupRatio } = this.state;
     if (loading) return <Loader />;
     // console.log(result);
     return (
@@ -159,9 +207,9 @@ export class RollupEstimateDialog extends React.PureComponent<
         title={`Estimate your rollup ratio: ${datasource}`}
       >
         <ReactTable
-          data={result ? result.rows : []}
+          data={result ? result.queryResult.rows : []}
           loading={loading}
-          columns={(result ? result.header : []).map((h: any, i) => {
+          columns={(result ? result.queryResult.header : []).map((h: any, i) => {
             // Need to clean this up
 
             return {
@@ -186,17 +234,24 @@ export class RollupEstimateDialog extends React.PureComponent<
           showPagination={false}
           sortable={false}
         />
-        <RollupRatio datasource={datasource} queryColumns={queryColumns ? queryColumns : []} />
+        <RollupRatio
+          datasource={datasource}
+          queryColumns={queryColumns ? queryColumns : []}
+          rollupRatio={rollupRatio}
+          interval={interval}
+          updateInterval={(interval: string) => this.updateInterval(interval)}
+        />
       </Dialog>
     );
   }
 }
 /*
 Todo:
-2. Correct query to calculate rollup ratio based on rollup/non-rollup data
-3. Bucket time column for non-rolled data
+1. Intervals
+2. Correct query to calculate rollup ratio based on rollup/non-rollup data (Rollup -> multiply by rollup ratio?) **
+3. Bucket time column for non-rolled data (select vs scan vs timeseries granularity: hour) **
 4. Clean up code
-5. Separate ratio from Callout, put name of datasource at top
+5. Separate ratio from Callout, put name of datasource at top, and other UI mistakes
 6. Error handling with division of 0
-
+7. Is count going to be the only column?
 */

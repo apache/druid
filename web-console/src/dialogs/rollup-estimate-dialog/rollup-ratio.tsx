@@ -16,27 +16,28 @@
  * limitations under the License.
  */
 
-import { Callout } from '@blueprintjs/core';
+import { Button, Callout, FormGroup, InputGroup } from '@blueprintjs/core';
 import { HeaderRows, normalizeQueryResult } from 'druid-query-toolkit';
 import * as React from 'react';
 
 import { Loader } from '../../components/index';
 import { getDruidErrorMessage, queryDruidRune, QueryManager } from '../../utils/index';
-import { QueryContext } from '../../utils/query-context';
 
 import './rollup-ratio.scss';
 
 export interface RollupRatioProps {
   queryColumns: string[];
+  rollupRatio: number;
   datasource: string;
+  interval: string;
+  updateInterval: (interval: string) => void;
 }
 
 export interface RollupRatioState {
-  rollupQueryString: string;
   result?: HeaderRows;
-  queryContext: QueryContext;
   loading: boolean;
   error?: string;
+  intervalInput: string;
 }
 
 export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRatioState> {
@@ -44,56 +45,8 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
   constructor(props: RollupRatioProps, context: any) {
     super(props, context);
     this.state = {
-      queryContext: {},
-      rollupQueryString: `
-{
-  "queryType": "timeseries",
-  "dataSource": {
-    "type": "table",
-    "name": "${this.props.datasource}"
-  },
-  "intervals": {
-    "type": "intervals",
-    "intervals": [
-      "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
-    ]
-  },
-  "descending": false,
-  "filter": null,
-  "granularity": {
-    "type": "all"
-  },
-  "aggregations": [
-    {
-      "type": "count",
-      "name": "a0"
-    },
-    {
-      "type": "cardinality",
-      "name": "a1",
-      "fields": [
-        ${this.props.queryColumns.map(column => `"${column}"`)}
-      ],
-      "byRow": true
-    }
-  ],
-  "postAggregations": [
-    {
-      "type": "expression",
-      "name": "p0",
-      "expression": "((\\"a0\\" / \\"a1\\") * 1.0)",
-      "ordering": null
-    }
-  ],
-  "limit": 2147483647,
-  "context": {
-    "skipEmptyBuckets": true,
-    "sqlQueryId": "37382db2-d30f-43a0-86ec-49dbc48b97b8"
-  }
-}
-      `,
-      // rollupQueryString: `SELECT COUNT("${this.props.queryColumns[1]}") / COUNT(DISTINCT "${this.props.queryColumns[1]}") * 1.0 FROM "${this.props.datasource}"`,
       loading: false,
+      intervalInput: this.props.interval,
     };
     this.druidQueryManager = new QueryManager({
       processQuery: async (): Promise<HeaderRows> => {
@@ -158,72 +111,16 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
   }
 
   componentDidUpdate(prevProps: RollupRatioProps) {
-    const { queryColumns, datasource } = this.props;
+    const { queryColumns } = this.props;
     if (prevProps.queryColumns !== queryColumns) {
-      this.setState(
-        {
-          rollupQueryString: `
-{
-  "queryType": "timeseries",
-  "dataSource": {
-    "type": "table",
-    "name": "${datasource}"
-  },
-  "intervals": {
-    "type": "intervals",
-    "intervals": [
-      "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
-    ]
-  },
-  "descending": false,
-  "filter": null,
-  "granularity": {
-    "type": "all"
-  },
-  "aggregations": [
-    {
-      "type": "count",
-      "name": "a0"
-    },
-    {
-      "type": "cardinality",
-      "name": "a1",
-      "fields": [
-        ${queryColumns.map(column => `"${column}"`)}
-      ],
-      "byRow": true
-    }
-  ],
-  "postAggregations": [
-    {
-      "type": "expression",
-      "name": "p0",
-      "expression": "((\\"a0\\" / \\"a1\\") * 1.0)",
-      "ordering": null
-    }
-  ],
-  "limit": 2147483647,
-  "context": {
-    "skipEmptyBuckets": true,
-    "sqlQueryId": "37382db2-d30f-43a0-86ec-49dbc48b97b8"
-  }
-}    
-`,
-        },
-        () => {
-          this.druidQueryManager.runQuery(null);
-        },
-      );
+      this.druidQueryManager.runQuery(null);
     }
   }
 
   render(): JSX.Element {
-    const { loading, result } = this.state;
-    // const { queryColumns } = this.props;
-    // console.log(queryColumns);
+    const { intervalInput, loading, result } = this.state;
+    const { rollupRatio, updateInterval } = this.props;
     if (loading) return <Loader />;
-
-    // console.log(rollupQueryString);
     return (
       <div className="rollup-ratio">
         <Callout>
@@ -231,8 +128,28 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
             You may select any column to exclude them from your rollup preview. This will update
             your rollup ratio.{' '}
           </p>
+          <p>
+            {rollupRatio !== -1
+              ? `This datasource has previously been rolled up. The original rollup ratio is ${rollupRatio}`
+              : ''}
+          </p>
           <p>Your rollup ratio is currently: {result ? result.rows[0][1] : []}</p>
         </Callout>
+
+        <FormGroup
+          // key={field.name}
+          label={`Interval`}
+        >
+          <InputGroup
+            value={intervalInput}
+            placeholder="2019-01-01/2020-01-01"
+            onChange={(e: any) => {
+              this.setState({ intervalInput: e.target.value });
+              console.log(intervalInput);
+            }}
+          />
+        </FormGroup>
+        <Button onClick={() => updateInterval(intervalInput)}>Estimate rollup</Button>
       </div>
     );
   }
