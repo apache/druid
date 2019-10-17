@@ -1630,6 +1630,16 @@ v0.12.0
 versionReplacementString
 workerId
 yyyy-MM-dd
+taskType
+index_kafka
+c1
+c2
+ds1
+equalDistributionWithCategorySpec
+fillCapacityWithCategorySpec
+WorkerCategorySpec
+workerCategorySpec
+CategoryConfig
  - ../docs/design/index.md
 logsearch
  - ../docs/ingestion/index.md

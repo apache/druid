@@ -46,6 +46,7 @@ import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -143,7 +144,7 @@ public class HttpRemoteTaskRunnerTest
         new DruidNode("service", "host1", false, 8080, null, true, false),
         NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
-            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0")
+            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0", WorkerConfig.DEFAULT_CATEGORY)
         )
     );
 
@@ -151,7 +152,7 @@ public class HttpRemoteTaskRunnerTest
         new DruidNode("service", "host2", false, 8080, null, true, false),
         NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
-            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 2, "0")
+            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 2, "0", WorkerConfig.DEFAULT_CATEGORY)
         )
     );
 
@@ -240,7 +241,7 @@ public class HttpRemoteTaskRunnerTest
         new DruidNode("service", "host1", false, 8080, null, true, false),
         NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
-            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0")
+            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0", WorkerConfig.DEFAULT_CATEGORY)
         )
     );
 
@@ -248,7 +249,7 @@ public class HttpRemoteTaskRunnerTest
         new DruidNode("service", "host2", false, 8080, null, true, false),
         NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
-            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 2, "0")
+            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 2, "0", WorkerConfig.DEFAULT_CATEGORY)
         )
     );
 
@@ -344,7 +345,7 @@ public class HttpRemoteTaskRunnerTest
         new DruidNode("service", "host", false, 1234, null, true, false),
         NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
-            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0")
+            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0", WorkerConfig.DEFAULT_CATEGORY)
         )
     );
 
@@ -489,7 +490,7 @@ public class HttpRemoteTaskRunnerTest
         new DruidNode("service", "host", false, 1234, null, true, false),
         NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
-            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0")
+            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0", WorkerConfig.DEFAULT_CATEGORY)
         )
     );
 
@@ -663,7 +664,7 @@ public class HttpRemoteTaskRunnerTest
     DiscoveryDruidNode druidNode = new DiscoveryDruidNode(
         new DruidNode("service", "host", false, 1234, null, true, false),
         NodeType.MIDDLE_MANAGER,
-        ImmutableMap.of(WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0"))
+        ImmutableMap.of(WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0", WorkerConfig.DEFAULT_CATEGORY))
     );
 
     workerHolders.put(
@@ -844,7 +845,7 @@ public class HttpRemoteTaskRunnerTest
         new DruidNode("service", "host1", false, 8080, null, true, false),
         NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
-            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 1, "0")
+            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 1, "0", WorkerConfig.DEFAULT_CATEGORY)
         )
     );
 
@@ -889,7 +890,7 @@ public class HttpRemoteTaskRunnerTest
     DiscoveryDruidNode druidNode2 = new DiscoveryDruidNode(
         new DruidNode("service", "host2", false, 8080, null, true, false),
         NodeType.MIDDLE_MANAGER,
-        ImmutableMap.of(WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 1, "0"))
+        ImmutableMap.of(WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 1, "0", WorkerConfig.DEFAULT_CATEGORY))
     );
 
     workerHolders.put(
@@ -920,7 +921,7 @@ public class HttpRemoteTaskRunnerTest
     DiscoveryDruidNode druidNode3 = new DiscoveryDruidNode(
         new DruidNode("service", "host3", false, 8080, null, true, false),
         NodeType.MIDDLE_MANAGER,
-        ImmutableMap.of(WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 1, "0"))
+        ImmutableMap.of(WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 1, "0", WorkerConfig.DEFAULT_CATEGORY))
     );
 
     workerHolders.put(
@@ -966,7 +967,7 @@ public class HttpRemoteTaskRunnerTest
     );
 
     WorkerHolder workerHolder = EasyMock.createMock(WorkerHolder.class);
-    EasyMock.expect(workerHolder.getWorker()).andReturn(new Worker("http", "worker", "127.0.0.1", 1, "v1")).anyTimes();
+    EasyMock.expect(workerHolder.getWorker()).andReturn(new Worker("http", "worker", "127.0.0.1", 1, "v1", WorkerConfig.DEFAULT_CATEGORY)).anyTimes();
     workerHolder.setLastCompletedTaskTime(EasyMock.anyObject());
     workerHolder.resetContinuouslyFailedTasksCount();
     EasyMock.expect(workerHolder.getContinuouslyFailedTasksCount()).andReturn(0);
@@ -1002,7 +1003,7 @@ public class HttpRemoteTaskRunnerTest
     // Another "rogue-worker" reports running it, and gets asked to shutdown the task
     WorkerHolder rogueWorkerHolder = EasyMock.createMock(WorkerHolder.class);
     EasyMock.expect(rogueWorkerHolder.getWorker())
-            .andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1"))
+            .andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1", WorkerConfig.DEFAULT_CATEGORY))
             .anyTimes();
     rogueWorkerHolder.shutdownTask(task.getId());
     EasyMock.replay(rogueWorkerHolder);
@@ -1017,7 +1018,7 @@ public class HttpRemoteTaskRunnerTest
     // "rogue-worker" reports FAILURE for the task, ignored
     rogueWorkerHolder = EasyMock.createMock(WorkerHolder.class);
     EasyMock.expect(rogueWorkerHolder.getWorker())
-            .andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1"))
+            .andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1", WorkerConfig.DEFAULT_CATEGORY))
             .anyTimes();
     EasyMock.replay(rogueWorkerHolder);
     taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
@@ -1040,7 +1041,7 @@ public class HttpRemoteTaskRunnerTest
     // "rogue-worker" reports running it, and gets asked to shutdown the task
     rogueWorkerHolder = EasyMock.createMock(WorkerHolder.class);
     EasyMock.expect(rogueWorkerHolder.getWorker())
-            .andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1"))
+            .andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1", WorkerConfig.DEFAULT_CATEGORY))
             .anyTimes();
     rogueWorkerHolder.shutdownTask(task.getId());
     EasyMock.replay(rogueWorkerHolder);
@@ -1055,7 +1056,7 @@ public class HttpRemoteTaskRunnerTest
     // "rogue-worker" reports FAILURE for the tasks, ignored
     rogueWorkerHolder = EasyMock.createMock(WorkerHolder.class);
     EasyMock.expect(rogueWorkerHolder.getWorker())
-            .andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1"))
+            .andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1", WorkerConfig.DEFAULT_CATEGORY))
             .anyTimes();
     EasyMock.replay(rogueWorkerHolder);
     taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
@@ -1094,7 +1095,7 @@ public class HttpRemoteTaskRunnerTest
         listenerNotificationsAccumulator
     );
 
-    Worker worker = new Worker("http", "localhost", "127.0.0.1", 1, "v1");
+    Worker worker = new Worker("http", "localhost", "127.0.0.1", 1, "v1", WorkerConfig.DEFAULT_CATEGORY);
 
     WorkerHolder workerHolder = EasyMock.createMock(WorkerHolder.class);
     EasyMock.expect(workerHolder.getWorker()).andReturn(worker).anyTimes();
@@ -1153,7 +1154,7 @@ public class HttpRemoteTaskRunnerTest
     HttpRemoteTaskRunner taskRunner =
         createTaskRunnerForTestTaskAddedOrUpdated(taskStorage, listenerNotificationsAccumulator);
 
-    Worker worker = new Worker("http", "localhost", "127.0.0.1", 1, "v1");
+    Worker worker = new Worker("http", "localhost", "127.0.0.1", 1, "v1", WorkerConfig.DEFAULT_CATEGORY);
 
     WorkerHolder workerHolder = EasyMock.createMock(WorkerHolder.class);
     EasyMock.expect(workerHolder.getWorker()).andReturn(worker).anyTimes();
