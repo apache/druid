@@ -806,7 +806,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // Regression test for https://github.com/apache/incubator-druid/issues/7768.
 
     // After upgrading to Calcite 1.21, Calcite no longer respects the ORDER BY __time DESC
-    // in the inner query.
+    // in the inner query. This is valid, as the SQL standard considers the subquery results to be an unordered
+    // set of rows.
     testQuery(
         "SELECT 'beep ' || dim1 FROM (SELECT dim1 FROM druid.foo ORDER BY __time DESC)",
         ImmutableList.of(
