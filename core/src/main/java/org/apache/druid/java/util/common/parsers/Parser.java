@@ -19,6 +19,8 @@
 
 package org.apache.druid.java.util.common.parsers;
 
+import org.apache.druid.java.util.common.collect.Utils;
+
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +46,18 @@ public interface Parser<K, V>
    */
   @Nullable
   Map<K, V> parseToMap(String input);
+
+
+  /**
+   * Parse a String into a List of Maps.  The result can be null which means the given input string will be ignored.
+   *
+   * @throws ParseException if the String cannot be parsed
+   */
+  @Nullable
+  default List<Map<K, V>> parseToMapList(String input)
+  {
+    return Utils.nullableListOf();
+  }
 
   /**
    * Set the fieldNames that you expect to see in parsed Maps. Deprecated; Parsers should not, in general, be

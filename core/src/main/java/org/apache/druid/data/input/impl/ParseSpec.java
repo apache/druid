@@ -28,6 +28,7 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.parsers.Parser;
 
 import java.util.List;
+import java.util.Objects;
 
 @ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "format")
@@ -98,12 +99,10 @@ public abstract class ParseSpec
 
     ParseSpec parseSpec = (ParseSpec) o;
 
-    if (timestampSpec != null ? !timestampSpec.equals(parseSpec.timestampSpec) : parseSpec.timestampSpec != null) {
+    if (!Objects.equals(timestampSpec, parseSpec.timestampSpec)) {
       return false;
     }
-    return !(dimensionsSpec != null
-             ? !dimensionsSpec.equals(parseSpec.dimensionsSpec)
-             : parseSpec.dimensionsSpec != null);
+    return !(!Objects.equals(dimensionsSpec, parseSpec.dimensionsSpec));
 
   }
 

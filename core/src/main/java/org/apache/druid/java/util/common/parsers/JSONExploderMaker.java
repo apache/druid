@@ -20,13 +20,10 @@
 package org.apache.druid.java.util.common.parsers;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.collect.FluentIterable;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
-import net.thisptr.jackson.jq.JsonQuery;
-import net.thisptr.jackson.jq.exception.JsonQueryException;
 import org.apache.druid.data.input.impl.FastJacksonJsonNodeJsonProvider;
 import org.apache.druid.java.util.common.StringUtils;
 
@@ -39,9 +36,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 
-public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonNode>
+public class JSONExploderMaker implements ObjectExploders.ExploderMaker<JsonNode>
 {
   private static final Configuration JSONPATH_CONFIGURATION =
       Configuration.builder()
@@ -52,64 +48,43 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
 
   private final CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
 
-  @Override
-  public Iterable<String> discoverRootFields(final JsonNode obj)
-  {
-    return FluentIterable.from(() -> obj.fields())
-                         .filter(
-                             entry -> {
-                               final JsonNode val = entry.getValue();
-                               return !(val.isObject() || val.isNull() || (val.isArray() && !isFlatList(val)));
-                             }
-                         )
-                         .transform(Map.Entry::getKey);
-  }
 
   @Override
-  public Object getRootField(final JsonNode obj, final String key)
-  {
-    return valueConversionFunction(obj.get(key));
-  }
-
-  @Override
-  public Function<JsonNode, Object> makeJsonPathExtractor(final String expr)
+  public List<Object> getExplodeArray(final JsonNode obj, String expr)
   {
     final JsonPath jsonPath = JsonPath.compile(expr);
-    return node -> valueConversionFunction(jsonPath.read(node, JSONPATH_CONFIGURATION));
+    JsonNode arrayToExplode = jsonPath.read(obj, JSONPATH_CONFIGURATION);
+    List<Object> newList = new ArrayList<>();
+    for (JsonNode entry : arrayToExplode) {
+      if (!entry.isNull()) {
+        newList.add(entry);
+      }
+    }
+    return newList;
   }
 
   @Override
-  public Function<JsonNode, Object> makeJsonQueryExtractor(final String expr)
+  public JsonNode setObj(final JsonNode node, Object value, String expr)
   {
-    try {
-      final JsonQuery jsonQuery = JsonQuery.compile(expr);
-      return jsonNode -> {
-        try {
-          return valueConversionFunction(jsonQuery.apply(jsonNode).get(0));
-        }
-        catch (JsonQueryException e) {
-          throw new RuntimeException(e);
-        }
-      };
-    }
-    catch (JsonQueryException e) {
-      throw new RuntimeException(e);
-    }
+    final JsonPath jsonPath = JsonPath.compile(expr);
+    JsonNode replica = node.deepCopy();
+    JsonNode retVal = jsonPath.set(replica, value, JSONPATH_CONFIGURATION);
+    return retVal;
   }
 
-  @Nullable
-  private Object valueConversionFunction(JsonNode val)
+  @Override
+  public Object valueConversionFunction(JsonNode val)
   {
     if (val == null || val.isNull()) {
       return null;
     }
 
-    if (val.isInt() || val.isLong()) {
-      return val.asLong();
-    }
-
     if (val.isBoolean()) {
       return val.asBoolean();
+    }
+
+    if (val.isInt() || val.isLong()) {
+      return val.asLong();
     }
 
     if (val.isNumber()) {
@@ -153,15 +128,5 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
     } else {
       return s;
     }
-  }
-
-  private boolean isFlatList(JsonNode list)
-  {
-    for (JsonNode obj : list) {
-      if (obj.isObject() || obj.isArray()) {
-        return false;
-      }
-    }
-    return true;
   }
 }

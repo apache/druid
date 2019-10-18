@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.java.util.common.parsers.JSONExplodeSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathParser;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.common.parsers.Parser;
@@ -33,17 +34,20 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
+ *
  */
 public class JSONParseSpec extends NestedDataParseSpec<JSONPathSpec>
 {
   private final ObjectMapper objectMapper;
   private final Map<String, Boolean> featureSpec;
+  private final List<JSONExplodeSpec> explodeSpec;
 
   @JsonCreator
   public JSONParseSpec(
       @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
       @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
       @JsonProperty("flattenSpec") JSONPathSpec flattenSpec,
+      @JsonProperty("explodeSpec") List<JSONExplodeSpec> explodeSpec,
       @JsonProperty("featureSpec") Map<String, Boolean> featureSpec
   )
   {
@@ -54,12 +58,19 @@ public class JSONParseSpec extends NestedDataParseSpec<JSONPathSpec>
       Feature feature = Feature.valueOf(entry.getKey());
       objectMapper.configure(feature, entry.getValue());
     }
+    this.explodeSpec = explodeSpec;
+  }
+
+  @JsonProperty
+  public List<JSONExplodeSpec> getExplodeSpec()
+  {
+    return explodeSpec;
   }
 
   @Deprecated
   public JSONParseSpec(TimestampSpec ts, DimensionsSpec dims)
   {
-    this(ts, dims, null, null);
+    this(ts, dims, null, null, null);
   }
 
   @Override
@@ -70,19 +81,19 @@ public class JSONParseSpec extends NestedDataParseSpec<JSONPathSpec>
   @Override
   public Parser<String, Object> makeParser()
   {
-    return new JSONPathParser(getFlattenSpec(), objectMapper);
+    return new JSONPathParser(getFlattenSpec(), getExplodeSpec(), objectMapper);
   }
 
   @Override
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {
-    return new JSONParseSpec(spec, getDimensionsSpec(), getFlattenSpec(), getFeatureSpec());
+    return new JSONParseSpec(spec, getDimensionsSpec(), getFlattenSpec(), getExplodeSpec(), getFeatureSpec());
   }
 
   @Override
   public ParseSpec withDimensionsSpec(DimensionsSpec spec)
   {
-    return new JSONParseSpec(getTimestampSpec(), spec, getFlattenSpec(), getFeatureSpec());
+    return new JSONParseSpec(getTimestampSpec(), spec, getFlattenSpec(), getExplodeSpec(), getFeatureSpec());
   }
 
   @JsonProperty
@@ -120,6 +131,7 @@ public class JSONParseSpec extends NestedDataParseSpec<JSONPathSpec>
            "timestampSpec=" + getTimestampSpec() +
            ", dimensionsSpec=" + getDimensionsSpec() +
            ", flattenSpec=" + getFlattenSpec() +
+           ", explodeSpec=" + getExplodeSpec() +
            ", featureSpec=" + featureSpec +
            '}';
   }

@@ -70,6 +70,7 @@ public class HadoopDruidIndexerMapperTest
                       null
                   ),
                   new JSONPathSpec(true, ImmutableList.of()),
+                  null,
                   ImmutableMap.of()
               )
           ),

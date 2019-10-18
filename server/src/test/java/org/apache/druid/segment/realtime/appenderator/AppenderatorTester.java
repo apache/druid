@@ -130,6 +130,7 @@ public class AppenderatorTester implements AutoCloseable
                 new TimestampSpec("ts", "auto", null),
                 new DimensionsSpec(null, null, null),
                 null,
+                null,
                 null
             )
         ),

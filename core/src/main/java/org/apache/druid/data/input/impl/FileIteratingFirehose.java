@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -36,7 +37,7 @@ public class FileIteratingFirehose implements Firehose
 {
   private final Iterator<LineIterator> lineIterators;
   private final StringInputRowParser parser;
-
+  private final ArrayList<InputRow> parsedInputRows;
   private LineIterator lineIterator = null;
 
   private final Closeable closer;
@@ -58,11 +59,15 @@ public class FileIteratingFirehose implements Firehose
     this.lineIterators = lineIterators;
     this.parser = parser;
     this.closer = closer;
+    this.parsedInputRows = new ArrayList<>();
   }
 
   @Override
   public boolean hasMore() throws IOException
   {
+    if (!parsedInputRows.isEmpty()) {
+      return true;
+    }
     while ((lineIterator == null || !lineIterator.hasNext()) && lineIterators.hasNext()) {
       lineIterator = getNextLineIterator();
     }
@@ -77,8 +82,22 @@ public class FileIteratingFirehose implements Firehose
     if (!hasMore()) {
       throw new NoSuchElementException();
     }
+    if (!parsedInputRows.isEmpty()) {
+      return parsedInputRows.remove(0);
+    }
+    return getNextRow();
+  }
 
-    return parser.parse(lineIterator.next());
+  private InputRow getNextRow()
+  {
+    for (InputRow inputRow : parser.parseBatch(lineIterator.next())) {
+      parsedInputRows.add(inputRow);
+    }
+    if (!parsedInputRows.isEmpty()) {
+      return parsedInputRows.remove(0);
+    } else {
+      return null;
+    }
   }
 
   @Override

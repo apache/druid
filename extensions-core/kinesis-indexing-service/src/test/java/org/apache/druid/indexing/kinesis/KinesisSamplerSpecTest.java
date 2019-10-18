@@ -87,6 +87,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
                       null
                   ),
                   new JSONPathSpec(true, ImmutableList.of()),
+                  null,
                   ImmutableMap.of()
               ),
               StandardCharsets.UTF_8.name()

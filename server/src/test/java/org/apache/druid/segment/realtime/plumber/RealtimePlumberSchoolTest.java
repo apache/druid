@@ -141,6 +141,7 @@ public class RealtimePlumberSchoolTest
                     new TimestampSpec("timestamp", "auto", null),
                     new DimensionsSpec(null, null, null),
                     null,
+                    null,
                     null
                 ),
                 null
@@ -160,6 +161,7 @@ public class RealtimePlumberSchoolTest
                 new JSONParseSpec(
                     new TimestampSpec("timestamp", "auto", null),
                     new DimensionsSpec(null, null, null),
+                    null,
                     null,
                     null
                 ),

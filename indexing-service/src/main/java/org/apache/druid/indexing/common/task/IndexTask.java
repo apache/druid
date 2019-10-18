@@ -708,7 +708,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     try (
         final Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser(), firehoseTempDir)
     ) {
-
       while (firehose.hasMore()) {
         try {
           final InputRow inputRow = firehose.nextRow();

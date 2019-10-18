@@ -50,6 +50,12 @@ public class TransformingStringInputRowParser extends StringInputRowParser
     return super.parseBatch(input).stream().map(transformer::transform).collect(Collectors.toList());
   }
 
+  @Override
+  public List<InputRow> parseBatch(final String input)
+  {
+    return super.parseBatch(input).stream().map(transformer::transform).collect(Collectors.toList());
+  }
+
   @Nullable
   @Override
   public InputRow parse(@Nullable final String input)

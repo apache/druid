@@ -808,7 +808,7 @@ public class FirehoseSamplerTest
         ImmutableList.of("t", "dim1", "dim2", "met1"),
         false,
         0
-    ) : new JSONParseSpec(timestampSpec, dimensionsSpec, null, null);
+    ) : new JSONParseSpec(timestampSpec, dimensionsSpec, null, null, null);
   }
 
   private String getUnparseableTimestampString()

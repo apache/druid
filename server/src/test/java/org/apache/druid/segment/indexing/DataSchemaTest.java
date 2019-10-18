@@ -72,6 +72,7 @@ public class DataSchemaTest
                 new TimestampSpec("time", "auto", null),
                 new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA")), null, null),
                 null,
+                null,
                 null
             ),
             null
@@ -109,6 +110,7 @@ public class DataSchemaTest
                     null
                 ),
                 null,
+                null,
                 null
             ),
             null
@@ -145,6 +147,7 @@ public class DataSchemaTest
                     ImmutableList.of(),
                     null
                 ),
+                null,
                 null,
                 null
             ),
@@ -204,6 +207,7 @@ public class DataSchemaTest
                     "metric1"
                 )), ImmutableList.of("dimC"), null),
                 null,
+                null,
                 null
             ),
             null
@@ -236,6 +240,7 @@ public class DataSchemaTest
                     ImmutableList.of("dimC"),
                     null
                 ),
+                null,
                 null,
                 null
             ),
@@ -301,6 +306,7 @@ public class DataSchemaTest
                     ImmutableList.of("dimC"),
                     null
                 ),
+                null,
                 null,
                 null
             ),
@@ -397,6 +403,7 @@ public class DataSchemaTest
             new TimestampSpec("xXx", null, null),
             new DimensionsSpec(null, Arrays.asList("metric1", "xXx", "col1"), null),
             null,
+            null,
             null
         )
     );
@@ -423,6 +430,7 @@ public class DataSchemaTest
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
                 new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA")), null, null),
+                null,
                 null,
                 null
             ),
@@ -462,6 +470,7 @@ public class DataSchemaTest
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
                 new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA")), null, null),
+                null,
                 null,
                 null
             ),

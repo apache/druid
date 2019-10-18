@@ -127,6 +127,7 @@ public class DoubleStorageTest
               ImmutableList.of()
           ),
           null,
+          null,
           null
       )
   );

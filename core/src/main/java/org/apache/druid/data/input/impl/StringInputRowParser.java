@@ -36,10 +36,12 @@ import java.nio.charset.Charset;
 import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 /**
+ *
  */
 public class StringInputRowParser implements ByteBufferInputRowParser
 {
@@ -140,6 +142,15 @@ public class StringInputRowParser implements ByteBufferInputRowParser
   {
     initializeParser();
     parser.startFileFromBeginning();
+  }
+
+
+  public List<InputRow> parseBatch(@Nullable String input)
+  {
+    initializeParser();
+    List<InputRow> returnList = new ArrayList<>();
+    parser.parseToMapList(input).forEach(e -> returnList.add(parseMap(e)));
+    return returnList;
   }
 
   @Nullable

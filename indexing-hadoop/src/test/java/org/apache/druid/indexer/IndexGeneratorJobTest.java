@@ -338,6 +338,7 @@ public class IndexGeneratorJobTest
                         new TimestampSpec("ts", "yyyyMMddHH", null),
                         new DimensionsSpec(null, null, null),
                         null,
+                        null,
                         null
                     ),
                     null
@@ -370,6 +371,7 @@ public class IndexGeneratorJobTest
                     new JSONParseSpec(
                         new TimestampSpec("ts", "yyyyMMddHH", null),
                         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("B", "F", "M", "Q", "X", "Y")), null, null),
+                        null,
                         null,
                         null
                     ),

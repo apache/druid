@@ -182,7 +182,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private AppenderatorsManager appenderatorsManager;
   private final Set<Integer> checkpointRequestsHash = new HashSet<>();
   private RowIngestionMetersFactory rowIngestionMetersFactory;
-
+  
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 

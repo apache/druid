@@ -115,6 +115,7 @@ public class DefaultOfflineAppenderatorFactoryTest
                 new TimestampSpec("ts", "auto", null),
                 new DimensionsSpec(null, null, null),
                 null,
+                null,
                 null
             )
         ),

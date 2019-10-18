@@ -1029,6 +1029,7 @@ public class IndexTaskTest extends IngestionTestBase
                 new ArrayList<>()
             ),
             null,
+            null,
             null
         ),
         null,

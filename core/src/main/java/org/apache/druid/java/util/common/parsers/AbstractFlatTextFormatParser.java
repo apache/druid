@@ -127,6 +127,12 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
   }
 
   @Override
+  public List<Map<String, Object>> parseToMapList(final String input)
+  {
+    return Utils.nullableListOf(parseToMap(input));
+  }
+
+  @Override
   public Map<String, Object> parseToMap(final String input)
   {
     if (!supportSkipHeaderRows && (hasHeaderRow || maxSkipHeaderRows > 0)) {

@@ -21,7 +21,9 @@ package org.apache.druid.java.util.common.parsers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +34,8 @@ public class JSONPathParser implements Parser<String, Object>
 {
   private final ObjectMapper mapper;
   private final ObjectFlattener<JsonNode> flattener;
+  private final ObjectExploder<JsonNode> exploder;
+  private final List<JSONExplodeSpec> explodeSpec;
 
   /**
    * Constructor
@@ -39,10 +43,12 @@ public class JSONPathParser implements Parser<String, Object>
    * @param flattenSpec Provide a path spec for flattening and field discovery.
    * @param mapper      Optionally provide an ObjectMapper, used by the parser for reading the input JSON.
    */
-  public JSONPathParser(JSONPathSpec flattenSpec, ObjectMapper mapper)
+  public JSONPathParser(JSONPathSpec flattenSpec, List<JSONExplodeSpec> explodeSpec, ObjectMapper mapper)
   {
     this.mapper = mapper == null ? new ObjectMapper() : mapper;
     this.flattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker());
+    this.exploder = ObjectExploders.create(explodeSpec, new JSONExploderMaker());
+    this.explodeSpec = explodeSpec;
   }
 
   @Override
@@ -60,7 +66,6 @@ public class JSONPathParser implements Parser<String, Object>
    * @param input JSON string. The root must be a JSON object, not an array.
    *              e.g., {"valid": "true"} and {"valid":[1,2,3]} are supported
    *              but [{"invalid": "true"}] and [1,2,3] are not.
-   *
    * @return A map of field names and values
    */
   @Override
@@ -69,6 +74,27 @@ public class JSONPathParser implements Parser<String, Object>
     try {
       JsonNode document = mapper.readValue(input, JsonNode.class);
       return flattener.flatten(document);
+    }
+    catch (Exception e) {
+      throw new ParseException(e, "Unable to parse row [%s]", input);
+    }
+  }
+
+  @Override
+  public List<Map<String, Object>> parseToMapList(String input)
+  {
+    try {
+      JsonNode document = mapper.readValue(input, JsonNode.class);
+      if (explodeSpec != null) {
+        List<JsonNode> explodedNodes = exploder.explode(ImmutableList.of(document));
+        List<Map<String, Object>> flattenedMaps = new ArrayList<>();
+        for (JsonNode explodedNode : explodedNodes) {
+          flattenedMaps.add(flattener.flatten(explodedNode));
+        }
+        return flattenedMaps;
+      } else {
+        return ImmutableList.of(flattener.flatten(document));
+      }
     }
     catch (Exception e) {
       throw new ParseException(e, "Unable to parse row [%s]", input);
