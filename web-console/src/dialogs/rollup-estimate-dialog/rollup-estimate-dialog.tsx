@@ -247,11 +247,10 @@ export class RollupEstimateDialog extends React.PureComponent<
 }
 /*
 Todo:
-1. Intervals
 2. Correct query to calculate rollup ratio based on rollup/non-rollup data (Rollup -> multiply by rollup ratio?) **
 3. Bucket time column for non-rolled data (select vs scan vs timeseries granularity: hour) **
 4. Clean up code
-5. Separate ratio from Callout, put name of datasource at top, and other UI mistakes
+5. Separate ratio from Callout, flicker
 6. Error handling with division of 0
-7. Is count going to be the only column?
+7. Is count going to be the only column? **
 */

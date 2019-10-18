@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Callout, FormGroup, InputGroup } from '@blueprintjs/core';
+import { Button, Callout, FormGroup, InputGroup, Intent } from '@blueprintjs/core';
 import { HeaderRows, normalizeQueryResult } from 'druid-query-toolkit';
 import * as React from 'react';
 
@@ -110,12 +110,12 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
     this.druidQueryManager.runQuery(null);
   }
 
-  componentDidUpdate(prevProps: RollupRatioProps) {
-    const { queryColumns } = this.props;
-    if (prevProps.queryColumns !== queryColumns) {
-      this.druidQueryManager.runQuery(null);
-    }
-  }
+  // componentDidUpdate(prevProps: RollupRatioProps) {
+  //   const { queryColumns } = this.props;
+  //   if (prevProps.queryColumns !== queryColumns) {
+  //     this.druidQueryManager.runQuery(null);
+  //   }
+  // }
 
   render(): JSX.Element {
     const { intervalInput, loading, result } = this.state;
@@ -130,10 +130,15 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
           </p>
           <p>
             {rollupRatio !== -1
-              ? `This datasource has previously been rolled up. The original rollup ratio is ${rollupRatio}`
+              ? `This datasource has previously been rolled up. The original rollup ratio is ${(rollupRatio -
+                  1) *
+                  100}%`
               : ''}
           </p>
-          <p>Your rollup ratio is currently: {result ? result.rows[0][1] : []}</p>
+          <p>
+            Your rollup ratio is currently:{' '}
+            {result ? ((Math.max(result.rows[0][1], 1) - 1) * 100).toFixed(2) : []}%
+          </p>
         </Callout>
 
         <FormGroup
@@ -149,7 +154,19 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
             }}
           />
         </FormGroup>
-        <Button onClick={() => updateInterval(intervalInput)}>Estimate rollup</Button>
+        <Button
+          text="Preview data"
+          onClick={() => {
+            updateInterval(intervalInput);
+          }}
+        />
+        <Button
+          text="Estimate rollup"
+          intent={Intent.PRIMARY}
+          onClick={() => {
+            this.druidQueryManager.runQuery(null);
+          }}
+        />
       </div>
     );
   }
