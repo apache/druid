@@ -40,6 +40,7 @@ import java.util.Objects;
  */
 public abstract class HllSketchAggregatorFactory extends AggregatorFactory
 {
+  public static final boolean DEFAULT_ROUND = false;
   public static final int DEFAULT_LG_K = 12;
   public static final TgtHllType DEFAULT_TGT_HLL_TYPE = TgtHllType.HLL_4;
 

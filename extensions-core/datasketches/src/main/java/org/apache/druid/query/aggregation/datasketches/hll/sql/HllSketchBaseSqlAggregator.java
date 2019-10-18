@@ -24,20 +24,13 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlAggFunction;
-import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.type.InferTypes;
-import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
-import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchMergeAggregatorFactory;
-import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.VirtualColumn;
@@ -53,20 +46,11 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-public class HllSketchSqlAggregator implements SqlAggregator
+public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
 {
-  private static final SqlAggFunction FUNCTION_INSTANCE = new HllSketchSqlAggFunction();
-  private static final String NAME = "APPROX_COUNT_DISTINCT_DS_HLL";
   private static final boolean ROUND = true;
-
-  @Override
-  public SqlAggFunction calciteFunction()
-  {
-    return FUNCTION_INSTANCE;
-  }
 
   @Nullable
   @Override
@@ -174,39 +158,18 @@ public class HllSketchSqlAggregator implements SqlAggregator
       );
     }
 
-    return Aggregation.create(
+    return toAggregation(
+        name,
+        finalizeAggregations,
         virtualColumns,
-        Collections.singletonList(aggregatorFactory),
-        finalizeAggregations ? new FinalizingFieldAccessPostAggregator(
-            name,
-            aggregatorFactory.getName()
-        ) : null
+        aggregatorFactory
     );
   }
 
-  private static class HllSketchSqlAggFunction extends SqlAggFunction
-  {
-    private static final String SIGNATURE = "'" + NAME + "(column, lgK, tgtHllType)'\n";
-
-    HllSketchSqlAggFunction()
-    {
-      super(
-          NAME,
-          null,
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.BIGINT),
-          InferTypes.VARCHAR_1024,
-          OperandTypes.or(
-              OperandTypes.ANY,
-              OperandTypes.and(
-                  OperandTypes.sequence(SIGNATURE, OperandTypes.ANY, OperandTypes.LITERAL, OperandTypes.LITERAL),
-                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING)
-              )
-          ),
-          SqlFunctionCategory.NUMERIC,
-          false,
-          false
-      );
-    }
-  }
+  protected abstract Aggregation toAggregation(
+      String name,
+      boolean finalizeAggregations,
+      List<VirtualColumn> virtualColumns,
+      AggregatorFactory aggregatorFactory
+  );
 }

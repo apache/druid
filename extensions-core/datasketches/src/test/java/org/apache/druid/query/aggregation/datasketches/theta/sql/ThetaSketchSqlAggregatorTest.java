@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Druids;
@@ -36,8 +37,10 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.theta.SketchEstimatePostAggregator;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
+import org.apache.druid.query.aggregation.datasketches.theta.SketchSetPostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
@@ -47,6 +50,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -125,6 +129,7 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
     SketchModule.registerSerde();
     for (Module mod : new SketchModule().getJacksonModules()) {
       CalciteTests.getJsonMapper().registerModule(mod);
+      TestHelper.JSON_MAPPER.registerModule(mod);
     }
 
     final QueryableIndex index = IndexBuilder.create()
@@ -164,8 +169,17 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
     final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
-        ImmutableSet.of(new ThetaSketchSqlAggregator()),
-        ImmutableSet.of()
+        ImmutableSet.of(
+            new ThetaSketchApproxCountDistinctSqlAggregator(),
+            new ThetaSketchObjectSqlAggregator()
+        ),
+        ImmutableSet.of(
+            new ThetaSketchEstimateOperatorConversion(),
+            new ThetaSketchEstimateWithErrorBoundsOperatorConversion(),
+            new ThetaSketchSetIntersectOperatorConversion(),
+            new ThetaSketchSetUnionOperatorConversion(),
+            new ThetaSketchSetNotOperatorConversion()
+        )
     );
 
     sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(
@@ -398,5 +412,247 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
 
     // Verify query
     Assert.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testThetaSketchPostAggs() throws Exception
+  {
+    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+    final String sql = "SELECT\n"
+                       + "  SUM(cnt),\n"
+                       + "  theta_sketch_estimate(DS_THETA(dim2)),\n"
+                       + "  theta_sketch_estimate(DS_THETA(CONCAT(dim2, 'hello'))),\n"
+                       + "  theta_sketch_estimate_with_error_bounds(DS_THETA(dim2), 10),\n"
+                       + "  THETA_SKETCH_INTERSECT(DS_THETA(dim2), DS_THETA(dim1)),\n"
+                       + "  THETA_SKETCH_UNION(DS_THETA(dim2), DS_THETA(dim1)),\n"
+                       + "  THETA_SKETCH_NOT(DS_THETA(dim2), DS_THETA(dim1)),\n"
+                       + "  THETA_SKETCH_INTERSECT(32768, DS_THETA(dim2), DS_THETA(dim1)),\n"
+                       + "  theta_sketch_estimate(THETA_SKETCH_INTERSECT(THETA_SKETCH_INTERSECT(DS_THETA(dim2), DS_THETA(dim1)), DS_THETA(dim2)))\n"
+                       + "FROM druid.foo";
+
+    // Verify results
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> expectedResults;
+
+    if (NullHandling.replaceWithDefault()) {
+      expectedResults = ImmutableList.of(
+          new Object[]{
+              6L,
+              2.0d,
+              3.0d,
+              "{\"estimate\":2.0,\"highBound\":2.0,\"lowBound\":2.0,\"numStdDev\":10}",
+              "\"AQMDAAAazJOQxkPsNomrZQ==\"",
+              "\"AgMDAAAazJMGAAAAAACAP1XTBztMIcMJ+HOoBBne1zKQxkPsNomrZUeWbJt3n+VpF8EdUoUHAXvxsLkOSE0lfQ==\"",
+              "\"AQMDAAAazJMXwR1ShQcBew==\"",
+              "\"AQMDAAAazJOQxkPsNomrZQ==\"",
+              1.0d
+          }
+      );
+    } else {
+      expectedResults = ImmutableList.of(
+          new Object[]{
+              6L,
+              2.0d,
+              3.0d,
+              "{\"estimate\":2.0,\"highBound\":2.0,\"lowBound\":2.0,\"numStdDev\":10}",
+              "\"AQMDAAAazJOQxkPsNomrZQ==\"",
+              "\"AgMDAAAazJMGAAAAAACAP1XTBztMIcMJ+HOoBBne1zKQxkPsNomrZUeWbJt3n+VpF8EdUoUHAXvxsLkOSE0lfQ==\"",
+              "\"AQMDAAAazJMXwR1ShQcBew==\"",
+              "\"AQMDAAAazJOQxkPsNomrZQ==\"",
+              1.0d
+          }
+      );
+    }
+
+    Assert.assertEquals(expectedResults.size(), results.size());
+    for (int i = 0; i < expectedResults.size(); i++) {
+      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
+    }
+
+    Query actualQuery = Iterables.getOnlyElement(queryLogHook.getRecordedQueries());
+
+    Query expectedQuery =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(CalciteTests.DATASOURCE1)
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+              .granularity(Granularities.ALL)
+              .virtualColumns(
+                  new ExpressionVirtualColumn(
+                      "v0",
+                      "concat(\"dim2\",'hello')",
+                      ValueType.STRING,
+                      TestExprMacroTable.INSTANCE
+                  )
+              )
+              .aggregators(
+                  ImmutableList.of(
+                      new LongSumAggregatorFactory("a0", "cnt"),
+                      new SketchMergeAggregatorFactory(
+                          "a1",
+                          "dim2",
+                          null,
+                          null,
+                          null,
+                          null
+                      ),
+                      new SketchMergeAggregatorFactory(
+                          "a2",
+                          "v0",
+                          null,
+                          null,
+                          null,
+                          null
+                      ),
+                      new SketchMergeAggregatorFactory(
+                          "a3",
+                          "dim1",
+                          null,
+                          null,
+                          null,
+                          null
+                      )
+                  )
+              )
+              .postAggregators(
+                  new SketchEstimatePostAggregator(
+                      "p1",
+                      new FieldAccessPostAggregator("p0", "a1"),
+                      null
+                  ),
+                  new SketchEstimatePostAggregator(
+                      "p3",
+                      new FieldAccessPostAggregator("p2", "a2"),
+                      null
+                  ),
+                  new SketchEstimatePostAggregator(
+                      "p5",
+                      new FieldAccessPostAggregator("p4", "a1"),
+                      10
+                  ),
+                  new SketchSetPostAggregator(
+                      "p8",
+                      "INTERSECT",
+                      null,
+                      ImmutableList.of(
+                          new FieldAccessPostAggregator("p6", "a1"),
+                          new FieldAccessPostAggregator("p7", "a3")
+                      )
+                  ),
+                  new SketchSetPostAggregator(
+                      "p11",
+                      "UNION",
+                      null,
+                      ImmutableList.of(
+                          new FieldAccessPostAggregator("p9", "a1"),
+                          new FieldAccessPostAggregator("p10", "a3")
+                      )
+                  ),
+                  new SketchSetPostAggregator(
+                      "p14",
+                      "NOT",
+                      null,
+                      ImmutableList.of(
+                          new FieldAccessPostAggregator("p12", "a1"),
+                          new FieldAccessPostAggregator("p13", "a3")
+                      )
+                  ),
+                  new SketchSetPostAggregator(
+                      "p17",
+                      "INTERSECT",
+                      32768,
+                      ImmutableList.of(
+                          new FieldAccessPostAggregator("p15", "a1"),
+                          new FieldAccessPostAggregator("p16", "a3")
+                      )
+                  ),
+                  new SketchEstimatePostAggregator(
+                      "p23",
+                      new SketchSetPostAggregator(
+                          "p22",
+                          "INTERSECT",
+                          null,
+                          ImmutableList.of(
+                              new SketchSetPostAggregator(
+                                  "p20",
+                                  "INTERSECT",
+                                  null,
+                                  ImmutableList.of(
+                                      new FieldAccessPostAggregator("p18", "a1"),
+                                      new FieldAccessPostAggregator("p19", "a3")
+                                  )
+                              ),
+                              new FieldAccessPostAggregator("p21", "a1")
+                          )
+                      ),
+                      null
+                  )
+              )
+              .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+              .build();
+
+
+    // Verify query
+    Assert.assertEquals(expectedQuery, actualQuery);
+  }
+
+  @Test
+  public void testThetaSketchPostAggsPostSort() throws Exception
+  {
+    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+
+    final String sql = "SELECT DS_THETA(dim2) as y FROM druid.foo ORDER BY THETA_SKETCH_ESTIMATE(DS_THETA(dim2)) DESC LIMIT 10";
+    final String sql2 = StringUtils.format("SELECT THETA_SKETCH_ESTIMATE(y) from (%s)", sql);
+
+    // Verify results
+    final List<Object[]> results = sqlLifecycle.runSimple(sql2, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{
+            2.0d
+        }
+    );
+
+    Assert.assertEquals(expectedResults.size(), results.size());
+    for (int i = 0; i < expectedResults.size(); i++) {
+      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
+    }
+
+    Query actualQuery = Iterables.getOnlyElement(queryLogHook.getRecordedQueries());
+
+    Query expectedQuery =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(CalciteTests.DATASOURCE1)
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+              .granularity(Granularities.ALL)
+              .aggregators(
+                  ImmutableList.of(
+                      new SketchMergeAggregatorFactory(
+                          "a0",
+                          "dim2",
+                          null,
+                          null,
+                          null,
+                          null
+                      )
+                  )
+              )
+              .postAggregators(
+                  new FieldAccessPostAggregator("p0", "a0"),
+                  new SketchEstimatePostAggregator(
+                      "p2",
+                      new FieldAccessPostAggregator("p1", "a0"),
+                      null
+                  ),
+                  new SketchEstimatePostAggregator(
+                      "s1",
+                      new FieldAccessPostAggregator("s0", "p0"),
+                      null
+                  )
+              )
+              .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+              .build();
+
+
+    // Verify query
+    Assert.assertEquals(expectedQuery, actualQuery);
   }
 }

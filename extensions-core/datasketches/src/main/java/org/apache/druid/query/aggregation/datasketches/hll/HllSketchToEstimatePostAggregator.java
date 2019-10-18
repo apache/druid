@@ -22,43 +22,37 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.yahoo.sketches.hll.HllSketch;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
+import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
-import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 /**
- * Returns a distinct count estimate and error bounds from a given {@link HllSketch}.
- * The result will be three double values: estimate, lower bound and upper bound.
- * The bounds are provided at a given number of standard deviations (optional, defaults to 1).
- * This must be an integer value of 1, 2 or 3 corresponding to approximately 68.3%, 95.4% and 99.7%
- * confidence intervals.
+ * Returns a distinct count estimate a from a given {@link HllSketch}.
+ * The result will be a double value.
  */
-public class HllSketchToEstimateWithBoundsPostAggregator implements PostAggregator
+public class HllSketchToEstimatePostAggregator implements PostAggregator
 {
-  public static final int DEFAULT_NUM_STD_DEVS = 1;
-
   private final String name;
   private final PostAggregator field;
-  private final int numStdDevs;
+  private final boolean round;
 
   @JsonCreator
-  public HllSketchToEstimateWithBoundsPostAggregator(
+  public HllSketchToEstimatePostAggregator(
       @JsonProperty("name") final String name,
       @JsonProperty("field") final PostAggregator field,
-      @JsonProperty("numStdDev") @Nullable final Integer numStdDevs
+      @JsonProperty("round") boolean round
   )
   {
     this.name = name;
     this.field = field;
-    this.numStdDevs = numStdDevs == null ? DEFAULT_NUM_STD_DEVS : numStdDevs;
+    this.round = round;
   }
 
   @Override
@@ -75,9 +69,9 @@ public class HllSketchToEstimateWithBoundsPostAggregator implements PostAggregat
   }
 
   @JsonProperty
-  public int getNumStdDev()
+  public boolean isRound()
   {
-    return numStdDevs;
+    return round;
   }
 
   @Override
@@ -87,16 +81,16 @@ public class HllSketchToEstimateWithBoundsPostAggregator implements PostAggregat
   }
 
   @Override
-  public Comparator<double[]> getComparator()
+  public Comparator<Double> getComparator()
   {
-    throw new IAE("Comparing arrays of estimates and error bounds is not supported");
+    return ArithmeticPostAggregator.DEFAULT_COMPARATOR;
   }
 
   @Override
-  public double[] compute(final Map<String, Object> combinedAggregators)
+  public Object compute(final Map<String, Object> combinedAggregators)
   {
     final HllSketch sketch = (HllSketch) field.compute(combinedAggregators);
-    return new double[] {sketch.getEstimate(), sketch.getLowerBound(numStdDevs), sketch.getUpperBound(numStdDevs)};
+    return round ? Math.round(sketch.getEstimate()) : sketch.getEstimate();
   }
 
   @Override
@@ -111,7 +105,6 @@ public class HllSketchToEstimateWithBoundsPostAggregator implements PostAggregat
     return getClass().getSimpleName() + "{" +
         "name='" + name + '\'' +
         ", field=" + field +
-        ", numStdDev=" + numStdDevs +
         "}";
   }
 
@@ -121,16 +114,13 @@ public class HllSketchToEstimateWithBoundsPostAggregator implements PostAggregat
     if (this == o) {
       return true;
     }
-    if (!(o instanceof HllSketchToEstimateWithBoundsPostAggregator)) {
+    if (!(o instanceof HllSketchToEstimatePostAggregator)) {
       return false;
     }
 
-    final HllSketchToEstimateWithBoundsPostAggregator that = (HllSketchToEstimateWithBoundsPostAggregator) o;
+    final HllSketchToEstimatePostAggregator that = (HllSketchToEstimatePostAggregator) o;
 
     if (!name.equals(that.name)) {
-      return false;
-    }
-    if (numStdDevs != that.numStdDevs) {
       return false;
     }
     return field.equals(that.field);
@@ -139,16 +129,14 @@ public class HllSketchToEstimateWithBoundsPostAggregator implements PostAggregat
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, field, numStdDevs);
+    return Objects.hash(name, field);
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(AggregatorUtil.HLL_SKETCH_TO_ESTIMATE_AND_BOUNDS_CACHE_TYPE_ID)
-        .appendString(name)
+    return new CacheKeyBuilder(PostAggregatorIds.HLL_SKETCH_TO_ESTIMATE_CACHE_TYPE_ID)
         .appendCacheable(field)
-        .appendInt(numStdDevs)
         .build();
   }
 
