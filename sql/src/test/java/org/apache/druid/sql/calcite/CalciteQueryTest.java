@@ -9196,9 +9196,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     if (NullHandling.replaceWithDefault()) {
       results2 = ImmutableList.of(
           new Object[]{""},
-          new Object[]{"def"},
-          new Object[]{"abc"},
-          new Object[]{"2"}
+          new Object[]{"def"}
       );
     } else {
       results2 = ImmutableList.of(
