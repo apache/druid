@@ -29,7 +29,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>dev-0.16.0-incubating</version>
+        <version>0.23.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -45,11 +45,6 @@
             <artifactId>druid-sql</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.sf.trove4j</groupId>
-            <artifactId>core</artifactId>
-            <version>3.1.0</version>
         </dependency>
 
         <!-- Tests -->

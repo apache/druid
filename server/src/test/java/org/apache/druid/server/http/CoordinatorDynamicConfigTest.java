@@ -51,6 +51,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
+                     + "  \"skipCoordinatorRun\": true,\n"
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1,\n"
@@ -83,6 +84,7 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         true,
+        true,
         whitelist,
         false,
         1,
@@ -104,6 +106,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         2,
+        true,
         true,
         whitelist,
         false,
@@ -127,6 +130,7 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         true,
+        true,
         whitelist,
         false,
         1,
@@ -148,6 +152,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         2,
+        true,
         true,
         whitelist,
         false,
@@ -171,6 +176,7 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         true,
+        true,
         whitelist,
         false,
         1,
@@ -193,6 +199,7 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         true,
+        true,
         whitelist,
         false,
         1,
@@ -214,6 +221,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         2,
+        true,
         true,
         whitelist,
         false,
@@ -238,6 +246,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
+                     + "  \"skipCoordinatorRun\": true,\n"
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1\n"
@@ -265,6 +274,7 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         true,
+        true,
         whitelist,
         false,
         1,
@@ -287,6 +297,7 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         true,
+        true,
         whitelist,
         false,
         1,
@@ -308,6 +319,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         2,
+        true,
         true,
         whitelist,
         false,
@@ -332,6 +344,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
+                     + "  \"skipCoordinatorRun\": true,\n"
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killDataSourceWhitelist\": \"test1, test2\", \n"
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1\n"
@@ -356,6 +369,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         2,
+        true,
         true,
         ImmutableSet.of("test1", "test2"),
         false,
@@ -446,6 +460,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
+                     + "  \"skipCoordinatorRun\": true,\n"
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1,\n"
@@ -475,6 +490,7 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         true,
+        true,
         whitelist,
         false,
         1,
@@ -498,6 +514,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
+                     + "  \"skipCoordinatorRun\": true,\n"
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killAllDataSources\": true,\n"
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1\n"
@@ -523,6 +540,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         2,
+        true,
         true,
         ImmutableSet.of(),
         true,
@@ -565,6 +583,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
+                     + "  \"skipCoordinatorRun\": true,\n"
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killAllDataSources\": true\n"
                      + "}\n";
@@ -589,6 +608,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         2,
+        true,
         true,
         ImmutableSet.of(),
         true,
@@ -616,6 +636,7 @@ public class CoordinatorDynamicConfigTest
         15,
         10,
         1,
+        false,
         false,
         emptyList,
         false,
@@ -657,7 +678,8 @@ public class CoordinatorDynamicConfigTest
             null,
             null,
             null,
-            null
+            null,
+                null
         ).build(current)
     );
   }
@@ -706,6 +728,7 @@ public class CoordinatorDynamicConfigTest
       int expectedReplicantLifetime,
       int expectedReplicationThrottleLimit,
       int expectedBalancerComputeThreads,
+      boolean expectedSkipCoordinatorRun,
       boolean expectedEmitingBalancingStats,
       Set<String> expectedSpecificDataSourcesToKillUnusedSegmentsIn,
       boolean expectedKillUnusedSegmentsInAllDataSources,
@@ -728,6 +751,7 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(expectedReplicantLifetime, config.getReplicantLifetime());
     Assert.assertEquals(expectedReplicationThrottleLimit, config.getReplicationThrottleLimit());
     Assert.assertEquals(expectedBalancerComputeThreads, config.getBalancerComputeThreads());
+    Assert.assertEquals(expectedSkipCoordinatorRun, config.isSkipCoordinatorRun());
     Assert.assertEquals(expectedEmitingBalancingStats, config.emitBalancingStats());
     Assert.assertEquals(
         expectedSpecificDataSourcesToKillUnusedSegmentsIn,

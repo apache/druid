@@ -872,6 +872,12 @@ public class DruidCoordinator
           }
         }
 
+        boolean skipCoordinatorRun = getDynamicConfigs().isSkipCoordinatorRun();
+        if (skipCoordinatorRun) {
+          log.warn("Coordinator run skipped.");
+          return;
+        }
+
         initBalancerExecutor();
         BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
 
