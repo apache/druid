@@ -1127,7 +1127,7 @@ public class SystemSchemaTest extends CalciteTestBase
                                                             .withConstructor(client, mapper, responseHandler, authMapper)
                                                             .createMock();
     EasyMock.replay(supervisorTable);
-    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/supervisor?fullStatus", false))
+    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/supervisor?system", false))
             .andReturn(request)
             .anyTimes();
     SettableFuture<InputStream> future = SettableFuture.create();
@@ -1135,7 +1135,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final int ok = HttpServletResponse.SC_OK;
     EasyMock.expect(responseHandler.getStatus()).andReturn(ok).anyTimes();
     EasyMock.expect(request.getUrl())
-            .andReturn(new URL("http://test-host:1234/druid/indexer/v1/supervisor?fullStatus"))
+            .andReturn(new URL("http://test-host:1234/druid/indexer/v1/supervisor?system"))
             .anyTimes();
 
     AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();

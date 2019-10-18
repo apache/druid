@@ -507,8 +507,8 @@ Returns a list of objects of the currently active supervisors.
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
-|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`|
-|`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details)|
+|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.html#operations) for details.|
+|`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details), e.g. [Kafka](../development/extensions-core/kafka-ingestion.html) or [Kinesis](../development/extensions-core/kinesis-ingestion.html))|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
 
@@ -522,21 +522,6 @@ Returns a list of objects of the currently active supervisors and their current 
 |`state`|String|basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.html#operations) for details.|
 |`detailedState`|String|supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../development/extensions-core/kafka-ingestion.html) or [Kinesis](../development/extensions-core/kinesis-ingestion.html))|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
-|`suspended`|Boolean|true or false indicator of whether the supervisor is in suspended state|
-
-* `/druid/indexer/v1/supervisor?fullStatus`
-
-Returns a list of objects of the currently active supervisors.
-
-|Field|Type|Description|
-|---|---|---|
-|`id`|String|supervisor unique identifier|
-|`state`|String|basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.html#operations) for details.|
-|`detailedState`|String|supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../development/extensions-core/kafka-ingestion.html) or [Kinesis](../development/extensions-core/kinesis-ingestion.html))|
-|`healthy`|Boolean|true or false indicator of overall supervisor health|
-|`specString`|String|a JSON string of supervisor spec|
-|`type`|String|type of supervisor, e.g. `kafka` or `kinesis`|
-|`source`|String|source of supervisor, e.g. Kafka topic or Kinesis stream|
 |`suspended`|Boolean|true or false indicator of whether the supervisor is in suspended state|
 
 * `/druid/indexer/v1/supervisor/<supervisorId>`

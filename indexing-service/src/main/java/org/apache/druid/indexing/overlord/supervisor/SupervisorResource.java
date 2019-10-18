@@ -124,7 +124,7 @@ public class SupervisorResource
   public Response specGetAll(
       @QueryParam("full") String full,
       @QueryParam("state") Boolean state,
-      @QueryParam("fullStatus") String fullStatus,
+      @QueryParam("system") String system,
       @Context final HttpServletRequest req
   )
   {
@@ -137,9 +137,9 @@ public class SupervisorResource
           );
           final boolean includeFull = full != null;
           final boolean includeState = state != null && state;
-          final boolean includeFullStatus = fullStatus != null;
+          final boolean includeSystem = system != null;
 
-          if (includeFull || includeState || includeFullStatus) {
+          if (includeFull || includeState || includeSystem) {
             List<SupervisorStatus> allStates = authorizedSupervisorIds
                 .stream()
                 .map(x -> {
@@ -158,11 +158,11 @@ public class SupervisorResource
                       theBuilder.withSpec(manager.getSupervisorSpec(x).get());
                     }
                   }
-                  if (includeFullStatus) {
+                  if (includeSystem) {
                     Optional<SupervisorSpec> theSpec = manager.getSupervisorSpec(x);
                     if (theSpec.isPresent()) {
                       try {
-                        // serializing SupervisorSpec here, so that callers of `druid/indexer/v1/supervisor?fullStatus`
+                        // serializing SupervisorSpec here, so that callers of `druid/indexer/v1/supervisor?system`
                         // which are outside the overlord process can deserialize the response and get a json
                         // payload of SupervisorSpec object when they don't have guice bindings for all the fields
                         // for example, broker does not have bindings for all fields of `KafkaSupervisorSpec` or

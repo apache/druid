@@ -885,14 +885,14 @@ public class SystemSchema extends AbstractSchema
       Function<SupervisorStatus, Iterable<ResourceAction>> raGenerator = supervisor -> Collections.singletonList(
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(supervisor.getSource()));
 
-      final Iterable<SupervisorStatus> authorizedTasks = AuthorizationUtils.filterAuthorizedResources(
+      final Iterable<SupervisorStatus> authorizedSupervisors = AuthorizationUtils.filterAuthorizedResources(
           authenticationResult,
           () -> it,
           raGenerator,
           authorizerMapper
       );
 
-      return wrap(authorizedTasks.iterator(), it);
+      return wrap(authorizedSupervisors.iterator(), it);
     }
   }
 
@@ -908,7 +908,7 @@ public class SystemSchema extends AbstractSchema
     try {
       request = indexingServiceClient.makeRequest(
           HttpMethod.GET,
-          "/druid/indexer/v1/supervisor?fullStatus",
+          "/druid/indexer/v1/supervisor?system",
           false
       );
     }

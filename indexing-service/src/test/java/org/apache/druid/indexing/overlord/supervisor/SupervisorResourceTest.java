@@ -216,7 +216,7 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
-  public void testSpecGetAllFullStatus()
+  public void testSpecGetAllSystem()
   {
     SupervisorStateManager.State state1 = SupervisorStateManager.BasicState.RUNNING;
     SupervisorStateManager.State state2 = SupervisorStateManager.BasicState.SUSPENDED;
