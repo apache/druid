@@ -56,9 +56,9 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
 
       // Deprecated properties preserved for backward compatibility:
       @Deprecated @JsonProperty(DimensionBasedPartitionsSpec.TARGET_PARTITION_SIZE) @Nullable
-          Integer targetPartitionSize,
+          Integer targetPartitionSize,  // prefer targetRowsPerSegment
       @Deprecated @JsonProperty(PartitionsSpec.MAX_ROWS_PER_SEGMENT) @Nullable
-          Integer maxRowsPerSegment
+          Integer maxRowsPerSegment  // prefer targetRowsPerSegment
   )
   {
     Integer adjustedTargetRowsPerSegment = PartitionsSpec.resolveHistoricalNullIfNeeded(targetRowsPerSegment);
@@ -112,6 +112,13 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
   )
   {
     this(null, numShards, partitionDimensions, null, maxRowsPerSegment);
+  }
+
+  @Nullable
+  @Override
+  public Integer getTargetRowsPerSegment()
+  {
+    return null;
   }
 
   @Nullable

@@ -26,10 +26,17 @@ import {
 import React from 'react';
 import ReactTable from 'react-table';
 
+import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
 import { copyAndAlert } from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
 
 import './query-output.scss';
+
+function trimValue(str: any): string {
+  str = String(str);
+  if (str.length < 102) return str;
+  return str.substr(0, 100) + '...';
+}
 
 export interface QueryOutputProps {
   loading: boolean;
@@ -40,7 +47,25 @@ export interface QueryOutputProps {
   runeMode: boolean;
 }
 
-export class QueryOutput extends React.PureComponent<QueryOutputProps> {
+export interface QueryOutputState {
+  showValue?: string;
+}
+
+export class QueryOutput extends React.PureComponent<QueryOutputProps, QueryOutputState> {
+  constructor(props: QueryOutputProps) {
+    super(props);
+    this.state = {};
+  }
+
+  renderShowValueDialog(): JSX.Element | undefined {
+    const { showValue } = this.state;
+    if (!showValue) return;
+
+    return (
+      <ShowValueDialog onClose={() => this.setState({ showValue: undefined })} str={showValue} />
+    );
+  }
+
   render(): JSX.Element {
     const { queryResult, parsedQuery, loading, error } = this.props;
 
@@ -73,23 +98,21 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
               accessor: String(i),
               Cell: row => {
                 const value = row.value;
-                const popover = (
+                if (!value) return value == null ? null : value;
+                return (
                   <div>
                     <Popover content={this.getRowActions(value, h)}>
                       <div>{value}</div>
                     </Popover>
                   </div>
                 );
-                if (value) {
-                  return popover;
-                }
-                return value;
               },
               className:
                 aggregateColumns && aggregateColumns.includes(h) ? 'aggregate-column' : undefined,
             };
           })}
         />
+        {this.renderShowValueDialog()}
       </div>
     );
   }
@@ -107,7 +130,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
           if (sorted.id === h) {
             basicActions.push({
               icon: sorted.desc ? IconNames.SORT_ASC : IconNames.SORT_DESC,
-              title: `Order by: ${h} ${sorted.desc ? 'ASC' : 'DESC'}`,
+              title: `Order by: ${trimValue(h)} ${sorted.desc ? 'ASC' : 'DESC'}`,
               onAction: () => {
                 onQueryChange(parsedQuery.orderBy(h, sorted.desc ? 'ASC' : 'DESC'), true);
               },
@@ -119,14 +142,14 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
         basicActions.push(
           {
             icon: IconNames.SORT_DESC,
-            title: `Order by: ${h} DESC`,
+            title: `Order by: ${trimValue(h)} DESC`,
             onAction: () => {
               onQueryChange(parsedQuery.orderBy(h, 'DESC'), true);
             },
           },
           {
             icon: IconNames.SORT_ASC,
-            title: `Order by: ${h} ASC`,
+            title: `Order by: ${trimValue(h)} ASC`,
             onAction: () => {
               onQueryChange(parsedQuery.orderBy(h, 'ASC'), true);
             },
@@ -135,7 +158,7 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
       }
       basicActions.push({
         icon: IconNames.CROSS,
-        title: `Remove: ${h}`,
+        title: `Remove: ${trimValue(h)}`,
         onAction: () => {
           onQueryChange(parsedQuery.excludeColumn(h), true);
         },
@@ -146,34 +169,34 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
         <Menu>
           <MenuItem
             icon={IconNames.CLIPBOARD}
-            text={`Copy: ${h}`}
+            text={`Copy: ${trimValue(h)}`}
             onClick={() => {
               copyAndAlert(h, `${h}' copied to clipboard`);
             }}
           />
-          {runeMode && (
-            <MenuItem
-              icon={IconNames.CLIPBOARD}
-              text={`Copy: ORDER BY ${basicIdentifierEscape(h)} ASC`}
-              onClick={() =>
-                copyAndAlert(
-                  `ORDER BY ${basicIdentifierEscape(h)} ASC`,
-                  `ORDER BY ${basicIdentifierEscape(h)} ASC' copied to clipboard`,
-                )
-              }
-            />
-          )}
-          {runeMode && (
-            <MenuItem
-              icon={IconNames.CLIPBOARD}
-              text={`Copy: 'ORDER BY ${basicIdentifierEscape(h)} DESC'`}
-              onClick={() =>
-                copyAndAlert(
-                  `ORDER BY ${basicIdentifierEscape(h)} DESC`,
-                  `ORDER BY ${basicIdentifierEscape(h)} DESC' copied to clipboard`,
-                )
-              }
-            />
+          {!runeMode && (
+            <>
+              <MenuItem
+                icon={IconNames.CLIPBOARD}
+                text={`Copy: ORDER BY ${basicIdentifierEscape(h)} ASC`}
+                onClick={() =>
+                  copyAndAlert(
+                    `ORDER BY ${basicIdentifierEscape(h)} ASC`,
+                    `ORDER BY ${basicIdentifierEscape(h)} ASC' copied to clipboard`,
+                  )
+                }
+              />
+              <MenuItem
+                icon={IconNames.CLIPBOARD}
+                text={`Copy: 'ORDER BY ${basicIdentifierEscape(h)} DESC'`}
+                onClick={() =>
+                  copyAndAlert(
+                    `ORDER BY ${basicIdentifierEscape(h)} DESC`,
+                    `ORDER BY ${basicIdentifierEscape(h)} DESC' copied to clipboard`,
+                  )
+                }
+              />
+            </>
           )}
         </Menu>
       );
@@ -181,8 +204,21 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
     return actionsMenu ? actionsMenu : undefined;
   }
 
-  getRowActions(row: string, header: string) {
+  getRowActions(row: any, header: string) {
     const { parsedQuery, onQueryChange, runeMode } = this.props;
+
+    const showFullValueMenuItem =
+      typeof row === 'string' ? (
+        <MenuItem
+          icon={IconNames.EYE_OPEN}
+          text={`Show full value`}
+          onClick={() => {
+            this.setState({ showValue: row });
+          }}
+        />
+      ) : (
+        undefined
+      );
 
     let actionsMenu;
     if (parsedQuery) {
@@ -190,14 +226,14 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
         <Menu>
           <MenuItem
             icon={IconNames.FILTER_KEEP}
-            text={`Filter by: ${header} = ${row}`}
+            text={`Filter by: ${trimValue(header)} = ${trimValue(row)}`}
             onClick={() => {
               onQueryChange(parsedQuery.filterRow(header, row, '='), true);
             }}
           />
           <MenuItem
             icon={IconNames.FILTER_REMOVE}
-            text={`Filter by: ${header} != ${row}`}
+            text={`Filter by: ${trimValue(header)} != ${trimValue(row)}`}
             onClick={() => {
               onQueryChange(parsedQuery.filterRow(header, row, '!='), true);
             }}
@@ -206,20 +242,21 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
             <>
               <MenuItem
                 icon={IconNames.FILTER_KEEP}
-                text={`Filter by: ${header} >= ${row}`}
+                text={`Filter by: ${trimValue(header)} >= ${trimValue(row)}`}
                 onClick={() => {
                   onQueryChange(parsedQuery.filterRow(header, row, '>='), true);
                 }}
               />
               <MenuItem
                 icon={IconNames.FILTER_KEEP}
-                text={`Filter by: ${header} <= ${row}`}
+                text={`Filter by: ${trimValue(header)} <= ${trimValue(row)}`}
                 onClick={() => {
                   onQueryChange(parsedQuery.filterRow(header, row, '<='), true);
                 }}
               />
             </>
           )}
+          {showFullValueMenuItem}
         </Menu>
       );
     } else {
@@ -227,37 +264,38 @@ export class QueryOutput extends React.PureComponent<QueryOutputProps> {
         <Menu>
           <MenuItem
             icon={IconNames.CLIPBOARD}
-            text={`Copy: ${row}`}
+            text={`Copy: ${trimValue(row)}`}
             onClick={() => copyAndAlert(row, `${row} copied to clipboard`)}
           />
-          {runeMode && (
-            <MenuItem
-              icon={IconNames.CLIPBOARD}
-              text={`Copy: ${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)}`}
-              onClick={() =>
-                copyAndAlert(
-                  `${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)}`,
-                  `${basicIdentifierEscape(header)} = ${basicLiteralEscape(
-                    row,
-                  )} copied to clipboard`,
-                )
-              }
-            />
+          {!runeMode && (
+            <>
+              <MenuItem
+                icon={IconNames.CLIPBOARD}
+                text={`Copy: ${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)}`}
+                onClick={() =>
+                  copyAndAlert(
+                    `${basicIdentifierEscape(header)} = ${basicLiteralEscape(row)}`,
+                    `${basicIdentifierEscape(header)} = ${basicLiteralEscape(
+                      row,
+                    )} copied to clipboard`,
+                  )
+                }
+              />
+              <MenuItem
+                icon={IconNames.CLIPBOARD}
+                text={`Copy: ${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)}`}
+                onClick={() =>
+                  copyAndAlert(
+                    `${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)}`,
+                    `${basicIdentifierEscape(header)} != ${basicLiteralEscape(
+                      row,
+                    )} copied to clipboard`,
+                  )
+                }
+              />
+            </>
           )}
-          {runeMode && (
-            <MenuItem
-              icon={IconNames.CLIPBOARD}
-              text={`Copy: ${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)}`}
-              onClick={() =>
-                copyAndAlert(
-                  `${basicIdentifierEscape(header)} != ${basicLiteralEscape(row)}`,
-                  `${basicIdentifierEscape(header)} != ${basicLiteralEscape(
-                    row,
-                  )} copied to clipboard`,
-                )
-              }
-            />
-          )}
+          {showFullValueMenuItem}
         </Menu>
       );
     }

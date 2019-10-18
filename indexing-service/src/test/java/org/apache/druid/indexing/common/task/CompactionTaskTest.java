@@ -64,7 +64,6 @@ import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -431,7 +430,6 @@ public class CompactionTaskTest
     Assert.assertEquals(expected.getIoConfig(), actual.getIoConfig());
     Assert.assertEquals(expected.getDimensionsSpec(), actual.getDimensionsSpec());
     Assert.assertArrayEquals(expected.getMetricsSpec(), actual.getMetricsSpec());
-    Assert.assertEquals(expected.getTargetCompactionSizeBytes(), actual.getTargetCompactionSizeBytes());
     Assert.assertEquals(expected.getTuningConfig(), actual.getTuningConfig());
     Assert.assertEquals(expected.getContext(), actual.getContext());
   }
@@ -442,7 +440,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(null, TUNING_CONFIG),
+        new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
         null,
@@ -508,7 +506,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(null, tuningConfig),
+        new PartitionConfigurationManager(tuningConfig),
         null,
         null,
         null,
@@ -575,7 +573,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(null, tuningConfig),
+        new PartitionConfigurationManager(tuningConfig),
         null,
         null,
         null,
@@ -642,7 +640,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(null, tuningConfig),
+        new PartitionConfigurationManager(tuningConfig),
         null,
         null,
         null,
@@ -703,7 +701,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(null, TUNING_CONFIG),
+        new PartitionConfigurationManager(TUNING_CONFIG),
         customSpec,
         null,
         null,
@@ -744,7 +742,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(null, TUNING_CONFIG),
+        new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         customMetricsSpec,
         null,
@@ -778,7 +776,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(SEGMENTS)),
-        new PartitionConfigurationManager(null, TUNING_CONFIG),
+        new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
         null,
@@ -818,7 +816,7 @@ public class CompactionTaskTest
     CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
-        new PartitionConfigurationManager(null, TUNING_CONFIG),
+        new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
         null,
@@ -841,7 +839,7 @@ public class CompactionTaskTest
     CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
-        new PartitionConfigurationManager(null, TUNING_CONFIG),
+        new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
         null,
@@ -877,64 +875,12 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testTargetPartitionSizeWithPartitionConfig() throws IOException, SegmentLoadingException
-  {
-    final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
-        10000,
-        null,
-        500000,
-        1000000L,
-        null,
-        null,
-        null,
-        new HashedPartitionsSpec(1000, null, null),
-        new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
-            CompressionStrategy.LZ4,
-            CompressionStrategy.LZF,
-            LongEncodingStrategy.LONGS
-        ),
-        null,
-        null,
-        true,
-        false,
-        5000L,
-        null,
-        null,
-        10,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("targetCompactionSizeBytes[6] cannot be used with");
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
-        toolbox,
-        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(6L, tuningConfig),
-        null,
-        null,
-        null,
-        OBJECT_MAPPER,
-        COORDINATOR_CLIENT,
-        segmentLoaderFactory,
-        RETRY_POLICY_FACTORY
-    );
-  }
-
-  @Test
   public void testSegmentGranularity() throws IOException, SegmentLoadingException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(null, TUNING_CONFIG),
+        new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
         new PeriodGranularity(Period.months(3), null, null),
@@ -969,7 +915,7 @@ public class CompactionTaskTest
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        new PartitionConfigurationManager(null, TUNING_CONFIG),
+        new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
         null,
@@ -994,27 +940,6 @@ public class CompactionTaskTest
         SEGMENT_INTERVALS,
         Granularities.MONTH
     );
-  }
-
-  @Test
-  public void testHugeTargetCompactionSize()
-  {
-    final PartitionConfigurationManager manager = new PartitionConfigurationManager(Long.MAX_VALUE, TUNING_CONFIG);
-    final TestIndexIO indexIO = (TestIndexIO) toolbox.getIndexIO();
-    final Map<File, QueryableIndex> queryableIndexMap = indexIO.getQueryableIndexMap();
-    final List<Pair<QueryableIndex, DataSegment>> segments = new ArrayList<>();
-
-    for (Entry<DataSegment, File> entry : SEGMENT_MAP.entrySet()) {
-      final DataSegment segment = entry.getKey();
-      final File file = entry.getValue();
-      segments.add(Pair.of(Preconditions.checkNotNull(queryableIndexMap.get(file)), segment));
-    }
-
-    expectedException.expect(ArithmeticException.class);
-    expectedException.expectMessage(
-        CoreMatchers.startsWith("Estimated maxRowsPerSegment[922337203685477632] is out of integer value range.")
-    );
-    manager.computeTuningConfig(segments);
   }
 
   private static List<DimensionsSpec> getExpectedDimensionsSpecForAutoGeneration()

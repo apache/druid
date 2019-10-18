@@ -167,7 +167,8 @@ public class DruidCoordinator
       @CoordinatorIndexingServiceHelper Set<DruidCoordinatorHelper> indexingServiceHelpers,
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
-      @Coordinator DruidLeaderSelector coordLeaderSelector
+      @Coordinator DruidLeaderSelector coordLeaderSelector,
+      DruidCoordinatorSegmentCompactor segmentCompactor
   )
   {
     this(
@@ -188,7 +189,8 @@ public class DruidCoordinator
         indexingServiceHelpers,
         factory,
         lookupCoordinatorManager,
-        coordLeaderSelector
+        coordLeaderSelector,
+        segmentCompactor
     );
   }
 
@@ -210,7 +212,8 @@ public class DruidCoordinator
       Set<DruidCoordinatorHelper> indexingServiceHelpers,
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
-      DruidLeaderSelector coordLeaderSelector
+      DruidLeaderSelector coordLeaderSelector,
+      DruidCoordinatorSegmentCompactor segmentCompactor
   )
   {
     this.config = config;
@@ -235,7 +238,7 @@ public class DruidCoordinator
     this.lookupCoordinatorManager = lookupCoordinatorManager;
     this.coordLeaderSelector = coordLeaderSelector;
 
-    this.segmentCompactor = new DruidCoordinatorSegmentCompactor(indexingServiceClient);
+    this.segmentCompactor = segmentCompactor;
   }
 
   public boolean isLeader()

@@ -73,13 +73,12 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   @Override
   public String compactSegments(
       List<DataSegment> segments,
-      @Nullable Long targetCompactionSizeBytes,
       int compactionTaskPriority,
       ClientCompactQueryTuningConfig tuningConfig,
       @Nullable Map<String, Object> context
   )
   {
-    Preconditions.checkArgument(segments.size() > 1, "Expect two or more segments to compact");
+    Preconditions.checkArgument(!segments.isEmpty(), "Expect non-empty segments to compact");
 
     final String dataSource = segments.get(0).getDataSource();
     Preconditions.checkArgument(
@@ -94,7 +93,6 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
         new ClientCompactQuery(
             dataSource,
             new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments)),
-            targetCompactionSizeBytes,
             tuningConfig,
             context
         )

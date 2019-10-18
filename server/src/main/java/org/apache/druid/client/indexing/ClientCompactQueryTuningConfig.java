@@ -146,6 +146,11 @@ public class ClientCompactQueryTuningConfig
     return splitHintSpec;
   }
 
+  public long getMaxTotalRowsOr(long defaultMaxTotalRows)
+  {
+    return maxTotalRows == null ? defaultMaxTotalRows : maxTotalRows;
+  }
+
   @JsonProperty
   @Nullable
   public IndexSpec getIndexSpec()
