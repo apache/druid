@@ -613,6 +613,9 @@ public class DruidCoordinatorBalancerTest
     @Override
     public BalancerSegmentHolder pickSegmentToMove(List<ServerHolder> serverHolders)
     {
+      if (serverHolders.size() == 0) {
+        return null;
+      }
       return pickOrder.get(pickCounter.getAndIncrement() % pickOrder.size());
     }
 
