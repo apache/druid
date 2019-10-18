@@ -9150,7 +9150,24 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
         .context(outerLimitContext);
 
-    // no existing limit
+    List<Object[]> results1;
+    if (NullHandling.replaceWithDefault()) {
+      results1 = ImmutableList.of(
+          new Object[]{""},
+          new Object[]{"def"},
+          new Object[]{"abc"},
+          new Object[]{"2"}
+      );
+    } else {
+      results1 = ImmutableList.of(
+          new Object[]{"def"},
+          new Object[]{"abc"},
+          new Object[]{"2"},
+          new Object[]{"10.1"}
+      );
+    }
+
+      // no existing limit
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         outerLimitContext,
@@ -9159,12 +9176,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             baseBuilder.threshold(4).build()
         ),
-        ImmutableList.of(
-            new Object[]{""},
-            new Object[]{"def"},
-            new Object[]{"abc"},
-            new Object[]{"2"}
-        )
+        results1
     );
 
     // existing limit greater than context limit, override existing limit
@@ -9176,13 +9188,24 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             baseBuilder.threshold(4).build()
         ),
-        ImmutableList.of(
-            new Object[]{""},
-            new Object[]{"def"},
-            new Object[]{"abc"},
-            new Object[]{"2"}
-        )
+        results1
     );
+
+
+    List<Object[]> results2;
+    if (NullHandling.replaceWithDefault()) {
+      results2 = ImmutableList.of(
+          new Object[]{""},
+          new Object[]{"def"},
+          new Object[]{"abc"},
+          new Object[]{"2"}
+      );
+    } else {
+      results2 = ImmutableList.of(
+          new Object[]{"def"},
+          new Object[]{"abc"}
+      );
+    }
 
     // existing limit less than context limit, keep existing limit
     testQuery(
@@ -9194,10 +9217,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             baseBuilder.threshold(2).build()
 
         ),
-        ImmutableList.of(
-            new Object[]{""},
-            new Object[]{"def"}
-        )
+        results2
     );
   }
 }
