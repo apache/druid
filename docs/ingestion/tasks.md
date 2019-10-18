@@ -43,17 +43,19 @@ the Overlord APIs.
 
 ## Task reports
 
+A report containing information about the number of rows ingested, and any parse exceptions that occurred is available for both completed tasks and running tasks.
+
+The reporting feature is supported by the [simple native batch task](../ingestion/native-batch.md#simple-task), the Hadoop batch task, and Kafka and Kinesis ingestion tasks.
+
 ### Completion report
 
-After a task completes, a report containing information about the number of rows ingested and any parse exceptions that occurred is available at:
+After a task completes, a completion report can be retrieved at:
 
 ```
 http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/task/<task-id>/reports
 ```
 
-The reporting feature is supported by the [simple native batch task](../ingestion/native-batch.md#simple-task), the Hadoop batch task, and Kafka and Kinesis ingestion tasks.
-
-An example output is shown below, along with a description of the fields:
+An example output is shown below:
 
 ```json
 {
@@ -82,6 +84,70 @@ An example output is shown below, along with a description of the fields:
   }
 }
 ```
+
+### Live report
+
+When a task is running, a live report containing ingestion state, unparseable events and moving average for number of events processed for 1 min, 5 min, 15 min time window can be retrieved at:
+
+```
+http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/task/<task-id>/reports
+```
+
+and 
+
+```
+http://<middlemanager-host>:<worker-port>/druid/worker/v1/chat/<task-id>/liveReports
+```
+
+An example output is shown below:
+
+```json
+{
+  "ingestionStatsAndErrors": {
+    "taskId": "compact_twitter_2018-09-24T18:24:23.920Z",
+    "payload": {
+      "ingestionState": "RUNNING",
+      "unparseableEvents": {},
+      "rowStats": {
+        "movingAverages": {
+          "buildSegments": {
+            "5m": {
+              "processed": 3.392158326408501,
+              "unparseable": 0,
+              "thrownAway": 0,
+              "processedWithError": 0
+            },
+            "15m": {
+              "processed": 1.736165476881023,
+              "unparseable": 0,
+              "thrownAway": 0,
+              "processedWithError": 0
+            },
+            "1m": {
+              "processed": 4.206417693750045,
+              "unparseable": 0,
+              "thrownAway": 0,
+              "processedWithError": 0
+            }
+          }
+        },
+        "totals": {
+          "buildSegments": {
+            "processed": 1994,
+            "processedWithError": 0,
+            "thrownAway": 0,
+            "unparseable": 0
+          }
+        }
+      },
+      "errorMsg": null
+    },
+    "type": "ingestionStatsAndErrors"
+  }
+}
+```
+
+A description of the fields:
 
 The `ingestionStatsAndErrors` report provides information about row counts and errors.
 

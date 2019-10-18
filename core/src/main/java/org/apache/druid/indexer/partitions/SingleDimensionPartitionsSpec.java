@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexer.Checks;
+import org.apache.druid.indexer.Property;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -64,18 +66,23 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
           Integer maxPartitionSize  // prefer maxRowsPerSegment
   )
   {
+    Integer adjustedTargetRowsPerSegment = PartitionsSpec.resolveHistoricalNullIfNeeded(targetRowsPerSegment);
+    Integer adjustedMaxRowsPerSegment = PartitionsSpec.resolveHistoricalNullIfNeeded(maxRowsPerSegment);
+    Integer adjustedTargetPartitionSize = PartitionsSpec.resolveHistoricalNullIfNeeded(targetPartitionSize);
+    Integer adjustedMaxPartitionSize = PartitionsSpec.resolveHistoricalNullIfNeeded(maxPartitionSize);
+
     Property<Integer> target = Checks.checkAtMostOneNotNull(
         DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT,
-        targetRowsPerSegment,
+        adjustedTargetRowsPerSegment,
         DimensionBasedPartitionsSpec.TARGET_PARTITION_SIZE,
-        targetPartitionSize
+        adjustedTargetPartitionSize
     );
 
     Property<Integer> max = Checks.checkAtMostOneNotNull(
         PartitionsSpec.MAX_ROWS_PER_SEGMENT,
-        maxRowsPerSegment,
+        adjustedMaxRowsPerSegment,
         MAX_PARTITION_SIZE,
-        maxPartitionSize
+        adjustedMaxPartitionSize
     );
 
     Preconditions.checkArgument(
@@ -122,6 +129,7 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
   }
 
   @JsonProperty
+  @Override
   @Nullable
   public Integer getTargetRowsPerSegment()
   {

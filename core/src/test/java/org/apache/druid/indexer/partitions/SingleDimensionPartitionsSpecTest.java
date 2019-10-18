@@ -32,6 +32,7 @@ public class SingleDimensionPartitionsSpecTest
 {
   private static final Integer TARGET_ROWS_PER_SEGMENT = 1;
   private static final Integer MAX_ROWS_PER_SEGMENT = null;
+  private static final Integer HISTORICAL_NULL = PartitionsSpec.HISTORICAL_NULL;
   private static final String PARTITION_DIMENSION = "a";
   private static final boolean ASSUME_GROUPED = false;
   private static final SingleDimensionPartitionsSpec SPEC = new SingleDimensionPartitionsSpec(
@@ -73,7 +74,7 @@ public class SingleDimensionPartitionsSpecTest
     new Tester()
         .targetRowsPerSegment(1)
         .targetPartitionSize(1)
-        .testIllegalArgumentException("At most one of targetRowsPerSegment or targetPartitionSize must be present");
+        .testIllegalArgumentException("At most one of [Property{name='targetRowsPerSegment', value=1}] or [Property{name='targetPartitionSize', value=1}] must be present");
   }
 
   @Test
@@ -82,7 +83,7 @@ public class SingleDimensionPartitionsSpecTest
     new Tester()
         .maxRowsPerSegment(1)
         .maxPartitionSize(1)
-        .testIllegalArgumentException("At most one of maxRowsPerSegment or maxPartitionSize must be present");
+        .testIllegalArgumentException("At most one of [Property{name='maxRowsPerSegment', value=1}] or [Property{name='maxPartitionSize', value=1}] must be present");
   }
 
   @Test
@@ -90,7 +91,6 @@ public class SingleDimensionPartitionsSpecTest
   {
     new Tester()
         .testIllegalArgumentException("Exactly one of targetRowsPerSegment or maxRowsPerSegment must be present");
-
   }
 
   @Test
@@ -99,6 +99,14 @@ public class SingleDimensionPartitionsSpecTest
     new Tester()
         .targetRowsPerSegment(0)
         .testIllegalArgumentException("targetRowsPerSegment must be greater than 0");
+  }
+
+  @Test
+  public void targetRowsPerSegmentHistoricalNull()
+  {
+    new Tester()
+        .targetRowsPerSegment(HISTORICAL_NULL)
+        .testIllegalArgumentException("Exactly one of targetRowsPerSegment or maxRowsPerSegment must be present");
   }
 
   @Test
@@ -134,11 +142,27 @@ public class SingleDimensionPartitionsSpecTest
   }
 
   @Test
+  public void maxRowsPerSegmentHistoricalNull()
+  {
+    new Tester()
+        .maxRowsPerSegment(HISTORICAL_NULL)
+        .testIllegalArgumentException("Exactly one of targetRowsPerSegment or maxRowsPerSegment must be present");
+  }
+
+  @Test
   public void maxPartitionSizeMustBePositive()
   {
     new Tester()
         .maxPartitionSize(0)
         .testIllegalArgumentException("maxPartitionSize must be greater than 0");
+  }
+
+  @Test
+  public void maxPartitionHistoricalNull()
+  {
+    new Tester()
+        .maxPartitionSize(HISTORICAL_NULL)
+        .testIllegalArgumentException("Exactly one of targetRowsPerSegment or maxRowsPerSegment must be present");
   }
 
   @Test

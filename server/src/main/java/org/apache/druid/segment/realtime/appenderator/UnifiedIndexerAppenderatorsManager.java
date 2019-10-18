@@ -31,6 +31,7 @@ import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.guice.annotations.Processing;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.UOE;
@@ -164,6 +165,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       Appenderator appenderator = new AppenderatorImpl(
           schema,
           rewriteAppenderatorConfigMemoryLimits(config),
+          false,
           metrics,
           dataSegmentPusher,
           objectMapper,
@@ -184,6 +186,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
+      boolean storeCompactionState,
       FireDepartmentMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
@@ -194,14 +197,13 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     synchronized (this) {
       DatasourceBundle datasourceBundle = datasourceBundles.computeIfAbsent(
           schema.getDataSource(),
-          (datasource) -> {
-            return new DatasourceBundle(datasource);
-          }
+          DatasourceBundle::new
       );
 
       Appenderator appenderator = Appenderators.createOffline(
           schema,
           rewriteAppenderatorConfigMemoryLimits(config),
+          storeCompactionState,
           metrics,
           dataSegmentPusher,
           objectMapper,
@@ -398,6 +400,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     }
 
     @Override
+    public PartitionsSpec getPartitionsSpec()
+    {
+      return baseConfig.getPartitionsSpec();
+    }
+
+    @Override
     public Period getIntermediatePersistPeriod()
     {
       return baseConfig.getIntermediatePersistPeriod();
@@ -471,7 +479,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         File outDir,
         IndexSpec indexSpec,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-    ) throws IOException
+    )
     {
       ListenableFuture<File> mergeFuture = mergeExecutor.submit(
           new Callable<File>()
@@ -511,7 +519,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         File outDir,
         IndexSpec indexSpec,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-    ) throws IOException
+    )
     {
       ListenableFuture<File> mergeFuture = mergeExecutor.submit(
           new Callable<File>()
@@ -550,7 +558,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         AggregatorFactory[] metricAggs,
         File outDir,
         IndexSpec indexSpec
-    ) throws IOException
+    )
     {
       throw new UOE(ERROR_MSG);
     }
@@ -560,7 +568,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         File inDir,
         File outDir,
         IndexSpec indexSpec
-    ) throws IOException
+    )
     {
       throw new UOE(ERROR_MSG);
     }
@@ -572,7 +580,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         File outDir,
         IndexSpec indexSpec,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-    ) throws IOException
+    )
     {
       throw new UOE(ERROR_MSG);
     }
@@ -583,7 +591,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         File outDir,
         IndexSpec indexSpec,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-    ) throws IOException
+    )
     {
       throw new UOE(ERROR_MSG);
     }
@@ -596,7 +604,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         IndexSpec indexSpec,
         ProgressIndicator progress,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-    ) throws IOException
+    )
     {
       throw new UOE(ERROR_MSG);
     }
@@ -610,7 +618,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         IndexSpec indexSpec,
         ProgressIndicator progress,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-    ) throws IOException
+    )
     {
       throw new UOE(ERROR_MSG);
     }

@@ -57,7 +57,7 @@ Don't use the default remote repositories, only use the repositories provided di
 
 `-d` or `--defaultVersion`
 
-Version to use for extension coordinate that doesn't have a version information. For example, if extension coordinate is `org.apache.druid.extensions:mysql-metadata-storage`, and default version is `#{DRUIDVERSION}`, then this coordinate will be treated as `org.apache.druid.extensions:mysql-metadata-storage:#{DRUIDVERSION}`
+Version to use for extension coordinate that doesn't have a version information. For example, if extension coordinate is `org.apache.druid.extensions:mysql-metadata-storage`, and default version is `{{DRUIDVERSION}}`, then this coordinate will be treated as `org.apache.druid.extensions:mysql-metadata-storage:{{DRUIDVERSION}}`
 
 `--use-proxy`
 
@@ -91,10 +91,10 @@ To run `pull-deps`, you should
 
 Example:
 
-Suppose you want to download ```mysql-metadata-storage``` and ```hadoop-client```(both 2.3.0 and 2.4.0) with a specific version, you can run `pull-deps` command with `-c org.apache.druid.extensions:mysql-metadata-storage:#{DRUIDVERSION}`, `-h org.apache.hadoop:hadoop-client:2.3.0` and `-h org.apache.hadoop:hadoop-client:2.4.0`, an example command would be:
+Suppose you want to download ```mysql-metadata-storage``` and ```hadoop-client```(both 2.3.0 and 2.4.0) with a specific version, you can run `pull-deps` command with `-c org.apache.druid.extensions:mysql-metadata-storage:{{DRUIDVERSION}}`, `-h org.apache.hadoop:hadoop-client:2.3.0` and `-h org.apache.hadoop:hadoop-client:2.4.0`, an example command would be:
 
 ```
-java -classpath "/my/druid/lib/*" org.apache.druid.cli.Main tools pull-deps --clean -c org.apache.druid.extensions:mysql-metadata-storage:#{DRUIDVERSION} -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
+java -classpath "/my/druid/lib/*" org.apache.druid.cli.Main tools pull-deps --clean -c org.apache.druid.extensions:mysql-metadata-storage:{{DRUIDVERSION}} -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
 ```
 
 Because `--clean` is supplied, this command will first remove the directories specified at `druid.extensions.directory` and `druid.extensions.hadoopDependenciesDir`, then recreate them and start downloading the extensions there. After finishing downloading, if you go to the extension directories you specified, you will see
@@ -103,7 +103,7 @@ Because `--clean` is supplied, this command will first remove the directories sp
 tree extensions
 extensions
 └── mysql-metadata-storage
-    └── mysql-metadata-storage-#{DRUIDVERSION}.jar
+    └── mysql-metadata-storage-{{DRUIDVERSION}}.jar
 ```
 
 ```
@@ -128,10 +128,10 @@ hadoop-dependencies/
     ..... lots of jars
 ```
 
-Note that if you specify `--defaultVersion`, you don't have to put version information in the coordinate. For example, if you want `mysql-metadata-storage` to use version `#{DRUIDVERSION}`,  you can change the command above to
+Note that if you specify `--defaultVersion`, you don't have to put version information in the coordinate. For example, if you want `mysql-metadata-storage` to use version `{{DRUIDVERSION}}`,  you can change the command above to
 
 ```
-java -classpath "/my/druid/lib/*" org.apache.druid.cli.Main tools pull-deps --defaultVersion #{DRUIDVERSION} --clean -c org.apache.druid.extensions:mysql-metadata-storage -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
+java -classpath "/my/druid/lib/*" org.apache.druid.cli.Main tools pull-deps --defaultVersion {{DRUIDVERSION}} --clean -c org.apache.druid.extensions:mysql-metadata-storage -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
 ```
 
 > Please note to use the pull-deps tool you must know the Maven groupId, artifactId, and version of your extension.

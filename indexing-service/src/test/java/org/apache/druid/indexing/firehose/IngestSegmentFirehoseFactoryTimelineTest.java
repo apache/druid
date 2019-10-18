@@ -163,11 +163,11 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   private void testSplit() throws Exception
   {
     Assert.assertTrue(factory.isSplittable());
-    final int numSplits = factory.getNumSplits();
+    final int numSplits = factory.getNumSplits(null);
     // We set maxInputSegmentBytesPerSplit to 2 so each segment should become a byte.
     Assert.assertEquals(segmentCount, numSplits);
     final List<InputSplit<List<WindowedSegmentId>>> splits =
-        factory.getSplits().collect(Collectors.toList());
+        factory.getSplits(null).collect(Collectors.toList());
     Assert.assertEquals(numSplits, splits.size());
 
     int count = 0;

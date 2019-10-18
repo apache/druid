@@ -34,7 +34,8 @@ public class WorkerNodeServiceTest
     DruidService expected = new WorkerNodeService(
         "1.1.1.1",
         100,
-        "v1"
+        "v1",
+        "c1"
     );
 
     ObjectMapper mapper = TestHelper.makeJsonMapper();

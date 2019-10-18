@@ -38,6 +38,7 @@ public interface PartitionsSpec
 {
   int DEFAULT_MAX_ROWS_PER_SEGMENT = 5_000_000;
   String MAX_ROWS_PER_SEGMENT = "maxRowsPerSegment";
+  int HISTORICAL_NULL = -1;
 
   /**
    * Returns the max number of rows per segment.
@@ -58,7 +59,7 @@ public interface PartitionsSpec
    */
   static boolean isEffectivelyNull(@Nullable Integer val)
   {
-    return val == null || val == -1;
+    return val == null || val == HISTORICAL_NULL;
   }
 
   /**
@@ -66,6 +67,12 @@ public interface PartitionsSpec
    */
   static boolean isEffectivelyNull(@Nullable Long val)
   {
-    return val == null || val == -1;
+    return val == null || val == HISTORICAL_NULL;
+  }
+
+  @Nullable
+  static Integer resolveHistoricalNullIfNeeded(@Nullable Integer val)
+  {
+    return isEffectivelyNull(val) ? null : val;
   }
 }

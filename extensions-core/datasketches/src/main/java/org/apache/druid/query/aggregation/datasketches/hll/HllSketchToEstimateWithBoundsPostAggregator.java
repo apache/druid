@@ -43,6 +43,7 @@ import java.util.Set;
  */
 public class HllSketchToEstimateWithBoundsPostAggregator implements PostAggregator
 {
+  public static final int DEFAULT_NUM_STD_DEVS = 1;
 
   private final String name;
   private final PostAggregator field;
@@ -57,7 +58,7 @@ public class HllSketchToEstimateWithBoundsPostAggregator implements PostAggregat
   {
     this.name = name;
     this.field = field;
-    this.numStdDevs = numStdDevs == null ? 1 : numStdDevs;
+    this.numStdDevs = numStdDevs == null ? DEFAULT_NUM_STD_DEVS : numStdDevs;
   }
 
   @Override

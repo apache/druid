@@ -32,14 +32,13 @@ public class HadoopWorkingDirCleaner
 {
   private static final Logger log = new Logger(HadoopWorkingDirCleaner.class);
 
-  public static String runTask(String[] args) throws Exception
+  public static void runTask(String[] args) throws Exception
   {
     String workingPath = args[0];
     log.info("Deleting indexing hadoop working path [%s].", workingPath);
     Path p = new Path(workingPath);
-    FileSystem fs = p.getFileSystem(new Configuration());
-    fs.delete(p, true);
-
-    return null;
+    try (FileSystem fs = p.getFileSystem(new Configuration())) {
+      fs.delete(p, true);
+    }
   }
 }

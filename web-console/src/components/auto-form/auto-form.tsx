@@ -53,8 +53,9 @@ export interface AutoFormProps<T> {
   fields: Field<T>[];
   model: T | undefined;
   onChange: (newModel: T) => void;
+  onFinalize?: () => void;
   showCustom?: (model: T) => boolean;
-  updateJSONValidity?: (jsonValidity: boolean) => void;
+  updateJsonValidity?: (jsonValidity: boolean) => void;
   large?: boolean;
 }
 
@@ -128,7 +129,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   };
 
   private renderNumberInput(field: Field<T>): JSX.Element {
-    const { model, large } = this.props;
+    const { model, large, onFinalize } = this.props;
 
     const modelValue = deepGet(model as any, field.name) || field.defaultValue;
     return (
@@ -142,6 +143,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
           if (e.target.value === '') {
             this.fieldChange(field, undefined);
           }
+          if (onFinalize) onFinalize();
         }}
         min={field.min || 0}
         fill
@@ -158,7 +160,8 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   }
 
   private renderSizeBytesInput(field: Field<T>): JSX.Element {
-    const { model, large } = this.props;
+    const { model, large, onFinalize } = this.props;
+
     return (
       <NumericInput
         value={deepGet(model as any, field.name) || field.defaultValue}
@@ -166,9 +169,13 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
           if (isNaN(v)) return;
           this.fieldChange(field, v);
         }}
+        onBlur={() => {
+          if (onFinalize) onFinalize();
+        }}
         min={0}
         stepSize={1000}
         majorStepSize={1000000}
+        fill
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model)}
       />
@@ -176,7 +183,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   }
 
   private renderStringInput(field: Field<T>, sanitize?: (str: string) => string): JSX.Element {
-    const { model, large } = this.props;
+    const { model, large, onFinalize } = this.props;
 
     const modelValue = deepGet(model as any, field.name);
     return (
@@ -189,6 +196,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         onBlur={() => {
           if (modelValue === '') this.fieldChange(field, undefined);
         }}
+        onFinalize={onFinalize}
         placeholder={field.placeholder}
         suggestions={field.suggestions}
         large={large}
@@ -203,7 +211,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   }
 
   private renderBooleanInput(field: Field<T>): JSX.Element {
-    const { model, large } = this.props;
+    const { model, large, onFinalize } = this.props;
     const modelValue = deepGet(model as any, field.name);
     const shownValue = modelValue == null ? field.defaultValue : modelValue;
     const disabled = AutoForm.evaluateFunctor(field.disabled, model);
@@ -218,7 +226,10 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
           intent={intent}
           disabled={disabled}
           active={shownValue === false}
-          onClick={() => this.fieldChange(field, false)}
+          onClick={() => {
+            this.fieldChange(field, false);
+            if (onFinalize) onFinalize();
+          }}
         >
           False
         </Button>
@@ -226,7 +237,10 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
           intent={intent}
           disabled={disabled}
           active={shownValue === true}
-          onClick={() => this.fieldChange(field, true)}
+          onClick={() => {
+            this.fieldChange(field, true);
+            if (onFinalize) onFinalize();
+          }}
         >
           True
         </Button>
@@ -234,20 +248,20 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     );
   }
 
-  private renderJSONInput(field: Field<T>): JSX.Element {
-    const { model, updateJSONValidity } = this.props;
+  private renderJsonInput(field: Field<T>): JSX.Element {
+    const { model, updateJsonValidity } = this.props;
     const { jsonInputsValidity } = this.state;
 
     const updateInputValidity = (e: any) => {
-      if (updateJSONValidity) {
+      if (updateJsonValidity) {
         const newJSONInputValidity = Object.assign({}, jsonInputsValidity, { [field.name]: e });
         this.setState({
           jsonInputsValidity: newJSONInputValidity,
         });
-        const allJSONValid: boolean = Object.keys(newJSONInputValidity).every(
+        const allJsonValid: boolean = Object.keys(newJSONInputValidity).every(
           property => newJSONInputValidity[property] === true,
         );
-        updateJSONValidity(allJSONValid);
+        updateJsonValidity(allJsonValid);
       }
     };
 
@@ -299,7 +313,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
       case 'string-array':
         return this.renderStringArrayInput(field);
       case 'json':
-        return this.renderJSONInput(field);
+        return this.renderJsonInput(field);
       default:
         throw new Error(`unknown field type '${field.type}'`);
     }

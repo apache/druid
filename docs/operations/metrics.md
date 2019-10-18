@@ -209,6 +209,10 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/overShadowed/count`|Number of overShadowed segments.||Varies.|
 |`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|datasource.|0|
 |`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|tier, datasource.|0|
+|`tier/historical/count`|Number of available historical nodes in each tier.|tier.|Varies.|
+|`tier/replication/factor`|Configured maximum replication factor in each tier.|tier.|Varies.|
+|`tier/required/capacity`|Total capacity in bytes required in each tier.|tier.|Varies.|
+|`tier/total/capacity`|Total capacity in bytes available in each tier.|tier.|Varies.|
 
 If `emitBalancingStats` is set to `true` in the Coordinator [dynamic configuration](../configuration/index.html#dynamic-configuration), then [log entries](../configuration/logging.md) for class `org.apache.druid.server.coordinator.helper.DruidCoordinatorLogger` will have extra information on balancing decisions.
 
@@ -242,7 +246,7 @@ These metrics are only available if the JVMMonitor module is included.
 |`jvm/mem/used`|Used memory.|memKind.|< max memory|
 |`jvm/mem/committed`|Committed memory.|memKind.|close to max memory|
 |`jvm/gc/count`|Garbage collection count.|gcName (cms/g1/parallel/etc.), gcGen (old/young)|Varies.|
-|`jvm/gc/cpu`|Cpu time in Nanoseconds spent on garbage collection.|gcName, gcGen|Sum of `jvm/gc/cpu` should be within 10-30% of sum of `jvm/cpu/total`, depending on the GC algorithm used (reported by [`JvmCpuMonitor`](../configuration/index.html#enabling-metrics)) |
+|`jvm/gc/cpu`|Count of CPU time in Nanoseconds spent on garbage collection. Note: `jvm/gc/cpu` represents the total time over multiple GC cycles; divide by `jvm/gc/count` to get the mean GC time per cycle|gcName, gcGen|Sum of `jvm/gc/cpu` should be within 10-30% of sum of `jvm/cpu/total`, depending on the GC algorithm used (reported by [`JvmCpuMonitor`](../configuration/index.html#enabling-metrics)) |
 
 ### EventReceiverFirehose
 

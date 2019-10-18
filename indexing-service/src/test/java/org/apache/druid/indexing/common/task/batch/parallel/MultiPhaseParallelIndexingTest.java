@@ -154,64 +154,6 @@ public class MultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervi
     assertHashedPartition(publishedSegments);
   }
 
-  @Test
-  public void testMissingIntervals()
-  {
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage(
-        "forceGuaranteedRollup is set but intervals is missing in granularitySpec"
-    );
-    newTask(
-        null,
-        new ParallelIndexIOConfig(
-            new LocalFirehoseFactory(inputDir, "test_*", null),
-            false
-        ),
-        new HashedPartitionsSpec(null, 2, null)
-    );
-  }
-
-  @Test
-  public void testMissingNumShards()
-  {
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage(
-        "forceGuaranteedRollup is set but numShards is missing in partitionsSpec"
-    );
-    newTask(
-        Intervals.of("2017/2018"),
-        Granularities.DAY,
-        new ParallelIndexIOConfig(new LocalFirehoseFactory(inputDir, "test_*", null), false),
-        new ParallelIndexTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            new HashedPartitionsSpec(null, null, null),
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            2,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        )
-    );
-  }
-
   private Set<DataSegment> runTestTask(Interval interval, HashedPartitionsSpec partitionsSpec) throws Exception
   {
     final ParallelIndexSupervisorTask task = newTask(
@@ -244,6 +186,7 @@ public class MultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervi
         Granularities.DAY,
         ioConfig,
         new ParallelIndexTuningConfig(
+            null,
             null,
             null,
             null,

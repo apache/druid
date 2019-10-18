@@ -22,6 +22,7 @@ package org.apache.druid.security.basic.authentication;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
@@ -32,6 +33,8 @@ import org.apache.druid.server.security.Escalator;
 @JsonTypeName("basic")
 public class BasicHTTPEscalator implements Escalator
 {
+  private static final Logger LOG = new Logger(BasicHTTPEscalator.class);
+
   private final String internalClientUsername;
   private final PasswordProvider internalClientPassword;
   private final String authorizerName;
@@ -51,6 +54,7 @@ public class BasicHTTPEscalator implements Escalator
   @Override
   public HttpClient createEscalatedClient(HttpClient baseClient)
   {
+    LOG.debug("----------- Creating escalated client");
     return new CredentialedHttpClient(
         new BasicCredentials(internalClientUsername, internalClientPassword.getPassword()),
         baseClient
@@ -60,6 +64,7 @@ public class BasicHTTPEscalator implements Escalator
   @Override
   public AuthenticationResult createEscalatedAuthenticationResult()
   {
+    LOG.debug("----------- Creating escalated authentication result. username: %s", this.internalClientUsername);
     // if you found your self asking why the authenticatedBy field is set to null please read this:
     // https://github.com/apache/incubator-druid/pull/5706#discussion_r185940889
     return new AuthenticationResult(internalClientUsername, authorizerName, null, null);

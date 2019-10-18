@@ -1269,20 +1269,33 @@ notice: |
     - Apache License 2.0
     - BSD License
 
-
 ---
 
 name: Apache HttpClient
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.5.3
+version: 4.5.10
 libraries:
   - org.apache.httpcomponents: httpclient
 notices:
   - httpclient: |
       Apache HttpClient
       Copyright 1999-2017 The Apache Software Foundation
+
+---
+
+name: Apache HttpClient
+license_category: binary
+module: hadoop-client
+license_name: Apache License version 2.0
+version: 4.5.2
+libraries:
+  - org.apache.httpcomponents: httpclient
+notices:
+  - httpclient: |
+      Apache HttpClient
+      Copyright 1999-2016 The Apache Software Foundation
 
 ---
 
@@ -2766,20 +2779,6 @@ notices:
   - htrace-core4: |
       htrace-core4
       Copyright 2015 The Apache Software Foundation
-
----
-
-name: Apache HttpClient
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 4.5.2
-libraries:
-  - org.apache.httpcomponents: httpclient
-notices:
-  - httpclient: |
-      Apache HttpClient
-      Copyright 1999-2016 The Apache Software Foundation
 
 ---
 

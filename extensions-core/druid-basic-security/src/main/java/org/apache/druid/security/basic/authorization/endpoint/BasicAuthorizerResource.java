@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.security.basic.BasicSecurityResourceFilter;
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.server.security.ResourceAction;
 
 import javax.servlet.http.HttpServletRequest;
@@ -44,7 +45,7 @@ import java.util.List;
 @LazySingleton
 public class BasicAuthorizerResource
 {
-  private BasicAuthorizerResourceHandler resourceHandler;
+  private final BasicAuthorizerResourceHandler resourceHandler;
 
   @Inject
   public BasicAuthorizerResource(
@@ -109,6 +110,24 @@ public class BasicAuthorizerResource
   }
 
   /**
+   * @param req HTTP request
+   *
+   * @return List of all groupMappings
+   */
+  @GET
+  @Path("/db/{authorizerName}/groupMappings")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response getAllGroupMappings(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName
+  )
+  {
+    return resourceHandler.getAllGroupMappings(authorizerName);
+  }
+
+  /**
    * @param req      HTTP request
    * @param userName Name of user to retrieve information about
    *
@@ -128,6 +147,27 @@ public class BasicAuthorizerResource
   )
   {
     return resourceHandler.getUser(authorizerName, userName, full != null, simplifyPermissions != null);
+  }
+
+  /**
+   * @param req               HTTP request
+   * @param groupMappingName  Name of groupMapping to retrieve information about
+   *
+   * @return Name, groupPattern, roles, and permissions of the groupMapping with groupMappingName, 400 error response if groupMapping doesn't exist
+   */
+  @GET
+  @Path("/db/{authorizerName}/groupMappings/{groupMappingName}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response getGroupMapping(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
+      @PathParam("groupMappingName") final String groupMappingName,
+      @QueryParam("full") String full
+  )
+  {
+    return resourceHandler.getGroupMapping(authorizerName, groupMappingName, full != null);
   }
 
   /**
@@ -175,6 +215,54 @@ public class BasicAuthorizerResource
   }
 
   /**
+   * Create a new groupMapping with name groupMappingName
+   *
+   * @param req               HTTP request
+   * @param groupMappingName  Name to assign the new groupMapping
+   *
+   * @return OK response, or 400 error response if groupMapping already exists
+   */
+  @POST
+  @Path("/db/{authorizerName}/groupMappings/{groupMappingName}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response createGroupMapping(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
+      @PathParam("groupMappingName") String groupMappingName,
+      BasicAuthorizerGroupMapping groupMapping
+  )
+  {
+    return resourceHandler.createGroupMapping(
+        authorizerName,
+        new BasicAuthorizerGroupMapping(groupMappingName, groupMapping.getGroupPattern(), groupMapping.getRoles())
+    );
+  }
+
+  /**
+   * Delete a groupMapping with name groupMappingName
+   *
+   * @param req               HTTP request
+   * @param groupMappingName  Name of groupMapping to delete
+   *
+   * @return OK response, or 400 error response if groupMapping doesn't exist
+   */
+  @DELETE
+  @Path("/db/{authorizerName}/groupMappings/{groupMappingName}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response deleteGroupMapping(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
+      @PathParam("groupMappingName") String groupMappingName
+  )
+  {
+    return resourceHandler.deleteGroupMapping(authorizerName, groupMappingName);
+  }
+
+  /**
    * @param req HTTP request
    *
    * @return List of all roles
@@ -198,7 +286,7 @@ public class BasicAuthorizerResource
    * @param req      HTTP request
    * @param roleName Name of role
    *
-   * @return Role name, users with role, and permissions of role. 400 error if role doesn't exist.
+   * @return Role name, users with role, groupMappings with role, and permissions of role. 400 error if role doesn't exist.
    */
   @GET
   @Path("/db/{authorizerName}/roles/{roleName}")
@@ -309,6 +397,54 @@ public class BasicAuthorizerResource
   }
 
   /**
+   * Assign a role to a groupMapping.
+   *
+   * @param req       HTTP request
+   * @param groupMappingName Name of groupMapping
+   * @param roleName  Name of role
+   *
+   * @return OK response. 400 error if groupMapping/role don't exist, or if groupMapping already has the role
+   */
+  @POST
+  @Path("/db/{authorizerName}/groupMappings/{groupMappingName}/roles/{roleName}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response assignRoleToGroupMapping(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
+      @PathParam("groupMappingName") String groupMappingName,
+      @PathParam("roleName") String roleName
+  )
+  {
+    return resourceHandler.assignRoleToGroupMapping(authorizerName, groupMappingName, roleName);
+  }
+
+  /**
+   * Remove a role from a groupMapping.
+   *
+   * @param req       HTTP request
+   * @param groupMappingName Name of groupMapping
+   * @param roleName  Name of role
+   *
+   * @return OK response. 400 error if groupMapping/role don't exist, or if groupMapping does not have the role.
+   */
+  @DELETE
+  @Path("/db/{authorizerName}/groupMappings/{groupMappingName}/roles/{roleName}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response unassignRoleFromGroupMapping(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
+      @PathParam("groupMappingName") String groupMappingName,
+      @PathParam("roleName") String roleName
+  )
+  {
+    return resourceHandler.unassignRoleFromGroupMapping(authorizerName, groupMappingName, roleName);
+  }
+
+  /**
    * Set the permissions of a role. This replaces the previous permissions of the role.
    *
    * @param req         HTTP request
@@ -333,6 +469,28 @@ public class BasicAuthorizerResource
   }
 
   /**
+   * Get the permissions of a role.
+   *
+   * @param req         HTTP request
+   * @param roleName    Name of role
+   *
+   * @return OK response. 400 error if role doesn't exist.
+   */
+  @GET
+  @Path("/db/{authorizerName}/roles/{roleName}/permissions")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response getRolePermissions(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
+      @PathParam("roleName") String roleName
+  )
+  {
+    return resourceHandler.getRolePermissions(authorizerName, roleName);
+  }
+
+  /**
    * @param req HTTP request
    *
    * @return serialized user map
@@ -347,24 +505,79 @@ public class BasicAuthorizerResource
       @PathParam("authorizerName") final String authorizerName
   )
   {
-    return resourceHandler.getCachedMaps(authorizerName);
+    return resourceHandler.getCachedUserMaps(authorizerName);
+  }
+
+  /**
+   * @param req HTTP request
+   *
+   * @return serialized groupMapping map
+   */
+  @GET
+  @Path("/db/{authorizerName}/cachedSerializedGroupMappingMap")
+  @Produces(SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response getCachedSerializedGroupMap(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName
+  )
+  {
+    return resourceHandler.getCachedGroupMappingMaps(authorizerName);
   }
 
 
   /**
-   * Listen for update notifications for the auth storage
+   * Listen for update notifications for the user auth storage
+   * @deprecated  path /listen/{authorizerName} is to replaced by /listen/users/{authorizerName}
+   *              use {@link #authorizerUserUpdateListener(HttpServletRequest, String, byte[])} instead
    */
   @POST
   @Path("/listen/{authorizerName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(BasicSecurityResourceFilter.class)
+  @Deprecated
   public Response authorizerUpdateListener(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
       byte[] serializedUserAndRoleMap
   )
   {
-    return resourceHandler.authorizerUpdateListener(authorizerName, serializedUserAndRoleMap);
+    return resourceHandler.authorizerUserUpdateListener(authorizerName, serializedUserAndRoleMap);
+  }
+
+  /**
+   * Listen for update notifications for the user auth storage
+   */
+  @POST
+  @Path("/listen/users/{authorizerName}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response authorizerUserUpdateListener(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
+      byte[] serializedUserAndRoleMap
+  )
+  {
+    return resourceHandler.authorizerUserUpdateListener(authorizerName, serializedUserAndRoleMap);
+  }
+
+  /**
+   * Listen for update notifications for the groupMapping auth storage
+   */
+  @POST
+  @Path("/listen/groupMappings/{authorizerName}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response authorizerGroupMappingUpdateListener(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
+      byte[] serializedGroupMappingAndRoleMap
+  )
+  {
+    return resourceHandler.authorizerGroupMappingUpdateListener(authorizerName, serializedGroupMappingAndRoleMap);
   }
 }
