@@ -67,13 +67,13 @@ three data structures:
 
 
 Why these three data structures? The dictionary simply maps string
-values to integer ids so that the values in 2 and 3 can be
-represented compactly. The bitmaps in 3 -- also known as *inverted
+values to integer ids so that the values in \(2\) and \(3\) can be
+represented compactly. The bitmaps in \(3\) -- also known as *inverted
 indexes* allow for quick filtering operations (specifically, bitmaps
 are convenient for quickly applying AND and OR operators). Finally,
-the list of values in 2 is needed for *group by* and *TopN*
+the list of values in \(2\) is needed for *group by* and *TopN*
 queries. In other words, queries that solely aggregate metrics based
-on filters do not need to touch the list of dimension values stored in 2.
+on filters do not need to touch the list of dimension values stored in \(2\).
 
 To get a concrete sense of these data structures, consider the ‘page’
 column from the example data above.  The three data structures that

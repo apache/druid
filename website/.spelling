@@ -671,6 +671,7 @@ maxRecordsPerPollrecordsPerFetchfetchDelayMillisreplicasfetchDelayMillisrecordsP
 numKinesisShards
 numProcessors
 q.size
+repartitionTransitionDuration
 replicastaskCounttaskCount
 resetuseEarliestSequenceNumberPOST
 resumePOST
@@ -683,6 +684,15 @@ taskCounttaskDurationtaskDurationPOST
 taskDurationstartDelayperioduseEarliestSequenceNumbercompletionTimeouttaskDurationlateMessageRejectionPeriodPT1HearlyMessageRejectionPeriodPT1HPT1HrecordsPerFetchfetchDelayMillisawsAssumedRoleArnawsExternalIddeaggregateGET
 terminatePOST
 terminatedruid.worker.capacitytaskDurationcompletionTimeoutreplicastaskCountreplicas
+PT2M
+kinesis.us
+amazonaws.com
+PT6H
+GetRecords
+KCL
+signalled
+ProvisionedThroughputExceededException
+Deaggregation
  - ../docs/development/extensions-core/lookups-cached-global.md
 baz
 customJson
@@ -1620,6 +1630,16 @@ v0.12.0
 versionReplacementString
 workerId
 yyyy-MM-dd
+taskType
+index_kafka
+c1
+c2
+ds1
+equalDistributionWithCategorySpec
+fillCapacityWithCategorySpec
+WorkerCategorySpec
+workerCategorySpec
+CategoryConfig
  - ../docs/design/index.md
 logsearch
  - ../docs/ingestion/index.md

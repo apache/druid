@@ -38,7 +38,8 @@ public final class BatchAppenderators
       FireDepartmentMetrics metrics,
       TaskToolbox toolbox,
       DataSchema dataSchema,
-      AppenderatorConfig appenderatorConfig
+      AppenderatorConfig appenderatorConfig,
+      boolean storeCompactionState
   )
   {
     return newAppenderator(
@@ -48,7 +49,8 @@ public final class BatchAppenderators
         toolbox,
         dataSchema,
         appenderatorConfig,
-        toolbox.getSegmentPusher()
+        toolbox.getSegmentPusher(),
+        storeCompactionState
     );
   }
 
@@ -59,13 +61,15 @@ public final class BatchAppenderators
       TaskToolbox toolbox,
       DataSchema dataSchema,
       AppenderatorConfig appenderatorConfig,
-      DataSegmentPusher segmentPusher
+      DataSegmentPusher segmentPusher,
+      boolean storeCompactionState
   )
   {
     return appenderatorsManager.createOfflineAppenderatorForTask(
         taskId,
         dataSchema,
         appenderatorConfig.withBasePersistDirectory(toolbox.getPersistDir()),
+        storeCompactionState,
         metrics,
         segmentPusher,
         toolbox.getObjectMapper(),
