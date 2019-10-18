@@ -32,12 +32,14 @@ import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.utils.CompressionUtils;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 
 /**
+ * Firehose that reads data from files on local disk
  */
 public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
 {
@@ -45,6 +47,7 @@ public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
 
   private final File baseDir;
   private final String filter;
+  @Nullable
   private final StringInputRowParser parser;
 
   @JsonCreator
@@ -52,7 +55,7 @@ public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
       @JsonProperty("baseDir") File baseDir,
       @JsonProperty("filter") String filter,
       // Backwards compatible
-      @JsonProperty("parser") StringInputRowParser parser
+      @Nullable @JsonProperty("parser") StringInputRowParser parser
   )
   {
     this.baseDir = baseDir;
@@ -73,6 +76,7 @@ public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
   }
 
   @JsonProperty
+  @Nullable
   public StringInputRowParser getParser()
   {
     return parser;

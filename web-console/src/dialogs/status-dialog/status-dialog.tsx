@@ -27,13 +27,19 @@ import { QueryManager } from '../../utils';
 
 import './status-dialog.scss';
 
+interface StatusResponse {
+  version: string;
+  modules: any[];
+}
+
 interface StatusDialogProps {
   onClose: () => void;
 }
 
 interface StatusDialogState {
-  response: any;
+  response?: StatusResponse;
   loading: boolean;
+  error?: string;
 }
 
 export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusDialogState> {
@@ -42,22 +48,23 @@ export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusD
   }
 
   private showStatusQueryManager: QueryManager<null, any>;
+
   constructor(props: StatusDialogProps, context: any) {
     super(props, context);
     this.state = {
-      response: [],
       loading: false,
     };
+
     this.showStatusQueryManager = new QueryManager({
       processQuery: async () => {
-        const endpoint = UrlBaser.base(`/status`);
-        const resp = await axios.get(endpoint);
+        const resp = await axios.get(`/status`);
         return resp.data;
       },
-      onStateChange: ({ result, loading }) => {
+      onStateChange: ({ result, loading, error }) => {
         this.setState({
           loading,
           response: result,
+          error,
         });
       },
     });
@@ -67,13 +74,16 @@ export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusD
     this.showStatusQueryManager.runQuery(null);
   }
 
-  render(): JSX.Element {
-    const { onClose } = this.props;
-    const { response, loading } = this.state;
-    if (loading) return <Loader />;
-    return (
-      <Dialog className={'status-dialog'} onClose={onClose} isOpen title="Status">
-        <div className={'status-dialog-main-area'}>
+  renderContent(): JSX.Element | undefined {
+    const { response, loading, error } = this.state;
+
+    if (loading) return <Loader loading />;
+
+    if (error) return <span>{`Error while loading status: ${error}`}</span>;
+
+    if (response) {
+      return (
+        <>
           <FormGroup label="Version" labelFor="version" inline>
             <InputGroup id="version" defaultValue={response.version} readOnly />
           </FormGroup>
@@ -103,12 +113,23 @@ export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusD
             filterable
             defaultFilterMethod={StatusDialog.anywhereMatcher}
           />
-        </div>
+        </>
+      );
+    }
+
+    return;
+  }
+
+  render(): JSX.Element {
+    const { onClose } = this.props;
+
+    return (
+      <Dialog className={'status-dialog'} onClose={onClose} isOpen title="Status">
+        <div className={'status-dialog-main-area'}>{this.renderContent()}</div>
         <div className={Classes.DIALOG_FOOTER}>
           <div className="viewRawButton">
             <Button
               text="View raw"
-              disabled={!response}
               minimal
               onClick={() => window.open(UrlBaser.base(`/status`), '_blank')}
             />

@@ -24,6 +24,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -36,13 +40,13 @@ import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
-/**
- */
 public class HadoopDruidIndexerConfigTest
 {
   private static final ObjectMapper JSON_MAPPER;
@@ -55,56 +59,18 @@ public class HadoopDruidIndexerConfigTest
   @Test
   public void testHashedBucketSelection()
   {
-    List<HadoopyShardSpec> specs = new ArrayList<>();
+    List<HadoopyShardSpec> shardSpecs = new ArrayList<>();
     final int partitionCount = 10;
     for (int i = 0; i < partitionCount; i++) {
-      specs.add(new HadoopyShardSpec(
+      shardSpecs.add(new HadoopyShardSpec(
           new HashBasedNumberedShardSpec(i, partitionCount, null, new DefaultObjectMapper()),
           i
       ));
     }
 
-    HadoopIngestionSpec spec = new HadoopIngestionSpec(
-        new DataSchema(
-            "foo",
-            null,
-            new AggregatorFactory[0],
-            new UniformGranularitySpec(
-                Granularities.MINUTE,
-                Granularities.MINUTE,
-                ImmutableList.of(Intervals.of("2010-01-01/P1D"))
-            ),
-            null,
-            JSON_MAPPER
-        ),
-        new HadoopIOConfig(ImmutableMap.of("paths", "bar", "type", "static"), null, null),
-        new HadoopTuningConfig(
-            null,
-            null,
-            null,
-            ImmutableMap.of(DateTimes.of("2010-01-01T01:00:00").getMillis(), specs),
-            null,
-            null,
-            null,
-            null,
-            false,
-            false,
-            false,
-            false,
-            null,
-            false,
-            false,
-            null,
-            null,
-            null,
-            false,
-            false,
-            null,
-            null,
-            null,
-            null
-        )
-    );
+    HadoopIngestionSpec spec = new HadoopIngestionSpecBuilder()
+        .shardSpecs(ImmutableMap.of(DateTimes.of("2010-01-01T01:00:00").getMillis(), shardSpecs))
+        .build();
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(spec);
     final List<String> dims = Arrays.asList("diM1", "dIM2");
     final ImmutableMap<String, Object> values = ImmutableMap.of(
@@ -133,57 +99,21 @@ public class HadoopDruidIndexerConfigTest
   @Test
   public void testNoneShardSpecBucketSelection()
   {
-    HadoopIngestionSpec spec = new HadoopIngestionSpec(
-        new DataSchema(
-            "foo",
-            null,
-            new AggregatorFactory[0],
-            new UniformGranularitySpec(
-                Granularities.MINUTE,
-                Granularities.MINUTE,
-                ImmutableList.of(Intervals.of("2010-01-01/P1D"))
-            ),
-            null,
-            JSON_MAPPER
-        ),
-        new HadoopIOConfig(ImmutableMap.of("paths", "bar", "type", "static"), null, null),
-        new HadoopTuningConfig(
-            null,
-            null,
-            null,
-            ImmutableMap.of(DateTimes.of("2010-01-01T01:00:00").getMillis(),
-                                                              Collections.singletonList(new HadoopyShardSpec(
-                                                                  NoneShardSpec.instance(),
-                                                                  1
-                                                              )),
-                                                              DateTimes.of("2010-01-01T02:00:00").getMillis(),
-                                                              Collections.singletonList(new HadoopyShardSpec(
-                                                                  NoneShardSpec.instance(),
-                                                                  2
-                                                              ))
-            ),
-            null,
-            null,
-            null,
-            null,
-            false,
-            false,
-            false,
-            false,
-            null,
-            false,
-            false,
-            null,
-            null,
-            null,
-            false,
-            false,
-            null,
-            null,
-            null,
-            null
-        )
+    Map<Long, List<HadoopyShardSpec>> shardSpecs = ImmutableMap.of(
+        DateTimes.of("2010-01-01T01:00:00").getMillis(),
+        Collections.singletonList(new HadoopyShardSpec(
+            NoneShardSpec.instance(),
+            1
+        )),
+        DateTimes.of("2010-01-01T02:00:00").getMillis(),
+        Collections.singletonList(new HadoopyShardSpec(
+            NoneShardSpec.instance(),
+            2
+        ))
     );
+    HadoopIngestionSpec spec = new HadoopIngestionSpecBuilder()
+        .shardSpecs(shardSpecs)
+        .build();
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(spec);
     final List<String> dims = Arrays.asList("diM1", "dIM2");
     final ImmutableMap<String, Object> values = ImmutableMap.of(
@@ -197,10 +127,132 @@ public class HadoopDruidIndexerConfigTest
         "4"
     );
     final long ts1 = DateTimes.of("2010-01-01T01:00:01").getMillis();
-    Assert.assertEquals(config.getBucket(new MapBasedInputRow(ts1, dims, values)).get().getShardNum(), 1);
+    Assert.assertEquals(1, config.getBucket(new MapBasedInputRow(ts1, dims, values)).get().getShardNum());
 
     final long ts2 = DateTimes.of("2010-01-01T02:00:01").getMillis();
-    Assert.assertEquals(config.getBucket(new MapBasedInputRow(ts2, dims, values)).get().getShardNum(), 2);
+    Assert.assertEquals(2, config.getBucket(new MapBasedInputRow(ts2, dims, values)).get().getShardNum());
+  }
 
+  @Test
+  public void testGetTargetPartitionSizeWithHashedPartitions()
+  {
+    HadoopIngestionSpec spec = new HadoopIngestionSpecBuilder()
+        .partitionsSpec(HashedPartitionsSpec.defaultSpec())
+        .build();
+    HadoopDruidIndexerConfig config = new HadoopDruidIndexerConfig(spec);
+    int targetPartitionSize = config.getTargetPartitionSize();
+    Assert.assertEquals(PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT, targetPartitionSize);
+  }
+
+  @Test
+  public void testGetTargetPartitionSizeWithSingleDimensionPartitionsTargetRowsPerSegment()
+  {
+    int targetRowsPerSegment = 123;
+    SingleDimensionPartitionsSpec partitionsSpec = new SingleDimensionPartitionsSpec(
+        targetRowsPerSegment,
+        null,
+        null,
+        false
+
+    );
+    HadoopIngestionSpec spec = new HadoopIngestionSpecBuilder()
+        .partitionsSpec(partitionsSpec)
+        .build();
+    HadoopDruidIndexerConfig config = new HadoopDruidIndexerConfig(spec);
+    int targetPartitionSize = config.getTargetPartitionSize();
+    Assert.assertEquals(targetRowsPerSegment, targetPartitionSize);
+  }
+
+  @Test
+  public void testGetTargetPartitionSizeWithSingleDimensionPartitionsMaxRowsPerSegment()
+  {
+    int maxRowsPerSegment = 456;
+    SingleDimensionPartitionsSpec partitionsSpec = new SingleDimensionPartitionsSpec(
+        null,
+        maxRowsPerSegment,
+        null,
+        false
+    );
+    HadoopIngestionSpec spec = new HadoopIngestionSpecBuilder()
+        .partitionsSpec(partitionsSpec)
+        .build();
+    HadoopDruidIndexerConfig config = new HadoopDruidIndexerConfig(spec);
+    int targetPartitionSize = config.getTargetPartitionSize();
+    Assert.assertEquals(maxRowsPerSegment, targetPartitionSize);
+  }
+
+  private static class HadoopIngestionSpecBuilder
+  {
+    private static final DataSchema DATA_SCHEMA = new DataSchema(
+        "foo",
+        null,
+        new AggregatorFactory[0],
+        new UniformGranularitySpec(
+            Granularities.MINUTE,
+            Granularities.MINUTE,
+            ImmutableList.of(Intervals.of("2010-01-01/P1D"))
+        ),
+        null,
+        HadoopDruidIndexerConfigTest.JSON_MAPPER
+    );
+
+    private static final HadoopIOConfig HADOOP_IO_CONFIG = new HadoopIOConfig(
+        ImmutableMap.of("paths", "bar", "type", "static"),
+        null,
+        null
+    );
+
+    @Nullable
+    private DimensionBasedPartitionsSpec partitionsSpec = null;
+
+    private Map<Long, List<HadoopyShardSpec>> shardSpecs = Collections.emptyMap();
+
+    HadoopIngestionSpecBuilder partitionsSpec(DimensionBasedPartitionsSpec partitionsSpec)
+    {
+      this.partitionsSpec = partitionsSpec;
+      return this;
+    }
+
+    HadoopIngestionSpecBuilder shardSpecs(Map<Long, List<HadoopyShardSpec>> shardSpecs)
+    {
+      this.shardSpecs = shardSpecs;
+      return this;
+    }
+
+    HadoopIngestionSpec build()
+    {
+      HadoopTuningConfig hadoopTuningConfig = new HadoopTuningConfig(
+          null,
+          null,
+          partitionsSpec,
+          shardSpecs,
+          null,
+          null,
+          null,
+          null,
+          false,
+          false,
+          false,
+          false,
+          null,
+          false,
+          false,
+          null,
+          null,
+          null,
+          false,
+          false,
+          null,
+          null,
+          null,
+          null
+      );
+
+      return new HadoopIngestionSpec(
+          DATA_SCHEMA,
+          HADOOP_IO_CONFIG,
+          hadoopTuningConfig
+      );
+    }
   }
 }

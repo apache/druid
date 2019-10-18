@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordinator.helper.CompactionSegmentIterator;
 import org.apache.druid.server.coordinator.helper.CompactionSegmentSearchPolicy;
@@ -60,7 +61,7 @@ public class NewestSegmentFirstPolicyBenchmark
 {
   private static final String DATA_SOURCE_PREFIX = "dataSource_";
 
-  private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy();
+  private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy(new DefaultObjectMapper());
 
   @Param("100")
   private int numDataSources;
@@ -72,7 +73,7 @@ public class NewestSegmentFirstPolicyBenchmark
   private int numPartitionsPerDayInterval;
 
   @Param("800000000")
-  private long targetCompactionSizeBytes;
+  private long inputSegmentSizeBytes;
 
   @Param("1000000")
   private long segmentSizeBytes;
@@ -94,9 +95,7 @@ public class NewestSegmentFirstPolicyBenchmark
           new DataSourceCompactionConfig(
               dataSource,
               0,
-              targetCompactionSizeBytes,
-              targetCompactionSizeBytes,
-              null,
+              inputSegmentSizeBytes,
               null,
               null,
               null,

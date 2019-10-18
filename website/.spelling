@@ -23,6 +23,8 @@
 ACL
 APIs
 AWS
+AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
+AWS_CONTAINER_CREDENTIALS_FULL_URI
 Actian
 Authorizer
 Avatica
@@ -54,8 +56,12 @@ Double.NEGATIVE_INFINITY
 Double.NEGATIVE_INFINITY.
 Double.POSITIVE_INFINITY
 Double.POSITIVE_INFINITY.
+Dropwizard
+dropwizard
 DruidSQL
 EC2
+EC2ContainerCredentialsProviderWrapper
+ECS
 EMR
 EMRFS
 ETL
@@ -85,11 +91,13 @@ IndexSpec
 IndexTask
 InfluxDB
 Integer.MAX_VALUE
+JBOD
 JDBC
 JDK
 JDK7
 JDK8
 JKS
+JMX
 JRE
 JS
 JSON
@@ -244,6 +252,7 @@ lookback
 lookups
 mapreduce
 masse
+max_map_count
 memcached
 mergeable
 metadata
@@ -333,6 +342,7 @@ timestamp
 timestamps
 tradeoffs
 tsv
+ulimit
 unannounce
 unannouncements
 unary
@@ -566,6 +576,18 @@ authorizerName
 druid_system
 pollingPeriod
 roleName
+LDAP
+ldap
+MyBasicMetadataAuthenticator
+MyBasicLDAPAuthenticator
+MyBasicMetadataAuthorizer
+MyBasicLDAPAuthorizer
+credentialsValidator
+sAMAccountName
+objectClass
+initialAdminRole
+adminGroupMapping
+groupMappingName
  - ../docs/development/extensions-core/druid-kerberos.md
 8Kb
 HttpComponents
@@ -649,6 +671,7 @@ maxRecordsPerPollrecordsPerFetchfetchDelayMillisreplicasfetchDelayMillisrecordsP
 numKinesisShards
 numProcessors
 q.size
+repartitionTransitionDuration
 replicastaskCounttaskCount
 resetuseEarliestSequenceNumberPOST
 resumePOST
@@ -661,6 +684,15 @@ taskCounttaskDurationtaskDurationPOST
 taskDurationstartDelayperioduseEarliestSequenceNumbercompletionTimeouttaskDurationlateMessageRejectionPeriodPT1HearlyMessageRejectionPeriodPT1HPT1HrecordsPerFetchfetchDelayMillisawsAssumedRoleArnawsExternalIddeaggregateGET
 terminatePOST
 terminatedruid.worker.capacitytaskDurationcompletionTimeoutreplicastaskCountreplicas
+PT2M
+kinesis.us
+amazonaws.com
+PT6H
+GetRecords
+KCL
+signalled
+ProvisionedThroughputExceededException
+Deaggregation
  - ../docs/development/extensions-core/lookups-cached-global.md
 baz
 customJson
@@ -760,6 +792,7 @@ statsd-emitter
 coords
 dimName
 maxCoords
+Mb
 minCoords
  - ../docs/development/javascript.md
 Metaspace
@@ -804,6 +837,7 @@ listDelimiter
 timestampSpec
  - ../docs/ingestion/data-management.md
 1GB
+IOConfig
 compactionTask
 compactionTasks
 ingestSegmentFirehose
@@ -1598,6 +1632,16 @@ v0.12.0
 versionReplacementString
 workerId
 yyyy-MM-dd
+taskType
+index_kafka
+c1
+c2
+ds1
+equalDistributionWithCategorySpec
+fillCapacityWithCategorySpec
+WorkerCategorySpec
+workerCategorySpec
+CategoryConfig
  - ../docs/design/index.md
 logsearch
  - ../docs/ingestion/index.md

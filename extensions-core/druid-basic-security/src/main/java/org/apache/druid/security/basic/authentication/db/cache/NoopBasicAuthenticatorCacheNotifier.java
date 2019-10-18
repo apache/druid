@@ -26,8 +26,14 @@ package org.apache.druid.security.basic.authentication.db.cache;
  */
 public class NoopBasicAuthenticatorCacheNotifier implements BasicAuthenticatorCacheNotifier
 {
+  /**
+   * Send the user map state contained in updatedUserMap to all non-coordinator Druid services
+   *
+   * @param updatedAuthenticatorPrefix Name of authenticator being updated
+   * @param updatedUserMap             User map state
+   */
   @Override
-  public void addUpdate(String updatedAuthenticatorPrefix, byte[] updatedUserMap)
+  public void addUserUpdate(String updatedAuthenticatorPrefix, byte[] updatedUserMap)
   {
     // Do nothing as this is a noop implementation
   }

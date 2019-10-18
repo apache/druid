@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.helper;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
@@ -28,8 +29,6 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorStats;
@@ -54,16 +53,22 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 
   // Should be synced with CompactionTask.TYPE
   private static final String COMPACT_TASK_TYPE = "compact";
+  // Should be synced with Tasks.STORE_COMPACTION_STATE_KEY
+  private static final String STORE_COMPACTION_STATE_KEY = "storeCompactionState";
   private static final Logger LOG = new Logger(DruidCoordinatorSegmentCompactor.class);
 
-  private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy();
+  private final CompactionSegmentSearchPolicy policy;
   private final IndexingServiceClient indexingServiceClient;
 
   private Object2LongMap<String> remainingSegmentSizeBytes;
 
   @Inject
-  public DruidCoordinatorSegmentCompactor(IndexingServiceClient indexingServiceClient)
+  public DruidCoordinatorSegmentCompactor(
+      ObjectMapper objectMapper,
+      IndexingServiceClient indexingServiceClient
+  )
   {
+    this.policy = new NewestSegmentFirstPolicy(objectMapper);
     this.indexingServiceClient = indexingServiceClient;
   }
 
@@ -94,22 +99,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
           }
           if (COMPACT_TASK_TYPE.equals(response.getPayload().getType())) {
             final ClientCompactQuery compactQuery = (ClientCompactQuery) response.getPayload();
-            final Interval interval;
-
-            if (compactQuery.getSegments() != null) {
-              interval = JodaUtils.umbrellaInterval(
-                  compactQuery.getSegments()
-                              .stream()
-                              .map(DataSegment::getInterval)
-                              .sorted(Comparators.intervalsByStartThenEnd())
-                              .collect(Collectors.toList())
-              );
-            } else if (compactQuery.getInterval() != null) {
-              interval = compactQuery.getInterval();
-            } else {
-              throw new ISE("task[%s] has neither 'segments' nor 'interval'", status.getId());
-            }
-
+            final Interval interval = compactQuery.getIoConfig().getInputSpec().getInterval();
             compactTaskIntervals.computeIfAbsent(status.getDataSource(), k -> new ArrayList<>()).add(interval);
           } else {
             throw new ISE("WTH? task[%s] is not a compactTask?", status.getId());
@@ -176,31 +166,37 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 
     for (; iterator.hasNext() && numSubmittedTasks < numAvailableCompactionTaskSlots; numSubmittedTasks++) {
       final List<DataSegment> segmentsToCompact = iterator.next();
-      final String dataSourceName = segmentsToCompact.get(0).getDataSource();
 
-      if (segmentsToCompact.size() > 1) {
+      if (!segmentsToCompact.isEmpty()) {
+        final String dataSourceName = segmentsToCompact.get(0).getDataSource();
         final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
         // make tuningConfig
         final String taskId = indexingServiceClient.compactSegments(
             segmentsToCompact,
-            config.getTargetCompactionSizeBytes(),
             config.getTaskPriority(),
             ClientCompactQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
-            config.getTaskContext()
+            newAutoCompactionContext(config.getTaskContext())
         );
         LOG.info(
             "Submitted a compactTask[%s] for segments %s",
             taskId,
             Iterables.transform(segmentsToCompact, DataSegment::getId)
         );
-      } else if (segmentsToCompact.size() == 1) {
-        throw new ISE("Found one segments[%s] to compact", segmentsToCompact);
       } else {
-        throw new ISE("Failed to find segments for dataSource[%s]", dataSourceName);
+        throw new ISE("segmentsToCompact is empty?");
       }
     }
 
     return makeStats(numSubmittedTasks, iterator);
+  }
+
+  private Map<String, Object> newAutoCompactionContext(@Nullable Map<String, Object> configuredContext)
+  {
+    final Map<String, Object> newContext = configuredContext == null
+                                           ? new HashMap<>()
+                                           : new HashMap<>(configuredContext);
+    newContext.put(STORE_COMPACTION_STATE_KEY, true);
+    return newContext;
   }
 
   private CoordinatorStats makeStats(int numCompactionTasks, CompactionSegmentIterator iterator)
@@ -218,7 +214,6 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
     return stats;
   }
 
-  @Nullable
   public long getRemainingSegmentSizeBytes(String dataSource)
   {
     return remainingSegmentSizeBytes.getLong(dataSource);

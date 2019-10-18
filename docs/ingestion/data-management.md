@@ -99,10 +99,9 @@ Compaction tasks merge all segments of the given interval. The syntax is:
     "type": "compact",
     "id": <task_id>,
     "dataSource": <task_datasource>,
-    "interval": <interval to specify segments to be merged>,
+    "ioConfig": <IO config>,
     "dimensions" <custom dimensionsSpec>,
     "segmentGranularity": <segment granularity after compaction>,
-    "targetCompactionSizeBytes": <target size of compacted segments>
     "tuningConfig" <index task tuningConfig>,
     "context": <task context>
 }
@@ -113,11 +112,10 @@ Compaction tasks merge all segments of the given interval. The syntax is:
 |`type`|Task type. Should be `compact`|Yes|
 |`id`|Task id|No|
 |`dataSource`|DataSource name to be compacted|Yes|
-|`interval`|Interval of segments to be compacted|Yes|
+|`ioConfig`|ioConfig for compaction task. See [Compaction IOConfig](#compaction-ioconfig) for details.|Yes|
 |`dimensionsSpec`|Custom dimensionsSpec. Compaction task will use this dimensionsSpec if exist instead of generating one. See below for more details.|No|
 |`metricsSpec`|Custom metricsSpec. Compaction task will use this metricsSpec if specified rather than generating one.|No|
 |`segmentGranularity`|If this is set, compactionTask will change the segment granularity for the given interval. See `segmentGranularity` of [`granularitySpec`](index.md#granularityspec) for more details. See the below table for the behavior.|No|
-|`targetCompactionSizeBytes`|Target segment size after compaction. Cannot be used with `maxRowsPerSegment`, `maxTotalRows`, and `numShards` in tuningConfig.|No|
 |`tuningConfig`|[Index task tuningConfig](../ingestion/native-batch.md#tuningconfig)|No|
 |`context`|[Task context](../ingestion/tasks.md#context)|No|
 
@@ -128,7 +126,13 @@ An example of compaction task is
 {
   "type" : "compact",
   "dataSource" : "wikipedia",
-  "interval" : "2017-01-01/2018-01-01"
+  "ioConfig" : {
+    "type": "compact",
+    "inputSpec": {
+      "type": "interval",
+      "interval": "2017-01-01/2018-01-01"
+    }
+  }
 }
 ```
 
@@ -157,6 +161,31 @@ your own ordering and types, you can specify a custom `dimensionsSpec` in the co
 See [Roll-up](../ingestion/index.html#rollup) for more details.
 You can check that your segments are rolled up or not by using [Segment Metadata Queries](../querying/segmentmetadataquery.html#analysistypes).
 
+
+### Compaction IOConfig
+
+The compaction IOConfig requires specifying `inputSpec` as seen below.
+
+|Field|Description|Required|
+|-----|-----------|--------|
+|`type`|Task type. Should be `compact`|Yes|
+|`inputSpec`|Input specification|Yes|
+
+There are two supported `inputSpec`s for now.
+
+The interval `inputSpec` is:
+
+|Field|Description|Required|
+|-----|-----------|--------|
+|`type`|Task type. Should be `interval`|Yes|
+|`interval`|Interval to compact|Yes|
+
+The segments `inputSpec` is:
+
+|Field|Description|Required|
+|-----|-----------|--------|
+|`type`|Task type. Should be `segments`|Yes|
+|`segments`|A list of segment IDs|Yes|
 
 
 ## Adding new data

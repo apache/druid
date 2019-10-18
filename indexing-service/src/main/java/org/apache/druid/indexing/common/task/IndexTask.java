@@ -873,7 +873,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         buildSegmentsFireDepartmentMetrics,
         toolbox,
         dataSchema,
-        tuningConfig
+        tuningConfig,
+        getContextValue(Tasks.STORE_COMPACTION_STATE_KEY, Tasks.DEFAULT_STORE_COMPACTION_STATE)
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
@@ -1321,6 +1322,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     @JsonProperty
     @Nullable
+    @Override
     public PartitionsSpec getPartitionsSpec()
     {
       return partitionsSpec;

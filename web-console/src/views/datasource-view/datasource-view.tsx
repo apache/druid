@@ -533,7 +533,7 @@ GROUP BY 1`;
       this.datasourceQueryManager.rerunLastQuery();
     } catch (e) {
       AppToaster.show({
-        message: e,
+        message: getDruidErrorMessage(e),
         intent: Intent.DANGER,
       });
     }
@@ -556,7 +556,7 @@ GROUP BY 1`;
             );
           } catch (e) {
             AppToaster.show({
-              message: e,
+              message: getDruidErrorMessage(e),
               intent: Intent.DANGER,
             });
           }
@@ -874,12 +874,12 @@ GROUP BY 1`;
                 const { compaction } = row.original;
                 let text: string;
                 if (compaction) {
-                  if (compaction.targetCompactionSizeBytes == null) {
-                    text = `Target: Default (${formatBytes(
-                      CompactionDialog.DEFAULT_TARGET_COMPACTION_SIZE_BYTES,
+                  if (compaction.maxRowsPerSegment == null) {
+                    text = `Target: Default (${formatNumber(
+                      CompactionDialog.DEFAULT_MAX_ROWS_PER_SEGMENT,
                     )})`;
                   } else {
-                    text = `Target: ${formatBytes(compaction.targetCompactionSizeBytes)}`;
+                    text = `Target: ${formatNumber(compaction.maxRowsPerSegment)}`;
                   }
                 } else {
                   text = 'None';

@@ -106,6 +106,7 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
+      boolean storeCompactionState,
       FireDepartmentMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
@@ -120,6 +121,7 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       batchAppenderator = Appenderators.createOffline(
           schema,
           config,
+          storeCompactionState,
           metrics,
           dataSegmentPusher,
           objectMapper,

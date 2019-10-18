@@ -9953,6 +9953,85 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
+  public void testGroupByLimitPushDownWithLongDimensionNotInLimitSpec()
+  {
+    // Cannot vectorize due to extraction dimension spec.
+    cannotVectorize();
+
+    if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
+      return;
+    }
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN).setDimensions(
+            new ExtractionDimensionSpec("quality", "qualityLen", ValueType.LONG, StrlenExtractionFn.instance())
+        )
+        .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                Collections.EMPTY_LIST,
+                6
+            )
+        ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
+            "1970-01-01T00:00:00.000Z",
+            "qualityLen",
+            4L,
+            "rows",
+            93L
+        ),
+        makeRow(
+            query,
+            "1970-01-01T00:00:00.000Z",
+            "qualityLen",
+            6L,
+            "rows",
+            186L
+        ),
+        makeRow(
+            query,
+            "1970-01-01T00:00:00.000Z",
+            "qualityLen",
+            7L,
+            "rows",
+            279L
+        ),
+        makeRow(
+            query,
+            "1970-01-01T00:00:00.000Z",
+            "qualityLen",
+            8L,
+            "rows",
+            93L
+        ),
+        makeRow(
+            query,
+            "1970-01-01T00:00:00.000Z",
+            "qualityLen",
+            9L,
+            "rows",
+            279L
+        ),
+        makeRow(
+            query,
+            "1970-01-01T00:00:00.000Z",
+            "qualityLen",
+            10L,
+            "rows",
+            186L
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
+  }
+
+  @Test
   public void testMergeResultsWithLimitPushDown()
   {
     if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
