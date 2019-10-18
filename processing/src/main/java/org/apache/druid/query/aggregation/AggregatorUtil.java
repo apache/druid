@@ -122,6 +122,9 @@ public class AggregatorUtil
   public static final byte BLOOM_FILTER_CACHE_TYPE_ID = 0x34;
   public static final byte BLOOM_FILTER_MERGE_CACHE_TYPE_ID = 0x35;
 
+  // collect set extension
+  public static final byte COLLECT_SET_CACHE_TYPE_ID = 0x36;
+
   // Quantiles sketch in momentsketch extension
   public static final byte MOMENTS_SKETCH_BUILD_CACHE_TYPE_ID = 0x36;
   public static final byte MOMENTS_SKETCH_MERGE_CACHE_TYPE_ID = 0x37;
