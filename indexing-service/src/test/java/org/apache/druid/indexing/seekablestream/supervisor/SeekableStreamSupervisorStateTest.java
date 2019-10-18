@@ -641,6 +641,12 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       }
 
       @Override
+      public Duration getRepartitionTransitionDuration()
+      {
+        return new Period("PT2M").toStandardDuration();
+      }
+
+      @Override
       public SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig()
       {
         return new SeekableStreamIndexTaskTuningConfig(
@@ -909,6 +915,12 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     @Override
     protected boolean isEndOfShard(String seqNum)
+    {
+      return false;
+    }
+
+    @Override
+    protected boolean isShardExpirationMarker(String seqNum)
     {
       return false;
     }

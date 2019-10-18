@@ -661,7 +661,7 @@ public class DeterminePartitionsJob implements Jobby
         }
 
         // See if we need to cut a new partition ending immediately before this dimension value
-        if (currentDimPartition.rows > 0 && currentDimPartition.rows + dvc.numRows >= config.getTargetPartitionSize()) {
+        if (currentDimPartition.rows > 0 && currentDimPartition.rows + dvc.numRows > config.getTargetPartitionSize()) {
           final ShardSpec shardSpec = new SingleDimensionShardSpec(
               currentDimPartitions.dim,
               currentDimPartitionStart,

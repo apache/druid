@@ -36,6 +36,7 @@ import org.apache.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -577,7 +578,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         int capacity
     )
     {
-      super(new Worker(scheme, host, ip, capacity, version), null, new DefaultObjectMapper());
+      super(new Worker(scheme, host, ip, capacity, version, WorkerConfig.DEFAULT_CATEGORY), null, new DefaultObjectMapper());
 
       this.testTask = testTask;
     }

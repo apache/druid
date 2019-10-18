@@ -22,7 +22,6 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 
@@ -34,8 +33,6 @@ public class ClientCompactQuery implements ClientQuery
 {
   private final String dataSource;
   private final ClientCompactionIOConfig ioConfig;
-  @Nullable
-  private final Long targetCompactionSizeBytes;
   private final ClientCompactQueryTuningConfig tuningConfig;
   private final Map<String, Object> context;
 
@@ -43,14 +40,12 @@ public class ClientCompactQuery implements ClientQuery
   public ClientCompactQuery(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("ioConfig") ClientCompactionIOConfig ioConfig,
-      @JsonProperty("targetCompactionSizeBytes") @Nullable Long targetCompactionSizeBytes,
       @JsonProperty("tuningConfig") ClientCompactQueryTuningConfig tuningConfig,
       @JsonProperty("context") Map<String, Object> context
   )
   {
     this.dataSource = dataSource;
     this.ioConfig = ioConfig;
-    this.targetCompactionSizeBytes = targetCompactionSizeBytes;
     this.tuningConfig = tuningConfig;
     this.context = context;
   }
@@ -73,13 +68,6 @@ public class ClientCompactQuery implements ClientQuery
   public ClientCompactionIOConfig getIoConfig()
   {
     return ioConfig;
-  }
-
-  @JsonProperty
-  @Nullable
-  public Long getTargetCompactionSizeBytes()
-  {
-    return targetCompactionSizeBytes;
   }
 
   @JsonProperty
@@ -106,7 +94,6 @@ public class ClientCompactQuery implements ClientQuery
     ClientCompactQuery that = (ClientCompactQuery) o;
     return Objects.equals(dataSource, that.dataSource) &&
            Objects.equals(ioConfig, that.ioConfig) &&
-           Objects.equals(targetCompactionSizeBytes, that.targetCompactionSizeBytes) &&
            Objects.equals(tuningConfig, that.tuningConfig) &&
            Objects.equals(context, that.context);
   }
@@ -114,7 +101,7 @@ public class ClientCompactQuery implements ClientQuery
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, ioConfig, targetCompactionSizeBytes, tuningConfig, context);
+    return Objects.hash(dataSource, ioConfig, tuningConfig, context);
   }
 
   @Override
@@ -123,7 +110,6 @@ public class ClientCompactQuery implements ClientQuery
     return "ClientCompactQuery{" +
            "dataSource='" + dataSource + '\'' +
            ", ioConfig=" + ioConfig +
-           ", targetCompactionSizeBytes=" + targetCompactionSizeBytes +
            ", tuningConfig=" + tuningConfig +
            ", context=" + context +
            '}';

@@ -69,7 +69,6 @@ public class ClientCompactQuerySerdeTest
                 "testSha256OfSortedSegmentIds"
             )
         ),
-        null,
         new ClientCompactQueryTuningConfig(
             100,
             40000,
@@ -100,7 +99,6 @@ public class ClientCompactQuerySerdeTest
         query.getIoConfig().getInputSpec().getSha256OfSortedSegmentIds(),
         ((CompactionIntervalSpec) task.getIoConfig().getInputSpec()).getSha256OfSortedSegmentIds()
     );
-    Assert.assertEquals(query.getTargetCompactionSizeBytes(), task.getTargetCompactionSizeBytes());
     Assert.assertEquals(
         query.getTuningConfig().getMaxRowsInMemory().intValue(), task.getTuningConfig().getMaxRowsInMemory()
     );
