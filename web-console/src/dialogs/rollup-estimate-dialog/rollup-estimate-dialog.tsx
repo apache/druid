@@ -24,7 +24,7 @@ import ReactTable from 'react-table';
 import { Loader } from '../../components/index';
 import { getDruidErrorMessage, queryDruidRune, QueryManager } from '../../utils/index';
 
-import { RollupRatio } from './rollup-ratio';
+import { RollupRatioPanel } from './rollup-ratio-panel';
 
 import './rollup-estimate-dialog.scss';
 
@@ -92,7 +92,6 @@ export class RollupEstimateDialog extends React.PureComponent<
           });
 
           if (Array.isArray(segmentMetadataResponse) && segmentMetadataResponse.length === 1) {
-            // Get preview of data source
             const segmentMetadataResponse0 = segmentMetadataResponse[0];
             if (segmentMetadataResponse0.rollup) {
               try {
@@ -131,6 +130,7 @@ export class RollupEstimateDialog extends React.PureComponent<
             }
             console.log(rollupRatio);
             try {
+              // Get preview of data source
               const previewDataResponse = await queryDruidRune({
                 queryType: 'scan',
                 dataSource: datasource,
@@ -193,11 +193,9 @@ export class RollupEstimateDialog extends React.PureComponent<
     this.druidQueryManager.runQuery(null);
   }
   render(): JSX.Element {
-    // Plan to separate main and control components
     const { datasource, onClose } = this.props;
     const { interval, result, loading, queryColumns, rollupRatio } = this.state;
-    if (loading) return <Loader />;
-    // console.log(result);
+    // if (loading) return <Loader />;
     return (
       <Dialog
         className="rollup-estimate-dialog"
@@ -206,41 +204,51 @@ export class RollupEstimateDialog extends React.PureComponent<
         canOutsideClickClose={false}
         title={`Estimate your rollup ratio: ${datasource}`}
       >
-        <ReactTable
-          data={result ? result.queryResult.rows : []}
-          loading={loading}
-          columns={(result ? result.queryResult.header : []).map((h: any, i) => {
-            // Need to clean this up
+        {loading ? (
+          <div className="loader">
+            <Loader loading />
+          </div>
+        ) : (
+          <>
+            <div className="main-table">
+              <ReactTable
+                data={result ? result.queryResult.rows : []}
+                loading={loading}
+                columns={(result ? result.queryResult.header : []).map((h: any, i) => {
+                  // Need to clean this up
 
-            return {
-              Header: () => {
-                return (
-                  <div
-                    onClick={() => {
-                      this.updateColumns(h);
-                    }}
-                  >
-                    {h}
-                  </div>
-                );
-              },
-              headerClassName: queryColumns.includes(h) ? h : 'selected',
-              accessor: String(i),
-              className: queryColumns.includes(h) ? h : 'selected',
-              Cell: row => <div> {row.value}</div>,
-            };
-          })}
-          showPageSizeOptions={false}
-          showPagination={false}
-          sortable={false}
-        />
-        <RollupRatio
-          datasource={datasource}
-          queryColumns={queryColumns ? queryColumns : []}
-          rollupRatio={rollupRatio}
-          interval={interval}
-          updateInterval={(interval: string) => this.updateInterval(interval)}
-        />
+                  return {
+                    Header: () => {
+                      return (
+                        <div
+                          onClick={() => {
+                            this.updateColumns(h);
+                          }}
+                        >
+                          {h}
+                        </div>
+                      );
+                    },
+                    headerClassName: queryColumns.includes(h) ? h : 'selected',
+                    accessor: String(i),
+                    className: queryColumns.includes(h) ? h : 'selected',
+                    Cell: row => <div> {row.value}</div>,
+                  };
+                })}
+                showPageSizeOptions={false}
+                showPagination={false}
+                sortable={false}
+              />
+            </div>
+            <RollupRatioPanel
+              datasource={datasource}
+              queryColumns={queryColumns ? queryColumns : []}
+              rollupRatio={rollupRatio}
+              interval={interval}
+              updateInterval={(interval: string) => this.updateInterval(interval)}
+            />
+          </>
+        )}
       </Dialog>
     );
   }
@@ -250,7 +258,7 @@ Todo:
 2. Correct query to calculate rollup ratio based on rollup/non-rollup data (Rollup -> multiply by rollup ratio?) **
 3. Bucket time column for non-rolled data (select vs scan vs timeseries granularity: hour) **
 4. Clean up code
-5. Separate ratio from Callout, flicker
+5. flicker
 6. Error handling with division of 0
 7. Is count going to be the only column? **
 */

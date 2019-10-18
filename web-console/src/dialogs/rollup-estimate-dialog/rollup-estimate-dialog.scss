@@ -24,14 +24,18 @@
       'navi navi'
       'main ctrl'
       'main next';
+    grid-template-columns: 1fr 280px;
+    grid-template-rows: 55px 1fr 28px;
+    grid-gap: 15px 5px;
+    padding: 15px 10px;
     .bp3-dialog-header {
       grid-area: navi;
-      margin-bottom: 10px;
+      margin: 0 5px;
     }
-    .ReactTable {
+    .main-table {
       grid-area: main;
       overflow: auto;
-      margin: 15px;
+      margin: 0 5px;
       .rt-th {
         cursor: pointer;
         background: rgba(38, 170, 201, 0.5);
@@ -43,6 +47,12 @@
       .selected {
         background: rgba(128, 128, 128, 0.5);
       }
+    }
+    .loader {
+      position: relative;
+      grid-area: main;
+      overflow: auto;
+      margin: 0 5px;
     }
   }
 }

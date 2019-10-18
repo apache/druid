@@ -20,12 +20,12 @@ import { Button, Callout, FormGroup, InputGroup, Intent } from '@blueprintjs/cor
 import { HeaderRows, normalizeQueryResult } from 'druid-query-toolkit';
 import * as React from 'react';
 
-import { Loader } from '../../components/index';
+// import { Loader } from '../../components/index';
 import { getDruidErrorMessage, queryDruidRune, QueryManager } from '../../utils/index';
 
 import './rollup-ratio.scss';
 
-export interface RollupRatioProps {
+export interface RollupRatioPanelProps {
   queryColumns: string[];
   rollupRatio: number;
   datasource: string;
@@ -33,16 +33,19 @@ export interface RollupRatioProps {
   updateInterval: (interval: string) => void;
 }
 
-export interface RollupRatioState {
+export interface RollupRatioPanelState {
   result?: HeaderRows;
   loading: boolean;
   error?: string;
   intervalInput: string;
 }
 
-export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRatioState> {
+export class RollupRatioPanel extends React.PureComponent<
+  RollupRatioPanelProps,
+  RollupRatioPanelState
+> {
   private druidQueryManager: QueryManager<null, HeaderRows>;
-  constructor(props: RollupRatioProps, context: any) {
+  constructor(props: RollupRatioPanelProps, context: any) {
     super(props, context);
     this.state = {
       loading: false,
@@ -110,7 +113,7 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
     this.druidQueryManager.runQuery(null);
   }
 
-  // componentDidUpdate(prevProps: RollupRatioProps) {
+  // componentDidUpdate(prevProps: RollupRatioPanelProps) {
   //   const { queryColumns } = this.props;
   //   if (prevProps.queryColumns !== queryColumns) {
   //     this.druidQueryManager.runQuery(null);
@@ -118,56 +121,64 @@ export class RollupRatio extends React.PureComponent<RollupRatioProps, RollupRat
   // }
 
   render(): JSX.Element {
-    const { intervalInput, loading, result } = this.state;
+    const { intervalInput, result } = this.state;
     const { rollupRatio, updateInterval } = this.props;
-    if (loading) return <Loader />;
+    // if (loading) return <Loader />;
     return (
-      <div className="rollup-ratio">
-        <Callout>
-          <p>
-            You may select any column to exclude them from your rollup preview. This will update
-            your rollup ratio.{' '}
-          </p>
-          <p>
-            {rollupRatio !== -1
-              ? `This datasource has previously been rolled up. The original rollup ratio is ${(rollupRatio -
-                  1) *
-                  100}%`
-              : ''}
-          </p>
-          <p>
-            Your rollup ratio is currently:{' '}
-            {result ? ((Math.max(result.rows[0][1], 1) - 1) * 100).toFixed(2) : []}%
-          </p>
-        </Callout>
+      <>
+        <div className="rollup-ratio">
+          <Callout>
+            <p>
+              You may select any column to exclude them from your rollup preview. This will update
+              your rollup ratio after you click on "Estimate Rollup".{' '}
+            </p>
+            <p>Please click on "Preview Data" after modifying your interval.</p>
+            <p>
+              {rollupRatio !== -1
+                ? `This datasource has previously been rolled up. The original rollup ratio is ${(rollupRatio -
+                    1) *
+                    100}%`
+                : ''}
+            </p>
+          </Callout>
 
-        <FormGroup
-          // key={field.name}
-          label={`Interval`}
-        >
-          <InputGroup
-            value={intervalInput}
-            placeholder="2019-01-01/2020-01-01"
-            onChange={(e: any) => {
-              this.setState({ intervalInput: e.target.value });
-              console.log(intervalInput);
+          <FormGroup label={`Your current rollup ratio:`}>
+            <InputGroup
+              value={result ? ((Math.max(result.rows[0][1], 1) - 1) * 100).toFixed(2) + '%' : ''}
+              readOnly
+            />
+          </FormGroup>
+          <FormGroup
+            // key={field.name}
+            label={`Interval`}
+          >
+            <InputGroup
+              value={intervalInput}
+              placeholder="2019-01-01/2020-01-01"
+              onChange={(e: any) => {
+                this.setState({ intervalInput: e.target.value });
+                console.log(intervalInput);
+              }}
+            />
+          </FormGroup>
+
+          <Button
+            text="Preview data"
+            onClick={() => {
+              updateInterval(intervalInput);
             }}
           />
-        </FormGroup>
-        <Button
-          text="Preview data"
-          onClick={() => {
-            updateInterval(intervalInput);
-          }}
-        />
-        <Button
-          text="Estimate rollup"
-          intent={Intent.PRIMARY}
-          onClick={() => {
-            this.druidQueryManager.runQuery(null);
-          }}
-        />
-      </div>
+        </div>
+        <div className="rollup-ratio-submit">
+          <Button
+            text="Estimate rollup"
+            intent={Intent.PRIMARY}
+            onClick={() => {
+              this.druidQueryManager.runQuery(null);
+            }}
+          />
+        </div>
+      </>
     );
   }
 }
