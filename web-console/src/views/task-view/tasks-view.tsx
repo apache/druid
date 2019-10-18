@@ -34,7 +34,15 @@ import SplitterLayout from 'react-splitter-layout';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { ActionCell, RefreshButton, TableColumnSelector, ViewControlBar } from '../../components';
+import {
+  ACTION_COLUMN_ID,
+  ACTION_COLUMN_LABEL,
+  ACTION_COLUMN_WIDTH,
+  ActionCell,
+  RefreshButton,
+  TableColumnSelector,
+  ViewControlBar,
+} from '../../components';
 import {
   AsyncActionDialog,
   SpecDialog,
@@ -64,7 +72,7 @@ const supervisorTableColumns: string[] = [
   'Type',
   'Topic/Stream',
   'Status',
-  ActionCell.COLUMN_LABEL,
+  ACTION_COLUMN_LABEL,
 ];
 const taskTableColumns: string[] = [
   'Task ID',
@@ -75,7 +83,7 @@ const taskTableColumns: string[] = [
   'Created time',
   'Status',
   'Duration',
-  ActionCell.COLUMN_LABEL,
+  ACTION_COLUMN_LABEL,
 ];
 
 export interface TasksViewProps {
@@ -610,10 +618,10 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               show: hiddenSupervisorColumns.exists('Status'),
             },
             {
-              Header: ActionCell.COLUMN_LABEL,
-              id: ActionCell.COLUMN_ID,
+              Header: ACTION_COLUMN_LABEL,
+              id: ACTION_COLUMN_ID,
               accessor: 'id',
-              width: ActionCell.COLUMN_WIDTH,
+              width: ACTION_COLUMN_WIDTH,
               filterable: false,
               Cell: row => {
                 const id = row.value;
@@ -632,7 +640,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                   />
                 );
               },
-              show: hiddenSupervisorColumns.exists(ActionCell.COLUMN_LABEL),
+              show: hiddenSupervisorColumns.exists(ACTION_COLUMN_LABEL),
             },
           ]}
         />
@@ -874,10 +882,10 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               show: hiddenTaskColumns.exists('Duration'),
             },
             {
-              Header: ActionCell.COLUMN_LABEL,
-              id: ActionCell.COLUMN_ID,
+              Header: ACTION_COLUMN_LABEL,
+              id: ACTION_COLUMN_ID,
               accessor: 'task_id',
-              width: ActionCell.COLUMN_WIDTH,
+              width: ACTION_COLUMN_WIDTH,
               filterable: false,
               Cell: row => {
                 if (row.aggregated) return '';
@@ -899,7 +907,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                 );
               },
               Aggregated: () => '',
-              show: hiddenTaskColumns.exists(ActionCell.COLUMN_LABEL),
+              show: hiddenTaskColumns.exists(ACTION_COLUMN_LABEL),
             },
           ]}
         />

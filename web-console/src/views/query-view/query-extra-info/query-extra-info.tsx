@@ -49,66 +49,10 @@ export interface QueryExtraInfoProps {
   onDownload: (filename: string, format: string) => void;
 }
 
-export class QueryExtraInfo extends React.PureComponent<QueryExtraInfoProps> {
-  render(): JSX.Element {
-    const { queryExtraInfo } = this.props;
+export function QueryExtraInfo(props: QueryExtraInfoProps) {
+  const { queryExtraInfo, onDownload } = props;
 
-    const downloadMenu = (
-      <Menu className="download-format-menu">
-        <MenuDivider title="Download as:" />
-        <MenuItem text="CSV" onClick={() => this.handleDownload('csv')} />
-        <MenuItem text="TSV" onClick={() => this.handleDownload('tsv')} />
-        <MenuItem text="JSON (new line delimited)" onClick={() => this.handleDownload('json')} />
-      </Menu>
-    );
-
-    let resultCount: string;
-    if (
-      queryExtraInfo.wrapQueryLimit &&
-      queryExtraInfo.numResults === queryExtraInfo.wrapQueryLimit
-    ) {
-      resultCount = `${queryExtraInfo.numResults - 1}+ results`;
-    } else {
-      resultCount = pluralIfNeeded(queryExtraInfo.numResults, 'result');
-    }
-
-    const elapsed = queryExtraInfo.endTime.valueOf() - queryExtraInfo.startTime.valueOf();
-
-    let tooltipContent: JSX.Element | undefined;
-    if (queryExtraInfo.queryId) {
-      tooltipContent = (
-        <>
-          Query ID: <strong>{queryExtraInfo.queryId}</strong> (click to copy)
-        </>
-      );
-    } else if (queryExtraInfo.sqlQueryId) {
-      tooltipContent = (
-        <>
-          SQL query ID: <strong>{queryExtraInfo.sqlQueryId}</strong> (click to copy)
-        </>
-      );
-    }
-
-    return (
-      <div className="query-extra-info">
-        <div className="query-info" onClick={this.handleQueryInfoClick}>
-          <Tooltip content={tooltipContent} hoverOpenDelay={500}>
-            {`${resultCount} in ${(elapsed / 1000).toFixed(2)}s`}
-          </Tooltip>
-        </div>
-        <Popover
-          className="download-button"
-          content={downloadMenu}
-          position={Position.BOTTOM_RIGHT}
-        >
-          <Button icon={IconNames.DOWNLOAD} minimal />
-        </Popover>
-      </div>
-    );
-  }
-
-  private handleQueryInfoClick = () => {
-    const { queryExtraInfo } = this.props;
+  function handleQueryInfoClick() {
     const id = queryExtraInfo.queryId || queryExtraInfo.sqlQueryId;
     if (!id) return;
 
@@ -117,13 +61,61 @@ export class QueryExtraInfo extends React.PureComponent<QueryExtraInfoProps> {
       message: 'Query ID copied to clipboard',
       intent: Intent.SUCCESS,
     });
-  };
+  }
 
-  private handleDownload = (format: string) => {
-    const { queryExtraInfo, onDownload } = this.props;
+  function handleDownload(format: string) {
     const id = queryExtraInfo.queryId || queryExtraInfo.sqlQueryId;
     if (!id) return;
 
     onDownload(`query-${id}.${format}`, format);
-  };
+  }
+
+  const downloadMenu = (
+    <Menu className="download-format-menu">
+      <MenuDivider title="Download as:" />
+      <MenuItem text="CSV" onClick={() => handleDownload('csv')} />
+      <MenuItem text="TSV" onClick={() => handleDownload('tsv')} />
+      <MenuItem text="JSON (new line delimited)" onClick={() => handleDownload('json')} />
+    </Menu>
+  );
+
+  let resultCount: string;
+  if (
+    queryExtraInfo.wrapQueryLimit &&
+    queryExtraInfo.numResults === queryExtraInfo.wrapQueryLimit
+  ) {
+    resultCount = `${queryExtraInfo.numResults - 1}+ results`;
+  } else {
+    resultCount = pluralIfNeeded(queryExtraInfo.numResults, 'result');
+  }
+
+  const elapsed = queryExtraInfo.endTime.valueOf() - queryExtraInfo.startTime.valueOf();
+
+  let tooltipContent: JSX.Element | undefined;
+  if (queryExtraInfo.queryId) {
+    tooltipContent = (
+      <>
+        Query ID: <strong>{queryExtraInfo.queryId}</strong> (click to copy)
+      </>
+    );
+  } else if (queryExtraInfo.sqlQueryId) {
+    tooltipContent = (
+      <>
+        SQL query ID: <strong>{queryExtraInfo.sqlQueryId}</strong> (click to copy)
+      </>
+    );
+  }
+
+  return (
+    <div className="query-extra-info">
+      <div className="query-info" onClick={handleQueryInfoClick}>
+        <Tooltip content={tooltipContent} hoverOpenDelay={500}>
+          {`${resultCount} in ${(elapsed / 1000).toFixed(2)}s`}
+        </Tooltip>
+      </div>
+      <Popover className="download-button" content={downloadMenu} position={Position.BOTTOM_RIGHT}>
+        <Button icon={IconNames.DOWNLOAD} minimal />
+      </Popover>
+    </div>
+  );
 }

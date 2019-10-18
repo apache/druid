@@ -22,7 +22,15 @@ import axios from 'axios';
 import React from 'react';
 import ReactTable from 'react-table';
 
-import { ActionCell, RefreshButton, TableColumnSelector, ViewControlBar } from '../../components';
+import {
+  ACTION_COLUMN_ID,
+  ACTION_COLUMN_LABEL,
+  ACTION_COLUMN_WIDTH,
+  ActionCell,
+  RefreshButton,
+  TableColumnSelector,
+  ViewControlBar,
+} from '../../components';
 import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
 import { AppToaster } from '../../singletons/toaster';
 import { getDruidErrorMessage, LocalStorageKeys, QueryManager } from '../../utils';
@@ -31,7 +39,7 @@ import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array'
 
 import './lookups-view.scss';
 
-const tableColumns: string[] = ['Lookup name', 'Tier', 'Type', 'Version', ActionCell.COLUMN_LABEL];
+const tableColumns: string[] = ['Lookup name', 'Tier', 'Type', 'Version', ACTION_COLUMN_LABEL];
 
 const DEFAULT_LOOKUP_TIER: string = '__default';
 
@@ -316,9 +324,9 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
               show: hiddenColumns.exists('Version'),
             },
             {
-              Header: ActionCell.COLUMN_LABEL,
-              id: ActionCell.COLUMN_ID,
-              width: ActionCell.COLUMN_WIDTH,
+              Header: ACTION_COLUMN_LABEL,
+              id: ACTION_COLUMN_ID,
+              width: ACTION_COLUMN_WIDTH,
               accessor: (row: any) => ({ id: row.id, tier: row.tier }),
               filterable: false,
               Cell: (row: any) => {
@@ -327,7 +335,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
                 const lookupActions = this.getLookupActions(lookupTier, lookupId);
                 return <ActionCell actions={lookupActions} />;
               },
-              show: hiddenColumns.exists(ActionCell.COLUMN_LABEL),
+              show: hiddenColumns.exists(ACTION_COLUMN_LABEL),
             },
           ]}
           defaultPageSize={50}

@@ -18,7 +18,7 @@
 
 import { Button, Classes, Dialog, Icon, IconName, Intent, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import React from 'react';
+import React, { ReactNode } from 'react';
 
 import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
 
@@ -36,44 +36,43 @@ interface TableActionDialogProps {
   sideButtonMetadata: SideButtonMetaData[];
   onClose: () => void;
   actions?: BasicAction[];
+  children?: ReactNode;
 }
 
-export class TableActionDialog extends React.PureComponent<TableActionDialogProps> {
-  render(): JSX.Element {
-    const { sideButtonMetadata, onClose, title, actions, children } = this.props;
-    const actionsMenu = actions ? basicActionsToMenu(actions) : undefined;
+export function TableActionDialog(props: TableActionDialogProps) {
+  const { sideButtonMetadata, onClose, title, actions, children } = props;
+  const actionsMenu = actions ? basicActionsToMenu(actions) : undefined;
 
-    return (
-      <Dialog className="table-action-dialog" isOpen onClose={onClose} title={title}>
-        <div className={Classes.DIALOG_BODY}>
-          <div className="side-bar">
-            {sideButtonMetadata.map((d, i) => (
-              <Button
-                className="tab-button"
-                icon={<Icon icon={d.icon} iconSize={20} />}
-                key={i}
-                text={d.text}
-                intent={d.active ? Intent.PRIMARY : Intent.NONE}
-                minimal={!d.active}
-                onClick={d.onClick}
-              />
-            ))}
-          </div>
-          <div className="main-section">{children}</div>
+  return (
+    <Dialog className="table-action-dialog" isOpen onClose={onClose} title={title}>
+      <div className={Classes.DIALOG_BODY}>
+        <div className="side-bar">
+          {sideButtonMetadata.map((d, i) => (
+            <Button
+              className="tab-button"
+              icon={<Icon icon={d.icon} iconSize={20} />}
+              key={i}
+              text={d.text}
+              intent={d.active ? Intent.PRIMARY : Intent.NONE}
+              minimal={!d.active}
+              onClick={d.onClick}
+            />
+          ))}
         </div>
-        <div className={Classes.DIALOG_FOOTER}>
-          {actionsMenu && (
-            <div className="footer-actions-left">
-              <Popover content={actionsMenu}>
-                <Button icon={IconNames.WRENCH} text="Actions" rightIcon={IconNames.CARET_DOWN} />
-              </Popover>
-            </div>
-          )}
-          <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-            <Button text="Close" intent={Intent.PRIMARY} onClick={onClose} />
+        <div className="main-section">{children}</div>
+      </div>
+      <div className={Classes.DIALOG_FOOTER}>
+        {actionsMenu && (
+          <div className="footer-actions-left">
+            <Popover content={actionsMenu}>
+              <Button icon={IconNames.WRENCH} text="Actions" rightIcon={IconNames.CARET_DOWN} />
+            </Popover>
           </div>
+        )}
+        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+          <Button text="Close" intent={Intent.PRIMARY} onClick={onClose} />
         </div>
-      </Dialog>
-    );
-  }
+      </div>
+    </Dialog>
+  );
 }

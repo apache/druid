@@ -46,7 +46,7 @@ import {
   CenterMessage,
   ClearableInput,
   ExternalLink,
-  JSONInput,
+  JsonInput,
   Loader,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
@@ -1025,7 +1025,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             />
           ) : (
             <FormGroup label="IO Config">
-              <JSONInput
+              <JsonInput
                 value={ioConfig}
                 onChange={c => this.updateSpec(deepSet(spec, 'ioConfig', c))}
                 height="300px"
@@ -2068,7 +2068,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             onChange={s => this.updateSpec(s)}
           />
           <FormGroup label="Extra filter">
-            <JSONInput
+            <JsonInput
               value={restFilter}
               onChange={f => {
                 const curFilter = splitFilter(deepGet(spec, 'dataSchema.transformSpec.filter'));
@@ -2711,7 +2711,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </div>
             )
           ) : (
-            <JSONInput
+            <JsonInput
               value={ioConfig}
               onChange={c => this.updateSpec(deepSet(spec, 'ioConfig', c))}
               height="300px"
@@ -2918,7 +2918,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     return (
       <>
         <div className="main">
-          <JSONInput
+          <JsonInput
             value={spec}
             onChange={s => {
               if (!s) return;
