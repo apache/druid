@@ -32,7 +32,7 @@ public class SegmentsSplitHintSpec implements SplitHintSpec
 {
   public static final String TYPE = "segments";
 
-  private static final long DEFAULT_MAX_INPUT_SEGMENT_BYTES_PER_TASK = 150 * 1024 * 1024;
+  private static final long DEFAULT_MAX_INPUT_SEGMENT_BYTES_PER_TASK = 500 * 1024 * 1024;
 
   /**
    * Maximum number of bytes of input segments to process in a single task.
