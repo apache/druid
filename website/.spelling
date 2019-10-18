@@ -1390,6 +1390,7 @@ avg_num_rows
 avg_size
 created_time
 current_size
+detailed_state
 druid.server.maxSize
 druid.server.tier
 druid.sql.planner.maxSemiJoinRowsInMemory
@@ -1416,6 +1417,7 @@ runner_status
 segment_id
 server_type
 sqlTimeZone
+supervisor_id
 sys
 sys.segments
 task_id
