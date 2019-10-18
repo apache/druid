@@ -67,6 +67,19 @@ druid.extensions.loadList=["druid-datasketches"]
 
 ### Post Aggregators
 
+#### Estimate
+
+Returns the distinct count estimate as a double.
+
+```
+{
+  "type"  : "HLLSketchEstimate",
+  "name": <output name>,
+  "field"  : <post aggregator that returns an HLL Sketch>,
+  "round" : <if true, round the estimate. Default is false>
+}
+```
+
 #### Estimate with bounds
 
 Returns a distinct count estimate and error bounds from an HLL sketch.
@@ -97,7 +110,7 @@ This must be an integer value of 1, 2 or 3 corresponding to approximately 68.3%,
 
 #### Sketch to string
 
-Human-readable sketch summary for debugging
+Human-readable sketch summary for debugging.
 
 ```
 {
@@ -105,5 +118,4 @@ Human-readable sketch summary for debugging
   "name": <output name>,
   "field"  : <post aggregator that returns an HLL Sketch>
 }
-
 ```

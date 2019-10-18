@@ -46,6 +46,7 @@ public class HllSketchEstimateWithErrorBoundsOperatorConversion extends DirectOp
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.INTEGER)
+      .requiredOperands(1)
       .returnType(SqlTypeName.OTHER)
       .build();
 
@@ -92,11 +93,15 @@ public class HllSketchEstimateWithErrorBoundsOperatorConversion extends DirectOp
       return null;
     }
 
-    if (!operands.get(1).isA(SqlKind.LITERAL)) {
-      return null;
-    }
 
-    final int numStdDev = ((Number) RexLiteral.value(operands.get(1))).intValue();
+    Integer numStdDev = null;
+    if (operands.size() == 2) {
+      if (!operands.get(1).isA(SqlKind.LITERAL)) {
+        return null;
+      }
+
+      numStdDev = ((Number) RexLiteral.value(operands.get(1))).intValue();
+    }
 
     return new HllSketchToEstimateWithBoundsPostAggregator(
         postAggregatorVisitor.getOutputNamePrefix() + postAggregatorVisitor.getAndIncrementCounter(),

@@ -448,10 +448,12 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                        + "  HLL_SKETCH_ESTIMATE(DS_HLL(CONCAT(dim2, 'hello'))),\n"
                        + "  ABS(HLL_SKETCH_ESTIMATE(DS_HLL(dim2))),\n"
                        + "  HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(DS_HLL(dim2), 2),\n"
+                       + "  HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(DS_HLL(dim2)),\n"
                        + "  DS_HLL(POWER(ABS(m1 + 100), 2)),\n"
                        + "  APPROX_COUNT_DISTINCT_DS_HLL(dim2),\n"
                        + "  HLL_SKETCH_TO_STRING(DS_HLL(dim2)),\n"
-                       + "  UPPER(HLL_SKETCH_TO_STRING(DS_HLL(dim2)))\n"
+                       + "  UPPER(HLL_SKETCH_TO_STRING(DS_HLL(dim2))),\n"
+                       + "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2), true)\n"
                        + "FROM druid.foo";
 
     // Verify results
@@ -465,6 +467,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
             3.000000014901161d,
             2.000000004967054d,
             "[2.000000004967054,2.0,2.0001997319422404]",
+            "[2.000000004967054,2.0,2.000099863468538]",
             "\"AgEHDAMIBgC1EYgH1mlHBwsKPwu5SK8MIiUxB7iZVwU=\"",
             2L,
             "### HLL SKETCH SUMMARY: \n"
@@ -484,7 +487,8 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
               + "  ESTIMATE       : 2.000000004967054\n"
               + "  UB             : 2.000099863468538\n"
               + "  OUTOFORDER FLAG: FALSE\n"
-              + "  COUPON COUNT   : 2\n"
+              + "  COUPON COUNT   : 2\n",
+            2.0
         }
     );
 
@@ -557,21 +561,27 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                   ImmutableList.of(
                       new FieldAccessPostAggregator("p0", "a0"),
                       new FieldAccessPostAggregator("p1", "a1"),
-                      new HllSketchToEstimatePostAggregator("p3", new FieldAccessPostAggregator("p2", "a0")),
-                      new HllSketchToEstimatePostAggregator("p5", new FieldAccessPostAggregator("p4", "a0")),
+                      new HllSketchToEstimatePostAggregator("p3", new FieldAccessPostAggregator("p2", "a0"), false),
+                      new HllSketchToEstimatePostAggregator("p5", new FieldAccessPostAggregator("p4", "a0"), false),
                       new ExpressionPostAggregator("p6", "(p5 + 1)", null, TestExprMacroTable.INSTANCE),
-                      new HllSketchToEstimatePostAggregator("p8", new FieldAccessPostAggregator("p7", "a2")),
-                      new HllSketchToEstimatePostAggregator("p10", new FieldAccessPostAggregator("p9", "a0")),
+                      new HllSketchToEstimatePostAggregator("p8", new FieldAccessPostAggregator("p7", "a2"), false),
+                      new HllSketchToEstimatePostAggregator("p10", new FieldAccessPostAggregator("p9", "a0"), false),
                       new ExpressionPostAggregator("p11", "abs(p10)", null, TestExprMacroTable.INSTANCE),
                       new HllSketchToEstimateWithBoundsPostAggregator(
                           "p13",
                           new FieldAccessPostAggregator("p12", "a0"),
                           2
                       ),
-                      new FieldAccessPostAggregator("p14", "a3"),
-                      new HllSketchToStringPostAggregator("p16", new FieldAccessPostAggregator("p15", "a0")),
+                      new HllSketchToEstimateWithBoundsPostAggregator(
+                          "p15",
+                          new FieldAccessPostAggregator("p14", "a0"),
+                          1
+                      ),
+                      new FieldAccessPostAggregator("p16", "a3"),
                       new HllSketchToStringPostAggregator("p18", new FieldAccessPostAggregator("p17", "a0")),
-                      new ExpressionPostAggregator("p19", "upper(p18)", null, TestExprMacroTable.INSTANCE)
+                      new HllSketchToStringPostAggregator("p20", new FieldAccessPostAggregator("p19", "a0")),
+                      new ExpressionPostAggregator("p21", "upper(p20)", null, TestExprMacroTable.INSTANCE),
+                      new HllSketchToEstimatePostAggregator("p23", new FieldAccessPostAggregator("p22", "a0"), true)
                   )
               )
               .context(ImmutableMap.of(
@@ -635,8 +645,8 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
               .postAggregators(
                   ImmutableList.of(
                       new FieldAccessPostAggregator("p0", "a0"),
-                      new HllSketchToEstimatePostAggregator("p2", new FieldAccessPostAggregator("p1", "a0")),
-                      new HllSketchToEstimatePostAggregator("s1", new FieldAccessPostAggregator("s0", "p0")),
+                      new HllSketchToEstimatePostAggregator("p2", new FieldAccessPostAggregator("p1", "a0"), false),
+                      new HllSketchToEstimatePostAggregator("s1", new FieldAccessPostAggregator("s0", "p0"), false),
                       new HllSketchToStringPostAggregator("s3", new FieldAccessPostAggregator("s2", "p0"))
                   )
               )

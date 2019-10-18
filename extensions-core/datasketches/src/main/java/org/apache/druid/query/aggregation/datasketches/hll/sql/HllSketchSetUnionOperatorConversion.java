@@ -57,10 +57,6 @@ public class HllSketchSetUnionOperatorConversion implements SqlOperatorConversio
       SqlFunctionCategory.USER_DEFINED_FUNCTION
   );
 
-  public HllSketchSetUnionOperatorConversion()
-  {
-  }
-
   @Override
   public SqlOperator calciteOperator()
   {

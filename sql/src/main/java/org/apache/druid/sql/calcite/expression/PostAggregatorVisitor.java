@@ -43,14 +43,7 @@ public class PostAggregatorVisitor
 
   public int getAndIncrementCounter()
   {
-    int oldVal = counter;
-    counter++;
-    return oldVal;
-  }
-
-  public int getCounter()
-  {
-    return counter;
+    return counter++;
   }
 
   public String getOutputNamePrefix()

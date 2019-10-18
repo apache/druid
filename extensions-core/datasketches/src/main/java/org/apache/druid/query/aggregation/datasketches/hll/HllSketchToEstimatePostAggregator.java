@@ -41,15 +41,18 @@ public class HllSketchToEstimatePostAggregator implements PostAggregator
 {
   private final String name;
   private final PostAggregator field;
+  private final boolean round;
 
   @JsonCreator
   public HllSketchToEstimatePostAggregator(
       @JsonProperty("name") final String name,
-      @JsonProperty("field") final PostAggregator field
+      @JsonProperty("field") final PostAggregator field,
+      @JsonProperty("round") boolean round
   )
   {
     this.name = name;
     this.field = field;
+    this.round = round;
   }
 
   @Override
@@ -63,6 +66,12 @@ public class HllSketchToEstimatePostAggregator implements PostAggregator
   public PostAggregator getField()
   {
     return field;
+  }
+
+  @JsonProperty
+  public boolean isRound()
+  {
+    return round;
   }
 
   @Override
@@ -81,7 +90,7 @@ public class HllSketchToEstimatePostAggregator implements PostAggregator
   public Object compute(final Map<String, Object> combinedAggregators)
   {
     final HllSketch sketch = (HllSketch) field.compute(combinedAggregators);
-    return sketch.getEstimate();
+    return round ? Math.round(sketch.getEstimate()) : sketch.getEstimate();
   }
 
   @Override
