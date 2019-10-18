@@ -100,9 +100,10 @@ Compaction tasks merge all segments of the given interval. The syntax is:
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "ioConfig": <IO config>,
-    "dimensions" <custom dimensionsSpec>,
+    "dimensionsSpec" <custom dimensionsSpec>,
+    "metricsSpec" <custom metricsSpec>,
     "segmentGranularity": <segment granularity after compaction>,
-    "tuningConfig" <index task tuningConfig>,
+    "tuningConfig" <parallel indexing task tuningConfig>,
     "context": <task context>
 }
 ```
@@ -116,7 +117,7 @@ Compaction tasks merge all segments of the given interval. The syntax is:
 |`dimensionsSpec`|Custom dimensionsSpec. Compaction task will use this dimensionsSpec if exist instead of generating one. See below for more details.|No|
 |`metricsSpec`|Custom metricsSpec. Compaction task will use this metricsSpec if specified rather than generating one.|No|
 |`segmentGranularity`|If this is set, compactionTask will change the segment granularity for the given interval. See `segmentGranularity` of [`granularitySpec`](index.md#granularityspec) for more details. See the below table for the behavior.|No|
-|`tuningConfig`|[Index task tuningConfig](../ingestion/native-batch.md#tuningconfig)|No|
+|`tuningConfig`|[Parallel indexing task tuningConfig](../ingestion/native-batch.md#tuningconfig)|No|
 |`context`|[Task context](../ingestion/tasks.md#context)|No|
 
 

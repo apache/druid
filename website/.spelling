@@ -918,6 +918,8 @@ InlineFirehose
 LocalFirehose
 PartitionsSpec
 PasswordProviders
+SegmentsSplitHintSpec
+SplitHintSpec
 appendToExisting
 baseDir
 chatHandlerNumRetries
@@ -938,6 +940,7 @@ reportParseExceptions
 segmentWriteOutMediumFactory
 sql
 sqls
+splitHintSpec
 taskStatusCheckPeriodMs
 timeChunk
 totalNumMergeTasks

@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 
 import javax.annotation.Nullable;
@@ -84,13 +85,13 @@ public class InlineFirehoseFactory implements FiniteFirehoseFactory<StringInputR
   }
 
   @Override
-  public Stream<InputSplit<String>> getSplits()
+  public Stream<InputSplit<String>> getSplits(@Nullable SplitHintSpec splitHintSpec)
   {
     return Stream.of(new InputSplit<>(data));
   }
 
   @Override
-  public int getNumSplits()
+  public int getNumSplits(@Nullable SplitHintSpec splitHintSpec)
   {
     return 1;
   }

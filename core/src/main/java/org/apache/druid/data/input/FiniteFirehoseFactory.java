@@ -22,6 +22,7 @@ package org.apache.druid.data.input;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.druid.data.input.impl.InputRowParser;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.stream.Stream;
 
@@ -52,13 +53,13 @@ public interface FiniteFirehoseFactory<T extends InputRowParser, S> extends Fire
    * lazily so that the listing overhead could be amortized.
    */
   @JsonIgnore
-  Stream<InputSplit<S>> getSplits() throws IOException;
+  Stream<InputSplit<S>> getSplits(@Nullable SplitHintSpec splitHintSpec) throws IOException;
 
   /**
-   * Returns number of splits returned by {@link #getSplits()}.
+   * Returns number of splits returned by {@link #getSplits}.
    */
   @JsonIgnore
-  int getNumSplits() throws IOException;
+  int getNumSplits(@Nullable SplitHintSpec splitHintSpec) throws IOException;
 
   /**
    * Returns the same {@link FiniteFirehoseFactory} but with the given {@link InputSplit}. The returned

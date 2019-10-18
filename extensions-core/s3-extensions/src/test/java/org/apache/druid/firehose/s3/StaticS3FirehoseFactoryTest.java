@@ -115,7 +115,7 @@ public class StaticS3FirehoseFactoryTest
         5
     );
     final List<FiniteFirehoseFactory<StringInputRowParser, URI>> subFactories = factory
-        .getSplits()
+        .getSplits(null)
         .map(factory::withSplit)
         .sorted(Comparator.comparing(eachFactory -> {
           final StaticS3FirehoseFactory staticS3FirehoseFactory = (StaticS3FirehoseFactory) eachFactory;
