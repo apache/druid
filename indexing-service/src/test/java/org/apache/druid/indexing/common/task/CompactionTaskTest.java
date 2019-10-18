@@ -1007,7 +1007,7 @@ public class CompactionTaskTest
             Long.MAX_VALUE,
             null,
             null,
-            new HashedPartitionsSpec(41943040, null, null), // automatically computed targetPartitionSize
+            new HashedPartitionsSpec(5000000, null, null), // automatically computed targetPartitionSize
             new IndexSpec(
                 new RoaringBitmapSerdeFactory(true),
                 CompressionStrategy.LZ4,
