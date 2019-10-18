@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
@@ -247,6 +248,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
 
   private Map<String, BasicAuthenticatorUser> tryFetchUserMapFromCoordinator(String prefix) throws Exception
   {
+    Map<String, BasicAuthenticatorUser> userMap = null;
     Request req = druidLeaderClient.makeRequest(
         HttpMethod.GET,
         StringUtils.format("/druid-ext/basic-security/authentication/db/%s/cachedSerializedUserMap", prefix)
@@ -256,12 +258,16 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
         new BytesFullResponseHandler()
     );
     byte[] userMapBytes = responseHolder.getContent();
-    Map<String, BasicAuthenticatorUser> userMap = objectMapper.readValue(
-        userMapBytes,
-        BasicAuthUtils.AUTHENTICATOR_USER_MAP_TYPE_REFERENCE
-    );
-    if (userMap != null && commonCacheConfig.getCacheDirectory() != null) {
-      writeUserMapToDisk(prefix, userMapBytes);
+    if (ArrayUtils.isNotEmpty(userMapBytes)) {
+      userMap = objectMapper.readValue(
+          userMapBytes,
+          BasicAuthUtils.AUTHENTICATOR_USER_MAP_TYPE_REFERENCE
+      );
+      if (userMap != null && commonCacheConfig.getCacheDirectory() != null) {
+        writeUserMapToDisk(prefix, userMapBytes);
+      }
+    } else {
+      LOG.info("Empty cached serialized user map retrieved, authenticator - %s", prefix);
     }
     return userMap;
   }
