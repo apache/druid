@@ -312,7 +312,7 @@ public class CachingClusteredClientBenchmark
 
     processingPool = Execs.multiThreaded(processingConfig.getNumThreads(), "caching-clustered-client-benchmark");
     forkJoinPool = new ForkJoinPool(
-        (int) Math.ceil(Runtime.getRuntime().availableProcessors() * 1.5),
+        (int) Math.ceil(Runtime.getRuntime().availableProcessors() * 0.75),
         ForkJoinPool.defaultForkJoinWorkerThreadFactory,
         null,
         true

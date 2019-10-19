@@ -66,7 +66,7 @@ public class ParallelMergeCombiningSequenceTest
   public void setup()
   {
     pool = new ForkJoinPool(
-        (int) Math.ceil(Runtime.getRuntime().availableProcessors() * 1.5),
+        (int) Math.ceil(Runtime.getRuntime().availableProcessors() * 0.75),
         ForkJoinPool.defaultForkJoinWorkerThreadFactory,
         (t, e) -> LOG.error(e, "Unhandled exception in thread [%s]", t),
         true
@@ -505,7 +505,7 @@ public class ParallelMergeCombiningSequenceTest
         true,
         5000,
         0,
-        Runtime.getRuntime().availableProcessors() - 1,
+        (int) Math.ceil(Runtime.getRuntime().availableProcessors() * 0.5),
         yieldAfter,
         batchSize,
         ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS
@@ -563,7 +563,7 @@ public class ParallelMergeCombiningSequenceTest
           true,
           timeout,
           0,
-          Runtime.getRuntime().availableProcessors() - 1,
+          (int) Math.ceil(Runtime.getRuntime().availableProcessors() * 0.5),
           yieldAfter,
           batchSize,
           ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS
@@ -722,7 +722,7 @@ public class ParallelMergeCombiningSequenceTest
                 if (i == 0 || (i % frequency == 0 && ThreadLocalRandom.current().nextBoolean())) {
                   try {
                     Thread.sleep(
-                        ThreadLocalRandom.current().nextInt(1, i  == 0 ? maxStartDelayMillis : maxDelayMillis)
+                        ThreadLocalRandom.current().nextInt(1, i == 0 ? maxStartDelayMillis : maxDelayMillis)
                     );
                   }
                   catch (InterruptedException ex) {

@@ -165,7 +165,8 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     if (numThreadsConfigured != DEFAULT_NUM_THREADS) {
       return numThreadsConfigured;
     } else {
-      return (int) Math.ceil(JvmUtils.getRuntimeInfo().getAvailableProcessors() * 1.5);
+      // assume 2 hyper-threads per core, so that this value is probably by default the number of physical cores * 1.5
+      return (int) Math.ceil(JvmUtils.getRuntimeInfo().getAvailableProcessors() * 0.75);
     }
   }
 
@@ -178,7 +179,8 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   @Config(value = "${base_path}.merge.pool.defaultMaxQueryParallelism")
   public int getMergePoolDefaultMaxQueryParallelism()
   {
-    return Integer.MAX_VALUE;
+    // assume 2 hyper-threads per core, so that this value is probably by default the number of physical cores
+    return (int) Math.max(JvmUtils.getRuntimeInfo().getAvailableProcessors() * 0.5, 1);
   }
 
   @Config(value = "${base_path}.merge.task.targetRunTimeMillis")

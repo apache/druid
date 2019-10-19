@@ -64,22 +64,38 @@ import java.util.function.Supplier;
 public class ParallelMergeCombiningSequenceBenchmark
 {
   private static final Logger log = new Logger(ParallelMergeCombiningSequenceBenchmark.class);
+  // default merge FJP size
   private static final ForkJoinPool mergePool = new ForkJoinPool(
-      (int) Math.ceil(Runtime.getRuntime().availableProcessors() * 1.5),
+      (int) Math.ceil(Runtime.getRuntime().availableProcessors() * 0.75),
       ForkJoinPool.defaultForkJoinWorkerThreadFactory,
       (t, e) -> log.error(e, "Unhandled exception in thread [%s]", t),
       true
   );
 
-  private static final ExecutorService consumer = Execs.multiThreaded(40, "mock-http-thread");
+  // this should be as large as the largest value of concurrentSequenceConsumers
+  private static final ExecutorService consumer = Execs.multiThreaded(64, "mock-http-thread");
 
-  @Param({"8", "16", "32", "64"})
+  // note: parameters are broken down to allow easily commenting out lines to mix and match which benchmarks to run
+  @Param({
+      "8",
+      "16",
+      "32",
+      "64"
+  })
   private int numSequences;
 
   @Param({"75000"})
   private int rowsPerSequence;
 
-  @Param({"1", "2", "4", "8", "16", "32", "64"})
+  @Param({
+      "1",
+      "2",
+      "4",
+      "8",
+      "16",
+      "32",
+      "64"
+  })
   private int concurrentSequenceConsumers;
 
   @Param({
@@ -88,27 +104,22 @@ public class ParallelMergeCombiningSequenceBenchmark
       "parallelism-4-10ms-256-1024",
       "parallelism-8-10ms-256-1024",
       "parallelism-16-10ms-256-1024",
-      "parallelism-32-10ms-256-1024",
       "parallelism-1-100ms-512-4096",
       "parallelism-4-100ms-512-4096",
       "parallelism-8-100ms-512-4096",
       "parallelism-16-100ms-512-4096",
-      "parallelism-32-100ms-512-4096",
       "parallelism-1-100ms-1024-4096",
       "parallelism-4-100ms-1024-4096",
       "parallelism-8-100ms-1024-4096",
       "parallelism-16-100ms-1024-4096",
-      "parallelism-32-100ms-1024-4096",
       "parallelism-1-100ms-1024-16384",
       "parallelism-4-100ms-1024-16384",
       "parallelism-8-100ms-1024-16384",
       "parallelism-16-100ms-1024-16384",
-      "parallelism-32-100ms-1024-16384",
       "parallelism-1-100ms-4096-16384",
       "parallelism-4-100ms-4096-16384",
       "parallelism-8-100ms-4096-16384",
-      "parallelism-16-100ms-4096-16384",
-      "parallelism-32-100ms-4096-16384",
+      "parallelism-16-100ms-4096-16384"
   })
   private String strategy;
 

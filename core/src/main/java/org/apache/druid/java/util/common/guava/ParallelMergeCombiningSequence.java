@@ -383,11 +383,11 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
      */
     private int computeNumTasks()
     {
-      final int availableProcessors = JvmUtils.getRuntimeInfo().getAvailableProcessors();
       final int runningThreadCount = getPool().getRunningThreadCount();
       final int submissionCount = getPool().getQueuedSubmissionCount();
-      // max is minimum of either number of processors or user suggested parallelism
-      final int maxParallelism = Math.min(Math.min(availableProcessors, parallelism), getPool().getParallelism());
+      // max is smaller of either parallelism passed into sequence (number of physical cores by default) or the pool
+      // parallelism
+      final int maxParallelism = Math.min(parallelism, getPool().getParallelism());
       // adjust max to be no more than total pool parallelism less the number of running threads + submitted tasks
       // minus 1 for the task that is running this calculation since it will be replaced with the parallel tasks
       final int utilizationEstimate = runningThreadCount + submissionCount - 1;
@@ -404,16 +404,16 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
       final int computedNumParallelTasks = Math.max(computedOptimalParallelism, 1);
 
-      LOG.debug("Computed parallel tasks: [%s]; ForkJoinPool details - processors: [%s] parallelism: [%s] "
+      LOG.debug("Computed parallel tasks: [%s]; ForkJoinPool details - sequence parallelism: [%s] "
                 + "active threads: [%s] running threads: [%s] queued submissions: [%s] queued tasks: [%s] "
-                + "pool size: [%s] steal count: [%s]",
+                + "pool parallelism: [%s] pool size: [%s] steal count: [%s]",
                 computedNumParallelTasks,
-                availableProcessors,
                 parallelism,
                 getPool().getActiveThreadCount(),
                 runningThreadCount,
                 submissionCount,
                 getPool().getQueuedTaskCount(),
+                getPool().getParallelism(),
                 getPool().getPoolSize(),
                 getPool().getStealCount()
       );
