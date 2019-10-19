@@ -59,8 +59,8 @@ import java.util.function.Supplier;
 
 @State(Scope.Benchmark)
 @Fork(value = 1, jvmArgsAppend = "-XX:+UseG1GC")
-@Warmup(iterations = 10)
-@Measurement(iterations = 30)
+@Warmup(iterations = 5)
+@Measurement(iterations = 25)
 public class ParallelMergeCombiningSequenceBenchmark
 {
   private static final Logger log = new Logger(ParallelMergeCombiningSequenceBenchmark.class);
@@ -76,6 +76,7 @@ public class ParallelMergeCombiningSequenceBenchmark
   private static final ExecutorService consumer = Execs.multiThreaded(64, "mock-http-thread");
 
   // note: parameters are broken down to allow easily commenting out lines to mix and match which benchmarks to run
+  // also note: don't really run this like it is unless you have days to spare
   @Param({
       "8",
       "16",
@@ -125,13 +126,11 @@ public class ParallelMergeCombiningSequenceBenchmark
 
   @Param({
       "non-blocking",
-      "initial-block-random-500ms",
-      "initial-block-random-5000ms",
-      "slow-sequence-random-100ms-1ms"
+      "initial-block-random-100-500ms",
+      "initial-block-random-4000-5000ms",
+      "slow-sequence-random-10-100ms-1ms"
   })
   private String inputSequenceType;
-
-  private List<Sequence<ParallelMergeCombiningSequenceTest.IntPair>> inputSequences;
 
   private int parallelism;
   private int targetTaskTimeMillis;
@@ -146,25 +145,28 @@ public class ParallelMergeCombiningSequenceBenchmark
   {
     String[] inputSequenceTypeSplit = inputSequenceType.split("-");
     if ("initial".equals(inputSequenceTypeSplit[0])) {
-      // e.g. "initial-block-random-{startDelay}ms"
-      final int delayMillis = Integer.parseInt(inputSequenceTypeSplit[3].substring(0, inputSequenceTypeSplit[3].length() - 2));
-      inputSequenceFactory = () ->
-          ParallelMergeCombiningSequenceTest.initialDelaySequence(rowsPerSequence, delayMillis);
-    } else if("slow".equals(inputSequenceTypeSplit[0])) {
-      // e.g. "slow-sequence-random-{startDelay}ms-{frequencyDelay}ms"
-      final int startDelayMillis = Integer.parseInt(inputSequenceTypeSplit[3].substring(0,inputSequenceTypeSplit[3].length() - 2));
+      // e.g. "initial-block-random-{startDelayStart}-{startDelayEnd}ms"
+      final int startMillis = Integer.parseInt(inputSequenceTypeSplit[3]);
       final int delayMillis = Integer.parseInt(inputSequenceTypeSplit[4].substring(0, inputSequenceTypeSplit[4].length() - 2));
+      inputSequenceFactory = () ->
+          ParallelMergeCombiningSequenceTest.initialDelaySequence(rowsPerSequence, delayMillis, delayMillis - startMillis);
+    } else if("slow".equals(inputSequenceTypeSplit[0])) {
+      // e.g. "slow-sequence-random-{startDelayStart}-{startDelayEnd}ms-{frequencyDelay}ms"
+      final int startStartDelayMillis = Integer.parseInt(inputSequenceTypeSplit[3]);
+      final int startDelayMillis = Integer.parseInt(inputSequenceTypeSplit[4].substring(0,inputSequenceTypeSplit[4].length() - 2));
+      final int delayMillis = Integer.parseInt(inputSequenceTypeSplit[5].substring(0, inputSequenceTypeSplit[5].length() - 2));
       final int frequency = rowsPerSequence / 10;
       inputSequenceFactory = () ->
-          ParallelMergeCombiningSequenceTest.slowSequence(rowsPerSequence, frequency, startDelayMillis, delayMillis);
+          ParallelMergeCombiningSequenceTest.slowSequence(
+              rowsPerSequence,
+              frequency,
+              startDelayMillis,
+              startDelayMillis - startStartDelayMillis,
+              delayMillis
+          );
     } else { // non-blocking sequence
       inputSequenceFactory = () ->
           ParallelMergeCombiningSequenceTest.generateOrderedPairsSequence(rowsPerSequence);
-    }
-
-    inputSequences = new ArrayList<>(numSequences);
-    for (int i = 0; i < numSequences; i++) {
-      inputSequences.add(inputSequenceFactory.get());
     }
 
     String[] strategySplit = strategy.split("-");
@@ -204,11 +206,20 @@ public class ParallelMergeCombiningSequenceBenchmark
     blackhole.consume(futures);
   }
 
+  private List<Sequence<ParallelMergeCombiningSequenceTest.IntPair>> createInputSequences()
+  {
+    List<Sequence<ParallelMergeCombiningSequenceTest.IntPair>> inputSequences = new ArrayList<>(numSequences);
+    for (int j = 0; j < numSequences; j++) {
+      inputSequences.add(inputSequenceFactory.get());
+    }
+    return inputSequences;
+  }
+
   private Sequence<ParallelMergeCombiningSequenceTest.IntPair> createParallelSequence()
   {
     return new ParallelMergeCombiningSequence<>(
         mergePool,
-        inputSequences,
+        createInputSequences(),
         ParallelMergeCombiningSequenceTest.INT_PAIR_ORDERING,
         ParallelMergeCombiningSequenceTest.INT_PAIR_MERGE_FN,
         false,
@@ -224,7 +235,10 @@ public class ParallelMergeCombiningSequenceBenchmark
   private Sequence<ParallelMergeCombiningSequenceTest.IntPair> createCombiningMergeSequence()
   {
     return CombiningSequence.create(
-        new MergeSequence<>(ParallelMergeCombiningSequenceTest.INT_PAIR_ORDERING, Sequences.simple(inputSequences)),
+        new MergeSequence<>(
+            ParallelMergeCombiningSequenceTest.INT_PAIR_ORDERING,
+            Sequences.simple(createInputSequences())
+        ),
         ParallelMergeCombiningSequenceTest.INT_PAIR_ORDERING,
         ParallelMergeCombiningSequenceTest.INT_PAIR_MERGE_FN
     );

@@ -448,8 +448,7 @@ public class ParallelMergeCombiningSequenceTest
     input.add(generateOrderedPairsSequence(someSize));
     input.add(generateOrderedPairsSequence(someSize));
     input.add(generateOrderedPairsSequence(someSize));
-    input.add(slowSequence(someSize, 1, 500, 500));
-
+    input.add(slowSequence(someSize, 1, 500, 100, 500));
     expectedException.expect(RuntimeException.class);
     expectedException.expectCause(Matchers.instanceOf(TimeoutException.class));
     expectedException.expectMessage("Sequence iterator timed out waiting for data");
@@ -655,9 +654,14 @@ public class ParallelMergeCombiningSequenceTest
     );
   }
 
-  public static Sequence<IntPair> initialDelaySequence(int size, int maxDelayMillis)
+  public static Sequence<IntPair> initialDelaySequence(int size, int maxDelayMillis, int startDelayRange)
   {
     List<IntPair> items = generateOrderedPairs(size);
+    final long delayMillis = ThreadLocalRandom.current().nextLong(
+        Math.max(0, maxDelayMillis - startDelayRange),
+        maxDelayMillis
+    );
+    final long delayUntil = System.nanoTime() + TimeUnit.NANOSECONDS.convert(delayMillis, TimeUnit.MILLISECONDS);
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<IntPair, Iterator<IntPair>>()
         {
@@ -676,9 +680,12 @@ public class ParallelMergeCombiningSequenceTest
               @Override
               public IntPair next()
               {
-                if (i == 0) {
+                final long currentNano = System.nanoTime();
+                if (i == 0 && currentNano < delayUntil) {
                   try {
-                    Thread.sleep(ThreadLocalRandom.current().nextInt(1, maxDelayMillis));
+                    Thread.sleep(
+                        TimeUnit.MILLISECONDS.convert(delayUntil - currentNano, TimeUnit.NANOSECONDS)
+                    );
                   }
                   catch (InterruptedException ex) {
                     throw new RuntimeException(ex);
@@ -698,9 +705,20 @@ public class ParallelMergeCombiningSequenceTest
     );
   }
 
-  public static Sequence<IntPair> slowSequence(int size, int frequency, int maxStartDelayMillis, int maxDelayMillis)
+  public static Sequence<IntPair> slowSequence(
+      int size,
+      int frequency,
+      int maxStartDelayMillis,
+      int startDelayRange,
+      int maxDelayMillis
+  )
   {
     List<IntPair> items = generateOrderedPairs(size);
+    final long delayMillis = ThreadLocalRandom.current().nextLong(
+        Math.max(0, maxStartDelayMillis - startDelayRange),
+        maxStartDelayMillis
+    );
+    final long delayUntil = System.nanoTime() + TimeUnit.NANOSECONDS.convert(delayMillis, TimeUnit.MILLISECONDS);
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<IntPair, Iterator<IntPair>>()
         {
@@ -719,15 +737,20 @@ public class ParallelMergeCombiningSequenceTest
               @Override
               public IntPair next()
               {
-                if (i == 0 || (i % frequency == 0 && ThreadLocalRandom.current().nextBoolean())) {
-                  try {
+                try {
+                  final long currentNano = System.nanoTime();
+                  if (i == 0 && currentNano < delayUntil) {
                     Thread.sleep(
-                        ThreadLocalRandom.current().nextInt(1, i == 0 ? maxStartDelayMillis : maxDelayMillis)
+                        TimeUnit.MILLISECONDS.convert(delayUntil - currentNano, TimeUnit.NANOSECONDS)
+                    );
+                  } else if (i > 0 && i % frequency == 0 && ThreadLocalRandom.current().nextBoolean()) {
+                    Thread.sleep(
+                        ThreadLocalRandom.current().nextInt(1, maxDelayMillis)
                     );
                   }
-                  catch (InterruptedException ex) {
-                    throw new RuntimeException(ex);
-                  }
+                }
+                catch (InterruptedException ex) {
+                  throw new RuntimeException(ex);
                 }
                 return items.get(i++);
               }
