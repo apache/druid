@@ -123,6 +123,22 @@ The [Druid router process](../design/router.md), which serves the [Druid console
 
 It takes a few seconds for all the Druid processes to fully start up. If you open the console immediately after starting the services, you may see some errors that you can safely ignore.
 
+## Alternative: Running with Docker
+
+To get the full composition:
+```bash
+$ wget https://raw.githubusercontent.com/apache/incubator-druid/master/distribution/docker/docker-compose.yml
+```
+
+To start `druid`:
+```
+$ docker-compose up
+```
+
+Once the composition has started, you can navigate to [http://localhost:3001](http://localhost:3001) and the *Druid Console* is now available:
+
+![Druid console](../assets/tutorial-quickstart-01.png "Druid console")
+
 
 ## Loading data
 

@@ -46,7 +46,7 @@ services:
       - ZOO_MY_ID=1
 
   coordinator:
-    image: apache/incubator-druid
+    image: apache/incubator-druid:0.16.0-incubating
     container_name: coordinator
     volumes:
       - coordinator_var:/opt/druid/var
@@ -61,7 +61,7 @@ services:
       - environment
 
   broker:
-    image: apache/incubator-druid
+    image: apache/incubator-druid:0.16.0-incubating
     container_name: broker
     volumes:
       - broker_var:/opt/druid/var
@@ -77,7 +77,7 @@ services:
       - environment
 
   historical:
-    image: apache/incubator-druid
+    image: apache/incubator-druid:0.16.0-incubating
     container_name: historical
     volumes:
       - historical_var:/opt/druid/var
@@ -93,7 +93,7 @@ services:
       - environment
 
   overlord:
-    image: apache/incubator-druid
+    image: apache/incubator-druid:0.16.0-incubating
     container_name: overlord
     volumes:
       - overlord_var:/opt/druid/var
@@ -108,7 +108,7 @@ services:
       - environment
 
   middlemanager:
-    image: apache/incubator-druid
+    image: apache/incubator-druid:0.16.0-incubating
     container_name: middlemanager
     volumes:
       - middle_var:/opt/druid/var
@@ -124,7 +124,7 @@ services:
       - environment
 
   router:
-    image: apache/incubator-druid
+    image: apache/incubator-druid:0.16.0-incubating
     container_name: router
     volumes:
       - router_var:/opt/druid/var
