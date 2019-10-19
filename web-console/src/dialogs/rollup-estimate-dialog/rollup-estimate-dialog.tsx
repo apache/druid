@@ -121,14 +121,11 @@ export class RollupEstimateDialog extends React.PureComponent<
                     },
                   ],
                 });
-                console.log(rollupRatioResponse[0].result.p0);
-                console.log('come on');
                 rollupRatio = rollupRatioResponse[0].result.p0;
               } catch (e) {
                 throw new Error(getDruidErrorMessage(e));
               }
             }
-            console.log(rollupRatio);
             try {
               // Get preview of data source
               const previewDataResponse = await queryDruidRune({
@@ -142,7 +139,6 @@ export class RollupEstimateDialog extends React.PureComponent<
                     !Object.keys(segmentMetadataResponse0.aggregators).includes(column),
                 ),
               });
-              console.log(previewDataResponse);
               rawQueryResult = previewDataResponse;
             } catch (e) {
               throw new Error(getDruidErrorMessage(e));
@@ -171,10 +167,11 @@ export class RollupEstimateDialog extends React.PureComponent<
 
   updateColumns(columnName: string) {
     const { queryColumns } = this.state;
+
     const newQueryColumns = queryColumns.slice();
     if (!queryColumns.includes(columnName)) {
       newQueryColumns.push(columnName);
-    } else {
+    } else if (queryColumns.length !== 1) {
       const indexOfColumn = newQueryColumns.indexOf(columnName);
       newQueryColumns.splice(indexOfColumn, 1);
     }
@@ -183,7 +180,6 @@ export class RollupEstimateDialog extends React.PureComponent<
 
   updateInterval(newInterval: string) {
     this.setState({ interval: newInterval }, () => {
-      console.log(this.state.interval);
       this.druidQueryManager.runQuery(null);
     });
   }
@@ -204,10 +200,19 @@ export class RollupEstimateDialog extends React.PureComponent<
         canOutsideClickClose={false}
         title={`Estimate your rollup ratio: ${datasource}`}
       >
-        {loading ? (
-          <div className="loader">
-            <Loader loading />
-          </div>
+        {!queryColumns ? (
+          <>
+            <div className="loader">
+              <Loader loading />
+            </div>
+            <RollupRatioPanel
+              datasource={datasource}
+              queryColumns={queryColumns ? queryColumns : []}
+              rollupRatio={-1}
+              interval={interval}
+              updateInterval={(interval: string) => this.updateInterval(interval)}
+            />
+          </>
         ) : (
           <>
             <div className="main-table">
@@ -242,7 +247,7 @@ export class RollupEstimateDialog extends React.PureComponent<
             </div>
             <RollupRatioPanel
               datasource={datasource}
-              queryColumns={queryColumns ? queryColumns : []}
+              queryColumns={queryColumns}
               rollupRatio={rollupRatio}
               interval={interval}
               updateInterval={(interval: string) => this.updateInterval(interval)}
@@ -258,7 +263,5 @@ Todo:
 2. Correct query to calculate rollup ratio based on rollup/non-rollup data (Rollup -> multiply by rollup ratio?) **
 3. Bucket time column for non-rolled data (select vs scan vs timeseries granularity: hour) **
 4. Clean up code
-5. flicker
-6. Error handling with division of 0
 7. Is count going to be the only column? **
 */

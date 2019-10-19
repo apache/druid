@@ -20,10 +20,11 @@ import { Button, Callout, FormGroup, InputGroup, Intent } from '@blueprintjs/cor
 import { HeaderRows, normalizeQueryResult } from 'druid-query-toolkit';
 import * as React from 'react';
 
-// import { Loader } from '../../components/index';
 import { getDruidErrorMessage, queryDruidRune, QueryManager } from '../../utils/index';
 
 import './rollup-ratio.scss';
+
+// import { Loader } from '../../components/index';
 
 export interface RollupRatioPanelProps {
   queryColumns: string[];
@@ -110,19 +111,24 @@ export class RollupRatioPanel extends React.PureComponent<
     });
   }
   componentDidMount() {
-    this.druidQueryManager.runQuery(null);
+    const { queryColumns } = this.props;
+    if (queryColumns.length !== 0) this.druidQueryManager.runQuery(null);
   }
 
-  // componentDidUpdate(prevProps: RollupRatioPanelProps) {
-  //   const { queryColumns } = this.props;
-  //   if (prevProps.queryColumns !== queryColumns) {
-  //     this.druidQueryManager.runQuery(null);
-  //   }
-  // }
+  componentWillUnmount() {
+    this.druidQueryManager.terminate();
+  }
+  componentDidUpdate(prevProps: RollupRatioPanelProps) {
+    const { queryColumns } = this.props;
+    if (prevProps.queryColumns.length === 0 && prevProps.queryColumns !== queryColumns) {
+      this.druidQueryManager.runQuery(null);
+    }
+  }
 
   render(): JSX.Element {
     const { intervalInput, result } = this.state;
     const { rollupRatio, updateInterval } = this.props;
+
     // if (loading) return <Loader />;
     return (
       <>
