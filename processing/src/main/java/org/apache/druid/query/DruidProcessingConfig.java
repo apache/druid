@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.concurrent.ExecutorServiceConfig;
+import org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.utils.JvmUtils;
@@ -34,8 +35,6 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   public static final int DEFAULT_NUM_MERGE_BUFFERS = -1;
   public static final int DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = -1;
   public static final int MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = 1024 * 1024 * 1024;
-  public static final int DEFAULT_PARALLEL_MERGE_INITIAL_YIELD_ROWS = 1024;
-  public static final int DEFAULT_PARALLEL_MERGE_SMALL_BATCH_ROWS = 128;
   public static final int DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS = 60_000;
 
   private AtomicReference<Integer> computedBufferSizeBytes = new AtomicReference<>();
@@ -148,19 +147,19 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     return System.getProperty("java.io.tmpdir");
   }
 
-  @Config(value = "${base_path}.useParallelMergePool")
+  @Config(value = "${base_path}.merge.useParallelMergePool")
   public boolean useParallelMergePool()
   {
     return true;
   }
 
-  @Config(value = "${base_path}.numMergePoolThreads")
+  @Config(value = "${base_path}.merge.pool.parallelism")
   public int getNumThreadsMergePoolConfigured()
   {
     return DEFAULT_NUM_THREADS;
   }
 
-  public int getNumThreadsMergePool()
+  public int getMergePoolParallelism()
   {
     int numThreadsConfigured = getNumThreadsMergePoolConfigured();
     if (numThreadsConfigured != DEFAULT_NUM_THREADS) {
@@ -170,28 +169,34 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     }
   }
 
-  @Config(value = "${base_path}.mergePoolAwaitShutdownMillis")
+  @Config(value = "${base_path}.merge.pool.awaitShutdownMillis")
   public long getMergePoolAwaitShutdownMillis()
   {
     return DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS;
   }
 
-  @Config(value = "${base_path}.mergePoolDefaultMaxParallelism")
-  public int getMergePoolDefaultMaxParallelism()
+  @Config(value = "${base_path}.merge.pool.defaultMaxQueryParallelism")
+  public int getMergePoolDefaultMaxQueryParallelism()
   {
     return Integer.MAX_VALUE;
   }
 
-  @Config(value = "${base_path}.mergePoolTaskInitialYieldRows")
-  public int getMergePoolTaskInitialYieldRows()
+  @Config(value = "${base_path}.merge.task.targetRunTimeMillis")
+  public int getMergePoolTargetTaskRunTimeMillis()
   {
-    return DEFAULT_PARALLEL_MERGE_INITIAL_YIELD_ROWS;
+    return ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS;
   }
 
-  @Config(value = "${base_path}.mergePoolSmallBatchRows")
+  @Config(value = "${base_path}.merge.task.initialYieldNumRows")
+  public int getMergePoolTaskInitialYieldRows()
+  {
+    return ParallelMergeCombiningSequence.DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS;
+  }
+
+  @Config(value = "${base_path}.merge.task.smallBatchNumRows")
   public int getMergePoolSmallBatchRows()
   {
-    return DEFAULT_PARALLEL_MERGE_SMALL_BATCH_ROWS;
+    return ParallelMergeCombiningSequence.DEFAULT_TASK_SMALL_BATCH_NUM_ROWS;
   }
 }
 

@@ -141,7 +141,7 @@ public class DruidProcessingModule implements Module
   public LifecycleForkJoinPoolProvider getMergeProcessingPoolProvider(DruidProcessingConfig config)
   {
     return new LifecycleForkJoinPoolProvider(
-        config.getNumThreadsMergePool(),
+        config.getMergePoolParallelism(),
         ForkJoinPool.defaultForkJoinWorkerThreadFactory,
         (t, e) -> log.error(e, "Unhandled exception in thread [%s]", t),
         true,

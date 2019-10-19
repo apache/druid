@@ -313,9 +313,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
             QueryContexts.hasTimeout(query),
             QueryContexts.getTimeout(query),
             QueryContexts.getPriority(query),
-            QueryContexts.getParallelMergeParallelism(query, processingConfig.getMergePoolDefaultMaxParallelism()),
+            QueryContexts.getParallelMergeParallelism(query, processingConfig.getMergePoolDefaultMaxQueryParallelism()),
             QueryContexts.getParallelMergeInitialYieldRows(query, processingConfig.getMergePoolTaskInitialYieldRows()),
-            QueryContexts.getParallelMergeSmallBatchRows(query, processingConfig.getMergePoolSmallBatchRows())
+            QueryContexts.getParallelMergeSmallBatchRows(query, processingConfig.getMergePoolSmallBatchRows()),
+            processingConfig.getMergePoolTargetTaskRunTimeMillis()
         );
       } else {
         return Sequences

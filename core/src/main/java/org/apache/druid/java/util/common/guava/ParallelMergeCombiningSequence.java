@@ -45,11 +45,21 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BinaryOperator;
 
 /**
- * Artisanal, locally-sourced, hand-crafted, gluten and GMO free, bespoke, small-batch parallel merge combinining sequence
+ * Artisanal, locally-sourced, hand-crafted, gluten and GMO free, bespoke, free-range, organic, small-batch parallel
+ * merge combining sequence.
+ *
+ * See proposal: https://github.com/apache/incubator-druid/issues/8577
+ *
+ * Functionally equivalent to wrapping {@link org.apache.druid.common.guava.CombiningSequence} around a
+ * {@link MergeSequence}, but done in parallel on a {@link ForkJoinPool} running in 'async' mode.
  */
 public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 {
   private static final Logger LOG = new Logger(ParallelMergeCombiningSequence.class);
+
+  public static final int DEFAULT_TASK_TARGET_RUN_TIME_MILLIS = 10;
+  public static final int DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS = 1024;
+  public static final int DEFAULT_TASK_SMALL_BATCH_NUM_ROWS = 128;
 
   private final ForkJoinPool workerPool;
   private final List<Sequence<T>> baseSequences;
@@ -62,6 +72,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   private final int yieldAfter;
   private final int batchSize;
   private final int parallelism;
+  private final long targetTimeNanos;
   private final CancellationGizmo cancellationGizmo;
 
   public ParallelMergeCombiningSequence(
@@ -74,7 +85,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       int queryPriority,
       int parallelism,
       int yieldAfter,
-      int batchSize
+      int batchSize,
+      int targetTimeMillis
   )
   {
     this.workerPool = workerPool;
@@ -87,6 +99,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     this.parallelism = parallelism;
     this.yieldAfter = yieldAfter;
     this.batchSize = batchSize;
+    this.targetTimeNanos = TimeUnit.NANOSECONDS.convert(targetTimeMillis, TimeUnit.MILLISECONDS);
     this.queueSize = 4 * (yieldAfter / batchSize);
     this.cancellationGizmo = new CancellationGizmo();
   }
@@ -108,6 +121,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         parallelism,
         yieldAfter,
         batchSize,
+        targetTimeNanos,
         hasTimeout,
         timeoutAtNanos,
         cancellationGizmo
@@ -142,7 +156,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               public boolean hasNext()
               {
                 final long thisTimeoutNanos = timeoutAtNanos - System.nanoTime();
-                if (thisTimeoutNanos < 0) {
+                if (hasTimeout && thisTimeoutNanos < 0) {
                   throw new RE(new TimeoutException("Sequence iterator timed out"));
                 }
 
@@ -228,6 +242,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     private final int parallelism;
     private final int yieldAfter;
     private final int batchSize;
+    private final long targetTimeNanos;
     private final boolean hasTimeout;
     private final long timeoutAt;
     private final CancellationGizmo cancellationGizmo;
@@ -241,6 +256,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         int parallelism,
         int yieldAfter,
         int batchSize,
+        long targetTimeNanos,
         boolean hasTimeout,
         long timeoutAt,
         CancellationGizmo cancellationGizmo
@@ -254,6 +270,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       this.parallelism = parallelism;
       this.yieldAfter = yieldAfter;
       this.batchSize = batchSize;
+      this.targetTimeNanos = targetTimeNanos;
       this.hasTimeout = hasTimeout;
       this.timeoutAt = timeoutAt;
       this.cancellationGizmo = cancellationGizmo;
@@ -267,7 +284,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
         // if we have a small number of sequences to merge, or computed paralellism is too low, do not run in parallel,
         // just serially perform the merge-combine with a single task
-        if (sequences.size() < 4 || parallelTaskCount < 2) {
+        if (parallelTaskCount < 2) {
           LOG.debug(
               "Input sequence count (%s) or available parallel merge task count (%s) too small to perform parallel"
               + " merge-combine, performing serially with a single merge-combine task",
@@ -288,6 +305,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               combineFn,
               yieldAfter,
               batchSize,
+              targetTimeNanos,
               cancellationGizmo
           );
           getPool().execute(blockForInputsAction);
@@ -327,6 +345,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
             combineFn,
             yieldAfter,
             batchSize,
+            targetTimeNanos,
             cancellationGizmo
         );
         tasks.add(blockForInputsAction);
@@ -350,6 +369,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           combineFn,
           yieldAfter,
           batchSize,
+          targetTimeNanos,
           cancellationGizmo
       );
 
@@ -367,14 +387,16 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       final int runningThreadCount = getPool().getRunningThreadCount();
       final int submissionCount = getPool().getQueuedSubmissionCount();
       // max is minimum of either number of processors or user suggested parallelism
-      final int maxParallelism = Math.min(availableProcessors, parallelism);
+      final int maxParallelism = Math.min(Math.min(availableProcessors, parallelism), getPool().getParallelism());
       // adjust max to be no more than total pool parallelism less the number of running threads + submitted tasks
-      final int utilizationEstimate = runningThreadCount + submissionCount;
-      // minimum of 'max computed parallelism' and pool parallelism less current 'utilization estimate'
-      final int computedParallelism = Math.min(maxParallelism, getPool().getParallelism() - utilizationEstimate);
+      // minus 1 for the task that is running this calculation since it will be replaced with the parallel tasks
+      final int utilizationEstimate = runningThreadCount + submissionCount - 1;
+      // 'computed parallelism' is the remaineder of the 'max parallelism' less current 'utilization estimate'
+      final int computedParallelism = maxParallelism - utilizationEstimate;
       // compute total number of layer 1 'parallel' tasks, the final merge task will take the remaining slot
       // we divide the sequences by 2 because we need at least 2 sequences per partition for it to make sense to need
-      // an additional parallel task to compute the merge
+      // an additional parallel task to compute the merge, so if we have a small number of total sequences this might be
+      // below
       final int computedOptimalParallelism = Math.min(
           (int) Math.floor((double) sequences.size() / 2.0),
           computedParallelism - 1
@@ -426,6 +448,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     private final T initialValue;
     private final int yieldAfter;
     private final int batchSize;
+    private final long targetTimeNanos;
     private final int recursionDepth;
     private final CancellationGizmo cancellationGizmo;
 
@@ -437,6 +460,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         T initialValue,
         int yieldAfter,
         int batchSize,
+        long targetTimeNanos,
         int recursionDepth,
         CancellationGizmo cancellationGizmo
     )
@@ -448,6 +472,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       this.initialValue = initialValue;
       this.yieldAfter = yieldAfter;
       this.batchSize = batchSize;
+      this.targetTimeNanos = targetTimeNanos;
       this.recursionDepth = recursionDepth;
       this.cancellationGizmo = cancellationGizmo;
     }
@@ -457,6 +482,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     {
       try {
         long start = System.nanoTime();
+        long startCpuNanos = JvmUtils.safeGetThreadCpuTime();
 
         int counter = 0;
         int batchCounter = 0;
@@ -515,20 +541,21 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           // measure the time it took to process 'yieldAfter' elements in order to project a next 'yieldAfter' value
           // which we want to target a 10ms task run time. smooth this value with a cumulative moving average in order
           // to prevent normal jitter in processing time from skewing the next yield value too far in any direction
-          final long elapsedMillis = Math.max(
-              TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS),
-              1L
-          );
-          final double nextYieldAfter = Math.max(10.0 * ((double) yieldAfter / elapsedMillis), 1.0);
-          final double cumulativeMovingAverage = (nextYieldAfter + (recursionDepth * yieldAfter)) / (recursionDepth + 1);
+          final long elapsedNanos = System.nanoTime() - start;
+          final long elapsedCpuNanos = JvmUtils.safeGetThreadCpuTime() - startCpuNanos;
+          final double nextYieldAfter = Math.max((double) targetTimeNanos * ((double) yieldAfter / elapsedCpuNanos), 1.0);
+          final double cumulativeMovingAverage =
+              (nextYieldAfter + (recursionDepth * yieldAfter)) / (recursionDepth + 1);
           final int adjustedNextYieldAfter = (int) Math.ceil(cumulativeMovingAverage);
 
           LOG.debug(
-              "task %s yielded %s results ran for %s millis, next task yielding every %s operations",
+              "task recursion %s yielded %s results ran for %s millis (%s nanos), %s cpu nanos, next task yielding every %s operations",
               recursionDepth,
               yieldAfter,
-              elapsedMillis,
-              nextYieldAfter
+              TimeUnit.MILLISECONDS.convert(elapsedNanos, TimeUnit.NANOSECONDS),
+              elapsedNanos,
+              elapsedCpuNanos,
+              adjustedNextYieldAfter
           );
           getPool().execute(new MergeCombineAction<>(
               pQueue,
@@ -538,6 +565,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               currentCombinedValue,
               adjustedNextYieldAfter,
               batchSize,
+              targetTimeNanos,
               recursionDepth + 1,
               cancellationGizmo
           ));
@@ -585,6 +613,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     private final QueuePusher<ResultBatch<T>> outputQueue;
     private final int yieldAfter;
     private final int batchSize;
+    private final long targetTimeNanos;
     private final CancellationGizmo cancellationGizmo;
 
     private PrepareMergeCombineInputsAction(
@@ -594,6 +623,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         BinaryOperator<T> combineFn,
         int yieldAfter,
         int batchSize,
+        long targetTimeNanos,
         CancellationGizmo cancellationGizmo
     )
     {
@@ -603,6 +633,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       this.outputQueue = outputQueue;
       this.yieldAfter = yieldAfter;
       this.batchSize = batchSize;
+      this.targetTimeNanos = targetTimeNanos;
       this.cancellationGizmo = cancellationGizmo;
     }
 
@@ -628,6 +659,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               null,
               yieldAfter,
               batchSize,
+              targetTimeNanos,
               1,
               cancellationGizmo
           ));
@@ -933,6 +965,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         return true;
       }
       if (resultBatch == null || resultBatch.isDrained()) {
+        resultBatch = new ResultBatch<>(batcher.batchSize);
         final Yielder<ResultBatch<E>> nextYielder = yielder.next(resultBatch);
         yielder = nextYielder;
       }

@@ -46,13 +46,9 @@ import java.util.function.BinaryOperator;
 public class ParallelMergeCombiningSequenceTest
 {
   private static final Logger LOG = new Logger(ParallelMergeCombiningSequenceTest.class);
-  private static final int DEFAULT_TEST_YIELD_AFTER = 1024;
-  private static final int DEFAULT_TEST_BATCH_SIZE = 128;
 
-  private ForkJoinPool pool;
-
-  private final Ordering<IntPair> ordering = Ordering.natural().onResultOf(p -> p.lhs);
-  private final BinaryOperator<IntPair> mergeFn = (lhs, rhs) -> {
+  public static final Ordering<IntPair> INT_PAIR_ORDERING = Ordering.natural().onResultOf(p -> p.lhs);
+  public static final BinaryOperator<IntPair> INT_PAIR_MERGE_FN = (lhs, rhs) -> {
     if (lhs == null) {
       return rhs;
     }
@@ -64,10 +60,17 @@ public class ParallelMergeCombiningSequenceTest
     return new IntPair(lhs.lhs, lhs.rhs + rhs.rhs);
   };
 
+  private ForkJoinPool pool;
+
   @Before
   public void setup()
   {
-    pool = new ForkJoinPool(4, ForkJoinPool.defaultForkJoinWorkerThreadFactory, null, true);
+    pool = new ForkJoinPool(
+        (int) Math.ceil(Runtime.getRuntime().availableProcessors() * 1.5),
+        ForkJoinPool.defaultForkJoinWorkerThreadFactory,
+        (t, e) -> LOG.error(e, "Unhandled exception in thread [%s]", t),
+        true
+    );
   }
 
   @After
@@ -86,7 +89,7 @@ public class ParallelMergeCombiningSequenceTest
     ParallelMergeCombiningSequence.YielderBatchedResultsCursor<IntPair> cursor =
         new ParallelMergeCombiningSequence.YielderBatchedResultsCursor<>(
             new ParallelMergeCombiningSequence.SequenceBatcher<>(rawSequence, 128),
-            ordering
+            INT_PAIR_ORDERING
         );
     cursor.initialize();
     Yielder<IntPair> rawYielder = Yielders.each(rawSequence);
@@ -94,7 +97,6 @@ public class ParallelMergeCombiningSequenceTest
     IntPair prev = null;
     while (!rawYielder.isDone() && !cursor.isDone()) {
       Assert.assertEquals(rawYielder.get(), cursor.get());
-      LOG.debug("%s", cursor.get());
       Assert.assertNotEquals(cursor.get(), prev);
       prev = cursor.get();
       rawYielder = rawYielder.next(rawYielder.get());
@@ -113,7 +115,7 @@ public class ParallelMergeCombiningSequenceTest
     ParallelMergeCombiningSequence.YielderBatchedResultsCursor<IntPair> cursor =
         new ParallelMergeCombiningSequence.YielderBatchedResultsCursor<>(
             new ParallelMergeCombiningSequence.SequenceBatcher<>(rawSequence, 128),
-            ordering
+            INT_PAIR_ORDERING
         );
 
     cursor.initialize();
@@ -128,7 +130,6 @@ public class ParallelMergeCombiningSequenceTest
     int batchCounter = 0;
     while (!rawYielder.isDone() && !cursor.isDone()) {
       Assert.assertEquals(rawYielder.get(), cursor.get());
-      LOG.debug("%s", cursor.get());
       Assert.assertNotEquals(cursor.get(), prev);
       prev = cursor.get();
       currentBatch.add(prev);
@@ -160,10 +161,8 @@ public class ParallelMergeCombiningSequenceTest
 
     Yielder<IntPair> queueYielder = Yielders.each(queueAsSequence);
 
-    int rowCtr = 0;
     while (!rawYielder.isDone() && !queueYielder.isDone()) {
       Assert.assertEquals(rawYielder.get(), queueYielder.get());
-      LOG.debug("row %s: %s", rowCtr++, queueYielder.get());
       Assert.assertNotEquals(queueYielder.get(), prev);
       prev = queueYielder.get();
       rawYielder = rawYielder.next(rawYielder.get());
@@ -183,7 +182,7 @@ public class ParallelMergeCombiningSequenceTest
     ParallelMergeCombiningSequence.YielderBatchedResultsCursor<IntPair> cursor =
         new ParallelMergeCombiningSequence.YielderBatchedResultsCursor<>(
             new ParallelMergeCombiningSequence.SequenceBatcher<>(rawSequence, 128),
-            ordering
+            INT_PAIR_ORDERING
         );
 
     cursor.initialize();
@@ -199,7 +198,6 @@ public class ParallelMergeCombiningSequenceTest
     int batchCounter = 0;
     while (!rawYielder.isDone() && !cursor.isDone()) {
       Assert.assertEquals(rawYielder.get(), cursor.get());
-      LOG.debug("%s", cursor.get());
       Assert.assertNotEquals(cursor.get(), prev);
       prev = cursor.get();
       currentBatch.add(prev);
@@ -225,7 +223,7 @@ public class ParallelMergeCombiningSequenceTest
     ParallelMergeCombiningSequence.BlockingQueueuBatchedResultsCursor<IntPair> queueCursor =
         new ParallelMergeCombiningSequence.BlockingQueueuBatchedResultsCursor<>(
             outputQueue,
-            ordering,
+            INT_PAIR_ORDERING,
             false,
             -1L
         );
@@ -233,7 +231,6 @@ public class ParallelMergeCombiningSequenceTest
     prev = null;
     while (!rawYielder.isDone() && !queueCursor.isDone()) {
       Assert.assertEquals(rawYielder.get(), queueCursor.get());
-      LOG.debug("%s", queueCursor.get());
       Assert.assertNotEquals(queueCursor.get(), prev);
       prev = queueCursor.get();
       rawYielder = rawYielder.next(rawYielder.get());
@@ -451,13 +448,19 @@ public class ParallelMergeCombiningSequenceTest
     input.add(generateOrderedPairsSequence(someSize));
     input.add(generateOrderedPairsSequence(someSize));
     input.add(generateOrderedPairsSequence(someSize));
-    input.add(slowSequence(someSize, 500));
+    input.add(slowSequence(someSize, 1, 500, 500));
 
     expectedException.expect(RuntimeException.class);
     expectedException.expectCause(Matchers.instanceOf(TimeoutException.class));
     expectedException.expectMessage("Sequence iterator timed out waiting for data");
 
-    assertException(input, DEFAULT_TEST_BATCH_SIZE, DEFAULT_TEST_YIELD_AFTER, 1000L, 0);
+    assertException(
+        input,
+        ParallelMergeCombiningSequence.DEFAULT_TASK_SMALL_BATCH_NUM_ROWS,
+        ParallelMergeCombiningSequence.DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS,
+        1000L,
+        0
+    );
   }
 
   @Test
@@ -478,29 +481,34 @@ public class ParallelMergeCombiningSequenceTest
 
   private void assertResult(List<Sequence<IntPair>> sequences) throws InterruptedException, IOException
   {
-    assertResult(sequences, DEFAULT_TEST_BATCH_SIZE, DEFAULT_TEST_YIELD_AFTER);
+    assertResult(
+        sequences,
+        ParallelMergeCombiningSequence.DEFAULT_TASK_SMALL_BATCH_NUM_ROWS,
+        ParallelMergeCombiningSequence.DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS
+    );
   }
 
   private void assertResult(List<Sequence<IntPair>> sequences, int batchSize, int yieldAfter)
       throws InterruptedException, IOException
   {
     final CombiningSequence<IntPair> combiningSequence = CombiningSequence.create(
-        new MergeSequence<>(ordering, Sequences.simple(sequences)),
-        ordering,
-        mergeFn
+        new MergeSequence<>(INT_PAIR_ORDERING, Sequences.simple(sequences)),
+        INT_PAIR_ORDERING,
+        INT_PAIR_MERGE_FN
     );
 
     final ParallelMergeCombiningSequence<IntPair> parallelMergeCombineSequence = new ParallelMergeCombiningSequence<>(
         pool,
         sequences,
-        ordering,
-        mergeFn,
+        INT_PAIR_ORDERING,
+        INT_PAIR_MERGE_FN,
         true,
         5000,
         0,
         Runtime.getRuntime().availableProcessors() - 1,
         yieldAfter,
-        batchSize
+        batchSize,
+        ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS
     );
 
     Yielder<IntPair> combiningYielder = Yielders.each(combiningSequence);
@@ -510,7 +518,6 @@ public class ParallelMergeCombiningSequenceTest
 
     while (!combiningYielder.isDone() && !parallelMergeCombineYielder.isDone()) {
       Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
-      LOG.debug("%s", parallelMergeCombineYielder.get());
       Assert.assertNotEquals(parallelMergeCombineYielder.get(), prev);
       prev = parallelMergeCombineYielder.get();
       combiningYielder = combiningYielder.next(combiningYielder.get());
@@ -529,7 +536,13 @@ public class ParallelMergeCombiningSequenceTest
 
   private void assertException(List<Sequence<IntPair>> sequences) throws Exception
   {
-    assertException(sequences, DEFAULT_TEST_BATCH_SIZE, DEFAULT_TEST_YIELD_AFTER, 5000L, 0);
+    assertException(
+        sequences,
+        ParallelMergeCombiningSequence.DEFAULT_TASK_SMALL_BATCH_NUM_ROWS,
+        ParallelMergeCombiningSequence.DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS,
+        5000L,
+        0
+    );
   }
 
   private void assertException(
@@ -545,14 +558,15 @@ public class ParallelMergeCombiningSequenceTest
       final ParallelMergeCombiningSequence<IntPair> parallelMergeCombineSequence = new ParallelMergeCombiningSequence<>(
           pool,
           sequences,
-          ordering,
-          mergeFn,
+          INT_PAIR_ORDERING,
+          INT_PAIR_MERGE_FN,
           true,
           timeout,
           0,
           Runtime.getRuntime().availableProcessors() - 1,
           yieldAfter,
-          batchSize
+          batchSize,
+          ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS
       );
 
       Yielder<IntPair> parallelMergeCombineYielder = Yielders.each(parallelMergeCombineSequence);
@@ -560,7 +574,6 @@ public class ParallelMergeCombiningSequenceTest
       IntPair prev = null;
 
       while (!parallelMergeCombineYielder.isDone()) {
-        LOG.debug("%s", parallelMergeCombineYielder.get());
         Assert.assertNotEquals(parallelMergeCombineYielder.get(), prev);
         prev = parallelMergeCombineYielder.get();
         if (readDelayMillis > 0 && ThreadLocalRandom.current().nextBoolean()) {
@@ -571,20 +584,20 @@ public class ParallelMergeCombiningSequenceTest
       parallelMergeCombineYielder.close();
     }
     catch (Exception ex) {
-      LOG.warn(ex, "actual exception:");
+      LOG.warn(ex, "exception:");
       throw ex;
     }
   }
 
-  static class IntPair extends Pair<Integer, Integer>
+  public static class IntPair extends Pair<Integer, Integer>
   {
-    IntPair(@Nullable Integer lhs, @Nullable Integer rhs)
+    public IntPair(@Nullable Integer lhs, @Nullable Integer rhs)
     {
       super(lhs, rhs);
     }
   }
 
-  private static List<IntPair> generateOrderedPairs(int length)
+  public static List<IntPair> generateOrderedPairs(int length)
   {
     int counter = 0;
     int i = 0;
@@ -599,12 +612,12 @@ public class ParallelMergeCombiningSequenceTest
     return generatedSequence;
   }
 
-  private static Sequence<IntPair> generateOrderedPairsSequence(int length)
+  public static Sequence<IntPair> generateOrderedPairsSequence(int length)
   {
     return Sequences.simple(generateOrderedPairs(length));
   }
 
-  private static Sequence<IntPair> explodingSequence(int explodeAfter)
+  public static Sequence<IntPair> explodingSequence(int explodeAfter)
   {
     List<IntPair> items = generateOrderedPairs(explodeAfter + 1);
     return new BaseSequence<>(
@@ -642,7 +655,7 @@ public class ParallelMergeCombiningSequenceTest
     );
   }
 
-  private static Sequence<IntPair> slowSequence(int size, int delay)
+  public static Sequence<IntPair> initialDelaySequence(int size, int maxDelayMillis)
   {
     List<IntPair> items = generateOrderedPairs(size);
     return new BaseSequence<>(
@@ -663,9 +676,54 @@ public class ParallelMergeCombiningSequenceTest
               @Override
               public IntPair next()
               {
-                if (ThreadLocalRandom.current().nextBoolean()) {
+                if (i == 0) {
                   try {
-                    Thread.sleep(delay);
+                    Thread.sleep(ThreadLocalRandom.current().nextInt(1, maxDelayMillis));
+                  }
+                  catch (InterruptedException ex) {
+                    throw new RuntimeException(ex);
+                  }
+                }
+                return items.get(i++);
+              }
+            };
+          }
+
+          @Override
+          public void cleanup(Iterator<IntPair> iterFromMake)
+          {
+            // nothing to cleanup
+          }
+        }
+    );
+  }
+
+  public static Sequence<IntPair> slowSequence(int size, int frequency, int maxStartDelayMillis, int maxDelayMillis)
+  {
+    List<IntPair> items = generateOrderedPairs(size);
+    return new BaseSequence<>(
+        new BaseSequence.IteratorMaker<IntPair, Iterator<IntPair>>()
+        {
+          @Override
+          public Iterator<IntPair> make()
+          {
+            return new Iterator<IntPair>()
+            {
+              int i = 0;
+              @Override
+              public boolean hasNext()
+              {
+                return i < items.size();
+              }
+
+              @Override
+              public IntPair next()
+              {
+                if (i == 0 || (i % frequency == 0 && ThreadLocalRandom.current().nextBoolean())) {
+                  try {
+                    Thread.sleep(
+                        ThreadLocalRandom.current().nextInt(1, i  == 0 ? maxStartDelayMillis : maxDelayMillis)
+                    );
                   }
                   catch (InterruptedException ex) {
                     throw new RuntimeException(ex);
