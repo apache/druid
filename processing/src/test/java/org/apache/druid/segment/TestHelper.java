@@ -51,7 +51,7 @@ import java.util.stream.IntStream;
  */
 public class TestHelper
 {
-  private static final ObjectMapper JSON_MAPPER = makeJsonMapper();
+  public static final ObjectMapper JSON_MAPPER = makeJsonMapper();
 
   public static IndexMergerV9 getTestIndexMergerV9(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {

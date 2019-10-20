@@ -85,7 +85,7 @@ public class InlineFirehoseFactoryTest
   {
     Assert.assertTrue(target instanceof FiniteFirehoseFactory);
     Assert.assertFalse(target.isSplittable());
-    Assert.assertEquals(1, target.getNumSplits());
+    Assert.assertEquals(1, target.getNumSplits(null));
   }
 
   @Test(expected = NullPointerException.class)
@@ -115,7 +115,7 @@ public class InlineFirehoseFactoryTest
   @Test
   public void testForcedSplitAndClone()
   {
-    Optional<InputSplit<String>> inputSplitOptional = target.getSplits().findFirst();
+    Optional<InputSplit<String>> inputSplitOptional = target.getSplits(null).findFirst();
     Assert.assertTrue(inputSplitOptional.isPresent());
     FiniteFirehoseFactory<StringInputRowParser, String> cloneWithSplit = target.withSplit(inputSplitOptional.get());
     Assert.assertTrue(cloneWithSplit instanceof InlineFirehoseFactory);

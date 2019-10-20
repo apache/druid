@@ -58,6 +58,18 @@ public class TestSupervisorSpec implements SupervisorSpec
     return null;
   }
 
+  @Override
+  public String getType()
+  {
+    return null;
+  }
+
+  @Override
+  public String getSource()
+  {
+    return null;
+  }
+
   @JsonProperty
   public Object getData()
   {

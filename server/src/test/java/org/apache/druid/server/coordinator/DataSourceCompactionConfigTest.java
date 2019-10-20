@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
@@ -93,7 +94,7 @@ public class DataSourceCompactionConfigTest
   @Test
   public void testSerdeUserCompactTuningConfig() throws IOException
   {
-    final UserCompactTuningConfig config = new UserCompactTuningConfig(null, null, null, null, null, null);
+    final UserCompactTuningConfig config = new UserCompactTuningConfig(null, null, null, null, null, null, null, null);
     final String json = OBJECT_MAPPER.writeValueAsString(config);
     // Check maxRowsPerSegment doesn't exist in the JSON string
     Assert.assertFalse(json.contains("maxRowsPerSegment"));
@@ -114,6 +115,8 @@ public class DataSourceCompactionConfigTest
             null,
             null,
             10000L,
+            null,
+            null,
             null,
             null,
             null
@@ -147,6 +150,8 @@ public class DataSourceCompactionConfigTest
             10000L,
             null,
             null,
+            null,
+            null,
             null
         ),
         ImmutableMap.of("key", "val")
@@ -171,6 +176,7 @@ public class DataSourceCompactionConfigTest
         1000,
         10000L,
         2000L,
+        new SegmentsSplitHintSpec(10000L),
         new IndexSpec(
             new RoaringBitmapSerdeFactory(false),
             CompressionStrategy.LZF,
@@ -178,7 +184,8 @@ public class DataSourceCompactionConfigTest
             LongEncodingStrategy.LONGS
         ),
         1,
-        3000L
+        3000L,
+        null
     );
 
     final String json = OBJECT_MAPPER.writeValueAsString(tuningConfig);

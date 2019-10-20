@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.java.util.common.IAE;
@@ -46,6 +47,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   private static final int DEFAULT_MAX_NUM_SEGMENTS_TO_MERGE = 100;
   private static final int DEFAULT_TOTAL_NUM_MERGE_TASKS = 10;
 
+  private final SplitHintSpec splitHintSpec;
+
   private final int maxNumConcurrentSubTasks;
   private final int maxRetry;
   private final long taskStatusCheckPeriodMs;
@@ -67,9 +70,10 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
    */
   private final int totalNumMergeTasks;
 
-  static ParallelIndexTuningConfig defaultConfig()
+  public static ParallelIndexTuningConfig defaultConfig()
   {
     return new ParallelIndexTuningConfig(
+        null,
         null,
         null,
         null,
@@ -106,6 +110,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
       @JsonProperty("numShards") @Deprecated @Nullable Integer numShards,
+      @JsonProperty("splitHintSpec") @Nullable SplitHintSpec splitHintSpec,
       @JsonProperty("partitionsSpec") @Nullable PartitionsSpec partitionsSpec,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
       @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
@@ -117,7 +122,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       @JsonProperty("maxNumSubTasks") @Deprecated @Nullable Integer maxNumSubTasks,
       @JsonProperty("maxNumConcurrentSubTasks") @Nullable Integer maxNumConcurrentSubTasks,
       @JsonProperty("maxRetry") @Nullable Integer maxRetry,
-      @JsonProperty("taskStatusCheckPeriodMs") @Nullable Integer taskStatusCheckPeriodMs,
+      @JsonProperty("taskStatusCheckPeriodMs") @Nullable Long taskStatusCheckPeriodMs,
       @JsonProperty("chatHandlerTimeout") @Nullable Duration chatHandlerTimeout,
       @JsonProperty("chatHandlerNumRetries") @Nullable Integer chatHandlerNumRetries,
       @JsonProperty("maxNumSegmentsToMerge") @Nullable Integer maxNumSegmentsToMerge,
@@ -154,6 +159,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       throw new IAE("Can't use both maxNumSubTasks and maxNumConcurrentSubTasks. Use maxNumConcurrentSubTasks instead");
     }
 
+    this.splitHintSpec = splitHintSpec;
+
     if (maxNumConcurrentSubTasks == null) {
       this.maxNumConcurrentSubTasks = maxNumSubTasks == null ? DEFAULT_MAX_NUM_CONCURRENT_SUB_TASKS : maxNumSubTasks;
     } else {
@@ -180,6 +187,13 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
     Preconditions.checkArgument(this.maxNumConcurrentSubTasks > 0, "maxNumConcurrentSubTasks must be positive");
     Preconditions.checkArgument(this.maxNumSegmentsToMerge > 0, "maxNumSegmentsToMerge must be positive");
     Preconditions.checkArgument(this.totalNumMergeTasks > 0, "totalNumMergeTasks must be positive");
+  }
+
+  @Nullable
+  @JsonProperty
+  public SplitHintSpec getSplitHintSpec()
+  {
+    return splitHintSpec;
   }
 
   @JsonProperty
@@ -225,6 +239,39 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   }
 
   @Override
+  public ParallelIndexTuningConfig withPartitionsSpec(PartitionsSpec partitionsSpec)
+  {
+    return new ParallelIndexTuningConfig(
+        null,
+        null,
+        getMaxRowsInMemory(),
+        getMaxBytesInMemory(),
+        null,
+        null,
+        getSplitHintSpec(),
+        partitionsSpec,
+        getIndexSpec(),
+        getIndexSpecForIntermediatePersists(),
+        getMaxPendingPersists(),
+        isForceGuaranteedRollup(),
+        isReportParseExceptions(),
+        getPushTimeout(),
+        getSegmentWriteOutMediumFactory(),
+        null,
+        getMaxNumConcurrentSubTasks(),
+        getMaxRetry(),
+        getTaskStatusCheckPeriodMs(),
+        getChatHandlerTimeout(),
+        getChatHandlerNumRetries(),
+        getMaxNumSegmentsToMerge(),
+        getTotalNumMergeTasks(),
+        isLogParseExceptions(),
+        getMaxParseExceptions(),
+        getMaxSavedParseExceptions()
+    );
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -243,6 +290,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
            chatHandlerNumRetries == that.chatHandlerNumRetries &&
            maxNumSegmentsToMerge == that.maxNumSegmentsToMerge &&
            totalNumMergeTasks == that.totalNumMergeTasks &&
+           Objects.equals(splitHintSpec, that.splitHintSpec) &&
            Objects.equals(chatHandlerTimeout, that.chatHandlerTimeout);
   }
 
@@ -251,6 +299,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   {
     return Objects.hash(
         super.hashCode(),
+        splitHintSpec,
         maxNumConcurrentSubTasks,
         maxRetry,
         taskStatusCheckPeriodMs,
@@ -259,5 +308,20 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         maxNumSegmentsToMerge,
         totalNumMergeTasks
     );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ParallelIndexTuningConfig{" +
+           "splitHintSpec=" + splitHintSpec +
+           ", maxNumConcurrentSubTasks=" + maxNumConcurrentSubTasks +
+           ", maxRetry=" + maxRetry +
+           ", taskStatusCheckPeriodMs=" + taskStatusCheckPeriodMs +
+           ", chatHandlerTimeout=" + chatHandlerTimeout +
+           ", chatHandlerNumRetries=" + chatHandlerNumRetries +
+           ", maxNumSegmentsToMerge=" + maxNumSegmentsToMerge +
+           ", totalNumMergeTasks=" + totalNumMergeTasks +
+           "} " + super.toString();
   }
 }
