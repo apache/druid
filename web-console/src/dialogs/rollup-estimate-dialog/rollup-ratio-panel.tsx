@@ -129,10 +129,10 @@ export class RollupRatioPanel extends React.PureComponent<
         <div className="rollup-ratio-panel">
           <Callout>
             <p>
-              You may select any column to exclude them from your rollup preview. This will update
-              your rollup ratio after you click on "Estimate Rollup".{' '}
+              {`You may select any column to exclude them from your rollup preview. This will update
+              your rollup ratio after you click on "Estimate rollup".`}
             </p>
-            <p>Please click on "Preview Data" after modifying your interval.</p>
+            <p>{`Please click on "Preview data" after modifying your interval.`}</p>
             <p>
               {rollupRatio !== -1
                 ? `This datasource has previously been rolled up. The original rollup ratio is ${(rollupRatio -
