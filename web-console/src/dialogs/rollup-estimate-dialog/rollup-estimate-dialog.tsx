@@ -200,7 +200,7 @@ export class RollupEstimateDialog extends React.PureComponent<
         canOutsideClickClose={false}
         title={`Estimate your rollup ratio: ${datasource}`}
       >
-        {!queryColumns ? (
+        {loading ? (
           <>
             <div className="loader">
               <Loader loading />
