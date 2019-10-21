@@ -44,6 +44,7 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeType;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -638,7 +639,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                       // move the segment out from the active segments of BaseAppenderatorDriver to make a new segment.
                       final boolean isPushRequired = addResult.isPushRequired(
                           tuningConfig.getPartitionsSpec().getMaxRowsPerSegment(),
-                          tuningConfig.getPartitionsSpec().getMaxTotalRows()
+                          tuningConfig.getPartitionsSpec().getMaxTotalRowsOr(DynamicPartitionsSpec.DEFAULT_MAX_TOTAL_ROWS)
                       );
                       if (isPushRequired && !sequenceToUse.isCheckpointed()) {
                         sequenceToCheckpoint = sequenceToUse;

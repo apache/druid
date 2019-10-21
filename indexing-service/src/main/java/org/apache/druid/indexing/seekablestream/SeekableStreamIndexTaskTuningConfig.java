@@ -159,6 +159,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     return partitionsSpec.getMaxTotalRows();
   }
 
+  @Override
   public DynamicPartitionsSpec getPartitionsSpec()
   {
     return partitionsSpec;

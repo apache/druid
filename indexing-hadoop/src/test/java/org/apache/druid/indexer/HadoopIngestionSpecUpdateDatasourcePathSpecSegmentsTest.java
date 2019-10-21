@@ -38,6 +38,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -66,7 +67,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
     jsonMapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ObjectMapper.class, jsonMapper)
-            .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT)
+            .addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT)
     );
   }
 

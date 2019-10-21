@@ -20,38 +20,13 @@
 package org.apache.druid.server.coordinator.helper;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
-
-import javax.annotation.Nullable;
-import java.util.Collection;
 
 /**
  * Util class used by {@link DruidCoordinatorSegmentCompactor} and {@link CompactionSegmentSearchPolicy}.
  */
 class SegmentCompactorUtil
 {
-  /**
-   * The allowed error rate of the segment size after compaction.
-   * Its value is determined experimentally.
-   */
-  private static final double ALLOWED_ERROR_OF_SEGMENT_SIZE = .2;
-
-  static boolean needsCompaction(@Nullable Long targetCompactionSizeBytes, Collection<DataSegment> candidates)
-  {
-    if (targetCompactionSizeBytes == null) {
-      // If targetCompactionSizeBytes is null, we have no way to check that the given segments need compaction or not.
-      return true;
-    }
-    final double minTargetThreshold = targetCompactionSizeBytes * (1 - ALLOWED_ERROR_OF_SEGMENT_SIZE);
-    final double maxTargetThreshold = targetCompactionSizeBytes * (1 + ALLOWED_ERROR_OF_SEGMENT_SIZE);
-
-    return candidates
-        .stream()
-        .filter(segment -> segment.getSize() < minTargetThreshold || segment.getSize() > maxTargetThreshold)
-        .count() > 1;
-  }
-
   /**
    * Removes {@code smallInterval} from {@code largeInterval}.  The end of both intervals should be same.
    *

@@ -28,6 +28,8 @@ import org.apache.druid.client.indexing.ClientCompactQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
@@ -35,6 +37,7 @@ import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -47,7 +50,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -66,7 +68,6 @@ public class DruidCoordinatorSegmentCompactorTest
     @Override
     public String compactSegments(
         List<DataSegment> segments,
-        @Nullable Long targetCompactionSizeBytes,
         int compactionTaskPriority,
         ClientCompactQueryTuningConfig tuningConfig,
         Map<String, Object> context
@@ -97,6 +98,22 @@ public class DruidCoordinatorSegmentCompactorTest
             segments.get(0).getDimensions(),
             segments.get(0).getMetrics(),
             new NumberedShardSpec(i, 0),
+            new CompactionState(
+                new DynamicPartitionsSpec(
+                    tuningConfig.getMaxRowsPerSegment(),
+                    tuningConfig.getMaxTotalRowsOr(Long.MAX_VALUE)
+                ),
+                ImmutableMap.of(
+                    "bitmap",
+                    ImmutableMap.of("type", "concise"),
+                    "dimensionCompression",
+                    "lz4",
+                    "metricCompression",
+                    "lz4",
+                    "longEncoding",
+                    "longs"
+                )
+            ),
             1,
             segmentSize
         );
@@ -178,7 +195,10 @@ public class DruidCoordinatorSegmentCompactorTest
   @Test
   public void testRun()
   {
-    final DruidCoordinatorSegmentCompactor compactor = new DruidCoordinatorSegmentCompactor(indexingServiceClient);
+    final DruidCoordinatorSegmentCompactor compactor = new DruidCoordinatorSegmentCompactor(
+        new DefaultObjectMapper(),
+        indexingServiceClient
+    );
 
     final Supplier<String> expectedVersionSupplier = new Supplier<String>()
     {
@@ -375,7 +395,6 @@ public class DruidCoordinatorSegmentCompactorTest
               dataSource,
               0,
               50L,
-              20L,
               null,
               new Period("PT1H"), // smaller than segment interval
               null,
