@@ -37,6 +37,9 @@
       grid-area: main;
       overflow: auto;
       margin: 0 5px;
+      .ReactTable {
+        height: 100%;
+      }
       .rt-th {
         cursor: pointer;
         background: rgba(38, 170, 201, 0.5);

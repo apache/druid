@@ -22,9 +22,7 @@ import * as React from 'react';
 
 import { getDruidErrorMessage, queryDruidRune, QueryManager } from '../../utils/index';
 
-import './rollup-ratio.scss';
-
-// import { Loader } from '../../components/index';
+import './rollup-ratio-panel.scss';
 
 export interface RollupRatioPanelProps {
   queryColumns: string[];
@@ -81,8 +79,6 @@ export class RollupRatioPanel extends React.PureComponent<
                 ordering: null,
               },
             ],
-            limit: 10,
-            context: { skipEmptyBuckets: true, sqlQueryId: '37382db2-d30f-43a0-86ec-49dbc48b97b8' },
           });
           console.log(timeseriesResponse);
 
@@ -128,11 +124,9 @@ export class RollupRatioPanel extends React.PureComponent<
   render(): JSX.Element {
     const { intervalInput, result } = this.state;
     const { rollupRatio, updateInterval } = this.props;
-
-    // if (loading) return <Loader />;
     return (
       <>
-        <div className="rollup-ratio">
+        <div className="rollup-ratio-panel">
           <Callout>
             <p>
               You may select any column to exclude them from your rollup preview. This will update
@@ -154,16 +148,12 @@ export class RollupRatioPanel extends React.PureComponent<
               readOnly
             />
           </FormGroup>
-          <FormGroup
-            // key={field.name}
-            label={`Interval`}
-          >
+          <FormGroup label={`Interval`}>
             <InputGroup
               value={intervalInput}
               placeholder="2019-01-01/2020-01-01"
               onChange={(e: any) => {
                 this.setState({ intervalInput: e.target.value });
-                console.log(intervalInput);
               }}
             />
           </FormGroup>

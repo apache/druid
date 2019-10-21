@@ -95,6 +95,7 @@ export class RollupEstimateDialog extends React.PureComponent<
             const segmentMetadataResponse0 = segmentMetadataResponse[0];
             if (segmentMetadataResponse0.rollup) {
               try {
+                // Get rollup ratio of ingested data
                 const rollupRatioResponse = await queryDruidRune({
                   queryType: 'timeseries',
                   dataSource: datasource,
@@ -166,6 +167,7 @@ export class RollupEstimateDialog extends React.PureComponent<
   }
 
   updateColumns(columnName: string) {
+    // Include or exclude columns for rollup
     const { queryColumns } = this.state;
 
     const newQueryColumns = queryColumns.slice();
@@ -184,14 +186,18 @@ export class RollupEstimateDialog extends React.PureComponent<
     });
   }
 
-  componentDidMount() {
-    // Do something when component unmounts
+  componentDidMount(): void {
     this.druidQueryManager.runQuery(null);
   }
+
+  componentWillUnmount(): void {
+    this.druidQueryManager.terminate();
+  }
+
   render(): JSX.Element {
     const { datasource, onClose } = this.props;
     const { interval, result, loading, queryColumns, rollupRatio } = this.state;
-    // if (loading) return <Loader />;
+    console.log(result);
     return (
       <Dialog
         className="rollup-estimate-dialog"
@@ -220,8 +226,6 @@ export class RollupEstimateDialog extends React.PureComponent<
                 data={result ? result.queryResult.rows : []}
                 loading={loading}
                 columns={(result ? result.queryResult.header : []).map((h: any, i) => {
-                  // Need to clean this up
-
                   return {
                     Header: () => {
                       return (
