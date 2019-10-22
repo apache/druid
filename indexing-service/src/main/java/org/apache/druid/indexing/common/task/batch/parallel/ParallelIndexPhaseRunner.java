@@ -28,6 +28,7 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -196,7 +197,10 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
                     (SinglePhaseSubTaskSpec) taskCompleteEvent.getSpec();
                 LOG.error(
                     "Failed to run sub tasks for inputSplits[%s]",
-                    getSplitsIfSplittable(spec.getIngestionSpec().getIOConfig().getFirehoseFactory())
+                    getSplitsIfSplittable(
+                        spec.getIngestionSpec().getIOConfig().getFirehoseFactory(),
+                        tuningConfig.getSplitHintSpec()
+                    )
                 );
               }
               break;
@@ -250,11 +254,14 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     );
   }
 
-  private static List<InputSplit> getSplitsIfSplittable(FirehoseFactory firehoseFactory) throws IOException
+  private static List<InputSplit> getSplitsIfSplittable(
+      FirehoseFactory firehoseFactory,
+      @Nullable SplitHintSpec splitHintSpec
+  ) throws IOException
   {
     if (firehoseFactory instanceof FiniteFirehoseFactory) {
       final FiniteFirehoseFactory<?, ?> finiteFirehoseFactory = (FiniteFirehoseFactory) firehoseFactory;
-      return finiteFirehoseFactory.getSplits().collect(Collectors.toList());
+      return finiteFirehoseFactory.getSplits(splitHintSpec).collect(Collectors.toList());
     } else {
       throw new ISE("firehoseFactory[%s] is not splittable", firehoseFactory.getClass().getSimpleName());
     }

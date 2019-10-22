@@ -27,6 +27,9 @@ import org.apache.druid.client.indexing.ClientCompactQuery;
 import org.apache.druid.client.indexing.ClientCompactQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
+import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
@@ -74,6 +77,7 @@ public class ClientCompactQuerySerdeTest
             40000,
             2000L,
             30000L,
+            new SegmentsSplitHintSpec(100000L),
             new IndexSpec(
                 new DefaultBitmapSerdeFactory(),
                 CompressionStrategy.LZ4,
@@ -81,7 +85,8 @@ public class ClientCompactQuerySerdeTest
                 LongEncodingStrategy.LONGS
             ),
             null,
-            1000L
+            1000L,
+            100
         ),
         new HashMap<>()
     );
@@ -100,22 +105,36 @@ public class ClientCompactQuerySerdeTest
         ((CompactionIntervalSpec) task.getIoConfig().getInputSpec()).getSha256OfSortedSegmentIds()
     );
     Assert.assertEquals(
-        query.getTuningConfig().getMaxRowsInMemory().intValue(), task.getTuningConfig().getMaxRowsInMemory()
+        query.getTuningConfig().getMaxRowsInMemory().intValue(),
+        task.getTuningConfig().getMaxRowsInMemory()
     );
     Assert.assertEquals(
-        query.getTuningConfig().getMaxBytesInMemory().longValue(), task.getTuningConfig().getMaxBytesInMemory()
+        query.getTuningConfig().getMaxBytesInMemory().longValue(),
+        task.getTuningConfig().getMaxBytesInMemory()
     );
     Assert.assertEquals(
-        query.getTuningConfig().getMaxRowsPerSegment(), task.getTuningConfig().getMaxRowsPerSegment()
+        query.getTuningConfig().getMaxRowsPerSegment(),
+        task.getTuningConfig().getMaxRowsPerSegment()
     );
     Assert.assertEquals(
-        query.getTuningConfig().getMaxTotalRows(), task.getTuningConfig().getMaxTotalRows()
+        query.getTuningConfig().getMaxTotalRows(),
+        task.getTuningConfig().getMaxTotalRows()
     );
     Assert.assertEquals(
-        query.getTuningConfig().getIndexSpec(), task.getTuningConfig().getIndexSpec()
+        query.getTuningConfig().getSplitHintSpec(),
+        task.getTuningConfig().getSplitHintSpec()
     );
     Assert.assertEquals(
-        query.getTuningConfig().getPushTimeout().longValue(), task.getTuningConfig().getPushTimeout()
+        query.getTuningConfig().getIndexSpec(),
+        task.getTuningConfig().getIndexSpec()
+    );
+    Assert.assertEquals(
+        query.getTuningConfig().getPushTimeout().longValue(),
+        task.getTuningConfig().getPushTimeout()
+    );
+    Assert.assertEquals(
+        query.getTuningConfig().getMaxNumConcurrentSubTasks().intValue(),
+        task.getTuningConfig().getMaxNumConcurrentSubTasks()
     );
     Assert.assertEquals(query.getContext(), task.getContext());
   }
@@ -143,6 +162,7 @@ public class ClientCompactQuerySerdeTest
                   binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
                   binder.bind(SegmentLoaderFactory.class).toInstance(new SegmentLoaderFactory(null, objectMapper));
                   binder.bind(AppenderatorsManager.class).toInstance(APPENDERATORS_MANAGER);
+                  binder.bind(IndexingServiceClient.class).toInstance(new NoopIndexingServiceClient());
                 }
             )
         )

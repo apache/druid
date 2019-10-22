@@ -192,6 +192,7 @@ public class MultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervi
             null,
             null,
             null,
+            null,
             partitionsSpec,
             null,
             null,

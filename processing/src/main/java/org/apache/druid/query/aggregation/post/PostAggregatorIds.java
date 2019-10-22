@@ -53,4 +53,5 @@ public class PostAggregatorIds
   public static final byte THETA_SKETCH_TO_STRING = 29;
   public static final byte TDIGEST_SKETCH_TO_QUANTILES_CACHE_TYPE_ID = 30;
   public static final byte TDIGEST_SKETCH_TO_QUANTILE_CACHE_TYPE_ID = 31;
+  public static final byte HLL_SKETCH_TO_ESTIMATE_CACHE_TYPE_ID = 32;
 }

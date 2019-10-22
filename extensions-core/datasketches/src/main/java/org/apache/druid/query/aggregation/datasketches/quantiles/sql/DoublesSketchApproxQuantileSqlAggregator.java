@@ -51,9 +51,9 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DoublesSketchSqlAggregator implements SqlAggregator
+public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
 {
-  private static final SqlAggFunction FUNCTION_INSTANCE = new DoublesSketchSqlAggFunction();
+  private static final SqlAggFunction FUNCTION_INSTANCE = new DoublesSketchApproxQuantileSqlAggFunction();
   private static final String NAME = "APPROX_QUANTILE_DS";
 
   @Override
@@ -206,12 +206,12 @@ public class DoublesSketchSqlAggregator implements SqlAggregator
     );
   }
 
-  private static class DoublesSketchSqlAggFunction extends SqlAggFunction
+  private static class DoublesSketchApproxQuantileSqlAggFunction extends SqlAggFunction
   {
     private static final String SIGNATURE1 = "'" + NAME + "(column, probability)'\n";
     private static final String SIGNATURE2 = "'" + NAME + "(column, probability, k)'\n";
 
-    DoublesSketchSqlAggFunction()
+    DoublesSketchApproxQuantileSqlAggFunction()
     {
       super(
           NAME,

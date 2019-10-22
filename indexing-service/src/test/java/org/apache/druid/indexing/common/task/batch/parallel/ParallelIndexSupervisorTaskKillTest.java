@@ -23,6 +23,7 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -161,7 +162,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
   )
   {
     final TestFirehoseFactory firehoseFactory = (TestFirehoseFactory) ioConfig.getFirehoseFactory();
-    final int numTotalSubTasks = firehoseFactory.getNumSplits();
+    final int numTotalSubTasks = firehoseFactory.getNumSplits(null);
     // set up ingestion spec
     final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
         new DataSchema(
@@ -186,6 +187,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
         ),
         ioConfig,
         new ParallelIndexTuningConfig(
+            null,
             null,
             null,
             null,
@@ -256,13 +258,13 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     }
 
     @Override
-    public Stream<InputSplit<TestInput>> getSplits()
+    public Stream<InputSplit<TestInput>> getSplits(@Nullable SplitHintSpec splitHintSpec)
     {
       return splits.stream();
     }
 
     @Override
-    public int getNumSplits()
+    public int getNumSplits(@Nullable SplitHintSpec splitHintSpec)
     {
       return splits.size();
     }

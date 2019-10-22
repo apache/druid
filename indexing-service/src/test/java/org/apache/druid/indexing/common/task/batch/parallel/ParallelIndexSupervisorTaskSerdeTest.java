@@ -156,6 +156,7 @@ public class ParallelIndexSupervisorTaskSerdeTest
     {
       return new ParallelIndexSupervisorTask(
           ID,
+          null,
           taskResource,
           ingestionSpec,
           context,
@@ -242,6 +243,7 @@ public class ParallelIndexSupervisorTaskSerdeTest
       );
 
       ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+          null,
           null,
           null,
           null,
