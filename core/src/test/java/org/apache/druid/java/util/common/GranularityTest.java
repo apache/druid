@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -34,6 +35,8 @@ import org.junit.Test;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public class GranularityTest
 {
@@ -770,6 +773,40 @@ public class GranularityTest
     catch (IAE e) {
       // pass
     }
+  }
+
+  @Test // Regression test for https://github.com/apache/incubator-druid/issues/5200.
+  public void testIncrementOverSpringForward()
+  {
+    // Sao Paulo daylight savings time in 2017 starts at midnight. When we spring forward, 00:00:00 doesn't exist.
+    // (The clock goes straight from 23:59:59 to 01:00:00.) This test verifies we handle the case correctly while
+    // iterating through Paulistano days.
+    final DateTimeZone saoPaulo = DateTimes.inferTzFromString("America/Sao_Paulo");
+    final PeriodGranularity granSaoPauloDay = new PeriodGranularity(
+        Period.days(1),
+        null,
+        saoPaulo
+    );
+
+    final Iterable<Interval> intervals = granSaoPauloDay.getIterable(
+        new Interval(
+            new DateTime("2017-10-14", saoPaulo),
+            new DateTime("2017-10-17", saoPaulo)
+        )
+    );
+
+    // Similar to what query engines do: call granularity.bucketStart on the datetimes returned by their cursors.
+    // (And the cursors, in turn, use getIterable like above.)
+    Assert.assertEquals(
+        ImmutableList.of(
+            new DateTime("2017-10-14", saoPaulo),
+            new DateTime("2017-10-15T01", saoPaulo),
+            new DateTime("2017-10-16", saoPaulo)
+        ),
+        StreamSupport.stream(intervals.spliterator(), false)
+                     .map(interval -> granSaoPauloDay.bucketStart(interval.getStart()))
+                     .collect(Collectors.toList())
+    );
   }
 
   private static class PathDate
