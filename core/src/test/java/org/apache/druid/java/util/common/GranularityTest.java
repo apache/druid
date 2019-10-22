@@ -781,7 +781,7 @@ public class GranularityTest
     // Sao Paulo daylight savings time in 2017 starts at midnight. When we spring forward, 00:00:00 doesn't exist.
     // (The clock goes straight from 23:59:59 to 01:00:00.) This test verifies we handle the case correctly while
     // iterating through Paulistano days.
-    final DateTimeZone saoPaulo = DateTimeZone.forID("America/Sao_Paulo");
+    final DateTimeZone saoPaulo = DateTimes.inferTzFromString("America/Sao_Paulo");
     final PeriodGranularity granSaoPauloDay = new PeriodGranularity(
         Period.days(1),
         null,
