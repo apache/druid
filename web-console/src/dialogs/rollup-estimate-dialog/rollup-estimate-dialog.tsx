@@ -58,17 +58,6 @@ export class RollupEstimateDialog extends React.PureComponent<
   constructor(props: RollupEstimateDialogProps, context: any) {
     super(props, context);
     this.state = {
-      // Rename some of these variables
-      //       queryString: `
-      // {
-      //   "queryType":"segmentMetadata",
-      //   "dataSource":"${props.datasource}",
-      //   "intervals":["2013-01-01/2020-01-01"],
-      //   "analysisTypes": ["queryGranularity", "aggregators", "rollup"],
-      //   "lenientAggregatorMerge": true,
-      //   "merge": true
-      // }
-      //       `,
       rollupRatio: -1,
       interval: `${CURRENT_YEAR - 10}-01-01/${CURRENT_YEAR + 1}-01-01`,
       queryColumns: [],
@@ -262,10 +251,3 @@ export class RollupEstimateDialog extends React.PureComponent<
     );
   }
 }
-/*
-Todo:
-2. Correct query to calculate rollup ratio based on rollup/non-rollup data (Rollup -> multiply by rollup ratio?) **
-3. Bucket time column for non-rolled data (select vs scan vs timeseries granularity: hour) **
-4. Clean up code
-7. Is count going to be the only column? **
-*/
