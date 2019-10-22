@@ -81,10 +81,11 @@ You may want to consider the below things:
 - The number of concurrent tasks run in parallel ingestion is determined by `maxNumConcurrentSubTasks` in the `tuningConfig`.
   The supervisor task checks the number of current running sub tasks and creates more if it's smaller than `maxNumConcurrentSubTasks` no matter how many task slots are currently available.
   This may affect to other ingestion performance. See the below [Capacity Planning](#capacity-planning) section for more details.
-- By default, batch ingestion replaces all data in any segment that it writes to. If you'd like to add to the segment
-  instead, set the `appendToExisting` flag in `ioConfig`. Note that it only replaces data in segments where it actively adds
-  data: if there are segments in your `granularitySpec`'s intervals that have no data written by this task, they will be
-  left alone.
+- By default, batch ingestion replaces all data (in your `granularitySpec`'s intervals) in any segment that it writes to.
+  If you'd like to add to the segment instead, set the `appendToExisting` flag in `ioConfig`. Note that it only replaces
+  data in segments where it actively adds data: if there are segments in your `granularitySpec`'s intervals that have
+  no data written by this task, they will be left alone. If any existing segments partially overlap with the
+  `granularitySpec`'s intervals, the portion of those segments outside the new segments' intervals will still be visible.
 
 ### Task syntax
 
