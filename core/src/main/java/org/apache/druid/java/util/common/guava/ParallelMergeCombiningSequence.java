@@ -385,21 +385,28 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     {
       final int runningThreadCount = getPool().getRunningThreadCount();
       final int submissionCount = getPool().getQueuedSubmissionCount();
-      // max is smaller of either parallelism passed into sequence (number of physical cores by default) or the pool
-      // parallelism
+
+      // max is smaller of either:
+      // - parallelism passed into sequence (number of physical cores by default)
+      // - pool parallelism (number of physical cores * 1.5 by default)
       final int maxParallelism = Math.min(parallelism, getPool().getParallelism());
-      // adjust max to be no more than total pool parallelism less the number of running threads + submitted tasks
-      // minus 1 for the task that is running this calculation since it will be replaced with the parallel tasks
+
+      // we consider 'utilization' to be the number of running threads + submitted tasks that have not yet started
+      // running, minus 1 for the task that is running this calculation (as it will be replaced with the parallel tasks)
       final int utilizationEstimate = runningThreadCount + submissionCount - 1;
+
       // 'computed parallelism' is the remaineder of the 'max parallelism' less current 'utilization estimate'
-      final int computedParallelism = maxParallelism - utilizationEstimate;
-      // compute total number of layer 1 'parallel' tasks, the final merge task will take the remaining slot
-      // we divide the sequences by 2 because we need at least 2 sequences per partition for it to make sense to need
-      // an additional parallel task to compute the merge, so if we have a small number of total sequences this might be
-      // below
+      final int computedParallelismForUtilization = maxParallelism - utilizationEstimate;
+
+      // try to balance partition size with partition count so we don't end up with layer 2 'final merge' task that has
+      // significantly more work to do than the layer 1 'parallel' tasks.
+      final int computedParallelismForSequences = (int) Math.floor(Math.sqrt(sequences.size()));
+
+      // compute total number of layer 1 'parallel' tasks, for the utilzation parallelism, subtract 1 as the final merge
+      // task will take the remaining slot
       final int computedOptimalParallelism = Math.min(
-          (int) Math.floor((double) sequences.size() / 2.0),
-          computedParallelism - 1
+          computedParallelismForSequences,
+          computedParallelismForUtilization - 1
       );
 
       final int computedNumParallelTasks = Math.max(computedOptimalParallelism, 1);
