@@ -354,7 +354,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final Supplier<QueryConfig> vectorizationConfigSupplier = Suppliers.ofInstance(
+    final Supplier<QueryConfig> queryConfigSupplier = Suppliers.ofInstance(
         new QueryConfig()
     );
     final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
@@ -368,7 +368,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
-            vectorizationConfigSupplier,
+            queryConfigSupplier,
             bufferPool,
             mergePool,
             new ObjectMapper(new SmileFactory()),
@@ -387,7 +387,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         new GroupByStrategyV2(
             tooSmallDruidProcessingConfig,
             configSupplier,
-            vectorizationConfigSupplier,
+            queryConfigSupplier,
             bufferPool,
             tooSmallMergePool,
             new ObjectMapper(new SmileFactory()),

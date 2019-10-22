@@ -315,7 +315,7 @@ public class NestedQueryPushDownTest
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final Supplier<QueryConfig> vectorizationConfigSupplier = Suppliers.ofInstance(
+    final Supplier<QueryConfig> queryConfigSupplier = Suppliers.ofInstance(
         new QueryConfig()
     );
     final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
@@ -329,7 +329,7 @@ public class NestedQueryPushDownTest
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
-            vectorizationConfigSupplier,
+            queryConfigSupplier,
             bufferPool,
             mergePool,
             new ObjectMapper(new SmileFactory()),
@@ -348,7 +348,7 @@ public class NestedQueryPushDownTest
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
-            vectorizationConfigSupplier,
+            queryConfigSupplier,
             bufferPool,
             mergePool2,
             new ObjectMapper(new SmileFactory()),

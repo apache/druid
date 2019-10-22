@@ -97,7 +97,7 @@ public class VectorGroupByEngine
       @Nullable final Filter filter,
       final Interval interval,
       final GroupByQueryConfig config,
-      final QueryConfig vectorizationConfig
+      final QueryConfig queryConfig
   )
   {
     if (!canVectorize(query, storageAdapter, filter)) {
@@ -115,7 +115,7 @@ public class VectorGroupByEngine
                 interval,
                 query.getVirtualColumns(),
                 false,
-                vectorizationConfig.getVectorSize(),
+                queryConfig.getVectorSize(),
                 null
             );
 

@@ -59,7 +59,7 @@ import java.util.Objects;
  */
 public class TimeseriesQueryEngine
 {
-  private final Supplier<QueryConfig> vectorizationConfigSupplier;
+  private final Supplier<QueryConfig> queryConfigSupplier;
   private final NonBlockingPool<ByteBuffer> bufferPool;
 
   /**
@@ -68,17 +68,17 @@ public class TimeseriesQueryEngine
   @VisibleForTesting
   public TimeseriesQueryEngine()
   {
-    this.vectorizationConfigSupplier = Suppliers.ofInstance(new QueryConfig());
+    this.queryConfigSupplier = Suppliers.ofInstance(new QueryConfig());
     this.bufferPool = new StupidPool<>("dummy", () -> ByteBuffer.allocate(1000000));
   }
 
   @Inject
   public TimeseriesQueryEngine(
-      final Supplier<QueryConfig> vectorizationConfigSupplier,
+      final Supplier<QueryConfig> queryConfigSupplier,
       final @Global NonBlockingPool<ByteBuffer> bufferPool
   )
   {
-    this.vectorizationConfigSupplier = vectorizationConfigSupplier;
+    this.queryConfigSupplier = queryConfigSupplier;
     this.bufferPool = bufferPool;
   }
 
@@ -94,13 +94,13 @@ public class TimeseriesQueryEngine
       );
     }
 
-    final QueryConfig vectorizationConfigToUse = vectorizationConfigSupplier.get().withOverrides(query);
+    final QueryConfig queryConfigToUse = queryConfigSupplier.get().withOverrides(query);
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
     final Interval interval = Iterables.getOnlyElement(query.getIntervals());
     final Granularity gran = query.getGranularity();
     final boolean descending = query.isDescending();
 
-    final boolean doVectorize = vectorizationConfigToUse.getVectorize().shouldVectorize(
+    final boolean doVectorize = queryConfigToUse.getVectorize().shouldVectorize(
         adapter.canVectorize(filter, query.getVirtualColumns(), descending)
         && query.getAggregatorSpecs().stream().allMatch(AggregatorFactory::canVectorize)
     );
@@ -108,7 +108,7 @@ public class TimeseriesQueryEngine
     final Sequence<Result<TimeseriesResultValue>> result;
 
     if (doVectorize) {
-      result = processVectorized(query, vectorizationConfigToUse, adapter, filter, interval, gran, descending);
+      result = processVectorized(query, queryConfigToUse, adapter, filter, interval, gran, descending);
     } else {
       result = processNonVectorized(query, adapter, filter, interval, gran, descending);
     }
@@ -123,7 +123,7 @@ public class TimeseriesQueryEngine
 
   private Sequence<Result<TimeseriesResultValue>> processVectorized(
       final TimeseriesQuery query,
-      final QueryConfig vectorizationConfig,
+      final QueryConfig queryConfig,
       final StorageAdapter adapter,
       @Nullable final Filter filter,
       final Interval queryInterval,
@@ -139,7 +139,7 @@ public class TimeseriesQueryEngine
         queryInterval,
         query.getVirtualColumns(),
         descending,
-        vectorizationConfig.getVectorSize(),
+        queryConfig.getVectorSize(),
         null
     );
 

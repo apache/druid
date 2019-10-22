@@ -113,7 +113,7 @@ public class GroupByQueryEngineV2
       @Nullable final StorageAdapter storageAdapter,
       final NonBlockingPool<ByteBuffer> intermediateResultsBufferPool,
       final GroupByQueryConfig querySpecificConfig,
-      final QueryConfig vectorizationConfig
+      final QueryConfig queryConfig
   )
   {
     if (storageAdapter == null) {
@@ -140,7 +140,7 @@ public class GroupByQueryEngineV2
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
     final Interval interval = Iterables.getOnlyElement(query.getIntervals());
 
-    final boolean doVectorize = vectorizationConfig.getVectorize().shouldVectorize(
+    final boolean doVectorize = queryConfig.getVectorize().shouldVectorize(
         VectorGroupByEngine.canVectorize(query, storageAdapter, filter)
     );
 
@@ -155,7 +155,7 @@ public class GroupByQueryEngineV2
           filter,
           interval,
           querySpecificConfig,
-          vectorizationConfig
+          queryConfig
       );
     } else {
       result = processNonVectorized(
