@@ -26,17 +26,16 @@
       'main ctrl'
       'main next';
     grid-template-columns: 1fr 280px;
-    grid-template-rows: 55px 1fr 28px;
+    grid-template-rows: 55px 1fr 160px;
     grid-gap: 15px 5px;
-    padding: 15px 10px;
     .bp3-dialog-header {
       grid-area: navi;
-      margin: 0 5px;
     }
     .main-table {
       grid-area: main;
       overflow: auto;
-      margin: 0 5px;
+      margin-right: 5px;
+      margin-left: 15px;
       .ReactTable {
         height: 100%;
       }

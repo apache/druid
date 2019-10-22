@@ -16,8 +16,18 @@
  * limitations under the License.
  */
 
-import { Button, Callout, FormGroup, InputGroup, Intent } from '@blueprintjs/core';
-import { HeaderRows, normalizeQueryResult } from 'druid-query-toolkit';
+import {
+  Button,
+  Callout,
+  FormGroup,
+  InputGroup,
+  Intent,
+  Menu,
+  MenuItem,
+  Popover,
+  Position,
+} from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import * as React from 'react';
 
 import { getDruidErrorMessage, queryDruidRune, QueryManager } from '../../utils/index';
@@ -33,25 +43,28 @@ export interface RollupRatioPanelProps {
 }
 
 export interface RollupRatioPanelState {
-  result?: HeaderRows;
+  result?: number;
   loading: boolean;
   error?: string;
   intervalInput: string;
+  granularity: string;
 }
 
 export class RollupRatioPanel extends React.PureComponent<
   RollupRatioPanelProps,
   RollupRatioPanelState
 > {
-  private druidQueryManager: QueryManager<null, HeaderRows>;
+  private druidQueryManager: QueryManager<null, number>;
   constructor(props: RollupRatioPanelProps, context: any) {
     super(props, context);
     this.state = {
       loading: false,
       intervalInput: this.props.interval,
+      granularity: 'NONE',
     };
     this.druidQueryManager = new QueryManager({
-      processQuery: async (): Promise<HeaderRows> => {
+      processQuery: async (): Promise<number> => {
+        const { granularity } = this.state;
         const { datasource, queryColumns, interval } = this.props;
         let rawQueryResult: any;
         try {
@@ -63,19 +76,29 @@ export class RollupRatioPanel extends React.PureComponent<
             filter: null,
             granularity: { type: 'all' },
             aggregations: [
-              { type: 'count', name: 'a0' },
+              { type: 'count', name: 'Count' },
               {
                 type: 'cardinality',
-                name: 'a1',
-                fields: queryColumns,
+                name: 'DistCount',
+                fields: queryColumns.map(field => {
+                  if (field !== '__time') return field;
+                  return {
+                    type: 'extraction',
+                    dimension: '__time',
+                    extractionFn: {
+                      type: 'timeFormat',
+                      granularity: granularity,
+                    },
+                  };
+                }),
                 byRow: true,
               },
             ],
             postAggregations: [
               {
                 type: 'expression',
-                name: 'p0',
-                expression: '(("a0" / "a1") * 1.0)',
+                name: 'Ratio',
+                expression: '(("Count" / "DistCount") * 1.0)',
                 ordering: null,
               },
             ],
@@ -83,7 +106,7 @@ export class RollupRatioPanel extends React.PureComponent<
           console.log(timeseriesResponse);
 
           if (Array.isArray(timeseriesResponse) && timeseriesResponse.length === 1) {
-            rawQueryResult = timeseriesResponse;
+            rawQueryResult = timeseriesResponse[0];
             console.log(rawQueryResult);
           } else {
             throw new Error(`unexpected response from segmentMetadata query`);
@@ -92,10 +115,7 @@ export class RollupRatioPanel extends React.PureComponent<
           throw new Error(getDruidErrorMessage(e));
         }
 
-        const queryResult = normalizeQueryResult(rawQueryResult);
-
-        console.log(queryResult);
-        return queryResult;
+        return rawQueryResult.result.Ratio;
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
@@ -122,7 +142,7 @@ export class RollupRatioPanel extends React.PureComponent<
   }
 
   render(): JSX.Element {
-    const { intervalInput, result } = this.state;
+    const { granularity, intervalInput, result } = this.state;
     const { rollupRatio, updateInterval } = this.props;
     return (
       <>
@@ -135,19 +155,12 @@ export class RollupRatioPanel extends React.PureComponent<
             <p>{`Please click on "Preview data" after modifying your interval.`}</p>
             <p>
               {rollupRatio !== -1
-                ? `This datasource has previously been rolled up. The original rollup ratio is ${(rollupRatio -
-                    1) *
-                    100}%`
+                ? `This datasource has previously been rolled up. The original rollup ratio is ${(
+                    rollupRatio * 100
+                  ).toFixed(2)}%`
                 : ''}
             </p>
           </Callout>
-
-          <FormGroup label={`Your current rollup ratio:`}>
-            <InputGroup
-              value={result ? ((Math.max(result.rows[0][1], 1) - 1) * 100).toFixed(2) + '%' : ''}
-              readOnly
-            />
-          </FormGroup>
           <FormGroup label={`Interval`}>
             <InputGroup
               value={intervalInput}
@@ -166,6 +179,43 @@ export class RollupRatioPanel extends React.PureComponent<
           />
         </div>
         <div className="rollup-ratio-submit">
+          <Callout>
+            <p>
+              {`Estimated rollup ratio: `}
+              {result ? (Math.max(result, 1) * 100).toFixed(2) + '%' : ''}
+            </p>
+          </Callout>
+          <FormGroup label={`Granularity:`}>
+            <InputGroup
+              value={granularity}
+              readOnly
+              rightElement={
+                <Popover
+                  content={
+                    <Menu>
+                      <MenuItem
+                        text="NONE"
+                        onClick={() => this.setState({ granularity: 'NONE' })}
+                      />
+                      <MenuItem
+                        text="MINUTE"
+                        onClick={() => this.setState({ granularity: 'MINUTE' })}
+                      />
+                      <MenuItem
+                        text="HOUR"
+                        onClick={() => this.setState({ granularity: 'HOUR' })}
+                      />
+                      <MenuItem text="DAY" onClick={() => this.setState({ granularity: 'DAY' })} />
+                    </Menu>
+                  }
+                  position={Position.BOTTOM_RIGHT}
+                  autoFocus={false}
+                >
+                  <Button icon={IconNames.CARET_DOWN} minimal />
+                </Popover>
+              }
+            />
+          </FormGroup>
           <Button
             text="Estimate rollup"
             intent={Intent.PRIMARY}

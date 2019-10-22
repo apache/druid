@@ -18,7 +18,8 @@
 
 .rollup-ratio-panel {
   grid-area: ctrl;
-  padding: 0 5px;
+  padding-left: 5px;
+  padding-right: 15px;
   .bp3-callout {
     margin-bottom: 15px;
   }
@@ -26,5 +27,9 @@
 
 .rollup-ratio-submit {
   grid-area: next;
-  padding: 0 5px;
+  padding-left: 5px;
+  padding-right: 15px;
+  .bp3-callout {
+    margin-bottom: 15px;
+  }
 }
