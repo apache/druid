@@ -65,6 +65,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -336,6 +337,7 @@ public class CachingClusteredClientBenchmark
         new GroupByStrategyV2(
             processingConfig,
             configSupplier,
+            QueryConfig::new,
             bufferPool,
             mergeBufferPool,
             mapper,
