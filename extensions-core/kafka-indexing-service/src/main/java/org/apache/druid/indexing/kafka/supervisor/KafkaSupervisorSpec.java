@@ -40,6 +40,8 @@ import java.util.Map;
 
 public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
 {
+  private static final String TASK_TYPE = "kafka";
+
   @JsonCreator
   public KafkaSupervisorSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
@@ -101,6 +103,18 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
         rowIngestionMetersFactory,
         supervisorStateManagerConfig
     );
+  }
+
+  @Override
+  public String getType()
+  {
+    return TASK_TYPE;
+  }
+
+  @Override
+  public String getSource()
+  {
+    return getIoConfig() != null ? getIoConfig().getTopic() : null;
   }
 
   @Override

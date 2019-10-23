@@ -36,7 +36,7 @@ import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.junit.Assert;
 
 import java.util.HashMap;
@@ -51,7 +51,7 @@ import java.util.stream.IntStream;
  */
 public class TestHelper
 {
-  private static final ObjectMapper JSON_MAPPER = makeJsonMapper();
+  public static final ObjectMapper JSON_MAPPER = makeJsonMapper();
 
   public static IndexMergerV9 getTestIndexMergerV9(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
@@ -80,7 +80,7 @@ public class TestHelper
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
-            .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT)
+            .addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT)
     );
     return mapper;
   }

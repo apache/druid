@@ -37,10 +37,15 @@ public class Tasks
   public static final int DEFAULT_TASK_PRIORITY = 0;
   public static final long DEFAULT_LOCK_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
   public static final boolean DEFAULT_FORCE_TIME_CHUNK_LOCK = true;
+  public static final boolean DEFAULT_STORE_COMPACTION_STATE = false;
 
   public static final String PRIORITY_KEY = "priority";
   public static final String LOCK_TIMEOUT_KEY = "taskLockTimeout";
   public static final String FORCE_TIME_CHUNK_LOCK_KEY = "forceTimeChunkLock";
+  // This context is used in auto compaction. When it is set in the context, the segments created by the task
+  // will fill 'lastCompactionState' in its metadata. This will be used to track what segments are compacted or not.
+  // See DataSegment and NewestSegmentFirstIterator for more details.
+  public static final String STORE_COMPACTION_STATE_KEY = "storeCompactionState";
 
   public static SortedSet<Interval> computeCompactIntervals(SortedSet<Interval> intervals)
   {

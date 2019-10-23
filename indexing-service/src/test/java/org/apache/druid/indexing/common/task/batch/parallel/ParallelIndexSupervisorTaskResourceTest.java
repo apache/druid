@@ -25,6 +25,7 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
@@ -432,6 +433,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
             null,
             null,
             null,
+            null,
             NUM_SUB_TASKS,
             null,
             null,
@@ -465,13 +467,13 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     }
 
     @Override
-    public Stream<InputSplit<Integer>> getSplits()
+    public Stream<InputSplit<Integer>> getSplits(@Nullable SplitHintSpec splitHintSpec)
     {
       return ids.stream().map(InputSplit::new);
     }
 
     @Override
-    public int getNumSplits()
+    public int getNumSplits(@Nullable SplitHintSpec splitHintSpec)
     {
       return ids.size();
     }
@@ -596,7 +598,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           new LocalParallelIndexTaskClientFactory(supervisorTask)
       );
       final TestFirehose firehose = (TestFirehose) getIngestionSpec().getIOConfig().getFirehoseFactory();
-      final InputSplit<Integer> split = firehose.getSplits().findFirst().orElse(null);
+      final InputSplit<Integer> split = firehose.getSplits(null).findFirst().orElse(null);
       if (split == null) {
         throw new ISE("Split is null");
       }

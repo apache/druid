@@ -38,115 +38,109 @@ export interface QueryPlanDialogProps {
   setQueryString: (queryString: string) => void;
 }
 
-export class QueryPlanDialog extends React.PureComponent<QueryPlanDialogProps> {
-  constructor(props: QueryPlanDialogProps) {
-    super(props);
-  }
+export function QueryPlanDialog(props: QueryPlanDialogProps) {
+  const { explainResult, explainError, onClose, setQueryString } = props;
 
-  render(): JSX.Element {
-    const { explainResult, explainError, onClose, setQueryString } = this.props;
+  let content: JSX.Element;
+  let queryString: string | undefined;
 
-    let content: JSX.Element;
-    let queryString: string | undefined;
-
-    if (explainError) {
-      content = <div>{explainError}</div>;
-    } else if (!explainResult) {
-      content = <div />;
-    } else if ((explainResult as BasicQueryExplanation).query) {
-      let signature: JSX.Element | undefined;
-      if ((explainResult as BasicQueryExplanation).signature) {
-        const signatureContent = (explainResult as BasicQueryExplanation).signature || '';
-        signature = (
-          <FormGroup label="Signature">
-            <InputGroup defaultValue={signatureContent} readOnly />
-          </FormGroup>
-        );
-      }
-
-      queryString = JSON.stringify((explainResult as BasicQueryExplanation).query[0], undefined, 2);
-      content = (
-        <div className="one-query">
-          <FormGroup label="Query">
-            <TextArea readOnly value={queryString} />
-          </FormGroup>
-          {signature}
-        </div>
+  if (explainError) {
+    content = <div>{explainError}</div>;
+  } else if (!explainResult) {
+    content = <div />;
+  } else if ((explainResult as BasicQueryExplanation).query) {
+    let signature: JSX.Element | undefined;
+    if ((explainResult as BasicQueryExplanation).signature) {
+      const signatureContent = (explainResult as BasicQueryExplanation).signature || '';
+      signature = (
+        <FormGroup label="Signature">
+          <InputGroup defaultValue={signatureContent} readOnly />
+        </FormGroup>
       );
-    } else if (
-      (explainResult as SemiJoinQueryExplanation).mainQuery &&
-      (explainResult as SemiJoinQueryExplanation).subQueryRight
-    ) {
-      let mainSignature: JSX.Element | undefined;
-      let subSignature: JSX.Element | undefined;
-      if ((explainResult as SemiJoinQueryExplanation).mainQuery.signature) {
-        const signatureContent =
-          (explainResult as SemiJoinQueryExplanation).mainQuery.signature || '';
-        mainSignature = (
-          <FormGroup label="Signature">
-            <InputGroup defaultValue={signatureContent} readOnly />
-          </FormGroup>
-        );
-      }
-      if ((explainResult as SemiJoinQueryExplanation).subQueryRight.signature) {
-        const signatureContent =
-          (explainResult as SemiJoinQueryExplanation).subQueryRight.signature || '';
-        subSignature = (
-          <FormGroup label="Signature">
-            <InputGroup defaultValue={signatureContent} readOnly />
-          </FormGroup>
-        );
-      }
-
-      content = (
-        <div className="two-queries">
-          <FormGroup label="Main query">
-            <TextArea
-              readOnly
-              value={JSON.stringify(
-                (explainResult as SemiJoinQueryExplanation).mainQuery.query,
-                undefined,
-                2,
-              )}
-            />
-          </FormGroup>
-          {mainSignature}
-          <FormGroup label="Sub query">
-            <TextArea
-              readOnly
-              value={JSON.stringify(
-                (explainResult as SemiJoinQueryExplanation).subQueryRight.query,
-                undefined,
-                2,
-              )}
-            />
-          </FormGroup>
-          {subSignature}
-        </div>
-      );
-    } else {
-      content = <div className="generic-result">{explainResult}</div>;
     }
 
-    return (
-      <Dialog className="query-plan-dialog" isOpen onClose={onClose} title="Query plan">
-        <div className={Classes.DIALOG_BODY}>{content}</div>
-        <div className={Classes.DIALOG_FOOTER}>
-          <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-            <Button text="Close" onClick={onClose} />
-            {queryString && (
-              <Button
-                text="Open query"
-                intent={Intent.PRIMARY}
-                onClick={() => {
-                  if (queryString) setQueryString(queryString);
-                  onClose();
-                }}
-              />
-            )}
-          </div>
-        </div>
-      </Dialog>
+    queryString = JSON.stringify((explainResult as BasicQueryExplanation).query[0], undefined, 2);
+    content = (
+      <div className="one-query">
+        <FormGroup label="Query">
+          <TextArea readOnly value={queryString} />
+        </FormGroup>
+        {signature}
+      </div>
     );
+  } else if (
+    (explainResult as SemiJoinQueryExplanation).mainQuery &&
+    (explainResult as SemiJoinQueryExplanation).subQueryRight
+  ) {
+    let mainSignature: JSX.Element | undefined;
+    let subSignature: JSX.Element | undefined;
+    if ((explainResult as SemiJoinQueryExplanation).mainQuery.signature) {
+      const signatureContent =
+        (explainResult as SemiJoinQueryExplanation).mainQuery.signature || '';
+      mainSignature = (
+        <FormGroup label="Signature">
+          <InputGroup defaultValue={signatureContent} readOnly />
+        </FormGroup>
+      );
+    }
+    if ((explainResult as SemiJoinQueryExplanation).subQueryRight.signature) {
+      const signatureContent =
+        (explainResult as SemiJoinQueryExplanation).subQueryRight.signature || '';
+      subSignature = (
+        <FormGroup label="Signature">
+          <InputGroup defaultValue={signatureContent} readOnly />
+        </FormGroup>
+      );
+    }
+
+    content = (
+      <div className="two-queries">
+        <FormGroup label="Main query">
+          <TextArea
+            readOnly
+            value={JSON.stringify(
+              (explainResult as SemiJoinQueryExplanation).mainQuery.query,
+              undefined,
+              2,
+            )}
+          />
+        </FormGroup>
+        {mainSignature}
+        <FormGroup label="Sub query">
+          <TextArea
+            readOnly
+            value={JSON.stringify(
+              (explainResult as SemiJoinQueryExplanation).subQueryRight.query,
+              undefined,
+              2,
+            )}
+          />
+        </FormGroup>
+        {subSignature}
+      </div>
+    );
+  } else {
+    content = <div className="generic-result">{explainResult}</div>;
   }
+
+  return (
+    <Dialog className="query-plan-dialog" isOpen onClose={onClose} title="Query plan">
+      <div className={Classes.DIALOG_BODY}>{content}</div>
+      <div className={Classes.DIALOG_FOOTER}>
+        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+          <Button text="Close" onClick={onClose} />
+          {queryString && (
+            <Button
+              text="Open query"
+              intent={Intent.PRIMARY}
+              onClick={() => {
+                if (queryString) setQueryString(queryString);
+                onClose();
+              }}
+            />
+          )}
+        </div>
+      </div>
+    </Dialog>
+  );
 }

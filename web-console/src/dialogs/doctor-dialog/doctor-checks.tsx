@@ -282,7 +282,7 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
         sqlResult = await queryDruidSql({ query: `SELECT 1 + 1 AS "two"` });
       } catch (e) {
         controls.addIssue(
-          `Could not query SQL ensure that "druid.sql.enable" is set to "true" and that there are Broker nodes. Got: ${e.message}`,
+          `Could not query SQL ensure that "druid.sql.enable" is set to "true" and that there is a Broker node running. Got: ${e.message}`,
         );
         controls.terminateChecks();
         return;

@@ -228,7 +228,7 @@ exports[`compaction dialog matches snapshot 1`] = `
             <label
               class="bp3-label"
             >
-              Target compaction size bytes
+              Max rows per segment
                
               <span
                 class="bp3-text-muted"
@@ -277,7 +277,7 @@ exports[`compaction dialog matches snapshot 1`] = `
                     min="0"
                     style="padding-right: 10px;"
                     type="text"
-                    value="419430400"
+                    value="5000000"
                   />
                 </div>
                 <div

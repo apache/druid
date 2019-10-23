@@ -129,6 +129,7 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
   }
 
   @JsonProperty
+  @Override
   @Nullable
   public Integer getTargetRowsPerSegment()
   {

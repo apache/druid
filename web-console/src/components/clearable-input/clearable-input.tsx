@@ -28,20 +28,18 @@ export interface ClearableInputProps {
   placeholder: string;
 }
 
-export class ClearableInput extends React.PureComponent<ClearableInputProps> {
-  render(): JSX.Element {
-    const { className, value, onChange, placeholder } = this.props;
+export function ClearableInput(props: ClearableInputProps) {
+  const { className, value, onChange, placeholder } = props;
 
-    return (
-      <InputGroup
-        className={classNames('clearable-input', className)}
-        value={value}
-        onChange={(e: any) => onChange(e.target.value)}
-        rightElement={
-          value ? <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} /> : undefined
-        }
-        placeholder={placeholder}
-      />
-    );
-  }
+  return (
+    <InputGroup
+      className={classNames('clearable-input', className)}
+      value={value}
+      onChange={(e: any) => onChange(e.target.value)}
+      rightElement={
+        value ? <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} /> : undefined
+      }
+      placeholder={placeholder}
+    />
+  );
 }

@@ -81,10 +81,11 @@ You may want to consider the below things:
 - The number of concurrent tasks run in parallel ingestion is determined by `maxNumConcurrentSubTasks` in the `tuningConfig`.
   The supervisor task checks the number of current running sub tasks and creates more if it's smaller than `maxNumConcurrentSubTasks` no matter how many task slots are currently available.
   This may affect to other ingestion performance. See the below [Capacity Planning](#capacity-planning) section for more details.
-- By default, batch ingestion replaces all data in any segment that it writes to. If you'd like to add to the segment
-  instead, set the `appendToExisting` flag in `ioConfig`. Note that it only replaces data in segments where it actively adds
-  data: if there are segments in your `granularitySpec`'s intervals that have no data written by this task, they will be
-  left alone.
+- By default, batch ingestion replaces all data (in your `granularitySpec`'s intervals) in any segment that it writes to.
+  If you'd like to add to the segment instead, set the `appendToExisting` flag in `ioConfig`. Note that it only replaces
+  data in segments where it actively adds data: if there are segments in your `granularitySpec`'s intervals that have
+  no data written by this task, they will be left alone. If any existing segments partially overlap with the
+  `granularitySpec`'s intervals, the portion of those segments outside the new segments' intervals will still be visible.
 
 ### Task syntax
 
@@ -204,6 +205,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |maxBytesInMemory|Used in determining when intermediate persists to disk should occur. Normally this is computed internally and user does not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists)|1/6 of max JVM memory|no|
 |maxTotalRows|Deprecated. Use `partitionsSpec` instead. Total number of rows in segments waiting for being pushed. Used in determining when intermediate pushing should occur.|20000000|no|
 |numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
+|splitHintSpec|Used to give a hint to control the amount of data that each first phase task reads. This hint could be ignored depending on the implementation of firehose. See [SplitHintSpec](#splithintspec) for more details.|null|no|
 |partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` if `forceGuaranteedRollup` = true|no|
 |indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](index.md#indexspec)|null|no|
 |indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](index.md#indexspec) for possible values.|same as indexSpec|no|
@@ -212,13 +214,29 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |reportParseExceptions|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|false|no|
 |pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
 |segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](#segmentwriteoutmediumfactory).|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used|no|
-|maxNumConcurrentSubTasks|Maximum number of tasks which can be run in parallel at the same time. The supervisor task would spawn worker tasks up to `maxNumConcurrentSubTasks` regardless of the current available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion. Check [Capacity Planning](#capacity-planning) for more details.|1|no|
+|maxNumConcurrentSubTasks|Maximum number of sub tasks which can be run in parallel at the same time. The supervisor task would spawn worker tasks up to `maxNumConcurrentSubTasks` regardless of the current available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion. Check [Capacity Planning](#capacity-planning) for more details.|1|no|
 |maxRetry|Maximum number of retries on task failures.|3|no|
 |maxNumSegmentsToMerge|Max limit for the number of segments that a single task can merge at the same time in the second phase. Used only `forceGuaranteedRollup` is set.|100|no|
 |totalNumMergeTasks|Total number of tasks to merge segments in the second phase when `forceGuaranteedRollup` is set.|10|no|
 |taskStatusCheckPeriodMs|Polling period in milliseconds to check running task statuses.|1000|no|
 |chatHandlerTimeout|Timeout for reporting the pushed segments in worker tasks.|PT10S|no|
 |chatHandlerNumRetries|Retries for reporting the pushed segments in worker tasks.|5|no|
+
+### `splitHintSpec`
+
+`SplitHintSpec` is used to give a hint when the supervisor task creates input splits.
+Note that each sub task processes a single input split. You can control the amount of data each sub task will read during the first phase.
+
+Currently only one splitHintSpec, i.e., `segments`, is available.
+
+#### `SegmentsSplitHintSpec`
+
+`SegmentsSplitHintSpec` is used only for `IngestSegmentFirehose`.
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should always be `segments`.|none|yes|
+|maxInputSegmentBytesPerTask|Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).|150MB|no|
 
 ### `partitionsSpec`
 
@@ -785,7 +803,7 @@ This firehose will accept any type of parser, but will only utilize the list of 
 |dimensions|The list of dimensions to select. If left empty, no dimensions are returned. If left null or not defined, all dimensions are returned. |no|
 |metrics|The list of metrics to select. If left empty, no metrics are returned. If left null or not defined, all metrics are selected.|no|
 |filter| See [Filters](../querying/filters.md)|no|
-|maxInputSegmentBytesPerTask|When used with the native parallel index task, the maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks). Defaults to 150MB.|no|
+|maxInputSegmentBytesPerTask|Deprecated. Use [SegmentsSplitHintSpec](#segmentssplithintspec) instead. When used with the native parallel index task, the maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks). Defaults to 150MB.|no|
 
 <a name="sql-firehose"></a>
 
