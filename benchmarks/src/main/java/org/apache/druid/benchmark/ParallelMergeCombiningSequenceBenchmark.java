@@ -126,6 +126,10 @@ public class ParallelMergeCombiningSequenceBenchmark
 
   @Param({
       "non-blocking",
+      // note: beware when using the blocking sequences for a direct comparison between strategies
+      // at minimum they are useful for gauging behavior when sequences block, but because the sequences are not stable
+      // between strategies or number of sequences, much less between iterations of the same strategy, compensation in
+      // the form of running a lot of iterations could potentially make them more directly comparable
       "initial-block-random-100-500ms",
       "initial-block-random-4000-5000ms",
       "slow-sequence-random-10-100ms-1ms"
