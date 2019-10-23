@@ -1670,6 +1670,15 @@ If there is an L1 miss and L2 hit, it will also populate L1.
 
 This section describes configurations that control behavior of Druid's query types, applicable to Broker, Historical, and MiddleManager processes.
 
+### Query vectorization config
+
+The following configurations are to set the default behavior for query vectorization.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.vectorize`|See [Vectorizable queries](../querying/query-context.html#vectorizable-queries) for details. This value can be overridden by `vectorize` in the query contexts.|`false`|
+|`druid.query.vectorSize`|See [Vectorizable queries](../querying/query-context.html#vectorizable-queries) for details. This value can be overridden by `vectorSize` in the query contexts.|`512`|
+
 ### TopN query config
 
 |Property|Description|Default|

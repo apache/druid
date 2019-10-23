@@ -16,17 +16,10 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 export interface DeferredProps {
   content: () => JSX.Element;
 }
 
-export interface DeferredState {}
-
-export class Deferred extends React.PureComponent<DeferredProps, DeferredState> {
-  render(): JSX.Element {
-    const { content } = this.props;
-    return content();
-  }
+export function Deferred(props: DeferredProps) {
+  return props.content();
 }

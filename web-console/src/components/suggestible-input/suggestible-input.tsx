@@ -59,7 +59,7 @@ export class SuggestibleInput extends React.PureComponent<SuggestibleInputProps>
 
   renderSuggestionsMenu() {
     const { suggestions } = this.props;
-    if (!suggestions) return undefined;
+    if (!suggestions) return;
 
     return (
       <Menu>

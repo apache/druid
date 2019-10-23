@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 
 import { ShowJson } from '../../components';
 import { ShowHistory } from '../../components/show-history/show-history';
@@ -31,84 +31,69 @@ interface SupervisorTableActionDialogProps {
   onClose: () => void;
 }
 
-interface SupervisorTableActionDialogState {
-  activeTab: 'status' | 'stats' | 'payload' | 'history';
-}
+export function SupervisorTableActionDialog(props: SupervisorTableActionDialogProps) {
+  const { supervisorId, actions, onClose } = props;
+  const [activeTab, setActiveTab] = useState('status');
 
-export class SupervisorTableActionDialog extends React.PureComponent<
-  SupervisorTableActionDialogProps,
-  SupervisorTableActionDialogState
-> {
-  constructor(props: SupervisorTableActionDialogProps) {
-    super(props);
-    this.state = {
-      activeTab: 'status',
-    };
-  }
-  render(): React.ReactNode {
-    const { supervisorId, actions, onClose } = this.props;
-    const { activeTab } = this.state;
+  const supervisorTableSideButtonMetadata: SideButtonMetaData[] = [
+    {
+      icon: 'dashboard',
+      text: 'Status',
+      active: activeTab === 'status',
+      onClick: () => setActiveTab('status'),
+    },
+    {
+      icon: 'chart',
+      text: 'Statistics',
+      active: activeTab === 'stats',
+      onClick: () => setActiveTab('stats'),
+    },
+    {
+      icon: 'align-left',
+      text: 'Payload',
+      active: activeTab === 'payload',
+      onClick: () => setActiveTab('payload'),
+    },
+    {
+      icon: 'history',
+      text: 'History',
+      active: activeTab === 'history',
+      onClick: () => setActiveTab('history'),
+    },
+  ];
 
-    const supervisorTableSideButtonMetadata: SideButtonMetaData[] = [
-      {
-        icon: 'dashboard',
-        text: 'Status',
-        active: activeTab === 'status',
-        onClick: () => this.setState({ activeTab: 'status' }),
-      },
-      {
-        icon: 'chart',
-        text: 'Statistics',
-        active: activeTab === 'stats',
-        onClick: () => this.setState({ activeTab: 'stats' }),
-      },
-      {
-        icon: 'align-left',
-        text: 'Payload',
-        active: activeTab === 'payload',
-        onClick: () => this.setState({ activeTab: 'payload' }),
-      },
-      {
-        icon: 'history',
-        text: 'History',
-        active: activeTab === 'history',
-        onClick: () => this.setState({ activeTab: 'history' }),
-      },
-    ];
-
-    return (
-      <TableActionDialog
-        sideButtonMetadata={supervisorTableSideButtonMetadata}
-        onClose={onClose}
-        title={`Supervisor: ${supervisorId}`}
-        actions={actions}
-      >
-        {activeTab === 'status' && (
-          <ShowJson
-            endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/status`}
-            transform={x => deepGet(x, 'payload')}
-            downloadFilename={`supervisor-status-${supervisorId}.json`}
-          />
-        )}
-        {activeTab === 'stats' && (
-          <SupervisorStatisticsTable
-            endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/stats`}
-            downloadFilename={`supervisor-stats-${supervisorId}.json`}
-          />
-        )}
-        {activeTab === 'payload' && (
-          <ShowJson
-            endpoint={`/druid/indexer/v1/supervisor/${supervisorId}`}
-            downloadFilename={`supervisor-payload-${supervisorId}.json`}
-          />
-        )}
-        {activeTab === 'history' && (
-          <ShowHistory
-            endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/history`}
-            downloadFilename={`supervisor-history-${supervisorId}.json`}
-          />
-        )}
-      </TableActionDialog>
-    );
-  }
+  return (
+    <TableActionDialog
+      sideButtonMetadata={supervisorTableSideButtonMetadata}
+      onClose={onClose}
+      title={`Supervisor: ${supervisorId}`}
+      actions={actions}
+    >
+      {activeTab === 'status' && (
+        <ShowJson
+          endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/status`}
+          transform={x => deepGet(x, 'payload')}
+          downloadFilename={`supervisor-status-${supervisorId}.json`}
+        />
+      )}
+      {activeTab === 'stats' && (
+        <SupervisorStatisticsTable
+          endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/stats`}
+          downloadFilename={`supervisor-stats-${supervisorId}.json`}
+        />
+      )}
+      {activeTab === 'payload' && (
+        <ShowJson
+          endpoint={`/druid/indexer/v1/supervisor/${supervisorId}`}
+          downloadFilename={`supervisor-payload-${supervisorId}.json`}
+        />
+      )}
+      {activeTab === 'history' && (
+        <ShowHistory
+          endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/history`}
+          downloadFilename={`supervisor-history-${supervisorId}.json`}
+        />
+      )}
+    </TableActionDialog>
+  );
 }

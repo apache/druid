@@ -19,6 +19,8 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.annotations.PublicApi;
@@ -26,7 +28,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
 import java.util.concurrent.TimeUnit;
 
@@ -45,6 +46,8 @@ public class QueryContexts
 
   @Deprecated
   public static final String CHUNK_PERIOD_KEY = "chunkPeriod";
+  public static final String VECTORIZE_KEY = "vectorize";
+  public static final String VECTOR_SIZE_KEY = "vectorSize";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -88,6 +91,19 @@ public class QueryContexts
     };
 
     public abstract boolean shouldVectorize(boolean canVectorize);
+
+    @JsonCreator
+    public static Vectorize fromString(String str)
+    {
+      return Vectorize.valueOf(StringUtils.toUpperCase(str));
+    }
+
+    @Override
+    @JsonValue
+    public String toString()
+    {
+      return StringUtils.toLowerCase(name()).replace('_', '-');
+    }
   }
 
   public static <T> boolean isBySegment(Query<T> query)
@@ -155,14 +171,14 @@ public class QueryContexts
     return parseBoolean(query, "serializeDateTimeAsLongInner", defaultValue);
   }
 
-  public static <T> Vectorize getVectorize(Query<T> query)
+  public static <T> Vectorize getVectorize(Query<T> query, Vectorize defaultValue)
   {
-    return parseEnum(query, "vectorize", Vectorize.class, DEFAULT_VECTORIZE);
+    return parseEnum(query, VECTORIZE_KEY, Vectorize.class, defaultValue);
   }
 
-  public static <T> int getVectorSize(Query<T> query)
+  public static <T> int getVectorSize(Query<T> query, int defaultSize)
   {
-    return parseInt(query, "vectorSize", QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE);
+    return parseInt(query, VECTOR_SIZE_KEY, defaultSize);
   }
 
   public static <T> int getUncoveredIntervalsLimit(Query<T> query)
