@@ -25,7 +25,6 @@ import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.utils.Runnables;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -142,14 +141,6 @@ public class InlineFirehoseTest
     assertRawValue(data, raw);
 
     Assert.assertNotNull(rowPlusRaw.getParseException());
-  }
-
-  @Test
-  public void testCommit()
-  {
-    InlineFirehose target = create(NOT_EMPTY);
-    Runnable result = target.commit();
-    Assert.assertSame(Runnables.getNoopRunnable(), result);
   }
 
   @Test
