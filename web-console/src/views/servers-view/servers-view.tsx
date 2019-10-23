@@ -33,7 +33,15 @@ import React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { ActionCell, RefreshButton, TableColumnSelector, ViewControlBar } from '../../components';
+import {
+  ACTION_COLUMN_ID,
+  ACTION_COLUMN_LABEL,
+  ACTION_COLUMN_WIDTH,
+  ActionCell,
+  RefreshButton,
+  TableColumnSelector,
+  ViewControlBar,
+} from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import {
   addFilter,
@@ -60,7 +68,7 @@ const serverTableColumns: string[] = [
   'Max size',
   'Usage',
   'Detail',
-  ActionCell.COLUMN_LABEL,
+  ACTION_COLUMN_LABEL,
 ];
 
 function formatQueues(
@@ -523,9 +531,9 @@ ORDER BY "rank" DESC, "server" DESC`;
             show: hiddenColumns.exists('Detail'),
           },
           {
-            Header: ActionCell.COLUMN_LABEL,
-            id: ActionCell.COLUMN_ID,
-            width: ActionCell.COLUMN_WIDTH,
+            Header: ACTION_COLUMN_LABEL,
+            id: ACTION_COLUMN_ID,
+            width: ACTION_COLUMN_WIDTH,
             accessor: row => row.worker,
             filterable: false,
             Cell: row => {
@@ -534,7 +542,7 @@ ORDER BY "rank" DESC, "server" DESC`;
               const workerActions = this.getWorkerActions(row.value.host, disabled);
               return <ActionCell actions={workerActions} />;
             },
-            show: hiddenColumns.exists(ActionCell.COLUMN_LABEL),
+            show: hiddenColumns.exists(ACTION_COLUMN_LABEL),
           },
         ]}
       />

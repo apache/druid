@@ -30,7 +30,7 @@ import React from 'react';
 
 import { deepDelete, deepGet, deepSet } from '../../utils/object-change';
 import { ArrayInput } from '../array-input/array-input';
-import { JSONInput } from '../json-input/json-input';
+import { JsonInput } from '../json-input/json-input';
 import { SuggestibleInput, SuggestionGroup } from '../suggestible-input/suggestible-input';
 
 import './auto-form.scss';
@@ -254,19 +254,19 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
     const updateInputValidity = (e: any) => {
       if (updateJsonValidity) {
-        const newJSONInputValidity = Object.assign({}, jsonInputsValidity, { [field.name]: e });
+        const newJsonInputValidity = Object.assign({}, jsonInputsValidity, { [field.name]: e });
         this.setState({
-          jsonInputsValidity: newJSONInputValidity,
+          jsonInputsValidity: newJsonInputValidity,
         });
-        const allJsonValid: boolean = Object.keys(newJSONInputValidity).every(
-          property => newJSONInputValidity[property] === true,
+        const allJsonValid: boolean = Object.keys(newJsonInputValidity).every(
+          property => newJsonInputValidity[property] === true,
         );
         updateJsonValidity(allJsonValid);
       }
     };
 
     return (
-      <JSONInput
+      <JsonInput
         value={deepGet(model as any, field.name)}
         onChange={(v: any) => this.fieldChange(field, v)}
         updateInputValidity={updateInputValidity}
@@ -350,7 +350,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
     return (
       <FormGroup label="Custom" key="custom">
-        <JSONInput value={model} onChange={this.modelChange} />
+        <JsonInput value={model} onChange={this.modelChange} />
       </FormGroup>
     );
   }

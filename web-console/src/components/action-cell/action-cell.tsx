@@ -25,29 +25,27 @@ import { ActionIcon } from '../action-icon/action-icon';
 
 import './action-cell.scss';
 
+export const ACTION_COLUMN_ID = 'actions';
+export const ACTION_COLUMN_LABEL = 'Actions';
+export const ACTION_COLUMN_WIDTH = 70;
+
 export interface ActionCellProps {
   onDetail?: () => void;
   actions?: BasicAction[];
 }
 
-export class ActionCell extends React.PureComponent<ActionCellProps> {
-  static COLUMN_ID = 'actions';
-  static COLUMN_LABEL = 'Actions';
-  static COLUMN_WIDTH = 70;
+export function ActionCell(props: ActionCellProps) {
+  const { onDetail, actions } = props;
+  const actionsMenu = actions ? basicActionsToMenu(actions) : null;
 
-  render(): JSX.Element {
-    const { onDetail, actions } = this.props;
-    const actionsMenu = actions ? basicActionsToMenu(actions) : null;
-
-    return (
-      <div className="action-cell">
-        {onDetail && <ActionIcon icon={IconNames.SEARCH_TEMPLATE} onClick={onDetail} />}
-        {actionsMenu && (
-          <Popover content={actionsMenu} position={Position.BOTTOM_RIGHT}>
-            <ActionIcon icon={IconNames.WRENCH} />
-          </Popover>
-        )}
-      </div>
-    );
-  }
+  return (
+    <div className="action-cell">
+      {onDetail && <ActionIcon icon={IconNames.SEARCH_TEMPLATE} onClick={onDetail} />}
+      {actionsMenu && (
+        <Popover content={actionsMenu} position={Position.BOTTOM_RIGHT}>
+          <ActionIcon icon={IconNames.WRENCH} />
+        </Popover>
+      )}
+    </div>
+  );
 }

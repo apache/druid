@@ -16,20 +16,19 @@
  * limitations under the License.
  */
 
-import React from 'react';
+import React, { ReactNode } from 'react';
 
 export interface ExternalLinkProps {
   href: string;
+  children?: ReactNode;
 }
 
-export class ExternalLink extends React.PureComponent<ExternalLinkProps> {
-  render(): JSX.Element {
-    const { href, children } = this.props;
+export function ExternalLink(props: ExternalLinkProps) {
+  const { href, children } = props;
 
-    return (
-      <a href={href} target="_blank" rel="noopener noreferrer">
-        {children}
-      </a>
-    );
-  }
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  );
 }
