@@ -149,7 +149,12 @@ public class ParallelMergeCombiningSequenceBenchmark
       final int startMillis = Integer.parseInt(inputSequenceTypeSplit[3]);
       final int delayMillis = Integer.parseInt(inputSequenceTypeSplit[4].substring(0, inputSequenceTypeSplit[4].length() - 2));
       inputSequenceFactory = () ->
-          ParallelMergeCombiningSequenceTest.initialDelaySequence(rowsPerSequence, delayMillis, delayMillis - startMillis);
+          ParallelMergeCombiningSequenceTest.initialDelaySequence(
+              rowsPerSequence,
+              delayMillis,
+              delayMillis - startMillis,
+              true
+          );
     } else if ("slow".equals(inputSequenceTypeSplit[0])) {
       // e.g. "slow-sequence-random-{startDelayStart}-{startDelayEnd}ms-{frequencyDelay}ms"
       final int startStartDelayMillis = Integer.parseInt(inputSequenceTypeSplit[3]);
@@ -162,11 +167,12 @@ public class ParallelMergeCombiningSequenceBenchmark
               frequency,
               startDelayMillis,
               startDelayMillis - startStartDelayMillis,
-              delayMillis
+              delayMillis,
+              true
           );
     } else { // non-blocking sequence
       inputSequenceFactory = () ->
-          ParallelMergeCombiningSequenceTest.generateOrderedPairsSequence(rowsPerSequence);
+          ParallelMergeCombiningSequenceTest.generateOrderedPairsSequence(rowsPerSequence, true);
     }
 
     String[] strategySplit = strategy.split("-");

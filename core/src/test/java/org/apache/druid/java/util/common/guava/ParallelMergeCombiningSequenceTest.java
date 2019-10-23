@@ -448,7 +448,7 @@ public class ParallelMergeCombiningSequenceTest
     input.add(generateOrderedPairsSequence(someSize));
     input.add(generateOrderedPairsSequence(someSize));
     input.add(generateOrderedPairsSequence(someSize));
-    input.add(slowSequence(someSize, 1, 500, 100, 500));
+    input.add(slowSequence(someSize, 1, 500, 100, 500, true));
     expectedException.expect(RuntimeException.class);
     expectedException.expectCause(Matchers.instanceOf(TimeoutException.class));
     expectedException.expectMessage("Sequence iterator timed out waiting for data");
@@ -598,27 +598,27 @@ public class ParallelMergeCombiningSequenceTest
 
   public static List<IntPair> generateOrderedPairs(int length)
   {
-    int counter = 0;
-    int i = 0;
+    int rowCounter = 0;
+    int mergeKey = 0;
     List<IntPair> generatedSequence = new ArrayList<>(length);
-    while (counter < length) {
-      i++;
+    while (rowCounter < length) {
+      mergeKey++;
       if (ThreadLocalRandom.current().nextBoolean()) {
-        generatedSequence.add(new IntPair(i, ThreadLocalRandom.current().nextInt(1, 100)));
-        counter++;
+        generatedSequence.add(makeIntPair(mergeKey));
+        rowCounter++;
       }
     }
     return generatedSequence;
   }
 
-  public static Sequence<IntPair> generateOrderedPairsSequence(int length)
+  public static Sequence<IntPair> generateOrderedPairsSequence(int size)
   {
-    return Sequences.simple(generateOrderedPairs(length));
+    return generateOrderedPairsSequence(size, false);
   }
 
-  public static Sequence<IntPair> explodingSequence(int explodeAfter)
+  public static Sequence<IntPair> generateOrderedPairsSequence(int size, boolean lazyEvaluate)
   {
-    List<IntPair> items = generateOrderedPairs(explodeAfter + 1);
+    List<IntPair> pairs = lazyEvaluate ? null : generateOrderedPairs(size);
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<IntPair, Iterator<IntPair>>()
         {
@@ -627,20 +627,30 @@ public class ParallelMergeCombiningSequenceTest
           {
             return new Iterator<IntPair>()
             {
-              int i = 0;
+              int mergeKey = 0;
+              int rowCounter = 0;
               @Override
               public boolean hasNext()
               {
-                return i < items.size();
+                return rowCounter < size;
               }
 
               @Override
               public IntPair next()
               {
-                if (i == explodeAfter) {
-                  throw new RuntimeException("exploded");
+                if (lazyEvaluate) {
+                  IntPair value = null;
+                  while (value == null) {
+                    mergeKey++;
+                    if (ThreadLocalRandom.current().nextBoolean()) {
+                      value = makeIntPair(mergeKey);
+                      rowCounter++;
+                    }
+                  }
+                  return value;
+                } else {
+                  return pairs.get(rowCounter++);
                 }
-                return items.get(i++);
               }
             };
           }
@@ -654,9 +664,56 @@ public class ParallelMergeCombiningSequenceTest
     );
   }
 
-  public static Sequence<IntPair> initialDelaySequence(int size, int maxDelayMillis, int startDelayRange)
+  public static Sequence<IntPair> explodingSequence(int explodeAfter)
   {
-    List<IntPair> items = generateOrderedPairs(size);
+    final int explodeAt = explodeAfter + 1;
+    return new BaseSequence<>(
+        new BaseSequence.IteratorMaker<IntPair, Iterator<IntPair>>()
+        {
+          @Override
+          public Iterator<IntPair> make()
+          {
+            return new Iterator<IntPair>()
+            {
+              int mergeKey = 0;
+              int rowCounter = 0;
+              @Override
+              public boolean hasNext()
+              {
+                return rowCounter < explodeAt;
+              }
+
+              @Override
+              public IntPair next()
+              {
+                if (rowCounter == explodeAfter) {
+                  throw new RuntimeException("exploded");
+                }
+                IntPair value = null;
+                while (value == null) {
+                  mergeKey++;
+                  if (ThreadLocalRandom.current().nextBoolean()) {
+                    value = makeIntPair(mergeKey);
+                    rowCounter++;
+                  }
+                }
+                return value;
+              }
+            };
+          }
+
+          @Override
+          public void cleanup(Iterator<IntPair> iterFromMake)
+          {
+            // nothing to cleanup
+          }
+        }
+    );
+  }
+
+  public static Sequence<IntPair> initialDelaySequence(int size, int maxDelayMillis, int startDelayRange, boolean lazyEvaluate)
+  {
+    List<IntPair> pairs = lazyEvaluate ? null : generateOrderedPairs(size);
     final long delayMillis = ThreadLocalRandom.current().nextLong(
         Math.max(0, maxDelayMillis - startDelayRange),
         maxDelayMillis
@@ -670,18 +727,19 @@ public class ParallelMergeCombiningSequenceTest
           {
             return new Iterator<IntPair>()
             {
-              int i = 0;
+              int mergeKey = 0;
+              int rowCounter = 0;
               @Override
               public boolean hasNext()
               {
-                return i < items.size();
+                return rowCounter < size;
               }
 
               @Override
               public IntPair next()
               {
                 final long currentNano = System.nanoTime();
-                if (i == 0 && currentNano < delayUntil) {
+                if (rowCounter == 0 && currentNano < delayUntil) {
                   try {
                     Thread.sleep(
                         TimeUnit.MILLISECONDS.convert(delayUntil - currentNano, TimeUnit.NANOSECONDS)
@@ -691,7 +749,19 @@ public class ParallelMergeCombiningSequenceTest
                     throw new RuntimeException(ex);
                   }
                 }
-                return items.get(i++);
+                if (lazyEvaluate) {
+                  IntPair value = null;
+                  while (value == null) {
+                    mergeKey++;
+                    if (ThreadLocalRandom.current().nextBoolean()) {
+                      value = makeIntPair(mergeKey);
+                      rowCounter++;
+                    }
+                  }
+                  return value;
+                } else {
+                  return pairs.get(rowCounter++);
+                }
               }
             };
           }
@@ -710,10 +780,11 @@ public class ParallelMergeCombiningSequenceTest
       int frequency,
       int maxStartDelayMillis,
       int startDelayRange,
-      int maxDelayMillis
+      int maxDelayMillis,
+      boolean lazyEvaluate
   )
   {
-    List<IntPair> items = generateOrderedPairs(size);
+    List<IntPair> pairs = lazyEvaluate ? null : generateOrderedPairs(size);
     final long delayMillis = ThreadLocalRandom.current().nextLong(
         Math.max(0, maxStartDelayMillis - startDelayRange),
         maxStartDelayMillis
@@ -727,11 +798,12 @@ public class ParallelMergeCombiningSequenceTest
           {
             return new Iterator<IntPair>()
             {
-              int i = 0;
+              int mergeKey = 0;
+              int rowCounter = 0;
               @Override
               public boolean hasNext()
               {
-                return i < items.size();
+                return rowCounter < size;
               }
 
               @Override
@@ -739,11 +811,11 @@ public class ParallelMergeCombiningSequenceTest
               {
                 try {
                   final long currentNano = System.nanoTime();
-                  if (i == 0 && currentNano < delayUntil) {
+                  if (rowCounter == 0 && currentNano < delayUntil) {
                     Thread.sleep(
                         TimeUnit.MILLISECONDS.convert(delayUntil - currentNano, TimeUnit.NANOSECONDS)
                     );
-                  } else if (i > 0 && i % frequency == 0 && ThreadLocalRandom.current().nextBoolean()) {
+                  } else if (rowCounter > 0 && rowCounter % frequency == 0 && ThreadLocalRandom.current().nextBoolean()) {
                     Thread.sleep(
                         ThreadLocalRandom.current().nextInt(1, maxDelayMillis)
                     );
@@ -752,7 +824,19 @@ public class ParallelMergeCombiningSequenceTest
                 catch (InterruptedException ex) {
                   throw new RuntimeException(ex);
                 }
-                return items.get(i++);
+                if (lazyEvaluate) {
+                  IntPair value = null;
+                  while (value == null) {
+                    mergeKey++;
+                    if (ThreadLocalRandom.current().nextBoolean()) {
+                      value = makeIntPair(mergeKey);
+                      rowCounter++;
+                    }
+                  }
+                  return value;
+                } else {
+                  return pairs.get(rowCounter++);
+                }
               }
             };
           }
@@ -764,5 +848,10 @@ public class ParallelMergeCombiningSequenceTest
           }
         }
     );
+  }
+
+  static IntPair makeIntPair(int mergeKey)
+  {
+    return new IntPair(mergeKey, ThreadLocalRandom.current().nextInt(1, 100));
   }
 }
