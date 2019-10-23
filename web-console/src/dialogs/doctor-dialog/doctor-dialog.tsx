@@ -74,39 +74,38 @@ export class DoctorDialog extends React.PureComponent<DoctorDialogProps, DoctorD
       const check = DOCTOR_CHECKS[i];
       let terminateChecks = false;
 
-      // Slow down a bit so that the user can read the test name
-      await delay(500);
-
-      if (!this.mounted) return;
       try {
-        await check.check({
-          addSuggestion: (message: string) => {
-            addToDiagnoses({
-              type: 'suggestion',
-              check: check.name,
-              message,
-            });
-          },
-          addIssue: (message: string) => {
-            addToDiagnoses({
-              type: 'issue',
-              check: check.name,
-              message,
-            });
-          },
-          terminateChecks: () => {
-            if (!this.mounted) return;
-            this.setState({
-              earlyTermination: `${check.name} early terminated the check suite`,
-            });
-            terminateChecks = true;
-          },
-        });
+        await Promise.all([
+          await delay(450), // Make sure that a test takes at least this long so that the user can read the test name in the GUI,
+          check.check({
+            addSuggestion: (message: string) => {
+              addToDiagnoses({
+                type: 'suggestion',
+                check: check.name,
+                message,
+              });
+            },
+            addIssue: (message: string) => {
+              addToDiagnoses({
+                type: 'issue',
+                check: check.name,
+                message,
+              });
+            },
+            terminateChecks: () => {
+              if (!this.mounted) return;
+              this.setState({
+                earlyTermination: `The check "${check.name}" early terminated the check suite as it has encountered a condition that would make the rest of the tests meaningless.`,
+              });
+              terminateChecks = true;
+            },
+          }),
+        ]);
       } catch (e) {
         addToDiagnoses({
           type: 'issue',
           check: check.name,
-          message: `${check.name} encountered an unhandled exception`,
+          message: `The check "${check.name}" encountered an unhandled exception. Please report this issue. Message: ${e.message}`,
         });
       }
 

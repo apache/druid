@@ -38,8 +38,6 @@ const RUNTIME_PROPERTIES_ALL_NODES_MUST_AGREE_ON: string[] = [
   'druid.zk.service.host',
 ];
 
-const RUNTIME_PROPERTIES_ALL_NODES_SHOULD_AGREE_ON: string[] = ['java.version'];
-
 // In the future (when we can query other nodes) is will also be cool to check:
 // 'druid.storage.type' <=> historicals, overlords, mm
 // 'druid.indexer.logs.type' <=> overlord, mm, + peons
@@ -62,14 +60,14 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
         status = (await axios.get(`/status`)).data;
       } catch (e) {
         controls.addIssue(
-          `Did not get a /status response, is the cluster running? Got: ${e.message}`,
+          `Did not get a /status response from the Router node. Try confirming that it is running and accessible. Got: ${e.message}`,
         );
         controls.terminateChecks();
         return;
       }
 
       if (typeof status.version !== 'string') {
-        controls.addIssue('Could not get a valid /status response.');
+        controls.addIssue('Could not get a valid /status response from the Router.');
       }
     },
   },
@@ -81,24 +79,26 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
       try {
         properties = (await axios.get(`/status/properties`)).data;
       } catch (e) {
-        controls.addIssue('Did not get a /status/properties response, something must be broken.');
+        controls.addIssue(
+          `Did not get a /status/properties response from the Router. Message: ${e.message}`,
+        );
         return;
       }
 
       // Check that the management proxy is on, it really should be for someone to access the console in the first place but everything could happen
       if (properties['druid.router.managementProxy.enabled'] !== 'true') {
         controls.addIssue(
-          `The router's "druid.router.managementProxy.enabled" is not reported as "true" that is unusual.`,
+          `The Router's "druid.router.managementProxy.enabled" is not reported as "true". This means that the Coordinator and Overlord will not be accessible from the Router (and this console).`,
         );
       }
 
       // Check that the underlying Java is Java 8 the only officially supported Java version at the moment.
       if (
-        properties['java.runtime.version'] &&
-        !properties['java.runtime.version'].startsWith('1.8')
+        properties['java.specification.version'] &&
+        properties['java.specification.version'] !== '1.8'
       ) {
         controls.addSuggestion(
-          `It looks like are running Java ${properties['java.runtime.version']}, Druid only officially supports Java 1.8.x`,
+          `It looks like are running Java ${properties['java.runtime.version']}. Druid only officially supports Java 1.8.x`,
         );
       }
 
@@ -136,7 +136,9 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
       try {
         coordinatorStatus = (await axios.get(`/proxy/coordinator/status`)).data;
       } catch (e) {
-        controls.addIssue('Did not get a /status response from the coordinator, is it running?');
+        controls.addIssue(
+          'Did not get a /status response from the Coordinator node. Try confirming that it is running and accessible.',
+        );
         return;
       }
 
@@ -144,19 +146,21 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
       try {
         overlordStatus = (await axios.get(`/proxy/overlord/status`)).data;
       } catch (e) {
-        controls.addIssue('Did not get a /status response from the overlord, is it running?');
+        controls.addIssue(
+          'Did not get a /status response from the Overlord node. Try confirming that it is running and accessible.',
+        );
         return;
       }
 
       if (myStatus.version !== coordinatorStatus.version) {
         controls.addSuggestion(
-          `It looks like the Router and Coordinator nodes are on different versions of Druid, are you in the middle of a rolling upgrade?`,
+          `It looks like the Router and Coordinator nodes are on different versions of Druid. This may indicate a problem if you are not in the middle of a rolling upgrade.`,
         );
       }
 
       if (myStatus.version !== overlordStatus.version) {
         controls.addSuggestion(
-          `It looks like the Router and Coordinator nodes are on different versions of Druid, are you in the middle of a rolling upgrade?`,
+          `It looks like the Router and Overlord nodes are on different versions of Druid. This may indicate a problem if you are not in the middle of a rolling upgrade.`,
         );
       }
     },
@@ -176,7 +180,9 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
       try {
         coordinatorProperties = (await axios.get(`/proxy/coordinator/status/properties`)).data;
       } catch (e) {
-        controls.addIssue('Did not get a /status response from the coordinator, is it running?');
+        controls.addIssue(
+          'Did not get a /status response from the coordinator. Try confirming that it is running and accessible.',
+        );
         return;
       }
 
@@ -184,7 +190,9 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
       try {
         overlordProperties = (await axios.get(`/proxy/overlord/status/properties`)).data;
       } catch (e) {
-        controls.addIssue('Did not get a /status response from the overlord, is it running?');
+        controls.addIssue(
+          'Did not get a /status response from the overlord. Try confirming that it is running and accessible.',
+        );
         return;
       }
 
@@ -196,19 +204,6 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
         }
         if (myProperties[prop] !== overlordProperties[prop]) {
           controls.addIssue(
-            `The Router and Overlord do not agree on the "${prop}" runtime property ("${myProperties[prop]}" vs "${overlordProperties[prop]}")`,
-          );
-        }
-      }
-
-      for (const prop of RUNTIME_PROPERTIES_ALL_NODES_SHOULD_AGREE_ON) {
-        if (myProperties[prop] !== coordinatorProperties[prop]) {
-          controls.addSuggestion(
-            `The Router and Coordinator do not agree on the "${prop}" runtime property ("${myProperties[prop]}" vs "${coordinatorProperties[prop]}")`,
-          );
-        }
-        if (myProperties[prop] !== overlordProperties[prop]) {
-          controls.addSuggestion(
             `The Router and Overlord do not agree on the "${prop}" runtime property ("${myProperties[prop]}" vs "${overlordProperties[prop]}")`,
           );
         }
