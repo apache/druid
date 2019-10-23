@@ -57,9 +57,11 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 {
   private static final Logger LOG = new Logger(ParallelMergeCombiningSequence.class);
 
-  public static final int DEFAULT_TASK_TARGET_RUN_TIME_MILLIS = 10;
-  public static final int DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS = 1024;
-  public static final int DEFAULT_TASK_SMALL_BATCH_NUM_ROWS = 128;
+  // these values were chosen carefully via feedback from benchmarks,
+  // see PR https://github.com/apache/incubator-druid/pull/8578 for details
+  public static final int DEFAULT_TASK_TARGET_RUN_TIME_MILLIS = 100;
+  public static final int DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS = 16384;
+  public static final int DEFAULT_TASK_SMALL_BATCH_NUM_ROWS = 4096;
 
   private final ForkJoinPool workerPool;
   private final List<Sequence<T>> baseSequences;
