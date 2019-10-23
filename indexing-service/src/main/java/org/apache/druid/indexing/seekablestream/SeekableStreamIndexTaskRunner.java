@@ -724,7 +724,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             final CheckPointDataSourceMetadataAction checkpointAction = new CheckPointDataSourceMetadataAction(
                 task.getDataSource(),
                 ioConfig.getTaskGroupId(),
-                task.getIOConfig().getBaseSequenceName(),
                 null,
                 createDataSourceMetadata(
                     new SeekableStreamStartSequenceNumbers<>(
