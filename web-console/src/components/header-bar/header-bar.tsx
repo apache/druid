@@ -34,6 +34,7 @@ import React, { useState } from 'react';
 
 import { AboutDialog } from '../../dialogs/about-dialog/about-dialog';
 import { CoordinatorDynamicConfigDialog } from '../../dialogs/coordinator-dynamic-config-dialog/coordinator-dynamic-config-dialog';
+import { DoctorDialog } from '../../dialogs/doctor-dialog/doctor-dialog';
 import { OverlordDynamicConfigDialog } from '../../dialogs/overlord-dynamic-config-dialog/overlord-dynamic-config-dialog';
 import {
   DRUID_ASF_SLACK,
@@ -134,6 +135,7 @@ export interface HeaderBarProps {
 export function HeaderBar(props: HeaderBarProps) {
   const { active, hideLegacy } = props;
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
+  const [doctorDialogOpen, setDoctorDialogOpen] = useState(false);
   const [coordinatorDynamicConfigDialogOpen, setCoordinatorDynamicConfigDialogOpen] = useState(
     false,
   );
@@ -157,6 +159,11 @@ export function HeaderBar(props: HeaderBarProps) {
 
   const configMenu = (
     <Menu>
+      <MenuItem
+        icon={IconNames.PULSE}
+        text="Druid Doctor"
+        onClick={() => setDoctorDialogOpen(true)}
+      />
       <MenuItem
         icon={IconNames.SETTINGS}
         text="Coordinator dynamic config"
@@ -246,6 +253,7 @@ export function HeaderBar(props: HeaderBarProps) {
         </Popover>
       </NavbarGroup>
       {aboutDialogOpen && <AboutDialog onClose={() => setAboutDialogOpen(false)} />}
+      {doctorDialogOpen && <DoctorDialog onClose={() => setDoctorDialogOpen(false)} />}
       {coordinatorDynamicConfigDialogOpen && (
         <CoordinatorDynamicConfigDialog
           onClose={() => setCoordinatorDynamicConfigDialogOpen(false)}

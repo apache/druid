@@ -547,7 +547,7 @@ export function getFlattenFieldFormFields() {
 }
 
 export interface TransformSpec {
-  transforms: Transform[];
+  transforms?: Transform[];
   filter?: any;
 }
 

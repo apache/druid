@@ -36,7 +36,14 @@ export function AboutDialog(props: AboutDialogProps) {
   const { onClose } = props;
 
   return (
-    <Dialog icon={IconNames.GRAPH} onClose={onClose} title="Apache Druid" isOpen canEscapeKeyClose>
+    <Dialog
+      className="about-dialog"
+      icon={IconNames.GRAPH}
+      onClose={onClose}
+      title="Apache Druid"
+      isOpen
+      canEscapeKeyClose
+    >
       <div className={Classes.DIALOG_BODY}>
         <p>
           <strong>
