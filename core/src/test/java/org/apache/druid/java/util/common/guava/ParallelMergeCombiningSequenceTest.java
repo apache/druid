@@ -602,11 +602,9 @@ public class ParallelMergeCombiningSequenceTest
     int mergeKey = 0;
     List<IntPair> generatedSequence = new ArrayList<>(length);
     while (rowCounter < length) {
-      mergeKey++;
-      if (ThreadLocalRandom.current().nextBoolean()) {
-        generatedSequence.add(makeIntPair(mergeKey));
-        rowCounter++;
-      }
+      mergeKey += incrementMergeKeyAmount();
+      generatedSequence.add(makeIntPair(mergeKey));
+      rowCounter++;
     }
     return generatedSequence;
   }
@@ -639,15 +637,9 @@ public class ParallelMergeCombiningSequenceTest
               public IntPair next()
               {
                 if (lazyEvaluate) {
-                  IntPair value = null;
-                  while (value == null) {
-                    mergeKey++;
-                    if (ThreadLocalRandom.current().nextBoolean()) {
-                      value = makeIntPair(mergeKey);
-                      rowCounter++;
-                    }
-                  }
-                  return value;
+                  rowCounter++;
+                  mergeKey += incrementMergeKeyAmount();
+                  return makeIntPair(mergeKey);
                 } else {
                   return pairs.get(rowCounter++);
                 }
@@ -689,15 +681,9 @@ public class ParallelMergeCombiningSequenceTest
                 if (rowCounter == explodeAfter) {
                   throw new RuntimeException("exploded");
                 }
-                IntPair value = null;
-                while (value == null) {
-                  mergeKey++;
-                  if (ThreadLocalRandom.current().nextBoolean()) {
-                    value = makeIntPair(mergeKey);
-                    rowCounter++;
-                  }
-                }
-                return value;
+                mergeKey += incrementMergeKeyAmount();
+                rowCounter++;
+                return makeIntPair(mergeKey);
               }
             };
           }
@@ -750,15 +736,9 @@ public class ParallelMergeCombiningSequenceTest
                   }
                 }
                 if (lazyEvaluate) {
-                  IntPair value = null;
-                  while (value == null) {
-                    mergeKey++;
-                    if (ThreadLocalRandom.current().nextBoolean()) {
-                      value = makeIntPair(mergeKey);
-                      rowCounter++;
-                    }
-                  }
-                  return value;
+                  rowCounter++;
+                  mergeKey += incrementMergeKeyAmount();
+                  return makeIntPair(mergeKey);
                 } else {
                   return pairs.get(rowCounter++);
                 }
@@ -825,15 +805,9 @@ public class ParallelMergeCombiningSequenceTest
                   throw new RuntimeException(ex);
                 }
                 if (lazyEvaluate) {
-                  IntPair value = null;
-                  while (value == null) {
-                    mergeKey++;
-                    if (ThreadLocalRandom.current().nextBoolean()) {
-                      value = makeIntPair(mergeKey);
-                      rowCounter++;
-                    }
-                  }
-                  return value;
+                  rowCounter++;
+                  mergeKey += incrementMergeKeyAmount();
+                  return makeIntPair(mergeKey);
                 } else {
                   return pairs.get(rowCounter++);
                 }
@@ -848,6 +822,11 @@ public class ParallelMergeCombiningSequenceTest
           }
         }
     );
+  }
+
+  static int incrementMergeKeyAmount()
+  {
+    return ThreadLocalRandom.current().nextInt(1, 3);
   }
 
   static IntPair makeIntPair(int mergeKey)
