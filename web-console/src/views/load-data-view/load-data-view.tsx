@@ -2965,7 +2965,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   private handleSubmit = async () => {
     const { goToTask } = this.props;
-    const { spec } = this.state;
+    const { spec, submitting } = this.state;
+    if (submitting) return;
 
     this.setState({ submitting: true });
     if (isTask(spec)) {
