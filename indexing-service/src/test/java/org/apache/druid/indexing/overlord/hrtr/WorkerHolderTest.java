@@ -28,6 +28,7 @@ import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.WorkerHistoryItem;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
@@ -59,7 +60,7 @@ public class WorkerHolderTest
         new HttpRemoteTaskRunnerConfig(),
         EasyMock.createNiceMock(ScheduledExecutorService.class),
         (taskAnnouncement, holder) -> updates.add(taskAnnouncement),
-        new Worker("http", "localhost", "127.0.0.1", 5, "v0"),
+        new Worker("http", "localhost", "127.0.0.1", 5, "v0", WorkerConfig.DEFAULT_CATEGORY),
         ImmutableList.of(
             TaskAnnouncement.create(
                 task0,

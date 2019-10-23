@@ -68,7 +68,7 @@ The format of the result is:
 ```json
 [
   {
-    "timestamp": "2012-01-01T00:00:00.000Z",
+    "timestamp": "2013-01-01T00:00:00.000Z",
     "result": [
       {
         "dimension": "dim1",
@@ -83,7 +83,7 @@ The format of the result is:
     ]
   },
   {
-    "timestamp": "2012-01-02T00:00:00.000Z",
+    "timestamp": "2013-01-02T00:00:00.000Z",
     "result": [
       {
         "dimension": "dim1",

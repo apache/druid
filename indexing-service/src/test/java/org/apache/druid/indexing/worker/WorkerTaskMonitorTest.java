@@ -43,6 +43,7 @@ import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import org.apache.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -112,7 +113,8 @@ public class WorkerTaskMonitorTest
         "worker",
         "localhost",
         3,
-        "0"
+        "0",
+        WorkerConfig.DEFAULT_CATEGORY
     );
 
     workerCuratorCoordinator = new WorkerCuratorCoordinator(

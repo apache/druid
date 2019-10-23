@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.helper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -49,7 +50,7 @@ public class NewestSegmentFirstPolicyTest
   private static final long DEFAULT_SEGMENT_SIZE = 1000;
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
 
-  private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy();
+  private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(new DefaultObjectMapper());
 
   @Test
   public void testLargeOffsetAndSmallSegmentInterval()
@@ -281,72 +282,59 @@ public class NewestSegmentFirstPolicyTest
   }
 
   @Test
-  public void testIgnoreSingleSegmentToCompact()
-  {
-    final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(800000, new Period("P1D"))),
-        ImmutableMap.of(
-            DATA_SOURCE,
-            createTimeline(
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-12-02T00:00:00/2017-12-03T00:00:00"),
-                    new Period("P1D"),
-                    200,
-                    1
-                ),
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-12-01T00:00:00/2017-12-02T00:00:00"),
-                    new Period("P1D"),
-                    200,
-                    1
-                )
-            )
-        ),
-        Collections.emptyMap()
-    );
-
-    Assert.assertFalse(iterator.hasNext());
-  }
-
-  @Test
   public void testClearSegmentsToCompactWhenSkippingSegments()
   {
-    final long maxSizeOfSegmentsToCompact = 800000;
+    final long inputSegmentSizeBytes = 800000;
     final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-12-03T00:00:00/2017-12-04T00:00:00"),
             new Period("P1D"),
-            maxSizeOfSegmentsToCompact / 2 + 10,
+            inputSegmentSizeBytes / 2 + 10,
             1
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-12-02T00:00:00/2017-12-03T00:00:00"),
             new Period("P1D"),
-            maxSizeOfSegmentsToCompact + 10, // large segment
+            inputSegmentSizeBytes + 10, // large segment
             1
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-12-01T00:00:00/2017-12-02T00:00:00"),
             new Period("P1D"),
-            maxSizeOfSegmentsToCompact / 3 + 10,
+            inputSegmentSizeBytes / 3 + 10,
             2
         )
     );
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(maxSizeOfSegmentsToCompact, new Period("P0D"))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(inputSegmentSizeBytes, new Period("P0D"))),
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
 
-    final List<DataSegment> expectedSegmentsToCompact = timeline
-        .lookup(Intervals.of("2017-12-01/2017-12-02"))
-        .stream()
-        .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
-        .map(PartitionChunk::getObject)
-        .collect(Collectors.toList());
-
+    final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>();
+    expectedSegmentsToCompact.addAll(
+        timeline
+            .lookup(Intervals.of("2017-12-03/2017-12-04"))
+            .stream()
+            .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
+            .map(PartitionChunk::getObject)
+            .collect(Collectors.toList())
+    );
     Assert.assertTrue(iterator.hasNext());
     Assert.assertEquals(expectedSegmentsToCompact, iterator.next());
+
+    expectedSegmentsToCompact.clear();
+    expectedSegmentsToCompact.addAll(
+        timeline
+            .lookup(Intervals.of("2017-12-01/2017-12-02"))
+            .stream()
+            .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
+            .map(PartitionChunk::getObject)
+            .collect(Collectors.toList())
+    );
+    Assert.assertTrue(iterator.hasNext());
+    Assert.assertEquals(expectedSegmentsToCompact, iterator.next());
+
     Assert.assertFalse(iterator.hasNext());
   }
 
@@ -569,15 +557,14 @@ public class NewestSegmentFirstPolicyTest
   }
 
   private DataSourceCompactionConfig createCompactionConfig(
-      long targetCompactionSizeBytes,
+      long inputSegmentSizeBytes,
       Period skipOffsetFromLatest
   )
   {
     return new DataSourceCompactionConfig(
         DATA_SOURCE,
         0,
-        targetCompactionSizeBytes,
-        targetCompactionSizeBytes,
+        inputSegmentSizeBytes,
         null,
         skipOffsetFromLatest,
         null,

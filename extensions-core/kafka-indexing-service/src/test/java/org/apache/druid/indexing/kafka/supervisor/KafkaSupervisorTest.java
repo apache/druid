@@ -636,9 +636,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    // for simplicity in testing the offset availability check, we use negative stored offsets in metadata here,
+    // because the stream's earliest offset is 0, although that would not happen in real usage.
     EasyMock.expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 10L, 1, 20L, 2, 30L), ImmutableSet.of())
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, -10L, 1, -20L, 2, -30L), ImmutableSet.of())
         )
     ).anyTimes();
     replayAll();
@@ -2041,10 +2043,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     EasyMock.reset(indexerMetadataStorageCoordinator);
     // unknown DataSourceMetadata in metadata store
+    // for simplicity in testing the offset availability check, we use negative stored offsets in metadata here,
+    // because the stream's earliest offset is 0, although that would not happen in real usage.
     EasyMock.expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE))
             .andReturn(
                 new KafkaDataSourceMetadata(
-                    new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(1, 100L, 2, 200L))
+                    new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(1, -100L, 2, 200L))
                 )
             ).times(4);
     // getOffsetFromStorageForPartition() throws an exception when the offsets are automatically reset.

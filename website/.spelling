@@ -23,6 +23,8 @@
 ACL
 APIs
 AWS
+AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
+AWS_CONTAINER_CREDENTIALS_FULL_URI
 Actian
 Authorizer
 Avatica
@@ -58,6 +60,8 @@ Dropwizard
 dropwizard
 DruidSQL
 EC2
+EC2ContainerCredentialsProviderWrapper
+ECS
 EMR
 EMRFS
 ETL
@@ -668,6 +672,7 @@ maxRecordsPerPollrecordsPerFetchfetchDelayMillisreplicasfetchDelayMillisrecordsP
 numKinesisShards
 numProcessors
 q.size
+repartitionTransitionDuration
 replicastaskCounttaskCount
 resetuseEarliestSequenceNumberPOST
 resumePOST
@@ -680,6 +685,15 @@ taskCounttaskDurationtaskDurationPOST
 taskDurationstartDelayperioduseEarliestSequenceNumbercompletionTimeouttaskDurationlateMessageRejectionPeriodPT1HearlyMessageRejectionPeriodPT1HPT1HrecordsPerFetchfetchDelayMillisawsAssumedRoleArnawsExternalIddeaggregateGET
 terminatePOST
 terminatedruid.worker.capacitytaskDurationcompletionTimeoutreplicastaskCountreplicas
+PT2M
+kinesis.us
+amazonaws.com
+PT6H
+GetRecords
+KCL
+signalled
+ProvisionedThroughputExceededException
+Deaggregation
  - ../docs/development/extensions-core/lookups-cached-global.md
 baz
 customJson
@@ -905,6 +919,8 @@ InlineFirehose
 LocalFirehose
 PartitionsSpec
 PasswordProviders
+SegmentsSplitHintSpec
+SplitHintSpec
 appendToExisting
 baseDir
 chatHandlerNumRetries
@@ -925,6 +941,7 @@ reportParseExceptions
 segmentWriteOutMediumFactory
 sql
 sqls
+splitHintSpec
 taskStatusCheckPeriodMs
 timeChunk
 totalNumMergeTasks
@@ -1378,6 +1395,7 @@ avg_num_rows
 avg_size
 created_time
 current_size
+detailed_state
 druid.server.maxSize
 druid.server.tier
 druid.sql.planner.maxSemiJoinRowsInMemory
@@ -1404,6 +1422,7 @@ runner_status
 segment_id
 server_type
 sqlTimeZone
+supervisor_id
 sys
 sys.segments
 task_id
@@ -1621,6 +1640,16 @@ v0.12.0
 versionReplacementString
 workerId
 yyyy-MM-dd
+taskType
+index_kafka
+c1
+c2
+ds1
+equalDistributionWithCategorySpec
+fillCapacityWithCategorySpec
+WorkerCategorySpec
+workerCategorySpec
+CategoryConfig
  - ../docs/design/index.md
 logsearch
  - ../docs/ingestion/index.md

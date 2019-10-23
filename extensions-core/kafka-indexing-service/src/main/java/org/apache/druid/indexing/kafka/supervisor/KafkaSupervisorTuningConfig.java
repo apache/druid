@@ -140,6 +140,17 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
     return shutdownTimeout;
   }
 
+  @Override
+  public Duration getRepartitionTransitionDuration()
+  {
+    // Stopping tasks early for Kafka ingestion on partition set change is not supported yet,
+    // just return a default for now.
+    return SeekableStreamSupervisorTuningConfig.defaultDuration(
+        null,
+        SeekableStreamSupervisorTuningConfig.DEFAULT_REPARTITION_TRANSITION_DURATION
+    );
+  }
+
   @JsonProperty
   public Duration getOffsetFetchPeriod()
   {

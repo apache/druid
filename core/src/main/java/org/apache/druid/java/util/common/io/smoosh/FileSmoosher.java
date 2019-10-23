@@ -412,7 +412,7 @@ public class FileSmoosher implements Closeable
       this.outFile = outFile;
       this.maxLength = maxLength;
 
-      FileOutputStream outStream = closer.register(new FileOutputStream(outFile));
+      FileOutputStream outStream = closer.register(new FileOutputStream(outFile));  // lgtm [java/output-resource-leak]
       this.channel = closer.register(outStream.getChannel());
     }
 

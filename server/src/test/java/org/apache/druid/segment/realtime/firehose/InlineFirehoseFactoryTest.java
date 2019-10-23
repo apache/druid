@@ -20,8 +20,10 @@
 package org.apache.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
@@ -37,6 +39,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @SuppressWarnings({"NullableProblems", "ConstantConditions"})
 public class InlineFirehoseFactoryTest
@@ -77,6 +80,14 @@ public class InlineFirehoseFactoryTest
     target = new InlineFirehoseFactory(DATA);
   }
 
+  @Test
+  public void testInterfaceImplementation()
+  {
+    Assert.assertTrue(target instanceof FiniteFirehoseFactory);
+    Assert.assertFalse(target.isSplittable());
+    Assert.assertEquals(1, target.getNumSplits(null));
+  }
+
   @Test(expected = NullPointerException.class)
   public void testContstructorDataRequired()
   {
@@ -99,6 +110,16 @@ public class InlineFirehoseFactoryTest
     Assert.assertNotNull(values);
     Assert.assertEquals(1, values.size());
     Assert.assertEquals(VALUE, values.get(0));
+  }
+
+  @Test
+  public void testForcedSplitAndClone()
+  {
+    Optional<InputSplit<String>> inputSplitOptional = target.getSplits(null).findFirst();
+    Assert.assertTrue(inputSplitOptional.isPresent());
+    FiniteFirehoseFactory<StringInputRowParser, String> cloneWithSplit = target.withSplit(inputSplitOptional.get());
+    Assert.assertTrue(cloneWithSplit instanceof InlineFirehoseFactory);
+    Assert.assertEquals(DATA, ((InlineFirehoseFactory) cloneWithSplit).getData());
   }
 
   @Test

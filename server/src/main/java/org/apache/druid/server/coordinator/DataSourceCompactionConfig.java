@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.client.indexing.ClientCompactQueryTuningConfig;
+import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.segment.IndexSpec;
 import org.joda.time.Period;
 
@@ -43,8 +44,6 @@ public class DataSourceCompactionConfig
   private final String dataSource;
   private final int taskPriority;
   private final long inputSegmentSizeBytes;
-  @Nullable
-  private final Long targetCompactionSizeBytes;
   // The number of input segments is limited because the byte size of a serialized task spec is limited by
   // RemoteTaskRunnerConfig.maxZnodeBytes.
   @Nullable
@@ -58,7 +57,6 @@ public class DataSourceCompactionConfig
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("taskPriority") @Nullable Integer taskPriority,
       @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
-      @JsonProperty("targetCompactionSizeBytes") @Nullable Long targetCompactionSizeBytes,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
       @JsonProperty("tuningConfig") @Nullable UserCompactTuningConfig tuningConfig,
@@ -72,60 +70,10 @@ public class DataSourceCompactionConfig
     this.inputSegmentSizeBytes = inputSegmentSizeBytes == null
                                  ? DEFAULT_INPUT_SEGMENT_SIZE_BYTES
                                  : inputSegmentSizeBytes;
-    this.targetCompactionSizeBytes = getValidTargetCompactionSizeBytes(
-        targetCompactionSizeBytes,
-        maxRowsPerSegment,
-        tuningConfig
-    );
     this.maxRowsPerSegment = maxRowsPerSegment;
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
     this.tuningConfig = tuningConfig;
     this.taskContext = taskContext;
-  }
-
-  /**
-   * This method is copied from {@code CompactionTask#getValidTargetCompactionSizeBytes}. The only difference is this
-   * method doesn't check 'numShards' which is not supported by {@link UserCompactTuningConfig}.
-   *
-   * Currently, we can't use the same method here because it's in a different module. Until we figure out how to reuse
-   * the same method, this method must be synced with {@code CompactionTask#getValidTargetCompactionSizeBytes}.
-   */
-  @Nullable
-  private static Long getValidTargetCompactionSizeBytes(
-      @Nullable Long targetCompactionSizeBytes,
-      @Nullable Integer maxRowsPerSegment,
-      @Nullable UserCompactTuningConfig tuningConfig
-  )
-  {
-    if (targetCompactionSizeBytes != null) {
-      Preconditions.checkArgument(
-          !hasPartitionConfig(maxRowsPerSegment, tuningConfig),
-          "targetCompactionSizeBytes[%s] cannot be used with maxRowsPerSegment[%s] and maxTotalRows[%s]",
-          targetCompactionSizeBytes,
-          maxRowsPerSegment,
-          tuningConfig == null ? null : tuningConfig.getMaxTotalRows()
-      );
-      return targetCompactionSizeBytes;
-    } else {
-      return hasPartitionConfig(maxRowsPerSegment, tuningConfig) ? null : DEFAULT_TARGET_COMPACTION_SIZE_BYTES;
-    }
-  }
-
-  /**
-   * his method is copied from {@code CompactionTask#hasPartitionConfig}. The two differences are
-   * 1) this method doesn't check 'numShards' which is not supported by {@link UserCompactTuningConfig}, and
-   * 2) this method accepts an additional 'maxRowsPerSegment' parameter since it's not supported by
-   * {@link UserCompactTuningConfig}.
-   *
-   * Currently, we can't use the same method here because it's in a different module. Until we figure out how to reuse
-   * the same method, this method must be synced with {@code CompactionTask#hasPartitionConfig}.
-   */
-  private static boolean hasPartitionConfig(
-      @Nullable Integer maxRowsPerSegment,
-      @Nullable UserCompactTuningConfig tuningConfig
-  )
-  {
-    return maxRowsPerSegment != null || (tuningConfig != null && tuningConfig.getMaxTotalRows() != null);
   }
 
   @JsonProperty
@@ -144,13 +92,6 @@ public class DataSourceCompactionConfig
   public long getInputSegmentSizeBytes()
   {
     return inputSegmentSizeBytes;
-  }
-
-  @JsonProperty
-  @Nullable
-  public Long getTargetCompactionSizeBytes()
-  {
-    return targetCompactionSizeBytes;
   }
 
   @JsonProperty
@@ -193,7 +134,6 @@ public class DataSourceCompactionConfig
     return taskPriority == that.taskPriority &&
            inputSegmentSizeBytes == that.inputSegmentSizeBytes &&
            Objects.equals(dataSource, that.dataSource) &&
-           Objects.equals(targetCompactionSizeBytes, that.targetCompactionSizeBytes) &&
            Objects.equals(skipOffsetFromLatest, that.skipOffsetFromLatest) &&
            Objects.equals(tuningConfig, that.tuningConfig) &&
            Objects.equals(taskContext, that.taskContext);
@@ -206,7 +146,6 @@ public class DataSourceCompactionConfig
         dataSource,
         taskPriority,
         inputSegmentSizeBytes,
-        targetCompactionSizeBytes,
         skipOffsetFromLatest,
         tuningConfig,
         taskContext
@@ -220,9 +159,11 @@ public class DataSourceCompactionConfig
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
         @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
         @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
+        @JsonProperty("splitHintSpec") @Nullable SplitHintSpec splitHintSpec,
         @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
         @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
-        @JsonProperty("pushTimeout") @Nullable Long pushTimeout
+        @JsonProperty("pushTimeout") @Nullable Long pushTimeout,
+        @JsonProperty("maxNumConcurrentSubTasks") @Nullable Integer maxNumConcurrentSubTasks
     )
     {
       super(
@@ -230,9 +171,11 @@ public class DataSourceCompactionConfig
           maxRowsInMemory,
           maxBytesInMemory,
           maxTotalRows,
+          splitHintSpec,
           indexSpec,
           maxPendingPersists,
-          pushTimeout
+          pushTimeout,
+          maxNumConcurrentSubTasks
       );
     }
 

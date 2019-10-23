@@ -786,8 +786,7 @@ A description of the compaction config is:
 |`dataSource`|dataSource name to be compacted.|yes|
 |`taskPriority`|[Priority](../ingestion/tasks.html#priority) of compaction task.|no (default = 25)|
 |`inputSegmentSizeBytes`|Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.|no (default = 419430400)|
-|`targetCompactionSizeBytes`|The target segment size, for each segment, after compaction. The actual sizes of compacted segments might be slightly larger or smaller than this value. Each compaction task may generate more than one output segment, and it will try to keep each output segment close to this configured size. This configuration cannot be used together with `maxRowsPerSegment`.|no (default = 419430400)|
-|`maxRowsPerSegment`|Max number of rows per segment after compaction. This configuration cannot be used together with `targetCompactionSizeBytes`.|no|
+|`maxRowsPerSegment`|Max number of rows per segment after compaction.|no|
 |`skipOffsetFromLatest`|The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources. |no (default = "P1D")|
 |`tuningConfig`|Tuning config for compaction tasks. See below [Compaction Task TuningConfig](#compaction-tuningconfig).|no|
 |`taskContext`|[Task context](../ingestion/tasks.html#context) for compaction tasks.|no|
@@ -814,9 +813,11 @@ If you see this problem, it's recommended to set `skipOffsetFromLatest` to some 
 |`maxRowsInMemory`|See [tuningConfig for indexTask](../ingestion/native-batch.md#tuningconfig)|no (default = 1000000)|
 |`maxBytesInMemory`|See [tuningConfig for indexTask](../ingestion/native-batch.md#tuningconfig)|no (1/6 of max JVM memory)|
 |`maxTotalRows`|See [tuningConfig for indexTask](../ingestion/native-batch.md#tuningconfig)|no (default = 20000000)|
+|`splitHintSpec`|See [tuningConfig for indexTask](../ingestion/native-batch.md#tuningconfig)|no (default = null)|
 |`indexSpec`|See [IndexSpec](../ingestion/index.md#indexspec)|no|
 |`maxPendingPersists`|See [tuningConfig for indexTask](../ingestion/native-batch.md#tuningconfig)|no (default = 0 (meaning one persist can be running concurrently with ingestion, and none can be queued up))|
 |`pushTimeout`|See [tuningConfig for indexTask](../ingestion/native-batch.md#tuningconfig)|no (default = 0)|
+|`maxNumConcurrentSubTasks`|See [tuningConfig for indexTask](../ingestion/native-batch.md#tuningconfig)|no (default = 1)|
 
 ### Overlord
 
@@ -982,6 +983,37 @@ useful if you want work evenly distributed across your MiddleManagers.
 |`type`|`equalDistribution`.|required; must be `equalDistribution`|
 |`affinityConfig`|[Affinity config](#affinity) object|null (no affinity)|
 
+###### Equal Distribution With Category Spec
+
+This strategy is a variant of `Equal Distribution`, which support `workerCategorySpec` field rather than `affinityConfig`. By specifying `workerCategorySpec`, you can assign tasks to run on different categories of MiddleManagers based on the tasks' **taskType** and **dataSource name**. This strategy can't work with `AutoScaler` since the behavior is undefined.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`type`|`equalDistributionWithCategorySpec`.|required; must be `equalDistributionWithCategorySpec`|
+|`workerCategorySpec`|[Worker Category Spec](#workercategoryspec) object|null (no worker category spec)|
+
+Example: specify tasks default to run on **c1** whose task
+type is "index_kafka", while dataSource "ds1" run on **c2**.
+
+```json
+{
+  "selectStrategy": {
+    "type": "equalDistributionWithCategorySpec",
+    "workerCategorySpec": {
+      "strong": false,
+      "categoryMap": {
+        "index_kafka": {
+           "defaultCategory": "c1",
+           "categoryAffinity": {
+              "ds1": "c2"
+           }
+        }
+      }
+    }
+  }
+}
+```
+
 ###### Fill Capacity
 
 Tasks are assigned to the worker with the most currently-running tasks at the time the task begins running. This is
@@ -995,6 +1027,17 @@ MiddleManagers up to capacity simultaneously, rather than a single MiddleManager
 |--------|-----------|-------|
 |`type`|`fillCapacity`.|required; must be `fillCapacity`|
 |`affinityConfig`|[Affinity config](#affinity) object|null (no affinity)|
+
+###### Fill Capacity With Category Spec
+
+This strategy is a variant of `Fill Capacity`, which support `workerCategorySpec` field rather than `affinityConfig`. The usage is the same with _equalDistributionWithCategorySpec_ strategy. This strategy can't work with `AutoScaler` since the behavior is undefined.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`type`|`fillCapacityWithCategorySpec`.|required; must be `fillCapacityWithCategorySpec`|
+|`workerCategorySpec`|[Worker Category Spec](#workercategoryspec) object|null (no worker category spec)|
+
+> Before using the _equalDistributionWithCategorySpec_ and _fillCapacityWithCategorySpec_ strategies, you must upgrade overlord and all MiddleManagers to the version that support this feature.
 
 <a name="javascript-worker-select-strategy"></a>
 
@@ -1031,6 +1074,23 @@ field. If not provided, the default is to not use affinity at all.
 |--------|-----------|-------|
 |`affinity`|JSON object mapping a datasource String name to a list of indexing service MiddleManager host:port String values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the MiddleManager and what the MiddleManager announces itself as (examine the Overlord logs to see what your MiddleManager announces itself as).|{}|
 |`strong`|With weak affinity (the default), tasks for a dataSource may be assigned to other MiddleManagers if their affinity-mapped MiddleManagers are not able to run all pending tasks in the queue for that dataSource. With strong affinity, tasks for a dataSource will only ever be assigned to their affinity-mapped MiddleManagers, and will wait in the pending queue if necessary.|false|
+
+###### WorkerCategorySpec
+
+WorkerCategorySpec can be provided to the _equalDistributionWithCategorySpec_ and _fillCapacityWithCategorySpec_ strategies using the "workerCategorySpec"
+field. If not provided, the default is to not use it at all.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`categoryMap`|A JSON map object mapping a task type String name to a [CategoryConfig](#categoryconfig) object, by which you can specify category config for different task type.|{}|
+|`strong`|With weak workerCategorySpec (the default), tasks for a dataSource may be assigned to other MiddleManagers if the MiddleManagers specified in `categoryMap` are not able to run all pending tasks in the queue for that dataSource. With strong workerCategorySpec, tasks for a dataSource will only ever be assigned to their specified MiddleManagers, and will wait in the pending queue if necessary.|false|
+
+###### CategoryConfig
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`defaultCategory`|Specify default category for a task type.|null|
+|`categoryAffinity`|A JSON map object mapping a datasource String name to a category String name of the MiddleManager. If category isn't specified for a datasource, then using the `defaultCategory`. If no specified category and the `defaultCategory` is also null, then tasks can run on any available MiddleManagers.|null|
 
 ##### Autoscaler
 
@@ -1083,6 +1143,7 @@ Middle managers pass their configurations down to their child peons. The MiddleM
 |`druid.worker.ip`|The IP of the worker.|localhost|
 |`druid.worker.version`|Version identifier for the MiddleManager.|0|
 |`druid.worker.capacity`|Maximum number of tasks the MiddleManager can accept.|Number of available processors - 1|
+|`druid.worker.category`|A string to name the category that the MiddleManager node belongs to.|`__default_worker_category`|
 
 #### Peon Processing
 
@@ -1470,6 +1531,8 @@ The Druid SQL server is configured through the following properties on the Broke
 |`druid.sql.planner.maxSemiJoinRowsInMemory`|Maximum number of rows to keep in memory for executing two-stage semi-join queries like `SELECT * FROM Employee WHERE DeptName IN (SELECT DeptName FROM Dept)`.|100000|
 |`druid.sql.planner.maxTopNLimit`|Maximum threshold for a [TopN query](../querying/topnquery.md). Higher limits will be planned as [GroupBy queries](../querying/groupbyquery.md) instead.|100000|
 |`druid.sql.planner.metadataRefreshPeriod`|Throttle for metadata refreshes.|PT1M|
+|`druid.sql.planner.metadataSegmentCacheEnable`|Whether to keep a cache of published segments in broker. If true, broker polls coordinator in background to get segments from metadata store and maintains a local cache. If false, coordinator's REST API will be invoked when broker needs published segments info.|false|
+|`druid.sql.planner.metadataSegmentPollPeriod`|How often to poll coordinator for published segments list if `druid.sql.planner.metadataSegmentCacheEnable` is set to true. Poll period is in milliseconds. |60000|
 |`druid.sql.planner.selectThreshold`|Page size threshold for [Select queries](../querying/select-query.md). Select queries for larger resultsets will be issued back-to-back using pagination.|1000|
 |`druid.sql.planner.useApproximateCountDistinct`|Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.|true|
 |`druid.sql.planner.useApproximateTopN`|Whether to use approximate [TopN queries](../querying/topnquery.md) when a SQL query could be expressed as such. If false, exact [GroupBy queries](../querying/groupbyquery.md) will be used instead.|true|

@@ -1760,6 +1760,7 @@ public class CachingClusteredClientTest
         null,
         null,
         new SingleDimensionShardSpec(dimension, start, end, partitionNum),
+        null,
         9,
         0L
     );
