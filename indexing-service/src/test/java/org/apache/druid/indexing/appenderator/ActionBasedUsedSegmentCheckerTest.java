@@ -53,12 +53,14 @@ public class ActionBasedUsedSegmentCheckerTest
                        .interval(Intervals.of("2002/P1D"))
                        .shardSpec(new LinearShardSpec(0))
                        .version("b")
+                       .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource("bar")
                        .interval(Intervals.of("2002/P1D"))
                        .shardSpec(new LinearShardSpec(1))
                        .version("b")
+                       .size(0)
                        .build()
         )
     );
@@ -78,24 +80,28 @@ public class ActionBasedUsedSegmentCheckerTest
                        .interval(Intervals.of("2000/P1D"))
                        .shardSpec(new LinearShardSpec(0))
                        .version("a")
+                       .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource("foo")
                        .interval(Intervals.of("2000/P1D"))
                        .shardSpec(new LinearShardSpec(1))
                        .version("a")
+                       .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource("foo")
                        .interval(Intervals.of("2001/P1D"))
                        .shardSpec(new LinearShardSpec(1))
                        .version("b")
+                       .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource("foo")
                        .interval(Intervals.of("2002/P1D"))
                        .shardSpec(new LinearShardSpec(1))
                        .version("b")
+                       .size(0)
                        .build()
         )
     );
@@ -117,12 +123,14 @@ public class ActionBasedUsedSegmentCheckerTest
                        .interval(Intervals.of("2000/P1D"))
                        .shardSpec(new LinearShardSpec(1))
                        .version("a")
+                       .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource("bar")
                        .interval(Intervals.of("2002/P1D"))
                        .shardSpec(new LinearShardSpec(0))
                        .version("b")
+                       .size(0)
                        .build()
         ),
         segments
