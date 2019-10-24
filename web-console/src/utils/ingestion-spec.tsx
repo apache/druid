@@ -229,6 +229,14 @@ export function getSpecType(spec: Partial<IngestionSpec>): IngestionType | undef
   );
 }
 
+export function isTask(spec: IngestionSpec) {
+  const type = String(getSpecType(spec));
+  return (
+    type.startsWith('index_') ||
+    ['index', 'compact', 'kill', 'append', 'merge', 'same_interval_merge'].includes(type)
+  );
+}
+
 export function isIngestSegment(spec: IngestionSpec): boolean {
   return deepGet(spec, 'ioConfig.firehose.type') === 'ingestSegment';
 }
