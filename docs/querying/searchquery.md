@@ -124,7 +124,7 @@ only the rows which satisfy those filters, thereby saving I/O cost. However, it 
 and cursor-based execution plans, and chooses the optimal one. Currently, it is not enabled by default due to the overhead
 of cost estimation.
 
-#### Server configuration
+## Server configuration
 
 The following runtime properties apply:
 
@@ -132,7 +132,7 @@ The following runtime properties apply:
 |--------|-----------|-------|
 |`druid.query.search.searchStrategy`|Default search query strategy.|useIndexes|
 
-#### Query context
+## Query context
 
 The following query context parameters apply:
 
