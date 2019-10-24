@@ -84,12 +84,6 @@ public class FixedCountFirehoseFactory implements FirehoseFactory
       }
 
       @Override
-      public Runnable commit()
-      {
-        return delegateFirehose.commit();
-      }
-
-      @Override
       public void close() throws IOException
       {
         delegateFirehose.close();

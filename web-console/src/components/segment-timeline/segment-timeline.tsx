@@ -70,7 +70,10 @@ export interface BarChartMargin {
   left: number;
 }
 
-export class SegmentTimeline extends React.Component<SegmentTimelineProps, SegmentTimelineState> {
+export class SegmentTimeline extends React.PureComponent<
+  SegmentTimelineProps,
+  SegmentTimelineState
+> {
   static COLORS = [
     '#b33040',
     '#d25c4d',

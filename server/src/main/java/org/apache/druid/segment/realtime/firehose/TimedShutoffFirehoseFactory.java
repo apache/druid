@@ -125,12 +125,6 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
       return firehose.nextRowWithRaw();
     }
 
-    @Override
-    public Runnable commit()
-    {
-      return firehose.commit();
-    }
-
     /**
      * This method is synchronized because it might be called concurrently from multiple threads: from {@link
      * #shutdownExec}, and explicitly on this Firehose object.
