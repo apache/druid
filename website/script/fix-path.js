@@ -40,7 +40,19 @@ try {
     from: /\{\{DRUIDVERSION\}\}/g,
     to: druidVersion,
   });
+
+  // Add canonical header
+  replace.sync({
+    files: './build/ApacheDruid/docs/**/*.html',
+    from: /<meta name="generator" content="Docusaurus"\/>/g,
+    to: (match, fullText, b, filename) => {
+      const path = filename.replace('./build/ApacheDruid/', '');
+      return `<link rel="canonical" href="https://druid.apache.org/${path}"/><meta name="generator" content="Docusaurus"/>`;
+    },
+  });
+
   console.log('Fixed versions');
+
 } catch (error) {
   console.error('Error occurred:', error);
   process.exit(1);
