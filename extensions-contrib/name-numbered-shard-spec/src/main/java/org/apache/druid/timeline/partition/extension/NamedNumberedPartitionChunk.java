@@ -103,11 +103,11 @@ public class NamedNumberedPartitionChunk<T> implements PartitionChunk<T>
     return chunkNumber;
   }
 
-//  @Override
-//  public Object getChunkIdentifier()
-//  {
-//    return chunkGroup + "_" + chunkNumber;
-//  }
+  @Override
+  public Object getChunkIdentifier()
+  {
+    return chunkGroup + "_" + chunkNumber;
+  }
 
   @Override
   public int compareTo(PartitionChunk<T> other)

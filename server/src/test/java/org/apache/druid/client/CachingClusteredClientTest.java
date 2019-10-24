@@ -564,6 +564,8 @@ public class CachingClusteredClientTest
     final DruidServer lastServer = servers[random.nextInt(servers.length)];
     final DataSegment dataSegment = EasyMock.createNiceMock(DataSegment.class);
     EasyMock.expect(dataSegment.getId()).andReturn(SegmentId.dummy(DATA_SOURCE)).anyTimes();
+    EasyMock.expect(dataSegment.getDimensions()).andReturn(ImmutableList.of("imps")).anyTimes();
+    EasyMock.expect(dataSegment.getMetrics()).andReturn(ImmutableList.of("a")).anyTimes();
     EasyMock.replay(dataSegment);
     final ServerSelector selector = new ServerSelector(
         dataSegment,
@@ -2353,6 +2355,8 @@ public class CachingClusteredClientTest
         );
         serverExpectations.get(lastServer).addExpectation(expectation);
         EasyMock.expect(mockSegment.getSize()).andReturn(0L).anyTimes();
+        EasyMock.expect(mockSegment.getDimensions()).andReturn(ImmutableList.of("imps")).anyTimes();
+        EasyMock.expect(mockSegment.getMetrics()).andReturn(ImmutableList.of("a")).anyTimes();
         EasyMock.replay(mockSegment);
         ServerSelector selector = new ServerSelector(
             expectation.getSegment(),
@@ -2360,6 +2364,8 @@ public class CachingClusteredClientTest
         );
         selector.addServerAndUpdateSegment(new QueryableDruidServer(lastServer, null), selector.getSegment());
         EasyMock.reset(mockSegment);
+        EasyMock.expect(mockSegment.getDimensions()).andReturn(ImmutableList.of("imps")).anyTimes();
+        EasyMock.expect(mockSegment.getMetrics()).andReturn(ImmutableList.of("a")).anyTimes();
         EasyMock.expect(mockSegment.getShardSpec())
                 .andReturn(shardSpec)
                 .anyTimes();
@@ -2949,7 +2955,12 @@ public class CachingClusteredClientTest
       @JsonProperty
       public List<String> getDimensions()
       {
-        return baseSegment.getDimensions();
+        try {
+          return baseSegment.getDimensions();
+        }
+        catch (IllegalStateException e) {
+          return ImmutableList.of("imps");
+        }
       }
 
       @Override
@@ -2957,7 +2968,12 @@ public class CachingClusteredClientTest
       @JsonProperty
       public List<String> getMetrics()
       {
-        return baseSegment.getMetrics();
+        try {
+          return baseSegment.getMetrics();
+        }
+        catch (IllegalStateException e) {
+          return ImmutableList.of("a");
+        }
       }
 
       @Override
