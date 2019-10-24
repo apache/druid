@@ -35,10 +35,7 @@ import SplitterLayout from 'react-splitter-layout';
 import { SQL_FUNCTIONS } from '../../../lib/sql-docs';
 import { QueryPlanDialog } from '../../dialogs';
 import { EditContextDialog } from '../../dialogs/edit-context-dialog/edit-context-dialog';
-import {
-  QueryHistoryDialog,
-  QueryRecord,
-} from '../../dialogs/query-history-dialog/query-history-dialog';
+import { QueryHistoryDialog } from '../../dialogs/query-history-dialog/query-history-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import {
   BasicQueryExplanation,
@@ -56,6 +53,7 @@ import {
 } from '../../utils';
 import { ColumnMetadata } from '../../utils/column-metadata';
 import { isEmptyContext, QueryContext } from '../../utils/query-context';
+import { QueryRecord, QueryRecordUtil } from '../../utils/query-history';
 
 import { ColumnTree } from './column-tree/column-tree';
 import { QueryExtraInfo, QueryExtraInfoData } from './query-extra-info/query-extra-info';
@@ -354,6 +352,12 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     this.explainQueryManager.terminate();
   }
 
+  prettyPrintJson(): void {
+    this.setState(prevState => ({
+      queryString: Hjson.stringify(Hjson.parse(prevState.queryString)),
+    }));
+  }
+
   handleDownload = (filename: string, format: string) => {
     const { result } = this.state;
     if (!result) return;
@@ -518,6 +522,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
               onRun={emptyQuery ? undefined : this.handleRun}
               onExplain={emptyQuery ? undefined : this.handleExplain}
               onHistory={() => this.setState({ historyDialogOpen: true })}
+              onPrettier={() => this.prettyPrintJson()}
             />
             {this.renderAutoRunSwitch()}
             {this.renderWrapQueryLimitSelector()}
@@ -569,7 +574,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     const { queryString, queryContext, wrapQueryLimit, queryHistory } = this.state;
     if (QueryView.isJsonLike(queryString) && !QueryView.validRune(queryString)) return;
 
-    const newQueryHistory = QueryHistoryDialog.addQueryToHistory(
+    const newQueryHistory = QueryRecordUtil.addQueryToHistory(
       queryHistory,
       queryString,
       queryContext,

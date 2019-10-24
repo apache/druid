@@ -52,7 +52,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -278,11 +277,7 @@ public class MaterializedViewSupervisor implements Supervisor
   }
 
   @Override
-  public void checkpoint(
-      @Nullable Integer taskGroupId,
-      String baseSequenceName,
-      DataSourceMetadata checkpointMetadata
-  )
+  public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
   {
     // do nothing
   }

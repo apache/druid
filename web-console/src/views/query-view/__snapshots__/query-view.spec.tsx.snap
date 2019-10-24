@@ -38,6 +38,7 @@ exports[`sql view matches snapshot 1`] = `
           onEditContext={[Function]}
           onExplain={[Function]}
           onHistory={[Function]}
+          onPrettier={[Function]}
           onQueryContextChange={[Function]}
           onRun={[Function]}
           queryContext={Object {}}

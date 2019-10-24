@@ -32,44 +32,43 @@ export interface AboutDialogProps {
   onClose: () => void;
 }
 
-export class AboutDialog extends React.PureComponent<AboutDialogProps> {
-  render(): JSX.Element {
-    const { onClose } = this.props;
+export function AboutDialog(props: AboutDialogProps) {
+  const { onClose } = props;
 
-    return (
-      <Dialog
-        icon={IconNames.GRAPH}
-        onClose={onClose}
-        title="Apache Druid"
-        isOpen
-        canEscapeKeyClose
-      >
-        <div className={Classes.DIALOG_BODY}>
-          <p>
-            <strong>
-              Apache Druid (incubating) is a high performance real-time analytics database.
-            </strong>
-          </p>
-          <p>
-            For help and support with Druid, please refer to the{' '}
-            <ExternalLink href={DRUID_COMMUNITY}>community page</ExternalLink> and the{' '}
-            <ExternalLink href={DRUID_USER_GROUP}>user groups</ExternalLink>.
-          </p>
-          <p>
-            Druid is made with ❤️ by a community of passionate developers. To contribute, join in
-            the discussion on the{' '}
-            <ExternalLink href={DRUID_DEVELOPER_GROUP}>developer group</ExternalLink>.
-          </p>
+  return (
+    <Dialog
+      className="about-dialog"
+      icon={IconNames.GRAPH}
+      onClose={onClose}
+      title="Apache Druid"
+      isOpen
+      canEscapeKeyClose
+    >
+      <div className={Classes.DIALOG_BODY}>
+        <p>
+          <strong>
+            Apache Druid (incubating) is a high performance real-time analytics database.
+          </strong>
+        </p>
+        <p>
+          For help and support with Druid, please refer to the{' '}
+          <ExternalLink href={DRUID_COMMUNITY}>community page</ExternalLink> and the{' '}
+          <ExternalLink href={DRUID_USER_GROUP}>user groups</ExternalLink>.
+        </p>
+        <p>
+          Druid is made with ❤️ by a community of passionate developers. To contribute, join in the
+          discussion on the{' '}
+          <ExternalLink href={DRUID_DEVELOPER_GROUP}>developer group</ExternalLink>.
+        </p>
+      </div>
+      <div className={Classes.DIALOG_FOOTER}>
+        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+          <Button onClick={onClose}>Close</Button>
+          <AnchorButton intent={Intent.PRIMARY} href={DRUID_WEBSITE} target="_blank">
+            Visit Druid
+          </AnchorButton>
         </div>
-        <div className={Classes.DIALOG_FOOTER}>
-          <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-            <Button onClick={onClose}>Close</Button>
-            <AnchorButton intent={Intent.PRIMARY} href={DRUID_WEBSITE} target="_blank">
-              Visit Druid
-            </AnchorButton>
-          </div>
-        </div>
-      </Dialog>
-    );
-  }
+      </div>
+    </Dialog>
+  );
 }

@@ -33,7 +33,13 @@ exports[`table cell matches snapshot array long 1`] = `
 </span>
 `;
 
-exports[`table cell matches snapshot array short 1`] = `[a, b, c]`;
+exports[`table cell matches snapshot array short 1`] = `
+<span
+  class="table-cell plain"
+>
+  [a, b, c]
+</span>
+`;
 
 exports[`table cell matches snapshot null 1`] = `
 <span
@@ -51,7 +57,13 @@ exports[`table cell matches snapshot null timestamp 1`] = `
 </span>
 `;
 
-exports[`table cell matches snapshot simple 1`] = `Hello World`;
+exports[`table cell matches snapshot simple 1`] = `
+<span
+  class="table-cell plain"
+>
+  Hello World
+</span>
+`;
 
 exports[`table cell matches snapshot truncate 1`] = `
 <span

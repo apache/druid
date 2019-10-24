@@ -27,7 +27,6 @@ import org.apache.druid.data.input.InputRowPlusRaw;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.utils.Runnables;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -83,12 +82,6 @@ public class InlineFirehose implements Firehose
     catch (ParseException e) {
       return InputRowPlusRaw.of(StringUtils.toUtf8(raw), e);
     }
-  }
-
-  @Override
-  public Runnable commit()
-  {
-    return Runnables.getNoopRunnable();
   }
 
   @Override
