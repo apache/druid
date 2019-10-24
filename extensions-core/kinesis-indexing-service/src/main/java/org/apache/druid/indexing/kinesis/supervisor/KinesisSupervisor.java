@@ -24,6 +24,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
@@ -44,6 +46,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -53,13 +56,17 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
 import org.apache.druid.indexing.seekablestream.utils.RandomIdUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -74,6 +81,10 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 {
+  private static final HashFunction HASH_FUNCTION = Hashing.sha1();
+
+  private static final EmittingLogger log = new EmittingLogger(KinesisSupervisor.class);
+
   public static final TypeReference<TreeMap<Integer, Map<String, String>>> CHECKPOINTS_TYPE_REF =
       new TypeReference<TreeMap<Integer, Map<String, String>>>()
       {
@@ -212,6 +223,9 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     // not yet implemented, see issue #6739
   }
 
+  /**
+   * We hash the shard ID string, and then use the first four bytes of the hash as an int % task count
+   */
   @Override
   protected int getTaskGroupIdForPartition(String partitionId)
   {
@@ -219,7 +233,38 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       partitionIds.add(partitionId);
     }
 
-    return partitionIds.indexOf(partitionId) % spec.getIoConfig().getTaskCount();
+    return getTaskGroupIdForPartitionWithProvidedList(partitionId, partitionIds);
+  }
+
+  private int getTaskGroupIdForPartitionWithProvidedList(String partitionId, List<String> availablePartitions)
+  {
+    return availablePartitions.indexOf(partitionId) % spec.getIoConfig().getTaskCount();
+  }
+
+  @Override
+  protected Map<Integer, ConcurrentHashMap<String, String>> recomputePartitionGroupsForExpiration(
+      Set<String> availablePartitions
+  )
+  {
+    List<String> availablePartitionsList = new ArrayList<>(availablePartitions);
+
+    Map<Integer, ConcurrentHashMap<String, String>> newPartitionGroups = new HashMap<>();
+
+    for (ConcurrentHashMap<String, String> oldGroup : partitionGroups.values()) {
+      for (Map.Entry<String, String> partitionOffsetMapping : oldGroup.entrySet()) {
+        String partitionId = partitionOffsetMapping.getKey();
+        if (availablePartitions.contains(partitionId)) {
+          int newTaskGroupId = getTaskGroupIdForPartitionWithProvidedList(partitionId, availablePartitionsList);
+          ConcurrentHashMap<String, String> partitionMap = newPartitionGroups.computeIfAbsent(
+              newTaskGroupId,
+              k -> new ConcurrentHashMap<>()
+          );
+          partitionMap.put(partitionId, partitionOffsetMapping.getValue());
+        }
+      }
+    }
+
+    return newPartitionGroups;
   }
 
   @Override
@@ -310,8 +355,89 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
+  protected boolean isShardExpirationMarker(String seqNum)
+  {
+    return KinesisSequenceNumber.EXPIRED_MARKER.equals(seqNum);
+  }
+
+  @Override
   protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
   {
     return true;
+  }
+
+  @Override
+  protected Map<String, OrderedSequenceNumber<String>> filterExpiredPartitionsFromStartingOffsets(
+      Map<String, OrderedSequenceNumber<String>> startingOffsets
+  )
+  {
+    Map<String, OrderedSequenceNumber<String>> filteredOffsets = new HashMap<>();
+    for (Map.Entry<String, OrderedSequenceNumber<String>> entry : startingOffsets.entrySet()) {
+      if (!entry.getValue().get().equals(KinesisSequenceNumber.END_OF_SHARD_MARKER)) {
+        filteredOffsets.put(entry.getKey(), entry.getValue());
+      } else {
+        log.debug("Excluding shard[%s] because it has reached EOS.", entry.getKey());
+      }
+    }
+    return filteredOffsets;
+  }
+
+  @Override
+  protected boolean supportsPartitionExpiration()
+  {
+    return true;
+  }
+
+  @Override
+  protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetadataWithExpiredPartitions(
+      SeekableStreamDataSourceMetadata<String, String> currentMetadata, Set<String> expiredPartitionIds
+  )
+  {
+    log.info("Marking expired shards in metadata: " + expiredPartitionIds);
+
+    final KinesisDataSourceMetadata dataSourceMetadata = (KinesisDataSourceMetadata) currentMetadata;
+
+    SeekableStreamSequenceNumbers<String, String> old = dataSourceMetadata.getSeekableStreamSequenceNumbers();
+
+    Map<String, String> oldPartitionSequenceNumberMap = old.getPartitionSequenceNumberMap();
+    Map<String, String> newPartitionSequenceNumberMap = new HashMap<>();
+    for (Map.Entry<String, String> entry : oldPartitionSequenceNumberMap.entrySet()) {
+      if (!expiredPartitionIds.contains(entry.getKey())) {
+        newPartitionSequenceNumberMap.put(entry.getKey(), entry.getValue());
+      } else {
+        newPartitionSequenceNumberMap.put(entry.getKey(), KinesisSequenceNumber.EXPIRED_MARKER);
+      }
+    }
+
+    SeekableStreamSequenceNumbers<String, String> newSequences;
+    if (old instanceof SeekableStreamStartSequenceNumbers) {
+      Set<String> oldExclusiveStartPartitions;
+      Set<String> newExclusiveStartPartitions;
+
+      newExclusiveStartPartitions = new HashSet<>();
+      oldExclusiveStartPartitions = ((SeekableStreamStartSequenceNumbers<String, String>) old).getExclusivePartitions();
+      for (String partitionId : oldExclusiveStartPartitions) {
+        if (!expiredPartitionIds.contains(partitionId)) {
+          newExclusiveStartPartitions.add(partitionId);
+        }
+      }
+
+      newSequences = new SeekableStreamStartSequenceNumbers<String, String>(
+          old.getStream(),
+          null,
+          newPartitionSequenceNumberMap,
+          null,
+          newExclusiveStartPartitions
+      );
+    } else {
+      newSequences = new SeekableStreamEndSequenceNumbers<String, String>(
+          old.getStream(),
+          null,
+          newPartitionSequenceNumberMap,
+          null
+      );
+    }
+
+    return new KinesisDataSourceMetadata(newSequences);
   }
 }

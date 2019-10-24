@@ -25,8 +25,8 @@ title: "Basic Security"
 
 This Apache Druid (incubating) extension adds:
 
-- an Authenticator which supports [HTTP Basic authentication](https://en.wikipedia.org/wiki/Basic_access_authentication)
-- an Authorizer which implements basic role-based access control
+- an Authenticator which supports [HTTP Basic authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) using the Druid metadata store or LDAP as its credentials store
+- an Authorizer which implements basic role-based access control for Druid metadata store or LDAP users and groups
 
 Make sure to [include](../../development/extensions.md#loading-extensions) `druid-basic-security` as an extension.
 
@@ -34,7 +34,7 @@ Please see [Authentication and Authorization](../../design/auth.md) for more inf
 
 ## Configuration
 
-The examples in the section will use "MyBasicAuthenticator" and "MyBasicAuthorizer" as names for the Authenticator and Authorizer.
+The examples in the section will use "MyBasicMetadataAuthenticator", "MyBasicLDAPAuthenticator", "MyBasicMetadataAuthorizer", and "MyBasicLDAPAuthorizer" as names for the Authenticators and Authorizer.
 
 These properties are not tied to specific Authenticator or Authorizer instances.
 
@@ -43,23 +43,27 @@ These configuration properties should be added to the common runtime properties 
 ### Properties
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
-|`druid.auth.basic.common.pollingPeriod`|Defines in milliseconds how often processes should poll the Coordinator for the current authenticator/authorizer database state.|60000|No|
+|`druid.auth.basic.common.pollingPeriod`|Defines in milliseconds how often processes should poll the Coordinator for the current Druid metadata store authenticator/authorizer state.|60000|No|
 |`druid.auth.basic.common.maxRandomDelay`|Defines in milliseconds the amount of random delay to add to the pollingPeriod, to spread polling requests across time.|6000|No|
-|`druid.auth.basic.common.maxSyncRetries`|Determines how many times a service will retry if the authentication/authorization database state sync with the Coordinator fails.|10|No|
-|`druid.auth.basic.common.cacheDirectory`|If defined, snapshots of the basic Authenticator and Authorizer database caches will be stored on disk in this directory. If this property is defined, when a service is starting, it will attempt to initialize its caches from these on-disk snapshots, if the service is unable to initialize its state by communicating with the Coordinator.|null|No|
+|`druid.auth.basic.common.maxSyncRetries`|Determines how many times a service will retry if the authentication/authorization Druid metadata store state sync with the Coordinator fails.|10|No|
+|`druid.auth.basic.common.cacheDirectory`|If defined, snapshots of the basic Authenticator and Authorizer Druid metadata store caches will be stored on disk in this directory. If this property is defined, when a service is starting, it will attempt to initialize its caches from these on-disk snapshots, if the service is unable to initialize its state by communicating with the Coordinator.|null|No|
 
 
-### Creating an Authenticator
+### Creating an Authenticator that uses the Druid metadata store to lookup and validate credentials
 ```
-druid.auth.authenticatorChain=["MyBasicAuthenticator"]
+druid.auth.authenticatorChain=["MyBasicMetadataAuthenticator"]
 
-druid.auth.authenticator.MyBasicAuthenticator.type=basic
-druid.auth.authenticator.MyBasicAuthenticator.initialAdminPassword=password1
-druid.auth.authenticator.MyBasicAuthenticator.initialInternalClientPassword=password2
-druid.auth.authenticator.MyBasicAuthenticator.authorizerName=MyBasicAuthorizer
+druid.auth.authenticator.MyBasicMetadataAuthenticator.type=basic
+druid.auth.authenticator.MyBasicMetadataAuthenticator.initialAdminPassword=password1
+druid.auth.authenticator.MyBasicMetadataAuthenticator.initialInternalClientPassword=password2
+druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialsValidator.type=metadata
+druid.auth.authenticator.MyBasicMetadataAuthenticator.skipOnFailure=false
+druid.auth.authenticator.MyBasicMetadataAuthenticator.authorizerName=MyBasicMetadataAuthorizer
 ```
 
 To use the Basic authenticator, add an authenticator with type `basic` to the authenticatorChain.
+The authenticator needs to also define a credentialsValidator with type 'metadata' or 'ldap'.
+If credentialsValidator is not specified, type 'metadata' will be used as default.
 
 Configuration of the named authenticator is assigned through properties with the form:
 
@@ -67,18 +71,41 @@ Configuration of the named authenticator is assigned through properties with the
 druid.auth.authenticator.<authenticatorName>.<authenticatorProperty>
 ```
 
-The configuration examples in the rest of this document will use "MyBasicAuthenticator" as the name of the authenticator being configured.
+The authenticator configuration examples in the rest of this document will use "MyBasicMetadataAuthenticator" or "MyBasicLDAPAuthenticator" as the name of the authenticators being configured.
 
 
-#### Properties
+#### Properties for Druid metadata store user authentication
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
-|`druid.auth.authenticator.MyBasicAuthenticator.initialAdminPassword`|Initial [Password Provider](../../operations/password-provider.md) for the automatically created default admin user. If no password is specified, the default admin user will not be created. If the default admin user already exists, setting this property will not affect its password.|null|No|
-|`druid.auth.authenticator.MyBasicAuthenticator.initialInternalClientPassword`|Initial [Password Provider](../../operations/password-provider.md) for the default internal system user, used for internal process communication. If no password is specified, the default internal system user will not be created. If the default internal system user already exists, setting this property will not affect its password.|null|No|
-|`druid.auth.authenticator.MyBasicAuthenticator.enableCacheNotifications`|If true, the Coordinator will notify Druid processes whenever a configuration change to this Authenticator occurs, allowing them to immediately update their state without waiting for polling.|true|No|
-|`druid.auth.authenticator.MyBasicAuthenticator.cacheNotificationTimeout`|The timeout in milliseconds for the cache notifications.|5000|No|
-|`druid.auth.authenticator.MyBasicAuthenticator.credentialIterations`|Number of iterations to use for password hashing.|10000|No|
-|`druid.auth.authenticator.MyBasicAuthenticator.authorizerName`|Authorizer that requests should be directed to|N/A|Yes|
+|`druid.auth.authenticator.MyBasicMetadataAuthenticator.initialAdminPassword`|Initial [Password Provider](../../operations/password-provider.md) for the automatically created default admin user. If no password is specified, the default admin user will not be created. If the default admin user already exists, setting this property will not affect its password.|null|No|
+|`druid.auth.authenticator.MyBasicMetadataAuthenticator.initialInternalClientPassword`|Initial [Password Provider](../../operations/password-provider.md) for the default internal system user, used for internal process communication. If no password is specified, the default internal system user will not be created. If the default internal system user already exists, setting this property will not affect its password.|null|No|
+|`druid.auth.authenticator.MyBasicMetadataAuthenticator.enableCacheNotifications`|If true, the Coordinator will notify Druid processes whenever a configuration change to this Authenticator occurs, allowing them to immediately update their state without waiting for polling.|true|No|
+|`druid.auth.authenticator.MyBasicMetadataAuthenticator.cacheNotificationTimeout`|The timeout in milliseconds for the cache notifications.|5000|No|
+|`druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialIterations`|Number of iterations to use for password hashing.|10000|No|
+|`druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialsValidator.type`|The type of credentials store (metadata) to validate requests credentials.|metadata|No|
+|`druid.auth.authenticator.MyBasicMetadataAuthenticator.skipOnFailure`|If true and the request credential doesn't exists or isn't fully configured in the credentials store, the request will proceed to next Authenticator in the chain.|false|No|
+|`druid.auth.authenticator.MyBasicMetadataAuthenticator.authorizerName`|Authorizer that requests should be directed to|N/A|Yes|
+
+#### Properties for LDAP user authentication
+|Property|Description|Default|required|
+|--------|-----------|-------|--------|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.initialAdminPassword`|Initial [Password Provider](../../operations/password-provider.md) for the automatically created default admin user. If no password is specified, the default admin user will not be created. If the default admin user already exists, setting this property will not affect its password.|null|No|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.initialInternalClientPassword`|Initial [Password Provider](../../operations/password-provider.md) for the default internal system user, used for internal process communication. If no password is specified, the default internal system user will not be created. If the default internal system user already exists, setting this property will not affect its password.|null|No|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.enableCacheNotifications`|If true, the Coordinator will notify Druid processes whenever a configuration change to this Authenticator occurs, allowing them to immediately update their state without waiting for polling.|true|No|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.cacheNotificationTimeout`|The timeout in milliseconds for the cache notifications.|5000|No|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialIterations`|Number of iterations to use for password hashing.|10000|No|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.type`|The type of credentials store (ldap) to validate requests credentials.|metadata|No|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.url`|URL of the LDAP server.|null|Yes|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.bindUser`|LDAP bind user username.|null|Yes|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.bindPassword`|[Password Provider](../../operations/password-provider.md) LDAP bind user password.|null|Yes|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.baseDn`|The point from where the LDAP server will search for users.|null|Yes|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.userSearch`|The filter/expression to use for the search. For example, (&(sAMAccountName=%s)(objectClass=user))|null|Yes|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.userAttribute`|The attribute id identifying the attribute that will be returned as part of the search. For example, sAMAccountName. |null|Yes|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.credentialVerifyDuration`|The duration in seconds for how long valid credentials are verifiable within the cache when not requested.|600|No|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.credentialMaxDuration`|The max duration in seconds for valid credentials that can reside in cache regardless of how often they are requested.|3600|No|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.credentialCacheSize`|The valid credentials cache size. The cache uses a LRU policy.|100|No|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.skipOnFailure`|If true and the request credential doesn't exists or isn't fully configured in the credentials store, the request will proceed to next Authenticator in the chain.|false|No|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.authorizerName`|Authorizer that requests should be directed to.|N/A|Yes|
 
 ### Creating an Escalator
 
@@ -87,37 +114,53 @@ The configuration examples in the rest of this document will use "MyBasicAuthent
 druid.escalator.type=basic
 druid.escalator.internalClientUsername=druid_system
 druid.escalator.internalClientPassword=password2
-druid.escalator.authorizerName=MyBasicAuthorizer
+druid.escalator.authorizerName=MyBasicMetadataAuthorizer
 ```
 
 #### Properties
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
-|`druid.escalator.internalClientUsername`|The escalator will use this username for requests made as the internal systerm user.|n/a|Yes|
+|`druid.escalator.internalClientUsername`|The escalator will use this username for requests made as the internal system user.|n/a|Yes|
 |`druid.escalator.internalClientPassword`|The escalator will use this [Password Provider](../../operations/password-provider.md) for requests made as the internal system user.|n/a|Yes|
 |`druid.escalator.authorizerName`|Authorizer that requests should be directed to.|n/a|Yes|
 
 
 ### Creating an Authorizer
 ```
-druid.auth.authorizers=["MyBasicAuthorizer"]
+druid.auth.authorizers=["MyBasicMetadataAuthorizer"]
 
-druid.auth.authorizer.MyBasicAuthorizer.type=basic
+druid.auth.authorizer.MyBasicMetadataAuthorizer.type=basic
 ```
 
-To use the Basic authorizer, add an authenticator with type `basic` to the authorizers list.
+To use the Basic authorizer, add an authorizer with type `basic` to the authorizers list.
 
-Configuration of the named authenticator is assigned through properties with the form:
+Configuration of the named authorizer is assigned through properties with the form:
 
 ```
 druid.auth.authorizer.<authorizerName>.<authorizerProperty>
 ```
 
-#### Properties
+The authorizer configuration examples in the rest of this document will use "MyBasicMetadataAuthorizer" or "MyBasicLDAPAuthorizer" as the name of the authenticators being configured.
+
+#### Properties for Druid metadata store user authorization
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
-|`druid.auth.authorizer.MyBasicAuthorizer.enableCacheNotifications`|If true, the Coordinator will notify Druid processes whenever a configuration change to this Authorizer occurs, allowing them to immediately update their state without waiting for polling.|true|No|
-|`druid.auth.authorizer.MyBasicAuthorizer.cacheNotificationTimeout`|The timeout in milliseconds for the cache notifications.|5000|No|
+|`druid.auth.authorizer.MyBasicMetadataAuthorizer.enableCacheNotifications`|If true, the Coordinator will notify Druid processes whenever a configuration change to this Authorizer occurs, allowing them to immediately update their state without waiting for polling.|true|No|
+|`druid.auth.authorizer.MyBasicMetadataAuthorizer.cacheNotificationTimeout`|The timeout in milliseconds for the cache notifications.|5000|No|
+|`druid.auth.authorizer.MyBasicMetadataAuthorizer.initialAdminUser`|The initial admin user with role defined in initialAdminRole property if specified, otherwise the default admin role will be assigned.|admin|No|
+|`druid.auth.authorizer.MyBasicMetadataAuthorizer.initialAdminRole`|The initial admin role to create if it doesn't already exists.|admin|No|
+|`druid.auth.authorizer.MyBasicMetadataAuthorizer.roleProvider.type`|The type of role provider to authorize requests credentials.|metadata|No
+
+#### Properties for LDAP user authorization
+|Property|Description|Default|required|
+|--------|-----------|-------|--------|
+|`druid.auth.authorizer.MyBasicLDAPAuthorizer.enableCacheNotifications`|If true, the Coordinator will notify Druid processes whenever a configuration change to this Authorizer occurs, allowing them to immediately update their state without waiting for polling.|true|No|
+|`druid.auth.authorizer.MyBasicLDAPAuthorizer.cacheNotificationTimeout`|The timeout in milliseconds for the cache notifications.|5000|No|
+|`druid.auth.authorizer.MyBasicLDAPAuthorizer.initialAdminUser`|The initial admin user with role defined in initialAdminRole property if specified, otherwise the default admin role will be assigned.|admin|No|
+|`druid.auth.authorizer.MyBasicLDAPAuthorizer.initialAdminRole`|The initial admin role to create if it doesn't already exists.|admin|No|
+|`druid.auth.authorizer.MyBasicLDAPAuthorizer.initialAdminGroupMapping`|The initial admin group mapping with role defined in initialAdminRole property if specified, otherwise the default admin role will be assigned. The name of this initial admin group mapping will be set to adminGroupMapping|null|No|
+|`druid.auth.authorizer.MyBasicLDAPAuthorizer.roleProvider.type`|The type of role provider (ldap) to authorize requests credentials.|metadata|No
+|`druid.auth.authorizer.MyBasicLDAPAuthorizer.roleProvider.groupFilters`|Array of LDAP group filters used to filter out the allowed set of groups returned from LDAP search. Filters can be begin with *, or end with ,* to provide configurational flexibility to limit or filter allowed set of groups available to LDAP Authorizer.|null|No|
 
 ## Usage
 
@@ -157,7 +200,7 @@ Example request body:
 
 ##### Cache Load Status
 `GET(/druid-ext/basic-security/authentication/loadStatus)`
-Return the current load status of the local caches of the authentication database.
+Return the current load status of the local caches of the authentication Druid metadata store.
 
 #### Authorization API
 
@@ -262,6 +305,30 @@ Create a new user with name {userName}
 `DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName})`
 Delete the user with name {userName}
 
+##### Group mapping Creation/Deletion
+`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/groupmappings)`
+Return a list of all group mappings.
+
+`GET(/druid-ext/basic-security/authorization/db/{authorizerName}/groupmappings/{groupMappingName})`
+Return the group mapping and role information of the group mapping with name {groupMappingName}
+
+`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/groupmappings/{groupMappingName})`
+Create a new group mapping with name {groupMappingName}
+Content: JSON group mapping object
+Example request body:
+
+```
+{
+    "name": "user",
+    "groupPattern": "CN=aaa,OU=aaa,OU=Groupings,DC=corp,DC=company,DC=com",
+    "roles": [
+        "user"
+    ]
+}
+```
+
+`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/groupmappings/{groupMappingName})`
+Delete the group mapping with name {groupMappingName}
 
 #### Role Creation/Deletion
 `GET(/druid-ext/basic-security/authorization/db/{authorizerName}/roles)`
@@ -297,7 +364,7 @@ This API supports the following flags:
 - `?full`: The output will contain an extra `users` list, containing the users that currently have this role.
 
 ```json
-"users":["druid"]
+{"users":["druid"]}
 ```
 
 - `?simplifyPermissions`: The permissions in the output will contain only a list of `resourceAction` objects, without the extraneous `resourceNamePattern` field. The `users` field will be null when `?full` is not specified.
@@ -336,6 +403,12 @@ Assign role {roleName} to user {userName}.
 `DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName}/roles/{roleName})`
 Unassign role {roleName} from user {userName}
 
+`POST(/druid-ext/basic-security/authorization/db/{authorizerName}/groupmappings/{groupMappingName}/roles/{roleName})`
+Assign role {roleName} to group mapping {groupMappingName}.
+
+`DELETE(/druid-ext/basic-security/authorization/db/{authorizerName}/groupmappings/{groupMappingName}/roles/{roleName})`
+Unassign role {roleName} from group mapping {groupMappingName}
+
 
 #### Permissions
 `POST(/druid-ext/basic-security/authorization/db/{authorizerName}/roles/{roleName}/permissions)`
@@ -368,7 +441,7 @@ Please see [Defining permissions](#defining-permissions) for more details.
 
 ##### Cache Load Status
 `GET(/druid-ext/basic-security/authorization/loadStatus)`
-Return the current load status of the local caches of the authorization database.
+Return the current load status of the local caches of the authorization Druid metadata store.
 
 ## Default user accounts
 
@@ -462,10 +535,10 @@ Queries on the [system schema tables](../../querying/sql.html#system-schema) req
 
 ## Configuration Propagation
 
-To prevent excessive load on the Coordinator, the Authenticator and Authorizer user/role database state is cached on each Druid process.
+To prevent excessive load on the Coordinator, the Authenticator and Authorizer user/role Druid metadata store state is cached on each Druid process.
 
-Each process will periodically poll the Coordinator for the latest database state, controlled by the `druid.auth.basic.common.pollingPeriod` and `druid.auth.basic.common.maxRandomDelay` properties.
+Each process will periodically poll the Coordinator for the latest Druid metadata store state, controlled by the `druid.auth.basic.common.pollingPeriod` and `druid.auth.basic.common.maxRandomDelay` properties.
 
-When a configuration update occurs, the Coordinator can optionally notify each process with the updated database state. This behavior is controlled by the `enableCacheNotifications` and `cacheNotificationTimeout` properties on Authenticators and Authorizers.
+When a configuration update occurs, the Coordinator can optionally notify each process with the updated Druid metadata store state. This behavior is controlled by the `enableCacheNotifications` and `cacheNotificationTimeout` properties on Authenticators and Authorizers.
 
-Note that because of the caching, changes made to the user/role database may not be immediately reflected at each Druid process.
+Note that because of the caching, changes made to the user/role Druid metadata store may not be immediately reflected at each Druid process.

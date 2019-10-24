@@ -76,7 +76,7 @@ public class HadoopTuningConfig implements TuningConfig
         null
     );
   }
-
+  @Nullable
   private final String workingPath;
   private final String version;
   private final DimensionBasedPartitionsSpec partitionsSpec;
@@ -86,9 +86,9 @@ public class HadoopTuningConfig implements TuningConfig
   private final int rowFlushBoundary;
   private final long maxBytesInMemory;
   private final boolean leaveIntermediate;
-  private final Boolean cleanupOnFailure;
+  private final boolean cleanupOnFailure;
   private final boolean overwriteFiles;
-  private final Boolean ignoreInvalidRows;
+  private final boolean ignoreInvalidRows;
   private final Map<String, String> jobProperties;
   private final boolean combineText;
   private final boolean useCombiner;
@@ -102,29 +102,29 @@ public class HadoopTuningConfig implements TuningConfig
 
   @JsonCreator
   public HadoopTuningConfig(
-      final @JsonProperty("workingPath") String workingPath,
-      final @JsonProperty("version") String version,
-      final @JsonProperty("partitionsSpec") DimensionBasedPartitionsSpec partitionsSpec,
-      final @JsonProperty("shardSpecs") Map<Long, List<HadoopyShardSpec>> shardSpecs,
-      final @JsonProperty("indexSpec") IndexSpec indexSpec,
+      final @JsonProperty("workingPath") @Nullable String workingPath,
+      final @JsonProperty("version") @Nullable String version,
+      final @JsonProperty("partitionsSpec") @Nullable DimensionBasedPartitionsSpec partitionsSpec,
+      final @JsonProperty("shardSpecs") @Nullable Map<Long, List<HadoopyShardSpec>> shardSpecs,
+      final @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
       final @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
-      final @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
-      final @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
+      final @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
+      final @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
-      final @JsonProperty("cleanupOnFailure") Boolean cleanupOnFailure,
+      final @JsonProperty("cleanupOnFailure") @Nullable Boolean cleanupOnFailure,
       final @JsonProperty("overwriteFiles") boolean overwriteFiles,
-      final @Deprecated @JsonProperty("ignoreInvalidRows") Boolean ignoreInvalidRows,
-      final @JsonProperty("jobProperties") Map<String, String> jobProperties,
+      final @Deprecated @JsonProperty("ignoreInvalidRows") @Nullable Boolean ignoreInvalidRows,
+      final @JsonProperty("jobProperties") @Nullable Map<String, String> jobProperties,
       final @JsonProperty("combineText") boolean combineText,
-      final @JsonProperty("useCombiner") Boolean useCombiner,
+      final @JsonProperty("useCombiner") @Nullable Boolean useCombiner,
       // See https://github.com/apache/incubator-druid/pull/1922
-      final @JsonProperty("rowFlushBoundary") Integer maxRowsInMemoryCOMPAT,
+      final @JsonProperty("rowFlushBoundary") @Nullable Integer maxRowsInMemoryCOMPAT,
       // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
       final @JsonProperty("buildV9Directly") Boolean buildV9Directly,
-      final @JsonProperty("numBackgroundPersistThreads") Integer numBackgroundPersistThreads,
+      final @JsonProperty("numBackgroundPersistThreads") @Nullable Integer numBackgroundPersistThreads,
       final @JsonProperty("forceExtendableShardSpecs") boolean forceExtendableShardSpecs,
       final @JsonProperty("useExplicitVersion") boolean useExplicitVersion,
-      final @JsonProperty("allowedHadoopPrefix") List<String> allowedHadoopPrefix,
+      final @JsonProperty("allowedHadoopPrefix") @Nullable List<String> allowedHadoopPrefix,
       final @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback
@@ -150,7 +150,7 @@ public class HadoopTuningConfig implements TuningConfig
                           ? ImmutableMap.of()
                           : ImmutableMap.copyOf(jobProperties));
     this.combineText = combineText;
-    this.useCombiner = useCombiner == null ? DEFAULT_USE_COMBINER : useCombiner.booleanValue();
+    this.useCombiner = useCombiner == null ? DEFAULT_USE_COMBINER : useCombiner;
     this.numBackgroundPersistThreads = numBackgroundPersistThreads == null
                                        ? DEFAULT_NUM_BACKGROUND_PERSIST_THREADS
                                        : numBackgroundPersistThreads;
@@ -174,6 +174,7 @@ public class HadoopTuningConfig implements TuningConfig
     this.useYarnRMJobStatusFallback = useYarnRMJobStatusFallback == null ? true : useYarnRMJobStatusFallback;
   }
 
+  @Nullable
   @JsonProperty
   public String getWorkingPath()
   {

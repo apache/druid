@@ -21,6 +21,8 @@ package org.apache.druid.data.input;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
+import javax.annotation.Nullable;
+
 /**
  * Committer includes a Runnable and a Jackson-serialized metadata object containing the offset
  */
@@ -32,5 +34,6 @@ public interface Committer extends Runnable
    * which needs to be serialized and deserialized by Jackson.
    * Commit metadata can be a complex type, but we recommend keeping it to List/Map/"Primitive JSON" types
    */
+  @Nullable
   Object getMetadata();
 }

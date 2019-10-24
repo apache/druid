@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.InsufficientResourcesException;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryInterruptedException;
@@ -110,6 +111,7 @@ public class GroupByQueryRunnerFailureTest
         new GroupByStrategyV2(
             DEFAULT_PROCESSING_CONFIG,
             configSupplier,
+            Suppliers.ofInstance(new QueryConfig()),
             BUFFER_POOL,
             MERGE_BUFFER_POOL,
             mapper,

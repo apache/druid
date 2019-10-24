@@ -73,8 +73,8 @@
   "segment/dropped/count" : { "dimensions" : ["tier"], "type" : "count" },
   "segment/deleted/count" : { "dimensions" : ["tier"], "type" : "count" },
   "segment/unneeded/count" : { "dimensions" : ["tier"], "type" : "count" },
-  "segment/unavailable/count" : { "dimensions" : ["dataSource"], "type" : "count" },
-  "segment/underReplicated/count" : { "dimensions" : ["dataSource", "tier"], "type" : "count" },
+  "segment/unavailable/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "segment/underReplicated/count" : { "dimensions" : ["dataSource", "tier"], "type" : "gauge" },
   "segment/cost/raw" : { "dimensions" : ["tier"], "type" : "count" },
   "segment/cost/normalization" : { "dimensions" : ["tier"], "type" : "count" },
   "segment/cost/normalized" : { "dimensions" : ["tier"], "type" : "count" },
@@ -102,7 +102,7 @@
   "jvm/mem/used" : { "dimensions" : ["memKind"], "type" : "gauge" },
   "jvm/mem/committed" : { "dimensions" : ["memKind"], "type" : "gauge" },
   "jvm/gc/count" : { "dimensions" : ["gcName"], "type" : "count" },
-  "jvm/gc/cpu" : { "dimensions" : ["gcName"], "type" : "timer" },
+  "jvm/gc/cpu" : { "dimensions" : ["gcName"], "type" : "count" },
 
   "ingest/events/buffered" : { "dimensions" : ["serviceName, bufferCapacity"], "type" : "gauge"},
 

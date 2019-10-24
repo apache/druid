@@ -46,7 +46,7 @@ import {
   CenterMessage,
   ClearableInput,
   ExternalLink,
-  JSONInput,
+  JsonInput,
   Loader,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
@@ -97,6 +97,7 @@ import {
   hasParallelAbility,
   IngestionComboTypeWithExtra,
   IngestionSpec,
+  invalidIoConfig,
   invalidTuningConfig,
   IoConfig,
   isColumnTimestampSpec,
@@ -105,6 +106,7 @@ import {
   isParallel,
   issueWithIoConfig,
   issueWithParser,
+  isTask,
   joinFilter,
   MAX_INLINE_DATA_LENGTH,
   MetricSpec,
@@ -231,7 +233,7 @@ const VIEW_TITLE: Record<Step, string> = {
   partition: 'Partition',
   tuning: 'Tune',
   publish: 'Publish',
-  spec: 'Edit JSON spec',
+  spec: 'Edit spec',
   loading: 'Loading',
 };
 
@@ -247,6 +249,7 @@ export interface LoadDataViewState {
   spec: IngestionSpec;
   cacheKey?: string;
   // dialogs / modals
+  continueToSpec: boolean;
   showResetConfirm: boolean;
   newRollup?: boolean;
   newDimensionMode?: DimensionMode;
@@ -299,7 +302,8 @@ export interface LoadDataViewState {
   selectedMetricSpecIndex: number;
   selectedMetricSpec?: MetricSpec;
 
-  continueToSpec: boolean;
+  // for final step
+  submitting: boolean;
 }
 
 export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDataViewState> {
@@ -314,6 +318,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       // dialogs / modals
       showResetConfirm: false,
+      continueToSpec: false,
 
       // general
       sampleStrategy: 'start',
@@ -346,7 +351,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       selectedDimensionSpecIndex: -1,
       selectedMetricSpecIndex: -1,
 
-      continueToSpec: false,
+      // for final step
+      submitting: false,
     };
   }
 
@@ -1024,7 +1030,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             />
           ) : (
             <FormGroup label="IO Config">
-              <JSONInput
+              <JsonInput
                 value={ioConfig}
                 onChange={c => this.updateSpec(deepSet(spec, 'ioConfig', c))}
                 height="300px"
@@ -1988,6 +1994,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             fields={getFilterFormFields()}
             model={selectedFilter}
             onChange={f => this.setState({ selectedFilter: f })}
+            showCustom={f => !['selector', 'in', 'regex', 'like', 'not'].includes(f.type)}
           />
           <div className="controls-buttons">
             <Button
@@ -2066,7 +2073,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             onChange={s => this.updateSpec(s)}
           />
           <FormGroup label="Extra filter">
-            <JSONInput
+            <JsonInput
               value={restFilter}
               onChange={f => {
                 const curFilter = splitFilter(deepGet(spec, 'dataSchema.transformSpec.filter'));
@@ -2323,6 +2330,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 ]}
                 model={spec}
                 onChange={s => this.updateSpec(s)}
+                onFinalize={() => {
+                  setTimeout(() => {
+                    this.queryForSchema();
+                  }, 10);
+                }}
               />
             </>
           )}
@@ -2441,6 +2453,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     };
 
     if (selectedDimensionSpec) {
+      const curDimensions =
+        deepGet(spec, `dataSchema.parser.parseSpec.dimensionsSpec.dimensions`) || EMPTY_ARRAY;
+
       return (
         <div className="edit-controls">
           <AutoForm
@@ -2468,11 +2483,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <Button
                 icon={IconNames.TRASH}
                 intent={Intent.DANGER}
+                disabled={curDimensions.length <= 1}
                 onClick={() => {
-                  const curDimensions =
-                    deepGet(spec, `dataSchema.parser.parseSpec.dimensionsSpec.dimensions`) ||
-                    EMPTY_ARRAY;
-                  if (curDimensions.length <= 1) return; // Guard against removing the last dimension, ToDo: some better feedback here would be good
+                  if (curDimensions.length <= 1) return; // Guard against removing the last dimension
 
                   this.updateSpec(
                     deepDelete(
@@ -2612,6 +2625,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 type: 'string',
                 suggestions: ['HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR'],
                 defined: (g: GranularitySpec) => g.type === 'uniform',
+                required: true,
                 info: (
                   <>
                     The granularity to create time chunks at. Multiple segments can be created per
@@ -2661,7 +2675,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderParallelPickerIfNeeded()}
         </div>
         {this.renderNextBar({
-          disabled: invalidTuningConfig(tuningConfig, granularitySpec.intervals),
+          disabled:
+            !granularitySpec.segmentGranularity ||
+            invalidTuningConfig(tuningConfig, granularitySpec.intervals),
         })}
       </>
     );
@@ -2700,7 +2716,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </div>
             )
           ) : (
-            <JSONInput
+            <JsonInput
               value={ioConfig}
               onChange={c => this.updateSpec(deepSet(spec, 'ioConfig', c))}
               height="300px"
@@ -2722,7 +2738,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           </Callout>
           {this.renderParallelPickerIfNeeded()}
         </div>
-        {this.renderNextBar({})}
+        {this.renderNextBar({
+          disabled: invalidIoConfig(ioConfig),
+        })}
       </>
     );
   }
@@ -2782,6 +2800,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'ioConfig.appendToExisting',
                 label: 'Append to existing',
                 type: 'boolean',
+                defaultValue: false,
                 defined: spec => !deepGet(spec, 'tuningConfig.forceGuaranteedRollup'),
                 info: (
                   <>
@@ -2803,8 +2822,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'tuningConfig.logParseExceptions',
                 label: 'Log parse exceptions',
                 type: 'boolean',
-                disabled: parallel,
                 defaultValue: false,
+                disabled: parallel,
                 info: (
                   <>
                     If true, log an error message when a parsing exception occurs, containing
@@ -2898,13 +2917,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderSpecStep() {
-    const { goToTask } = this.props;
-    const { spec } = this.state;
+    const { spec, submitting } = this.state;
 
     return (
       <>
         <div className="main">
-          <JSONInput
+          <JsonInput
             value={spec}
             onChange={s => {
               if (!s) return;
@@ -2937,54 +2955,67 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             text="Submit"
             rightIcon={IconNames.CLOUD_UPLOAD}
             intent={Intent.PRIMARY}
-            onClick={async () => {
-              if (['index', 'index_parallel'].includes(deepGet(spec, 'type'))) {
-                let taskResp: any;
-                try {
-                  taskResp = await axios.post('/druid/indexer/v1/task', {
-                    type: spec.type,
-                    spec,
-                  });
-                } catch (e) {
-                  AppToaster.show({
-                    message: `Failed to submit task: ${getDruidErrorMessage(e)}`,
-                    intent: Intent.DANGER,
-                  });
-                  return;
-                }
-
-                AppToaster.show({
-                  message: 'Task submitted successfully. Going to task view...',
-                  intent: Intent.SUCCESS,
-                });
-
-                setTimeout(() => {
-                  goToTask(taskResp.data.task);
-                }, 1000);
-              } else {
-                try {
-                  await axios.post('/druid/indexer/v1/supervisor', spec);
-                } catch (e) {
-                  AppToaster.show({
-                    message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,
-                    intent: Intent.DANGER,
-                  });
-                  return;
-                }
-
-                AppToaster.show({
-                  message: 'Supervisor submitted successfully. Going to task view...',
-                  intent: Intent.SUCCESS,
-                });
-
-                setTimeout(() => {
-                  goToTask(undefined); // Can we get the supervisor ID here?
-                }, 1000);
-              }
-            }}
+            disabled={submitting}
+            onClick={this.handleSubmit}
           />
         </div>
       </>
     );
   }
+
+  private handleSubmit = async () => {
+    const { goToTask } = this.props;
+    const { spec, submitting } = this.state;
+    if (submitting) return;
+
+    this.setState({ submitting: true });
+    if (isTask(spec)) {
+      let taskResp: any;
+      try {
+        taskResp = await axios.post('/druid/indexer/v1/task', {
+          type: spec.type,
+          spec,
+
+          // A hack to let context be set from the spec can be removed when https://github.com/apache/incubator-druid/issues/8662 is resolved
+          context: (spec as any).context,
+        });
+      } catch (e) {
+        AppToaster.show({
+          message: `Failed to submit task: ${getDruidErrorMessage(e)}`,
+          intent: Intent.DANGER,
+        });
+        this.setState({ submitting: false });
+        return;
+      }
+
+      AppToaster.show({
+        message: 'Task submitted successfully. Going to task view...',
+        intent: Intent.SUCCESS,
+      });
+
+      setTimeout(() => {
+        goToTask(taskResp.data.task);
+      }, 1000);
+    } else {
+      try {
+        await axios.post('/druid/indexer/v1/supervisor', spec);
+      } catch (e) {
+        AppToaster.show({
+          message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,
+          intent: Intent.DANGER,
+        });
+        this.setState({ submitting: false });
+        return;
+      }
+
+      AppToaster.show({
+        message: 'Supervisor submitted successfully. Going to task view...',
+        intent: Intent.SUCCESS,
+      });
+
+      setTimeout(() => {
+        goToTask(undefined); // Can we get the supervisor ID here?
+      }, 1000);
+    }
+  };
 }

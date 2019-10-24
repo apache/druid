@@ -158,7 +158,7 @@ exports[`load data view matches snapshot 1`] = `
           icon="manually-entered-data"
           key="spec"
           onClick={[Function]}
-          text="Edit JSON spec"
+          text="Edit spec"
         />
       </Blueprint3.ButtonGroup>
     </div>

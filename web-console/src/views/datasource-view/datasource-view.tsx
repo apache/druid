@@ -34,9 +34,11 @@ import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
 import {
+  ACTION_COLUMN_ID,
+  ACTION_COLUMN_LABEL,
+  ACTION_COLUMN_WIDTH,
   ActionCell,
   RefreshButton,
-  RuleEditor,
   TableColumnSelector,
   ViewControlBar,
 } from '../../components';
@@ -59,6 +61,7 @@ import {
   QueryManager,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
+import { RuleUtil } from '../../utils/load-rule';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 import { deepGet } from '../../utils/object-change';
 
@@ -74,7 +77,7 @@ const tableColumns: string[] = [
   'Compaction',
   'Avg. segment size',
   'Num rows',
-  ActionCell.COLUMN_LABEL,
+  ACTION_COLUMN_LABEL,
 ];
 const tableColumnsNoSql: string[] = [
   'Datasource',
@@ -84,7 +87,7 @@ const tableColumnsNoSql: string[] = [
   'Size',
   'Compaction',
   'Avg. segment size',
-  ActionCell.COLUMN_LABEL,
+  ACTION_COLUMN_LABEL,
 ];
 
 function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string {
@@ -188,9 +191,9 @@ GROUP BY 1`;
     if (rules.length === 0) {
       return 'No rules';
     } else if (rules.length <= 2) {
-      return rules.map(RuleEditor.ruleToString).join(', ');
+      return rules.map(RuleUtil.ruleToString).join(', ');
     } else {
-      return `${RuleEditor.ruleToString(rules[0])} +${rules.length - 1} more rules`;
+      return `${RuleUtil.ruleToString(rules[0])} +${rules.length - 1} more rules`;
     }
   }
 
@@ -533,7 +536,7 @@ GROUP BY 1`;
       this.datasourceQueryManager.rerunLastQuery();
     } catch (e) {
       AppToaster.show({
-        message: e,
+        message: getDruidErrorMessage(e),
         intent: Intent.DANGER,
       });
     }
@@ -556,7 +559,7 @@ GROUP BY 1`;
             );
           } catch (e) {
             AppToaster.show({
-              message: e,
+              message: getDruidErrorMessage(e),
               intent: Intent.DANGER,
             });
           }
@@ -874,12 +877,12 @@ GROUP BY 1`;
                 const { compaction } = row.original;
                 let text: string;
                 if (compaction) {
-                  if (compaction.targetCompactionSizeBytes == null) {
-                    text = `Target: Default (${formatBytes(
-                      CompactionDialog.DEFAULT_TARGET_COMPACTION_SIZE_BYTES,
+                  if (compaction.maxRowsPerSegment == null) {
+                    text = `Target: Default (${formatNumber(
+                      CompactionDialog.DEFAULT_MAX_ROWS_PER_SEGMENT,
                     )})`;
                   } else {
-                    text = `Target: ${formatBytes(compaction.targetCompactionSizeBytes)}`;
+                    text = `Target: ${formatNumber(compaction.maxRowsPerSegment)}`;
                   }
                 } else {
                   text = 'None';
@@ -920,10 +923,10 @@ GROUP BY 1`;
               show: !noSqlMode && hiddenColumns.exists('Num rows'),
             },
             {
-              Header: ActionCell.COLUMN_LABEL,
+              Header: ACTION_COLUMN_LABEL,
               accessor: 'datasource',
-              id: ActionCell.COLUMN_ID,
-              width: ActionCell.COLUMN_WIDTH,
+              id: ACTION_COLUMN_ID,
+              width: ACTION_COLUMN_WIDTH,
               filterable: false,
               Cell: row => {
                 const datasource = row.value;
@@ -946,7 +949,7 @@ GROUP BY 1`;
                   />
                 );
               },
-              show: hiddenColumns.exists(ActionCell.COLUMN_LABEL),
+              show: hiddenColumns.exists(ACTION_COLUMN_LABEL),
             },
           ]}
           defaultPageSize={50}

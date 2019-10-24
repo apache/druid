@@ -133,4 +133,38 @@ public class CoordinatorStatsTest
     Assert.assertEquals(1, stats.getTieredStat("stat2", "tier2"));
     Assert.assertEquals(1, stats.getTieredStat("stat3", "tier1"));
   }
+
+  @Test
+  public void testAccumulateMaxToTieredStat()
+  {
+    Assert.assertFalse(stats.hasPerTierStats());
+    stats.accumulateMaxTieredStat("stat1", "tier1", 2);
+    stats.accumulateMaxTieredStat("stat1", "tier1", 6);
+    stats.accumulateMaxTieredStat("stat1", "tier1", 5);
+
+    stats.accumulateMaxTieredStat("stat2", "tier1", 5);
+    stats.accumulateMaxTieredStat("stat2", "tier1", 4);
+    stats.accumulateMaxTieredStat("stat2", "tier1", 5);
+
+    stats.accumulateMaxTieredStat("stat1", "tier2", 7);
+    stats.accumulateMaxTieredStat("stat1", "tier2", 9);
+    stats.accumulateMaxTieredStat("stat1", "tier2", 10);
+
+    Assert.assertTrue(stats.hasPerTierStats());
+
+    Assert.assertEquals(
+        Sets.newHashSet("tier1", "tier2"),
+        stats.getTiers("stat1")
+    );
+    Assert.assertEquals(
+        Sets.newHashSet("tier1"),
+        stats.getTiers("stat2")
+    );
+    Assert.assertTrue(stats.getTiers("stat3").isEmpty());
+
+    Assert.assertEquals(6, stats.getTieredStat("stat1", "tier1"));
+    Assert.assertEquals(5, stats.getTieredStat("stat2", "tier1"));
+    Assert.assertEquals(10, stats.getTieredStat("stat1", "tier2"));
+
+  }
 }

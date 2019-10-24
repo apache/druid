@@ -27,75 +27,75 @@ import {
 } from 'druid-query-toolkit/build/ast/sql-query/helpers';
 import React from 'react';
 
+function dateToTimestamp(date: Date): Timestamp {
+  return timestampFactory(
+    date
+      .toISOString()
+      .split('.')[0]
+      .split('T')
+      .join(' '),
+  );
+}
+
+function floorHour(dt: Date): Date {
+  dt = new Date(dt.valueOf());
+  dt.setUTCMinutes(0, 0, 0);
+  return dt;
+}
+
+function nextHour(dt: Date): Date {
+  dt = new Date(dt.valueOf());
+  dt.setUTCHours(dt.getUTCHours() + 1);
+  return dt;
+}
+
+function floorDay(dt: Date): Date {
+  dt = new Date(dt.valueOf());
+  dt.setUTCHours(0, 0, 0, 0);
+  return dt;
+}
+
+function nextDay(dt: Date): Date {
+  dt = new Date(dt.valueOf());
+  dt.setUTCDate(dt.getUTCDate() + 1);
+  return dt;
+}
+
+function floorMonth(dt: Date): Date {
+  dt = new Date(dt.valueOf());
+  dt.setUTCHours(0, 0, 0, 0);
+  dt.setUTCDate(1);
+  return dt;
+}
+
+function nextMonth(dt: Date): Date {
+  dt = new Date(dt.valueOf());
+  dt.setUTCMonth(dt.getUTCMonth() + 1);
+  return dt;
+}
+
+function floorYear(dt: Date): Date {
+  dt = new Date(dt.valueOf());
+  dt.setUTCHours(0, 0, 0, 0);
+  dt.setUTCMonth(0, 1);
+  return dt;
+}
+
+function nextYear(dt: Date): Date {
+  dt = new Date(dt.valueOf());
+  dt.setUTCFullYear(dt.getUTCFullYear() + 1);
+  return dt;
+}
+
 export interface TimeMenuItemsProps {
   columnName: string;
   parsedQuery: SqlQuery;
   onQueryChange: (queryString: SqlQuery, run?: boolean) => void;
 }
 
-export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
-  static dateToTimestamp(date: Date): Timestamp {
-    return timestampFactory(
-      date
-        .toISOString()
-        .split('.')[0]
-        .split('T')
-        .join(' '),
-    );
-  }
-
-  static floorHour(dt: Date): Date {
-    dt = new Date(dt.valueOf());
-    dt.setUTCMinutes(0, 0, 0);
-    return dt;
-  }
-
-  static nextHour(dt: Date): Date {
-    dt = new Date(dt.valueOf());
-    dt.setUTCHours(dt.getUTCHours() + 1);
-    return dt;
-  }
-
-  static floorDay(dt: Date): Date {
-    dt = new Date(dt.valueOf());
-    dt.setUTCHours(0, 0, 0, 0);
-    return dt;
-  }
-
-  static nextDay(dt: Date): Date {
-    dt = new Date(dt.valueOf());
-    dt.setUTCDate(dt.getUTCDate() + 1);
-    return dt;
-  }
-
-  static floorMonth(dt: Date): Date {
-    dt = new Date(dt.valueOf());
-    dt.setUTCHours(0, 0, 0, 0);
-    dt.setUTCDate(1);
-    return dt;
-  }
-
-  static nextMonth(dt: Date): Date {
-    dt = new Date(dt.valueOf());
-    dt.setUTCMonth(dt.getUTCMonth() + 1);
-    return dt;
-  }
-
-  static floorYear(dt: Date): Date {
-    dt = new Date(dt.valueOf());
-    dt.setUTCHours(0, 0, 0, 0);
-    dt.setUTCMonth(0, 1);
-    return dt;
-  }
-
-  static nextYear(dt: Date): Date {
-    dt = new Date(dt.valueOf());
-    dt.setUTCFullYear(dt.getUTCFullYear() + 1);
-    return dt;
-  }
-
-  renderFilterMenu(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = this.props;
+export function TimeMenuItems(props: TimeMenuItemsProps) {
+  function renderFilterMenu(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = props;
     const now = new Date();
 
     return (
@@ -179,20 +179,12 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
         <MenuItem
           text={`Current hour`}
           onClick={() => {
-            const hourStart = TimeMenuItems.floorHour(now);
+            const hourStart = floorHour(now);
             onQueryChange(
               parsedQuery
                 .removeFilter(columnName)
-                .filterRow(
-                  TimeMenuItems.dateToTimestamp(hourStart),
-                  stringFactory(columnName, `"`),
-                  '<=',
-                )
-                .filterRow(
-                  columnName,
-                  TimeMenuItems.dateToTimestamp(TimeMenuItems.nextHour(hourStart)),
-                  '<',
-                ),
+                .filterRow(dateToTimestamp(hourStart), stringFactory(columnName, `"`), '<=')
+                .filterRow(columnName, dateToTimestamp(nextHour(hourStart)), '<'),
               true,
             );
           }}
@@ -200,20 +192,12 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
         <MenuItem
           text={`Current day`}
           onClick={() => {
-            const dayStart = TimeMenuItems.floorDay(now);
+            const dayStart = floorDay(now);
             onQueryChange(
               parsedQuery
                 .removeFilter(columnName)
-                .filterRow(
-                  TimeMenuItems.dateToTimestamp(dayStart),
-                  stringFactory(columnName, `"`),
-                  '<=',
-                )
-                .filterRow(
-                  columnName,
-                  TimeMenuItems.dateToTimestamp(TimeMenuItems.nextDay(dayStart)),
-                  '<',
-                ),
+                .filterRow(dateToTimestamp(dayStart), stringFactory(columnName, `"`), '<=')
+                .filterRow(columnName, dateToTimestamp(nextDay(dayStart)), '<'),
               true,
             );
           }}
@@ -221,20 +205,12 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
         <MenuItem
           text={`Current month`}
           onClick={() => {
-            const monthStart = TimeMenuItems.floorMonth(now);
+            const monthStart = floorMonth(now);
             onQueryChange(
               parsedQuery
                 .removeFilter(columnName)
-                .filterRow(
-                  TimeMenuItems.dateToTimestamp(monthStart),
-                  stringFactory(columnName, `"`),
-                  '<=',
-                )
-                .filterRow(
-                  columnName,
-                  TimeMenuItems.dateToTimestamp(TimeMenuItems.nextMonth(monthStart)),
-                  '<',
-                ),
+                .filterRow(dateToTimestamp(monthStart), stringFactory(columnName, `"`), '<=')
+                .filterRow(columnName, dateToTimestamp(nextMonth(monthStart)), '<'),
               true,
             );
           }}
@@ -242,20 +218,12 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
         <MenuItem
           text={`Current year`}
           onClick={() => {
-            const yearStart = TimeMenuItems.floorYear(now);
+            const yearStart = floorYear(now);
             onQueryChange(
               parsedQuery
                 .removeFilter(columnName)
-                .filterRow(
-                  TimeMenuItems.dateToTimestamp(yearStart),
-                  stringFactory(columnName, `"`),
-                  '<=',
-                )
-                .filterRow(
-                  columnName,
-                  TimeMenuItems.dateToTimestamp(TimeMenuItems.nextYear(yearStart)),
-                  '<',
-                ),
+                .filterRow(dateToTimestamp(yearStart), stringFactory(columnName, `"`), '<=')
+                .filterRow(columnName, dateToTimestamp(nextYear(yearStart)), '<'),
               true,
             );
           }}
@@ -264,8 +232,8 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
     );
   }
 
-  renderRemoveFilter(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = this.props;
+  function renderRemoveFilter(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.hasFilterForColumn(columnName)) return;
 
     return (
@@ -279,8 +247,22 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
     );
   }
 
-  renderGroupByMenu(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = this.props;
+  function renderRemoveGroupBy(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = props;
+    if (!parsedQuery.hasGroupByForColumn(columnName)) return;
+    return (
+      <MenuItem
+        icon={IconNames.UNGROUP_OBJECTS}
+        text={'Remove group by'}
+        onClick={() => {
+          onQueryChange(parsedQuery.removeGroupBy(columnName), true);
+        }}
+      />
+    );
+  }
+
+  function renderGroupByMenu(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.hasGroupBy()) return;
 
     return (
@@ -331,8 +313,8 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
     );
   }
 
-  renderAggregateMenu(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = this.props;
+  function renderAggregateMenu(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.hasGroupBy()) return;
 
     return (
@@ -359,14 +341,13 @@ export class TimeMenuItems extends React.PureComponent<TimeMenuItemsProps> {
     );
   }
 
-  render(): JSX.Element {
-    return (
-      <>
-        {this.renderFilterMenu()}
-        {this.renderRemoveFilter()}
-        {this.renderGroupByMenu()}
-        {this.renderAggregateMenu()}
-      </>
-    );
-  }
+  return (
+    <>
+      {renderFilterMenu()}
+      {renderRemoveFilter()}
+      {renderGroupByMenu()}
+      {renderRemoveGroupBy()}
+      {renderAggregateMenu()}
+    </>
+  );
 }

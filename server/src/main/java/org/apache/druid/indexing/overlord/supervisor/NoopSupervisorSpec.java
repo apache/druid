@@ -48,25 +48,36 @@ public class NoopSupervisorSpec implements SupervisorSpec
   @JsonProperty("suspended")
   private boolean suspended; //ignored
 
+  @JsonProperty("type")
+  private String type; //ignored
+
+  @JsonProperty("source")
+  private String source; //ignored
+
   @VisibleForTesting
   public NoopSupervisorSpec(
       String id,
       List<String> datasources
   )
   {
-    this(id, datasources, null);
+    this(id, datasources, null, null, null);
   }
 
   @JsonCreator
   public NoopSupervisorSpec(
       @JsonProperty("id") @Nullable String id,
       @JsonProperty("dataSources") @Nullable List<String> datasources,
-      @JsonProperty("suspended") @Nullable Boolean suspended
+      @JsonProperty("suspended") @Nullable Boolean suspended,
+      @JsonProperty("type") @Nullable String type,
+      @JsonProperty("source") @Nullable String source
   )
   {
     this.id = id;
     this.datasources = datasources == null ? new ArrayList<>() : datasources;
-    this.suspended = false; // ignore
+    // these are ignored
+    this.suspended = false;
+    this.type = "noop";
+    this.source = "noop";
   }
 
   @Override
@@ -90,6 +101,20 @@ public class NoopSupervisorSpec implements SupervisorSpec
   public boolean isSuspended()
   {
     return suspended;
+  }
+
+  @Override
+  @JsonProperty("type")
+  public String getType()
+  {
+    return type;
+  }
+
+  @Override
+  @JsonProperty("source")
+  public String getSource()
+  {
+    return source;
   }
 
   @Override
@@ -125,11 +150,7 @@ public class NoopSupervisorSpec implements SupervisorSpec
       }
 
       @Override
-      public void checkpoint(
-          @Nullable Integer taskGroupId,
-          String baseSequenceName,
-          DataSourceMetadata checkpointMetadata
-      )
+      public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
       {
 
       }

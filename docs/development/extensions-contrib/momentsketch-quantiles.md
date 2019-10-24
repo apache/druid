@@ -36,7 +36,7 @@ druid.extensions.loadList=["druid-momentsketch"]
 
 The result of the aggregation is a momentsketch that is the union of all sketches either built from raw data or read from the segments.
 
-The `momentSketch` aggregator operates over raw data while the `momentSketchMerge` aggregator should be used when aggregating pre-computed sketches.
+The `momentSketch` aggregator operates over raw data while the `momentSketchMerge` aggregator should be used when aggregating precomputed sketches.
 
 ```json
 {

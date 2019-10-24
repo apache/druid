@@ -30,7 +30,7 @@ import React from 'react';
 
 import { deepDelete, deepGet, deepSet } from '../../utils/object-change';
 import { ArrayInput } from '../array-input/array-input';
-import { JSONInput } from '../json-input/json-input';
+import { JsonInput } from '../json-input/json-input';
 import { SuggestibleInput, SuggestionGroup } from '../suggestible-input/suggestible-input';
 
 import './auto-form.scss';
@@ -53,8 +53,9 @@ export interface AutoFormProps<T> {
   fields: Field<T>[];
   model: T | undefined;
   onChange: (newModel: T) => void;
+  onFinalize?: () => void;
   showCustom?: (model: T) => boolean;
-  updateJSONValidity?: (jsonValidity: boolean) => void;
+  updateJsonValidity?: (jsonValidity: boolean) => void;
   large?: boolean;
 }
 
@@ -66,6 +67,8 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   AutoFormProps<T>,
   AutoFormState
 > {
+  static REQUIRED_INTENT = Intent.PRIMARY;
+
   static makeLabelName(label: string): string {
     let newLabel = label
       .split(/(?=[A-Z])/)
@@ -126,19 +129,21 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   };
 
   private renderNumberInput(field: Field<T>): JSX.Element {
-    const { model, large } = this.props;
+    const { model, large, onFinalize } = this.props;
 
     const modelValue = deepGet(model as any, field.name) || field.defaultValue;
     return (
       <NumericInput
         value={modelValue}
         onValueChange={(valueAsNumber: number, valueAsString: string) => {
-          if (valueAsString === '') {
-            this.fieldChange(field, undefined);
-            return;
-          }
-          if (isNaN(valueAsNumber)) return;
+          if (valueAsString === '' || isNaN(valueAsNumber)) return;
           this.fieldChange(field, valueAsNumber);
+        }}
+        onBlur={e => {
+          if (e.target.value === '') {
+            this.fieldChange(field, undefined);
+          }
+          if (onFinalize) onFinalize();
         }}
         min={field.min || 0}
         fill
@@ -147,7 +152,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         placeholder={field.placeholder}
         intent={
           AutoForm.evaluateFunctor(field.required, model) && modelValue == null
-            ? Intent.PRIMARY
+            ? AutoForm.REQUIRED_INTENT
             : undefined
         }
       />
@@ -155,7 +160,8 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   }
 
   private renderSizeBytesInput(field: Field<T>): JSX.Element {
-    const { model, large } = this.props;
+    const { model, large, onFinalize } = this.props;
+
     return (
       <NumericInput
         value={deepGet(model as any, field.name) || field.defaultValue}
@@ -163,9 +169,13 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
           if (isNaN(v)) return;
           this.fieldChange(field, v);
         }}
+        onBlur={() => {
+          if (onFinalize) onFinalize();
+        }}
         min={0}
         stepSize={1000}
         majorStepSize={1000000}
+        fill
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model)}
       />
@@ -173,67 +183,90 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   }
 
   private renderStringInput(field: Field<T>, sanitize?: (str: string) => string): JSX.Element {
-    const { model, large } = this.props;
+    const { model, large, onFinalize } = this.props;
 
-    const modalValue = deepGet(model as any, field.name);
+    const modelValue = deepGet(model as any, field.name);
     return (
       <SuggestibleInput
-        value={modalValue != null ? modalValue : field.defaultValue || ''}
+        value={modelValue != null ? modelValue : field.defaultValue || ''}
         onValueChange={v => {
           if (sanitize) v = sanitize(v);
           this.fieldChange(field, v);
         }}
         onBlur={() => {
-          if (modalValue === '') this.fieldChange(field, undefined);
+          if (modelValue === '') this.fieldChange(field, undefined);
         }}
+        onFinalize={onFinalize}
         placeholder={field.placeholder}
         suggestions={field.suggestions}
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model)}
+        intent={
+          AutoForm.evaluateFunctor(field.required, model) && modelValue == null
+            ? AutoForm.REQUIRED_INTENT
+            : undefined
+        }
       />
     );
   }
 
   private renderBooleanInput(field: Field<T>): JSX.Element {
-    const { model, large } = this.props;
-    let curValue = deepGet(model as any, field.name);
-    if (curValue == null) curValue = field.defaultValue;
+    const { model, large, onFinalize } = this.props;
+    const modelValue = deepGet(model as any, field.name);
+    const shownValue = modelValue == null ? field.defaultValue : modelValue;
     const disabled = AutoForm.evaluateFunctor(field.disabled, model);
+    const intent =
+      AutoForm.evaluateFunctor(field.required, model) && modelValue == null
+        ? AutoForm.REQUIRED_INTENT
+        : undefined;
+
     return (
       <ButtonGroup large={large}>
         <Button
+          intent={intent}
           disabled={disabled}
-          active={!curValue}
-          onClick={() => this.fieldChange(field, false)}
+          active={shownValue === false}
+          onClick={() => {
+            this.fieldChange(field, false);
+            if (onFinalize) onFinalize();
+          }}
         >
           False
         </Button>
-        <Button disabled={disabled} active={curValue} onClick={() => this.fieldChange(field, true)}>
+        <Button
+          intent={intent}
+          disabled={disabled}
+          active={shownValue === true}
+          onClick={() => {
+            this.fieldChange(field, true);
+            if (onFinalize) onFinalize();
+          }}
+        >
           True
         </Button>
       </ButtonGroup>
     );
   }
 
-  private renderJSONInput(field: Field<T>): JSX.Element {
-    const { model, updateJSONValidity } = this.props;
+  private renderJsonInput(field: Field<T>): JSX.Element {
+    const { model, updateJsonValidity } = this.props;
     const { jsonInputsValidity } = this.state;
 
     const updateInputValidity = (e: any) => {
-      if (updateJSONValidity) {
-        const newJSONInputValidity = Object.assign({}, jsonInputsValidity, { [field.name]: e });
+      if (updateJsonValidity) {
+        const newJsonInputValidity = Object.assign({}, jsonInputsValidity, { [field.name]: e });
         this.setState({
-          jsonInputsValidity: newJSONInputValidity,
+          jsonInputsValidity: newJsonInputValidity,
         });
-        const allJSONValid: boolean = Object.keys(newJSONInputValidity).every(
-          property => newJSONInputValidity[property] === true,
+        const allJsonValid: boolean = Object.keys(newJsonInputValidity).every(
+          property => newJsonInputValidity[property] === true,
         );
-        updateJSONValidity(allJSONValid);
+        updateJsonValidity(allJsonValid);
       }
     };
 
     return (
-      <JSONInput
+      <JsonInput
         value={deepGet(model as any, field.name)}
         onChange={(v: any) => this.fieldChange(field, v)}
         updateInputValidity={updateInputValidity}
@@ -256,7 +289,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         disabled={AutoForm.evaluateFunctor(field.disabled, model)}
         intent={
           AutoForm.evaluateFunctor(field.required, model) && modelValue == null
-            ? Intent.PRIMARY
+            ? AutoForm.REQUIRED_INTENT
             : undefined
         }
       />
@@ -280,7 +313,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
       case 'string-array':
         return this.renderStringArrayInput(field);
       case 'json':
-        return this.renderJSONInput(field);
+        return this.renderJsonInput(field);
       default:
         throw new Error(`unknown field type '${field.type}'`);
     }
@@ -317,7 +350,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
     return (
       <FormGroup label="Custom" key="custom">
-        <JSONInput value={model} onChange={this.modelChange} />
+        <JsonInput value={model} onChange={this.modelChange} />
       </FormGroup>
     );
   }

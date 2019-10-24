@@ -28,9 +28,9 @@ export interface NumberMenuItemsProps {
   onQueryChange: (queryString: SqlQuery, run?: boolean) => void;
 }
 
-export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
-  renderFilterMenu(): JSX.Element {
-    const { columnName, parsedQuery, onQueryChange } = this.props;
+export function NumberMenuItems(props: NumberMenuItemsProps) {
+  function renderFilterMenu(): JSX.Element {
+    const { columnName, parsedQuery, onQueryChange } = props;
 
     return (
       <MenuItem icon={IconNames.FILTER} text={`Filter`}>
@@ -50,8 +50,8 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
     );
   }
 
-  renderRemoveFilter(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = this.props;
+  function renderRemoveFilter(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.hasFilterForColumn(columnName)) return;
 
     return (
@@ -65,8 +65,22 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
     );
   }
 
-  renderGroupByMenu(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = this.props;
+  function renderRemoveGroupBy(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = props;
+    if (!parsedQuery.hasGroupByForColumn(columnName)) return;
+    return (
+      <MenuItem
+        icon={IconNames.UNGROUP_OBJECTS}
+        text={'Remove group by'}
+        onClick={() => {
+          onQueryChange(parsedQuery.removeGroupBy(columnName), true);
+        }}
+      />
+    );
+  }
+
+  function renderGroupByMenu(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.groupByClause) return;
 
     return (
@@ -102,8 +116,8 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
     );
   }
 
-  renderAggregateMenu(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = this.props;
+  function renderAggregateMenu(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.groupByClause) return;
 
     return (
@@ -139,14 +153,13 @@ export class NumberMenuItems extends React.PureComponent<NumberMenuItemsProps> {
     );
   }
 
-  render(): JSX.Element {
-    return (
-      <>
-        {this.renderFilterMenu()}
-        {this.renderRemoveFilter()}
-        {this.renderGroupByMenu()}
-        {this.renderAggregateMenu()}
-      </>
-    );
-  }
+  return (
+    <>
+      {renderFilterMenu()}
+      {renderRemoveFilter()}
+      {renderGroupByMenu()}
+      {renderRemoveGroupBy()}
+      {renderAggregateMenu()}
+    </>
+  );
 }

@@ -79,13 +79,13 @@ class SinglePhaseParallelIndexTaskRunner
   @Override
   Iterator<SubTaskSpec<SinglePhaseSubTask>> subTaskSpecIterator() throws IOException
   {
-    return baseFirehoseFactory.getSplits().map(this::newTaskSpec).iterator();
+    return baseFirehoseFactory.getSplits(getTuningConfig().getSplitHintSpec()).map(this::newTaskSpec).iterator();
   }
 
   @Override
   int getTotalNumSubTasks() throws IOException
   {
-    return baseFirehoseFactory.getNumSplits();
+    return baseFirehoseFactory.getNumSplits(getTuningConfig().getSplitHintSpec());
   }
 
   @VisibleForTesting
