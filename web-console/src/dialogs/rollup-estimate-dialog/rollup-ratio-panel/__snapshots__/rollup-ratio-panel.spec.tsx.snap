@@ -1,0 +1,875 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[` 1`] = `
+<div>
+  <div
+    class="rollup-ratio-panel"
+  >
+    <div
+      class="bp3-callout"
+    >
+      <p>
+        You may select any column to exclude them from your rollup preview. This will update
+              your rollup ratio after you click on "Estimate rollup".
+      </p>
+      <p>
+        Please click on "Preview data" after modifying your interval.
+      </p>
+      <p />
+    </div>
+    <div
+      class="bp3-form-group"
+    >
+      <label
+        class="bp3-label"
+      >
+        Interval
+         
+        <span
+          class="bp3-text-muted"
+        />
+      </label>
+      <div
+        class="bp3-form-content"
+      >
+        <div
+          class="bp3-input-group"
+        >
+          <input
+            class="bp3-input"
+            placeholder="2019-01-01/2020-01-01"
+            style="padding-right: 10px;"
+            type="text"
+            value="2009-01-01/2020-01-01"
+          />
+        </div>
+      </div>
+    </div>
+    <button
+      class="bp3-button"
+      type="button"
+    >
+      <span
+        class="bp3-button-text"
+      >
+        Preview data
+      </span>
+    </button>
+  </div>
+  <div
+    class="rollup-ratio-submit"
+  >
+    <div
+      class="bp3-callout"
+    >
+      <p>
+        Estimated rollup ratio: 
+        
+      </p>
+    </div>
+    <div
+      class="bp3-form-group"
+    >
+      <label
+        class="bp3-label"
+      >
+        Granularity:
+         
+        <span
+          class="bp3-text-muted"
+        />
+      </label>
+      <div
+        class="bp3-form-content"
+      >
+        <div
+          class="bp3-input-group"
+        >
+          <input
+            class="bp3-input"
+            readonly=""
+            style="padding-right: 0px;"
+            type="text"
+            value="NONE"
+          />
+          <span
+            class="bp3-input-action"
+          >
+            <span
+              class="bp3-popover-wrapper"
+            >
+              <span
+                class="bp3-popover-target"
+              >
+                <button
+                  class="bp3-button bp3-minimal"
+                  type="button"
+                >
+                  <span
+                    class="bp3-icon bp3-icon-caret-down"
+                    icon="caret-down"
+                  >
+                    <svg
+                      data-icon="caret-down"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      width="16"
+                    >
+                      <desc>
+                        caret-down
+                      </desc>
+                      <path
+                        d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                        fill-rule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                </button>
+              </span>
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+    <button
+      class="bp3-button bp3-intent-primary"
+      type="button"
+    >
+      <span
+        class="bp3-button-text"
+      >
+        Estimate rollup
+      </span>
+    </button>
+  </div>
+</div>
+`;
+
+exports[` 2`] = `
+<div>
+  <div
+    class="rollup-ratio-panel"
+  >
+    <div
+      class="bp3-callout"
+    >
+      <p>
+        You may select any column to exclude them from your rollup preview. This will update
+              your rollup ratio after you click on "Estimate rollup".
+      </p>
+      <p>
+        Please click on "Preview data" after modifying your interval.
+      </p>
+      <p />
+    </div>
+    <div
+      class="bp3-form-group"
+    >
+      <label
+        class="bp3-label"
+      >
+        Interval
+         
+        <span
+          class="bp3-text-muted"
+        />
+      </label>
+      <div
+        class="bp3-form-content"
+      >
+        <div
+          class="bp3-input-group"
+        >
+          <input
+            class="bp3-input"
+            placeholder="2019-01-01/2020-01-01"
+            style="padding-right: 10px;"
+            type="text"
+            value="2009-01-01/2020-01-01"
+          />
+        </div>
+      </div>
+    </div>
+    <button
+      class="bp3-button"
+      type="button"
+    >
+      <span
+        class="bp3-button-text"
+      >
+        Preview data
+      </span>
+    </button>
+  </div>
+  <div
+    class="rollup-ratio-submit"
+  >
+    <div
+      class="bp3-callout"
+    >
+      <p>
+        Estimated rollup ratio: 
+        
+      </p>
+    </div>
+    <div
+      class="bp3-form-group"
+    >
+      <label
+        class="bp3-label"
+      >
+        Granularity:
+         
+        <span
+          class="bp3-text-muted"
+        />
+      </label>
+      <div
+        class="bp3-form-content"
+      >
+        <div
+          class="bp3-input-group"
+        >
+          <input
+            class="bp3-input"
+            readonly=""
+            style="padding-right: 0px;"
+            type="text"
+            value="NONE"
+          />
+          <span
+            class="bp3-input-action"
+          >
+            <span
+              class="bp3-popover-wrapper"
+            >
+              <span
+                class="bp3-popover-target"
+              >
+                <button
+                  class="bp3-button bp3-minimal"
+                  type="button"
+                >
+                  <span
+                    class="bp3-icon bp3-icon-caret-down"
+                    icon="caret-down"
+                  >
+                    <svg
+                      data-icon="caret-down"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      width="16"
+                    >
+                      <desc>
+                        caret-down
+                      </desc>
+                      <path
+                        d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                        fill-rule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                </button>
+              </span>
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+    <button
+      class="bp3-button bp3-intent-primary"
+      type="button"
+    >
+      <span
+        class="bp3-button-text"
+      >
+        Estimate rollup
+      </span>
+    </button>
+  </div>
+</div>
+`;
+
+exports[` 3`] = `
+<div>
+  <div
+    class="rollup-ratio-panel"
+  >
+    <div
+      class="bp3-callout"
+    >
+      <p>
+        You may select any column to exclude them from your rollup preview. This will update
+              your rollup ratio after you click on "Estimate rollup".
+      </p>
+      <p>
+        Please click on "Preview data" after modifying your interval.
+      </p>
+      <p>
+        This datasource has previously been rolled up. The original rollup ratio is 100.00%
+      </p>
+    </div>
+    <div
+      class="bp3-form-group"
+    >
+      <label
+        class="bp3-label"
+      >
+        Interval
+         
+        <span
+          class="bp3-text-muted"
+        />
+      </label>
+      <div
+        class="bp3-form-content"
+      >
+        <div
+          class="bp3-input-group"
+        >
+          <input
+            class="bp3-input"
+            placeholder="2019-01-01/2020-01-01"
+            style="padding-right: 10px;"
+            type="text"
+            value="2009-01-01/2020-01-01"
+          />
+        </div>
+      </div>
+    </div>
+    <button
+      class="bp3-button"
+      type="button"
+    >
+      <span
+        class="bp3-button-text"
+      >
+        Preview data
+      </span>
+    </button>
+  </div>
+  <div
+    class="rollup-ratio-submit"
+  >
+    <div
+      class="bp3-callout"
+    >
+      <p>
+        Estimated rollup ratio: 
+        
+      </p>
+    </div>
+    <div
+      class="bp3-form-group"
+    >
+      <label
+        class="bp3-label"
+      >
+        Granularity:
+         
+        <span
+          class="bp3-text-muted"
+        />
+      </label>
+      <div
+        class="bp3-form-content"
+      >
+        <div
+          class="bp3-input-group"
+        >
+          <input
+            class="bp3-input"
+            readonly=""
+            style="padding-right: 0px;"
+            type="text"
+            value="NONE"
+          />
+          <span
+            class="bp3-input-action"
+          >
+            <span
+              class="bp3-popover-wrapper"
+            >
+              <span
+                class="bp3-popover-target"
+              >
+                <button
+                  class="bp3-button bp3-minimal"
+                  type="button"
+                >
+                  <span
+                    class="bp3-icon bp3-icon-caret-down"
+                    icon="caret-down"
+                  >
+                    <svg
+                      data-icon="caret-down"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      width="16"
+                    >
+                      <desc>
+                        caret-down
+                      </desc>
+                      <path
+                        d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                        fill-rule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                </button>
+              </span>
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+    <button
+      class="bp3-button bp3-intent-primary"
+      type="button"
+    >
+      <span
+        class="bp3-button-text"
+      >
+        Estimate rollup
+      </span>
+    </button>
+  </div>
+</div>
+`;
+
+exports[`render ratio panel with no columns matches snapshot 1`] = `
+<div>
+  <div
+    class="rollup-ratio-panel"
+  >
+    <div
+      class="bp3-callout"
+    >
+      <p>
+        You may select any column to exclude them from your rollup preview. This will update
+              your rollup ratio after you click on "Estimate rollup".
+      </p>
+      <p>
+        Please click on "Preview data" after modifying your interval.
+      </p>
+      <p />
+    </div>
+    <div
+      class="bp3-form-group"
+    >
+      <label
+        class="bp3-label"
+      >
+        Interval
+         
+        <span
+          class="bp3-text-muted"
+        />
+      </label>
+      <div
+        class="bp3-form-content"
+      >
+        <div
+          class="bp3-input-group"
+        >
+          <input
+            class="bp3-input"
+            placeholder="2019-01-01/2020-01-01"
+            style="padding-right: 10px;"
+            type="text"
+            value="2009-01-01/2020-01-01"
+          />
+        </div>
+      </div>
+    </div>
+    <button
+      class="bp3-button"
+      type="button"
+    >
+      <span
+        class="bp3-button-text"
+      >
+        Preview data
+      </span>
+    </button>
+  </div>
+  <div
+    class="rollup-ratio-submit"
+  >
+    <div
+      class="bp3-callout"
+    >
+      <p>
+        Estimated rollup ratio: 
+        
+      </p>
+    </div>
+    <div
+      class="bp3-form-group"
+    >
+      <label
+        class="bp3-label"
+      >
+        Granularity:
+         
+        <span
+          class="bp3-text-muted"
+        />
+      </label>
+      <div
+        class="bp3-form-content"
+      >
+        <div
+          class="bp3-input-group"
+        >
+          <input
+            class="bp3-input"
+            readonly=""
+            style="padding-right: 0px;"
+            type="text"
+            value="NONE"
+          />
+          <span
+            class="bp3-input-action"
+          >
+            <span
+              class="bp3-popover-wrapper"
+            >
+              <span
+                class="bp3-popover-target"
+              >
+                <button
+                  class="bp3-button bp3-minimal"
+                  type="button"
+                >
+                  <span
+                    class="bp3-icon bp3-icon-caret-down"
+                    icon="caret-down"
+                  >
+                    <svg
+                      data-icon="caret-down"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      width="16"
+                    >
+                      <desc>
+                        caret-down
+                      </desc>
+                      <path
+                        d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                        fill-rule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                </button>
+              </span>
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+    <button
+      class="bp3-button bp3-intent-primary"
+      type="button"
+    >
+      <span
+        class="bp3-button-text"
+      >
+        Estimate rollup
+      </span>
+    </button>
+  </div>
+</div>
+`;
+
+exports[`render ratio panel with no rollup matches snapshot 1`] = `
+<div>
+  <div
+    class="rollup-ratio-panel"
+  >
+    <div
+      class="bp3-callout"
+    >
+      <p>
+        You may select any column to exclude them from your rollup preview. This will update
+              your rollup ratio after you click on "Estimate rollup".
+      </p>
+      <p>
+        Please click on "Preview data" after modifying your interval.
+      </p>
+      <p />
+    </div>
+    <div
+      class="bp3-form-group"
+    >
+      <label
+        class="bp3-label"
+      >
+        Interval
+         
+        <span
+          class="bp3-text-muted"
+        />
+      </label>
+      <div
+        class="bp3-form-content"
+      >
+        <div
+          class="bp3-input-group"
+        >
+          <input
+            class="bp3-input"
+            placeholder="2019-01-01/2020-01-01"
+            style="padding-right: 10px;"
+            type="text"
+            value="2009-01-01/2020-01-01"
+          />
+        </div>
+      </div>
+    </div>
+    <button
+      class="bp3-button"
+      type="button"
+    >
+      <span
+        class="bp3-button-text"
+      >
+        Preview data
+      </span>
+    </button>
+  </div>
+  <div
+    class="rollup-ratio-submit"
+  >
+    <div
+      class="bp3-callout"
+    >
+      <p>
+        Estimated rollup ratio: 
+        
+      </p>
+    </div>
+    <div
+      class="bp3-form-group"
+    >
+      <label
+        class="bp3-label"
+      >
+        Granularity:
+         
+        <span
+          class="bp3-text-muted"
+        />
+      </label>
+      <div
+        class="bp3-form-content"
+      >
+        <div
+          class="bp3-input-group"
+        >
+          <input
+            class="bp3-input"
+            readonly=""
+            style="padding-right: 0px;"
+            type="text"
+            value="NONE"
+          />
+          <span
+            class="bp3-input-action"
+          >
+            <span
+              class="bp3-popover-wrapper"
+            >
+              <span
+                class="bp3-popover-target"
+              >
+                <button
+                  class="bp3-button bp3-minimal"
+                  type="button"
+                >
+                  <span
+                    class="bp3-icon bp3-icon-caret-down"
+                    icon="caret-down"
+                  >
+                    <svg
+                      data-icon="caret-down"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      width="16"
+                    >
+                      <desc>
+                        caret-down
+                      </desc>
+                      <path
+                        d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                        fill-rule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                </button>
+              </span>
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+    <button
+      class="bp3-button bp3-intent-primary"
+      type="button"
+    >
+      <span
+        class="bp3-button-text"
+      >
+        Estimate rollup
+      </span>
+    </button>
+  </div>
+</div>
+`;
+
+exports[`render ratio panel with no rollup matches snapshot 2`] = `
+<div>
+  <div
+    class="rollup-ratio-panel"
+  >
+    <div
+      class="bp3-callout"
+    >
+      <p>
+        You may select any column to exclude them from your rollup preview. This will update
+              your rollup ratio after you click on "Estimate rollup".
+      </p>
+      <p>
+        Please click on "Preview data" after modifying your interval.
+      </p>
+      <p>
+        This datasource has previously been rolled up. The original rollup ratio is 100.00%
+      </p>
+    </div>
+    <div
+      class="bp3-form-group"
+    >
+      <label
+        class="bp3-label"
+      >
+        Interval
+         
+        <span
+          class="bp3-text-muted"
+        />
+      </label>
+      <div
+        class="bp3-form-content"
+      >
+        <div
+          class="bp3-input-group"
+        >
+          <input
+            class="bp3-input"
+            placeholder="2019-01-01/2020-01-01"
+            style="padding-right: 10px;"
+            type="text"
+            value="2009-01-01/2020-01-01"
+          />
+        </div>
+      </div>
+    </div>
+    <button
+      class="bp3-button"
+      type="button"
+    >
+      <span
+        class="bp3-button-text"
+      >
+        Preview data
+      </span>
+    </button>
+  </div>
+  <div
+    class="rollup-ratio-submit"
+  >
+    <div
+      class="bp3-callout"
+    >
+      <p>
+        Estimated rollup ratio: 
+        
+      </p>
+    </div>
+    <div
+      class="bp3-form-group"
+    >
+      <label
+        class="bp3-label"
+      >
+        Granularity:
+         
+        <span
+          class="bp3-text-muted"
+        />
+      </label>
+      <div
+        class="bp3-form-content"
+      >
+        <div
+          class="bp3-input-group"
+        >
+          <input
+            class="bp3-input"
+            readonly=""
+            style="padding-right: 0px;"
+            type="text"
+            value="NONE"
+          />
+          <span
+            class="bp3-input-action"
+          >
+            <span
+              class="bp3-popover-wrapper"
+            >
+              <span
+                class="bp3-popover-target"
+              >
+                <button
+                  class="bp3-button bp3-minimal"
+                  type="button"
+                >
+                  <span
+                    class="bp3-icon bp3-icon-caret-down"
+                    icon="caret-down"
+                  >
+                    <svg
+                      data-icon="caret-down"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      width="16"
+                    >
+                      <desc>
+                        caret-down
+                      </desc>
+                      <path
+                        d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                        fill-rule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                </button>
+              </span>
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+    <button
+      class="bp3-button bp3-intent-primary"
+      type="button"
+    >
+      <span
+        class="bp3-button-text"
+      >
+        Estimate rollup
+      </span>
+    </button>
+  </div>
+</div>
+`;

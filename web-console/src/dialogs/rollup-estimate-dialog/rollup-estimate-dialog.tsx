@@ -24,7 +24,7 @@ import ReactTable from 'react-table';
 import { Loader } from '../../components/index';
 import { getDruidErrorMessage, queryDruidRune, QueryManager } from '../../utils/index';
 
-import { RollupRatioPanel } from './rollup-ratio-panel';
+import { RollupRatioPanel } from './rollup-ratio-panel/rollup-ratio-panel';
 
 import './rollup-estimate-dialog.scss';
 

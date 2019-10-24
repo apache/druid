@@ -30,7 +30,7 @@ import {
 import { IconNames } from '@blueprintjs/icons';
 import * as React from 'react';
 
-import { getDruidErrorMessage, queryDruidRune, QueryManager } from '../../utils/index';
+import { getDruidErrorMessage, queryDruidRune, QueryManager } from '../../../utils/index';
 
 import './rollup-ratio-panel.scss';
 
