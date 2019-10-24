@@ -44,8 +44,6 @@ export interface RollupRatioPanelProps {
 
 export interface RollupRatioPanelState {
   result?: number;
-  loading: boolean;
-  error?: string;
   intervalInput: string;
   granularity: string;
 }
@@ -58,7 +56,6 @@ export class RollupRatioPanel extends React.PureComponent<
   constructor(props: RollupRatioPanelProps, context: any) {
     super(props, context);
     this.state = {
-      loading: false,
       intervalInput: this.props.interval,
       granularity: 'NONE',
     };
@@ -103,11 +100,9 @@ export class RollupRatioPanel extends React.PureComponent<
               },
             ],
           });
-          console.log(timeseriesResponse);
 
           if (Array.isArray(timeseriesResponse) && timeseriesResponse.length === 1) {
             rawQueryResult = timeseriesResponse[0];
-            console.log(rawQueryResult);
           } else {
             throw new Error(`unexpected response from segmentMetadata query`);
           }
@@ -117,11 +112,9 @@ export class RollupRatioPanel extends React.PureComponent<
 
         return rawQueryResult.result.Ratio;
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: ({ result }) => {
         this.setState({
           result,
-          loading,
-          error,
         });
       },
     });

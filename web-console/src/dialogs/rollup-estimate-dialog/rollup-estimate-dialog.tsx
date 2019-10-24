@@ -46,7 +46,6 @@ export interface RollupEstimateDialogState {
   interval: string;
   loading: boolean;
   result?: QueryResult;
-  error?: string;
 }
 
 export class RollupEstimateDialog extends React.PureComponent<
@@ -143,11 +142,10 @@ export class RollupEstimateDialog extends React.PureComponent<
         const queryResult = normalizeQueryResult(rawQueryResult);
         return { queryResult, rollupRatio };
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: ({ result, loading }) => {
         this.setState({
           result,
           loading,
-          error,
           queryColumns: result ? result.queryResult.header : [],
           rollupRatio: result ? result.rollupRatio : -1,
         });
@@ -186,7 +184,6 @@ export class RollupEstimateDialog extends React.PureComponent<
   render(): JSX.Element {
     const { datasource, onClose } = this.props;
     const { interval, result, loading, queryColumns, rollupRatio } = this.state;
-    console.log(result);
     return (
       <Dialog
         className="rollup-estimate-dialog"
