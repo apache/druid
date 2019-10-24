@@ -139,9 +139,9 @@ public class HashBasedNamedNumberedShardSpec extends NumberedShardSpec
     };
   }
 
-//  @Override
-//  public Object getIdentifier()
-//  {
-//    return this.partitionName + "_" + this.getPartitionNum();
-//  }
+  @Override
+  public Object getIdentifier()
+  {
+    return this.partitionName + "_" + this.getPartitionNum();
+  }
 }

@@ -665,7 +665,8 @@ public class BrokerServerViewTest extends CuratorTestBase
           {
             return ignoredTiers;
           }
-        }
+        },
+        new BrokerDataSourceComplementConfig()
     );
 
     baseView.start();

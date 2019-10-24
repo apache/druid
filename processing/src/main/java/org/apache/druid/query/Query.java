@@ -180,6 +180,16 @@ public interface Query<T>
     return this;
   }
 
+  default List<Interval> getIntervalsOfInnerMostQuery()
+  {
+    if (getDataSource() instanceof QueryDataSource) {
+      //noinspection unchecked
+      return ((QueryDataSource) getDataSource()).getQuery().getIntervalsOfInnerMostQuery();
+    } else {
+      return getIntervals();
+    }
+  }
+
   default Query<T> withPriority(int priority)
   {
     return withOverriddenContext(ImmutableMap.of(QueryContexts.PRIORITY_KEY, priority));

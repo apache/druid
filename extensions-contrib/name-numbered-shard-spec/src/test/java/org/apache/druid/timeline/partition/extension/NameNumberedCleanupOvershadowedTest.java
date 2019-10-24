@@ -20,12 +20,12 @@
 package org.apache.druid.timeline.partition.extension;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
@@ -37,19 +37,16 @@ import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.junit.Ignore;
 import org.junit.Test;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class NameNumberedCleanupOvershadowedTest
 {
   DruidCoordinatorCleanupOvershadowed druidCoordinatorCleanupOvershadowed;
   DruidCoordinator coordinator = EasyMock.createStrictMock(DruidCoordinator.class);
-  private List<DataSegment> availableSegments;
+  private List<DataSegment> usedSegments;
   DateTime start = DateTimes.of("2012-01-01");
   DruidCluster druidCluster;
   private LoadQueuePeon mockPeon = EasyMock.createMock(LoadQueuePeon.class);
@@ -86,64 +83,69 @@ public class NameNumberedCleanupOvershadowedTest
       .shardSpec(new NamedNumberedShardSpec(0, 1, "doc"))
       .build();
 
-//  @Test
-//  public void testRun()
-//  {
-//    druidCoordinatorCleanupOvershadowed = new DruidCoordinatorCleanupOvershadowed(coordinator);
-//    availableSegments = ImmutableList.of(segmentV1, segmentV0, segmentV2, segmentV5, segmentV3, segmentV4);
-//
-//    // Dummy values for comparisons in TreeSet
-//    EasyMock.expect(mockPeon.getLoadQueueSize())
-//        .andReturn(0L)
-//        .anyTimes();
-//    EasyMock.expect(druidServer.getMaxSize())
-//        .andReturn(0L)
-//        .anyTimes();
-//    EasyMock.expect(druidServer.getCurrSize())
-//        .andReturn(0L)
-//        .anyTimes();
-//    EasyMock.expect(druidServer.getName())
-//        .andReturn("")
-//        .anyTimes();
-//    EasyMock.expect(druidServer.getHost())
-//        .andReturn("")
-//        .anyTimes();
-//    EasyMock.expect(druidServer.getTier())
-//        .andReturn("")
-//        .anyTimes();
-//    EasyMock.expect(druidServer.getType())
-//        .andReturn(ServerType.HISTORICAL)
-//        .anyTimes();
-//
-//    EasyMock.expect(druidServer.getDataSources())
-//        .andReturn(ImmutableList.of(druidDataSource))
-//        .anyTimes();
-//    EasyMock.expect(druidDataSource.getSegments())
-//        .andReturn(ImmutableSet.<DataSegment>of(segmentV1, segmentV2, segmentV4, segmentV5))
-//        .anyTimes();
-//    EasyMock.expect(druidDataSource.getName()).andReturn("test").anyTimes();
-//    coordinator.markSegmentAsUnused(segmentV1);
-//    coordinator.markSegmentAsUnused(segmentV4);
-//    coordinator.markSegmentAsUnused(segmentV0);
-//    coordinator.markSegmentAsUnused(segmentV3);
-//    EasyMock.expectLastCall();
-//    EasyMock.replay(mockPeon, coordinator, druidServer, druidDataSource);
-//
-//    druidCluster = new DruidCluster(
-//        null,
-//        ImmutableMap.of(
-//            "normal",
-//            Stream.of(
-//                new ServerHolder(druidServer, mockPeon)
-//            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
-//        ));
-//
-//    DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams.newBuilder()
-//        .withAvailableSegments(availableSegments)
-//        .withCoordinatorStats(new CoordinatorStats())
-//        .withDruidCluster(druidCluster)
-//        .build();
-//    druidCoordinatorCleanupOvershadowed.run(params);
-//    EasyMock.verify(coordinator, druidDataSource, druidServer);
-//  }
+  private static final CoordinatorDynamicConfig
+      COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS =
+      CoordinatorDynamicConfig.builder().withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(0L).build();
+
+  @Ignore
+  @Test
+  public void testRun()
+  {
+    druidCoordinatorCleanupOvershadowed = new DruidCoordinatorCleanupOvershadowed(coordinator);
+    usedSegments = ImmutableList.of(segmentV1, segmentV0, segmentV2, segmentV5, segmentV3, segmentV4);
+
+    // Dummy values for comparisons in TreeSet
+    EasyMock.expect(mockPeon.getLoadQueueSize())
+        .andReturn(0L)
+        .anyTimes();
+    EasyMock.expect(druidServer.getMaxSize())
+        .andReturn(0L)
+        .anyTimes();
+    EasyMock.expect(druidServer.getCurrSize())
+        .andReturn(0L)
+        .anyTimes();
+    EasyMock.expect(druidServer.getName())
+        .andReturn("")
+        .anyTimes();
+    EasyMock.expect(druidServer.getHost())
+        .andReturn("")
+        .anyTimes();
+    EasyMock.expect(druidServer.getTier())
+        .andReturn("")
+        .anyTimes();
+    EasyMock.expect(druidServer.getType())
+        .andReturn(ServerType.HISTORICAL)
+        .anyTimes();
+
+    EasyMock.expect(druidServer.getDataSources())
+        .andReturn(ImmutableList.of(druidDataSource))
+        .anyTimes();
+    EasyMock.expect(druidDataSource.getSegments())
+        .andReturn(ImmutableSet.of(segmentV1, segmentV2, segmentV4, segmentV5))
+        .anyTimes();
+    EasyMock.expect(druidDataSource.getName()).andReturn("test").anyTimes();
+    coordinator.markSegmentAsUnused(segmentV1);
+    coordinator.markSegmentAsUnused(segmentV4);
+    coordinator.markSegmentAsUnused(segmentV0);
+    coordinator.markSegmentAsUnused(segmentV3);
+    EasyMock.expectLastCall();
+    EasyMock.replay(mockPeon, coordinator, druidServer, druidDataSource);
+
+    druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier("normal", new ServerHolder(druidServer, mockPeon))
+        .build();
+
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
+        .withUsedSegmentsInTest(usedSegments)
+        .withCoordinatorStats(new CoordinatorStats())
+        .withDruidCluster(druidCluster)
+        .withDynamicConfigs(
+            COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS
+        )
+        .build();
+    druidCoordinatorCleanupOvershadowed.run(params);
+    EasyMock.verify(coordinator, druidDataSource, druidServer);
+  }
 }
