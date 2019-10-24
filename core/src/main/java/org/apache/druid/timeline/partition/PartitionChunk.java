@@ -69,4 +69,15 @@ public interface PartitionChunk<T> extends Comparable<PartitionChunk<T>>
    * @return the sequential numerical id of this partition chunk
    */
   int getChunkNumber();
+
+  /**
+   * Returns the partition identifier for this PartitionChunk. For most PartitionChunks, this is equivalent
+   * to the chunk number.
+   *
+   * @return The identifier of this partition chunk.
+   */
+  default Object getChunkIdentifier()
+  {
+    return this.getChunkNumber();
+  }
 }

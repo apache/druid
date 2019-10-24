@@ -21,8 +21,10 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
@@ -36,18 +38,17 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryToolChestWarehouse;
-import org.apache.druid.query.QueryWatcher;
-import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.*;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.timeline.ComplementaryNamespacedVersionedIntervalTimeline;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.NamespacedVersionedIntervalTimeline;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,7 +73,7 @@ public class BrokerServerView implements TimelineServerView
 
   private final ConcurrentMap<String, QueryableDruidServer> clients;
   private final Map<SegmentId, ServerSelector> selectors;
-  private final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines;
+  private final Map<String, NamespacedVersionedIntervalTimeline<String, ServerSelector>> timelines;
   private final ConcurrentMap<TimelineCallback, Executor> timelineCallbacks = new ConcurrentHashMap<>();
 
   private final QueryToolChestWarehouse warehouse;
@@ -84,6 +85,8 @@ public class BrokerServerView implements TimelineServerView
   private final ServiceEmitter emitter;
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> segmentFilter;
+  private final Map<String, String> dataSourceComplementaryMap;
+  private final Map<String, String> dataSourceComplementaryReverseMap;
 
   private final CountDownLatch initialized = new CountDownLatch(1);
 
@@ -96,8 +99,8 @@ public class BrokerServerView implements TimelineServerView
       final FilteredServerInventoryView baseView,
       final TierSelectorStrategy tierSelectorStrategy,
       final ServiceEmitter emitter,
-      final BrokerSegmentWatcherConfig segmentWatcherConfig
-  )
+      final BrokerSegmentWatcherConfig segmentWatcherConfig,
+      final BrokerDataSourceComplementConfig dataSourceComplementConfig)
   {
     this.warehouse = warehouse;
     this.queryWatcher = queryWatcher;
@@ -106,6 +109,14 @@ public class BrokerServerView implements TimelineServerView
     this.baseView = baseView;
     this.tierSelectorStrategy = tierSelectorStrategy;
     this.emitter = emitter;
+    this.dataSourceComplementaryMap = dataSourceComplementConfig.getMapping();
+    this.dataSourceComplementaryReverseMap = dataSourceComplementConfig.getMapping()
+        .entrySet()
+        .stream()
+        .collect(Collectors.toMap(
+            Map.Entry::getValue,
+            Map.Entry::getKey
+        ));
     this.clients = new ConcurrentHashMap<>();
     this.selectors = new HashMap<>();
     this.timelines = new HashMap<>();
@@ -271,14 +282,46 @@ public class BrokerServerView implements TimelineServerView
         ServerSelector selector = selectors.get(segmentId);
         if (selector == null) {
           selector = new ServerSelector(segment, tierSelectorStrategy);
-
-          VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
+          String dataSource = segment.getDataSource();
+          NamespacedVersionedIntervalTimeline<String, ServerSelector> timeline = timelines
+                  .get(dataSource);
           if (timeline == null) {
-            timeline = new VersionedIntervalTimeline<>(Ordering.natural());
+            if (dataSourceComplementaryMap.containsKey(dataSource)) {
+              NamespacedVersionedIntervalTimeline<String, ServerSelector> supportTimeline = timelines
+                      .get(dataSourceComplementaryMap.get(dataSource));
+              if (supportTimeline == null) {
+                supportTimeline = new NamespacedVersionedIntervalTimeline<>(Ordering.natural());
+                timelines.put(dataSourceComplementaryMap.get(dataSource), supportTimeline);
+              }
+              timeline = new ComplementaryNamespacedVersionedIntervalTimeline(
+                      dataSource,
+                      supportTimeline,
+                      dataSourceComplementaryMap.get(dataSource)
+              );
+            } else {
+              timeline = new NamespacedVersionedIntervalTimeline<>(Ordering.natural());
+              if (dataSourceComplementaryReverseMap.containsKey(dataSource)) {
+                NamespacedVersionedIntervalTimeline<String, ServerSelector> complementaryTimeline = timelines
+                        .get(dataSourceComplementaryReverseMap.get(dataSource));
+                if (complementaryTimeline == null) {
+                  complementaryTimeline = new ComplementaryNamespacedVersionedIntervalTimeline(
+                          dataSourceComplementaryReverseMap.get(dataSource),
+                          timeline, dataSource
+                  );
+                  timelines
+                          .put(dataSourceComplementaryReverseMap.get(dataSource), complementaryTimeline);
+                }
+              }
+            }
             timelines.put(segment.getDataSource(), timeline);
           }
 
-          timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector));
+          timeline.add(
+                  NamespacedVersionedIntervalTimeline.getNamespace(
+                          segment.getShardSpec().getIdentifier()),
+                  segment.getInterval(),
+                  segment.getVersion(),
+                  segment.getShardSpec().createChunk(selector));
           selectors.put(segmentId, selector);
         }
 
@@ -327,10 +370,11 @@ public class BrokerServerView implements TimelineServerView
       }
 
       if (selector.isEmpty()) {
-        VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
+        NamespacedVersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
         selectors.remove(segmentId);
 
         final PartitionChunk<ServerSelector> removedPartition = timeline.remove(
+            NamespacedVersionedIntervalTimeline.getNamespace(segment.getShardSpec().getIdentifier()),
             segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector)
         );
 
@@ -348,7 +392,7 @@ public class BrokerServerView implements TimelineServerView
   }
 
   @Override
-  public Optional<VersionedIntervalTimeline<String, ServerSelector>> getTimeline(final DataSourceAnalysis analysis)
+  public Optional<NamespacedVersionedIntervalTimeline<String, ServerSelector>> getTimeline(final DataSourceAnalysis analysis)
   {
     final TableDataSource table =
         analysis.getBaseTableDataSource()
@@ -356,6 +400,14 @@ public class BrokerServerView implements TimelineServerView
 
     synchronized (lock) {
       return Optional.ofNullable(timelines.get(table.getName()));
+    }
+  }
+
+  public NamespacedVersionedIntervalTimeline<String, ServerSelector> getTimeline(DataSource dataSource)
+  {
+    String table = Iterables.getOnlyElement(dataSource.getTableNames());
+    synchronized (lock) {
+      return timelines.get(table);
     }
   }
 

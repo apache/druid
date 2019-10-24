@@ -69,6 +69,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilterUtils;
@@ -79,6 +80,7 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.timeline.ComplementaryNamespacedVersionedIntervalTimeline;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineLookup;
@@ -188,7 +190,54 @@ public class CachingClusteredClient implements QuerySegmentWalker
       @Override
       public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
       {
-        return CachingClusteredClient.this.run(queryPlus, responseContext, timeline -> timeline, false);
+        TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(DataSourceAnalysis.forDataSource(queryPlus.getQuery().getDataSource())).get();
+        if (timeline instanceof ComplementaryNamespacedVersionedIntervalTimeline) {
+          Map<String, List<TimelineObjectHolder<String, ServerSelector>>> timelineResultMap =
+              ((ComplementaryNamespacedVersionedIntervalTimeline) timeline)
+                  .lookupWithComplementary(queryPlus.getQuery().getIntervalsOfInnerMostQuery());
+          return new LazySequence<>(() -> {
+            List<Sequence<T>> sequences =
+                timelineResultMap.keySet().stream().map(dataSource -> CachingClusteredClient.this.run(
+                    queryPlus.withQuery(queryPlus.getQuery()
+                        .withDataSource(new TableDataSource(
+                            dataSource))),
+                    responseContext,
+                    tl -> new TimelineLookup<String, ServerSelector>()
+                    {
+                      @Override
+                      public List<TimelineObjectHolder<String, ServerSelector>> lookup(
+                          Interval interval
+                      )
+                      {
+                        return timelineResultMap.get(dataSource)
+                            .stream()
+                            .filter(o -> o.getInterval().overlap(interval) != null)
+                            .collect(
+                                Collectors.toList());
+                      }
+
+                      @Override
+                      public List<TimelineObjectHolder<String, ServerSelector>> lookupWithIncompletePartitions(
+                          Interval interval
+                      )
+                      {
+                        throw new UnsupportedOperationException(
+                            "Unexpected method call");
+                      }
+
+                      @Override
+                      public PartitionChunk<ServerSelector> findChunk(Interval interval, String version, int partitionNum) {
+                        throw new UnsupportedOperationException(
+                                "Unexpected method call");
+                      }
+                    }
+                ,false)).collect(Collectors.toList());
+            return Sequences
+                .simple(sequences)
+                .flatMerge(seq -> seq, query.getResultOrdering());
+          });
+        }
+        return CachingClusteredClient.this.run(queryPlus, responseContext, tl -> tl, false);
       }
     };
   }

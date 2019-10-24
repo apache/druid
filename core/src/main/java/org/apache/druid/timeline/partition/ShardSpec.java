@@ -124,6 +124,15 @@ public interface ShardSpec
   boolean possibleInDomain(Map<String, RangeSet<String>> domain);
 
   /**
+   * Added in for NamedNumberedShardSpec
+   * @return unique identifier for ShardSpec
+   */
+  default Object getIdentifier()
+  {
+    return this.getPartitionNum();
+  }
+
+  /**
    * Get the type name of this ShardSpec.
    */
   @JsonIgnore
