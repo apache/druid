@@ -22,6 +22,7 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -72,6 +73,13 @@ public abstract class SeekableStreamSupervisorIOConfig
     this.earlyMessageRejectionPeriod = earlyMessageRejectionPeriod == null
                                        ? Optional.absent()
                                        : Optional.of(earlyMessageRejectionPeriod.toStandardDuration());
+
+    if (this.lateMessageRejectionPeriod.isPresent()
+                && this.lateMessageRejectionStartDateTime.isPresent()) {
+      throw new IAE("SeekableStreamSupervisorIOConfig does not support "
+                + "both properties lateMessageRejectionStartDateTime "
+          + "and lateMessageRejectionPeriod.");
+    }
   }
 
   private static Duration defaultDuration(final Period period, final String theDefault)
