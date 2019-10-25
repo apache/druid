@@ -27,8 +27,6 @@ import org.apache.druid.java.util.common.parsers.JavaScriptParser;
 import org.apache.druid.java.util.common.parsers.Parser;
 import org.apache.druid.js.JavaScriptConfig;
 
-import java.util.List;
-
 /**
  */
 public class JavaScriptParseSpec extends ParseSpec

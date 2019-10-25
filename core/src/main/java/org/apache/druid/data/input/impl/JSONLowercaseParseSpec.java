@@ -25,8 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.parsers.JSONToLowerParser;
 import org.apache.druid.java.util.common.parsers.Parser;
 
-import java.util.List;
-
 /**
  * This class is only here for backwards compatibility
  */
