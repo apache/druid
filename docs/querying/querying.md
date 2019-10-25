@@ -76,7 +76,7 @@ Druid has numerous query types for various use cases. Queries are composed of va
 
 ## Which query should I use?
 
-Where possible, we recommend using [Timeseries]() and [TopN]() queries instead of [GroupBy](). GroupBy is the most flexible Druid query, but also has the poorest performance.
+Where possible, we recommend using [Timeseries](../querying/timeseriesquery.md) and [TopN](../querying/topnquery.md) queries instead of [GroupBy](../querying/groupbyquery.md). GroupBy is the most flexible Druid query, but also has the poorest performance.
  Timeseries are significantly faster than groupBy queries for aggregations that don't require grouping over dimensions. For grouping and sorting over a single dimension,
  topN queries are much more optimized than groupBys.
 
