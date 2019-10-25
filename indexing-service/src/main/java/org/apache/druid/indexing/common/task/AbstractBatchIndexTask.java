@@ -159,7 +159,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   }
 
   /**
-   * The method to acutally process this task. This method is executed in {@link #run(TaskToolbox)}.
+   * The method to actually process this task. This method is executed in {@link #run(TaskToolbox)}.
    */
   public abstract TaskStatus runTask(TaskToolbox toolbox) throws Exception;
 
