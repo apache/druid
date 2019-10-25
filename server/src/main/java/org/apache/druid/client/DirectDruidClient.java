@@ -181,6 +181,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
         private QueryMetrics<? super Query<T>> queryMetrics;
         private long responseStartTimeNs;
+        private long poolAcquireTimeNs;
 
         private QueryMetrics<? super Query<T>> acquireResponseMetrics()
         {
@@ -221,6 +222,13 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
 
           return holder.getStream();
+        }
+
+        @Override
+        public void handleHttpConnectionAcquired()
+        {
+          log.debug("Acquired an http connection", url, query.getId());
+          poolAcquireTimeNs = System.nanoTime();
         }
 
         @Override
@@ -355,6 +363,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               totalByteCount.get() / (0.001 * nodeTimeMs)
           );
           QueryMetrics<? super Query<T>> responseMetrics = acquireResponseMetrics();
+          responseMetrics.reportTimeToAcquireHttpResource(poolAcquireTimeNs - requestStartTimeNs);
           responseMetrics.reportNodeTime(nodeTimeNs);
           responseMetrics.reportNodeBytes(totalByteCount.get());
 

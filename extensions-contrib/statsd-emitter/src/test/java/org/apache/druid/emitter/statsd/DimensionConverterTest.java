@@ -49,14 +49,16 @@ public class DimensionConverterTest
     ImmutableMap.Builder<String, String> actual = new ImmutableMap.Builder<>();
     StatsDMetric statsDMetric = dimensionConverter.addFilteredUserDims(
         event.getService(),
+        event.getHost(),
         event.getMetric(),
         event.getUserDims(),
         actual
     );
     Assert.assertEquals("correct StatsDMetric.Type", StatsDMetric.Type.timer, statsDMetric.type);
     ImmutableMap.Builder<String, String> expected = new ImmutableMap.Builder<>();
-    expected.put("dataSource", "data-source");
-    expected.put("type", "groupBy");
+    expected.put("host", "_t_host.brokerHost1");
+    expected.put("dataSource", "_t_dataSource.data-source");
+    expected.put("type", "_t_type.groupBy");
     Assert.assertEquals("correct Dimensions", expected.build(), actual.build());
   }
 }

@@ -114,9 +114,9 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
     return false;
   }
 
-  public PartitionChunk<T> getChunk(final int partitionNum)
+  public PartitionChunk<T> getChunk(Object partitionIdentifier)
   {
-    return overshadowableManager.getChunk(partitionNum);
+    return overshadowableManager.getChunk(partitionIdentifier);
   }
 
   @Override

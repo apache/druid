@@ -257,7 +257,7 @@ public class DruidCoordinatorRuntimeParams
     private BalancerStrategy balancerStrategy;
     private Set<String> broadcastDatasources;
 
-    private Builder()
+    public Builder()
     {
       this.startTimeNanos = null;
       this.druidCluster = null;

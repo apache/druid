@@ -65,7 +65,7 @@ public class DruidCluster
     this.brokers = new HashSet<>();
   }
 
-  private DruidCluster(
+  public DruidCluster(
       @Nullable Set<ServerHolder> realtimes,
       Map<String, Iterable<ServerHolder>> historicals,
       @Nullable Set<ServerHolder> brokers

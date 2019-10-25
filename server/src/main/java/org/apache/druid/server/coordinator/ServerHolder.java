@@ -34,6 +34,7 @@ public class ServerHolder implements Comparable<ServerHolder>
   private final ImmutableDruidServer server;
   private final LoadQueuePeon peon;
   private final boolean isDecommissioning;
+  private final boolean isMirroring;
 
   public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon)
   {
@@ -42,9 +43,15 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon, boolean isDecommissioning)
   {
+    this(server, peon, isDecommissioning, false);
+  }
+
+  public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon, boolean isDecommissioning, boolean isMirroring)
+  {
     this.server = server;
     this.peon = peon;
     this.isDecommissioning = isDecommissioning;
+    this.isMirroring = isMirroring;
   }
 
   public ImmutableDruidServer getServer()
@@ -92,6 +99,11 @@ public class ServerHolder implements Comparable<ServerHolder>
   public boolean isDecommissioning()
   {
     return isDecommissioning;
+  }
+
+  public boolean isMirroring()
+  {
+    return isMirroring;
   }
 
   public long getAvailableSize()

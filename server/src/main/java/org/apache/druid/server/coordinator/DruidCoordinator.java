@@ -92,6 +92,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -126,7 +127,7 @@ public class DruidCoordinator
    * cluster has availability problems and struggling to make all segments available immediately, at least we try to
    * make more "important" (more recent) segments available as soon as possible.
    */
-  static final Comparator<DataSegment> SEGMENT_COMPARATOR_RECENT_FIRST = Ordering
+  public static final Comparator<DataSegment> SEGMENT_COMPARATOR_RECENT_FIRST = Ordering
       .from(Comparators.intervalsByEndThenStart())
       .onResultOf(DataSegment::getInterval)
       .compound(Ordering.<DataSegment>natural())
@@ -278,6 +279,11 @@ public class DruidCoordinator
     this.coordLeaderSelector = coordLeaderSelector;
 
     this.compactSegments = compactSegments;
+  }
+
+  public DruidCoordinatorConfig getConfig()
+  {
+    return config;
   }
 
   public boolean isLeader()
@@ -1003,13 +1009,15 @@ public class DruidCoordinator
     DruidCluster prepareCluster(DruidCoordinatorRuntimeParams params, List<ImmutableDruidServer> currentServers)
     {
       Set<String> decommissioningServers = params.getCoordinatorDynamicConfig().getDecommissioningNodes();
+      Set<String> mirroringTiers = new HashSet<>(config.getTierToMirroringTierMap().values());
       final DruidCluster cluster = new DruidCluster();
       for (ImmutableDruidServer server : currentServers) {
         cluster.add(
             new ServerHolder(
                 server,
                 loadManagementPeons.get(server.getName()),
-                decommissioningServers.contains(server.getHost())
+                decommissioningServers.contains(server.getHost()),
+                mirroringTiers.contains(server.getTier())
             )
         );
       }

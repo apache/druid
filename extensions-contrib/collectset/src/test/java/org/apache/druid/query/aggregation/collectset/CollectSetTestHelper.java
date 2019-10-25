@@ -44,15 +44,15 @@ public class CollectSetTestHelper
   static final List<InputRow> INPUT_ROWS = new ArrayList<>();
 
   static {
-    for (String[] ROW : ROWS) {
+    for (String[] row : ROWS) {
       INPUT_ROWS.add(
           new MapBasedInputRow(
-              DateTimes.of(ROW[0]),
+              DateTimes.of(row[0]),
               Arrays.asList(DIMENSIONS),
               ImmutableMap.of(
-                  DIMENSIONS[0], ROW[1],
-                  DIMENSIONS[1], ROW[2],
-                  DIMENSIONS[2], ROW[3]
+                  DIMENSIONS[0], row[1],
+                  DIMENSIONS[1], row[2],
+                  DIMENSIONS[2], row[3]
               )
           )
       );

@@ -110,7 +110,15 @@ public class StatusResource
 
     private String getDruidVersion()
     {
-      return Status.class.getPackage().getImplementationVersion();
+      String version = Status.class.getPackage().getImplementationVersion();
+      if (version != null) {
+        if (version.startsWith("dev-")) {
+          return version.substring(4);
+        } else if (version.endsWith("-p")) {
+          return version.substring(0, version.length() - 2);
+        }
+      }
+      return version;
     }
 
     @JsonProperty
@@ -161,6 +169,11 @@ public class StatusResource
       for (DruidModule module : druidModules) {
         String artifact = module.getClass().getPackage().getImplementationTitle();
         String version = module.getClass().getPackage().getImplementationVersion();
+        if (version != null && version.startsWith("dev-")) {
+          version = version.substring(4);
+        } else if (version != null && version.endsWith("-p")) {
+          version = version.substring(0, version.length() - 2);
+        }
         moduleVersions.add(new ModuleVersion(module.getClass().getName(), artifact, version));
       }
       return moduleVersions;

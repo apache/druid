@@ -44,6 +44,7 @@ public class TestExprMacroTable extends ExprMacroTable
             new TrimExprMacro.BothTrimExprMacro(),
             new TrimExprMacro.LeftTrimExprMacro(),
             new TrimExprMacro.RightTrimExprMacro(),
+            new HashExprMacro(),
             new HyperUniqueExpressions.HllCreateExprMacro(),
             new HyperUniqueExpressions.HllAddExprMacro(),
             new HyperUniqueExpressions.HllEstimateExprMacro(),
