@@ -22,12 +22,12 @@ package org.apache.druid.firehose.hdfs;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.storage.hdfs.HdfsDataSegmentPuller;
 import org.apache.druid.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -41,18 +41,19 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
-import java.util.Objects;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class HdfsFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<Path>
 {
-  private final String inputPaths;
+  private final List<String> inputPaths;
   private final Configuration conf;
 
   @JsonCreator
   public HdfsFirehoseFactory(
       @JacksonInject Configuration conf,
-      @JsonProperty("paths") String inputPaths,
+      @JsonProperty("paths") Object inputPaths,
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
       @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
@@ -62,11 +63,19 @@ public class HdfsFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<Pa
   {
     super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
     this.conf = conf;
-    this.inputPaths = Preconditions.checkNotNull(inputPaths, "missing 'inputPaths'");
+
+    // Coerce 'inputPaths' to List<String>
+    if (inputPaths instanceof String) {
+      this.inputPaths = Collections.singletonList((String) inputPaths);
+    } else if (inputPaths instanceof List && ((List<?>) inputPaths).stream().allMatch(x -> x instanceof String)) {
+      this.inputPaths = ((List<?>) inputPaths).stream().map(x -> (String) x).collect(Collectors.toList());
+    } else {
+      throw new IAE("'inputPaths' must be a string or an array of strings");
+    }
   }
 
   @JsonProperty("paths")
-  public String getInputPaths()
+  public List<String> getInputPaths()
   {
     return inputPaths;
   }
@@ -78,7 +87,14 @@ public class HdfsFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<Pa
     final Job job = Job.getInstance(conf);
 
     // Add paths to the fake JobContext.
-    FileInputFormat.addInputPaths(job, inputPaths);
+    inputPaths.forEach(input -> {
+      try {
+        FileInputFormat.addInputPaths(job, input);
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
 
     return new TextInputFormat().getSplits(job)
                                 .stream()
@@ -133,30 +149,10 @@ public class HdfsFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<Pa
   }
 
   @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    HdfsFirehoseFactory that = (HdfsFirehoseFactory) o;
-    return Objects.equals(inputPaths, that.inputPaths) &&
-           Objects.equals(conf, that.conf);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(inputPaths, conf);
-  }
-
-  @Override
   public String toString()
   {
     return "HdfsFirehoseFactory{" +
-           "inputPaths='" + inputPaths + '\'' +
+           "inputPaths=" + inputPaths +
            '}';
   }
 }
