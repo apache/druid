@@ -1177,7 +1177,7 @@ You can optionally configure caching to be enabled on the peons by setting cachi
 |--------|---------------|-----------|-------|
 |`druid.realtime.cache.useCache`|true, false|Enable the cache on the realtime.|false|
 |`druid.realtime.cache.populateCache`|true, false|Populate the cache on the realtime.|false|
-|`druid.realtime.cache.unCacheable`|All druid query types|All query types to not cache.|`["groupBy", "select"]`|
+|`druid.realtime.cache.unCacheable`|All druid query types|All query types to not cache.|`[]`|
 |`druid.realtime.cache.maxEntrySize`|Maximum cache entry size in bytes.|1_000_000|
 
 See [cache configuration](#cache-configuration) for how to configure cache settings.
@@ -1311,7 +1311,7 @@ You can optionally configure caching to be enabled on the Indexer by setting cac
 |--------|---------------|-----------|-------|
 |`druid.realtime.cache.useCache`|true, false|Enable the cache on the realtime.|false|
 |`druid.realtime.cache.populateCache`|true, false|Populate the cache on the realtime.|false|
-|`druid.realtime.cache.unCacheable`|All druid query types|All query types to not cache.|`["groupBy", "select"]`|
+|`druid.realtime.cache.unCacheable`|All druid query types|All query types to not cache.|`[]`|
 |`druid.realtime.cache.maxEntrySize`|Maximum cache entry size in bytes.|1_000_000|
 
 See [cache configuration](#cache-configuration) for how to configure cache settings.
@@ -1407,7 +1407,7 @@ You can optionally only configure caching to be enabled on the Historical by set
 |--------|---------------|-----------|-------|
 |`druid.historical.cache.useCache`|true, false|Enable the cache on the Historical.|false|
 |`druid.historical.cache.populateCache`|true, false|Populate the cache on the Historical.|false|
-|`druid.historical.cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
+|`druid.historical.cache.unCacheable`|All druid query types|All query types to not cache.|`[]`|
 |`druid.historical.cache.maxEntrySize`|Maximum cache entry size in bytes.|1_000_000|
 
 See [cache configuration](#cache-configuration) for how to configure cache settings.
@@ -1544,7 +1544,7 @@ You can optionally only configure caching to be enabled on the Broker by setting
 |`druid.broker.cache.useResultLevelCache`|true, false|Enable result level caching on the Broker.|false|
 |`druid.broker.cache.populateResultLevelCache`|true, false|Populate the result level cache on the Broker.|false|
 |`druid.broker.cache.resultLevelCacheLimit`|positive integer|Maximum size of query response that can be cached.|`Integer.MAX_VALUE`|
-|`druid.broker.cache.unCacheable`|All druid query types|All query types to not cache.|`["groupBy", "select"]`|
+|`druid.broker.cache.unCacheable`|All druid query types|All query types to not cache.|`[]`|
 |`druid.broker.cache.cacheBulkMergeLimit`|positive integer or 0|Queries with more segments than this number will not attempt to fetch from cache at the broker level, leaving potential caching fetches (and cache result merging) to the Historicals|`Integer.MAX_VALUE`|
 |`druid.broker.cache.maxEntrySize`|Maximum cache entry size in bytes.|1_000_000|
 

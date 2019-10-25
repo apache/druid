@@ -31,7 +31,6 @@ import org.apache.druid.segment.QueryableIndexStorageAdapter;
  * @see org.apache.druid.query.search.SearchQueryConfig
  * @see org.apache.druid.query.topn.TopNQueryConfig
  * @see org.apache.druid.query.metadata.SegmentMetadataQueryConfig
- * @see org.apache.druid.query.select.SelectQueryConfig
  * @see org.apache.druid.query.scan.ScanQueryConfig
  */
 public class QueryConfig

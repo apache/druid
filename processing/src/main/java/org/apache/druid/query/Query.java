@@ -30,7 +30,6 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.search.SearchQuery;
-import org.apache.druid.query.select.SelectQuery;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -54,7 +53,6 @@ import java.util.concurrent.ExecutorService;
     @JsonSubTypes.Type(name = Query.GROUP_BY, value = GroupByQuery.class),
     @JsonSubTypes.Type(name = Query.SCAN, value = ScanQuery.class),
     @JsonSubTypes.Type(name = Query.SEGMENT_METADATA, value = SegmentMetadataQuery.class),
-    @JsonSubTypes.Type(name = Query.SELECT, value = SelectQuery.class),
     @JsonSubTypes.Type(name = Query.TOPN, value = TopNQuery.class),
     @JsonSubTypes.Type(name = Query.DATASOURCE_METADATA, value = DataSourceMetadataQuery.class)
 
@@ -67,7 +65,6 @@ public interface Query<T>
   String GROUP_BY = "groupBy";
   String SCAN = "scan";
   String SEGMENT_METADATA = "segmentMetadata";
-  String SELECT = "select";
   String TOPN = "topN";
   String DATASOURCE_METADATA = "dataSourceMetadata";
 
