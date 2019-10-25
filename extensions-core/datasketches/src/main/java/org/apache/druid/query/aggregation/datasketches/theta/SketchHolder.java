@@ -175,7 +175,7 @@ public class SketchHolder
     return result;
   }
 
-  public static SketchHolder combine(Object o1, Object o2, int nomEntries)
+  public static SketchHolder combine(Object o1, Object o2, int nomEntries, float samplingProbability)
   {
     SketchHolder holder1 = (SketchHolder) o1;
     SketchHolder holder2 = (SketchHolder) o2;
@@ -191,7 +191,7 @@ public class SketchHolder
       holder2.invalidateCache();
       return holder2;
     } else {
-      Union union = (Union) SetOperation.builder().setNominalEntries(nomEntries).build(Family.UNION);
+      Union union = (Union) SetOperation.builder().setNominalEntries(nomEntries).setP(samplingProbability).build(Family.UNION);
       holder1.updateUnion(union);
       holder2.updateUnion(union);
       return SketchHolder.of(union);

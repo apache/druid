@@ -42,10 +42,11 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
       @JsonProperty("size") @Nullable Integer size,
       @JsonProperty("shouldFinalize") @Nullable Boolean shouldFinalize,
       @JsonProperty("isInputThetaSketch") @Nullable Boolean isInputThetaSketch,
-      @JsonProperty("errorBoundsStdDev") @Nullable Integer errorBoundsStdDev
+      @JsonProperty("errorBoundsStdDev") @Nullable Integer errorBoundsStdDev,
+      @JsonProperty("samplingProbability") @Nullable Float samplingProbability
   )
   {
-    super(name, fieldName, size, AggregatorUtil.SKETCH_MERGE_CACHE_TYPE_ID);
+    super(name, fieldName, size, AggregatorUtil.SKETCH_MERGE_CACHE_TYPE_ID, samplingProbability);
     this.shouldFinalize = (shouldFinalize == null) ? true : shouldFinalize.booleanValue();
     this.isInputThetaSketch = (isInputThetaSketch == null) ? false : isInputThetaSketch.booleanValue();
     this.errorBoundsStdDev = errorBoundsStdDev;
@@ -61,7 +62,8 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
             size,
             shouldFinalize,
             isInputThetaSketch,
-            errorBoundsStdDev
+            errorBoundsStdDev,
+            samplingProbability
         )
     );
   }
@@ -69,7 +71,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new SketchMergeAggregatorFactory(name, name, size, shouldFinalize, false, errorBoundsStdDev);
+    return new SketchMergeAggregatorFactory(name, name, size, shouldFinalize, false, errorBoundsStdDev, samplingProbability);
   }
 
   @Override
@@ -84,7 +86,8 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
           Math.max(size, castedOther.size),
           shouldFinalize,
           false,
-          errorBoundsStdDev
+          errorBoundsStdDev,
+          samplingProbability
       );
     } else {
       throw new AggregatorFactoryNotMergeableException(this, other);

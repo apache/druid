@@ -32,9 +32,10 @@ public class OldSketchMergeAggregatorFactory extends SketchMergeAggregatorFactor
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
       @JsonProperty("size") Integer size,
-      @JsonProperty("shouldFinalize") Boolean shouldFinalize
+      @JsonProperty("shouldFinalize") Boolean shouldFinalize,
+      @JsonProperty("samplingProbability") Float samplingProbability
   )
   {
-    super(name, fieldName, size, shouldFinalize, true, null);
+    super(name, fieldName, size, shouldFinalize, true, null, samplingProbability);
   }
 }

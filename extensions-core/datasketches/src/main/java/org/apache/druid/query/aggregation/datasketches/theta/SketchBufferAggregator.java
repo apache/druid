@@ -37,15 +37,17 @@ public class SketchBufferAggregator implements BufferAggregator
 {
   private final BaseObjectColumnValueSelector selector;
   private final int size;
+  private final float samplingProbability;
   private final int maxIntermediateSize;
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<Union>> unions = new IdentityHashMap<>();
   private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
 
-  public SketchBufferAggregator(BaseObjectColumnValueSelector selector, int size, int maxIntermediateSize)
+  public SketchBufferAggregator(BaseObjectColumnValueSelector selector, int size, int maxIntermediateSize, float samplingProbability)
   {
     this.selector = selector;
     this.size = size;
     this.maxIntermediateSize = maxIntermediateSize;
+    this.samplingProbability = samplingProbability;
   }
 
   @Override

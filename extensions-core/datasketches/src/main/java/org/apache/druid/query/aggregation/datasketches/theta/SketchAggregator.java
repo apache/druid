@@ -34,19 +34,21 @@ public class SketchAggregator implements Aggregator
 {
   private final BaseObjectColumnValueSelector selector;
   private final int size;
+  private final float samplingProbability;
 
   @Nullable
   private Union union;
 
-  public SketchAggregator(BaseObjectColumnValueSelector selector, int size)
+  public SketchAggregator(BaseObjectColumnValueSelector selector, int size, float samplingProbability)
   {
     this.selector = selector;
     this.size = size;
+    this.samplingProbability = samplingProbability;
   }
 
   private void initUnion()
   {
-    union = (Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION);
+    union = (Union) SetOperation.builder().setNominalEntries(size).setP(samplingProbability).build(Family.UNION);
   }
 
   @Override

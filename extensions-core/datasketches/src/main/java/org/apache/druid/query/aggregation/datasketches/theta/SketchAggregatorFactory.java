@@ -44,19 +44,24 @@ import java.util.List;
 public abstract class SketchAggregatorFactory extends AggregatorFactory
 {
   public static final int DEFAULT_MAX_SKETCH_SIZE = 16384;
+  public static final float DEFAULT_SAMPLING_PROBABILITY = 1.0F;
 
   protected final String name;
   protected final String fieldName;
   protected final int size;
+  protected final float samplingProbability;
   private final byte cacheId;
 
-  public SketchAggregatorFactory(String name, String fieldName, Integer size, byte cacheId)
+
+  public SketchAggregatorFactory(String name, String fieldName, Integer size, byte cacheId, Float samplingProbability)
   {
     this.name = Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     this.fieldName = Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
 
     this.size = size == null ? DEFAULT_MAX_SKETCH_SIZE : size;
     Util.checkIfPowerOf2(this.size, "size");
+    this.samplingProbability = samplingProbability == null ? DEFAULT_SAMPLING_PROBABILITY : samplingProbability;
+    Util.checkProbability(this.samplingProbability, "sampling probability");
 
     this.cacheId = cacheId;
   }
@@ -66,7 +71,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
-    return new SketchAggregator(selector, size);
+    return new SketchAggregator(selector, size, samplingProbability);
   }
 
   @SuppressWarnings("unchecked")
@@ -74,7 +79,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
-    return new SketchBufferAggregator(selector, size, getMaxIntermediateSizeWithNulls());
+    return new SketchBufferAggregator(selector, size, getMaxIntermediateSizeWithNulls(), samplingProbability);
   }
 
   @Override
@@ -92,7 +97,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    return SketchHolder.combine(lhs, rhs, size);
+    return SketchHolder.combine(lhs, rhs, size, samplingProbability);
   }
 
   @Override
@@ -153,6 +158,12 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   public int getSize()
   {
     return size;
+  }
+
+  @JsonProperty
+  public float getSamplingProbability()
+  {
+    return samplingProbability;
   }
 
   @Override

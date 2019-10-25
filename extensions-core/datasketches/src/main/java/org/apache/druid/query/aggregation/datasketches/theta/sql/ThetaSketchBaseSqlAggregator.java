@@ -105,6 +105,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
           sketchSize,
           null,
           null,
+          null,
           null
       );
     } else {
@@ -132,6 +133,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
           aggregatorName,
           dimensionSpec.getDimension(),
           sketchSize,
+          null,
           null,
           null,
           null

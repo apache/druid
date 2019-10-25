@@ -175,15 +175,15 @@ public class OldApiSketchAggregationTest
   @Test
   public void testSketchMergeAggregatorFactorySerde() throws Exception
   {
-    assertAggregatorFactorySerde(new OldSketchMergeAggregatorFactory("name", "fieldName", 16, null));
-    assertAggregatorFactorySerde(new OldSketchMergeAggregatorFactory("name", "fieldName", 16, false));
-    assertAggregatorFactorySerde(new OldSketchMergeAggregatorFactory("name", "fieldName", 16, true));
+    assertAggregatorFactorySerde(new OldSketchMergeAggregatorFactory("name", "fieldName", 16, null, 1.0f));
+    assertAggregatorFactorySerde(new OldSketchMergeAggregatorFactory("name", "fieldName", 16, false, 1.0f));
+    assertAggregatorFactorySerde(new OldSketchMergeAggregatorFactory("name", "fieldName", 16, true, 1.0f));
   }
 
   @Test
   public void testSketchBuildAggregatorFactorySerde() throws Exception
   {
-    assertAggregatorFactorySerde(new OldSketchBuildAggregatorFactory("name", "fieldName", 16));
+    assertAggregatorFactorySerde(new OldSketchBuildAggregatorFactory("name", "fieldName", 16, 1.0f));
   }
 
   private void assertAggregatorFactorySerde(AggregatorFactory agg) throws Exception
@@ -234,7 +234,7 @@ public class OldApiSketchAggregationTest
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("sketch", sketchHolder)));
     SketchHolder[] holders = helper.runRelocateVerificationTest(
-        new OldSketchMergeAggregatorFactory("sketch", "sketch", 16, false),
+        new OldSketchMergeAggregatorFactory("sketch", "sketch", 16, false, 1.0f),
         columnSelectorFactory,
         SketchHolder.class
     );
