@@ -50,8 +50,6 @@ public class RegexParseSpec extends ParseSpec
     this.listDelimiter = listDelimiter;
     this.columns = columns;
     this.pattern = pattern;
-
-    verify(dimensionsSpec.getDimensionNames());
   }
 
   @JsonProperty
@@ -70,16 +68,6 @@ public class RegexParseSpec extends ParseSpec
   public List<String> getColumns()
   {
     return columns;
-  }
-
-  @Override
-  public void verify(List<String> usedCols)
-  {
-    if (columns != null) {
-      for (String columnName : usedCols) {
-        Preconditions.checkArgument(columns.contains(columnName), "column[%s] not in columns.", columnName);
-      }
-    }
   }
 
   @Override

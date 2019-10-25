@@ -60,11 +60,6 @@ public class JavaScriptParseSpec extends ParseSpec
   }
 
   @Override
-  public void verify(List<String> usedCols)
-  {
-  }
-
-  @Override
   public Parser<String, Object> makeParser()
   {
     // JavaScript configuration should be checked when it's actually used because someone might still want Druid

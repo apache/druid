@@ -63,11 +63,6 @@ public class JSONParseSpec extends NestedDataParseSpec<JSONPathSpec>
   }
 
   @Override
-  public void verify(List<String> usedCols)
-  {
-  }
-
-  @Override
   public Parser<String, Object> makeParser()
   {
     return new JSONPathParser(getFlattenSpec(), objectMapper);

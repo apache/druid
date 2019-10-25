@@ -108,12 +108,7 @@ public class ExpressionSelectors
       {
         // No need for null check on getObject() since baseSelector impls will never return null.
         ExprEval eval = baseSelector.getObject();
-        if (eval.isArray()) {
-          return Arrays.stream(eval.asStringArray())
-                .map(NullHandling::emptyToNullIfNeeded)
-                .collect(Collectors.toList());
-        }
-        return eval.value();
+        return coerceEvalToSelectorObject(eval);
       }
 
       @Override
@@ -509,13 +504,27 @@ public class ExpressionSelectors
   /**
    * Selectors are not consistent in treatment of null, [], and [null], so coerce [] to [null]
    */
-  private static Object coerceListDimToStringArray(List val)
+  public static Object coerceListDimToStringArray(List val)
   {
     Object[] arrayVal = val.stream().map(x -> x != null ? x.toString() : x).toArray(String[]::new);
     if (arrayVal.length > 0) {
       return arrayVal;
     }
     return new String[]{null};
+  }
+
+  /**
+   * Coerces {@link ExprEval} value back to selector friendly {@link List} if the evaluated expression result is an
+   * array type
+   */
+  public static Object coerceEvalToSelectorObject(ExprEval eval)
+  {
+    if (eval.isArray()) {
+      return Arrays.stream(eval.asStringArray())
+                   .map(NullHandling::emptyToNullIfNeeded)
+                   .collect(Collectors.toList());
+    }
+    return eval.value();
   }
 
   /**

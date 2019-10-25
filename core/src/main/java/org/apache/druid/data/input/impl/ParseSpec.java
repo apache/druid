@@ -64,12 +64,6 @@ public abstract class ParseSpec
     return dimensionsSpec;
   }
 
-  @PublicApi
-  public void verify(List<String> usedCols)
-  {
-    // do nothing
-  }
-
   public Parser<String, Object> makeParser()
   {
     return null;
