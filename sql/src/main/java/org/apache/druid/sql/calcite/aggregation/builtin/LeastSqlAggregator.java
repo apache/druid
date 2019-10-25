@@ -28,12 +28,12 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
-import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
+import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
-import org.apache.druid.query.aggregation.post.DoubleGreatestPostAggregator;
+import org.apache.druid.query.aggregation.post.DoubleLeastPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.apache.druid.query.aggregation.post.LongGreatestPostAggregator;
+import org.apache.druid.query.aggregation.post.LongLeastPostAggregator;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -41,10 +41,10 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GreatestSqlAggregator extends MultiColumnSqlAggregator
+public class LeastSqlAggregator extends MultiColumnSqlAggregator
 {
-  private static final SqlAggFunction FUNCTION_INSTANCE = new GreatestSqlAggFunction();
-  private static final String NAME = "GREATEST";
+  private static final SqlAggFunction FUNCTION_INSTANCE = new LeastSqlAggFunction();
+  private static final String NAME = "LEAST";
 
   @Override
   public SqlAggFunction calciteFunction()
@@ -69,13 +69,13 @@ public class GreatestSqlAggregator extends MultiColumnSqlAggregator
       postAggregators.add(new FieldAccessPostAggregator(null, prefixedName));
       switch (valueType) {
         case LONG:
-          aggregators.add(new LongMaxAggregatorFactory(prefixedName, fieldInfo.fieldName, fieldInfo.expression, macroTable));
+          aggregators.add(new LongMinAggregatorFactory(prefixedName, fieldInfo.fieldName, fieldInfo.expression, macroTable));
           break;
         case FLOAT:
           // TODO
           throw new ISE("Cannot create aggregator factory for type[%s]", valueType);
         case DOUBLE:
-          aggregators.add(new DoubleMaxAggregatorFactory(prefixedName, fieldInfo.fieldName, fieldInfo.expression, macroTable));
+          aggregators.add(new DoubleMinAggregatorFactory(prefixedName, fieldInfo.fieldName, fieldInfo.expression, macroTable));
           break;
         default:
           throw new ISE("Cannot create aggregator factory for type[%s]", valueType);
@@ -85,13 +85,13 @@ public class GreatestSqlAggregator extends MultiColumnSqlAggregator
     PostAggregator finalPostAggregator;
     switch (valueType) {
       case LONG:
-        finalPostAggregator = new LongGreatestPostAggregator(name, postAggregators);
+        finalPostAggregator = new LongLeastPostAggregator(name, postAggregators);
         break;
       case FLOAT:
         // TODO
         throw new ISE("Cannot create aggregator factory for type[%s]", valueType);
       case DOUBLE:
-        finalPostAggregator = new DoubleGreatestPostAggregator(name, postAggregators);
+        finalPostAggregator = new DoubleLeastPostAggregator(name, postAggregators);
         break;
       default:
         throw new ISE("Cannot create aggregator factory for type[%s]", valueType);
@@ -100,14 +100,14 @@ public class GreatestSqlAggregator extends MultiColumnSqlAggregator
     return Aggregation.create(aggregators, finalPostAggregator);
   }
 
-  private static class GreatestSqlAggFunction extends SqlAggFunction
+  private static class LeastSqlAggFunction extends SqlAggFunction
   {
-    GreatestSqlAggFunction()
+    LeastSqlAggFunction()
     {
       super(
           NAME,
           null,
-          SqlKind.GREATEST,
+          SqlKind.LEAST,
           ReturnTypes.ARG0_NULLABLE_IF_EMPTY,
           null,
           OperandTypes.SAME_VARIADIC,
