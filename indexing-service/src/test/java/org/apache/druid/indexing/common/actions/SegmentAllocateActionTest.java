@@ -348,20 +348,20 @@ public class SegmentAllocateActionTest
                                                          .collect(Collectors.toList());
 
       Assert.assertEquals(2, partyLocks.size());
-      final Map<Integer, SegmentLock> partitionIdToLock = new HashMap<>();
+      final Map<Object, SegmentLock> partitionIdToLock = new HashMap<>();
       partyLocks.forEach(lock -> {
         Assert.assertEquals(LockGranularity.SEGMENT, lock.getGranularity());
         final SegmentLock segmentLock = (SegmentLock) lock;
         partitionIdToLock.put(segmentLock.getPartitionId(), segmentLock);
       });
 
-      for (Entry<Integer, SegmentLock> entry : partitionIdToLock.entrySet()) {
+      for (Entry<Object, SegmentLock> entry : partitionIdToLock.entrySet()) {
         assertSameIdentifier(
             new SegmentIdWithShardSpec(
                 DATA_SOURCE,
                 Granularities.HOUR.bucket(PARTY_TIME),
                 allocatedPartyTimeIds.get(entry.getKey()).getVersion(),
-                new NumberedShardSpec(entry.getValue().getPartitionId(), 0)
+                new NumberedShardSpec((Integer) entry.getValue().getPartitionId(), 0)
             ),
             allocatedPartyTimeIds.get(entry.getKey())
         );
@@ -382,13 +382,13 @@ public class SegmentAllocateActionTest
         partitionIdToLock.put(segmentLock.getPartitionId(), segmentLock);
       });
 
-      for (Entry<Integer, SegmentLock> entry : partitionIdToLock.entrySet()) {
+      for (Entry<Object, SegmentLock> entry : partitionIdToLock.entrySet()) {
         assertSameIdentifier(
             new SegmentIdWithShardSpec(
                 DATA_SOURCE,
                 Granularities.HOUR.bucket(THE_DISTANT_FUTURE),
                 allocatedFutureIds.get(entry.getKey()).getVersion(),
-                new NumberedShardSpec(entry.getValue().getPartitionId(), 0)
+                new NumberedShardSpec((Integer) entry.getValue().getPartitionId(), 0)
             ),
             allocatedFutureIds.get(entry.getKey())
         );

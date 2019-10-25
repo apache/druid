@@ -134,7 +134,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         fullyQualifiedStorageDirectory.get(),
         segment.getDataSource(),
         UUIDUtils.generateUuid(),
-        segment.getShardSpec().getPartitionNum()
+        segment.getShardSpec().getIdentifier()
     ));
     FileSystem fs = tmpIndexFile.getFileSystem(hadoopConfig);
 
@@ -224,9 +224,9 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   {
     // This is only called from Hadoop batch which doesn't require unique segment paths so set useUniquePath=false
     return StringUtils.format(
-        "./%s/%d_%s",
+        "./%s/%s_%s",
         this.getStorageDir(dataSegment, false),
-        dataSegment.getShardSpec().getPartitionNum(),
+        dataSegment.getShardSpec().getIdentifier(),
         indexName
     );
   }

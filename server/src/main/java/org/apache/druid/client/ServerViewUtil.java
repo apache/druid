@@ -68,7 +68,8 @@ public class ServerViewUtil
         for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
           ServerSelector selector = chunk.getObject();
           final SegmentDescriptor descriptor = new SegmentDescriptor(
-              holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
+              holder.getInterval(), holder.getVersion(), chunk.getChunkNumber(),
+              chunk.getObject().getSegment().getShardSpec().getIdentifier()
           );
           long size = selector.getSegment().getSize();
           List<DruidServerMetadata> candidates = selector.getCandidates(numCandidates);

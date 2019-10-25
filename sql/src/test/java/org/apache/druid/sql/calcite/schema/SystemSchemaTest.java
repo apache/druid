@@ -569,6 +569,7 @@ public class SystemSchemaTest extends CalciteTestBase
         rows.get(0),
         "test1_2010-01-01T00:00:00.000Z_2011-01-01T00:00:00.000Z_version1",
         100L,
+        "0",
         0L, //partition_num
         1L, //num_replicas
         3L, //numRows
@@ -583,6 +584,7 @@ public class SystemSchemaTest extends CalciteTestBase
         rows.get(1),
         "test2_2011-01-01T00:00:00.000Z_2012-01-01T00:00:00.000Z_version2",
         100L,
+        "0",
         0L, //partition_num
         2L, //x§segment test2 is served by historical and realtime servers
         3L, //numRows
@@ -598,6 +600,7 @@ public class SystemSchemaTest extends CalciteTestBase
         rows.get(2),
         "test3_2012-01-01T00:00:00.000Z_2013-01-01T00:00:00.000Z_version3_2",
         100L,
+        "2",
         2L, //partition_num
         1L, //num_replicas
         2L, //numRows
@@ -612,6 +615,7 @@ public class SystemSchemaTest extends CalciteTestBase
         rows.get(3),
         "test4_2014-01-01T00:00:00.000Z_2015-01-01T00:00:00.000Z_version4",
         100L,
+        "0",
         0L, //partition_num
         1L, //num_replicas
         0L, //numRows
@@ -626,6 +630,7 @@ public class SystemSchemaTest extends CalciteTestBase
         rows.get(4),
         "test5_2015-01-01T00:00:00.000Z_2016-01-01T00:00:00.000Z_version5",
         100L,
+        "0",
         0L, //partition_num
         1L, //num_replicas
         0L, //numRows
@@ -642,6 +647,7 @@ public class SystemSchemaTest extends CalciteTestBase
         rows.get(5),
         "wikipedia1_2007-01-01T00:00:00.000Z_2008-01-01T00:00:00.000Z_version1",
         53000L,
+        "0",
         0L, //partition_num
         0L, //num_replicas
         0L, //numRows
@@ -656,6 +662,7 @@ public class SystemSchemaTest extends CalciteTestBase
         rows.get(6),
         "wikipedia2_2008-01-01T00:00:00.000Z_2009-01-01T00:00:00.000Z_version2",
         83000L,
+        "0",
         0L, //partition_num
         0L, //num_replicas
         0L, //numRows
@@ -670,6 +677,7 @@ public class SystemSchemaTest extends CalciteTestBase
         rows.get(7),
         "wikipedia3_2009-01-01T00:00:00.000Z_2010-01-01T00:00:00.000Z_version3",
         47000L,
+        "0",
         0L, //partition_num
         0L, //num_replicas
         0L, //numRows
@@ -688,6 +696,7 @@ public class SystemSchemaTest extends CalciteTestBase
       Object[] row,
       String segmentId,
       long size,
+      Object partitionIdentifier,
       long partitionNum,
       long numReplicas,
       long numRows,
@@ -705,13 +714,14 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(id.getIntervalEnd().toString(), row[3]);
     Assert.assertEquals(size, row[4]);
     Assert.assertEquals(id.getVersion(), row[5]);
-    Assert.assertEquals(partitionNum, row[6]);
-    Assert.assertEquals(numReplicas, row[7]);
-    Assert.assertEquals(numRows, row[8]);
-    Assert.assertEquals(isPublished, row[9]);
-    Assert.assertEquals(isAvailable, row[10]);
-    Assert.assertEquals(isRealtime, row[11]);
-    Assert.assertEquals(isOvershadowed, row[12]);
+    Assert.assertEquals(partitionIdentifier, row[6]);
+    Assert.assertEquals(partitionNum, row[7]);
+    Assert.assertEquals(numReplicas, row[8]);
+    Assert.assertEquals(numRows, row[9]);
+    Assert.assertEquals(isPublished, row[10]);
+    Assert.assertEquals(isAvailable, row[11]);
+    Assert.assertEquals(isRealtime, row[12]);
+    Assert.assertEquals(isOvershadowed, row[13]);
     if (compactionState == null) {
       Assert.assertNull(row[16]);
     } else {

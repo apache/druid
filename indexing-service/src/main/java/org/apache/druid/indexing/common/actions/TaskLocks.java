@@ -102,7 +102,7 @@ public class TaskLocks
                   return segmentLock.getInterval().contains(segment.getInterval())
                          && segmentLock.getDataSource().equals(segment.getDataSource())
                          && segmentLock.getVersion().compareTo(segment.getVersion()) >= 0
-                         && segmentLock.getPartitionId() == segment.getShardSpec().getPartitionNum();
+                         && segmentLock.getPartitionId() == segment.getShardSpec().getIdentifier();
                 }
               }
           );
@@ -142,7 +142,7 @@ public class TaskLocks
           if (segmentLock.getInterval().contains(segment.getInterval())
               && segmentLock.getDataSource().equals(segment.getDataSource())
               && segmentLock.getVersion().compareTo(segment.getVersion()) >= 0
-              && segmentLock.getPartitionId() == segment.getShardSpec().getPartitionNum()) {
+              && segmentLock.getPartitionId() == segment.getShardSpec().getIdentifier()) {
             found.add(lock);
           }
         }

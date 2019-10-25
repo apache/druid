@@ -750,7 +750,7 @@ public class TaskLockbox
    * @param task task to unlock
    * @param interval interval to unlock
    */
-  public void unlock(final Task task, final Interval interval, @Nullable Integer partitionId)
+  public void unlock(final Task task, final Interval interval, @Nullable Object partitionId)
   {
     giant.lock();
 
@@ -1005,7 +1005,7 @@ public class TaskLockbox
               interval
           );
         } else {
-          final Map<Integer, TaskLockPosse> partitionIdsOfLocks = new HashMap<>();
+          final Map<Object, TaskLockPosse> partitionIdsOfLocks = new HashMap<>();
           for (TaskLockPosse posse : filteredPosses) {
             final SegmentLock segmentLock = (SegmentLock) posse.getTaskLock();
             partitionIdsOfLocks.put(segmentLock.getPartitionId(), posse);

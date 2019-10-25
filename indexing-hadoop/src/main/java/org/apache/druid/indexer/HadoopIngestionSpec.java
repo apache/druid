@@ -30,8 +30,8 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.NamespacedVersionedIntervalTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 
@@ -199,8 +199,9 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
         }
       }
 
-      final VersionedIntervalTimeline<String, DataSegment> timeline =
-          VersionedIntervalTimeline.forSegments(usedVisibleSegments);
+      final NamespacedVersionedIntervalTimeline<String, DataSegment>
+          timeline = NamespacedVersionedIntervalTimeline.forSegments(usedVisibleSegments);
+
       final List<WindowedDataSegment> windowedSegments = new ArrayList<>();
       for (Interval interval : ingestionSpecObj.getIntervals()) {
         final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = timeline.lookup(interval);

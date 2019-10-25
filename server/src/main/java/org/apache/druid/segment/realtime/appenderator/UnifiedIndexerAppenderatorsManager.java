@@ -65,7 +65,7 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.NamespacedVersionedIntervalTimeline;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
@@ -409,7 +409,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     {
       this.taskAppenderatorMap = new HashMap<>();
 
-      VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<>(
+      NamespacedVersionedIntervalTimeline<String, Sink> sinkTimeline = new NamespacedVersionedIntervalTimeline<>(
           String.CASE_INSENSITIVE_ORDER
       );
       this.walker = new SinkQuerySegmentWalker(

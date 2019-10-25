@@ -40,6 +40,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -406,17 +407,7 @@ public final class SegmentId implements Comparable<SegmentId>
     if (result != 0) {
       return result;
     }
-    if (identifier == null) {
-      if (o.identifier == null) {
-        return 0;
-      } else {
-        return -1;
-      }
-    }
-    if (o.identifier == null) {
-      return 1;
-    }
-    result = identifier.compareTo(o.identifier);
+    result = Objects.compare(identifier, o.identifier, Comparator.nullsFirst(String::compareTo));
     if (result != 0) {
       return result;
     }
@@ -434,7 +425,13 @@ public final class SegmentId implements Comparable<SegmentId>
       .append(getIntervalEnd()).append(DELIMITER)
       .append(version);
 
-    if (partitionNum != 0) {
+    if (identifier != null) {
+      sb.append(DELIMITER).append(identifier);
+    }
+
+    // We should append _0 for NamedNumberedShardSpec segments, as those are written
+    // by spark ingestion using _0.
+    if (identifier != null || partitionNum != 0) {
       sb.append(DELIMITER).append(partitionNum);
     }
 

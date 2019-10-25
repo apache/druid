@@ -75,6 +75,21 @@ public class RunRulesTest
   public void setUp()
   {
     coordinator = EasyMock.createMock(DruidCoordinator.class);
+    DruidCoordinatorConfig config = new TestDruidCoordinatorConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        10,
+        null,
+        false,
+        false,
+        null,
+        ""
+    );
+    EasyMock.expect(coordinator.getConfig()).andReturn(config).anyTimes();
     mockPeon = EasyMock.createMock(LoadQueuePeon.class);
     emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
