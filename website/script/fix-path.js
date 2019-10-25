@@ -31,7 +31,7 @@ try {
   replace.sync({
     files: './build/ApacheDruid/docs/**/*.html',
     from: /"\/docs\//g,
-    to: '"/docs/' + urlVersion + '/',
+    to: `"/docs/${urlVersion}/`,
   });
 
   // Interpolate {{DRUIDVERSION}}
@@ -46,8 +46,8 @@ try {
     files: './build/ApacheDruid/docs/**/*.html',
     from: /<meta name="generator" content="Docusaurus"\/>/g,
     to: (match, fullText, b, filename) => {
-      const path = filename.replace('./build/ApacheDruid/', '');
-      return `<link rel="canonical" href="https://druid.apache.org/${path}"/><meta name="generator" content="Docusaurus"/>`;
+      const path = filename.replace('./build/ApacheDruid/docs/', '');
+      return `<link rel="canonical" href="https://druid.apache.org/docs/${urlVersion}/${path}"/><meta name="generator" content="Docusaurus"/>`;
     },
   });
 
