@@ -685,13 +685,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.runInternal();
     verifyAll();
     KafkaIndexTask task = (KafkaIndexTask) newTasksCapture.getValues().get(0);
+    // make sure the newly discovered partition use earliest offset
     Assert.assertEquals(
         0,
         task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(0).longValue()
     );
-
-    // make sure we killed the right task (sequenceName for replicas are the same)
-    Assert.assertTrue(shutdownTaskIdCapture.getValue().contains(iAmSuccess.getIOConfig().getBaseSequenceName()));
   }
 
   /**
