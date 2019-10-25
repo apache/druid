@@ -288,6 +288,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
 
+    Assert.assertEquals(1, segments.size());
     DataSegment segment = segments.get(0);
     final File segmentFile = segmentLoader.getSegmentFiles(segment);
 
@@ -324,7 +325,7 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals("bb", transforms.get(0).get("dimt"));
     Assert.assertEquals(ImmutableList.of("b", "b"), transforms.get(0).get("dimtarray1"));
     Assert.assertEquals(ImmutableList.of("anotherfoo", "arrayfoo"), transforms.get(0).get("dimtarray2"));
-    Assert.assertEquals(1, segments.size());
+
 
     Assert.assertEquals("test", segments.get(0).getDataSource());
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
