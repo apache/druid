@@ -632,7 +632,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderIngestionCard('kinesis')}
           {this.renderIngestionCard('index:static-s3')}
           {this.renderIngestionCard('index:static-google-blobstore')}
-          {this.renderIngestionCard('hadoop')}
+          {this.renderIngestionCard('index:hdfs')}
           {this.renderIngestionCard('index:ingestSegment')}
           {this.renderIngestionCard('index:http')}
           {this.renderIngestionCard('index:local')}
@@ -711,31 +711,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index:static-google-blobstore':
         return <p>Load text based data from the Google Blobstore.</p>;
 
+      case 'index:hdfs':
+        return <p>Load text based data from HDFS.</p>;
+
       case 'kafka':
         return <p>Load streaming data in real-time from Apache Kafka.</p>;
 
       case 'kinesis':
         return <p>Load streaming data in real-time from Amazon Kinesis.</p>;
-
-      case 'hadoop':
-        return (
-          <>
-            <p>
-              <em>Data loader support coming soon!</em>
-            </p>
-            <p>
-              You can not ingest data from HDFS via the data loader at this time, however you can
-              ingest it through a Druid task.
-            </p>
-            <p>
-              Please follow{' '}
-              <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/hadoop.html">
-                the hadoop docs
-              </ExternalLink>{' '}
-              and submit a JSON spec to start the task.
-            </p>
-          </>
-        );
 
       case 'example':
         if (exampleManifests && exampleManifests.length) {
@@ -774,6 +757,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index:inline':
       case 'index:static-s3':
       case 'index:static-google-blobstore':
+      case 'index:hdfs':
       case 'kafka':
       case 'kinesis':
         return (
@@ -788,18 +772,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   this.updateStep('connect');
                 }, 10);
               }}
-            />
-          </FormGroup>
-        );
-
-      case 'hadoop':
-        return (
-          <FormGroup>
-            <Button
-              text="Submit task"
-              rightIcon={IconNames.ARROW_RIGHT}
-              intent={Intent.PRIMARY}
-              onClick={() => goToTask(undefined, 'task')}
             />
           </FormGroup>
         );
