@@ -31,8 +31,10 @@ RUN yum clean all \
     && yum install -y curl which tar sudo openssh-server openssh-clients rsync yum-plugin-ovl\
     && yum clean all \
     && yum update -y libselinux \
+    && yum update -y nss \
     && yum clean all
 # update libselinux. see https://github.com/sequenceiq/hadoop-docker/issues/14
+# update nss. see https://unix.stackexchange.com/questions/280548/curl-doesnt-connect-to-https-while-wget-does-nss-error-12286
 
 # passwordless ssh
 RUN ssh-keygen -q -N "" -t dsa -f /etc/ssh/ssh_host_dsa_key
