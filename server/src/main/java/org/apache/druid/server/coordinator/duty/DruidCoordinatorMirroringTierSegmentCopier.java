@@ -105,14 +105,14 @@ public class DruidCoordinatorMirroringTierSegmentCopier implements DruidCoordina
               );
               mirroring.getPeon().dropSegment(segment, null);
             }
-            stats.addToTieredStat(ASSIGNED_COUNT, mirroringTier, toRemove.size());
+            stats.addToTieredStat(DROPPED_COUNT, mirroringTier, toRemove.size());
             for (DataSegment segment : toAdd) {
               log.info("Assigning segment [%s] to server [%s] in tier [%s]",
                   segment.getId().toString(), mirroring.getServer().getName(), mirroringTier
               );
               mirroring.getPeon().loadSegment(segment, null);
             }
-            stats.addToTieredStat(DROPPED_COUNT, mirroringTier, toAdd.size());
+            stats.addToTieredStat(ASSIGNED_COUNT, mirroringTier, toAdd.size());
           }
         }
       }

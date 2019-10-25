@@ -139,6 +139,8 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
   {
     for (ImmutableSegmentLoadInfo segmentLoadInfo : serverView) {
       if (segmentLoadInfo.getSegment().getInterval().contains(descriptor.getInterval())
+          && segmentLoadInfo.getSegment().getShardSpec().getIdentifier()
+             == descriptor.getPartitionIdentifier()
           && segmentLoadInfo.getSegment().getShardSpec().getPartitionNum()
              == descriptor.getPartitionNumber()
           && segmentLoadInfo.getSegment().getVersion().compareTo(descriptor.getVersion()) >= 0

@@ -172,9 +172,9 @@ public class FlushingPlumber extends RealtimePlumber
     );
 
     String threadName = StringUtils.format(
-        "%s-flusher-%d",
+        "%s-flusher-%s",
         getSchema().getDataSource(),
-        getConfig().getShardSpec().getPartitionNum()
+        getConfig().getShardSpec().getIdentifier()
     );
     ThreadRenamingCallable<ScheduledExecutors.Signal> threadRenamingCallable =
         new ThreadRenamingCallable<ScheduledExecutors.Signal>(threadName)

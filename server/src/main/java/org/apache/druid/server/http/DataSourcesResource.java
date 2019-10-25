@@ -912,6 +912,7 @@ public class DataSourcesResource
   {
     for (ImmutableSegmentLoadInfo segmentLoadInfo : servedSegments) {
       if (segmentLoadInfo.getSegment().getInterval().contains(descriptor.getInterval())
+          && segmentLoadInfo.getSegment().getShardSpec().getIdentifier() == descriptor.getPartitionIdentifier()
           && segmentLoadInfo.getSegment().getShardSpec().getPartitionNum() == descriptor.getPartitionNumber()
           && segmentLoadInfo.getSegment().getVersion().compareTo(descriptor.getVersion()) >= 0
           && Iterables.any(

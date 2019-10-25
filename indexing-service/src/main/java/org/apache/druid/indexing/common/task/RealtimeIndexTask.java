@@ -102,18 +102,18 @@ public class RealtimeIndexTask extends AbstractTask
   {
     return makeTaskId(
         fireDepartment.getDataSchema().getDataSource(),
-        fireDepartment.getTuningConfig().getShardSpec().getPartitionNum(),
+        fireDepartment.getTuningConfig().getShardSpec().getIdentifier(),
         DateTimes.nowUtc(),
         makeRandomId()
     );
   }
 
-  static String makeTaskId(String dataSource, int partitionNumber, DateTime timestamp, String suffix)
+  static String makeTaskId(String dataSource, Object partitionIdentifier, DateTime timestamp, String suffix)
   {
     return StringUtils.format(
-        "index_realtime_%s_%d_%s_%s",
+        "index_realtime_%s_%s_%s_%s",
         dataSource,
-        partitionNumber,
+        partitionIdentifier,
         timestamp,
         suffix
     );

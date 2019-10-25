@@ -43,7 +43,7 @@ public class SegmentLock implements TaskLock
   private final String dataSource;
   private final Interval interval;
   private final String version;
-  private final int partitionId;
+  private final Object partitionId;
   private final int priority;
   private final boolean revoked;
 
@@ -54,7 +54,7 @@ public class SegmentLock implements TaskLock
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
-      @JsonProperty("partitionId") int partitionId,
+      @JsonProperty("partitionId") Object partitionId,
       @JsonProperty("priority") int priority,
       @JsonProperty("revoked") boolean revoked
   )
@@ -129,7 +129,7 @@ public class SegmentLock implements TaskLock
   }
 
   @JsonProperty
-  public int getPartitionId()
+  public Object getPartitionId()
   {
     return partitionId;
   }

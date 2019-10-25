@@ -121,9 +121,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private static String makeTaskId(RealtimeAppenderatorIngestionSpec spec)
   {
     return StringUtils.format(
-        "index_realtime_%s_%d_%s_%s",
+        "index_realtime_%s_%s_%s_%s",
         spec.getDataSchema().getDataSource(),
-        spec.getTuningConfig().getShardSpec().getPartitionNum(),
+        spec.getTuningConfig().getShardSpec().getIdentifier(),
         DateTimes.nowUtc(),
         RealtimeIndexTask.makeRandomId()
     );
@@ -297,7 +297,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                         TaskLockType.EXCLUSIVE,
                         segmentId.getInterval(),
                         segmentId.getVersion(),
-                        segmentId.getShardSpec().getPartitionNum(),
+                        segmentId.getShardSpec().getIdentifier(),
                         1000L
                     )
                 ).isOk();

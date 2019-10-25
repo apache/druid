@@ -49,7 +49,7 @@ public final class SegmentIdWithShardSpec implements Comparable<SegmentIdWithSha
       @JsonProperty("shardSpec") ShardSpec shardSpec
   )
   {
-    this.id = SegmentId.of(dataSource, interval, version, shardSpec.getPartitionNum());
+    this.id = SegmentId.of(dataSource, interval, version, shardSpec.getIdentifier());
     this.shardSpec = Preconditions.checkNotNull(shardSpec, "shardSpec");
     this.asString = id.toString();
   }

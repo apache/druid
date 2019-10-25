@@ -33,7 +33,7 @@ public class SpecificSegmentLockRequest implements LockRequest
   private final String groupId;
   private final String dataSource;
   private final Interval interval;
-  private final int partitionId;
+  private final Object partitionId;
   private final String version;
   private final int priority;
   private final boolean revoked;
@@ -44,7 +44,7 @@ public class SpecificSegmentLockRequest implements LockRequest
       String dataSource,
       Interval interval,
       String version,
-      int partitionId,
+      Object partitionId,
       int priority,
       boolean revoked
   )
@@ -64,7 +64,7 @@ public class SpecificSegmentLockRequest implements LockRequest
       Task task,
       Interval interval,
       String version,
-      int partitionId
+      Object partitionId
   )
   {
     this(lockType, task.getGroupId(), task.getDataSource(), interval, version, partitionId, task.getPriority(), false);
@@ -135,7 +135,7 @@ public class SpecificSegmentLockRequest implements LockRequest
     return revoked;
   }
 
-  public int getPartitionId()
+  public Object getPartitionId()
   {
     return partitionId;
   }

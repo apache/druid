@@ -65,8 +65,8 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.timeline.NamespacedVersionedIntervalTimeline;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 
@@ -126,8 +126,8 @@ public class ServerManager implements QuerySegmentWalker
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
-    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline;
-    final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline =
+    final NamespacedVersionedIntervalTimeline<String, ReferenceCountingSegment> timeline;
+    final Optional<NamespacedVersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline =
         segmentManager.getTimeline(analysis);
 
     if (maybeTimeline.isPresent()) {
@@ -182,8 +182,8 @@ public class ServerManager implements QuerySegmentWalker
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
-    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline;
-    final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline =
+    final NamespacedVersionedIntervalTimeline<String, ReferenceCountingSegment> timeline;
+    final Optional<NamespacedVersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline =
         segmentManager.getTimeline(analysis);
 
     // Make sure this query type can handle the subquery, if present.
@@ -243,7 +243,7 @@ public class ServerManager implements QuerySegmentWalker
       final SegmentDescriptor descriptor,
       final QueryRunnerFactory<T, Query<T>> factory,
       final QueryToolChest<T, Query<T>> toolChest,
-      final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline,
+      final NamespacedVersionedIntervalTimeline<String, ReferenceCountingSegment> timeline,
       final Function<SegmentReference, SegmentReference> segmentMapFn,
       final AtomicLong cpuTimeAccumulator,
       Optional<byte[]> cacheKeyPrefix

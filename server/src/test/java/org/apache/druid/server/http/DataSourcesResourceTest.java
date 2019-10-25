@@ -56,12 +56,9 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.test.utils.ImmutableDruidDataSourceTestUtils;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.NamespacedVersionedIntervalTimeline;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.NumberedPartitionChunk;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.druid.timeline.partition.PartitionHolder;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -668,19 +665,8 @@ public class DataSourcesResourceTest
     String interval3 = "2013-01-02T02:00:00Z/2013-01-02T03:00:00Z";
     SegmentLoadInfo segmentLoadInfo = new SegmentLoadInfo(createSegment(Intervals.of(interval3), "v1", 1));
     segmentLoadInfo.addServer(createHistoricalServerMetadata("test"));
-    VersionedIntervalTimeline<String, SegmentLoadInfo> timeline =
-        new VersionedIntervalTimeline<String, SegmentLoadInfo>(null)
-    {
-      @Override
-      public List<TimelineObjectHolder<String, SegmentLoadInfo>> lookupWithIncompletePartitions(Interval interval)
-      {
-        PartitionHolder<SegmentLoadInfo> partitionHolder =
-            new PartitionHolder<>(new NumberedPartitionChunk<>(1, 1, segmentLoadInfo));
-        List<TimelineObjectHolder<String, SegmentLoadInfo>> ret = new ArrayList<>();
-        ret.add(new TimelineObjectHolder<>(Intervals.of(interval3), "v1", partitionHolder));
-        return ret;
-      }
-    };
+    NamespacedVersionedIntervalTimeline<String, SegmentLoadInfo> timeline =
+        new NamespacedVersionedIntervalTimeline<>(null);
     EasyMock.reset(inventoryView, databaseRuleManager);
     EasyMock.expect(databaseRuleManager.getRulesWithDefault("dataSource1"))
             .andReturn(ImmutableList.of(loadRule, dropRule))
