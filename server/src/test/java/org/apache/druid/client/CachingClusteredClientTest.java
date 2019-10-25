@@ -2819,7 +2819,7 @@ public class CachingClusteredClientTest
             null,
             NoneShardSpec.instance(),
             null,
-            -1
+            0
         );
       }
 
