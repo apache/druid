@@ -586,6 +586,115 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   /**
+   * Test if always use earliest offset on newly discovered partitions
+   */
+  @Test
+  public void testLatestOffsetOnDiscovery() throws Exception
+  {
+    supervisor = getTestableSupervisor(2, 2, false, "PT1H", null, null);
+    addSomeEvents(1);
+
+    Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(Status.NOT_STARTED))
+            .anyTimes();
+    EasyMock.expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(4);
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    List<Task> tasks = captured.getValues();
+
+    EasyMock.reset(taskStorage);
+    EasyMock.reset(taskClient);
+
+    EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(Status.NOT_STARTED))
+            .anyTimes();
+    EasyMock.expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    TreeMap<Integer, Map<Integer, Long>> checkpoints1 = new TreeMap<>();
+    checkpoints1.put(0, ImmutableMap.of(0, 0L, 2, 0L));
+    TreeMap<Integer, Map<Integer, Long>> checkpoints2 = new TreeMap<>();
+    checkpoints2.put(0, ImmutableMap.of(1, 0L));
+    // there would be 4 tasks, 2 for each task group
+    EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(checkpoints1))
+            .times(2);
+    EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(checkpoints2))
+            .times(2);
+
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(tasks).anyTimes();
+    for (Task task : tasks) {
+      EasyMock.expect(taskStorage.getStatus(task.getId()))
+              .andReturn(Optional.of(TaskStatus.running(task.getId())))
+              .anyTimes();
+      EasyMock.expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
+    }
+    EasyMock.replay(taskStorage);
+    EasyMock.replay(taskClient);
+
+    supervisor.runInternal();
+    verifyAll();
+
+    // test that a task succeeding causes a new task to be re-queued with the next offset range and causes any replica
+    // tasks to be shutdown
+    Capture<Task> newTasksCapture = Capture.newInstance(CaptureType.ALL);
+    Capture<String> shutdownTaskIdCapture = Capture.newInstance();
+    List<Task> imStillRunning = tasks.subList(1, 4);
+    KafkaIndexTask iAmSuccess = (KafkaIndexTask) tasks.get(0);
+    EasyMock.reset(taskStorage);
+    EasyMock.reset(taskQueue);
+    EasyMock.reset(taskClient);
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(imStillRunning).anyTimes();
+    for (Task task : imStillRunning) {
+      EasyMock.expect(taskStorage.getStatus(task.getId()))
+              .andReturn(Optional.of(TaskStatus.running(task.getId())))
+              .anyTimes();
+      EasyMock.expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
+    }
+    EasyMock.expect(taskStorage.getStatus(iAmSuccess.getId()))
+            .andReturn(Optional.of(TaskStatus.success(iAmSuccess.getId())));
+    EasyMock.expect(taskStorage.getTask(iAmSuccess.getId())).andReturn(Optional.of(iAmSuccess)).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(newTasksCapture))).andReturn(true).times(2);
+    EasyMock.expect(taskClient.stopAsync(EasyMock.capture(shutdownTaskIdCapture), EasyMock.eq(false)))
+            .andReturn(Futures.immediateFuture(true));
+    EasyMock.replay(taskStorage);
+    EasyMock.replay(taskQueue);
+    EasyMock.replay(taskClient);
+    supervisor.removePartitionId(0);
+
+    supervisor.runInternal();
+    verifyAll();
+    KafkaIndexTask task = (KafkaIndexTask)newTasksCapture.getValues().get(0);
+    Assert.assertEquals(
+        0,
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(0).longValue()
+    );
+
+    // make sure we killed the right task (sequenceName for replicas are the same)
+    Assert.assertTrue(shutdownTaskIdCapture.getValue().contains(iAmSuccess.getIOConfig().getBaseSequenceName()));
+  }
+
+  /**
    * Test generating the starting offsets from the partition data stored in druid_dataSource which contains the
    * offsets of the last built segments.
    */

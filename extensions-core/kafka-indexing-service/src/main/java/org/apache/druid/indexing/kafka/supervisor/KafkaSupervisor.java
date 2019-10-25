@@ -156,9 +156,12 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
 
 
   @Override
-  protected int getTaskGroupIdForPartition(Integer partition)
+  protected int getTaskGroupIdForPartition(Integer partitionId)
   {
-    return partition % spec.getIoConfig().getTaskCount();
+    if (!partitionIds.contains(partitionId)) {
+      partitionIds.add(partitionId);
+    }
+    return partitionId % spec.getIoConfig().getTaskCount();
   }
 
   @Override
