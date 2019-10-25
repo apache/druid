@@ -684,7 +684,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     supervisor.runInternal();
     verifyAll();
-    KafkaIndexTask task = (KafkaIndexTask)newTasksCapture.getValues().get(0);
+    KafkaIndexTask task = (KafkaIndexTask) newTasksCapture.getValues().get(0);
     Assert.assertEquals(
         0,
         task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(0).longValue()
@@ -749,7 +749,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
     // because the stream's earliest offset is 0, although that would not happen in real usage.
     EasyMock.expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
-            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, -10L, 1, -20L, 2, -30L), ImmutableSet.of())
+            new SeekableStreamStartSequenceNumbers<>(
+                topic,
+                ImmutableMap.of(0, -10L, 1, -20L, 2, -30L),
+                ImmutableSet.of()
+            )
         )
     ).anyTimes();
     replayAll();
@@ -1082,7 +1086,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
             .andReturn(Futures.immediateFuture(checkpoints))
             .times(1);
 
-    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of(captured.getValue())).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE))
+            .andReturn(ImmutableList.of(captured.getValue()))
+            .anyTimes();
     EasyMock.expect(taskStorage.getStatus(iHaveFailed.getId()))
             .andReturn(Optional.of(TaskStatus.failure(iHaveFailed.getId())));
     EasyMock.expect(taskStorage.getStatus(runningTaskId))
@@ -1586,7 +1592,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
-    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of(id1, id2)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE))
+            .andReturn(ImmutableList.of(id1, id2))
+            .anyTimes();
     EasyMock.expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
     EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
     EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
@@ -1974,7 +1982,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
-    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE))
+            .andReturn(ImmutableList.of(id1, id2, id3))
+            .anyTimes();
     EasyMock.expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
     EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
     EasyMock.expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
@@ -2239,7 +2249,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
-    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE))
+            .andReturn(ImmutableList.of(id1, id2, id3))
+            .anyTimes();
     EasyMock.expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
     EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
     EasyMock.expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
@@ -2337,7 +2349,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE))
+            .andReturn(ImmutableList.of(id1, id2, id3))
+            .anyTimes();
     EasyMock.expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
     EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
     EasyMock.expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
@@ -2447,7 +2461,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE))
+            .andReturn(ImmutableList.of(id1, id2, id3))
+            .anyTimes();
     EasyMock.expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
     EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
     EasyMock.expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
@@ -2554,7 +2570,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE))
+            .andReturn(ImmutableList.of(id1, id2, id3))
+            .anyTimes();
     EasyMock.expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
     EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
     EasyMock.expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
@@ -2685,7 +2703,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
-    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE))
+            .andReturn(ImmutableList.of(id1, id2, id3))
+            .anyTimes();
     EasyMock.expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
     EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
     EasyMock.expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
