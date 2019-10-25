@@ -17,32 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.segment.writeout;
+package org.apache.druid.server.coordinator.duty;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 
-import java.io.File;
-import java.io.IOException;
+import javax.annotation.Nullable;
 
-public class OnHeapMemorySegmentWriteOutMediumFactory implements SegmentWriteOutMediumFactory
+/**
+ *
+ */
+public interface DruidCoordinatorHelper
 {
-  private static final OnHeapMemorySegmentWriteOutMediumFactory INSTANCE =
-      new OnHeapMemorySegmentWriteOutMediumFactory();
-
-  @JsonCreator
-  public static OnHeapMemorySegmentWriteOutMediumFactory instance()
-  {
-    return INSTANCE;
-  }
-
-  private OnHeapMemorySegmentWriteOutMediumFactory()
-  {
-
-  }
-
-  @Override
-  public SegmentWriteOutMedium makeSegmentWriteOutMedium(File outDir) throws IOException
-  {
-    return new OnHeapMemorySegmentWriteOutMedium();
-  }
+    /**
+     * Implementations of this method run various activities performed by the coordinator.
+     * Input params can be used and modified. They are typically in a list and returned
+     * DruidCoordinatorRuntimeParams is passed to the next helper.
+     *
+     * @param params
+     *
+     * @return same as input or a modified value to be used by next helper. Null return
+     * values will prevent future DruidCoordinatorHelpers from running until the next
+     * cycle.
+     */
+    @Nullable
+    DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params);
 }

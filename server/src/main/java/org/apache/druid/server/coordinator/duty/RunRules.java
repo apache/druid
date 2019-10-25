@@ -30,11 +30,13 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
+import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -121,6 +123,8 @@ public class RunRules implements CoordinatorDuty
       }
     }
 
+    Set<String> mirrorTiers = new HashSet<>(coordinator.getConfig().getTierToMirroringTierMap().values());
+
     for (DataSegment segment : params.getUsedSegments()) {
       if (overshadowed.contains(segment.getId())) {
         // Skipping overshadowed segments
@@ -129,7 +133,7 @@ public class RunRules implements CoordinatorDuty
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
-        if (rule.appliesTo(segment, now)) {
+        if (isValidRule(rule, mirrorTiers) && rule.appliesTo(segment, now)) {
           if (
               stats.getGlobalStat(
                   "totalNonPrimaryReplicantsLoaded") >= paramsWithReplicationManager.getCoordinatorDynamicConfig()
@@ -167,5 +171,15 @@ public class RunRules implements CoordinatorDuty
                  .withCoordinatorStats(stats)
                  .withBroadcastDatasources(broadcastDatasources)
                  .build();
+  }
+
+  private boolean isValidRule(Rule rule, Set<String> mirrorTiers)
+  {
+    // Load rule must not contain any mirroring tier
+    if (rule instanceof LoadRule) {
+      LoadRule loadRule = (LoadRule) rule;
+      return Collections.disjoint(loadRule.getTieredReplicants().keySet(), mirrorTiers);
+    }
+    return true;
   }
 }

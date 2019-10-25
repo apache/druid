@@ -71,7 +71,11 @@ public class SqlRowTransformer
   @Nullable
   public Object transform(Object[] row, int i)
   {
-    if (row[i] == null) {
+    // If there's no Timeseries query, this check have no effect
+    // Else if there's Timeseries query, the last row can be for the summary
+    // result without a timestamp if grandTotal is passed in query context,
+    // don't throw NPE
+    if ((timeColumns[i] || dateColumns[i]) && row[i] == null) {
       return null;
     } else if (timeColumns[i]) {
       return ISODateTimeFormat.dateTime().print(

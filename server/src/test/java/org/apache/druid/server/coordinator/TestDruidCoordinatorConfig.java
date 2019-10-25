@@ -43,6 +43,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration getLoadQueuePeonRepeatDelay;
   private final int coordinatorKillMaxSegments;
 
+  private String tierMirroringMap = null;
+
   public TestDruidCoordinatorConfig(
       Duration coordinatorStartDelay,
       Duration coordinatorPeriod,
@@ -191,4 +193,10 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   {
     return getLoadQueuePeonRepeatDelay;
   }
+
+  @Override public String getTierMirroringMapConfigured()
+  {
+    return tierMirroringMap;
+  }
+
 }

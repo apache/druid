@@ -384,7 +384,7 @@ public interface Expr extends Cacheable
    * Mechanism to rewrite an {@link Expr}, implementing a {@link Shuttle} allows visiting all children of an
    * {@link Expr}, and replacing them as desired.
    */
-  interface Shuttle
+  public interface Shuttle
   {
     /**
      * Provide the {@link Shuttle} with an {@link Expr} to inspect and potentially rewrite.

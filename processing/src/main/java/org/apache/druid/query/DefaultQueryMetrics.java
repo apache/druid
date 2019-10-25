@@ -299,6 +299,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public QueryMetrics<QueryType> reportTimeToAcquireHttpResource(long timeNs)
+  {
+    return reportMillisTimeMetric("query/wait/node/http", timeNs);
+  }
+
+  @Override
   public QueryMetrics<QueryType> reportParallelMergeParallelism(int parallelism)
   {
     // Don't emit by default.
