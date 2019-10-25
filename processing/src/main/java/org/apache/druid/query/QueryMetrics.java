@@ -336,6 +336,11 @@ public interface QueryMetrics<QueryType extends Query<?>>
   QueryMetrics<QueryType> reportNodeBytes(long byteCount);
 
   /**
+   * Registers "time that requires to acquire a http connection" metric.
+   */
+  QueryMetrics<QueryType> reportTimeToAcquireHttpResource(long timeNs);
+
+  /**
    * Reports the time spent constructing bitmap from {@link #preFilters(List)} of the query. Not reported, if there are
    * no preFilters.
    */

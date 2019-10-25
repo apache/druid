@@ -675,8 +675,8 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-knox-password-provider</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-hash-name-numbered-shard-spec</argument>
-                                        <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-collectset</argument>
+                                        <!--<argument>-c</argument>-->
+                                        <!--<argument>org.apache.druid.extensions.contrib:druid-collectset</argument>-->
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-moving-average-query</argument>
                                         <argument>-c</argument>
@@ -910,8 +910,8 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-knox-password-provider</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-hash-name-numbered-shard-spec</argument>
-                                        <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-collectset</argument>
+                                        <!--<argument>-c</argument>-->
+                                        <!--<argument>org.apache.druid.extensions.contrib:druid-collectset</argument>-->
                                     </arguments>
                                 </configuration>
                             </execution>

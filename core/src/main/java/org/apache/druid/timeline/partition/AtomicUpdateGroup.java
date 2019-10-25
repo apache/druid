@@ -105,9 +105,9 @@ class AtomicUpdateGroup<T extends Overshadowable<T>> implements Overshadowable<A
   }
 
   @Nullable
-  PartitionChunk<T> findChunk(int partitionId)
+  PartitionChunk<T> findChunk(Object partitionId)
   {
-    return chunks.stream().filter(chunk -> chunk.getChunkNumber() == partitionId).findFirst().orElse(null);
+    return chunks.stream().filter(chunk -> chunk.getChunkIdentifier().equals(partitionId)).findFirst().orElse(null);
   }
 
   @Override

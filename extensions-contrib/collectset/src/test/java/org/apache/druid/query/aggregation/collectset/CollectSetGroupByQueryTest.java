@@ -19,9 +19,10 @@
 
 package org.apache.druid.query.aggregation.collectset;
 
+import static org.apache.druid.query.aggregation.collectset.CollectSetTestHelper.DIMENSIONS;
+
 import com.google.common.collect.Sets;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
@@ -47,8 +48,6 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-
-import static org.apache.druid.query.aggregation.collectset.CollectSetTestHelper.DIMENSIONS;
 
 public class CollectSetGroupByQueryTest
 {
