@@ -40,11 +40,16 @@ import java.util.List;
  */
 public abstract class MultiColumnSqlAggregator implements SqlAggregator
 {
-  protected class FieldInfo {
+  /*
+   * Useful Abstraction for passing field information to subclasses from shared parent methods
+   */
+  protected class FieldInfo
+  {
     String fieldName;
     String expression;
 
-    public FieldInfo(String fieldName, String expression) {
+    public FieldInfo(String fieldName, String expression)
+    {
       this.fieldName = fieldName;
       this.expression = expression;
     }
@@ -83,6 +88,7 @@ public abstract class MultiColumnSqlAggregator implements SqlAggregator
 
     final List<FieldInfo> fieldInfoList = new ArrayList<>();
 
+    // Convert arguments to concise field information & delegate the rest to sub-classes
     for (DruidExpression argument : arguments) {
       if (argument.isDirectColumnAccess()) {
         fieldInfoList.add(new FieldInfo(argument.getDirectColumn(), null));

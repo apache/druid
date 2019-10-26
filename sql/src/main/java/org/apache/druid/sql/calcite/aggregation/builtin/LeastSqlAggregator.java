@@ -41,6 +41,10 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Calcite integration class for Least post aggregators of Long & Double types.
+ * It applies Min aggregators over the provided fields/expressions & combines their results via Field access post aggregators.
+ */
 public class LeastSqlAggregator extends MultiColumnSqlAggregator
 {
   private static final SqlAggFunction FUNCTION_INSTANCE = new LeastSqlAggFunction();
@@ -58,22 +62,22 @@ public class LeastSqlAggregator extends MultiColumnSqlAggregator
       AggregateCall aggregateCall,
       ExprMacroTable macroTable,
       List<FieldInfo> fieldInfoList
-  ) {
+  )
+  {
     final ValueType valueType = Calcites.getValueTypeForSqlTypeName(aggregateCall.getType().getSqlTypeName());
     List<AggregatorFactory> aggregators = new ArrayList<>();
     List<PostAggregator> postAggregators = new ArrayList<>();
 
-    Integer id = 0;
+    // Create Min aggregator factories for provided fields & corresponding field access post aggregators
+    int id = 0;
     for (FieldInfo fieldInfo : fieldInfoList) {
-      String prefixedName = Calcites.makePrefixedName(name, (id++).toString());
+      String prefixedName = Calcites.makePrefixedName(name, String.valueOf(id++));
       postAggregators.add(new FieldAccessPostAggregator(null, prefixedName));
       switch (valueType) {
         case LONG:
           aggregators.add(new LongMinAggregatorFactory(prefixedName, fieldInfo.fieldName, fieldInfo.expression, macroTable));
           break;
         case FLOAT:
-          // TODO
-          throw new ISE("Cannot create aggregator factory for type[%s]", valueType);
         case DOUBLE:
           aggregators.add(new DoubleMinAggregatorFactory(prefixedName, fieldInfo.fieldName, fieldInfo.expression, macroTable));
           break;
@@ -82,14 +86,13 @@ public class LeastSqlAggregator extends MultiColumnSqlAggregator
       }
     }
 
+    // Use the field access post aggregators created in the previous loop to create the final Post aggregator
     PostAggregator finalPostAggregator;
     switch (valueType) {
       case LONG:
         finalPostAggregator = new LongLeastPostAggregator(name, postAggregators);
         break;
       case FLOAT:
-        // TODO
-        throw new ISE("Cannot create aggregator factory for type[%s]", valueType);
       case DOUBLE:
         finalPostAggregator = new DoubleLeastPostAggregator(name, postAggregators);
         break;

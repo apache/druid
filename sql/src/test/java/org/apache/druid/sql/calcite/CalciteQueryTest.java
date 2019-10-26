@@ -35,6 +35,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
@@ -46,7 +47,11 @@ import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFacto
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
+import org.apache.druid.query.aggregation.post.DoubleGreatestPostAggregator;
+import org.apache.druid.query.aggregation.post.DoubleLeastPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.aggregation.post.LongGreatestPostAggregator;
+import org.apache.druid.query.aggregation.post.LongLeastPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
@@ -4539,6 +4544,154 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(new Object[]{1L, 1L, 1L, 978480000L, 6L})
+    );
+  }
+
+  @Test
+  public void testGreatestDailyCountWithLimit() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT * FROM ("
+        + "  SELECT greatest(cntl1, cntl2), greatest(cntd1, cntd2) FROM (\n"
+        + "      SELECT TIME_FLOOR(__time, 'P1D') AS t,\n"
+        + "          count(1) AS cntl1, 10 AS cntl2,\n"
+        + "          (1.2 + count(1)) AS cntd1, 10.2 AS cntd2\n"
+        + "      FROM \"foo\"\n"
+        + "      GROUP BY 1\n"
+        + "  )"
+        + ")\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setVirtualColumns(
+                                                expressionVirtualColumn(
+                                                    "v0",
+                                                    "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+                                                    ValueType.LONG
+                                                )
+                                            )
+                                            .setDimensions(dimensions(new DefaultDimensionSpec(
+                                                "v0",
+                                                "v0",
+                                                ValueType.LONG
+                                            )))
+                                            .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                            .setContext(QUERY_CONTEXT_DEFAULT)
+                                            .build()
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(
+                            new LongMaxAggregatorFactory("_a0:0", "a0"),
+                            new LongMaxAggregatorFactory("_a0:1", null, "10", ExprMacroTable.nil()),
+                            new DoubleMaxAggregatorFactory("_a1:0", null, "(1.2 + \"a0\")", ExprMacroTable.nil()),
+                            new DoubleMaxAggregatorFactory("_a1:1", null, "10.2", ExprMacroTable.nil())
+                        ))
+                        .setPostAggregatorSpecs(
+                            ImmutableList.of(
+                                new LongGreatestPostAggregator(
+                                    "_a0",
+                                    ImmutableList.of(
+                                        new FieldAccessPostAggregator(null, "_a0:0"),
+                                        new FieldAccessPostAggregator(null, "_a0:1")
+                                    )
+                                ),
+                                new DoubleGreatestPostAggregator(
+                                    "_a1",
+                                    ImmutableList.of(
+                                        new FieldAccessPostAggregator(null, "_a1:0"),
+                                        new FieldAccessPostAggregator(null, "_a1:1")
+                                    )
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(new Object[]{10L, 10.2D})
+    );
+  }
+
+  @Test
+  public void testLeastDailyCountWithLimit() throws Exception
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT * FROM ("
+        + "  SELECT least(cntl1, cntl2), least(cntd1, cntd2) FROM (\n"
+        + "      SELECT TIME_FLOOR(__time, 'P1D') AS t,\n"
+        + "          count(1) AS cntl1, 10 AS cntl2,\n"
+        + "          (1.2 + count(1)) AS cntd1, 10.2 AS cntd2\n"
+        + "      FROM \"foo\"\n"
+        + "      GROUP BY 1\n"
+        + "  )"
+        + ")\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setVirtualColumns(
+                                                expressionVirtualColumn(
+                                                    "v0",
+                                                    "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+                                                    ValueType.LONG
+                                                )
+                                            )
+                                            .setDimensions(dimensions(new DefaultDimensionSpec(
+                                                "v0",
+                                                "v0",
+                                                ValueType.LONG
+                                            )))
+                                            .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                            .setContext(QUERY_CONTEXT_DEFAULT)
+                                            .build()
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(
+                            new LongMinAggregatorFactory("_a0:0", "a0"),
+                            new LongMinAggregatorFactory("_a0:1", null, "10", ExprMacroTable.nil()),
+                            new DoubleMinAggregatorFactory("_a1:0", null, "(1.2 + \"a0\")", ExprMacroTable.nil()),
+                            new DoubleMinAggregatorFactory("_a1:1", null, "10.2", ExprMacroTable.nil())
+                        ))
+                        .setPostAggregatorSpecs(
+                            ImmutableList.of(
+                                new LongLeastPostAggregator(
+                                    "_a0",
+                                    ImmutableList.of(
+                                        new FieldAccessPostAggregator(null, "_a0:0"),
+                                        new FieldAccessPostAggregator(null, "_a0:1")
+                                    )
+                                ),
+                                new DoubleLeastPostAggregator(
+                                    "_a1",
+                                    ImmutableList.of(
+                                        new FieldAccessPostAggregator(null, "_a1:0"),
+                                        new FieldAccessPostAggregator(null, "_a1:1")
+                                    )
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(new Object[]{1L, 2.2D})
     );
   }
 
