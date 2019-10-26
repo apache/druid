@@ -28,22 +28,32 @@ import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './transform-table.scss';
 
+export function transformTableSelectedColumnName(
+  sampleData: HeaderAndRows,
+  selectedTransform: Transform | undefined,
+): string | undefined {
+  if (!selectedTransform) return;
+  const selectedTransformName = selectedTransform.name;
+  if (!sampleData.header.includes(selectedTransformName)) return;
+  return selectedTransformName;
+}
+
 export interface TransformTableProps {
   sampleData: HeaderAndRows;
   columnFilter: string;
   transformedColumnsOnly: boolean;
   transforms: Transform[];
-  selectedTransformIndex: number;
+  selectedColumnName: string | undefined;
   onTransformSelect: (transform: Transform, index: number) => void;
 }
 
-export function TransformTable(props: TransformTableProps) {
+export const TransformTable = React.memo((props: TransformTableProps) => {
   const {
     sampleData,
     columnFilter,
     transformedColumnsOnly,
     transforms,
-    selectedTransformIndex,
+    selectedColumnName,
     onTransformSelect,
   } = props;
 
@@ -60,7 +70,7 @@ export function TransformTable(props: TransformTableProps) {
 
         const columnClassName = classNames({
           transformed: transform,
-          selected: transform && transformIndex === selectedTransformIndex,
+          selected: columnName === selectedColumnName,
         });
         return {
           Header: (
@@ -99,4 +109,4 @@ export function TransformTable(props: TransformTableProps) {
       sortable={false}
     />
   );
-}
+});

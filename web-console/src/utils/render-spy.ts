@@ -16,35 +16,14 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+import { useEffect } from 'react';
 
-import { TransformTable } from './transform-table';
-
-describe('transform table', () => {
-  it('matches snapshot', () => {
-    const sampleData = {
-      header: ['c1'],
-      rows: [
-        {
-          raw: `{"c1":"hello"}`,
-          parsed: { c1: 'hello' },
-        },
-      ],
-    };
-
-    const transformTable = (
-      <TransformTable
-        sampleData={sampleData}
-        columnFilter=""
-        transformedColumnsOnly={false}
-        transforms={[]}
-        selectedColumnName={undefined}
-        onTransformSelect={() => {}}
-      />
-    );
-
-    const { container } = render(transformTable);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+export function useRenderSpy(componentName: string, props: Record<string, any>) {
+  console.log(`Render on ${componentName}`);
+  const propKeys: string[] = Object.keys(props).sort();
+  for (const key of propKeys) {
+    useEffect(() => {
+      console.log(`${key} changed`);
+    }, [(props as any)[key]]);
+  }
+}

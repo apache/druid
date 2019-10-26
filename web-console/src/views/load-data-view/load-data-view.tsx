@@ -145,7 +145,10 @@ import { FilterTable } from './filter-table/filter-table';
 import { ParseDataTable } from './parse-data-table/parse-data-table';
 import { ParseTimeTable } from './parse-time-table/parse-time-table';
 import { SchemaTable } from './schema-table/schema-table';
-import { TransformTable } from './transform-table/transform-table';
+import {
+  TransformTable,
+  transformTableSelectedColumnName,
+} from './transform-table/transform-table';
 
 import './load-data-view.scss';
 
@@ -1635,7 +1638,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       columnFilter,
       specialColumnsOnly,
       transformQueryState,
-      selectedTransformIndex,
+      selectedTransform,
+      // selectedTransformIndex,
     } = this.state;
     const transforms: Transform[] =
       deepGet(spec, 'dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
@@ -1668,7 +1672,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             columnFilter={columnFilter}
             transformedColumnsOnly={specialColumnsOnly}
             transforms={transforms}
-            selectedTransformIndex={selectedTransformIndex}
+            selectedColumnName={transformTableSelectedColumnName(
+              transformQueryState.data,
+              selectedTransform,
+            )}
             onTransformSelect={this.onTransformSelect}
           />
         </div>
