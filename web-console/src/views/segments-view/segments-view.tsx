@@ -524,7 +524,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             accessor: 'size',
             filterable: false,
             defaultSortDesc: true,
-            Cell: row => formatBytes(row.value),
+            Cell: row => {
+              if (row.value === 0 && row.original.is_realtime === 1) return '(realtime)';
+              return formatBytes(row.value);
+            },
             show: hiddenColumns.exists('Size'),
           },
           {

@@ -483,12 +483,14 @@ doubleMax
 doubleMean
 doubleMeanNoNulls
 doubleMin
+doubleSum
 druid.generic.useDefaultValueForNull
 limitSpec
 longMax
 longMean
 longMeanNoNulls
 longMin
+longSum
 movingAverage
 postAggregations
 postAveragers
