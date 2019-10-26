@@ -28,7 +28,9 @@ interface DatasourceTableActionDialogProps {
   onClose: () => void;
 }
 
-export const DatasourceTableActionDialog = React.memo((props: DatasourceTableActionDialogProps) => {
+export const DatasourceTableActionDialog = React.memo(function DatasourceTableActionDialog(
+  props: DatasourceTableActionDialogProps,
+) {
   const { onClose, datasourceId, actions } = props;
   const [activeTab, setActiveTab] = useState('columns');
 

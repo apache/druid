@@ -28,7 +28,7 @@ export interface ClearableInputProps {
   placeholder: string;
 }
 
-export const ClearableInput = React.memo((props: ClearableInputProps) => {
+export const ClearableInput = React.memo(function ClearableInput(props: ClearableInputProps) {
   const { className, value, onChange, placeholder } = props;
 
   return (

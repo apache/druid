@@ -52,7 +52,7 @@ export interface SchemaTableProps {
   ) => void;
 }
 
-export const SchemaTable = React.memo((props: SchemaTableProps) => {
+export const SchemaTable = React.memo(function SchemaTable(props: SchemaTableProps) {
   const {
     sampleBundle,
     columnFilter,

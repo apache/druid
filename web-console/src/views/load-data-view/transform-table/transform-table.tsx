@@ -47,7 +47,7 @@ export interface TransformTableProps {
   onTransformSelect: (transform: Transform, index: number) => void;
 }
 
-export const TransformTable = React.memo((props: TransformTableProps) => {
+export const TransformTable = React.memo(function TransformTable(props: TransformTableProps) {
   const {
     sampleData,
     columnFilter,

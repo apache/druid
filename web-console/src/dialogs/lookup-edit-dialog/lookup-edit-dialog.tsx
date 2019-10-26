@@ -44,7 +44,7 @@ export interface LookupEditDialogProps {
   allLookupTiers: string[];
 }
 
-export const LookupEditDialog = React.memo((props: LookupEditDialogProps) => {
+export const LookupEditDialog = React.memo(function LookupEditDialog(props: LookupEditDialogProps) {
   const {
     onClose,
     onSubmit,

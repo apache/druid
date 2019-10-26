@@ -23,7 +23,7 @@ export interface ExternalLinkProps {
   children?: ReactNode;
 }
 
-export const ExternalLink = React.memo((props: ExternalLinkProps) => {
+export const ExternalLink = React.memo(function ExternalLink(props: ExternalLinkProps) {
   const { href, children } = props;
 
   return (

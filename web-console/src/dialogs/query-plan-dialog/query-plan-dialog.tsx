@@ -38,7 +38,7 @@ export interface QueryPlanDialogProps {
   setQueryString: (queryString: string) => void;
 }
 
-export const QueryPlanDialog = React.memo((props: QueryPlanDialogProps) => {
+export const QueryPlanDialog = React.memo(function QueryPlanDialog(props: QueryPlanDialogProps) {
   const { explainResult, explainError, onClose, setQueryString } = props;
 
   let content: JSX.Element;

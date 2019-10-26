@@ -32,7 +32,7 @@ export interface AboutDialogProps {
   onClose: () => void;
 }
 
-export const AboutDialog = React.memo((props: AboutDialogProps) => {
+export const AboutDialog = React.memo(function AboutDialog(props: AboutDialogProps) {
   const { onClose } = props;
 
   return (

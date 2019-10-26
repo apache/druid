@@ -49,7 +49,7 @@ export interface QueryExtraInfoProps {
   onDownload: (filename: string, format: string) => void;
 }
 
-export const QueryExtraInfo = React.memo((props: QueryExtraInfoProps) => {
+export const QueryExtraInfo = React.memo(function QueryExtraInfo(props: QueryExtraInfoProps) {
   const { queryExtraInfo, onDownload } = props;
 
   function handleQueryInfoClick() {

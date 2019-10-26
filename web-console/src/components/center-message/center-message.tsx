@@ -24,7 +24,7 @@ export interface CenterMessageProps {
   children?: ReactNode;
 }
 
-export const CenterMessage = React.memo((props: CenterMessageProps) => {
+export const CenterMessage = React.memo(function CenterMessage(props: CenterMessageProps) {
   const { children } = props;
 
   return (

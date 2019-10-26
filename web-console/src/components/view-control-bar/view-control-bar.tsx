@@ -25,7 +25,7 @@ export interface ViewControlBarProps {
   children?: ReactNode;
 }
 
-export const ViewControlBar = React.memo((props: ViewControlBarProps) => {
+export const ViewControlBar = React.memo(function ViewControlBar(props: ViewControlBarProps) {
   const { label, children } = props;
 
   return (

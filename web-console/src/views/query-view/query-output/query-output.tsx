@@ -47,7 +47,7 @@ export interface QueryOutputProps {
   runeMode: boolean;
 }
 
-export const QueryOutput = React.memo((props: QueryOutputProps) => {
+export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputProps) {
   const { queryResult, parsedQuery, loading, error } = props;
   const [showValue, setShowValue] = useState();
 

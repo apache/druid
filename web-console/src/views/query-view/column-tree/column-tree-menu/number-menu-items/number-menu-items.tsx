@@ -28,7 +28,7 @@ export interface NumberMenuItemsProps {
   onQueryChange: (queryString: SqlQuery, run?: boolean) => void;
 }
 
-export const NumberMenuItems = React.memo((props: NumberMenuItemsProps) => {
+export const NumberMenuItems = React.memo(function NumberMenuItems(props: NumberMenuItemsProps) {
   function renderFilterMenu(): JSX.Element {
     const { columnName, parsedQuery, onQueryChange } = props;
 

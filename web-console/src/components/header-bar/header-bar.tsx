@@ -132,7 +132,7 @@ export interface HeaderBarProps {
   hideLegacy: boolean;
 }
 
-export const HeaderBar = React.memo((props: HeaderBarProps) => {
+export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
   const { active, hideLegacy } = props;
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [doctorDialogOpen, setDoctorDialogOpen] = useState(false);

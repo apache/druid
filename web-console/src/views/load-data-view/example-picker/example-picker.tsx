@@ -27,7 +27,7 @@ export interface ExamplePickerProps {
   onSelectExample: (exampleManifest: ExampleManifest) => void;
 }
 
-export const ExamplePicker = React.memo((props: ExamplePickerProps) => {
+export const ExamplePicker = React.memo(function ExamplePicker(props: ExamplePickerProps) {
   const { exampleManifests, onSelectExample } = props;
   const [selectedIndex, setSelectedIndex] = useState(0);
 

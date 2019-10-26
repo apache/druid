@@ -25,7 +25,7 @@ interface ChartAxisProps {
   className?: string;
 }
 
-export const ChartAxis = React.memo((props: ChartAxisProps) => {
+export const ChartAxis = React.memo(function ChartAxis(props: ChartAxisProps) {
   const { transform, scale, className } = props;
   return (
     <g

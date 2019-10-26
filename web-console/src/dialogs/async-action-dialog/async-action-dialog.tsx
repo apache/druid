@@ -49,7 +49,9 @@ export interface AsyncActionDialogProps {
   children?: ReactNode;
 }
 
-export const AsyncActionDialog = React.memo((props: AsyncActionDialogProps) => {
+export const AsyncActionDialog = React.memo(function AsyncActionDialog(
+  props: AsyncActionDialogProps,
+) {
   const {
     action,
     onClose,

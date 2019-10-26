@@ -32,7 +32,7 @@ export interface HomeViewProps {
   noSqlMode: boolean;
 }
 
-export const HomeView = React.memo((props: HomeViewProps) => {
+export const HomeView = React.memo(function HomeView(props: HomeViewProps) {
   const { noSqlMode } = props;
 
   return (

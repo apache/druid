@@ -42,7 +42,7 @@ export interface ParseTimeTableProps {
   onTimestampColumnSelect: (newTimestampSpec: TimestampSpec) => void;
 }
 
-export const ParseTimeTable = React.memo((props: ParseTimeTableProps) => {
+export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTimeTableProps) {
   const {
     sampleBundle,
     columnFilter,

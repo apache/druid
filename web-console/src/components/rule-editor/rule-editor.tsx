@@ -43,7 +43,7 @@ export interface RuleEditorProps {
   moveDown: (() => void) | null;
 }
 
-export const RuleEditor = React.memo((props: RuleEditorProps) => {
+export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps) {
   const { rule, onChange, tiers, onDelete, moveUp, moveDown } = props;
   const [isOpen, setIsOpen] = useState(true);
   if (!rule) return null;

@@ -34,7 +34,7 @@ export interface ActionCellProps {
   actions?: BasicAction[];
 }
 
-export const ActionCell = React.memo((props: ActionCellProps) => {
+export const ActionCell = React.memo(function ActionCell(props: ActionCellProps) {
   const { onDetail, actions } = props;
   const actionsMenu = actions ? basicActionsToMenu(actions) : null;
 

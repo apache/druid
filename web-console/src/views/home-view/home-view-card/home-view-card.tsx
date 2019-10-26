@@ -33,7 +33,7 @@ export interface HomeViewCardProps {
   children?: ReactNode;
 }
 
-export const HomeViewCard = React.memo((props: HomeViewCardProps) => {
+export const HomeViewCard = React.memo(function HomeViewCard(props: HomeViewCardProps) {
   const { className, onClick, href, icon, title, loading, error, children } = props;
 
   return (

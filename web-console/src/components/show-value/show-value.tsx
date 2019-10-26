@@ -30,7 +30,7 @@ export interface ShowValueProps {
   jsonValue?: string;
 }
 
-export const ShowValue = React.memo((props: ShowValueProps) => {
+export const ShowValue = React.memo(function ShowValue(props: ShowValueProps) {
   const { endpoint, downloadFilename, jsonValue } = props;
   return (
     <div className="show-json">

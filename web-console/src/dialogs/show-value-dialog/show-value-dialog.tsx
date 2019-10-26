@@ -30,7 +30,7 @@ export interface ShowValueDialogProps {
   str: string;
 }
 
-export const ShowValueDialog = React.memo((props: ShowValueDialogProps) => {
+export const ShowValueDialog = React.memo(function ShowValueDialog(props: ShowValueDialogProps) {
   const { onClose, str } = props;
 
   function handleCopy() {

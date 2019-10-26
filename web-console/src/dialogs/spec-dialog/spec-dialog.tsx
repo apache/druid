@@ -31,7 +31,7 @@ export interface SpecDialogProps {
   initSpec?: any;
 }
 
-export const SpecDialog = React.memo((props: SpecDialogProps) => {
+export const SpecDialog = React.memo(function SpecDialog(props: SpecDialogProps) {
   const { onClose, onSubmit, title, initSpec } = props;
   const [spec, setSpec] = useState(() => (initSpec ? JSON.stringify(initSpec, null, 2) : '{\n\n}'));
 

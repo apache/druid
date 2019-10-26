@@ -51,7 +51,7 @@ export interface TableCellProps {
   unparseable?: boolean;
 }
 
-export const TableCell = React.memo((props: TableCellProps) => {
+export const TableCell = React.memo(function TableCell(props: TableCellProps) {
   const { value, timestamp, unparseable } = props;
   const [showValue, setShowValue] = useState();
 

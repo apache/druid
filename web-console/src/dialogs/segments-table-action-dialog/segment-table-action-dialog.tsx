@@ -29,7 +29,9 @@ interface SegmentTableActionDialogProps {
   onClose: () => void;
 }
 
-export const SegmentTableActionDialog = React.memo((props: SegmentTableActionDialogProps) => {
+export const SegmentTableActionDialog = React.memo(function SegmentTableActionDialog(
+  props: SegmentTableActionDialogProps,
+) {
   const { segmentId, onClose, datasourceId, actions } = props;
   const [activeTab, setActiveTab] = useState('metadata');
 
