@@ -40,7 +40,7 @@ import java.util.List;
  */
 public abstract class MultiColumnSqlAggregator implements SqlAggregator
 {
-  /*
+  /**
    * Useful Abstraction for passing field information to subclasses from shared parent methods
    */
   protected class FieldInfo
