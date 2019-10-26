@@ -4548,7 +4548,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGreatestDailyCountWithLimit() throws Exception
+  public void testGreatestLongAndDouble() throws Exception
   {
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
@@ -4622,7 +4622,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testLeastDailyCountWithLimit() throws Exception
+  public void testLeastLongAndDouble() throws Exception
   {
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
