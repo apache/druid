@@ -36,7 +36,7 @@ export interface FilterTableProps {
   onFilterSelect: (filter: DruidFilter, index: number) => void;
 }
 
-export function FilterTable(props: FilterTableProps) {
+export const FilterTable = React.memo((props: FilterTableProps) => {
   const {
     sampleData,
     columnFilter,
@@ -90,4 +90,4 @@ export function FilterTable(props: FilterTableProps) {
       sortable={false}
     />
   );
-}
+});

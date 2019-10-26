@@ -25,7 +25,7 @@ interface ChartAxisProps {
   className?: string;
 }
 
-export function ChartAxis(props: ChartAxisProps) {
+export const ChartAxis = React.memo((props: ChartAxisProps) => {
   const { transform, scale, className } = props;
   return (
     <g
@@ -34,4 +34,4 @@ export function ChartAxis(props: ChartAxisProps) {
       ref={node => d3.select(node).call(scale)}
     />
   );
-}
+});

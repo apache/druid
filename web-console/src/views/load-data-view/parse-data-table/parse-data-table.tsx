@@ -36,7 +36,7 @@ export interface ParseDataTableProps {
   onFlattenFieldSelect: (field: FlattenField, index: number) => void;
 }
 
-export function ParseDataTable(props: ParseDataTableProps) {
+export const ParseDataTable = React.memo((props: ParseDataTableProps) => {
   const {
     sampleData,
     columnFilter,
@@ -107,4 +107,4 @@ export function ParseDataTable(props: ParseDataTableProps) {
       sortable={false}
     />
   );
-}
+});

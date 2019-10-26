@@ -28,7 +28,7 @@ export interface NumberMenuItemsProps {
   onQueryChange: (queryString: SqlQuery, run?: boolean) => void;
 }
 
-export function NumberMenuItems(props: NumberMenuItemsProps) {
+export const NumberMenuItems = React.memo((props: NumberMenuItemsProps) => {
   function renderFilterMenu(): JSX.Element {
     const { columnName, parsedQuery, onQueryChange } = props;
 
@@ -162,4 +162,4 @@ export function NumberMenuItems(props: NumberMenuItemsProps) {
       {renderAggregateMenu()}
     </>
   );
-}
+});

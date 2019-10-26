@@ -28,7 +28,7 @@ interface HistoryDialogProps {
   children?: ReactNode;
 }
 
-export function HistoryDialog(props: HistoryDialogProps) {
+export const HistoryDialog = React.memo((props: HistoryDialogProps) => {
   function renderRecords() {
     const { children, historyRecords } = props;
     let content;
@@ -75,4 +75,4 @@ export function HistoryDialog(props: HistoryDialogProps) {
       {renderRecords()}
     </Dialog>
   );
-}
+});

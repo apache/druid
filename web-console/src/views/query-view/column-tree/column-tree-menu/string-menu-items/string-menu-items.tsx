@@ -35,7 +35,7 @@ export interface StringMenuItemsProps {
   onQueryChange: (queryString: SqlQuery, run?: boolean) => void;
 }
 
-export function StringMenuItems(props: StringMenuItemsProps) {
+export const StringMenuItems = React.memo((props: StringMenuItemsProps) => {
   function renderFilterMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
 
@@ -180,4 +180,4 @@ export function StringMenuItems(props: StringMenuItemsProps) {
       {renderAggregateMenu()}
     </>
   );
-}
+});

@@ -39,7 +39,7 @@ interface TableActionDialogProps {
   children?: ReactNode;
 }
 
-export function TableActionDialog(props: TableActionDialogProps) {
+export const TableActionDialog = React.memo((props: TableActionDialogProps) => {
   const { sideButtonMetadata, onClose, title, actions, children } = props;
   const actionsMenu = actions ? basicActionsToMenu(actions) : undefined;
 
@@ -75,4 +75,4 @@ export function TableActionDialog(props: TableActionDialogProps) {
       </div>
     </Dialog>
   );
-}
+});

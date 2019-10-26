@@ -29,7 +29,7 @@ interface SegmentTableActionDialogProps {
   onClose: () => void;
 }
 
-export function SegmentTableActionDialog(props: SegmentTableActionDialogProps) {
+export const SegmentTableActionDialog = React.memo((props: SegmentTableActionDialogProps) => {
   const { segmentId, onClose, datasourceId, actions } = props;
   const [activeTab, setActiveTab] = useState('metadata');
 
@@ -57,4 +57,4 @@ export function SegmentTableActionDialog(props: SegmentTableActionDialogProps) {
       )}
     </TableActionDialog>
   );
-}
+});

@@ -30,7 +30,7 @@ interface TaskTableActionDialogProps {
   status?: string;
 }
 
-export function TaskTableActionDialog(props: TaskTableActionDialogProps) {
+export const TaskTableActionDialog = React.memo((props: TaskTableActionDialogProps) => {
   const { taskId, actions, onClose, status } = props;
   const [activeTab, setActiveTab] = useState('status');
 
@@ -99,4 +99,4 @@ export function TaskTableActionDialog(props: TaskTableActionDialogProps) {
       )}
     </TableActionDialog>
   );
-}
+});

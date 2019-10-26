@@ -44,7 +44,7 @@ export interface LookupEditDialogProps {
   allLookupTiers: string[];
 }
 
-export function LookupEditDialog(props: LookupEditDialogProps) {
+export const LookupEditDialog = React.memo((props: LookupEditDialogProps) => {
   const {
     onClose,
     onSubmit,
@@ -158,4 +158,4 @@ export function LookupEditDialog(props: LookupEditDialogProps) {
       </div>
     </Dialog>
   );
-}
+});
