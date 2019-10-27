@@ -52,6 +52,8 @@ All services that need to access GCS need to have the [GCS connector jar](https:
 
 Tested with Druid 0.9.0, Hadoop 2.7.2 and gcs-connector jar 1.4.4-hadoop2.
 
+<a name="firehose"></a>
+
 ## Native batch ingestion
 
 This firehose ingests events from a predefined list of S3 objects.
