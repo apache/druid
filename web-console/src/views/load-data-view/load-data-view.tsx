@@ -141,7 +141,7 @@ import {
 import { computeFlattenPathsForData } from '../../utils/spec-utils';
 
 import { ExamplePicker } from './example-picker/example-picker';
-import { FilterTable } from './filter-table/filter-table';
+import { FilterTable, filterTableSelectedColumnName } from './filter-table/filter-table';
 import { ParseDataTable } from './parse-data-table/parse-data-table';
 import { ParseTimeTable } from './parse-time-table/parse-time-table';
 import { SchemaTable } from './schema-table/schema-table';
@@ -1898,14 +1898,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   });
 
   renderFilterStep() {
-    const {
-      spec,
-      columnFilter,
-      filterQueryState,
-      selectedFilter,
-      selectedFilterIndex,
-      showGlobalFilter,
-    } = this.state;
+    const { spec, columnFilter, filterQueryState, selectedFilter, showGlobalFilter } = this.state;
     const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || EMPTY_OBJECT;
     const dimensionFilters = this.getMemoizedDimensionFiltersFromSpec(spec);
 
@@ -1932,7 +1925,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             sampleData={filterQueryState.data}
             columnFilter={columnFilter}
             dimensionFilters={dimensionFilters}
-            selectedFilterIndex={selectedFilterIndex}
+            selectedFilterName={filterTableSelectedColumnName(
+              filterQueryState.data,
+              selectedFilter,
+            )}
             onShowGlobalFilter={this.onShowGlobalFilter}
             onFilterSelect={this.onFilterSelect}
           />
