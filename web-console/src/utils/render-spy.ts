@@ -16,20 +16,14 @@
  * limitations under the License.
  */
 
-import React, { ReactNode } from 'react';
+import { useEffect } from 'react';
 
-import './center-message.scss';
-
-export interface CenterMessageProps {
-  children?: ReactNode;
+export function useRenderSpy(componentName: string, props: Record<string, any>) {
+  console.log(`Render on ${componentName}`);
+  const propKeys: string[] = Object.keys(props).sort();
+  for (const key of propKeys) {
+    useEffect(() => {
+      console.log(`${key} changed`);
+    }, [(props as any)[key]]);
+  }
 }
-
-export const CenterMessage = React.memo(function CenterMessage(props: CenterMessageProps) {
-  const { children } = props;
-
-  return (
-    <div className="center-message bp3-input">
-      <div className="center-message-inner">{children}</div>
-    </div>
-  );
-});

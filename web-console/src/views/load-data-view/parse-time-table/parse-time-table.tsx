@@ -42,7 +42,7 @@ export interface ParseTimeTableProps {
   onTimestampColumnSelect: (newTimestampSpec: TimestampSpec) => void;
 }
 
-export function ParseTimeTable(props: ParseTimeTableProps) {
+export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTimeTableProps) {
   const {
     sampleBundle,
     columnFilter,
@@ -123,4 +123,4 @@ export function ParseTimeTable(props: ParseTimeTableProps) {
       sortable={false}
     />
   );
-}
+});

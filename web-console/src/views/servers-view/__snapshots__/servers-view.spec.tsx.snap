@@ -4,7 +4,7 @@ exports[`servers view action servers view 1`] = `
 <div
   className="servers-view app-view"
 >
-  <ViewControlBar
+  <Memo(ViewControlBar)
     label="Servers"
   >
     <Component>
@@ -30,7 +30,7 @@ exports[`servers view action servers view 1`] = `
         Tier
       </Blueprint3.Button>
     </Blueprint3.ButtonGroup>
-    <RefreshButton
+    <Memo(RefreshButton)
       localStorageKey="servers-refresh-rate"
       onRefresh={[Function]}
     />
@@ -71,7 +71,7 @@ exports[`servers view action servers view 1`] = `
         icon="more"
       />
     </Blueprint3.Popover>
-    <TableColumnSelector
+    <Memo(TableColumnSelector)
       columns={
         Array [
           "Server",
@@ -89,7 +89,7 @@ exports[`servers view action servers view 1`] = `
       onChange={[Function]}
       tableColumnsHidden={Array []}
     />
-  </ViewControlBar>
+  </Memo(ViewControlBar)>
   <ReactTable
     AggregatedComponent={[Function]}
     ExpanderComponent={[Function]}
