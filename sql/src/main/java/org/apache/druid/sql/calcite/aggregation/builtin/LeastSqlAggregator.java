@@ -85,7 +85,6 @@ public class LeastSqlAggregator extends MultiColumnSqlAggregator
           throw new ISE("Cannot create aggregator factory for type[%s]", valueType);
       }
     }
-
     // Use the field access post aggregators created in the previous loop to create the final Post aggregator
     PostAggregator finalPostAggregator;
     switch (valueType) {
