@@ -2513,8 +2513,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
           @Override
           public boolean checkPointDataSourceMetadata(
               String supervisorId,
-              @Nullable Integer taskGroupId,
-              String baseSequenceName,
+              int taskGroupId,
               @Nullable DataSourceMetadata previousDataSourceMetadata
           )
           {

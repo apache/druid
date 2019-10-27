@@ -17,19 +17,20 @@
  */
 
 import { Card, Dialog, Divider } from '@blueprintjs/core';
-import React from 'react';
+import React, { ReactNode } from 'react';
 
-import { JSONCollapse } from '../../components';
+import { JsonCollapse } from '../../components';
 
 import './history-dialog.scss';
 
 interface HistoryDialogProps {
   historyRecords: any[];
+  children?: ReactNode;
 }
 
-export class HistoryDialog extends React.PureComponent<HistoryDialogProps> {
-  renderRecords() {
-    const { children, historyRecords } = this.props;
+export const HistoryDialog = React.memo(function HistoryDialog(props: HistoryDialogProps) {
+  function renderRecords() {
+    const { children, historyRecords } = props;
     let content;
     if (historyRecords.length === 0) {
       content = <div className="no-record">No history records available</div>;
@@ -52,7 +53,7 @@ export class HistoryDialog extends React.PureComponent<HistoryDialogProps> {
                     </div>
                     <Divider />
                     <p>{auditInfo.comment === '' ? '(No comment)' : auditInfo.comment}</p>
-                    <JSONCollapse stringValue={record.payload} buttonText="Payload" />
+                    <JsonCollapse stringValue={record.payload} buttonText="Payload" />
                   </Card>
                 </div>
               );
@@ -69,11 +70,9 @@ export class HistoryDialog extends React.PureComponent<HistoryDialogProps> {
     );
   }
 
-  render(): React.ReactNode {
-    return (
-      <Dialog className="history-dialog" isOpen {...this.props}>
-        {this.renderRecords()}
-      </Dialog>
-    );
-  }
-}
+  return (
+    <Dialog className="history-dialog" isOpen {...props}>
+      {renderRecords()}
+    </Dialog>
+  );
+});

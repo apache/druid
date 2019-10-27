@@ -32,7 +32,15 @@ import React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { ActionCell, RefreshButton, TableColumnSelector, ViewControlBar } from '../../components';
+import {
+  ACTION_COLUMN_ID,
+  ACTION_COLUMN_LABEL,
+  ACTION_COLUMN_WIDTH,
+  ActionCell,
+  RefreshButton,
+  TableColumnSelector,
+  ViewControlBar,
+} from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import {
@@ -66,7 +74,7 @@ const tableColumns: string[] = [
   'Is realtime',
   'Is available',
   'Is overshadowed',
-  ActionCell.COLUMN_LABEL,
+  ACTION_COLUMN_LABEL,
 ];
 const tableColumnsNoSql: string[] = [
   'Segment ID',
@@ -516,7 +524,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             accessor: 'size',
             filterable: false,
             defaultSortDesc: true,
-            Cell: row => formatBytes(row.value),
+            Cell: row => {
+              if (row.value === 0 && row.original.is_realtime === 1) return '(realtime)';
+              return formatBytes(row.value);
+            },
             show: hiddenColumns.exists('Size'),
           },
           {
@@ -564,10 +575,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             show: !noSqlMode && hiddenColumns.exists('Is overshadowed'),
           },
           {
-            Header: ActionCell.COLUMN_LABEL,
-            id: ActionCell.COLUMN_ID,
+            Header: ACTION_COLUMN_LABEL,
+            id: ACTION_COLUMN_ID,
             accessor: 'segment_id',
-            width: ActionCell.COLUMN_WIDTH,
+            width: ACTION_COLUMN_WIDTH,
             filterable: false,
             Cell: row => {
               if (row.aggregated) return '';
@@ -587,7 +598,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               );
             },
             Aggregated: () => '',
-            show: hiddenColumns.exists(ActionCell.COLUMN_LABEL),
+            show: hiddenColumns.exists(ACTION_COLUMN_LABEL),
           },
         ]}
         defaultPageSize={SegmentsView.PAGE_SIZE}

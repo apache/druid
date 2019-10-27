@@ -2738,8 +2738,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
           @Override
           public boolean checkPointDataSourceMetadata(
               String supervisorId,
-              @Nullable Integer taskGroupId,
-              String baseSequenceName,
+              int taskGroupId,
               @Nullable DataSourceMetadata checkpointMetadata
           )
           {

@@ -229,6 +229,14 @@ export function getSpecType(spec: Partial<IngestionSpec>): IngestionType | undef
   );
 }
 
+export function isTask(spec: IngestionSpec) {
+  const type = String(getSpecType(spec));
+  return (
+    type.startsWith('index_') ||
+    ['index', 'compact', 'kill', 'append', 'merge', 'same_interval_merge'].includes(type)
+  );
+}
+
 export function isIngestSegment(spec: IngestionSpec): boolean {
   return deepGet(spec, 'ioConfig.firehose.type') === 'ingestSegment';
 }
@@ -322,10 +330,17 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
       ((p.format === 'csv' || p.format === 'tsv') && !p.hasHeaderRow) || p.format === 'regex',
   },
   {
+    name: 'delimiter',
+    type: 'string',
+    defaultValue: '\t',
+    defined: (p: ParseSpec) => p.format === 'tsv',
+    info: <>A custom delimiter for data values.</>,
+  },
+  {
     name: 'listDelimiter',
     type: 'string',
-    defaultValue: '|',
     defined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
+    info: <>A custom delimiter for multi-value dimensions.</>,
   },
 ];
 
@@ -547,7 +562,7 @@ export function getFlattenFieldFormFields() {
 }
 
 export interface TransformSpec {
-  transforms: Transform[];
+  transforms?: Transform[];
   filter?: any;
 }
 

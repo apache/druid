@@ -32,20 +32,18 @@ export interface HomeViewProps {
   noSqlMode: boolean;
 }
 
-export class HomeView extends React.PureComponent<HomeViewProps> {
-  render(): JSX.Element {
-    const { noSqlMode } = this.props;
+export const HomeView = React.memo(function HomeView(props: HomeViewProps) {
+  const { noSqlMode } = props;
 
-    return (
-      <div className="home-view app-view">
-        <StatusCard />
-        <DatasourcesCard noSqlMode={noSqlMode} />
-        <SegmentsCard noSqlMode={noSqlMode} />
-        <SupervisorsCard />
-        <TasksCard noSqlMode={noSqlMode} />
-        <ServersCard noSqlMode={noSqlMode} />
-        <LookupsCard />
-      </div>
-    );
-  }
-}
+  return (
+    <div className="home-view app-view">
+      <StatusCard />
+      <DatasourcesCard noSqlMode={noSqlMode} />
+      <SegmentsCard noSqlMode={noSqlMode} />
+      <SupervisorsCard />
+      <TasksCard noSqlMode={noSqlMode} />
+      <ServersCard noSqlMode={noSqlMode} />
+      <LookupsCard />
+    </div>
+  );
+});

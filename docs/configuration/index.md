@@ -1524,6 +1524,8 @@ The Druid SQL server is configured through the following properties on the Broke
 |`druid.sql.planner.maxSemiJoinRowsInMemory`|Maximum number of rows to keep in memory for executing two-stage semi-join queries like `SELECT * FROM Employee WHERE DeptName IN (SELECT DeptName FROM Dept)`.|100000|
 |`druid.sql.planner.maxTopNLimit`|Maximum threshold for a [TopN query](../querying/topnquery.md). Higher limits will be planned as [GroupBy queries](../querying/groupbyquery.md) instead.|100000|
 |`druid.sql.planner.metadataRefreshPeriod`|Throttle for metadata refreshes.|PT1M|
+|`druid.sql.planner.metadataSegmentCacheEnable`|Whether to keep a cache of published segments in broker. If true, broker polls coordinator in background to get segments from metadata store and maintains a local cache. If false, coordinator's REST API will be invoked when broker needs published segments info.|false|
+|`druid.sql.planner.metadataSegmentPollPeriod`|How often to poll coordinator for published segments list if `druid.sql.planner.metadataSegmentCacheEnable` is set to true. Poll period is in milliseconds. |60000|
 |`druid.sql.planner.selectThreshold`|Page size threshold for [Select queries](../querying/select-query.md). Select queries for larger resultsets will be issued back-to-back using pagination.|1000|
 |`druid.sql.planner.useApproximateCountDistinct`|Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.|true|
 |`druid.sql.planner.useApproximateTopN`|Whether to use approximate [TopN queries](../querying/topnquery.md) when a SQL query could be expressed as such. If false, exact [GroupBy queries](../querying/groupbyquery.md) will be used instead.|true|
@@ -1660,6 +1662,15 @@ If there is an L1 miss and L2 hit, it will also populate L1.
 ## General query configuration
 
 This section describes configurations that control behavior of Druid's query types, applicable to Broker, Historical, and MiddleManager processes.
+
+### Query vectorization config
+
+The following configurations are to set the default behavior for query vectorization.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.vectorize`|See [Vectorizable queries](../querying/query-context.html#vectorizable-queries) for details. This value can be overridden by `vectorize` in the query contexts.|`false`|
+|`druid.query.vectorSize`|See [Vectorizable queries](../querying/query-context.html#vectorizable-queries) for details. This value can be overridden by `vectorSize` in the query contexts.|`512`|
 
 ### TopN query config
 

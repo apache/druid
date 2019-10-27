@@ -52,7 +52,7 @@ public class DropwizardEmitterConfig
       @JsonProperty("includeHost") Boolean includeHost,
       @JsonProperty("dimensionMapPath") String dimensionMapPath,
       @JsonProperty("alertEmitters") List<String> alertEmitters,
-      @JsonProperty("metricsRegistrySize") Integer maxMetricsRegistrySize
+      @JsonProperty("maxMetricsRegistrySize") Integer maxMetricsRegistrySize
   )
   {
     Preconditions.checkArgument(reporters != null && !reporters.isEmpty());

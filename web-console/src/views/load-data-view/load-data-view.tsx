@@ -46,7 +46,7 @@ import {
   CenterMessage,
   ClearableInput,
   ExternalLink,
-  JSONInput,
+  JsonInput,
   Loader,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
@@ -106,6 +106,7 @@ import {
   isParallel,
   issueWithIoConfig,
   issueWithParser,
+  isTask,
   joinFilter,
   MAX_INLINE_DATA_LENGTH,
   MetricSpec,
@@ -144,7 +145,10 @@ import { FilterTable } from './filter-table/filter-table';
 import { ParseDataTable } from './parse-data-table/parse-data-table';
 import { ParseTimeTable } from './parse-time-table/parse-time-table';
 import { SchemaTable } from './schema-table/schema-table';
-import { TransformTable } from './transform-table/transform-table';
+import {
+  TransformTable,
+  transformTableSelectedColumnName,
+} from './transform-table/transform-table';
 
 import './load-data-view.scss';
 
@@ -248,6 +252,7 @@ export interface LoadDataViewState {
   spec: IngestionSpec;
   cacheKey?: string;
   // dialogs / modals
+  continueToSpec: boolean;
   showResetConfirm: boolean;
   newRollup?: boolean;
   newDimensionMode?: DimensionMode;
@@ -300,7 +305,8 @@ export interface LoadDataViewState {
   selectedMetricSpecIndex: number;
   selectedMetricSpec?: MetricSpec;
 
-  continueToSpec: boolean;
+  // for final step
+  submitting: boolean;
 }
 
 export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDataViewState> {
@@ -315,6 +321,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       // dialogs / modals
       showResetConfirm: false,
+      continueToSpec: false,
 
       // general
       sampleStrategy: 'start',
@@ -347,7 +354,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       selectedDimensionSpecIndex: -1,
       selectedMetricSpecIndex: -1,
 
-      continueToSpec: false,
+      // for final step
+      submitting: false,
     };
   }
 
@@ -1025,7 +1033,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             />
           ) : (
             <FormGroup label="IO Config">
-              <JSONInput
+              <JsonInput
                 value={ioConfig}
                 onChange={c => this.updateSpec(deepSet(spec, 'ioConfig', c))}
                 height="300px"
@@ -1630,7 +1638,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       columnFilter,
       specialColumnsOnly,
       transformQueryState,
-      selectedTransformIndex,
+      selectedTransform,
+      // selectedTransformIndex,
     } = this.state;
     const transforms: Transform[] =
       deepGet(spec, 'dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
@@ -1663,7 +1672,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             columnFilter={columnFilter}
             transformedColumnsOnly={specialColumnsOnly}
             transforms={transforms}
-            selectedTransformIndex={selectedTransformIndex}
+            selectedColumnName={transformTableSelectedColumnName(
+              transformQueryState.data,
+              selectedTransform,
+            )}
             onTransformSelect={this.onTransformSelect}
           />
         </div>
@@ -2068,7 +2080,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             onChange={s => this.updateSpec(s)}
           />
           <FormGroup label="Extra filter">
-            <JSONInput
+            <JsonInput
               value={restFilter}
               onChange={f => {
                 const curFilter = splitFilter(deepGet(spec, 'dataSchema.transformSpec.filter'));
@@ -2711,7 +2723,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </div>
             )
           ) : (
-            <JSONInput
+            <JsonInput
               value={ioConfig}
               onChange={c => this.updateSpec(deepSet(spec, 'ioConfig', c))}
               height="300px"
@@ -2912,13 +2924,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderSpecStep() {
-    const { goToTask } = this.props;
-    const { spec } = this.state;
+    const { spec, submitting } = this.state;
 
     return (
       <>
         <div className="main">
-          <JSONInput
+          <JsonInput
             value={spec}
             onChange={s => {
               if (!s) return;
@@ -2951,54 +2962,67 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             text="Submit"
             rightIcon={IconNames.CLOUD_UPLOAD}
             intent={Intent.PRIMARY}
-            onClick={async () => {
-              if (['index', 'index_parallel'].includes(deepGet(spec, 'type'))) {
-                let taskResp: any;
-                try {
-                  taskResp = await axios.post('/druid/indexer/v1/task', {
-                    type: spec.type,
-                    spec,
-                  });
-                } catch (e) {
-                  AppToaster.show({
-                    message: `Failed to submit task: ${getDruidErrorMessage(e)}`,
-                    intent: Intent.DANGER,
-                  });
-                  return;
-                }
-
-                AppToaster.show({
-                  message: 'Task submitted successfully. Going to task view...',
-                  intent: Intent.SUCCESS,
-                });
-
-                setTimeout(() => {
-                  goToTask(taskResp.data.task);
-                }, 1000);
-              } else {
-                try {
-                  await axios.post('/druid/indexer/v1/supervisor', spec);
-                } catch (e) {
-                  AppToaster.show({
-                    message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,
-                    intent: Intent.DANGER,
-                  });
-                  return;
-                }
-
-                AppToaster.show({
-                  message: 'Supervisor submitted successfully. Going to task view...',
-                  intent: Intent.SUCCESS,
-                });
-
-                setTimeout(() => {
-                  goToTask(undefined); // Can we get the supervisor ID here?
-                }, 1000);
-              }
-            }}
+            disabled={submitting}
+            onClick={this.handleSubmit}
           />
         </div>
       </>
     );
   }
+
+  private handleSubmit = async () => {
+    const { goToTask } = this.props;
+    const { spec, submitting } = this.state;
+    if (submitting) return;
+
+    this.setState({ submitting: true });
+    if (isTask(spec)) {
+      let taskResp: any;
+      try {
+        taskResp = await axios.post('/druid/indexer/v1/task', {
+          type: spec.type,
+          spec,
+
+          // A hack to let context be set from the spec can be removed when https://github.com/apache/incubator-druid/issues/8662 is resolved
+          context: (spec as any).context,
+        });
+      } catch (e) {
+        AppToaster.show({
+          message: `Failed to submit task: ${getDruidErrorMessage(e)}`,
+          intent: Intent.DANGER,
+        });
+        this.setState({ submitting: false });
+        return;
+      }
+
+      AppToaster.show({
+        message: 'Task submitted successfully. Going to task view...',
+        intent: Intent.SUCCESS,
+      });
+
+      setTimeout(() => {
+        goToTask(taskResp.data.task);
+      }, 1000);
+    } else {
+      try {
+        await axios.post('/druid/indexer/v1/supervisor', spec);
+      } catch (e) {
+        AppToaster.show({
+          message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,
+          intent: Intent.DANGER,
+        });
+        this.setState({ submitting: false });
+        return;
+      }
+
+      AppToaster.show({
+        message: 'Supervisor submitted successfully. Going to task view...',
+        intent: Intent.SUCCESS,
+      });
+
+      setTimeout(() => {
+        goToTask(undefined); // Can we get the supervisor ID here?
+      }, 1000);
+    }
+  };
 }

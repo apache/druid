@@ -30,7 +30,6 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.utils.Runnables;
 
 import java.io.File;
 import java.io.InputStream;
@@ -188,12 +187,6 @@ public class TestFirehose implements Firehose
         return InputRowPlusRaw.of(next != null ? StringUtils.toUtf8(next.toString()) : null, e);
       }
     }
-  }
-
-  @Override
-  public Runnable commit()
-  {
-    return Runnables.getNoopRunnable();
   }
 
   @Override

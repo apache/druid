@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.plumber;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -335,15 +336,10 @@ public class RealtimePlumberSchoolTest
     final CountDownLatch doneSignal = new CountDownLatch(1);
 
     plumber.persist(
-        Committers.supplierFromRunnable(
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                doneSignal.countDown();
-                throw new RuntimeException();
-              }
+        supplierFromRunnable(
+            () -> {
+              doneSignal.countDown();
+              throw new RuntimeException();
             }
         ).get()
     );
@@ -682,4 +678,22 @@ public class RealtimePlumberSchoolTest
     };
   }
 
+  private static Supplier<Committer> supplierFromRunnable(final Runnable runnable)
+  {
+    final Committer committer = new Committer()
+    {
+      @Override
+      public Object getMetadata()
+      {
+        return null;
+      }
+
+      @Override
+      public void run()
+      {
+        runnable.run();
+      }
+    };
+    return Suppliers.ofInstance(committer);
+  }
 }
