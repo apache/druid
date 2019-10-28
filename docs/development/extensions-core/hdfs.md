@@ -56,7 +56,7 @@ Tested with Druid 0.9.0, Hadoop 2.7.2 and gcs-connector jar 1.4.4-hadoop2.
 
 ## Native batch ingestion
 
-This firehose ingests events from a predefined list of S3 objects.
+This firehose ingests events from a predefined list of files from a Hadoop filesystem.
 This firehose is _splittable_ and can be used by [native parallel index tasks](../../ingestion/native-batch.md#parallel-task).
 Since each split represents an HDFS file, each worker task of `index_parallel` will read an object.
 
@@ -79,6 +79,6 @@ of files is slow.
 |paths|HDFS paths. Can be either a JSON array or comma-separated string of paths. Wildcards like `*` are supported in these paths.|none (required)|
 |maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache. Cached files are not removed until the ingestion task completes.|1073741824|
 |maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch. Prefetched files are removed immediately once they are read.|1073741824|
-|prefetchTriggerBytes|Threshold to trigger prefetching s3 objects.|maxFetchCapacityBytes / 2|
+|prefetchTriggerBytes|Threshold to trigger prefetching files.|maxFetchCapacityBytes / 2|
 |fetchTimeout|Timeout for fetching each file.|60000|
 |maxFetchRetry|Maximum number of retries for fetching each file.|3|
