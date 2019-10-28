@@ -37,7 +37,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.List;
@@ -87,7 +86,6 @@ public class NameNumberedCleanupOvershadowedTest
       COORDINATOR_CONFIG_WITH_ZERO_LEADING_TIME_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS =
       CoordinatorDynamicConfig.builder().withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(0L).build();
 
-  @Ignore
   @Test
   public void testRun()
   {

@@ -150,7 +150,9 @@ public class DruidCoordinatorMirroringTierSegmentCopierTest
             .collect(Collectors.toCollection(() -> new TreeSet<>(
                 Collections.reverseOrder())))
     ));
-    params = new DruidCoordinatorRuntimeParams.Builder().withDruidCluster(druidCluster).build();
+    params = new DruidCoordinatorRuntimeParams.Builder()
+        .withStartTimeNanos(System.nanoTime())
+        .withDruidCluster(druidCluster).build();
     assertStats(2, 0);
   }
 
@@ -171,7 +173,9 @@ public class DruidCoordinatorMirroringTierSegmentCopierTest
             .collect(Collectors.toCollection(() -> new TreeSet<>(
                 Collections.reverseOrder())))
     ));
-    params = new DruidCoordinatorRuntimeParams.Builder().withDruidCluster(druidCluster).build();
+    params = new DruidCoordinatorRuntimeParams.Builder()
+        .withStartTimeNanos(System.nanoTime())
+        .withDruidCluster(druidCluster).build();
     assertStats(1, 0);
   }
 
@@ -196,7 +200,9 @@ public class DruidCoordinatorMirroringTierSegmentCopierTest
             .collect(Collectors.toCollection(() -> new TreeSet<>(
                 Collections.reverseOrder())))
     ));
-    params = new DruidCoordinatorRuntimeParams.Builder().withDruidCluster(druidCluster).build();
+    params = new DruidCoordinatorRuntimeParams.Builder()
+        .withStartTimeNanos(System.nanoTime())
+        .withDruidCluster(druidCluster).build();
     assertStats(1, 0);
   }
 
@@ -219,7 +225,9 @@ public class DruidCoordinatorMirroringTierSegmentCopierTest
             .collect(Collectors.toCollection(() -> new TreeSet<>(
                 Collections.reverseOrder())))
     ));
-    params = new DruidCoordinatorRuntimeParams.Builder().withDruidCluster(druidCluster).build();
+    params = new DruidCoordinatorRuntimeParams.Builder()
+        .withStartTimeNanos(System.nanoTime())
+        .withDruidCluster(druidCluster).build();
     assertStats(0, 0);
   }
 
@@ -251,7 +259,9 @@ public class DruidCoordinatorMirroringTierSegmentCopierTest
             .collect(Collectors.toCollection(() -> new TreeSet<>(
                 Collections.reverseOrder())))
     ));
-    params = new DruidCoordinatorRuntimeParams.Builder().withDruidCluster(druidCluster).build();
+    params = new DruidCoordinatorRuntimeParams.Builder()
+        .withStartTimeNanos(System.nanoTime())
+        .withDruidCluster(druidCluster).build();
     assertStats(1, 1);
   }
 
