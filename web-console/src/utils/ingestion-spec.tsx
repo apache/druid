@@ -330,10 +330,17 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
       ((p.format === 'csv' || p.format === 'tsv') && !p.hasHeaderRow) || p.format === 'regex',
   },
   {
+    name: 'delimiter',
+    type: 'string',
+    defaultValue: '\t',
+    defined: (p: ParseSpec) => p.format === 'tsv',
+    info: <>A custom delimiter for data values.</>,
+  },
+  {
     name: 'listDelimiter',
     type: 'string',
-    defaultValue: '|',
     defined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
+    info: <>A custom delimiter for multi-value dimensions.</>,
   },
 ];
 

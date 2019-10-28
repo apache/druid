@@ -49,7 +49,9 @@ export interface AsyncActionDialogProps {
   children?: ReactNode;
 }
 
-export function AsyncActionDialog(props: AsyncActionDialogProps) {
+export const AsyncActionDialog = React.memo(function AsyncActionDialog(
+  props: AsyncActionDialogProps,
+) {
   const {
     action,
     onClose,
@@ -127,4 +129,4 @@ export function AsyncActionDialog(props: AsyncActionDialogProps) {
       </div>
     </Dialog>
   );
-}
+});

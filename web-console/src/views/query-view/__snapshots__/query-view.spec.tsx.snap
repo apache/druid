@@ -72,7 +72,7 @@ exports[`sql view matches snapshot 1`] = `
         </Blueprint3.Tooltip>
       </div>
     </div>
-    <QueryOutput
+    <Memo(QueryOutput)
       loading={false}
       onQueryChange={[Function]}
       runeMode={false}
