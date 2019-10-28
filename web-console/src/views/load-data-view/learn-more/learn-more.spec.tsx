@@ -19,36 +19,15 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { getEmptyTimestampSpec } from '../../../utils/ingestion-spec';
+import { LearnMore } from './learn-more';
 
-import { ParseTimeTable } from './parse-time-table';
-
-describe('parse time table', () => {
+describe('learn more', () => {
   it('matches snapshot', () => {
-    const sampleData = {
-      header: ['c1'],
-      rows: [
-        {
-          raw: `{"c1":"hello"}`,
-          parsed: { c1: 'hello' },
-        },
-      ],
-    };
-
-    const parseTimeTable = (
-      <ParseTimeTable
-        sampleBundle={{
-          headerAndRows: sampleData,
-          timestampSpec: getEmptyTimestampSpec(),
-        }}
-        columnFilter=""
-        possibleTimestampColumnsOnly={false}
-        selectedColumnName={undefined}
-        onTimestampColumnSelect={() => {}}
-      />
+    const learnMore = (
+      <LearnMore href="https://druid.apache.org/docs/latest/development/extensions-core/kinesis-ingestion.html" />
     );
 
-    const { container } = render(parseTimeTable);
+    const { container } = render(learnMore);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

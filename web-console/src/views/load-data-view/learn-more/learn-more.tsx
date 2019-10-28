@@ -16,35 +16,20 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
 import React from 'react';
 
-import { FilterTable } from './filter-table';
+import { ExternalLink } from '../../../components';
 
-describe('filter table', () => {
-  it('matches snapshot', () => {
-    const sampleData = {
-      header: ['c1'],
-      rows: [
-        {
-          raw: `{"c1":"hello"}`,
-          parsed: { c1: 'hello' },
-        },
-      ],
-    };
+export interface LearnMoreProps {
+  href: string;
+}
 
-    const filterTable = (
-      <FilterTable
-        sampleData={sampleData}
-        columnFilter=""
-        dimensionFilters={[]}
-        selectedFilterName={undefined}
-        onShowGlobalFilter={() => {}}
-        onFilterSelect={() => {}}
-      />
-    );
+export const LearnMore = React.memo(function LearnMore(props: LearnMoreProps) {
+  const { href } = props;
 
-    const { container } = render(filterTable);
-    expect(container.firstChild).toMatchSnapshot();
-  });
+  return (
+    <p className="learn-more">
+      <ExternalLink href={href}>Learn more</ExternalLink>
+    </p>
+  );
 });
