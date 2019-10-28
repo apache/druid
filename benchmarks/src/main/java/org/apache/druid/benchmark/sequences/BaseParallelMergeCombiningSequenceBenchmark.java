@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark;
+package org.apache.druid.benchmark.sequences;
 
 import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -29,53 +29,33 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.BenchmarkMode;
-import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
-import org.openjdk.jmh.annotations.Measurement;
-import org.openjdk.jmh.annotations.Mode;
-import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
-import org.openjdk.jmh.results.format.ResultFormatType;
-import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.RunnerException;
-import org.openjdk.jmh.runner.options.Options;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-
 @State(Scope.Benchmark)
-@Fork(value = 1, jvmArgsAppend = "-XX:+UseG1GC")
-@Warmup(iterations = 5)
-@Measurement(iterations = 25)
-public class ParallelMergeCombiningSequenceBenchmark
+public class BaseParallelMergeCombiningSequenceBenchmark
 {
   private static final Logger log = new Logger(ParallelMergeCombiningSequenceBenchmark.class);
   // default merge FJP size
-  private static final ForkJoinPool MERGE_POOL = new ForkJoinPool(
+  static final ForkJoinPool MERGE_POOL = new ForkJoinPool(
       (int) Math.ceil(Runtime.getRuntime().availableProcessors() * 0.75),
       ForkJoinPool.defaultForkJoinWorkerThreadFactory,
       (t, e) -> log.error(e, "Unhandled exception in thread [%s]", t),
       true
   );
 
-  // this should be as large as the largest value of concurrentSequenceConsumers
-  private static final ExecutorService CONSUMER_POOL = Execs.multiThreaded(64, "mock-http-thread");
-
-  // note: parameters are broken down to allow easily commenting out lines to mix and match which benchmarks to run
+  // note: parameters are broken down one per line to allow easily commenting out lines to mix and match which
+  // benchmarks to run
   // also note: don't really run this like it is unless you have days to spare
   @Param({
       "8",
@@ -83,21 +63,14 @@ public class ParallelMergeCombiningSequenceBenchmark
       "32",
       "64"
   })
-  private int numSequences;
-
-  @Param({"75000"})
-  private int rowsPerSequence;
+  int numSequences;
 
   @Param({
-      "1",
-      "2",
-      "4",
-      "8",
-      "16",
-      "32",
-      "64"
+      "1000",
+      "75000",
+      "10000000"
   })
-  private int concurrentSequenceConsumers;
+  int rowsPerSequence;
 
   @Param({
       "combiningMergeSequence-same-thread",
@@ -105,36 +78,29 @@ public class ParallelMergeCombiningSequenceBenchmark
       "parallelism-4-10ms-256-1024",
       "parallelism-8-10ms-256-1024",
       "parallelism-16-10ms-256-1024",
-      "parallelism-1-100ms-512-4096",
-      "parallelism-4-100ms-512-4096",
-      "parallelism-8-100ms-512-4096",
-      "parallelism-16-100ms-512-4096",
       "parallelism-1-100ms-1024-4096",
       "parallelism-4-100ms-1024-4096",
       "parallelism-8-100ms-1024-4096",
       "parallelism-16-100ms-1024-4096",
-      "parallelism-1-100ms-1024-16384",
-      "parallelism-4-100ms-1024-16384",
-      "parallelism-8-100ms-1024-16384",
-      "parallelism-16-100ms-1024-16384",
       "parallelism-1-100ms-4096-16384",
       "parallelism-4-100ms-4096-16384",
       "parallelism-8-100ms-4096-16384",
       "parallelism-16-100ms-4096-16384"
   })
-  private String strategy;
+  String strategy;
+
 
   @Param({
-      "non-blocking",
+      "non-blocking-sequence",
       // note: beware when using the blocking sequences for a direct comparison between strategies
       // at minimum they are useful for gauging behavior when sequences block, but because the sequences are not stable
       // between strategies or number of sequences, much less between iterations of the same strategy, compensation in
       // the form of running a lot of iterations could potentially make them more directly comparable
-      "initial-block-random-100-500ms",
-      "initial-block-random-4000-5000ms",
-      "slow-sequence-random-10-100ms-1ms"
+      "initially-blocking-sequence-100-500ms",
+      "initially-blocking-sequence-4000-5000ms",
+      "blocking-sequence-10-100ms-10-1ms"
   })
-  private String inputSequenceType;
+  String inputSequenceType;
 
   private int parallelism;
   private int targetTaskTimeMillis;
@@ -148,35 +114,44 @@ public class ParallelMergeCombiningSequenceBenchmark
   public void setup()
   {
     String[] inputSequenceTypeSplit = inputSequenceType.split("-");
-    if ("initial".equals(inputSequenceTypeSplit[0])) {
-      // e.g. "initial-block-random-{startDelayStart}-{startDelayEnd}ms"
-      final int startMillis = Integer.parseInt(inputSequenceTypeSplit[3]);
-      final int delayMillis = Integer.parseInt(inputSequenceTypeSplit[4].substring(0, inputSequenceTypeSplit[4].length() - 2));
+    if ("initially".equals(inputSequenceTypeSplit[0])) {
+      // e.g. "initially-blocking-sequence-{startDelayStart}-{startDelayEnd}ms"
+      final int startDelayStartMillis = Integer.parseInt(inputSequenceTypeSplit[3]);
+      final int startDelayEndMillis = Integer.parseInt(
+          inputSequenceTypeSplit[4].substring(0, inputSequenceTypeSplit[4].length() - 2)
+      );
       inputSequenceFactory = () ->
-          ParallelMergeCombiningSequenceTest.initialDelaySequence(
+          ParallelMergeCombiningSequenceTest.blockingSequence(
               rowsPerSequence,
-              delayMillis,
-              delayMillis - startMillis,
+              startDelayStartMillis,
+              startDelayEndMillis,
+              -1,
+              0,
               true
           );
-    } else if ("slow".equals(inputSequenceTypeSplit[0])) {
-      // e.g. "slow-sequence-random-{startDelayStart}-{startDelayEnd}ms-{frequencyDelay}ms"
-      final int startStartDelayMillis = Integer.parseInt(inputSequenceTypeSplit[3]);
-      final int startDelayMillis = Integer.parseInt(inputSequenceTypeSplit[4].substring(0, inputSequenceTypeSplit[4].length() - 2));
-      final int delayMillis = Integer.parseInt(inputSequenceTypeSplit[5].substring(0, inputSequenceTypeSplit[5].length() - 2));
-      final int frequency = rowsPerSequence / 10;
+    } else if ("blocking".equals(inputSequenceTypeSplit[0])) {
+      // e.g. "blocking-sequence-{startDelayStart}-{startDelayEnd}ms-{numberOfTimesToBlock}-{frequencyDelay}ms"
+      final int startDelayStartMillis = Integer.parseInt(inputSequenceTypeSplit[2]);
+      final int startDelayEndMillis = Integer.parseInt(
+          inputSequenceTypeSplit[3].substring(0, inputSequenceTypeSplit[3].length() - 2)
+      );
+      final int numberOfTimesToBlock = Integer.parseInt(inputSequenceTypeSplit[4]);
+      final int maxIterationDelayMillis = Integer.parseInt(
+          inputSequenceTypeSplit[5].substring(0, inputSequenceTypeSplit[5].length() - 2)
+      );
+      final int frequency = rowsPerSequence / numberOfTimesToBlock;
       inputSequenceFactory = () ->
-          ParallelMergeCombiningSequenceTest.slowSequence(
+          ParallelMergeCombiningSequenceTest.blockingSequence(
               rowsPerSequence,
+              startDelayStartMillis,
+              startDelayEndMillis,
               frequency,
-              startDelayMillis,
-              startDelayMillis - startStartDelayMillis,
-              delayMillis,
+              maxIterationDelayMillis,
               true
           );
     } else { // non-blocking sequence
       inputSequenceFactory = () ->
-          ParallelMergeCombiningSequenceTest.generateOrderedPairsSequence(rowsPerSequence, true);
+          ParallelMergeCombiningSequenceTest.nonBlockingSequence(rowsPerSequence, true);
     }
 
     String[] strategySplit = strategy.split("-");
@@ -192,32 +167,8 @@ public class ParallelMergeCombiningSequenceBenchmark
     }
   }
 
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  public void exec(Blackhole blackhole) throws Exception
-  {
-    List<Future> futures = new ArrayList<>(concurrentSequenceConsumers);
-    for (int i = 0; i < concurrentSequenceConsumers; i++) {
-      futures.add(
-          CONSUMER_POOL.submit(() -> {
-            try {
-              consumeSequence(blackhole);
-            }
-            catch (Exception anyException) {
-              log.error(anyException, "benchmark failed");
-            }
-          })
-      );
-    }
 
-    for (int i = 0; i < concurrentSequenceConsumers; i++) {
-      blackhole.consume(futures.get(i).get());
-    }
-    blackhole.consume(futures);
-  }
-
-  private List<Sequence<ParallelMergeCombiningSequenceTest.IntPair>> createInputSequences()
+  List<Sequence<ParallelMergeCombiningSequenceTest.IntPair>> createInputSequences()
   {
     List<Sequence<ParallelMergeCombiningSequenceTest.IntPair>> inputSequences = new ArrayList<>(numSequences);
     for (int j = 0; j < numSequences; j++) {
@@ -226,7 +177,7 @@ public class ParallelMergeCombiningSequenceBenchmark
     return inputSequences;
   }
 
-  private Sequence<ParallelMergeCombiningSequenceTest.IntPair> createParallelSequence()
+  Sequence<ParallelMergeCombiningSequenceTest.IntPair> createParallelSequence()
   {
     return new ParallelMergeCombiningSequence<>(
         MERGE_POOL,
@@ -243,7 +194,7 @@ public class ParallelMergeCombiningSequenceBenchmark
     );
   }
 
-  private Sequence<ParallelMergeCombiningSequenceTest.IntPair> createCombiningMergeSequence()
+  Sequence<ParallelMergeCombiningSequenceTest.IntPair> createCombiningMergeSequence()
   {
     return CombiningSequence.create(
         new MergeSequence<>(
@@ -255,28 +206,21 @@ public class ParallelMergeCombiningSequenceBenchmark
     );
   }
 
-  private void consumeSequence(Blackhole blackhole)
+  void consumeSequence(Blackhole blackhole)
   {
-    Yielder<ParallelMergeCombiningSequenceTest.IntPair> yielder = Yielders.each(outputSequenceFactory.get());
+    try {
+      Yielder<ParallelMergeCombiningSequenceTest.IntPair> yielder = Yielders.each(outputSequenceFactory.get());
 
-    ParallelMergeCombiningSequenceTest.IntPair prev;
-    while (!yielder.isDone()) {
-      prev = yielder.get();
-      blackhole.consume(prev);
-      yielder = yielder.next(yielder.get());
+      ParallelMergeCombiningSequenceTest.IntPair prev;
+      while (!yielder.isDone()) {
+        prev = yielder.get();
+        blackhole.consume(prev);
+        yielder = yielder.next(yielder.get());
+      }
     }
-  }
-
-  public static void main(String[] args) throws RunnerException
-  {
-    Options opt = new OptionsBuilder()
-        .include(ParallelMergeCombiningSequenceBenchmark.class.getSimpleName())
-        .forks(1)
-        .syncIterations(true)
-        .resultFormat(ResultFormatType.CSV)
-        .result("parallel-merge-combining-sequence.csv")
-        .build();
-
-    new Runner(opt).run();
+    catch (Exception anyException) {
+      log.error(anyException, "benchmark failed");
+      throw new RuntimeException(anyException);
+    }
   }
 }
