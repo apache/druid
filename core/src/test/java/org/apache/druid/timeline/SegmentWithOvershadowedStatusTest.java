@@ -29,6 +29,7 @@ import org.apache.druid.TestObjectMapper;
 import org.apache.druid.jackson.CommaListJoinDeserializer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
@@ -43,15 +44,15 @@ import java.util.Map;
 
 public class SegmentWithOvershadowedStatusTest
 {
-  private static final ObjectMapper mapper = new TestObjectMapper();
+  private static final ObjectMapper MAPPER = new TestObjectMapper();
   private static final int TEST_VERSION = 0x9;
 
   @Before
   public void setUp()
   {
     InjectableValues.Std injectableValues = new InjectableValues.Std();
-    injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
-    mapper.setInjectableValues(injectableValues);
+    injectableValues.addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT);
+    MAPPER.setInjectableValues(injectableValues);
   }
 
   @Test
@@ -68,18 +69,19 @@ public class SegmentWithOvershadowedStatusTest
         Arrays.asList("dim1", "dim2"),
         Arrays.asList("met1", "met2"),
         NoneShardSpec.instance(),
+        null,
         TEST_VERSION,
         1
     );
 
     final SegmentWithOvershadowedStatus segment = new SegmentWithOvershadowedStatus(dataSegment, false);
 
-    final Map<String, Object> objectMap = mapper.readValue(
-        mapper.writeValueAsString(segment),
+    final Map<String, Object> objectMap = MAPPER.readValue(
+        MAPPER.writeValueAsString(segment),
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(11, objectMap.size());
+    Assert.assertEquals(12, objectMap.size());
     Assert.assertEquals("something", objectMap.get("dataSource"));
     Assert.assertEquals(interval.toString(), objectMap.get("interval"));
     Assert.assertEquals("1", objectMap.get("version"));
@@ -91,9 +93,9 @@ public class SegmentWithOvershadowedStatusTest
     Assert.assertEquals(1, objectMap.get("size"));
     Assert.assertEquals(false, objectMap.get("overshadowed"));
 
-    final String json = mapper.writeValueAsString(segment);
+    final String json = MAPPER.writeValueAsString(segment);
 
-    final TestSegmentWithOvershadowedStatus deserializedSegment = mapper.readValue(
+    final TestSegmentWithOvershadowedStatus deserializedSegment = MAPPER.readValue(
         json,
         TestSegmentWithOvershadowedStatus.class
     );
@@ -133,6 +135,7 @@ class TestSegmentWithOvershadowedStatus extends DataSegment
       @Nullable
           List<String> metrics,
       @JsonProperty("shardSpec") @Nullable ShardSpec shardSpec,
+      @JsonProperty("lasCompactionState") @Nullable CompactionState lastCompactionState,
       @JsonProperty("binaryVersion") Integer binaryVersion,
       @JsonProperty("size") long size,
       @JsonProperty("overshadowed") boolean overshadowed
@@ -146,6 +149,7 @@ class TestSegmentWithOvershadowedStatus extends DataSegment
         dimensions,
         metrics,
         shardSpec,
+        lastCompactionState,
         binaryVersion,
         size
     );

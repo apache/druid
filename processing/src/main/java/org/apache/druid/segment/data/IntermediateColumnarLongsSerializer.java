@@ -27,6 +27,8 @@ import it.unimi.dsi.fastutil.longs.LongList;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
@@ -42,7 +44,6 @@ public class IntermediateColumnarLongsSerializer implements ColumnarLongsSeriali
   private final String filenameBase;
   private final ByteOrder order;
   private final CompressionStrategy compression;
-  private LongList tempOut = null;
 
   private int numInserted = 0;
 
@@ -52,6 +53,9 @@ public class IntermediateColumnarLongsSerializer implements ColumnarLongsSeriali
   private long maxVal = Long.MIN_VALUE;
   private long minVal = Long.MAX_VALUE;
 
+  @Nullable
+  private LongList tempOut = null;
+  @Nullable
   private ColumnarLongsSerializer delegate;
 
   IntermediateColumnarLongsSerializer(

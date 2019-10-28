@@ -44,7 +44,6 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.transform.Transformer;
-import org.apache.druid.utils.Runnables;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -133,7 +132,7 @@ public class IngestSegmentFirehose implements Firehose
                                       {
                                         final Map<String, Object> theEvent = Maps.newLinkedHashMap();
                                         final long timestamp = timestampColumnSelector.getLong();
-                                        theEvent.put(EventHolder.timestampKey, DateTimes.utc(timestamp));
+                                        theEvent.put(EventHolder.TIMESTAMP_KEY, DateTimes.utc(timestamp));
 
                                         for (Map.Entry<String, DimensionSelector> dimSelector :
                                             dimSelectors.entrySet()) {
@@ -200,12 +199,6 @@ public class IngestSegmentFirehose implements Firehose
     final InputRow inputRow = rowYielder.get();
     rowYielder = rowYielder.next(null);
     return transformer.transform(inputRow);
-  }
-
-  @Override
-  public Runnable commit()
-  {
-    return Runnables.getNoopRunnable();
   }
 
   @Override

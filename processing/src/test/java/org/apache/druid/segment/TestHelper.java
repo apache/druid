@@ -31,11 +31,12 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.junit.Assert;
 
 import java.util.HashMap;
@@ -46,10 +47,11 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
+ *
  */
 public class TestHelper
 {
-  private static final ObjectMapper JSON_MAPPER = makeJsonMapper();
+  public static final ObjectMapper JSON_MAPPER = makeJsonMapper();
 
   public static IndexMergerV9 getTestIndexMergerV9(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
@@ -78,7 +80,7 @@ public class TestHelper
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
-            .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT)
+            .addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT)
     );
     return mapper;
   }
@@ -143,10 +145,10 @@ public class TestHelper
       final Object next = resultsIter.next();
       final Object next2 = resultsIter2.next();
 
-      if (expectedNext instanceof Row) {
+      if (expectedNext instanceof ResultRow) {
         // HACK! Special casing for groupBy
-        assertRow(failMsg, (Row) expectedNext, (Row) next);
-        assertRow(failMsg, (Row) expectedNext, (Row) next2);
+        assertRow(failMsg, (ResultRow) expectedNext, (ResultRow) next);
+        assertRow(failMsg, (ResultRow) expectedNext, (ResultRow) next2);
       } else if (expectedNext instanceof Result
                  && (((Result) expectedNext).getValue()) instanceof TimeseriesResultValue) {
         // Special case for GroupByTimeseriesQueryRunnerTest to allow a floating point delta to be used
@@ -179,13 +181,21 @@ public class TestHelper
 
     if (resultsIter.hasNext()) {
       Assert.fail(
-          StringUtils.format("%s: Expected resultsIter to be exhausted, next element was %s", failMsg, resultsIter.next())
+          StringUtils.format(
+              "%s: Expected resultsIter to be exhausted, next element was %s",
+              failMsg,
+              resultsIter.next()
+          )
       );
     }
 
     if (resultsIter2.hasNext()) {
       Assert.fail(
-          StringUtils.format("%s: Expected resultsIter2 to be exhausted, next element was %s", failMsg, resultsIter.next())
+          StringUtils.format(
+              "%s: Expected resultsIter2 to be exhausted, next element was %s",
+              failMsg,
+              resultsIter.next()
+          )
       );
     }
 
@@ -213,12 +223,15 @@ public class TestHelper
       final Object next2 = resultsIter2.next();
 
       String failMsg = msg + "-" + index++;
-      String failMsg2 = StringUtils.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg);
+      String failMsg2 = StringUtils.format(
+          "%s: Second iterator bad, multiple calls to iterator() should be safe",
+          failMsg
+      );
 
-      if (expectedNext instanceof Row) {
+      if (expectedNext instanceof ResultRow) {
         // HACK! Special casing for groupBy
-        assertRow(failMsg, (Row) expectedNext, (Row) next);
-        assertRow(failMsg2, (Row) expectedNext, (Row) next2);
+        assertRow(failMsg, (ResultRow) expectedNext, (ResultRow) next);
+        assertRow(failMsg2, (ResultRow) expectedNext, (ResultRow) next2);
       } else {
         Assert.assertEquals(failMsg, expectedNext, next);
         Assert.assertEquals(failMsg2, expectedNext, next2);
@@ -262,10 +275,14 @@ public class TestHelper
     TimeseriesResultValue expectedVal = (TimeseriesResultValue) expected.getValue();
     TimeseriesResultValue actualVal = (TimeseriesResultValue) actual.getValue();
 
-    final Map<String, Object> expectedMap = (Map<String, Object>) expectedVal.getBaseObject();
-    final Map<String, Object> actualMap = (Map<String, Object>) actualVal.getBaseObject();
+    final Map<String, Object> expectedMap = expectedVal.getBaseObject();
+    final Map<String, Object> actualMap = actualVal.getBaseObject();
 
-    assertRow(msg, new MapBasedRow(expected.getTimestamp(), expectedMap), new MapBasedRow(actual.getTimestamp(), actualMap));
+    assertRow(
+        msg,
+        new MapBasedRow(expected.getTimestamp(), expectedMap),
+        new MapBasedRow(actual.getTimestamp(), actualMap)
+    );
   }
 
   private static void assertTopNResultValue(String msg, Result expected, Result actual)
@@ -332,6 +349,35 @@ public class TestHelper
     }
   }
 
+  private static void assertRow(String msg, ResultRow expected, ResultRow actual)
+  {
+    Assert.assertEquals(
+        StringUtils.format("%s: row length", msg),
+        expected.length(),
+        actual.length()
+    );
+
+    for (int i = 0; i < expected.length(); i++) {
+      final String message = StringUtils.format("%s: idx[%d]", msg, i);
+      final Object expectedValue = expected.get(i);
+      final Object actualValue = actual.get(i);
+
+      if (expectedValue instanceof Float || expectedValue instanceof Double) {
+        Assert.assertEquals(
+            message,
+            ((Number) expectedValue).doubleValue(),
+            ((Number) actualValue).doubleValue(),
+            Math.abs(((Number) expectedValue).doubleValue() * 1e-6)
+        );
+      } else {
+        Assert.assertEquals(
+            message,
+            expectedValue,
+            actualValue
+        );
+      }
+    }
+  }
 
   public static Map<String, Object> createExpectedMap(Object... vals)
   {

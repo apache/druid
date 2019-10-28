@@ -35,6 +35,7 @@ java.lang.Math#random() @ Use ThreadLocalRandom.current()
 java.util.regex.Pattern#matches(java.lang.String,java.lang.CharSequence) @ Use String.startsWith(), endsWith(), contains(), or compile and cache a Pattern explicitly
 org.apache.commons.io.FileUtils#getTempDirectory() @ Use org.junit.rules.TemporaryFolder for tests instead
 java.lang.Class#getCanonicalName() @ Class.getCanonicalName can return null for anonymous types, use Class.getName instead.
+com.google.common.base.Objects#firstNonNull(java.lang.Object, java.lang.Object) @ Use org.apache.druid.common.guava.GuavaUtils#firstNonNull(java.lang.Object, java.lang.Object) instead (probably... the GuavaUtils method return object is nullable)
 
 @defaultMessage Use Locale.ENGLISH
 com.ibm.icu.text.DateFormatSymbols#<init>()
@@ -47,3 +48,4 @@ com.google.common.io.BaseEncoding.base64
 
 @defaultMessage Use com.google.errorprone.annotations.concurrent.GuardedBy
 javax.annotations.concurrent.GuardedBy
+com.amazonaws.annotation.GuardedBy

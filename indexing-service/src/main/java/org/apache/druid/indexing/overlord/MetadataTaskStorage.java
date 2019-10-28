@@ -192,10 +192,23 @@ public class MetadataTaskStorage implements TaskStorage
     // filter out taskInfo with a null 'task' which should only happen in practice if we are missing a jackson module
     // and don't know what to do with the payload, so we won't be able to make use of it anyway
     return handler.getActiveTaskInfo(null)
-           .stream()
-           .filter(taskInfo -> taskInfo.getStatus().isRunnable() && taskInfo.getTask() != null)
-           .map(TaskInfo::getTask)
-           .collect(Collectors.toList());
+                  .stream()
+                  .filter(taskInfo -> taskInfo.getStatus().isRunnable() && taskInfo.getTask() != null)
+                  .map(TaskInfo::getTask)
+                  .collect(Collectors.toList());
+  }
+
+  @Override
+  public List<Task> getActiveTasksByDatasource(String datasource)
+  {
+    List<TaskInfo<Task, TaskStatus>> activeTaskInfos = handler.getActiveTaskInfo(datasource);
+    ImmutableList.Builder<Task> tasksBuilder = ImmutableList.builder();
+    for (TaskInfo<Task, TaskStatus> taskInfo : activeTaskInfos) {
+      if (taskInfo.getStatus().isRunnable() && taskInfo.getTask() != null) {
+        tasksBuilder.add(taskInfo.getTask());
+      }
+    }
+    return tasksBuilder.build();
   }
 
   @Override
@@ -215,7 +228,8 @@ public class MetadataTaskStorage implements TaskStorage
   {
     return ImmutableList.copyOf(
         handler.getCompletedTaskInfo(
-            DateTimes.nowUtc().minus(durationBeforeNow == null ? config.getRecentlyFinishedThreshold() : durationBeforeNow),
+            DateTimes.nowUtc()
+                     .minus(durationBeforeNow == null ? config.getRecentlyFinishedThreshold() : durationBeforeNow),
             maxTaskStatuses,
             datasource
         )

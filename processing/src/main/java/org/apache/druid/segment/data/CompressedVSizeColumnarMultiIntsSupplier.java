@@ -44,7 +44,7 @@ import java.util.Iterator;
  */
 public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplier<ColumnarMultiInts>
 {
-  private static final byte version = 0x2;
+  private static final byte VERSION = 0x2;
 
   /**
    * See class-level comment
@@ -73,7 +73,7 @@ public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplie
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    Channels.writeFully(channel, ByteBuffer.wrap(new byte[]{version}));
+    Channels.writeFully(channel, ByteBuffer.wrap(new byte[]{VERSION}));
     offsetSupplier.writeTo(channel, smoosher);
     valueSupplier.writeTo(channel, smoosher);
   }
@@ -82,7 +82,7 @@ public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplie
   {
     byte versionFromBuffer = buffer.get();
 
-    if (versionFromBuffer == version) {
+    if (versionFromBuffer == VERSION) {
       CompressedVSizeColumnarIntsSupplier offsetSupplier = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
           buffer,
           order

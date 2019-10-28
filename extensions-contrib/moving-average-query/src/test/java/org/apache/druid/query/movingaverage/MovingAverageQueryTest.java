@@ -60,6 +60,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.movingaverage.test.TestConfig;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
@@ -80,7 +81,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -249,18 +249,16 @@ public class MovingAverageQueryTest
     timeseriesResults.clear();
 
     if (getGroupByResultJson() != null) {
-      groupByResults.addAll(jsonMapper.readValue(getGroupByResultJson(), new TypeReference<List<Row>>()
-      {
-      }));
+      groupByResults.addAll(jsonMapper.readValue(getGroupByResultJson(), new TypeReference<List<ResultRow>>() {}));
     }
 
     if (getTimeseriesResultJson() != null) {
-      timeseriesResults.addAll(jsonMapper.readValue(
-          getTimeseriesResultJson(),
-          new TypeReference<List<Result<TimeseriesResultValue>>>()
-          {
-          }
-      ));
+      timeseriesResults.addAll(
+          jsonMapper.readValue(
+              getTimeseriesResultJson(),
+              new TypeReference<List<Result<TimeseriesResultValue>>>() {}
+          )
+      );
     }
   }
 
@@ -364,12 +362,11 @@ public class MovingAverageQueryTest
         },
         baseClient, warehouse, retryConfig, jsonMapper, serverConfig, null, new CacheConfig()
     );
-    final Map<String, Object> responseContext = new HashMap<>();
 
     defineMocks();
 
     QueryPlus queryPlus = QueryPlus.wrap(query);
-    final Sequence<?> res = query.getRunner(walker).run(queryPlus, responseContext);
+    final Sequence<?> res = query.getRunner(walker).run(queryPlus);
 
     List actualResults = new ArrayList();
     actualResults = (List<MapBasedRow>) res.accumulate(actualResults, Accumulators.list());

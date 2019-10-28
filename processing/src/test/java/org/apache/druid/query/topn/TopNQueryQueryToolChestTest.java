@@ -51,6 +51,7 @@ import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IncrementalIndexSegment;
@@ -72,7 +73,7 @@ import java.util.Map;
 public class TopNQueryQueryToolChestTest
 {
 
-  private static final SegmentId segmentId = SegmentId.dummy("testSegment");
+  private static final SegmentId SEGMENT_ID = SegmentId.dummy("testSegment");
 
   @Test
   public void testCacheStrategy() throws Exception
@@ -253,7 +254,7 @@ public class TopNQueryQueryToolChestTest
       );
       QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(
           factory,
-          new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), segmentId),
+          new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), SEGMENT_ID),
           null
       );
 
@@ -261,30 +262,25 @@ public class TopNQueryQueryToolChestTest
       context.put("minTopNThreshold", 500);
 
       TopNQueryBuilder builder = new TopNQueryBuilder()
-          .dataSource(QueryRunnerTestHelper.dataSource)
-          .granularity(QueryRunnerTestHelper.allGran)
-          .dimension(QueryRunnerTestHelper.placementishDimension)
-          .metric(QueryRunnerTestHelper.indexMetric)
-          .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-          .aggregators(QueryRunnerTestHelper.commonDoubleAggregators);
+          .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+          .granularity(QueryRunnerTestHelper.ALL_GRAN)
+          .dimension(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION)
+          .metric(QueryRunnerTestHelper.INDEX_METRIC)
+          .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+          .aggregators(QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS);
 
       TopNQuery query1 = builder.threshold(10).context(null).build();
       MockQueryRunner mockRunner = new MockQueryRunner(runner);
-      new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config).run(
-          QueryPlus.wrap(query1),
-          ImmutableMap.of()
-      );
+      new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config).run(QueryPlus.wrap(query1));
       Assert.assertEquals(1000, mockRunner.query.getThreshold());
 
       TopNQuery query2 = builder.threshold(10).context(context).build();
 
-      new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
-          .run(QueryPlus.wrap(query2), ImmutableMap.of());
+      new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config).run(QueryPlus.wrap(query2));
       Assert.assertEquals(500, mockRunner.query.getThreshold());
 
       TopNQuery query3 = builder.threshold(2000).context(context).build();
-      new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
-          .run(QueryPlus.wrap(query3), ImmutableMap.of());
+      new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config).run(QueryPlus.wrap(query3));
       Assert.assertEquals(2000, mockRunner.query.getThreshold());
     }
   }
@@ -324,16 +320,16 @@ public class TopNQueryQueryToolChestTest
     HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
     switch (valueType) {
       case LONG:
-        collector.add(CardinalityAggregator.hashFn.hashLong((Long) dimValue).asBytes());
+        collector.add(CardinalityAggregator.HASH_FUNCTION.hashLong((Long) dimValue).asBytes());
         break;
       case DOUBLE:
-        collector.add(CardinalityAggregator.hashFn.hashLong(Double.doubleToLongBits((Double) dimValue)).asBytes());
+        collector.add(CardinalityAggregator.HASH_FUNCTION.hashLong(Double.doubleToLongBits((Double) dimValue)).asBytes());
         break;
       case FLOAT:
-        collector.add(CardinalityAggregator.hashFn.hashInt(Float.floatToIntBits((Float) dimValue)).asBytes());
+        collector.add(CardinalityAggregator.HASH_FUNCTION.hashInt(Float.floatToIntBits((Float) dimValue)).asBytes());
         break;
       case STRING:
-        collector.add(CardinalityAggregator.hashFn.hashUnencodedChars((String) dimValue).asBytes());
+        collector.add(CardinalityAggregator.HASH_FUNCTION.hashUnencodedChars((String) dimValue).asBytes());
         break;
       default:
         throw new IllegalArgumentException("bad valueType: " + valueType);
@@ -563,7 +559,7 @@ public class TopNQueryQueryToolChestTest
     @Override
     public Sequence<Result<TopNResultValue>> run(
         QueryPlus<Result<TopNResultValue>> queryPlus,
-        Map<String, Object> responseContext
+        ResponseContext responseContext
     )
     {
       this.query = (TopNQuery) queryPlus.getQuery();

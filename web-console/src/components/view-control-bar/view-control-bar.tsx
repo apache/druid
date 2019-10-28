@@ -16,27 +16,22 @@
  * limitations under the License.
  */
 
-import React from 'react';
+import React, { ReactNode } from 'react';
 
 import './view-control-bar.scss';
 
 export interface ViewControlBarProps {
   label: string;
+  children?: ReactNode;
 }
 
-export class ViewControlBar extends React.PureComponent<ViewControlBarProps> {
-  constructor(props: ViewControlBarProps) {
-    super(props);
-  }
+export const ViewControlBar = React.memo(function ViewControlBar(props: ViewControlBarProps) {
+  const { label, children } = props;
 
-  render() {
-    const { label, children } = this.props;
-
-    return (
-      <div className="view-control-bar">
-        <div className="control-label">{label}</div>
-        {children}
-      </div>
-    );
-  }
-}
+  return (
+    <div className="view-control-bar">
+      <div className="control-label">{label}</div>
+      {children}
+    </div>
+  );
+});

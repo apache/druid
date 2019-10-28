@@ -90,11 +90,11 @@ public interface Expr
   }
 
   /**
-   * Returns the string identifier to use to get a value from {@link Expr.ObjectBinding} of an {@link IdentifierExpr},
+   * Returns the string key to use to get a value from {@link Expr.ObjectBinding} of an {@link IdentifierExpr},
    * else null
    */
   @Nullable
-  default String getIdentifierBindingIfIdentifier()
+  default String getBindingIfIdentifier()
   {
     // overridden by things that are identifiers
     return null;
@@ -163,69 +163,102 @@ public interface Expr
   /**
    * Information about the context in which {@link IdentifierExpr} are used in a greater {@link Expr}, listing
    * the 'free variables' (total set of required input columns or values) and distinguishing between which identifiers
-   * are used as scalar values and which are used as array values.
+   * are used as scalar inputs and which are used as array inputs.
+   *
+   * This type is primarily used at query time when creating expression column selectors to decide if an expression
+   * can properly deal with a multi-valued column input, and also to determine if certain optimizations can be taken.
+   *
+   * Current implementations of {@link #analyzeInputs()} provide context about {@link Function} and
+   * {@link ApplyFunction} arguments which are direct children {@link IdentifierExpr} as scalar or array typed.
+   * This is defined by {@link Function#getScalarInputs(List)}, {@link Function#getArrayInputs(List)} and
+   * {@link ApplyFunction#getArrayInputs(List)}. Identifiers that are nested inside of argument expressions which
+   * are other expression types will not be considered to belong directly to that function, and so are classified by the
+   * context their children are using them as instead.
+   *
+   * This means in rare cases and mostly for "questionable" expressions which we still allow to function 'correctly',
+   * these lists might not be fully reliable without a complete type inference system in place. Due to this shortcoming,
+   * boolean values {@link BindingDetails#hasInputArrays()} and {@link BindingDetails#isOutputArray()} are provided to
+   * allow functions to explicitly declare that they utilize array typed values, used when determining if some types of
+   * optimizations can be applied when constructing the expression column value selector.
+   *
+   * @see Function#getScalarInputs
+   * @see Function#getArrayInputs
+   * @see ApplyFunction#getArrayInputs
+   * @see Parser#applyUnappliedBindings
+   * @see Parser#applyUnapplied
+   * @see Parser#liftApplyLambda
+   * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeDimensionSelector
+   * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeColumnValueSelector
    */
+  @SuppressWarnings("JavadocReference")
   class BindingDetails
   {
     private final ImmutableSet<IdentifierExpr> freeVariables;
     private final ImmutableSet<IdentifierExpr> scalarVariables;
     private final ImmutableSet<IdentifierExpr> arrayVariables;
+    private final boolean hasInputArrays;
+    private final boolean isOutputArray;
 
-    public BindingDetails()
+    BindingDetails()
     {
-      this(ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of());
+      this(ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of(), false, false);
     }
 
-    public BindingDetails(IdentifierExpr expr)
+    BindingDetails(IdentifierExpr expr)
     {
-      this(ImmutableSet.of(expr), ImmutableSet.of(), ImmutableSet.of());
+      this(ImmutableSet.of(expr), ImmutableSet.of(), ImmutableSet.of(), false, false);
     }
 
-    public BindingDetails(
+    private BindingDetails(
         ImmutableSet<IdentifierExpr> freeVariables,
         ImmutableSet<IdentifierExpr> scalarVariables,
-        ImmutableSet<IdentifierExpr> arrayVariables
+        ImmutableSet<IdentifierExpr> arrayVariables,
+        boolean hasInputArrays,
+        boolean isOutputArray
     )
     {
       this.freeVariables = freeVariables;
       this.scalarVariables = scalarVariables;
       this.arrayVariables = arrayVariables;
+      this.hasInputArrays = hasInputArrays;
+      this.isOutputArray = isOutputArray;
     }
 
     /**
-     * Get the list of required column inputs to evaluate an expression
+     * Get the list of required column inputs to evaluate an expression ({@link IdentifierExpr#binding})
      */
-    public List<String> getRequiredColumnsList()
+    public List<String> getRequiredBindingsList()
     {
-      return new ArrayList<>(freeVariables.stream().map(IdentifierExpr::getIdentifierBindingIfIdentifier).collect(Collectors.toSet()));
+      return new ArrayList<>(getRequiredBindings());
     }
 
     /**
-     * Get the set of required column inputs to evaluate an expression, {@link IdentifierExpr#bindingIdentifier}
+     * Get the set of required column inputs to evaluate an expression ({@link IdentifierExpr#binding})
      */
-    public Set<String> getRequiredColumns()
+    public Set<String> getRequiredBindings()
     {
-      return freeVariables.stream().map(IdentifierExpr::getIdentifierBindingIfIdentifier).collect(Collectors.toSet());
+      return map(freeVariables, IdentifierExpr::getBindingIfIdentifier);
     }
 
     /**
-     * Set of {@link IdentifierExpr#bindingIdentifier} which are used with scalar operators and functions
+     * Set of {@link IdentifierExpr#binding} which are used as scalar inputs to operators and functions.
      */
-    public Set<String> getScalarColumns()
+    Set<String> getScalarBindings()
     {
-      return scalarVariables.stream().map(IdentifierExpr::getIdentifierBindingIfIdentifier).collect(Collectors.toSet());
+      return map(scalarVariables, IdentifierExpr::getBindingIfIdentifier);
     }
 
     /**
-     * Set of {@link IdentifierExpr#bindingIdentifier} which are used with array typed functions and apply functions.
+     * Set of {@link IdentifierExpr#binding} which are used as array inputs to operators, functions, and apply
+     * functions.
      */
-    public Set<String> getArrayColumns()
+    public Set<String> getArrayBindings()
     {
-      return arrayVariables.stream().map(IdentifierExpr::getIdentifierBindingIfIdentifier).collect(Collectors.toSet());
+      return map(arrayVariables, IdentifierExpr::getBindingIfIdentifier);
     }
 
     /**
-     * Total set of 'free' identifiers of an {@link Expr}, that are not supplied by a {@link LambdaExpr} binding
+     * Total set of 'free' inputs of an {@link Expr}, that are not supplied by a {@link LambdaExpr} binding
      */
     public Set<IdentifierExpr> getFreeVariables()
     {
@@ -233,19 +266,44 @@ public interface Expr
     }
 
     /**
-     * Set of {@link IdentifierExpr#identifier} which are used with scalar operators and functions.
+     * Set of {@link IdentifierExpr#identifier} which are used as scalar inputs to operators and functions.
      */
-    public Set<String> getScalarVariables()
+    Set<String> getScalarVariables()
     {
-      return scalarVariables.stream().map(IdentifierExpr::getIdentifier).collect(Collectors.toSet());
+      return map(scalarVariables, IdentifierExpr::getIdentifier);
     }
 
     /**
-     * Set of {@link IdentifierExpr#identifier} which are used with array typed functions and apply functions.
+     * Set of {@link IdentifierExpr#identifier} which are used as array inputs to operators, functions, and apply
+     * functions.
      */
-    public Set<String> getArrayVariables()
+    Set<String> getArrayVariables()
     {
-      return arrayVariables.stream().map(IdentifierExpr::getIdentifier).collect(Collectors.toSet());
+      return map(arrayVariables, IdentifierExpr::getIdentifier);
+    }
+
+    /**
+     * Returns true if any expression in the expression tree has any array inputs. Note that in some cases, this can be
+     * true and {@link #getArrayBindings()} or {@link #getArrayVariables()} can be empty.
+     *
+     * This is because these collections contain identifiers/bindings which were classified as either scalar or array
+     * inputs based on the context of their usage by {@link Expr#analyzeInputs()}, where as this value and
+     * {@link #isOutputArray()} are set based on information reported by {@link Function#hasArrayInputs()},
+     * {@link Function#hasArrayOutput()}, and {@link ApplyFunction#hasArrayOutput(LambdaExpr)}, without regards to
+     * identifiers or anything else.
+     */
+    public boolean hasInputArrays()
+    {
+      return hasInputArrays;
+    }
+
+    /**
+     * Returns true if any expression in this expression tree produces array outputs as reported by
+     * {@link Function#hasArrayOutput()} or {@link ApplyFunction#hasArrayOutput(LambdaExpr)}
+     */
+    public boolean isOutputArray()
+    {
+      return isOutputArray;
     }
 
     /**
@@ -264,7 +322,9 @@ public interface Expr
       return new BindingDetails(
           ImmutableSet.copyOf(Sets.union(freeVariables, other.freeVariables)),
           ImmutableSet.copyOf(Sets.union(scalarVariables, other.scalarVariables)),
-          ImmutableSet.copyOf(Sets.union(arrayVariables, other.arrayVariables))
+          ImmutableSet.copyOf(Sets.union(arrayVariables, other.arrayVariables)),
+          hasInputArrays || other.hasInputArrays,
+          isOutputArray || other.isOutputArray
       );
     }
 
@@ -276,15 +336,17 @@ public interface Expr
     {
       Set<IdentifierExpr> moreScalars = new HashSet<>();
       for (Expr expr : scalarArguments) {
-        final IdentifierExpr stringIdentifier = expr.getIdentifierExprIfIdentifierExpr();
-        if (stringIdentifier != null) {
+        final boolean isIdentiferExpr = expr.getIdentifierExprIfIdentifierExpr() != null;
+        if (isIdentiferExpr) {
           moreScalars.add((IdentifierExpr) expr);
         }
       }
       return new BindingDetails(
           ImmutableSet.copyOf(Sets.union(freeVariables, moreScalars)),
           ImmutableSet.copyOf(Sets.union(scalarVariables, moreScalars)),
-          arrayVariables
+          arrayVariables,
+          hasInputArrays,
+          isOutputArray
       );
     }
 
@@ -292,19 +354,49 @@ public interface Expr
      * Add set of arguments as {@link BindingDetails#arrayVariables} that are *directly* {@link IdentifierExpr},
      * else they are ignored.
      */
-    public BindingDetails withArrayArguments(Set<Expr> arrayArguments)
+    BindingDetails withArrayArguments(Set<Expr> arrayArguments)
     {
       Set<IdentifierExpr> arrayIdentifiers = new HashSet<>();
       for (Expr expr : arrayArguments) {
-        final IdentifierExpr isIdentifier = expr.getIdentifierExprIfIdentifierExpr();
-        if (isIdentifier != null) {
+        final boolean isIdentifierExpr = expr.getIdentifierExprIfIdentifierExpr() != null;
+        if (isIdentifierExpr) {
           arrayIdentifiers.add((IdentifierExpr) expr);
         }
       }
       return new BindingDetails(
           ImmutableSet.copyOf(Sets.union(freeVariables, arrayIdentifiers)),
           scalarVariables,
-          ImmutableSet.copyOf(Sets.union(arrayVariables, arrayIdentifiers))
+          ImmutableSet.copyOf(Sets.union(arrayVariables, arrayIdentifiers)),
+          hasInputArrays || !arrayArguments.isEmpty(),
+          isOutputArray
+      );
+    }
+
+    /**
+     * Copy, setting if an expression has array inputs
+     */
+    BindingDetails withArrayInputs(boolean hasArrays)
+    {
+      return new BindingDetails(
+          freeVariables,
+          scalarVariables,
+          arrayVariables,
+          hasArrays || !arrayVariables.isEmpty(),
+          isOutputArray
+      );
+    }
+
+    /**
+     * Copy, setting if an expression produces an array output
+     */
+    BindingDetails withArrayOutput(boolean isOutputArray)
+    {
+      return new BindingDetails(
+          freeVariables,
+          scalarVariables,
+          arrayVariables,
+          hasInputArrays,
+          isOutputArray
       );
     }
 
@@ -312,13 +404,28 @@ public interface Expr
      * Remove any {@link IdentifierExpr} that are from a {@link LambdaExpr}, since the {@link ApplyFunction} will
      * provide bindings for these variables.
      */
-    public BindingDetails removeLambdaArguments(Set<String> lambda)
+    BindingDetails removeLambdaArguments(Set<String> lambda)
     {
       return new BindingDetails(
-        ImmutableSet.copyOf(freeVariables.stream().filter(x -> !lambda.contains(x.getIdentifier())).iterator()),
-        ImmutableSet.copyOf(scalarVariables.stream().filter(x -> !lambda.contains(x.getIdentifier())).iterator()),
-        ImmutableSet.copyOf(arrayVariables.stream().filter(x -> !lambda.contains(x.getIdentifier())).iterator())
+          ImmutableSet.copyOf(freeVariables.stream().filter(x -> !lambda.contains(x.getIdentifier())).iterator()),
+          ImmutableSet.copyOf(scalarVariables.stream().filter(x -> !lambda.contains(x.getIdentifier())).iterator()),
+          ImmutableSet.copyOf(arrayVariables.stream().filter(x -> !lambda.contains(x.getIdentifier())).iterator()),
+          hasInputArrays,
+          isOutputArray
       );
+    }
+
+    // Use this instead of streams for better performance
+    private static Set<String> map(
+        Set<IdentifierExpr> variables,
+        java.util.function.Function<IdentifierExpr, String> mapper
+    )
+    {
+      Set<String> results = new HashSet<>(variables.size());
+      for (IdentifierExpr variable : variables) {
+        results.add(mapper.apply(variable));
+      }
+      return results;
     }
   }
 }
@@ -567,28 +674,37 @@ class DoubleArrayExpr extends ConstantExpr
 class IdentifierExpr implements Expr
 {
   private final String identifier;
-  private final String bindingIdentifier;
+  private final String binding;
 
+  /**
+   * Construct a identifier expression for a {@link LambdaExpr}, where the {@link #identifier} is equal to
+   * {@link #binding}
+   */
   IdentifierExpr(String value)
   {
     this.identifier = value;
-    this.bindingIdentifier = value;
+    this.binding = value;
   }
 
-  IdentifierExpr(String identifier, String bindingIdentifier)
+  /**
+   * Construct a normal identifier expression, where {@link #binding} is the key to fetch the backing value from
+   * {@link Expr.ObjectBinding} and the {@link #identifier} is a unique string that identifies this usage of the
+   * binding.
+   */
+  IdentifierExpr(String identifier, String binding)
   {
     this.identifier = identifier;
-    this.bindingIdentifier = bindingIdentifier;
+    this.binding = binding;
   }
 
   @Override
   public String toString()
   {
-    return bindingIdentifier;
+    return binding;
   }
 
   /**
-   * Unique identifier
+   * Unique identifier for the binding
    */
   @Nullable
   public String getIdentifier()
@@ -597,12 +713,12 @@ class IdentifierExpr implements Expr
   }
 
   /**
-   * Value binding identifier
+   * Value binding, key to retrieve value from {@link Expr.ObjectBinding#get(String)}
    */
   @Nullable
-  public String getBindingIdentifier()
+  public String getBinding()
   {
-    return bindingIdentifier;
+    return binding;
   }
 
   @Nullable
@@ -614,9 +730,9 @@ class IdentifierExpr implements Expr
 
   @Nullable
   @Override
-  public String getIdentifierBindingIfIdentifier()
+  public String getBindingIfIdentifier()
   {
-    return bindingIdentifier;
+    return binding;
   }
 
   @Nullable
@@ -635,7 +751,7 @@ class IdentifierExpr implements Expr
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return ExprEval.bestEffortOf(bindings.get(bindingIdentifier));
+    return ExprEval.bestEffortOf(bindings.get(binding));
   }
 
   @Override
@@ -668,7 +784,7 @@ class LambdaExpr implements Expr
     return StringUtils.format("(%s -> %s)", args, expr);
   }
 
-  public int identifierCount()
+  int identifierCount()
   {
     return args.size();
   }
@@ -688,7 +804,7 @@ class LambdaExpr implements Expr
     return args.stream().map(IdentifierExpr::toString).collect(Collectors.toList());
   }
 
-  public ImmutableList<IdentifierExpr> getIdentifierExprs()
+  ImmutableList<IdentifierExpr> getIdentifierExprs()
   {
     return args;
   }
@@ -737,8 +853,8 @@ class LambdaExpr implements Expr
 class FunctionExpr implements Expr
 {
   final Function function;
-  final String name;
   final ImmutableList<Expr> args;
+  private final String name;
 
   FunctionExpr(Function function, String name, List<Expr> args)
   {
@@ -785,7 +901,9 @@ class FunctionExpr implements Expr
       accumulator = accumulator.with(arg);
     }
     return accumulator.withScalarArguments(function.getScalarInputs(args))
-                      .withArrayArguments(function.getArrayInputs(args));
+                      .withArrayArguments(function.getArrayInputs(args))
+                      .withArrayInputs(function.hasArrayInputs())
+                      .withArrayOutput(function.hasArrayOutput());
   }
 }
 
@@ -824,7 +942,11 @@ class ApplyFunctionExpr implements Expr
     }
 
     lambdaBindingDetails = lambdaExpr.analyzeInputs();
-    bindingDetails = accumulator.with(lambdaBindingDetails).withArrayArguments(function.getArrayInputs(argsExpr));
+
+    bindingDetails = accumulator.with(lambdaBindingDetails)
+                                .withArrayArguments(function.getArrayInputs(argsExpr))
+                                .withArrayInputs(true)
+                                .withArrayOutput(function.hasArrayOutput(lambdaExpr));
     argsBindingDetails = argBindingDetailsBuilder.build();
   }
 
@@ -890,6 +1012,7 @@ abstract class UnaryExpr implements Expr
   public Expr visit(Shuttle shuttle)
   {
     Expr newExpr = expr.visit(shuttle);
+    //noinspection ObjectEquality (checking for object equality here is intentional)
     if (newExpr != expr) {
       return shuttle.visit(copy(newExpr));
     }
@@ -1005,6 +1128,7 @@ abstract class BinaryOpExprBase implements Expr
   {
     Expr newLeft = left.visit(shuttle);
     Expr newRight = right.visit(shuttle);
+    //noinspection ObjectEquality (checking for object equality here is intentional)
     if (left != newLeft || right != newRight) {
       return shuttle.visit(copy(newLeft, newRight));
     }
@@ -1476,3 +1600,4 @@ class BinOrExpr extends BinaryOpExprBase
     return leftVal.asBoolean() ? leftVal : right.eval(bindings);
   }
 }
+

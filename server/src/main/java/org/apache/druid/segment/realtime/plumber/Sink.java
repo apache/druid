@@ -36,10 +36,13 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.FireHydrant;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -52,7 +55,7 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class Sink implements Iterable<FireHydrant>
+public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 {
   private static final IncrementalIndexAddResult ALREADY_SWAPPED =
       new IncrementalIndexAddResult(-1, -1, null, "write after index swapped");
@@ -61,6 +64,8 @@ public class Sink implements Iterable<FireHydrant>
   private final Interval interval;
   private final DataSchema schema;
   private final ShardSpec shardSpec;
+  @Nullable
+  private final CompactionState compactionState;
   private final String version;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
@@ -84,22 +89,51 @@ public class Sink implements Iterable<FireHydrant>
       String dedupColumn
   )
   {
-    this.schema = schema;
-    this.shardSpec = shardSpec;
-    this.interval = interval;
-    this.version = version;
-    this.maxRowsInMemory = maxRowsInMemory;
-    this.maxBytesInMemory = maxBytesInMemory;
-    this.reportParseExceptions = reportParseExceptions;
-    this.dedupColumn = dedupColumn;
-
-    makeNewCurrIndex(interval.getStartMillis(), schema);
+    this(
+        interval,
+        schema,
+        shardSpec,
+        null,
+        version,
+        maxRowsInMemory,
+        maxBytesInMemory,
+        reportParseExceptions,
+        dedupColumn,
+        Collections.emptyList()
+    );
   }
 
   public Sink(
       Interval interval,
       DataSchema schema,
       ShardSpec shardSpec,
+      @Nullable CompactionState compactionState,
+      String version,
+      int maxRowsInMemory,
+      long maxBytesInMemory,
+      boolean reportParseExceptions,
+      String dedupColumn
+  )
+  {
+    this(
+        interval,
+        schema,
+        shardSpec,
+        compactionState,
+        version,
+        maxRowsInMemory,
+        maxBytesInMemory,
+        reportParseExceptions,
+        dedupColumn,
+        Collections.emptyList()
+    );
+  }
+
+  public Sink(
+      Interval interval,
+      DataSchema schema,
+      ShardSpec shardSpec,
+      @Nullable CompactionState compactionState,
       String version,
       int maxRowsInMemory,
       long maxBytesInMemory,
@@ -110,6 +144,7 @@ public class Sink implements Iterable<FireHydrant>
   {
     this.schema = schema;
     this.shardSpec = shardSpec;
+    this.compactionState = compactionState;
     this.interval = interval;
     this.version = version;
     this.maxRowsInMemory = maxRowsInMemory;
@@ -140,11 +175,6 @@ public class Sink implements Iterable<FireHydrant>
   public void clearDedupCache()
   {
     dedupSet.clear();
-  }
-
-  public String getVersion()
-  {
-    return version;
   }
 
   public Interval getInterval()
@@ -248,6 +278,7 @@ public class Sink implements Iterable<FireHydrant>
         Collections.emptyList(),
         Lists.transform(Arrays.asList(schema.getAggregators()), AggregatorFactory::getName),
         shardSpec,
+        compactionState,
         null,
         0
     );
@@ -407,5 +438,43 @@ public class Sink implements Iterable<FireHydrant>
            "interval=" + interval +
            ", schema=" + schema +
            '}';
+  }
+
+  @Override
+  public boolean overshadows(Sink other)
+  {
+    // Sink is currently used in timeline only for querying stream data.
+    // In this case, sinks never overshadow each other.
+    return false;
+  }
+
+  @Override
+  public int getStartRootPartitionId()
+  {
+    return shardSpec.getStartRootPartitionId();
+  }
+
+  @Override
+  public int getEndRootPartitionId()
+  {
+    return shardSpec.getEndRootPartitionId();
+  }
+
+  @Override
+  public String getVersion()
+  {
+    return version;
+  }
+
+  @Override
+  public short getMinorVersion()
+  {
+    return shardSpec.getMinorVersion();
+  }
+
+  @Override
+  public short getAtomicUpdateGroupSize()
+  {
+    return shardSpec.getAtomicUpdateGroupSize();
   }
 }

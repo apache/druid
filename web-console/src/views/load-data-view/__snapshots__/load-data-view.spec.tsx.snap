@@ -22,6 +22,7 @@ exports[`load data view matches snapshot 1`] = `
         <Blueprint3.Button
           active={true}
           className="welcome"
+          disabled={false}
           icon={false}
           key="welcome"
           onClick={[Function]}
@@ -30,6 +31,7 @@ exports[`load data view matches snapshot 1`] = `
         <Blueprint3.Button
           active={false}
           className="connect"
+          disabled={true}
           icon={false}
           key="connect"
           onClick={[Function]}
@@ -38,6 +40,7 @@ exports[`load data view matches snapshot 1`] = `
         <Blueprint3.Button
           active={false}
           className="parser"
+          disabled={true}
           icon={false}
           key="parser"
           onClick={[Function]}
@@ -46,6 +49,7 @@ exports[`load data view matches snapshot 1`] = `
         <Blueprint3.Button
           active={false}
           className="timestamp"
+          disabled={true}
           icon={false}
           key="timestamp"
           onClick={[Function]}
@@ -68,6 +72,7 @@ exports[`load data view matches snapshot 1`] = `
         <Blueprint3.Button
           active={false}
           className="transform"
+          disabled={true}
           icon={false}
           key="transform"
           onClick={[Function]}
@@ -76,6 +81,7 @@ exports[`load data view matches snapshot 1`] = `
         <Blueprint3.Button
           active={false}
           className="filter"
+          disabled={true}
           icon={false}
           key="filter"
           onClick={[Function]}
@@ -84,6 +90,7 @@ exports[`load data view matches snapshot 1`] = `
         <Blueprint3.Button
           active={false}
           className="schema"
+          disabled={true}
           icon={false}
           key="schema"
           onClick={[Function]}
@@ -106,6 +113,7 @@ exports[`load data view matches snapshot 1`] = `
         <Blueprint3.Button
           active={false}
           className="partition"
+          disabled={true}
           icon={false}
           key="partition"
           onClick={[Function]}
@@ -114,6 +122,7 @@ exports[`load data view matches snapshot 1`] = `
         <Blueprint3.Button
           active={false}
           className="tuning"
+          disabled={true}
           icon={false}
           key="tuning"
           onClick={[Function]}
@@ -122,6 +131,7 @@ exports[`load data view matches snapshot 1`] = `
         <Blueprint3.Button
           active={false}
           className="publish"
+          disabled={true}
           icon={false}
           key="publish"
           onClick={[Function]}
@@ -144,10 +154,11 @@ exports[`load data view matches snapshot 1`] = `
         <Blueprint3.Button
           active={false}
           className="spec"
+          disabled={false}
           icon="manually-entered-data"
           key="spec"
           onClick={[Function]}
-          text="Edit JSON spec"
+          text="Edit spec"
         />
       </Blueprint3.ButtonGroup>
     </div>

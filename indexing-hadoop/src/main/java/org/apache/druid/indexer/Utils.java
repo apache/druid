@@ -39,6 +39,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -53,7 +55,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class Utils
 {
   private static final Logger log = new Logger(Utils.class);
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   public static OutputStream makePathAndOutputStream(JobContext job, Path outputPath, boolean deleteExisting)
       throws IOException
@@ -120,7 +122,7 @@ public class Utils
   {
     FileSystem fs = statsPath.getFileSystem(job.getConfiguration());
 
-    return jsonMapper.readValue(
+    return JSON_MAPPER.readValue(
         fs.open(statsPath),
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
@@ -128,9 +130,10 @@ public class Utils
 
   public static void storeStats(JobContext job, Path path, Map<String, Object> stats) throws IOException
   {
-    jsonMapper.writeValue(makePathAndOutputStream(job, path, true), stats);
+    JSON_MAPPER.writeValue(makePathAndOutputStream(job, path, true), stats);
   }
 
+  @Nullable
   public static String getFailureMessage(Job failedJob, ObjectMapper jsonMapper)
   {
     try {

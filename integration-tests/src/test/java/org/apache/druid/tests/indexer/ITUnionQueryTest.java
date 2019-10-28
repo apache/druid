@@ -38,6 +38,7 @@ import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testing.utils.RetryUtil;
 import org.apache.druid.testing.utils.ServerDiscoveryUtil;
+import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
@@ -48,11 +49,12 @@ import org.testng.annotations.Test;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
+@Test(groups = TestNGGroup.QUERY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITUnionQueryTest extends AbstractIndexerTest
 {
@@ -134,7 +136,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       String queryResponseTemplate;
       try {
         InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(UNION_QUERIES_RESOURCE);
-        queryResponseTemplate = IOUtils.toString(is, "UTF-8");
+        queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
       }
       catch (IOException e) {
         throw new ISE(e, "could not read query file: %s", UNION_QUERIES_RESOURCE);
@@ -156,14 +158,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       for (int i = 0; i < numTasks; i++) {
         final int taskNum = i;
         RetryUtil.retryUntil(
-            new Callable<Boolean>()
-            {
-              @Override
-              public Boolean call()
-              {
-                return coordinator.areSegmentsLoaded(fullDatasourceName + taskNum);
-              }
-            },
+            () -> coordinator.areSegmentsLoaded(fullDatasourceName + taskNum),
             true,
             10000,
             10,
@@ -197,7 +192,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
     return StringUtils.replace(taskAsString, EVENT_RECEIVER_SERVICE_PREFIX, serviceName);
   }
 
-  public void postEvents(int id) throws Exception
+  private void postEvents(int id) throws Exception
   {
     final ServerDiscoverySelector eventReceiverSelector = factory.createSelector(EVENT_RECEIVER_SERVICE_PREFIX + id);
     eventReceiverSelector.start();

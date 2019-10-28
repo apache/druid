@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.helper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -49,14 +50,14 @@ public class NewestSegmentFirstPolicyTest
   private static final long DEFAULT_SEGMENT_SIZE = 1000;
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
 
-  private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy();
+  private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(new DefaultObjectMapper());
 
   @Test
   public void testLargeOffsetAndSmallSegmentInterval()
   {
     final Period segmentPeriod = new Period("PT1H");
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, 100, new Period("P2D"))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("P2D"))),
         ImmutableMap.of(
             DATA_SOURCE,
             createTimeline(
@@ -81,7 +82,7 @@ public class NewestSegmentFirstPolicyTest
   {
     final Period segmentPeriod = new Period("PT1H");
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, 100, new Period("PT1M"))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("PT1M"))),
         ImmutableMap.of(
             DATA_SOURCE,
             createTimeline(
@@ -114,41 +115,7 @@ public class NewestSegmentFirstPolicyTest
   {
     final Period segmentPeriod = new Period("PT1H");
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, 100, new Period("PT1H1M"))),
-        ImmutableMap.of(
-            DATA_SOURCE,
-            createTimeline(
-                new SegmentGenerateSpec(Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"), segmentPeriod),
-                // larger gap than SegmentCompactorUtil.LOOKUP_PERIOD (1 day)
-                new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-15T07:00:00"), segmentPeriod)
-            )
-        ),
-        Collections.emptyMap()
-    );
-
-    assertCompactSegmentIntervals(
-        iterator,
-        segmentPeriod,
-        Intervals.of("2017-11-16T20:00:00/2017-11-16T21:00:00"),
-        Intervals.of("2017-11-17T01:00:00/2017-11-17T02:00:00"),
-        false
-    );
-
-    assertCompactSegmentIntervals(
-        iterator,
-        segmentPeriod,
-        Intervals.of("2017-11-14T00:00:00/2017-11-14T01:00:00"),
-        Intervals.of("2017-11-15T06:00:00/2017-11-15T07:00:00"),
-        true
-    );
-  }
-
-  @Test
-  public void testSmallNumTargetCompactionSegments()
-  {
-    final Period segmentPeriod = new Period("PT1H");
-    final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, 5, new Period("PT1H1M"))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("PT1H1M"))),
         ImmutableMap.of(
             DATA_SOURCE,
             createTimeline(
@@ -181,7 +148,7 @@ public class NewestSegmentFirstPolicyTest
   public void testHugeShard()
   {
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, 100, new Period("P1D"))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("P1D"))),
         ImmutableMap.of(
             DATA_SOURCE,
             createTimeline(
@@ -231,7 +198,7 @@ public class NewestSegmentFirstPolicyTest
   public void testManySegmentsPerShard()
   {
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(800000, 100, new Period("P1D"))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(800000, new Period("P1D"))),
         ImmutableMap.of(
             DATA_SOURCE,
             createTimeline(
@@ -284,70 +251,6 @@ public class NewestSegmentFirstPolicyTest
   }
 
   @Test
-  public void testManySegmentsPerShard2()
-  {
-    final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(800000, 100, new Period("P1D"))),
-        ImmutableMap.of(
-            DATA_SOURCE,
-            createTimeline(
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-12-04T11:00:00/2017-12-05T05:00:00"),
-                    new Period("PT1H"),
-                    200,
-                    150
-                ),
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-12-04T06:00:00/2017-12-04T11:00:00"),
-                    new Period("PT1H"),
-                    375,
-                    80
-                ),
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-12-03T18:00:00/2017-12-04T06:00:00"),
-                    new Period("PT12H"),
-                    257000,
-                    1
-                ),
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-12-03T11:00:00/2017-12-03T18:00:00"),
-                    new Period("PT1H"),
-                    200,
-                    150
-                ),
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-12-02T19:00:00/2017-12-03T11:00:00"),
-                    new Period("PT16H"),
-                    257000,
-                    1
-                ),
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-12-02T11:00:00/2017-12-02T19:00:00"),
-                    new Period("PT1H"),
-                    200,
-                    150
-                ),
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-12-01T18:00:00/2017-12-02T11:00:00"),
-                    new Period("PT17H"),
-                    257000,
-                    1
-                ),
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-12-01T09:00:00/2017-12-01T18:00:00"),
-                    new Period("PT1H"),
-                    200,
-                    150
-                )
-            )
-        ),
-        Collections.emptyMap()
-    );
-
-    Assert.assertFalse(iterator.hasNext());
-  }
-
-  @Test
   public void testSkipUnknownDataSource()
   {
     final String unknownDataSource = "unknown";
@@ -355,9 +258,9 @@ public class NewestSegmentFirstPolicyTest
     final CompactionSegmentIterator iterator = policy.reset(
         ImmutableMap.of(
             unknownDataSource,
-            createCompactionConfig(10000, 100, new Period("P2D")),
+            createCompactionConfig(10000, new Period("P2D")),
             DATA_SOURCE,
-            createCompactionConfig(10000, 100, new Period("P2D"))
+            createCompactionConfig(10000, new Period("P2D"))
         ),
         ImmutableMap.of(
             DATA_SOURCE,
@@ -379,72 +282,59 @@ public class NewestSegmentFirstPolicyTest
   }
 
   @Test
-  public void testIgnoreSingleSegmentToCompact()
-  {
-    final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(800000, 100, new Period("P1D"))),
-        ImmutableMap.of(
-            DATA_SOURCE,
-            createTimeline(
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-12-02T00:00:00/2017-12-03T00:00:00"),
-                    new Period("P1D"),
-                    200,
-                    1
-                ),
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-12-01T00:00:00/2017-12-02T00:00:00"),
-                    new Period("P1D"),
-                    200,
-                    1
-                )
-            )
-        ),
-        Collections.emptyMap()
-    );
-
-    Assert.assertFalse(iterator.hasNext());
-  }
-
-  @Test
   public void testClearSegmentsToCompactWhenSkippingSegments()
   {
-    final long maxSizeOfSegmentsToCompact = 800000;
+    final long inputSegmentSizeBytes = 800000;
     final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-12-03T00:00:00/2017-12-04T00:00:00"),
             new Period("P1D"),
-            maxSizeOfSegmentsToCompact / 2 + 10,
+            inputSegmentSizeBytes / 2 + 10,
             1
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-12-02T00:00:00/2017-12-03T00:00:00"),
             new Period("P1D"),
-            maxSizeOfSegmentsToCompact + 10, // large segment
+            inputSegmentSizeBytes + 10, // large segment
             1
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-12-01T00:00:00/2017-12-02T00:00:00"),
             new Period("P1D"),
-            maxSizeOfSegmentsToCompact / 3 + 10,
+            inputSegmentSizeBytes / 3 + 10,
             2
         )
     );
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(maxSizeOfSegmentsToCompact, 100, new Period("P0D"))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(inputSegmentSizeBytes, new Period("P0D"))),
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
 
-    final List<DataSegment> expectedSegmentsToCompact = timeline
-        .lookup(Intervals.of("2017-12-01/2017-12-02"))
-        .stream()
-        .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
-        .map(PartitionChunk::getObject)
-        .collect(Collectors.toList());
-
+    final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>();
+    expectedSegmentsToCompact.addAll(
+        timeline
+            .lookup(Intervals.of("2017-12-03/2017-12-04"))
+            .stream()
+            .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
+            .map(PartitionChunk::getObject)
+            .collect(Collectors.toList())
+    );
     Assert.assertTrue(iterator.hasNext());
     Assert.assertEquals(expectedSegmentsToCompact, iterator.next());
+
+    expectedSegmentsToCompact.clear();
+    expectedSegmentsToCompact.addAll(
+        timeline
+            .lookup(Intervals.of("2017-12-01/2017-12-02"))
+            .stream()
+            .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
+            .map(PartitionChunk::getObject)
+            .collect(Collectors.toList())
+    );
+    Assert.assertTrue(iterator.hasNext());
+    Assert.assertEquals(expectedSegmentsToCompact, iterator.next());
+
     Assert.assertFalse(iterator.hasNext());
   }
 
@@ -461,7 +351,7 @@ public class NewestSegmentFirstPolicyTest
     );
 
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, 100, new Period("P1D"))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"))),
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
@@ -482,7 +372,7 @@ public class NewestSegmentFirstPolicyTest
     );
 
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, 100, new Period("P1D"))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"))),
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
@@ -495,7 +385,7 @@ public class NewestSegmentFirstPolicyTest
   {
     final Period segmentPeriod = new Period("PT1H");
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, 100, new Period("P1D"))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("P1D"))),
         ImmutableMap.of(
             DATA_SOURCE,
             createTimeline(
@@ -535,7 +425,7 @@ public class NewestSegmentFirstPolicyTest
   {
     final Period segmentPeriod = new Period("PT1H");
     final CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, 100, new Period("PT1H"))),
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("PT1H"))),
         ImmutableMap.of(
             DATA_SOURCE,
             createTimeline(
@@ -625,10 +515,7 @@ public class NewestSegmentFirstPolicyTest
       SegmentGenerateSpec... specs
   )
   {
-    VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
-        String.CASE_INSENSITIVE_ORDER
-    );
-
+    List<DataSegment> segments = new ArrayList<>();
     final String version = DateTimes.nowUtc().toString();
 
     final List<SegmentGenerateSpec> orderedSpecs = Arrays.asList(specs);
@@ -647,7 +534,7 @@ public class NewestSegmentFirstPolicyTest
         }
 
         for (int i = 0; i < spec.numSegmentsPerShard; i++) {
-          final ShardSpec shardSpec = new NumberedShardSpec(spec.numSegmentsPerShard, i);
+          final ShardSpec shardSpec = new NumberedShardSpec(i, spec.numSegmentsPerShard);
           final DataSegment segment = new DataSegment(
               DATA_SOURCE,
               segmentInterval,
@@ -659,33 +546,26 @@ public class NewestSegmentFirstPolicyTest
               0,
               spec.segmentSize
           );
-          timeline.add(
-              segmentInterval,
-              version,
-              shardSpec.createChunk(segment)
-          );
+          segments.add(segment);
         }
 
         remaininInterval = SegmentCompactorUtil.removeIntervalFromEnd(remaininInterval, segmentInterval);
       }
     }
 
-    return timeline;
+    return VersionedIntervalTimeline.forSegments(segments);
   }
 
   private DataSourceCompactionConfig createCompactionConfig(
-      long targetCompactionSizeBytes,
-      int numTargetCompactionSegments,
+      long inputSegmentSizeBytes,
       Period skipOffsetFromLatest
   )
   {
     return new DataSourceCompactionConfig(
         DATA_SOURCE,
         0,
-        targetCompactionSizeBytes,
-        targetCompactionSizeBytes,
+        inputSegmentSizeBytes,
         null,
-        numTargetCompactionSegments,
         skipOffsetFromLatest,
         null,
         null

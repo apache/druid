@@ -70,7 +70,7 @@ import java.util.TreeMap;
 public class FileSmoosher implements Closeable
 {
   private static final String FILE_EXTENSION = "smoosh";
-  private static final Joiner joiner = Joiner.on(",");
+  private static final Joiner JOINER = Joiner.on(",");
   private static final Logger LOG = new Logger(FileSmoosher.class);
 
   private final File baseDir;
@@ -376,7 +376,7 @@ public class FileSmoosher implements Closeable
       for (Map.Entry<String, Metadata> entry : internalFiles.entrySet()) {
         final Metadata metadata = entry.getValue();
         out.write(
-            joiner.join(
+            JOINER.join(
                 entry.getKey(),
                 metadata.getFileNum(),
                 metadata.getStartOffset(),
@@ -412,7 +412,7 @@ public class FileSmoosher implements Closeable
       this.outFile = outFile;
       this.maxLength = maxLength;
 
-      FileOutputStream outStream = closer.register(new FileOutputStream(outFile));
+      FileOutputStream outStream = closer.register(new FileOutputStream(outFile));  // lgtm [java/output-resource-leak]
       this.channel = closer.register(outStream.getChannel());
     }
 

@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.filter.Filter;
@@ -50,10 +51,20 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
+import java.util.List;
 
 public class TopNMetricSpecOptimizationsTest
 {
+  private static final List<AggregatorFactory> AGGS = Lists.newArrayList(
+      Iterables.concat(
+          QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS,
+          Lists.newArrayList(
+              new DoubleMaxAggregatorFactory("maxIndex", "index"),
+              new DoubleMinAggregatorFactory("minIndex", "index")
+          )
+      )
+  );
+
   @Test
   public void testShouldOptimizeLexicographic()
   {
@@ -61,24 +72,14 @@ public class TopNMetricSpecOptimizationsTest
     int cardinality = 1234;
     int threshold = 4;
     TopNQuery query = new TopNQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(QueryRunnerTestHelper.indexMetric)
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .metric(QueryRunnerTestHelper.INDEX_METRIC)
         .threshold(threshold)
         .intervals("2018-05-30T00:00:00Z/2018-05-31T00:00:00Z")
-        .aggregators(
-            Lists.newArrayList(
-                Iterables.concat(
-                    QueryRunnerTestHelper.commonDoubleAggregators,
-                    Lists.newArrayList(
-                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
-                        new DoubleMinAggregatorFactory("minIndex", "index")
-                    )
-                )
-            )
-        )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .aggregators(AGGS)
+        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
 
     StorageAdapter adapter =
@@ -105,24 +106,14 @@ public class TopNMetricSpecOptimizationsTest
     int cardinality = 1234;
     int threshold = 4;
     TopNQuery query = new TopNQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(QueryRunnerTestHelper.indexMetric)
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .metric(QueryRunnerTestHelper.INDEX_METRIC)
         .threshold(threshold)
         .intervals("2018-05-30T00:00:00Z/2018-05-30T01:00:00Z")
-        .aggregators(
-            Lists.newArrayList(
-                Iterables.concat(
-                    QueryRunnerTestHelper.commonDoubleAggregators,
-                    Lists.newArrayList(
-                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
-                        new DoubleMinAggregatorFactory("minIndex", "index")
-                    )
-                )
-            )
-        )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .aggregators(AGGS)
+        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
 
     StorageAdapter adapter =
@@ -150,24 +141,14 @@ public class TopNMetricSpecOptimizationsTest
     int cardinality = 1234;
     int threshold = 4;
     TopNQuery query = new TopNQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(QueryRunnerTestHelper.indexMetric)
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .metric(QueryRunnerTestHelper.INDEX_METRIC)
         .threshold(threshold)
         .intervals("2018-05-30T00:00:00Z/2018-05-30T01:00:00Z")
-        .aggregators(
-            Lists.newArrayList(
-                Iterables.concat(
-                    QueryRunnerTestHelper.commonDoubleAggregators,
-                    Lists.newArrayList(
-                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
-                        new DoubleMinAggregatorFactory("minIndex", "index")
-                    )
-                )
-            )
-        )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .aggregators(AGGS)
+        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
 
     StorageAdapter adapter =
@@ -195,25 +176,15 @@ public class TopNMetricSpecOptimizationsTest
     int cardinality = 1234;
     int threshold = 4;
     TopNQuery query = new TopNQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
-        .filters(QueryRunnerTestHelper.qualityDimension, "entertainment")
-        .metric(QueryRunnerTestHelper.indexMetric)
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .filters(QueryRunnerTestHelper.QUALITY_DIMENSION, "entertainment")
+        .metric(QueryRunnerTestHelper.INDEX_METRIC)
         .threshold(threshold)
         .intervals("2018-05-30T00:00:00Z/2018-05-31T00:00:00Z")
-        .aggregators(
-            Lists.newArrayList(
-                Iterables.concat(
-                    QueryRunnerTestHelper.commonDoubleAggregators,
-                    Lists.newArrayList(
-                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
-                        new DoubleMinAggregatorFactory("minIndex", "index")
-                    )
-                )
-            )
-        )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .aggregators(AGGS)
+        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
 
     StorageAdapter adapter =
@@ -240,24 +211,14 @@ public class TopNMetricSpecOptimizationsTest
     int cardinality = 1234;
     int threshold = 4;
     TopNQuery query = new TopNQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(QueryRunnerTestHelper.indexMetric)
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .metric(QueryRunnerTestHelper.INDEX_METRIC)
         .threshold(threshold)
         .intervals("2018-05-30T00:00:00Z/2018-05-31T00:00:00Z")
-        .aggregators(
-            Lists.newArrayList(
-                Iterables.concat(
-                    QueryRunnerTestHelper.commonDoubleAggregators,
-                    Lists.newArrayList(
-                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
-                        new DoubleMinAggregatorFactory("minIndex", "index")
-                    )
-                )
-            )
-        )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .aggregators(AGGS)
+        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
 
 

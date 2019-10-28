@@ -57,9 +57,9 @@ import java.util.stream.Collectors;
  */
 public class StaticS3FirehoseFactoryTest
 {
-  private static final AmazonS3Client S3_ClIENT = EasyMock.createNiceMock(AmazonS3Client.class);
+  private static final AmazonS3Client S3_CLIENT = EasyMock.createNiceMock(AmazonS3Client.class);
   private static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
-      S3_ClIENT,
+      S3_CLIENT,
       new NoopServerSideEncryption()
   );
 
@@ -102,7 +102,7 @@ public class StaticS3FirehoseFactoryTest
     uris.sort(Comparator.comparing(URI::toString));
 
     uris.forEach(StaticS3FirehoseFactoryTest::addExpectedObjject);
-    EasyMock.replay(S3_ClIENT);
+    EasyMock.replay(S3_CLIENT);
 
     final StaticS3FirehoseFactory factory = new StaticS3FirehoseFactory(
         SERVICE,
@@ -115,7 +115,7 @@ public class StaticS3FirehoseFactoryTest
         5
     );
     final List<FiniteFirehoseFactory<StringInputRowParser, URI>> subFactories = factory
-        .getSplits()
+        .getSplits(null)
         .map(factory::withSplit)
         .sorted(Comparator.comparing(eachFactory -> {
           final StaticS3FirehoseFactory staticS3FirehoseFactory = (StaticS3FirehoseFactory) eachFactory;

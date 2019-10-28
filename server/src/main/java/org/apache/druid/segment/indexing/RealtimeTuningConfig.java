@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
@@ -42,18 +43,18 @@ import java.io.File;
  */
 public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
 {
-  private static final int defaultMaxRowsInMemory = TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY;
-  private static final Period defaultIntermediatePersistPeriod = new Period("PT10M");
-  private static final Period defaultWindowPeriod = new Period("PT10M");
-  private static final VersioningPolicy defaultVersioningPolicy = new IntervalStartVersioningPolicy();
-  private static final RejectionPolicyFactory defaultRejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
-  private static final int defaultMaxPendingPersists = 0;
-  private static final ShardSpec defaultShardSpec = new NumberedShardSpec(0, 1);
-  private static final IndexSpec defaultIndexSpec = new IndexSpec();
-  private static final Boolean defaultReportParseExceptions = Boolean.FALSE;
-  private static final long defaultHandoffConditionTimeout = 0;
-  private static final long defaultAlertTimeout = 0;
-  private static final String defaultDedupColumn = null;
+  private static final int DEFAULT_MAX_ROWS_IN_MEMORY = TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY;
+  private static final Period DEFAULT_INTERMEDIATE_PERSIST_PERIOD = new Period("PT10M");
+  private static final Period DEFAULT_WINDOW_PERIOD = new Period("PT10M");
+  private static final VersioningPolicy DEFAULT_VERSIONING_POLICY = new IntervalStartVersioningPolicy();
+  private static final RejectionPolicyFactory DEFAULT_REJECTION_POLICY_FACTORY = new ServerTimeRejectionPolicyFactory();
+  private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
+  private static final ShardSpec DEFAULT_SHARD_SPEC = new NumberedShardSpec(0, 1);
+  private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
+  private static final Boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = Boolean.FALSE;
+  private static final long DEFAULT_HANDOFF_CONDITION_TIMEOUT = 0;
+  private static final long DEFAULT_ALERT_TIMEOUT = 0;
+  private static final String DEFAULT_DEDUP_COLUMN = null;
 
   private static File createNewBasePersistDirectory()
   {
@@ -72,25 +73,25 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   public static RealtimeTuningConfig makeDefaultTuningConfig(final @Nullable File basePersistDirectory)
   {
     return new RealtimeTuningConfig(
-        defaultMaxRowsInMemory,
+        DEFAULT_MAX_ROWS_IN_MEMORY,
         0L,
-        defaultIntermediatePersistPeriod,
-        defaultWindowPeriod,
+        DEFAULT_INTERMEDIATE_PERSIST_PERIOD,
+        DEFAULT_WINDOW_PERIOD,
         basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
-        defaultVersioningPolicy,
-        defaultRejectionPolicyFactory,
-        defaultMaxPendingPersists,
-        defaultShardSpec,
-        defaultIndexSpec,
-        defaultIndexSpec,
+        DEFAULT_VERSIONING_POLICY,
+        DEFAULT_REJECTION_POLICY_FACTORY,
+        DEFAULT_MAX_PENDING_PERSISTS,
+        DEFAULT_SHARD_SPEC,
+        DEFAULT_INDEX_SPEC,
+        DEFAULT_INDEX_SPEC,
         true,
         0,
         0,
-        defaultReportParseExceptions,
-        defaultHandoffConditionTimeout,
-        defaultAlertTimeout,
+        DEFAULT_REPORT_PARSE_EXCEPTIONS,
+        DEFAULT_HANDOFF_CONDITION_TIMEOUT,
+        DEFAULT_ALERT_TIMEOUT,
         null,
-        defaultDedupColumn
+        DEFAULT_DEDUP_COLUMN
     );
   }
 
@@ -139,38 +140,38 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("dedupColumn") @Nullable String dedupColumn
   )
   {
-    this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
+    this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
     // initializing this to 0, it will be lazily initialized to a value
     // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
-                                     ? defaultIntermediatePersistPeriod
+                                     ? DEFAULT_INTERMEDIATE_PERSIST_PERIOD
                                      : intermediatePersistPeriod;
-    this.windowPeriod = windowPeriod == null ? defaultWindowPeriod : windowPeriod;
+    this.windowPeriod = windowPeriod == null ? DEFAULT_WINDOW_PERIOD : windowPeriod;
     this.basePersistDirectory = basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory;
-    this.versioningPolicy = versioningPolicy == null ? defaultVersioningPolicy : versioningPolicy;
+    this.versioningPolicy = versioningPolicy == null ? DEFAULT_VERSIONING_POLICY : versioningPolicy;
     this.rejectionPolicyFactory = rejectionPolicyFactory == null
-                                  ? defaultRejectionPolicyFactory
+                                  ? DEFAULT_REJECTION_POLICY_FACTORY
                                   : rejectionPolicyFactory;
-    this.maxPendingPersists = maxPendingPersists == null ? defaultMaxPendingPersists : maxPendingPersists;
-    this.shardSpec = shardSpec == null ? defaultShardSpec : shardSpec;
-    this.indexSpec = indexSpec == null ? defaultIndexSpec : indexSpec;
+    this.maxPendingPersists = maxPendingPersists == null ? DEFAULT_MAX_PENDING_PERSISTS : maxPendingPersists;
+    this.shardSpec = shardSpec == null ? DEFAULT_SHARD_SPEC : shardSpec;
+    this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
     this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
                                             this.indexSpec : indexSpecForIntermediatePersists;
     this.mergeThreadPriority = mergeThreadPriority;
     this.persistThreadPriority = persistThreadPriority;
     this.reportParseExceptions = reportParseExceptions == null
-                                 ? defaultReportParseExceptions
+                                 ? DEFAULT_REPORT_PARSE_EXCEPTIONS
                                  : reportParseExceptions;
     this.handoffConditionTimeout = handoffConditionTimeout == null
-                                   ? defaultHandoffConditionTimeout
+                                   ? DEFAULT_HANDOFF_CONDITION_TIMEOUT
                                    : handoffConditionTimeout;
     Preconditions.checkArgument(this.handoffConditionTimeout >= 0, "handoffConditionTimeout must be >= 0");
 
-    this.alertTimeout = alertTimeout == null ? defaultAlertTimeout : alertTimeout;
+    this.alertTimeout = alertTimeout == null ? DEFAULT_ALERT_TIMEOUT : alertTimeout;
     Preconditions.checkArgument(this.alertTimeout >= 0, "alertTimeout must be >= 0");
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
-    this.dedupColumn = dedupColumn == null ? defaultDedupColumn : dedupColumn;
+    this.dedupColumn = dedupColumn == null ? DEFAULT_DEDUP_COLUMN : dedupColumn;
   }
 
   @Override
@@ -223,6 +224,12 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   public int getMaxPendingPersists()
   {
     return maxPendingPersists;
+  }
+
+  @Override
+  public PartitionsSpec getPartitionsSpec()
+  {
+    throw new UnsupportedOperationException();
   }
 
   @JsonProperty
@@ -326,6 +333,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     );
   }
 
+  @Override
   public RealtimeTuningConfig withBasePersistDirectory(File dir)
   {
     return new RealtimeTuningConfig(

@@ -1,0 +1,207 @@
+{
+  "docs": {
+    "Getting started": [
+      "design/index",
+      "tutorials/index",
+      "operations/single-server",
+      "tutorials/cluster"
+    ],
+    "Tutorials": [
+      "tutorials/tutorial-batch",
+      "tutorials/tutorial-kafka",
+      "tutorials/tutorial-batch-hadoop",
+      "tutorials/tutorial-query",
+      "tutorials/tutorial-rollup",
+      "tutorials/tutorial-retention",
+      "tutorials/tutorial-update-data",
+      "tutorials/tutorial-compaction",
+      "tutorials/tutorial-delete-data",
+      "tutorials/tutorial-ingestion-spec",
+      "tutorials/tutorial-transform-spec",
+      "tutorials/tutorial-kerberos-hadoop"
+    ],
+    "Design": [
+      "design/architecture",
+      "design/segments",
+      "design/processes",
+      "dependencies/deep-storage",
+      "dependencies/metadata-storage",
+      "dependencies/zookeeper"
+    ],
+    "Data ingestion": [
+      "ingestion/index",
+      "ingestion/data-formats",
+      "ingestion/schema-design",
+      "ingestion/data-management",
+      {
+        "type": "subcategory",
+        "label": "Stream ingestion",
+        "ids": [
+          "development/extensions-core/kafka-ingestion",
+          "development/extensions-core/kinesis-ingestion",
+          "ingestion/tranquility",
+          "ingestion/standalone-realtime"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Batch ingestion",
+        "ids": [
+          "ingestion/native-batch",
+          "ingestion/hadoop"
+        ]
+      },
+      "ingestion/tasks",
+      "ingestion/faq"
+    ],
+    "Querying": [
+      "querying/sql",
+      {
+        "type": "subcategory",
+        "label": "Native query types",
+        "ids": [
+          "querying/querying",
+          "querying/timeseriesquery",
+          "querying/topnquery",
+          "querying/groupbyquery",
+          "querying/scan-query",
+          "querying/timeboundaryquery",
+          "querying/segmentmetadataquery",
+          "querying/datasourcemetadataquery",
+          "querying/searchquery",
+          "querying/select-query"
+        ]
+      },
+      "querying/multi-value-dimensions",
+      "querying/lookups",
+      "querying/joins",
+      "querying/multitenancy",
+      "querying/caching",
+      "development/geo"
+    ],
+    "Configuration": [
+      "configuration/index",
+      "development/extensions",
+      "configuration/logging"
+    ],
+    "Operations": [
+      "operations/management-uis",
+      "operations/basic-cluster-tuning",
+      "operations/api-reference",
+      "operations/high-availability",
+      "operations/rolling-updates",
+      "operations/rule-configuration",
+      "operations/metrics",
+      "operations/alerts",
+      "operations/other-hadoop",
+      "operations/http-compression",
+      "operations/tls-support",
+      "operations/password-provider",
+      "operations/dump-segment",
+      "operations/reset-cluster",
+      "operations/insert-segment-to-db",
+      "operations/pull-deps",
+      {
+        "type": "subcategory",
+        "label": "Misc",
+        "ids": [
+          "operations/deep-storage-migration",
+          "operations/druid-console",
+          "operations/export-metadata",
+          "operations/getting-started",
+          "operations/metadata-migration",
+          "operations/segment-optimization",
+          "operations/use_sbt_to_build_fat_jar"
+        ]
+      }
+    ],
+    "Development": [
+      "development/overview",
+      "development/modules",
+      "development/javascript",
+      "development/build",
+      "development/versioning",
+      "development/experimental"
+    ],
+    "Misc": [
+      "misc/math-expr",
+      "misc/papers-and-talks"
+    ],
+    "Hidden": [
+      "comparisons/druid-vs-elasticsearch",
+      "comparisons/druid-vs-key-value",
+      "comparisons/druid-vs-kudu",
+      "comparisons/druid-vs-redshift",
+      "comparisons/druid-vs-spark",
+      "comparisons/druid-vs-sql-on-hadoop",
+      "design/auth",
+      "design/broker",
+      "design/coordinator",
+      "design/historical",
+      "design/indexer",
+      "design/indexing-service",
+      "design/middlemanager",
+      "design/overlord",
+      "design/router",
+      "design/peons",
+      "development/extensions-core/approximate-histograms",
+      "development/extensions-core/avro",
+      "development/extensions-core/bloom-filter",
+      "development/extensions-core/datasketches-extension",
+      "development/extensions-core/datasketches-hll",
+      "development/extensions-core/datasketches-quantiles",
+      "development/extensions-core/datasketches-theta",
+      "development/extensions-core/datasketches-tuple",
+      "development/extensions-core/druid-basic-security",
+      "development/extensions-core/druid-kerberos",
+      "development/extensions-core/druid-lookups",
+      "development/extensions-core/google",
+      "development/extensions-core/hdfs",
+      "development/extensions-core/kafka-extraction-namespace",
+      "development/extensions-core/lookups-cached-global",
+      "development/extensions-core/mysql",
+      "development/extensions-core/orc",
+      "development/extensions-core/parquet",
+      "development/extensions-core/postgresql",
+      "development/extensions-core/protobuf",
+      "development/extensions-core/s3",
+      "development/extensions-core/simple-client-sslcontext",
+      "development/extensions-core/stats",
+      "development/extensions-core/test-stats",
+      "development/extensions-contrib/ambari-metrics-emitter",
+      "development/extensions-contrib/azure",
+      "development/extensions-contrib/cassandra",
+      "development/extensions-contrib/cloudfiles",
+      "development/extensions-contrib/distinctcount",
+      "development/extensions-contrib/graphite",
+      "querying/aggregations",
+      "querying/datasource",
+      "querying/dimensionspecs",
+      "querying/filters",
+      "querying/granularities",
+      "querying/having",
+      "querying/hll-old",
+      "querying/limitspec",
+      "querying/post-aggregations",
+      "querying/query-context",
+      "querying/searchqueryspec",
+      "querying/sorting-orders",
+      "querying/topnmetricspec",
+      "querying/virtual-columns",
+      "development/extensions-contrib/influx",
+      "development/extensions-contrib/influxdb-emitter",
+      "development/extensions-contrib/kafka-emitter",
+      "development/extensions-contrib/materialized-view",
+      "development/extensions-contrib/momentsketch-quantiles",
+      "development/extensions-contrib/moving-average-query",
+      "development/extensions-contrib/opentsdb-emitter",
+      "development/extensions-contrib/redis-cache",
+      "development/extensions-contrib/sqlserver",
+      "development/extensions-contrib/statsd",
+      "development/extensions-contrib/tdigestsketch-quantiles",
+      "development/extensions-contrib/thrift",
+      "development/extensions-contrib/time-min-max",
+      "ingestion/standalone-realtime"
+    ]
+  }
+}

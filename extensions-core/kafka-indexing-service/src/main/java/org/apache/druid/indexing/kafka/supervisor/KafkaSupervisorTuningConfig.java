@@ -21,7 +21,6 @@ package org.apache.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.TuningConfigs;
@@ -141,6 +140,17 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
     return shutdownTimeout;
   }
 
+  @Override
+  public Duration getRepartitionTransitionDuration()
+  {
+    // Stopping tasks early for Kafka ingestion on partition set change is not supported yet,
+    // just return a default for now.
+    return SeekableStreamSupervisorTuningConfig.defaultDuration(
+        null,
+        SeekableStreamSupervisorTuningConfig.DEFAULT_REPARTITION_TRANSITION_DURATION
+    );
+  }
+
   @JsonProperty
   public Duration getOffsetFetchPeriod()
   {
@@ -177,7 +187,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
   }
 
   @Override
-  public SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig()
+  public KafkaIndexTaskTuningConfig convertToTaskTuningConfig()
   {
     return new KafkaIndexTaskTuningConfig(
         getMaxRowsInMemory(),

@@ -32,14 +32,14 @@ import java.util.List;
 
 public class CardinalityAggregator implements Aggregator
 {
-  public static final HashFunction hashFn = Hashing.murmur3_128();
+  public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
 
   static void hashRow(
       ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>[] selectorPluses,
       HyperLogLogCollector collector
   )
   {
-    final Hasher hasher = hashFn.newHasher();
+    final Hasher hasher = HASH_FUNCTION.newHasher();
     for (int k = 0; k < selectorPluses.length; ++k) {
       if (k != 0) {
         hasher.putByte((byte) 0);

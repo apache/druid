@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
-import org.apache.druid.segment.ColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -40,7 +39,7 @@ public class FloatMinAggregatorFactory extends SimpleFloatAggregatorFactory
   public FloatMinAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("expression") String expression,
+      @JsonProperty("expression") @Nullable String expression,
       @JacksonInject ExprMacroTable macroTable
   )
   {
@@ -53,29 +52,23 @@ public class FloatMinAggregatorFactory extends SimpleFloatAggregatorFactory
   }
 
   @Override
-  protected BaseFloatColumnValueSelector selector(ColumnSelectorFactory metricFactory)
+  protected float nullValue()
   {
-    return getFloatColumnSelector(
-        metricFactory,
-        Float.POSITIVE_INFINITY
-    );
+    return Float.POSITIVE_INFINITY;
   }
 
   @Override
-  protected Aggregator factorize(ColumnSelectorFactory metricFactory, BaseFloatColumnValueSelector selector)
+  protected Aggregator buildAggregator(BaseFloatColumnValueSelector selector)
   {
     return new FloatMinAggregator(selector);
   }
 
   @Override
-  protected BufferAggregator factorizeBuffered(
-      ColumnSelectorFactory metricFactory,
-      BaseFloatColumnValueSelector selector
-  )
+  protected BufferAggregator buildBufferAggregator(BaseFloatColumnValueSelector selector)
   {
     return new FloatMinBufferAggregator(selector);
   }
-
+  
   @Override
   @Nullable
   public Object combine(@Nullable Object lhs, @Nullable Object rhs)

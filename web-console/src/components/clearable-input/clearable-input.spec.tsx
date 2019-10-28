@@ -28,10 +28,8 @@ describe('clearable-input', () => {
         className={'testClassName'}
         value={'testValue'}
         placeholder={'testPlaceholder'}
-        onChange={() => null}
-      >
-        <div>Hello World</div>
-      </ClearableInput>
+        onChange={() => {}}
+      />
     );
 
     const { container } = render(centerMessage);

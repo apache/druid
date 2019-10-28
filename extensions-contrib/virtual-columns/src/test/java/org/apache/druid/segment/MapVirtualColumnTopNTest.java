@@ -50,7 +50,6 @@ import org.junit.rules.ExpectedException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 
 public class MapVirtualColumnTopNTest
@@ -86,7 +85,7 @@ public class MapVirtualColumnTopNTest
   public void testWithMapColumn()
   {
     final TopNQuery query = new TopNQuery(
-        new TableDataSource(QueryRunnerTestHelper.dataSource),
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         VirtualColumns.create(
             ImmutableList.of(
                 new MapVirtualColumn("keys", "values", "params")
@@ -105,14 +104,14 @@ public class MapVirtualColumnTopNTest
 
     expectedException.expect(UnsupportedOperationException.class);
     expectedException.expectMessage("Map column doesn't support getRow()");
-    runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    runner.run(QueryPlus.wrap(query)).toList();
   }
 
   @Test
   public void testWithSubColumn()
   {
     final TopNQuery query = new TopNQuery(
-        new TableDataSource(QueryRunnerTestHelper.dataSource),
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
         VirtualColumns.create(
             ImmutableList.of(
                 new MapVirtualColumn("keys", "values", "params")
@@ -129,7 +128,7 @@ public class MapVirtualColumnTopNTest
         null
     );
 
-    final List<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    final List<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query)).toList();
     final List<Result<TopNResultValue>> expected = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),

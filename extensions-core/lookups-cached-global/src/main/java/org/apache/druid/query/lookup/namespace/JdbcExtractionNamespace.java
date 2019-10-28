@@ -59,9 +59,9 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
       @NotNull @JsonProperty(value = "table", required = true) final String table,
       @NotNull @JsonProperty(value = "keyColumn", required = true) final String keyColumn,
       @NotNull @JsonProperty(value = "valueColumn", required = true) final String valueColumn,
-      @Nullable @JsonProperty(value = "tsColumn", required = false) final String tsColumn,
-      @Nullable @JsonProperty(value = "filter", required = false) final String filter,
-      @Min(0) @Nullable @JsonProperty(value = "pollPeriod", required = false) final Period pollPeriod
+      @JsonProperty(value = "tsColumn", required = false) @Nullable final String tsColumn,
+      @JsonProperty(value = "filter", required = false) @Nullable final String filter,
+      @Min(0) @JsonProperty(value = "pollPeriod", required = false) @Nullable final Period pollPeriod
   )
   {
     this.connectorConfig = Preconditions.checkNotNull(connectorConfig, "connectorConfig");

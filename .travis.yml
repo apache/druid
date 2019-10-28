@@ -25,109 +25,251 @@ cache:
   directories:
     - $HOME/.m2
 
-matrix:
+env:
+  global:
+    - DOCKER_IP=127.0.0.1  # for integration tests
+    - MVN="mvn -B"
+    - > # Various options to make execution of maven goals faster (e.g., mvn install)
+      MAVEN_SKIP="
+      -Danimal.sniffer.skip=true
+      -Dcheckstyle.skip=true
+      -Ddruid.console.skip=true
+      -Denforcer.skip=true
+      -Dforbiddenapis.skip=true
+      -Dmaven.javadoc.skip=true
+      -Dpmd.skip=true
+      -Dspotbugs.skip=true
+      "
+    - MAVEN_SKIP_TESTS="-DskipTests -Djacoco.skip=true"
+
+# Add various options to make 'mvn install' fast and skip javascript compile (-Ddruid.console.skip=true) since it is not
+# needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
+# output.  To compensate, use travis_wait to extend the timeout.
+install: MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
+
+jobs:
   include:
-      # Java 11 build
-    - jdk: openjdk11
+    - name: "animal sniffer checks"
+      script: ${MVN} animal-sniffer:check --fail-at-end
 
-      # license checks
-    - env:
-       - NAME="license checks"
-      install: true
-      script: MAVEN_OPTS='-Xmx3000m' mvn clean verify -Prat -DskipTests -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Drat.consoleOutput=true
+    - name: "checkstyle"
+      script: ${MVN} checkstyle:checkstyle --fail-at-end
 
-      # strict compilation
-    - env:
-        - NAME="strict compilation"
-      install: true
-      # Strict compilation requires more than 2 GB
-      script: MAVEN_OPTS='-Xmx3000m' mvn clean -Pstrict -pl '!benchmarks' compile test-compile spotbugs:check -B --fail-at-end
+    - name: "enforcer checks"
+      script: ${MVN} enforcer:enforce --fail-at-end
 
-    # packaging check
-    - env:
-        - NAME="packaging check"
-      before_install:
+    - name: "forbidden api checks"
+      script: ${MVN} forbiddenapis:check forbiddenapis:testCheck --fail-at-end
+
+    - name: "pmd checks"
+      script: ${MVN} pmd:check --fail-at-end  # TODO: consider adding pmd:cpd-check
+
+    - name: "spotbugs checks"
+      script: ${MVN} spotbugs:check --fail-at-end -pl '!benchmarks'
+
+    - name: "license checks"
+      install: skip
+      before_script: &setup_generate_license
         - sudo apt-get update && sudo apt-get install python3 python3-pip python3-setuptools -y
-        - pip3 install wheel # install wheel first explicitly
+        - pip3 install wheel  # install wheel first explicitly
         - pip3 install pyyaml
-      install: MAVEN_OPTS='-Xmx3000m' mvn install -q -ff -DskipTests -B
-      script: ./build.sh
-
-      # processing module test
-    - env:
-        - NAME="processing module test"
-      install: MAVEN_OPTS='-Xmx3000m' mvn install -q -ff -DskipTests -B
-      before_script: unset _JAVA_OPTIONS
       script:
-        # Set MAVEN_OPTS for Surefire launcher
-        - MAVEN_OPTS='-Xmx800m' mvn test -B -pl processing
+        - >
+          ${MVN} apache-rat:check -Prat --fail-at-end
+          -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+          -Drat.consoleOutput=true
+        # Generate dependency reports and checks they are valid. When running on Travis CI, 2 cores are available
+        # (https://docs.travis-ci.com/user/reference/overview/#virtualisation-environment-vs-operating-system).
+        - mkdir -p target
+        - distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
+        - distribution/bin/check-licenses.py licenses.yaml target/license-reports
+
+    - &compile_strict
+      name: "(openjdk8) strict compilation"
+      install: skip
+      # Strict compilation requires more than 2 GB
+      script: >
+        MAVEN_OPTS='-Xmx3000m' ${MVN} clean -Pstrict compile test-compile --fail-at-end
+        -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+
+    - name: "analyze dependencies"
+      script: MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true
+      after_failure: |-
+        echo "FAILURE EXPLANATION:
+
+        The dependency analysis has found a dependency that is either:
+
+        1) Used and undeclared: These are available as a transitive dependency but should be explicitly
+        added to the POM to ensure the dependency version. The XML to add the dependencies to the POM is
+        shown above.
+
+        2) Unused and declared: These are not needed and removing them from the POM will speed up the build
+        and reduce the artifact size. The dependencies to remove are shown above.
+
+        If there are false positive dependency analysis warnings, they can be suppressed:
+        https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html#usedDependencies
+        https://maven.apache.org/plugins/maven-dependency-plugin/examples/exclude-dependencies-from-dependency-analysis.html
+
+        For more information, refer to:
+        https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html
+        "
+
+    - &package
+      name: "(openjdk8) packaging check"
+      install: skip
+      before_script: *setup_generate_license
+      script: >
+        MAVEN_OPTS='-Xmx3000m' ${MVN} clean install -Pdist -Pbundle-contrib-exts --fail-at-end
+        -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Ddruid.console.skip=false -T1C
+
+    - <<: *package
+      name: "(openjdk11) packaging check"
+      jdk: openjdk11
+
+    - &test_processing_module
+      name: "(openjdk8) processing module test"
+      env: &processing_env
+      - MAVEN_PROJECTS='processing'
+      before_script: &setup_java_test
+        - unset _JAVA_OPTIONS
+      script: &run_java_test
+        # Set MAVEN_OPTS for Surefire launcher. Skip remoteresources to avoid intermittent connection timeouts when
+        # resolving the SIGAR dependency.
+        - >
+          MAVEN_OPTS='-Xmx800m' ${MVN} test -pl ${MAVEN_PROJECTS}
+          ${MAVEN_SKIP} -Dremoteresources.skip=true
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
+      after_success: &upload_java_unit_test_coverage
+        - ${MVN} -pl ${MAVEN_PROJECTS} jacoco:report
+        # retry in case of network error
+        - travis_retry curl -o codecov.sh -s https://codecov.io/bash
+        - travis_retry bash codecov.sh -X gcov
 
-      # processing module tests with SQL Compatibility enabled
-    - env:
-        - NAME="processing module test with SQL Compatibility"
-      install: MAVEN_OPTS='-Xmx3000m' mvn install -q -ff -DskipTests -B
-      before_script: unset _JAVA_OPTIONS
-      script:
-        # Set MAVEN_OPTS for Surefire launcher
-        - MAVEN_OPTS='-Xmx800m' mvn test -B -Ddruid.generic.useDefaultValueForNull=false -pl processing
+    - <<: *test_processing_module
+      name: "(openjdk11) processing module test"
+      jdk: openjdk11
+
+    - &test_processing_module_sqlcompat
+      name: "(openjdk8) processing module test (SQL Compatibility)"
+      env: *processing_env
+      before_script: *setup_java_test
+      script: &run_java_sql_compat_test
+        # Set MAVEN_OPTS for Surefire launcher. Skip remoteresources to avoid intermittent connection timeouts when
+        # resolving the SIGAR dependency.
+        - >
+          MAVEN_OPTS='-Xmx800m' ${MVN} test -pl ${MAVEN_PROJECTS} -Ddruid.generic.useDefaultValueForNull=false
+          ${MAVEN_SKIP} -Dremoteresources.skip=true
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
+      after_success: *upload_java_unit_test_coverage
 
-      # server module test
-    - env:
-        - NAME="server module test"
-      install: MAVEN_OPTS='-Xmx3000m' mvn install -q -ff -DskipTests -B
-      before_script: unset _JAVA_OPTIONS
+    - <<: *test_processing_module_sqlcompat
+      name: "(openjdk11) processing module test (SQL Compatibility)"
+      jdk: openjdk11
+
+    - &test_indexing_module
+      name: "(openjdk8) indexing modules test"
+      env: &indexing_env
+      - MAVEN_PROJECTS='indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
+      before_script: *setup_java_test
+      script: *run_java_test
+      after_success: *upload_java_unit_test_coverage
+
+    - <<: *test_indexing_module
+      name: "(openjdk11) indexing modules test"
+      jdk: openjdk11
+
+    - &test_indexing_module_sqlcompat
+      name: "(openjdk8) indexing modules test (SQL Compatibility)"
+      env: *indexing_env
+      before_script: *setup_java_test
+      script: *run_java_sql_compat_test
+      after_success: *upload_java_unit_test_coverage
+
+    - <<: *test_indexing_module_sqlcompat
+      name: "(openjdk11) indexing modules test (SQL Compatibility)"
+      jdk: openjdk11
+
+    - &test_server_module
+      name: "(openjdk8) server module test"
+      env: &server_env
+        - MAVEN_PROJECTS='server'
+      before_script: *setup_java_test
+      script: *run_java_test
+      after_success: *upload_java_unit_test_coverage
+
+    - <<: *test_server_module
+      name: "(openjdk11) server module test"
+      jdk: openjdk11
+
+    - &test_server_module_sqlcompat
+      name: "(openjdk8) server module test (SQL Compatibility)"
+      env: *server_env
+      before_script: *setup_java_test
+      script: *run_java_sql_compat_test
+      after_success: *upload_java_unit_test_coverage
+
+    - <<: *test_server_module_sqlcompat
+      name: "(openjdk11) server module test (SQL Compatibility)"
+      jdk: openjdk11
+
+    - &test_modules
+      name: "(openjdk8) other modules test"
+      env: &other_env
+        - MAVEN_PROJECTS='!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console'
+      before_script: *setup_java_test
+      script: *run_java_test
+      after_success: *upload_java_unit_test_coverage
+
+    - <<: *test_modules
+      name: "(openjdk11) other modules test"
+      jdk: openjdk11
+
+    - &test_modules_sqlcompat
+      name: "(openjdk8) other modules test (SQL Compatibility)"
+      env: *other_env
+      before_script: *setup_java_test
+      script: *run_java_sql_compat_test
+      after_success: *upload_java_unit_test_coverage
+
+    - <<: *test_modules_sqlcompat
+      name: "(openjdk11) other modules test (SQL Compatibility)"
+      jdk: openjdk11
+
+    - &test_webconsole
+      name: "web console"
+      install: skip
       script:
-        # Set MAVEN_OPTS for Surefire launcher
-        - MAVEN_OPTS='-Xmx800m' mvn test -B -pl server
+        - ${MVN} test -pl 'web-console'
+      after_success:
+        - (cd web-console && travis_retry npm run codecov)  # retry in case of network error
 
-      # server module test with SQL Compatibility enabled
-    - env:
-        - NAME="server module test with SQL Compatibility enabled"
-      install: MAVEN_OPTS='-Xmx3000m' mvn install -q -ff -DskipTests -B
-      before_script: unset _JAVA_OPTIONS
-      script:
-        # Set MAVEN_OPTS for Surefire launcher
-        - MAVEN_OPTS='-Xmx800m' mvn test -B -pl server -Ddruid.generic.useDefaultValueForNull=false
+    - name: "docs"
+      install: (cd website && npm install)
+      script: (cd website && npm run lint && npm run spellcheck)
+      after_failure: |-
+        echo "FAILURE EXPLANATION:
 
+        If there are spell check errors:
 
-      # other modules test
-    - env:
-        - NAME="other modules test"
-      install: MAVEN_OPTS='-Xmx3000m' mvn install -q -ff -DskipTests -B
-      before_script: unset _JAVA_OPTIONS
-      script:
-        # Set MAVEN_OPTS for Surefire launcher
-        - MAVEN_OPTS='-Xmx800m' mvn test -B -pl '!processing,!server'
-        - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
-        - free -m
+        1) Suppressing False Positives: Edit website/.spelling to add suppressions. Instructions
+        are at the top of the file and explain how to suppress false positives either globally or
+        within a particular file.
 
-      # other modules test with SQL Compatibility enabled
-    - env:
-        - NAME="other modules test with SQL Compatibility"
-      install: MAVEN_OPTS='-Xmx3000m' mvn install -q -ff -DskipTests -B
-      before_script: unset _JAVA_OPTIONS
-      script:
-        # Set MAVEN_OPTS for Surefire launcher
-        - MAVEN_OPTS='-Xmx800m' mvn test -B -Ddruid.generic.useDefaultValueForNull=false -pl '!processing,!server'
-        - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
-        - free -m
+        2) Running Spell Check Locally: cd website && npm install && npm run spellcheck
 
-      # run integration tests
-    - services:
+        For more information, refer to: https://www.npmjs.com/package/markdown-spellcheck
+        "
+
+    - &integration_batch_index
+      name: "batch index integration test"
+      services: &integration_test_services
         - docker
-      env:
-        - NAME="integration test part 1"
-        - DOCKER_IP=127.0.0.1
-      install:
-        # Only errors will be shown with the -q option. This is to avoid generating too many logs which make travis build failed.
-        - mvn install -q -ff -DskipTests -B
-      script:
-        - $TRAVIS_BUILD_DIR/ci/travis_script_integration.sh
-      after_failure:
+      env: TESTNG_GROUPS='-Dgroups=batch-index'
+      script: &run_integration_test
+        - ${MVN} verify -pl integration-tests -P integration-tests ${TESTNG_GROUPS} ${MAVEN_SKIP}
+      after_failure: &integration_test_diags
         - for v in ~/shared/logs/*.log ; do
           echo $v logtail ======================== ; tail -100 $v ;
           done
@@ -136,22 +278,30 @@ matrix:
           docker exec -it druid-$v sh -c 'dmesg | tail -3' ;
           done
 
-      # run integration tests
-    - services:
-        - docker
-      env:
-        - NAME="integration test part 2"
-        - DOCKER_IP=127.0.0.1
-      install:
-        # Only errors will be shown with the -q option. This is to avoid generating too many logs which make travis build failed.
-        - mvn install -q -ff -DskipTests -B
-      script:
-        - $TRAVIS_BUILD_DIR/ci/travis_script_integration_part2.sh
-      after_failure:
-        - for v in ~/shared/logs/*.log ; do
-          echo $v logtail ======================== ; tail -100 $v ;
-          done
-        - for v in broker middlemanager overlord router coordinator historical ; do
-          echo $v dmesg ======================== ;
-          docker exec -it druid-$v sh -c 'dmesg | tail -3' ;
-          done
+    - &integration_kafka_index
+      name: "kafka index integration test"
+      services: *integration_test_services
+      env: TESTNG_GROUPS='-Dgroups=kafka-index'
+      script: *run_integration_test
+      after_failure: *integration_test_diags
+
+    - &integration_query
+      name: "query integration test"
+      services: *integration_test_services
+      env: TESTNG_GROUPS='-Dgroups=query'
+      script: *run_integration_test
+      after_failure: *integration_test_diags
+
+    - &integration_realtime_index
+      name: "realtime index integration test"
+      services: *integration_test_services
+      env: TESTNG_GROUPS='-Dgroups=realtime-index'
+      script: *run_integration_test
+      after_failure: *integration_test_diags
+
+    - &integration_tests
+      name: "other integration test"
+      services: *integration_test_services
+      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,kafka-index,query,realtime-index'
+      script: *run_integration_test
+      after_failure: *integration_test_diags

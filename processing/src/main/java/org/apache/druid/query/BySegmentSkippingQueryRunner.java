@@ -21,8 +21,7 @@ package org.apache.druid.query;
 
 
 import org.apache.druid.java.util.common.guava.Sequence;
-
-import java.util.Map;
+import org.apache.druid.query.context.ResponseContext;
 
 /**
  */
@@ -38,7 +37,7 @@ public abstract class BySegmentSkippingQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+  public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
     if (QueryContexts.isBySegment(queryPlus.getQuery())) {
       return baseRunner.run(queryPlus, responseContext);
@@ -47,5 +46,5 @@ public abstract class BySegmentSkippingQueryRunner<T> implements QueryRunner<T>
     return doRun(baseRunner, queryPlus, responseContext);
   }
 
-  protected abstract Sequence<T> doRun(QueryRunner<T> baseRunner, QueryPlus<T> queryPlus, Map<String, Object> context);
+  protected abstract Sequence<T> doRun(QueryRunner<T> baseRunner, QueryPlus<T> queryPlus, ResponseContext context);
 }

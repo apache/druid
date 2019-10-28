@@ -41,7 +41,6 @@ import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.discovery.NodeType;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
@@ -84,6 +83,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -106,7 +106,7 @@ import java.util.stream.Collectors;
 /**
  * A Remote TaskRunner to manage tasks on Middle Manager nodes using internal-discovery({@link DruidNodeDiscoveryProvider})
  * to discover them and Http.
- * Middle Managers expose 3 HTTP endpoints
+ * Middle Managers manages list of assigned/completed tasks on disk and exposes 3 HTTP endpoints
  * 1. POST request for assigning a task
  * 2. POST request for shutting down a task
  * 3. GET request for getting list of assigned, running, completed tasks on Middle Manager and its enable/disable status.
@@ -237,7 +237,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           cleanupExec,
           Period.ZERO.toStandardDuration(),
           config.getWorkerBlackListCleanupPeriod().toStandardDuration(),
-          () -> checkAndRemoveWorkersFromBlackList()
+          this::checkAndRemoveWorkersFromBlackList
       );
 
       provisioningService = provisioningStrategy.makeProvisioningService(this);
@@ -330,16 +330,9 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             Maps.transformEntries(
                 Maps.filterEntries(
                     workers,
-                    new Predicate<Map.Entry<String, WorkerHolder>>()
-                    {
-                      @Override
-                      public boolean apply(Map.Entry<String, WorkerHolder> input)
-                      {
-                        return !lazyWorkers.containsKey(input.getKey()) &&
-                               !workersWithUnacknowledgedTask.containsKey(input.getKey()) &&
-                               !blackListedWorkers.containsKey(input.getKey());
-                      }
-                    }
+                    input -> !lazyWorkers.containsKey(input.getKey()) &&
+                             !workersWithUnacknowledgedTask.containsKey(input.getKey()) &&
+                             !blackListedWorkers.containsKey(input.getKey())
                 ),
                 (String key, WorkerHolder value) -> value.toImmutable()
             )
@@ -438,7 +431,10 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   private void startWorkersHandling() throws InterruptedException
   {
     final CountDownLatch workerViewInitialized = new CountDownLatch(1);
-    DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER);
+
+    DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForService(
+        WorkerNodeService.DISCOVERY_SERVICE_KEY
+    );
     druidNodeDiscovery.registerListener(
         new DruidNodeDiscovery.Listener()
         {
@@ -489,7 +485,8 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         node.getDruidNode().getHostAndPortToUse(),
         ((WorkerNodeService) node.getServices().get(WorkerNodeService.DISCOVERY_SERVICE_KEY)).getIp(),
         ((WorkerNodeService) node.getServices().get(WorkerNodeService.DISCOVERY_SERVICE_KEY)).getCapacity(),
-        ((WorkerNodeService) node.getServices().get(WorkerNodeService.DISCOVERY_SERVICE_KEY)).getVersion()
+        ((WorkerNodeService) node.getServices().get(WorkerNodeService.DISCOVERY_SERVICE_KEY)).getVersion(),
+        ((WorkerNodeService) node.getServices().get(WorkerNodeService.DISCOVERY_SERVICE_KEY)).getCategory()
     );
   }
 
@@ -501,7 +498,35 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
       WorkerHolder holder = workers.get(worker.getHost());
       if (holder == null) {
-        holder = createWorkerHolder(smileMapper, httpClient, config, workersSyncExec, this::taskAddedOrUpdated, worker);
+        List<TaskAnnouncement> expectedAnnouncements = new ArrayList<>();
+        synchronized (statusLock) {
+          // It might be a worker that existed before, temporarily went away and came back. We might have a set of
+          // tasks that we think are running on this worker. Provide that information to WorkerHolder that
+          // manages the task syncing with that worker.
+          for (Map.Entry<String, HttpRemoteTaskRunnerWorkItem> e : tasks.entrySet()) {
+            if (e.getValue().getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
+              Worker w = e.getValue().getWorker();
+              if (w != null && w.getHost().equals(worker.getHost())) {
+                expectedAnnouncements.add(
+                    TaskAnnouncement.create(
+                        e.getValue().getTask(),
+                        TaskStatus.running(e.getKey()),
+                        e.getValue().getLocation()
+                    )
+                );
+              }
+            }
+          }
+        }
+        holder = createWorkerHolder(
+            smileMapper,
+            httpClient,
+            config,
+            workersSyncExec,
+            this::taskAddedOrUpdated,
+            worker,
+            expectedAnnouncements
+        );
         holder.start();
         workers.put(worker.getHost(), holder);
       } else {
@@ -520,10 +545,11 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       HttpRemoteTaskRunnerConfig config,
       ScheduledExecutorService workersSyncExec,
       WorkerHolder.Listener listener,
-      Worker worker
+      Worker worker,
+      List<TaskAnnouncement> knownAnnouncements
   )
   {
-    return new WorkerHolder(smileMapper, httpClient, config, workersSyncExec, listener, worker);
+    return new WorkerHolder(smileMapper, httpClient, config, workersSyncExec, listener, worker, knownAnnouncements);
   }
 
   private void removeWorker(final Worker worker)
@@ -564,41 +590,36 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     cancelWorkerCleanup(workerHostAndPort);
 
     final ListenableScheduledFuture<?> cleanupTask = cleanupExec.schedule(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            log.info("Running scheduled cleanup for Worker[%s]", workerHostAndPort);
-            try {
-              Set<HttpRemoteTaskRunnerWorkItem> tasksToFail = new HashSet<>();
-              synchronized (statusLock) {
-                for (Map.Entry<String, HttpRemoteTaskRunnerWorkItem> e : tasks.entrySet()) {
-                  if (e.getValue().getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
-                    Worker w = e.getValue().getWorker();
-                    if (w != null && w.getHost().equals(workerHostAndPort)) {
-                      tasksToFail.add(e.getValue());
-                    }
+        () -> {
+          log.info("Running scheduled cleanup for Worker[%s]", workerHostAndPort);
+          try {
+            Set<HttpRemoteTaskRunnerWorkItem> tasksToFail = new HashSet<>();
+            synchronized (statusLock) {
+              for (Map.Entry<String, HttpRemoteTaskRunnerWorkItem> e : tasks.entrySet()) {
+                if (e.getValue().getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
+                  Worker w = e.getValue().getWorker();
+                  if (w != null && w.getHost().equals(workerHostAndPort)) {
+                    tasksToFail.add(e.getValue());
                   }
                 }
               }
+            }
 
-              for (HttpRemoteTaskRunnerWorkItem taskItem : tasksToFail) {
-                if (!taskItem.getResult().isDone()) {
-                  log.info(
-                      "Failing task[%s] because worker[%s] disappeared and did not report within cleanup timeout[%s].",
-                      workerHostAndPort,
-                      taskItem.getTaskId(),
-                      config.getTaskCleanupTimeout()
-                  );
-                  taskComplete(taskItem, null, TaskStatus.failure(taskItem.getTaskId()));
-                }
+            for (HttpRemoteTaskRunnerWorkItem taskItem : tasksToFail) {
+              if (!taskItem.getResult().isDone()) {
+                log.info(
+                    "Failing task[%s] because worker[%s] disappeared and did not report within cleanup timeout[%s].",
+                    workerHostAndPort,
+                    taskItem.getTaskId(),
+                    config.getTaskCleanupTimeout()
+                );
+                taskComplete(taskItem, null, TaskStatus.failure(taskItem.getTaskId()));
               }
             }
-            catch (Exception e) {
-              log.makeAlert("Exception while cleaning up worker[%s]", workerHostAndPort).emit();
-              throw new RuntimeException(e);
-            }
+          }
+          catch (Exception e) {
+            log.makeAlert("Exception while cleaning up worker[%s]", workerHostAndPort).emit();
+            throw new RuntimeException(e);
           }
         },
         config.getTaskCleanupTimeout().toStandardDuration().getMillis(),
@@ -777,14 +798,12 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   public Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers)
   {
     synchronized (statusLock) {
-      Iterator<String> iterator = workers.keySet().iterator();
-      while (iterator.hasNext()) {
-        String worker = iterator.next();
-        WorkerHolder workerHolder = workers.get(worker);
+      for (Map.Entry<String, WorkerHolder> worker : workers.entrySet()) {
+        final WorkerHolder workerHolder = worker.getValue();
         try {
           if (isWorkerOkForMarkingLazy(workerHolder.getWorker()) && isLazyWorker.apply(workerHolder.toImmutable())) {
             log.info("Adding Worker[%s] to lazySet!", workerHolder.getWorker().getHost());
-            lazyWorkers.put(worker, workerHolder);
+            lazyWorkers.put(worker.getKey(), workerHolder);
             if (lazyWorkers.size() == maxWorkers) {
               // only mark excess workers as lazy and allow their cleanup
               break;
@@ -833,7 +852,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return tasks.values()
                   .stream()
                   .filter(item -> item.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING)
-                  .map(item -> item.getTask())
+                  .map(HttpRemoteTaskRunnerWorkItem::getTask)
                   .collect(Collectors.toList());
     }
   }
@@ -857,6 +876,52 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           "/druid/worker/v1/task/%s/log?offset=%s",
           taskId,
           Long.toString(offset)
+      );
+      return Optional.of(
+          new ByteSource()
+          {
+            @Override
+            public InputStream openStream() throws IOException
+            {
+              try {
+                return httpClient.go(
+                    new Request(HttpMethod.GET, url),
+                    new InputStreamResponseHandler()
+                ).get();
+              }
+              catch (InterruptedException e) {
+                throw new RuntimeException(e);
+              }
+              catch (ExecutionException e) {
+                // Unwrap if possible
+                Throwables.propagateIfPossible(e.getCause(), IOException.class);
+                throw new RuntimeException(e);
+              }
+            }
+          }
+      );
+    }
+  }
+
+  @Override
+  public Optional<ByteSource> streamTaskReports(String taskId)
+  {
+    HttpRemoteTaskRunnerWorkItem taskRunnerWorkItem = tasks.get(taskId);
+    Worker worker = null;
+    if (taskRunnerWorkItem != null && taskRunnerWorkItem.getState() != HttpRemoteTaskRunnerWorkItem.State.COMPLETE) {
+      worker = taskRunnerWorkItem.getWorker();
+    }
+
+    if (worker == null || !workers.containsKey(worker.getHost())) {
+      // Worker is not running this task, it might be available in deep storage
+      return Optional.absent();
+    } else {
+      // Worker is still running this task
+      TaskLocation taskLocation = taskRunnerWorkItem.getLocation();
+      final URL url = TaskRunnerUtils.makeTaskLocationURL(
+          taskLocation,
+          "/druid/worker/v1/chat/%s/liveReports",
+          taskId
       );
       return Optional.of(
           new ByteSource()
@@ -1149,6 +1214,17 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         default:
           throw new ISE("Unknown state[%s]", workItem.state);
       }
+    }
+  }
+
+  @Override
+  public TaskLocation getTaskLocation(String taskId)
+  {
+    final HttpRemoteTaskRunnerWorkItem workItem = tasks.get(taskId);
+    if (workItem == null) {
+      return TaskLocation.unknown();
+    } else {
+      return workItem.getLocation();
     }
   }
 

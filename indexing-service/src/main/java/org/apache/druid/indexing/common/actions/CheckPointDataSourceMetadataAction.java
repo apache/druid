@@ -23,46 +23,41 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 
 import javax.annotation.Nullable;
 
 public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
 {
   private final String supervisorId;
-  @Nullable
-  private final Integer taskGroupId;
-  @Deprecated
-  private final String baseSequenceName;
-  private final DataSourceMetadata previousCheckPoint;
-  private final DataSourceMetadata currentCheckPoint;
+  private final int taskGroupId;
+  private final SeekableStreamDataSourceMetadata checkpointMetadata;
 
   public CheckPointDataSourceMetadataAction(
       @JsonProperty("supervisorId") String supervisorId,
-      @JsonProperty("taskGroupId") @Nullable Integer taskGroupId, // nullable for backward compatibility,
-      @JsonProperty("sequenceName") @Deprecated String baseSequenceName, // old version would use this
-      @JsonProperty("previousCheckPoint") DataSourceMetadata previousCheckPoint,
-      @JsonProperty("currentCheckPoint") DataSourceMetadata currentCheckPoint
+      @JsonProperty("taskGroupId") Integer taskGroupId,
+      @JsonProperty("previousCheckPoint") @Nullable @Deprecated SeekableStreamDataSourceMetadata previousCheckPoint,
+      @JsonProperty("checkpointMetadata") @Nullable SeekableStreamDataSourceMetadata checkpointMetadata
   )
   {
     this.supervisorId = Preconditions.checkNotNull(supervisorId, "supervisorId");
-    this.taskGroupId = taskGroupId;
-    this.baseSequenceName = Preconditions.checkNotNull(baseSequenceName, "sequenceName");
-    this.previousCheckPoint = Preconditions.checkNotNull(previousCheckPoint, "previousCheckPoint");
-    this.currentCheckPoint = Preconditions.checkNotNull(currentCheckPoint, "currentCheckPoint");
+    this.taskGroupId = Preconditions.checkNotNull(taskGroupId, "taskGroupId");
+    this.checkpointMetadata = checkpointMetadata == null ? previousCheckPoint : checkpointMetadata;
+
+    Preconditions.checkNotNull(this.checkpointMetadata, "checkpointMetadata");
+    // checkpointMetadata must be SeekableStreamStartSequenceNumbers because it's the start sequence numbers of the
+    // sequence currently being checkpointed
+    Preconditions.checkArgument(
+        this.checkpointMetadata.getSeekableStreamSequenceNumbers() instanceof SeekableStreamStartSequenceNumbers,
+        "checkpointMetadata must be SeekableStreamStartSequenceNumbers"
+    );
   }
 
   @JsonProperty
   public String getSupervisorId()
   {
     return supervisorId;
-  }
-
-  @Deprecated
-  @JsonProperty("sequenceName")
-  public String getBaseSequenceName()
-  {
-    return baseSequenceName;
   }
 
   @Nullable
@@ -72,16 +67,18 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
     return taskGroupId;
   }
 
+  // For backwards compatibility
+  @Deprecated
   @JsonProperty
-  public DataSourceMetadata getPreviousCheckPoint()
+  public SeekableStreamDataSourceMetadata getPreviousCheckPoint()
   {
-    return previousCheckPoint;
+    return checkpointMetadata;
   }
 
   @JsonProperty
-  public DataSourceMetadata getCurrentCheckPoint()
+  public SeekableStreamDataSourceMetadata getCheckpointMetadata()
   {
-    return currentCheckPoint;
+    return checkpointMetadata;
   }
 
   @Override
@@ -98,9 +95,7 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
     return toolbox.getSupervisorManager().checkPointDataSourceMetadata(
         supervisorId,
         taskGroupId,
-        baseSequenceName,
-        previousCheckPoint,
-        currentCheckPoint
+        checkpointMetadata
     );
   }
 
@@ -115,10 +110,8 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
   {
     return "CheckPointDataSourceMetadataAction{" +
            "supervisorId='" + supervisorId + '\'' +
-           ", baseSequenceName='" + baseSequenceName + '\'' +
            ", taskGroupId='" + taskGroupId + '\'' +
-           ", previousCheckPoint=" + previousCheckPoint +
-           ", currentCheckPoint=" + currentCheckPoint +
+           ", checkpointMetadata=" + checkpointMetadata +
            '}';
   }
 }

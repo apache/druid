@@ -72,5 +72,10 @@ public class GoogleBlob
     return Objects.equals(bucket, that.bucket) &&
            Objects.equals(path, that.path);
   }
-}
 
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(bucket, path);
+  }
+}

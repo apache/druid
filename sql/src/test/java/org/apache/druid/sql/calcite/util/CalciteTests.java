@@ -149,6 +149,7 @@ public class CalciteTests
   public static final String DATASOURCE1 = "foo";
   public static final String DATASOURCE2 = "foo2";
   public static final String DATASOURCE3 = "numfoo";
+  public static final String DATASOURCE4 = "foo4";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
@@ -425,6 +426,30 @@ public class CalciteTests
       createRow("2000-01-01", "друид", "ru", 1.0)
   );
 
+  public static final List<InputRow> ROWS1_WITH_FULL_TIMESTAMP = ImmutableList.of(
+      createRow(
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2000-01-01T10:51:45.695Z")
+              .put("m1", "1.0")
+              .put("m2", "1.0")
+              .put("dim1", "")
+              .put("dim2", ImmutableList.of("a"))
+              .put("dim3", ImmutableList.of("a", "b"))
+              .build()
+      ),
+      createRow(
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2000-01-18T10:51:45.695Z")
+              .put("m1", "2.0")
+              .put("m2", "2.0")
+              .put("dim1", "10.1")
+              .put("dim2", ImmutableList.of())
+              .put("dim3", ImmutableList.of("b", "c"))
+              .build()
+      )
+  );
+
+
   public static final List<InputRow> FORBIDDEN_ROWS = ImmutableList.of(
       createRow("2000-01-01", "forbidden", "abcd", 9999.0)
   );
@@ -472,6 +497,13 @@ public class CalciteTests
               }
 
               @Override
+              public int getNumThreads()
+              {
+                // Only use 1 thread for tests.
+                return 1;
+              }
+
+              @Override
               public int getNumMergeBuffers()
               {
                 // Need 3 buffers for CalciteQueryTest.testDoubleNestedGroupby.
@@ -499,7 +531,7 @@ public class CalciteTests
                 new ScanQueryRunnerFactory(
                     new ScanQueryQueryToolChest(
                         new ScanQueryConfig(),
-                        new DefaultGenericQueryMetricsFactory(TestHelper.makeJsonMapper())
+                        new DefaultGenericQueryMetricsFactory()
                     ),
                     new ScanQueryEngine(),
                     new ScanQueryConfig()
@@ -556,7 +588,7 @@ public class CalciteTests
           }
         },
         walker,
-        new DefaultGenericQueryMetricsFactory(INJECTOR.getInstance(Key.get(ObjectMapper.class, Json.class))),
+        new DefaultGenericQueryMetricsFactory(),
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
         new AuthConfig(),
@@ -615,6 +647,15 @@ public class CalciteTests
         .rows(ROWS1_WITH_NUMERIC_DIMS)
         .buildMMappedIndex();
 
+    final QueryableIndex index4 = IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "4"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(INDEX_SCHEMA)
+        .rows(ROWS1_WITH_FULL_TIMESTAMP)
+        .buildMMappedIndex();
+
+
     return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
                    .dataSource(DATASOURCE1)
@@ -639,13 +680,22 @@ public class CalciteTests
                    .shardSpec(new LinearShardSpec(0))
                    .build(),
         forbiddenIndex
-    ).add(DataSegment.builder()
-                     .dataSource(DATASOURCE3)
-                     .interval(indexNumericDims.getDataInterval())
-                     .version("1")
-                     .shardSpec(new LinearShardSpec(0))
-                     .build(),
-          indexNumericDims
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATASOURCE3)
+                   .interval(indexNumericDims.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .build(),
+        indexNumericDims
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATASOURCE4)
+                   .interval(index4.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .build(),
+        index4
     );
   }
 

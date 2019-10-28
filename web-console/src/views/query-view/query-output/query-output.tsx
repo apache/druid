@@ -16,40 +16,293 @@
  * limitations under the License.
  */
 
-import React from 'react';
+import { Menu, MenuItem, Popover } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import { HeaderRows, SqlQuery } from 'druid-query-toolkit';
+import {
+  basicIdentifierEscape,
+  basicLiteralEscape,
+} from 'druid-query-toolkit/build/ast/sql-query/helpers';
+import React, { useState } from 'react';
 import ReactTable from 'react-table';
 
-import { TableCell } from '../../../components';
-import { HeaderRows } from '../../../utils';
+import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
+import { copyAndAlert } from '../../../utils';
+import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
 
 import './query-output.scss';
 
+function trimValue(str: any): string {
+  str = String(str);
+  if (str.length < 102) return str;
+  return str.substr(0, 100) + '...';
+}
+
 export interface QueryOutputProps {
   loading: boolean;
-  result: HeaderRows | null;
-  error: string | null;
+  queryResult?: HeaderRows;
+  parsedQuery?: SqlQuery;
+  onQueryChange: (query: SqlQuery, run?: boolean) => void;
+  error?: string;
+  runeMode: boolean;
 }
 
-export class QueryOutput extends React.PureComponent<QueryOutputProps> {
-  render() {
-    const { result, loading, error } = this.props;
+export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputProps) {
+  const { queryResult, parsedQuery, loading, error } = props;
+  const [showValue, setShowValue] = useState();
 
-    return (
-      <div className="query-output">
-        <ReactTable
-          data={result ? result.rows : []}
-          loading={loading}
-          noDataText={!loading && result && !result.rows.length ? 'No results' : error || ''}
-          sortable={false}
-          columns={(result ? result.header : []).map((h: any, i) => {
-            return {
-              Header: h,
-              accessor: String(i),
-              Cell: row => <TableCell value={row.value} />,
-            };
-          })}
-        />
-      </div>
-    );
+  function getHeaderMenu(header: string) {
+    const { parsedQuery, onQueryChange, runeMode } = props;
+
+    if (parsedQuery) {
+      const sorted = parsedQuery.getSorted();
+
+      const basicActions: BasicAction[] = [];
+      if (sorted) {
+        sorted.map(sorted => {
+          if (sorted.id === header) {
+            basicActions.push({
+              icon: sorted.desc ? IconNames.SORT_ASC : IconNames.SORT_DESC,
+              title: `Order by: ${trimValue(header)} ${sorted.desc ? 'ASC' : 'DESC'}`,
+              onAction: () => {
+                onQueryChange(parsedQuery.orderBy(header, sorted.desc ? 'ASC' : 'DESC'), true);
+              },
+            });
+          }
+        });
+      }
+      if (!basicActions.length) {
+        basicActions.push(
+          {
+            icon: IconNames.SORT_DESC,
+            title: `Order by: ${trimValue(header)} DESC`,
+            onAction: () => {
+              onQueryChange(parsedQuery.orderBy(header, 'DESC'), true);
+            },
+          },
+          {
+            icon: IconNames.SORT_ASC,
+            title: `Order by: ${trimValue(header)} ASC`,
+            onAction: () => {
+              onQueryChange(parsedQuery.orderBy(header, 'ASC'), true);
+            },
+          },
+        );
+      }
+      basicActions.push({
+        icon: IconNames.CROSS,
+        title: `Remove: ${trimValue(header)}`,
+        onAction: () => {
+          onQueryChange(parsedQuery.excludeColumn(header), true);
+        },
+      });
+
+      return basicActionsToMenu(basicActions);
+    } else {
+      return (
+        <Menu>
+          <MenuItem
+            icon={IconNames.CLIPBOARD}
+            text={`Copy: ${trimValue(header)}`}
+            onClick={() => {
+              copyAndAlert(header, `${header}' copied to clipboard`);
+            }}
+          />
+          {!runeMode && (
+            <>
+              <MenuItem
+                icon={IconNames.CLIPBOARD}
+                text={`Copy: ORDER BY ${basicIdentifierEscape(header)} ASC`}
+                onClick={() =>
+                  copyAndAlert(
+                    `ORDER BY ${basicIdentifierEscape(header)} ASC`,
+                    `ORDER BY ${basicIdentifierEscape(header)} ASC' copied to clipboard`,
+                  )
+                }
+              />
+              <MenuItem
+                icon={IconNames.CLIPBOARD}
+                text={`Copy: 'ORDER BY ${basicIdentifierEscape(header)} DESC'`}
+                onClick={() =>
+                  copyAndAlert(
+                    `ORDER BY ${basicIdentifierEscape(header)} DESC`,
+                    `ORDER BY ${basicIdentifierEscape(header)} DESC' copied to clipboard`,
+                  )
+                }
+              />
+            </>
+          )}
+        </Menu>
+      );
+    }
   }
-}
+
+  function getCellMenu(header: string, value: any) {
+    const { parsedQuery, onQueryChange, runeMode } = props;
+
+    const showFullValueMenuItem =
+      typeof value === 'string' ? (
+        <MenuItem
+          icon={IconNames.EYE_OPEN}
+          text={`Show full value`}
+          onClick={() => {
+            setShowValue(value);
+          }}
+        />
+      ) : (
+        undefined
+      );
+
+    if (parsedQuery) {
+      return (
+        <Menu>
+          <MenuItem
+            icon={IconNames.FILTER_KEEP}
+            text={`Filter by: ${trimValue(header)} = ${trimValue(value)}`}
+            onClick={() => {
+              onQueryChange(parsedQuery.filterRow(header, value, '='), true);
+            }}
+          />
+          <MenuItem
+            icon={IconNames.FILTER_REMOVE}
+            text={`Filter by: ${trimValue(header)} != ${trimValue(value)}`}
+            onClick={() => {
+              onQueryChange(parsedQuery.filterRow(header, value, '!='), true);
+            }}
+          />
+          {!isNaN(Number(value)) && (
+            <>
+              <MenuItem
+                icon={IconNames.FILTER_KEEP}
+                text={`Filter by: ${trimValue(header)} >= ${trimValue(value)}`}
+                onClick={() => {
+                  onQueryChange(parsedQuery.filterRow(header, value, '>='), true);
+                }}
+              />
+              <MenuItem
+                icon={IconNames.FILTER_KEEP}
+                text={`Filter by: ${trimValue(header)} <= ${trimValue(value)}`}
+                onClick={() => {
+                  onQueryChange(parsedQuery.filterRow(header, value, '<='), true);
+                }}
+              />
+            </>
+          )}
+          {showFullValueMenuItem}
+        </Menu>
+      );
+    } else {
+      return (
+        <Menu>
+          <MenuItem
+            icon={IconNames.CLIPBOARD}
+            text={`Copy: ${trimValue(value)}`}
+            onClick={() => copyAndAlert(value, `${value} copied to clipboard`)}
+          />
+          {!runeMode && (
+            <>
+              <MenuItem
+                icon={IconNames.CLIPBOARD}
+                text={`Copy: ${basicIdentifierEscape(header)} = ${basicLiteralEscape(value)}`}
+                onClick={() =>
+                  copyAndAlert(
+                    `${basicIdentifierEscape(header)} = ${basicLiteralEscape(value)}`,
+                    `${basicIdentifierEscape(header)} = ${basicLiteralEscape(
+                      value,
+                    )} copied to clipboard`,
+                  )
+                }
+              />
+              <MenuItem
+                icon={IconNames.CLIPBOARD}
+                text={`Copy: ${basicIdentifierEscape(header)} != ${basicLiteralEscape(value)}`}
+                onClick={() =>
+                  copyAndAlert(
+                    `${basicIdentifierEscape(header)} != ${basicLiteralEscape(value)}`,
+                    `${basicIdentifierEscape(header)} != ${basicLiteralEscape(
+                      value,
+                    )} copied to clipboard`,
+                  )
+                }
+              />
+            </>
+          )}
+          {showFullValueMenuItem}
+        </Menu>
+      );
+    }
+  }
+
+  function getHeaderClassName(header: string) {
+    const { parsedQuery } = props;
+
+    const className = [];
+    if (parsedQuery) {
+      const sorted = parsedQuery.getSorted();
+      if (sorted) {
+        className.push(
+          sorted.map(sorted => {
+            if (sorted.id === header) {
+              return sorted.desc ? '-sort-desc' : '-sort-asc';
+            }
+            return '';
+          })[0],
+        );
+      }
+
+      const aggregateColumns = parsedQuery.getAggregateColumns();
+      if (aggregateColumns && aggregateColumns.includes(header)) {
+        className.push('aggregate-header');
+      }
+    }
+
+    return className.join(' ');
+  }
+
+  let aggregateColumns: string[] | undefined;
+  if (parsedQuery) {
+    aggregateColumns = parsedQuery.getAggregateColumns();
+  }
+
+  return (
+    <div className="query-output">
+      <ReactTable
+        data={queryResult ? queryResult.rows : []}
+        loading={loading}
+        noDataText={
+          !loading && queryResult && !queryResult.rows.length
+            ? 'Query returned no data'
+            : error || ''
+        }
+        sortable={false}
+        columns={(queryResult ? queryResult.header : []).map((h: any, i) => {
+          return {
+            Header: () => {
+              return (
+                <Popover className={'clickable-cell'} content={getHeaderMenu(h)}>
+                  <div>{h}</div>
+                </Popover>
+              );
+            },
+            headerClassName: getHeaderClassName(h),
+            accessor: String(i),
+            Cell: row => {
+              const value = row.value;
+              if (!value) return value == null ? null : value;
+              return (
+                <div>
+                  <Popover content={getCellMenu(h, value)}>
+                    <div>{value}</div>
+                  </Popover>
+                </div>
+              );
+            },
+            className:
+              aggregateColumns && aggregateColumns.includes(h) ? 'aggregate-column' : undefined,
+          };
+        })}
+      />
+      {showValue && <ShowValueDialog onClose={() => setShowValue(undefined)} str={showValue} />}
+    </div>
+  );
+});

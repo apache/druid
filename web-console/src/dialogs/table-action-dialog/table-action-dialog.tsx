@@ -16,8 +16,11 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, Icon, IconName, IDialogProps, Intent } from '@blueprintjs/core';
-import React from 'react';
+import { Button, Classes, Dialog, Icon, IconName, Intent, Popover } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import React, { ReactNode } from 'react';
+
+import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
 
 import './table-action-dialog.scss';
 
@@ -28,46 +31,50 @@ export interface SideButtonMetaData {
   onClick?: () => void;
 }
 
-interface TableActionDialogProps extends IDialogProps {
+interface TableActionDialogProps {
+  title: string;
   sideButtonMetadata: SideButtonMetaData[];
   onClose: () => void;
-  bottomButtons?: React.ReactNode;
+  actions?: BasicAction[];
+  children?: ReactNode;
 }
 
-export class TableActionDialog extends React.PureComponent<TableActionDialogProps> {
-  constructor(props: TableActionDialogProps) {
-    super(props);
-    this.state = {};
-  }
+export const TableActionDialog = React.memo(function TableActionDialog(
+  props: TableActionDialogProps,
+) {
+  const { sideButtonMetadata, onClose, title, actions, children } = props;
+  const actionsMenu = actions ? basicActionsToMenu(actions) : undefined;
 
-  render() {
-    const { sideButtonMetadata, isOpen, onClose, title, bottomButtons } = this.props;
-
-    return (
-      <Dialog className="table-action-dialog" isOpen={isOpen} onClose={onClose} title={title}>
-        <div className={Classes.DIALOG_BODY}>
-          <div className="side-bar">
-            {sideButtonMetadata.map((d, i) => (
-              <Button
-                className="tab-button"
-                icon={<Icon icon={d.icon} iconSize={20} />}
-                key={i}
-                text={d.text}
-                intent={d.active ? Intent.PRIMARY : Intent.NONE}
-                minimal={!d.active}
-                onClick={d.onClick}
-              />
-            ))}
-          </div>
-          <div className="main-section">{this.props.children}</div>
+  return (
+    <Dialog className="table-action-dialog" isOpen onClose={onClose} title={title}>
+      <div className={Classes.DIALOG_BODY}>
+        <div className="side-bar">
+          {sideButtonMetadata.map((d, i) => (
+            <Button
+              className="tab-button"
+              icon={<Icon icon={d.icon} iconSize={20} />}
+              key={i}
+              text={d.text}
+              intent={d.active ? Intent.PRIMARY : Intent.NONE}
+              minimal={!d.active}
+              onClick={d.onClick}
+            />
+          ))}
         </div>
-        <div className={Classes.DIALOG_FOOTER}>
-          <div className="footer-actions-left">{bottomButtons}</div>
-          <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-            <Button text="Close" intent={Intent.PRIMARY} onClick={onClose} />
+        <div className="main-section">{children}</div>
+      </div>
+      <div className={Classes.DIALOG_FOOTER}>
+        {actionsMenu && (
+          <div className="footer-actions-left">
+            <Popover content={actionsMenu}>
+              <Button icon={IconNames.WRENCH} text="Actions" rightIcon={IconNames.CARET_DOWN} />
+            </Popover>
           </div>
+        )}
+        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+          <Button text="Close" intent={Intent.PRIMARY} onClick={onClose} />
         </div>
-      </Dialog>
-    );
-  }
-}
+      </div>
+    </Dialog>
+  );
+});

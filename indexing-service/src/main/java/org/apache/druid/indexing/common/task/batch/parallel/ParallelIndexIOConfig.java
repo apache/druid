@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -32,6 +33,7 @@ import javax.annotation.Nullable;
 @JsonTypeName("index_parallel")
 public class ParallelIndexIOConfig extends IndexIOConfig
 {
+  @JsonCreator
   public ParallelIndexIOConfig(
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
       @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting

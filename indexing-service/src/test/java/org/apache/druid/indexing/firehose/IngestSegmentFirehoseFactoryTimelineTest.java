@@ -148,7 +148,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     int count = 0;
     long sum = 0;
 
-    try (final Firehose firehose = factory.connect(ROW_PARSER, null)) {
+    try (final Firehose firehose = factory.connect(ROW_PARSER, tmpDir)) {
       while (firehose.hasMore()) {
         final InputRow row = firehose.nextRow();
         count++;
@@ -163,11 +163,11 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   private void testSplit() throws Exception
   {
     Assert.assertTrue(factory.isSplittable());
-    final int numSplits = factory.getNumSplits();
+    final int numSplits = factory.getNumSplits(null);
     // We set maxInputSegmentBytesPerSplit to 2 so each segment should become a byte.
     Assert.assertEquals(segmentCount, numSplits);
     final List<InputSplit<List<WindowedSegmentId>>> splits =
-        factory.getSplits().collect(Collectors.toList());
+        factory.getSplits(null).collect(Collectors.toList());
     Assert.assertEquals(numSplits, splits.size());
 
     int count = 0;
@@ -176,7 +176,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     for (InputSplit<List<WindowedSegmentId>> split : splits) {
       final FiniteFirehoseFactory<InputRowParser, List<WindowedSegmentId>> splitFactory =
           factory.withSplit(split);
-      try (final Firehose firehose = splitFactory.connect(ROW_PARSER, null)) {
+      try (final Firehose firehose = splitFactory.connect(ROW_PARSER, tmpDir)) {
         while (firehose.hasMore()) {
           final InputRow row = firehose.nextRow();
           count++;

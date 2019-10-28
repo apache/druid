@@ -43,6 +43,7 @@ interface ConsoleConfig {
   customHeaderName?: string;
   customHeaderValue?: string;
   customHeaders?: Record<string, string>;
+  exampleManifestsUrl?: string;
 }
 
 const consoleConfig: ConsoleConfig = (window as any).consoleConfig;
@@ -52,7 +53,7 @@ if (typeof consoleConfig.title === 'string') {
 
 if (consoleConfig.baseURL) {
   axios.defaults.baseURL = consoleConfig.baseURL;
-  UrlBaser.baseURL = consoleConfig.baseURL;
+  UrlBaser.baseUrl = consoleConfig.baseURL;
 }
 if (consoleConfig.customHeaderName && consoleConfig.customHeaderValue) {
   axios.defaults.headers.common[consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;
@@ -64,6 +65,7 @@ if (consoleConfig.customHeaders) {
 ReactDOM.render(
   React.createElement(ConsoleApplication, {
     hideLegacy: Boolean(consoleConfig.hideLegacy),
+    exampleManifestsUrl: consoleConfig.exampleManifestsUrl,
   }) as any,
   container,
 );

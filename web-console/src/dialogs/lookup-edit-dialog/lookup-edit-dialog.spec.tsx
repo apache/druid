@@ -25,10 +25,9 @@ describe('lookup edit dialog', () => {
   it('matches snapshot', () => {
     const lookupEditDialog = (
       <LookupEditDialog
-        isOpen
-        onClose={() => null}
-        onSubmit={() => null}
-        onChange={() => null}
+        onClose={() => {}}
+        onSubmit={() => {}}
+        onChange={() => {}}
         lookupName={'test'}
         lookupTier={'test'}
         lookupVersion={'test'}

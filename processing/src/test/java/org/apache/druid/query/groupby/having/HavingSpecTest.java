@@ -22,15 +22,14 @@ package org.apache.druid.query.groupby.having;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.ResultRow;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -38,11 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class HavingSpecTest
 {
-  private static final Row ROW = new MapBasedInputRow(
-      0,
-      new ArrayList<>(),
-      ImmutableMap.of("metric", 10f)
-  );
+  private static final ResultRow ROW = ResultRow.of(10f);
 
   @Test
   public void testHavingClauseSerde()
@@ -139,9 +134,9 @@ public class HavingSpecTest
     Assert.assertFalse(spec.eval(getTestRow(Long.MAX_VALUE)));
   }
 
-  private Row getTestRow(Object metricValue)
+  private ResultRow getTestRow(Object metricValue)
   {
-    return new MapBasedInputRow(0, new ArrayList<>(), ImmutableMap.of("metric", metricValue));
+    return ResultRow.of(metricValue);
   }
 
   @Test
@@ -213,7 +208,7 @@ public class HavingSpecTest
     Assert.assertFalse(spec.eval(getTestRow(Long.MAX_VALUE)));
   }
 
-  private static class CountingHavingSpec extends BaseHavingSpec
+  private static class CountingHavingSpec implements HavingSpec
   {
 
     private final AtomicInteger counter;
@@ -226,7 +221,13 @@ public class HavingSpecTest
     }
 
     @Override
-    public boolean eval(Row row)
+    public void setQuery(GroupByQuery query)
+    {
+      // Nothing to do.
+    }
+
+    @Override
+    public boolean eval(ResultRow row)
     {
       counter.incrementAndGet();
       return value;
@@ -333,10 +334,10 @@ public class HavingSpecTest
   @Test
   public void testNotHavingSepc()
   {
-    NotHavingSpec spec = new NotHavingSpec(HavingSpec.NEVER);
+    NotHavingSpec spec = new NotHavingSpec(new NeverHavingSpec());
     Assert.assertTrue(spec.eval(ROW));
 
-    spec = new NotHavingSpec(HavingSpec.ALWAYS);
+    spec = new NotHavingSpec(new AlwaysHavingSpec());
     Assert.assertFalse(spec.eval(ROW));
   }
 }

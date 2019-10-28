@@ -35,7 +35,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -71,14 +70,14 @@ public class VarianceTimeseriesQueryTest
   public void testTimeseriesWithNullFilterOnNonExistentDimension()
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                  .dataSource(QueryRunnerTestHelper.dataSource)
-                                  .granularity(QueryRunnerTestHelper.dayGran)
+                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                  .granularity(QueryRunnerTestHelper.DAY_GRAN)
                                   .filters("bobby", null)
-                                  .intervals(QueryRunnerTestHelper.firstToThird)
-                                  .aggregators(VarianceTestHelper.commonPlusVarAggregators)
+                                  .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+                                  .aggregators(VarianceTestHelper.COMMON_PLUS_VAR_AGGREGATORS)
                                   .postAggregators(
-                                      QueryRunnerTestHelper.addRowsIndexConstant,
-                                      VarianceTestHelper.stddevOfIndexPostAggr
+                                      QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT,
+                                      VarianceTestHelper.STD_DEV_OF_INDEX_POST_AGGR
                                   )
                                   .descending(descending)
                                   .build();
@@ -112,7 +111,7 @@ public class VarianceTimeseriesQueryTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     assertExpectedResults(expectedResults, results);
   }
 

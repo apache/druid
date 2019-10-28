@@ -27,16 +27,6 @@ import org.joda.time.Interval;
  */
 class SegmentCompactorUtil
 {
-  static boolean isCompactibleSize(long targetBytes, long currentTotalBytes, long additionalBytes)
-  {
-    return currentTotalBytes + additionalBytes <= targetBytes;
-  }
-
-  static boolean isCompactibleNum(int numTargetSegments, int numCurrentSegments, int numAdditionalSegments)
-  {
-    return numCurrentSegments + numAdditionalSegments <= numTargetSegments;
-  }
-
   /**
    * Removes {@code smallInterval} from {@code largeInterval}.  The end of both intervals should be same.
    *

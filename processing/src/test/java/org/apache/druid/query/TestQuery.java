@@ -24,7 +24,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 
 import java.util.Map;
 
-class TestQuery extends BaseQuery
+public class TestQuery extends BaseQuery
 {
 
   public TestQuery(DataSource dataSource, QuerySegmentSpec querySegmentSpec, boolean descending, Map context)

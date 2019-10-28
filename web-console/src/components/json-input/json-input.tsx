@@ -19,23 +19,24 @@
 import React from 'react';
 import AceEditor from 'react-ace';
 
-import { parseStringToJSON, stringifyJSON, validJson } from '../../utils';
+import { parseStringToJson, stringifyJson, validJson } from '../../utils';
 
-interface JSONInputProps {
+interface JsonInputProps {
   onChange: (newJSONValue: any) => void;
   value: any;
   updateInputValidity?: (valueValid: boolean) => void;
+  placeholder?: string;
   focus?: boolean;
   width?: string;
   height?: string;
 }
 
-interface JSONInputState {
+interface JsonInputState {
   stringValue: string;
 }
 
-export class JSONInput extends React.PureComponent<JSONInputProps, JSONInputState> {
-  constructor(props: JSONInputProps) {
+export class JsonInput extends React.PureComponent<JsonInputProps, JsonInputState> {
+  constructor(props: JsonInputProps) {
     super(props);
     this.state = {
       stringValue: '',
@@ -44,22 +45,22 @@ export class JSONInput extends React.PureComponent<JSONInputProps, JSONInputStat
 
   componentDidMount(): void {
     const { value } = this.props;
-    const stringValue = stringifyJSON(value);
+    const stringValue = stringifyJson(value);
     this.setState({
       stringValue,
     });
   }
 
-  componentWillReceiveProps(nextProps: JSONInputProps): void {
+  componentWillReceiveProps(nextProps: JsonInputProps): void {
     if (JSON.stringify(nextProps.value) !== JSON.stringify(this.props.value)) {
       this.setState({
-        stringValue: stringifyJSON(nextProps.value),
+        stringValue: stringifyJson(nextProps.value),
       });
     }
   }
 
-  render() {
-    const { onChange, updateInputValidity, focus, width, height } = this.props;
+  render(): JSX.Element {
+    const { onChange, updateInputValidity, placeholder, focus, width, height } = this.props;
     const { stringValue } = this.state;
     return (
       <AceEditor
@@ -69,7 +70,7 @@ export class JSONInput extends React.PureComponent<JSONInputProps, JSONInputStat
         name="ace-editor"
         onChange={(e: string) => {
           this.setState({ stringValue: e });
-          if (validJson(e) || e === '') onChange(parseStringToJSON(e));
+          if (validJson(e) || e === '') onChange(parseStringToJson(e));
           if (updateInputValidity) updateInputValidity(validJson(e) || e === '');
         }}
         focus={focus}
@@ -79,6 +80,7 @@ export class JSONInput extends React.PureComponent<JSONInputProps, JSONInputStat
         showPrintMargin={false}
         showGutter={false}
         value={stringValue}
+        placeholder={placeholder}
         editorProps={{
           $blockScrolling: Infinity,
         }}

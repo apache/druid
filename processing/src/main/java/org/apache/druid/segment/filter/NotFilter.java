@@ -32,6 +32,8 @@ import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import java.util.Set;
+
 /**
  */
 public class NotFilter implements Filter
@@ -104,9 +106,21 @@ public class NotFilter implements Filter
   }
 
   @Override
+  public Set<String> getRequiredColumns()
+  {
+    return baseFilter.getRequiredColumns();
+  }
+
+  @Override
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return baseFilter.supportsBitmapIndex(selector);
+  }
+
+  @Override
+  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+  {
+    return baseFilter.shouldUseBitmapIndex(selector);
   }
 
   @Override

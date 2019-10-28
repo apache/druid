@@ -22,6 +22,11 @@ package org.apache.druid.client.cache;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
+ * Thread safe collector of {@link CachePopulator} statistics, utilized {@link CacheMonitor} to emit cache metrics.
+ * Like the {@link CachePopulator}, this is used as a singleton.
+ *
+ * See {@link org.apache.druid.guice.DruidProcessingModule#getCachePopulator} which supplies either
+ * {@link ForegroundCachePopulator} or {@link BackgroundCachePopulator}, as configured, for more details.
  */
 public class CachePopulatorStats
 {

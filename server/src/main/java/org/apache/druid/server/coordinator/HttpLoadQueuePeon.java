@@ -576,6 +576,13 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
       queuedSize.addAndGet(-getSegment().getSize());
       super.requestSucceeded();
     }
+
+    @Override
+    public void requestFailed(String failureCause)
+    {
+      queuedSize.addAndGet(-getSegment().getSize());
+      super.requestFailed(failureCause);
+    }
   }
 
   private class DropSegmentHolder extends SegmentHolder

@@ -16,7 +16,16 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Label } from '@blueprintjs/core';
+import {
+  Button,
+  ButtonGroup,
+  Intent,
+  Label,
+  Menu,
+  MenuItem,
+  Popover,
+  Position,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import { sum } from 'd3-array';
@@ -24,7 +33,15 @@ import React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
-import { ActionCell, RefreshButton, TableColumnSelector, ViewControlBar } from '../../components';
+import {
+  ACTION_COLUMN_ID,
+  ACTION_COLUMN_LABEL,
+  ACTION_COLUMN_WIDTH,
+  ActionCell,
+  RefreshButton,
+  TableColumnSelector,
+  ViewControlBar,
+} from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import {
   addFilter,
@@ -51,7 +68,7 @@ const serverTableColumns: string[] = [
   'Max size',
   'Usage',
   'Detail',
-  ActionCell.COLUMN_LABEL,
+  ACTION_COLUMN_LABEL,
 ];
 
 function formatQueues(
@@ -83,13 +100,13 @@ export interface ServersViewProps {
 
 export interface ServersViewState {
   serversLoading: boolean;
-  servers: any[] | null;
-  serversError: string | null;
+  servers?: any[];
+  serversError?: string;
   serverFilter: Filter[];
-  groupServersBy: null | 'server_type' | 'tier';
+  groupServersBy?: 'server_type' | 'tier';
 
-  middleManagerDisableWorkerHost: string | null;
-  middleManagerEnableWorkerHost: string | null;
+  middleManagerDisableWorkerHost?: string;
+  middleManagerEnableWorkerHost?: string;
 
   hiddenColumns: LocalStorageBackedArray<string>;
 }
@@ -182,13 +199,7 @@ ORDER BY "rank" DESC, "server" DESC`;
     super(props, context);
     this.state = {
       serversLoading: true,
-      servers: null,
-      serversError: null,
       serverFilter: [],
-      groupServersBy: null,
-
-      middleManagerDisableWorkerHost: null,
-      middleManagerEnableWorkerHost: null,
 
       hiddenColumns: new LocalStorageBackedArray<string>(
         LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION,
@@ -520,9 +531,9 @@ ORDER BY "rank" DESC, "server" DESC`;
             show: hiddenColumns.exists('Detail'),
           },
           {
-            Header: ActionCell.COLUMN_LABEL,
-            id: ActionCell.COLUMN_ID,
-            width: ActionCell.COLUMN_WIDTH,
+            Header: ACTION_COLUMN_LABEL,
+            id: ACTION_COLUMN_ID,
+            width: ACTION_COLUMN_WIDTH,
             accessor: row => row.worker,
             filterable: false,
             Cell: row => {
@@ -531,7 +542,7 @@ ORDER BY "rank" DESC, "server" DESC`;
               const workerActions = this.getWorkerActions(row.value.host, disabled);
               return <ActionCell actions={workerActions} />;
             },
-            show: hiddenColumns.exists(ActionCell.COLUMN_LABEL),
+            show: hiddenColumns.exists(ACTION_COLUMN_LABEL),
           },
         ]}
       />
@@ -576,7 +587,7 @@ ORDER BY "rank" DESC, "server" DESC`;
         failText="Could not disable worker"
         intent={Intent.DANGER}
         onClose={() => {
-          this.setState({ middleManagerDisableWorkerHost: null });
+          this.setState({ middleManagerDisableWorkerHost: undefined });
         }}
         onSuccess={() => {
           this.serverQueryManager.rerunLastQuery();
@@ -605,7 +616,7 @@ ORDER BY "rank" DESC, "server" DESC`;
         failText="Could not enable worker"
         intent={Intent.PRIMARY}
         onClose={() => {
-          this.setState({ middleManagerEnableWorkerHost: null });
+          this.setState({ middleManagerEnableWorkerHost: undefined });
         }}
         onSuccess={() => {
           this.serverQueryManager.rerunLastQuery();
@@ -616,8 +627,31 @@ ORDER BY "rank" DESC, "server" DESC`;
     );
   }
 
-  render() {
+  renderBulkServersActions() {
     const { goToQuery, noSqlMode } = this.props;
+
+    const bulkserversActionsMenu = (
+      <Menu>
+        {!noSqlMode && (
+          <MenuItem
+            icon={IconNames.APPLICATION}
+            text="View SQL query for table"
+            onClick={() => goToQuery(ServersView.SERVER_SQL)}
+          />
+        )}
+      </Menu>
+    );
+
+    return (
+      <>
+        <Popover content={bulkserversActionsMenu} position={Position.BOTTOM_LEFT}>
+          <Button icon={IconNames.MORE} />
+        </Popover>
+      </>
+    );
+  }
+
+  render(): JSX.Element {
     const { groupServersBy, hiddenColumns } = this.state;
 
     return (
@@ -626,8 +660,8 @@ ORDER BY "rank" DESC, "server" DESC`;
           <Label>Group by</Label>
           <ButtonGroup>
             <Button
-              active={groupServersBy === null}
-              onClick={() => this.setState({ groupServersBy: null })}
+              active={!groupServersBy}
+              onClick={() => this.setState({ groupServersBy: undefined })}
             >
               None
             </Button>
@@ -648,16 +682,14 @@ ORDER BY "rank" DESC, "server" DESC`;
             onRefresh={auto => this.serverQueryManager.rerunLastQuery(auto)}
             localStorageKey={LocalStorageKeys.SERVERS_REFRESH_RATE}
           />
-          {!noSqlMode && (
-            <Button
-              icon={IconNames.APPLICATION}
-              text="Go to SQL"
-              onClick={() => goToQuery(ServersView.SERVER_SQL)}
-            />
-          )}
+          {this.renderBulkServersActions()}
           <TableColumnSelector
             columns={serverTableColumns}
-            onChange={column => this.setState({ hiddenColumns: hiddenColumns.toggle(column) })}
+            onChange={column =>
+              this.setState(prevState => ({
+                hiddenColumns: prevState.hiddenColumns.toggle(column),
+              }))
+            }
             tableColumnsHidden={hiddenColumns.storedArray}
           />
         </ViewControlBar>

@@ -36,7 +36,7 @@ import org.joda.time.format.DateTimeFormatter;
 
 import java.io.Closeable;
 import java.io.InputStream;
-import java.util.concurrent.Callable;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -57,14 +57,13 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
   private static final String INDEX_DATASOURCE = "wikipedia_index_test";
 
   static final int DELAY_BETWEEN_EVENTS_SECS = 4;
-  String taskID;
   final String TIME_PLACEHOLDER = "YYYY-MM-DDTHH:MM:SS";
-  // format for putting datestamp into events
-  final DateTimeFormatter EVENT_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss");
+  // format for putting timestamp into events
+  static final DateTimeFormatter EVENT_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss");
   // format for the querying interval
-  final DateTimeFormatter INTERVAL_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:'00Z'");
+  private static final DateTimeFormatter INTERVAL_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:'00Z'");
   // format for the expected timestamp in a query response
-  final DateTimeFormatter TIMESTAMP_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'.000Z'");
+  private static final DateTimeFormatter TIMESTAMP_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'.000Z'");
   DateTime dtFirst;            // timestamp of 1st event
   DateTime dtLast;             // timestamp of last event
   DateTime dtGroupBy;          // timestamp for expected response for groupBy query
@@ -84,8 +83,8 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
   {
     fullDatasourceName = INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix();
 
-    LOG.info("Starting test: ITRealtimeIndexTaskTest");
-    try (final Closeable closeable = unloader(fullDatasourceName)) {
+    LOG.info("Starting test: %s", this.getClass().getSimpleName());
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
       // the task will run for 3 minutes and then shutdown itself
       String task = setShutOffTime(
           getResourceAsString(getTaskResource()),
@@ -94,7 +93,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       task = StringUtils.replace(task, "%%DATASOURCE%%", fullDatasourceName);
 
       LOG.info("indexerSpec: [%s]\n", task);
-      taskID = indexer.submitTask(task);
+      String taskID = indexer.submitTask(task);
 
 
       // sleep for a while to let peons finish starting up
@@ -115,7 +114,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       if (null == is) {
         throw new ISE("could not open query file: %s", getQueriesResource());
       }
-      query_response_template = IOUtils.toString(is, "UTF-8");
+      query_response_template = IOUtils.toString(is, StandardCharsets.UTF_8);
 
       String queryStr = query_response_template;
       queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst));
@@ -145,14 +144,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
 
       // task should complete only after the segments are loaded by historical node
       RetryUtil.retryUntil(
-          new Callable<Boolean>()
-          {
-            @Override
-            public Boolean call()
-            {
-              return coordinator.areSegmentsLoaded(fullDatasourceName);
-            }
-          },
+          () -> coordinator.areSegmentsLoaded(fullDatasourceName),
           true,
           10000,
           60,
@@ -167,12 +159,12 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
     }
   }
 
-  String setShutOffTime(String taskAsString, DateTime time)
+  private String setShutOffTime(String taskAsString, DateTime time)
   {
     return StringUtils.replace(taskAsString, "#SHUTOFFTIME", time.toString());
   }
 
-  String getRouterURL()
+  private String getRouterURL()
   {
     return StringUtils.format(
         "%s/druid/v2?pretty",

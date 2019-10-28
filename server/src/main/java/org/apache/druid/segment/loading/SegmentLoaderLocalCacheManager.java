@@ -21,7 +21,6 @@ package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.guice.annotations.Json;
@@ -34,7 +33,7 @@ import org.apache.druid.timeline.DataSegment;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -43,8 +42,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SegmentLoaderLocalCacheManager implements SegmentLoader
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentLoaderLocalCacheManager.class);
-  private static final Comparator<StorageLocation> COMPARATOR = (left, right) ->
-      Longs.compare(right.available(), left.available());
 
   private final IndexIO indexIO;
   private final SegmentLoaderConfig config;
@@ -77,6 +74,8 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
    */
   private final ConcurrentHashMap<DataSegment, ReferenceCountingLock> segmentLocks = new ConcurrentHashMap<>();
 
+  private final StorageLocationSelectorStrategy strategy;
+
   // Note that we only create this via injection in historical and realtime nodes. Peons create these
   // objects via SegmentLoaderFactory objects, so that they can store segments in task-specific
   // directories rather than statically configured directories.
@@ -101,7 +100,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
           )
       );
     }
-    locations.sort(COMPARATOR);
+    this.strategy = config.getStorageLocationSelectorStrategy(locations);
   }
 
   @Override
@@ -163,7 +162,6 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
         if (loc == null) {
           loc = loadSegmentWithRetry(segment, storageDir);
         }
-        loc.addSegment(segment);
         return new File(loc.getPath(), storageDir);
       }
       finally {
@@ -176,27 +174,35 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
    * location may fail because of IO failure, most likely in two cases:<p>
    * 1. druid don't have the write access to this location, most likely the administrator doesn't config it correctly<p>
    * 2. disk failure, druid can't read/write to this disk anymore
+   *
+   * Locations are fetched using {@link StorageLocationSelectorStrategy}.
    */
   private StorageLocation loadSegmentWithRetry(DataSegment segment, String storageDirStr) throws SegmentLoadingException
   {
-    for (StorageLocation loc : locations) {
-      if (loc.canHandle(segment)) {
-        File storageDir = new File(loc.getPath(), storageDirStr);
+    Iterator<StorageLocation> locationsIterator = strategy.getLocations();
 
+    while (locationsIterator.hasNext()) {
+
+      StorageLocation loc = locationsIterator.next();
+
+      File storageDir = loc.reserve(storageDirStr, segment);
+      if (storageDir != null) {
         try {
           loadInLocationWithStartMarker(segment, storageDir);
           return loc;
         }
         catch (SegmentLoadingException e) {
-          log.makeAlert(
-              e,
-              "Failed to load segment in current location %s, try next location if any",
-              loc.getPath().getAbsolutePath()
-          )
-             .addData("location", loc.getPath().getAbsolutePath())
-             .emit();
-
-          cleanupCacheFiles(loc.getPath(), storageDir);
+          try {
+            log.makeAlert(
+                e,
+                "Failed to load segment in current location [%s], try next location if any",
+                loc.getPath().getAbsolutePath()
+            ).addData("location", loc.getPath().getAbsolutePath()).emit();
+          }
+          finally {
+            loc.removeSegmentDir(storageDir, segment);
+            cleanupCacheFiles(loc.getPath(), storageDir);
+          }
         }
       }
     }
@@ -270,7 +276,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
             // Druid creates folders of the form dataSource/interval/version/partitionNum.
             // We need to clean up all these directories if they are all empty.
             cleanupCacheFiles(location.getPath(), localStorageDir);
-            location.removeSegment(segment);
+            location.removeSegmentDir(localStorageDir, segment);
           }
         }
       }
@@ -364,5 +370,11 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   public ConcurrentHashMap<DataSegment, ReferenceCountingLock> getSegmentLocks()
   {
     return segmentLocks;
+  }
+
+  @VisibleForTesting
+  public List<StorageLocation> getLocations()
+  {
+    return locations;
   }
 }

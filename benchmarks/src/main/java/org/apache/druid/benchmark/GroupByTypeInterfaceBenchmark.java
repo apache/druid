@@ -34,7 +34,6 @@ import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -44,6 +43,7 @@ import org.apache.druid.offheap.OffheapBufferGenerator;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -51,12 +51,14 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryEngine;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
@@ -92,7 +94,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -108,7 +109,7 @@ import java.util.concurrent.TimeUnit;
 public class GroupByTypeInterfaceBenchmark
 {
   private static final SegmentId Q_INDEX_SEGMENT_ID = SegmentId.dummy("qIndex");
-  
+
   @Param({"4"})
   private int numSegments;
 
@@ -137,7 +138,7 @@ public class GroupByTypeInterfaceBenchmark
   private IncrementalIndex anIncrementalIndex;
   private List<QueryableIndex> queryableIndexes;
 
-  private QueryRunnerFactory<Row, GroupByQuery> factory;
+  private QueryRunnerFactory<ResultRow, GroupByQuery> factory;
 
   private BenchmarkSchemaInfo schemaInfo;
   private GroupByQuery stringQuery;
@@ -190,8 +191,10 @@ public class GroupByTypeInterfaceBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(new DefaultDimensionSpec("metLongUniform", null),
-                         new DefaultDimensionSpec("metFloatNormal", null))
+          .setDimensions(
+              new DefaultDimensionSpec("metLongUniform", null),
+              new DefaultDimensionSpec("metFloatNormal", null)
+          )
           .setAggregatorSpecs(
               queryAggs
           )
@@ -392,6 +395,7 @@ public class GroupByTypeInterfaceBenchmark
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
+            QueryConfig::new,
             bufferPool,
             mergePool,
             new ObjectMapper(new SmileFactory()),
@@ -450,7 +454,7 @@ public class GroupByTypeInterfaceBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
     return queryResult.toList();
   }
 
@@ -459,15 +463,15 @@ public class GroupByTypeInterfaceBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void querySingleQueryableIndexStringOnly(Blackhole blackhole)
   {
-    QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+    QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         Q_INDEX_SEGMENT_ID,
         new QueryableIndexSegment(queryableIndexes.get(0), Q_INDEX_SEGMENT_ID)
     );
 
-    List<Row> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, stringQuery);
+    List<ResultRow> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, stringQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
   }
@@ -477,15 +481,15 @@ public class GroupByTypeInterfaceBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void querySingleQueryableIndexLongOnly(Blackhole blackhole)
   {
-    QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+    QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         Q_INDEX_SEGMENT_ID,
         new QueryableIndexSegment(queryableIndexes.get(0), Q_INDEX_SEGMENT_ID)
     );
 
-    List<Row> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, longQuery);
+    List<ResultRow> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, longQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
   }
@@ -495,15 +499,15 @@ public class GroupByTypeInterfaceBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void querySingleQueryableIndexFloatOnly(Blackhole blackhole)
   {
-    QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+    QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         Q_INDEX_SEGMENT_ID,
         new QueryableIndexSegment(queryableIndexes.get(0), Q_INDEX_SEGMENT_ID)
     );
 
-    List<Row> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, floatQuery);
+    List<ResultRow> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, floatQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
   }
@@ -513,15 +517,15 @@ public class GroupByTypeInterfaceBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void querySingleQueryableIndexNumericOnly(Blackhole blackhole)
   {
-    QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+    QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         Q_INDEX_SEGMENT_ID,
         new QueryableIndexSegment(queryableIndexes.get(0), Q_INDEX_SEGMENT_ID)
     );
 
-    List<Row> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, longFloatQuery);
+    List<ResultRow> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, longFloatQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
   }
@@ -531,15 +535,15 @@ public class GroupByTypeInterfaceBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void querySingleQueryableIndexNumericThenString(Blackhole blackhole)
   {
-    QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+    QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         Q_INDEX_SEGMENT_ID,
         new QueryableIndexSegment(queryableIndexes.get(0), Q_INDEX_SEGMENT_ID)
     );
 
-    List<Row> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, longFloatQuery);
+    List<ResultRow> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, longFloatQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
 
@@ -551,7 +555,7 @@ public class GroupByTypeInterfaceBenchmark
 
     results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, stringQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
   }
@@ -562,15 +566,15 @@ public class GroupByTypeInterfaceBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void querySingleQueryableIndexLongThenString(Blackhole blackhole)
   {
-    QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+    QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         Q_INDEX_SEGMENT_ID,
         new QueryableIndexSegment(queryableIndexes.get(0), Q_INDEX_SEGMENT_ID)
     );
 
-    List<Row> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, longQuery);
+    List<ResultRow> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, longQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
 
@@ -582,7 +586,7 @@ public class GroupByTypeInterfaceBenchmark
 
     results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, stringQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
   }
@@ -592,15 +596,15 @@ public class GroupByTypeInterfaceBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void querySingleQueryableIndexLongThenFloat(Blackhole blackhole)
   {
-    QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+    QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         Q_INDEX_SEGMENT_ID,
         new QueryableIndexSegment(queryableIndexes.get(0), Q_INDEX_SEGMENT_ID)
     );
 
-    List<Row> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, longQuery);
+    List<ResultRow> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, longQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
 
@@ -612,7 +616,7 @@ public class GroupByTypeInterfaceBenchmark
 
     results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, floatQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
   }
@@ -622,15 +626,15 @@ public class GroupByTypeInterfaceBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void querySingleQueryableIndexStringThenNumeric(Blackhole blackhole)
   {
-    QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+    QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         Q_INDEX_SEGMENT_ID,
         new QueryableIndexSegment(queryableIndexes.get(0), Q_INDEX_SEGMENT_ID)
     );
 
-    List<Row> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, stringQuery);
+    List<ResultRow> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, stringQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
 
@@ -642,7 +646,7 @@ public class GroupByTypeInterfaceBenchmark
 
     results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, longFloatQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
   }
@@ -652,15 +656,15 @@ public class GroupByTypeInterfaceBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void querySingleQueryableIndexStringThenLong(Blackhole blackhole)
   {
-    QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+    QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         Q_INDEX_SEGMENT_ID,
         new QueryableIndexSegment(queryableIndexes.get(0), Q_INDEX_SEGMENT_ID)
     );
 
-    List<Row> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, stringQuery);
+    List<ResultRow> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, stringQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
 
@@ -672,7 +676,7 @@ public class GroupByTypeInterfaceBenchmark
 
     results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, longQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
   }
@@ -682,15 +686,15 @@ public class GroupByTypeInterfaceBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void querySingleQueryableIndexStringTwice(Blackhole blackhole)
   {
-    QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+    QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         Q_INDEX_SEGMENT_ID,
         new QueryableIndexSegment(queryableIndexes.get(0), Q_INDEX_SEGMENT_ID)
     );
 
-    List<Row> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, stringQuery);
+    List<ResultRow> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, stringQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
 
@@ -702,7 +706,7 @@ public class GroupByTypeInterfaceBenchmark
 
     results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, stringQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
   }
@@ -712,15 +716,15 @@ public class GroupByTypeInterfaceBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void querySingleQueryableIndexLongTwice(Blackhole blackhole)
   {
-    QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+    QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         Q_INDEX_SEGMENT_ID,
         new QueryableIndexSegment(queryableIndexes.get(0), Q_INDEX_SEGMENT_ID)
     );
 
-    List<Row> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, longQuery);
+    List<ResultRow> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, longQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
 
@@ -732,7 +736,7 @@ public class GroupByTypeInterfaceBenchmark
 
     results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, longQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
   }
@@ -743,15 +747,15 @@ public class GroupByTypeInterfaceBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void querySingleQueryableIndexFloatTwice(Blackhole blackhole)
   {
-    QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+    QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         Q_INDEX_SEGMENT_ID,
         new QueryableIndexSegment(queryableIndexes.get(0), Q_INDEX_SEGMENT_ID)
     );
 
-    List<Row> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, floatQuery);
+    List<ResultRow> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, floatQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
 
@@ -763,7 +767,7 @@ public class GroupByTypeInterfaceBenchmark
 
     results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, floatQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
   }
@@ -773,15 +777,15 @@ public class GroupByTypeInterfaceBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void querySingleQueryableIndexFloatThenLong(Blackhole blackhole)
   {
-    QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+    QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         Q_INDEX_SEGMENT_ID,
         new QueryableIndexSegment(queryableIndexes.get(0), Q_INDEX_SEGMENT_ID)
     );
 
-    List<Row> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, floatQuery);
+    List<ResultRow> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, floatQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
 
@@ -793,7 +797,7 @@ public class GroupByTypeInterfaceBenchmark
 
     results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, longQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
   }
@@ -803,15 +807,15 @@ public class GroupByTypeInterfaceBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void querySingleQueryableIndexFloatThenString(Blackhole blackhole)
   {
-    QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
+    QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         Q_INDEX_SEGMENT_ID,
         new QueryableIndexSegment(queryableIndexes.get(0), Q_INDEX_SEGMENT_ID)
     );
 
-    List<Row> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, floatQuery);
+    List<ResultRow> results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, floatQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
 
@@ -823,7 +827,7 @@ public class GroupByTypeInterfaceBenchmark
 
     results = GroupByTypeInterfaceBenchmark.runQuery(factory, runner, stringQuery);
 
-    for (Row result : results) {
+    for (ResultRow result : results) {
       blackhole.consume(result);
     }
   }

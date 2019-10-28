@@ -39,8 +39,8 @@ describe('transform table', () => {
         columnFilter=""
         transformedColumnsOnly={false}
         transforms={[]}
-        selectedTransformIndex={-1}
-        onTransformSelect={() => null}
+        selectedColumnName={undefined}
+        onTransformSelect={() => {}}
       />
     );
 

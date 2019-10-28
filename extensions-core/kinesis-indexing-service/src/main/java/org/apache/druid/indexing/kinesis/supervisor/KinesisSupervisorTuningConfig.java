@@ -21,7 +21,6 @@ package org.apache.druid.indexing.kinesis.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskTuningConfig;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -39,6 +38,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   private final Long chatRetries;
   private final Duration httpTimeout;
   private final Duration shutdownTimeout;
+  private final Duration repartitionTransitionDuration;
 
   public KinesisSupervisorTuningConfig(
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
@@ -70,7 +70,8 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
-      @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod
+      @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
+      @JsonProperty("repartitionTransitionDuration") Period repartitionTransitionDuration
   )
   {
     super(
@@ -108,6 +109,10 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
     this.shutdownTimeout = SeekableStreamSupervisorTuningConfig.defaultDuration(
         shutdownTimeout,
         DEFAULT_SHUTDOWN_TIMEOUT
+    );
+    this.repartitionTransitionDuration = SeekableStreamSupervisorTuningConfig.defaultDuration(
+        repartitionTransitionDuration,
+        DEFAULT_REPARTITION_TRANSITION_DURATION
     );
   }
 
@@ -147,6 +152,12 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   }
 
   @Override
+  public Duration getRepartitionTransitionDuration()
+  {
+    return repartitionTransitionDuration;
+  }
+
+  @Override
   public String toString()
   {
     return "KinesisSupervisorTuningConfig{" +
@@ -178,11 +189,12 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
            ", maxRecordsPerPoll=" + getMaxRecordsPerPoll() +
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
+           ", repartitionTransitionDuration=" + getRepartitionTransitionDuration() +
            '}';
   }
 
   @Override
-  public SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig()
+  public KinesisIndexTaskTuningConfig convertToTaskTuningConfig()
   {
     return new KinesisIndexTaskTuningConfig(
         getMaxRowsInMemory(),

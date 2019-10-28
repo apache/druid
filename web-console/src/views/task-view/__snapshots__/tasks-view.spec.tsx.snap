@@ -17,10 +17,10 @@ exports[`tasks view matches snapshot 1`] = `
     <div
       className="top-pane"
     >
-      <ViewControlBar
+      <Memo(ViewControlBar)
         label="Supervisors"
       >
-        <RefreshButton
+        <Memo(RefreshButton)
           localStorageKey="supervisors-refresh-rate"
           onRefresh={[Function]}
         />
@@ -127,7 +127,7 @@ exports[`tasks view matches snapshot 1`] = `
             icon="more"
           />
         </Blueprint3.Popover>
-        <TableColumnSelector
+        <Memo(TableColumnSelector)
           columns={
             Array [
               "Datasource",
@@ -140,7 +140,7 @@ exports[`tasks view matches snapshot 1`] = `
           onChange={[Function]}
           tableColumnsHidden={Array []}
         />
-      </ViewControlBar>
+      </Memo(ViewControlBar)>
       <ReactTable
         AggregatedComponent={[Function]}
         ExpanderComponent={[Function]}
@@ -255,6 +255,14 @@ exports[`tasks view matches snapshot 1`] = `
           }
         }
         filterable={true}
+        filtered={
+          Array [
+            Object {
+              "id": "datasource",
+              "value": "datasource",
+            },
+          ]
+        }
         freezeWhenExpanded={false}
         getLoadingProps={[Function]}
         getNoDataProps={[Function]}
@@ -288,6 +296,7 @@ exports[`tasks view matches snapshot 1`] = `
         noDataText=""
         ofText="of"
         onFetchData={[Function]}
+        onFilteredChange={[Function]}
         originalKey="_original"
         pageJumpText="jump to page"
         pageSizeOptions={
@@ -322,7 +331,7 @@ exports[`tasks view matches snapshot 1`] = `
     <div
       className="bottom-pane"
     >
-      <ViewControlBar
+      <Memo(ViewControlBar)
         label="Tasks"
       >
         <Component>
@@ -334,6 +343,12 @@ exports[`tasks view matches snapshot 1`] = `
             onClick={[Function]}
           >
             None
+          </Blueprint3.Button>
+          <Blueprint3.Button
+            active={false}
+            onClick={[Function]}
+          >
+            Group ID
           </Blueprint3.Button>
           <Blueprint3.Button
             active={false}
@@ -354,14 +369,9 @@ exports[`tasks view matches snapshot 1`] = `
             Status
           </Blueprint3.Button>
         </Blueprint3.ButtonGroup>
-        <RefreshButton
+        <Memo(RefreshButton)
           localStorageKey="task-refresh-rate"
           onRefresh={[Function]}
-        />
-        <Blueprint3.Button
-          icon="application"
-          onClick={[Function]}
-          text="Go to SQL"
         />
         <Blueprint3.Popover
           boundary="scrollParent"
@@ -410,10 +420,48 @@ exports[`tasks view matches snapshot 1`] = `
             text="Submit task"
           />
         </Blueprint3.Popover>
-        <TableColumnSelector
+        <Blueprint3.Popover
+          boundary="scrollParent"
+          captureDismiss={false}
+          content={
+            <Blueprint3.Menu>
+              <Blueprint3.MenuItem
+                disabled={false}
+                icon="application"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={Object {}}
+                shouldDismissPopover={true}
+                text="View SQL query for table"
+              />
+            </Blueprint3.Menu>
+          }
+          defaultIsOpen={false}
+          disabled={false}
+          fill={false}
+          hasBackdrop={false}
+          hoverCloseDelay={300}
+          hoverOpenDelay={150}
+          inheritDarkTheme={true}
+          interactionKind="click"
+          minimal={false}
+          modifiers={Object {}}
+          openOnTargetFocus={true}
+          position="bottom-left"
+          targetTagName="span"
+          transitionDuration={300}
+          usePortal={true}
+          wrapperTagName="span"
+        >
+          <Blueprint3.Button
+            icon="more"
+          />
+        </Blueprint3.Popover>
+        <Memo(TableColumnSelector)
           columns={
             Array [
               "Task ID",
+              "Group ID",
               "Type",
               "Datasource",
               "Location",
@@ -426,7 +474,7 @@ exports[`tasks view matches snapshot 1`] = `
           onChange={[Function]}
           tableColumnsHidden={Array []}
         />
-      </ViewControlBar>
+      </Memo(ViewControlBar)>
       <ReactTable
         AggregatedComponent={[Function]}
         ExpanderComponent={[Function]}
@@ -489,6 +537,13 @@ exports[`tasks view matches snapshot 1`] = `
               "Header": "Task ID",
               "accessor": "task_id",
               "show": true,
+              "width": 500,
+            },
+            Object {
+              "Aggregated": [Function],
+              "Header": "Group ID",
+              "accessor": "group_id",
+              "show": true,
               "width": 300,
             },
             Object {
@@ -496,6 +551,7 @@ exports[`tasks view matches snapshot 1`] = `
               "Header": "Type",
               "accessor": "type",
               "show": true,
+              "width": 140,
             },
             Object {
               "Cell": [Function],
@@ -515,7 +571,7 @@ exports[`tasks view matches snapshot 1`] = `
               "Header": "Created time",
               "accessor": "created_time",
               "show": true,
-              "width": 120,
+              "width": 190,
             },
             Object {
               "Cell": [Function],
@@ -534,6 +590,7 @@ exports[`tasks view matches snapshot 1`] = `
               "accessor": "duration",
               "filterable": false,
               "show": true,
+              "width": 70,
             },
             Object {
               "Aggregated": [Function],
@@ -578,6 +635,10 @@ exports[`tasks view matches snapshot 1`] = `
             Object {
               "id": "task_id",
               "value": "test",
+            },
+            Object {
+              "id": "datasource",
+              "value": "datasource",
             },
           ]
         }

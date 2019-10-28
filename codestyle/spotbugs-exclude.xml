@@ -37,7 +37,6 @@
     <Bug pattern="DC_DOUBLECHECK"/>
     <Bug pattern="DM_BOXED_PRIMITIVE_FOR_PARSING"/>
     <Bug pattern="DM_EXIT"/>
-    <Bug pattern="DM_NUMBER_CTOR"/>
     <Bug pattern="DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED"/>
     <Bug pattern="EI_EXPOSE_REP"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
@@ -61,22 +60,17 @@
     <Bug pattern="NP_LOAD_OF_KNOWN_NULL_VALUE"/>
     <Bug pattern="NP_METHOD_PARAMETER_TIGHTENS_ANNOTATION"/>
     <Bug pattern="NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
-    <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
-    <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
-    <Bug pattern="NP_NONNULL_RETURN_VIOLATION"/>
     <Bug pattern="NP_NULL_ON_SOME_PATH"/>
     <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
     <Bug pattern="NP_NULL_ON_SOME_PATH_MIGHT_BE_INFEASIBLE"/>
     <Bug pattern="NP_NULL_PARAM_DEREF"/>
     <Bug pattern="NP_NULL_PARAM_DEREF_NONVIRTUAL"/>
     <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE"/>
-    <Bug pattern="NP_STORE_INTO_NONNULL_FIELD"/>
     <Bug pattern="NS_DANGEROUS_NON_SHORT_CIRCUIT"/>
     <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
     <Bug pattern="OS_OPEN_STREAM"/>
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
-    <Bug pattern="RC_REF_COMPARISON_BAD_PRACTICE_BOOLEAN"/>
     <Bug pattern="REC_CATCH_EXCEPTION"/>
     <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"/>
     <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
@@ -86,9 +80,7 @@
     <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
     <Bug pattern="SF_SWITCH_NO_DEFAULT"/>
     <Bug pattern="SR_NOT_CHECKED"/>
-    <Bug pattern="SS_SHOULD_BE_STATIC"/>
     <Bug pattern="SWL_SLEEP_WITH_LOCK_HELD"/>
     <Bug pattern="UL_UNRELEASED_LOCK_EXCEPTION_PATH"/>
     <Bug pattern="URF_UNREAD_FIELD"/>
-    <Bug pattern="WMI_WRONG_MAP_ITERATOR"/>
 </FindBugsFilter>

@@ -17,18 +17,14 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
-import React from 'react';
+import React, { useState } from 'react';
 
+import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { ActionIcon } from '../action-icon/action-icon';
 
 import './table-cell.scss';
 
-export interface NullTableCellProps {
-  value?: any;
-  timestamp?: boolean;
-  unparseable?: boolean;
-  openModal?: (str: string) => void;
-}
+const MAX_CHARS_TO_SHOW = 50;
 
 interface ShortParts {
   prefix: string;
@@ -36,61 +32,69 @@ interface ShortParts {
   suffix: string;
 }
 
-export class TableCell extends React.PureComponent<NullTableCellProps> {
-  static MAX_CHARS_TO_SHOW = 50;
+function shortenString(str: string): ShortParts {
+  // Print something like:
+  // BAAAArAAEiQKpDAEAACwZCBAGSBgiSEAAAAQpAIDwAg...23 omitted...gwiRoQBJIC
+  const omit = str.length - (MAX_CHARS_TO_SHOW - 17);
+  const prefix = str.substr(0, str.length - (omit + 10));
+  const suffix = str.substr(str.length - 10);
+  return {
+    prefix,
+    omitted: `...${omit} omitted...`,
+    suffix,
+  };
+}
 
-  possiblyTruncate(str: string): React.ReactNode {
-    if (str.length <= TableCell.MAX_CHARS_TO_SHOW) return str;
+export interface TableCellProps {
+  value?: any;
+  timestamp?: boolean;
+  unparseable?: boolean;
+}
 
-    const { prefix, omitted, suffix } = TableCell.shortenString(str);
+export const TableCell = React.memo(function TableCell(props: TableCellProps) {
+  const { value, timestamp, unparseable } = props;
+  const [showValue, setShowValue] = useState();
+
+  function renderShowValueDialog(): JSX.Element | undefined {
+    if (!showValue) return;
+
+    return <ShowValueDialog onClose={() => setShowValue(undefined)} str={showValue} />;
+  }
+
+  function renderTruncated(str: string): JSX.Element {
+    if (str.length <= MAX_CHARS_TO_SHOW) return <span className="table-cell plain">{str}</span>;
+
+    const { prefix, omitted, suffix } = shortenString(str);
     return (
       <span className="table-cell truncated">
         {prefix}
         <span className="omitted">{omitted}</span>
         {suffix}
-        <ActionIcon
-          icon={IconNames.MORE}
-          onClick={() => (this.props.openModal ? this.props.openModal(str) : null)}
-        />
+        <ActionIcon icon={IconNames.MORE} onClick={() => setShowValue(str)} />
+        {renderShowValueDialog()}
       </span>
     );
   }
 
-  static shortenString(str: string): ShortParts {
-    // Print something like:
-    // BAAAArAAEiQKpDAEAACwZCBAGSBgiSEAAAAQpAIDwAg...23 omitted...gwiRoQBJIC
-    const omit = str.length - (TableCell.MAX_CHARS_TO_SHOW - 17);
-    const prefix = str.substr(0, str.length - (omit + 10));
-    const suffix = str.substr(str.length - 10);
-    return {
-      prefix,
-      omitted: `...${omit} omitted...`,
-      suffix,
-    };
-  }
-
-  render() {
-    const { value, timestamp, unparseable } = this.props;
-    if (unparseable) {
-      return <span className="table-cell unparseable">error</span>;
-    } else if (value !== '' && value != null) {
-      if (timestamp) {
-        return (
-          <span className="table-cell timestamp" title={value}>
-            {new Date(value).toISOString()}
-          </span>
-        );
-      } else if (Array.isArray(value)) {
-        return this.possiblyTruncate(`[${value.join(', ')}]`);
-      } else {
-        return this.possiblyTruncate(String(value));
-      }
+  if (unparseable) {
+    return <span className="table-cell unparseable">error</span>;
+  } else if (value !== '' && value != null) {
+    if (timestamp) {
+      return (
+        <span className="table-cell timestamp" title={value}>
+          {new Date(value).toISOString()}
+        </span>
+      );
+    } else if (Array.isArray(value)) {
+      return renderTruncated(`[${value.join(', ')}]`);
     } else {
-      if (timestamp) {
-        return <span className="table-cell unparseable">unparseable timestamp</span>;
-      } else {
-        return <span className="table-cell null">null</span>;
-      }
+      return renderTruncated(String(value));
+    }
+  } else {
+    if (timestamp) {
+      return <span className="table-cell unparseable">unparseable timestamp</span>;
+    } else {
+      return <span className="table-cell null">null</span>;
     }
   }
-}
+});

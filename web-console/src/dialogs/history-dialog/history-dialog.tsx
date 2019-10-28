@@ -16,27 +16,21 @@
  * limitations under the License.
  */
 
-import { Card, Dialog, Divider, IDialogProps } from '@blueprintjs/core';
-import React from 'react';
+import { Card, Dialog, Divider } from '@blueprintjs/core';
+import React, { ReactNode } from 'react';
 
-import { JSONCollapse } from '../../components';
+import { JsonCollapse } from '../../components';
 
 import './history-dialog.scss';
 
-interface HistoryDialogProps extends IDialogProps {
+interface HistoryDialogProps {
   historyRecords: any[];
+  children?: ReactNode;
 }
 
-interface HistoryDialogState {}
-
-export class HistoryDialog extends React.PureComponent<HistoryDialogProps, HistoryDialogState> {
-  constructor(props: HistoryDialogProps) {
-    super(props);
-    this.state = {};
-  }
-
-  renderRecords() {
-    const { children, historyRecords } = this.props;
+export const HistoryDialog = React.memo(function HistoryDialog(props: HistoryDialogProps) {
+  function renderRecords() {
+    const { children, historyRecords } = props;
     let content;
     if (historyRecords.length === 0) {
       content = <div className="no-record">No history records available</div>;
@@ -59,7 +53,7 @@ export class HistoryDialog extends React.PureComponent<HistoryDialogProps, Histo
                     </div>
                     <Divider />
                     <p>{auditInfo.comment === '' ? '(No comment)' : auditInfo.comment}</p>
-                    <JSONCollapse stringValue={record.payload} buttonText="Payload" />
+                    <JsonCollapse stringValue={record.payload} buttonText="Payload" />
                   </Card>
                 </div>
               );
@@ -76,11 +70,9 @@ export class HistoryDialog extends React.PureComponent<HistoryDialogProps, Histo
     );
   }
 
-  render(): React.ReactNode {
-    return (
-      <Dialog isOpen {...this.props}>
-        {this.renderRecords()}
-      </Dialog>
-    );
-  }
-}
+  return (
+    <Dialog className="history-dialog" isOpen {...props}>
+      {renderRecords()}
+    </Dialog>
+  );
+});

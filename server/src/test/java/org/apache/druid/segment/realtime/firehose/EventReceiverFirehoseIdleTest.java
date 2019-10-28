@@ -100,9 +100,7 @@ public class EventReceiverFirehoseIdleTest
 
   private void awaitDelayedExecutorThreadTerminated() throws InterruptedException
   {
-    while (firehose.getDelayedCloseExecutor().getState() != Thread.State.TERMINATED) {
-      Thread.sleep(50);
-    }
+    firehose.getDelayedCloseExecutor().join();
   }
 
   @Test(timeout = 40_000L)

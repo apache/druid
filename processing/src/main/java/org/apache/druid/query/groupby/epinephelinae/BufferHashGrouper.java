@@ -28,10 +28,11 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 
+import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.AbstractList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.function.ToIntFunction;
@@ -42,7 +43,6 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   private static final int DEFAULT_INITIAL_BUCKETS = 1024;
   private static final float DEFAULT_MAX_LOAD_FACTOR = 0.7f;
 
-  private ByteBuffer buffer;
   private boolean initialized = false;
 
   // The BufferHashGrouper normally sorts by all fields of the grouping key with lexicographic ascending order.
@@ -54,16 +54,17 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   // to get a comparator that uses the ordering defined by the OrderByColumnSpec of a query.
   private final boolean useDefaultSorting;
 
-  // Track the offsets of used buckets using this list.
-  // When a new bucket is initialized by initializeNewBucketKey(), an offset is added to this list.
-  // When expanding the table, the list is reset() and filled with the new offsets of the copied buckets.
-  private ByteBuffer offsetListBuffer;
+  @Nullable
   private ByteBufferIntList offsetList;
 
   // Scratch objects used by aggregateVector(). Only set if initVectorized() is called.
+  @Nullable
   private ByteBuffer vKeyBuffer = null;
+  @Nullable
   private int[] vKeyHashCodes = null;
+  @Nullable
   private int[] vAggregationPositions = null;
+  @Nullable
   private int[] vAggregationRows = null;
 
   public BufferHashGrouper(
@@ -93,7 +94,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   public void init()
   {
     if (!initialized) {
-      this.buffer = bufferSupplier.get();
+      ByteBuffer buffer = bufferSupplier.get();
 
       int hashTableSize = ByteBufferHashTable.calculateTableArenaSizeWithPerBucketAdditionalSize(
           buffer.capacity(),
@@ -106,7 +107,10 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
       hashTableBuffer.limit(hashTableSize);
       hashTableBuffer = hashTableBuffer.slice();
 
-      offsetListBuffer = buffer.duplicate();
+      // Track the offsets of used buckets using this list.
+      // When a new bucket is initialized by initializeNewBucketKey(), an offset is added to this list.
+      // When expanding the table, the list is reset() and filled with the new offsets of the copied buckets.
+      ByteBuffer offsetListBuffer = buffer.duplicate();
       offsetListBuffer.position(hashTableSize);
       offsetListBuffer.limit(buffer.capacity());
       offsetListBuffer = offsetListBuffer.slice();
@@ -240,7 +244,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   }
 
   @Override
-  public boolean canSkipAggregate(boolean bucketWasUsed, int bucketOffset)
+  public boolean canSkipAggregate(int bucketOffset)
   {
     return false;
   }
@@ -315,19 +319,14 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
       // Sort offsets in-place.
       Collections.sort(
           wrappedOffsets,
-          new Comparator<Integer>()
-          {
-            @Override
-            public int compare(Integer lhs, Integer rhs)
-            {
-              final ByteBuffer tableBuffer = hashTable.getTableBuffer();
-              return comparator.compare(
-                  tableBuffer,
-                  tableBuffer,
-                  lhs + HASH_SIZE,
-                  rhs + HASH_SIZE
-              );
-            }
+          (lhs, rhs) -> {
+            final ByteBuffer tableBuffer = hashTable.getTableBuffer();
+            return comparator.compare(
+                tableBuffer,
+                tableBuffer,
+                lhs + HASH_SIZE,
+                rhs + HASH_SIZE
+            );
           }
       );
 

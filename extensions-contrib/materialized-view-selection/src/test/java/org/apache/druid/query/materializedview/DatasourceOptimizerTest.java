@@ -203,38 +203,32 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     // build user query
     TopNQuery userQuery = new TopNQueryBuilder()
         .dataSource("base")
-        .granularity(QueryRunnerTestHelper.allGran)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
         .dimension("dim1")
         .metric("cost")
         .threshold(4)
         .intervals("2011-04-01/2011-04-06")
-        .aggregators(
-            Collections.singletonList(new LongSumAggregatorFactory("cost", "cost"))
-        )
+        .aggregators(new LongSumAggregatorFactory("cost", "cost"))
         .build();
 
     List<Query> expectedQueryAfterOptimizing = Lists.newArrayList(
         new TopNQueryBuilder()
             .dataSource("derivative")
-            .granularity(QueryRunnerTestHelper.allGran)
+            .granularity(QueryRunnerTestHelper.ALL_GRAN)
             .dimension("dim1")
             .metric("cost")
             .threshold(4)
             .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-01/2011-04-04"))))
-            .aggregators(
-                Collections.singletonList(new LongSumAggregatorFactory("cost", "cost"))
-            )
+            .aggregators(new LongSumAggregatorFactory("cost", "cost"))
             .build(),
         new TopNQueryBuilder()
             .dataSource("base")
-            .granularity(QueryRunnerTestHelper.allGran)
+            .granularity(QueryRunnerTestHelper.ALL_GRAN)
             .dimension("dim1")
             .metric("cost")
             .threshold(4)
             .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-04/2011-04-06"))))
-            .aggregators(
-                Collections.singletonList(new LongSumAggregatorFactory("cost", "cost"))
-            )
+            .aggregators(new LongSumAggregatorFactory("cost", "cost"))
             .build()
     );
     Assert.assertEquals(expectedQueryAfterOptimizing, optimizer.optimize(userQuery));

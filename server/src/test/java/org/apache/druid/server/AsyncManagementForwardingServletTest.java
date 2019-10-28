@@ -66,8 +66,8 @@ import java.util.zip.Deflater;
 
 public class AsyncManagementForwardingServletTest extends BaseJettyTest
 {
-  private static final ExpectedRequest coordinatorExpectedRequest = new ExpectedRequest();
-  private static final ExpectedRequest overlordExpectedRequest = new ExpectedRequest();
+  private static final ExpectedRequest COORDINATOR_EXPECTED_REQUEST = new ExpectedRequest();
+  private static final ExpectedRequest OVERLORD_EXPECTED_REQUEST = new ExpectedRequest();
 
   private static int coordinatorPort;
   private static int overlordPort;
@@ -104,8 +104,8 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     coordinatorPort = SocketUtil.findOpenPortFrom(port + 1);
     overlordPort = SocketUtil.findOpenPortFrom(coordinatorPort + 1);
 
-    coordinator = makeTestServer(coordinatorPort, coordinatorExpectedRequest);
-    overlord = makeTestServer(overlordPort, overlordExpectedRequest);
+    coordinator = makeTestServer(coordinatorPort, COORDINATOR_EXPECTED_REQUEST);
+    overlord = makeTestServer(overlordPort, OVERLORD_EXPECTED_REQUEST);
 
     coordinator.start();
     overlord.start();
@@ -117,8 +117,8 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     coordinator.stop();
     overlord.stop();
 
-    coordinatorExpectedRequest.reset();
-    overlordExpectedRequest.reset();
+    COORDINATOR_EXPECTED_REQUEST.reset();
+    OVERLORD_EXPECTED_REQUEST.reset();
   }
 
   @Override
@@ -138,183 +138,183 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   @Test
   public void testCoordinatorDatasources() throws Exception
   {
-    coordinatorExpectedRequest.path = "/druid/coordinator/v1/datasources";
-    coordinatorExpectedRequest.method = "GET";
-    coordinatorExpectedRequest.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
+    COORDINATOR_EXPECTED_REQUEST.path = "/druid/coordinator/v1/datasources";
+    COORDINATOR_EXPECTED_REQUEST.method = "GET";
+    COORDINATOR_EXPECTED_REQUEST.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(StringUtils.format("http://localhost:%d%s", port, coordinatorExpectedRequest.path))
+        new URL(StringUtils.format("http://localhost:%d%s", port, COORDINATOR_EXPECTED_REQUEST.path))
             .openConnection());
-    connection.setRequestMethod(coordinatorExpectedRequest.method);
+    connection.setRequestMethod(COORDINATOR_EXPECTED_REQUEST.method);
 
-    coordinatorExpectedRequest.headers.forEach(connection::setRequestProperty);
+    COORDINATOR_EXPECTED_REQUEST.headers.forEach(connection::setRequestProperty);
 
     Assert.assertEquals(200, connection.getResponseCode());
-    Assert.assertTrue("coordinator called", coordinatorExpectedRequest.called);
-    Assert.assertFalse("overlord called", overlordExpectedRequest.called);
+    Assert.assertTrue("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
   }
 
   @Test
   public void testCoordinatorLoadStatus() throws Exception
   {
-    coordinatorExpectedRequest.path = "/druid/coordinator/v1/loadstatus";
-    coordinatorExpectedRequest.query = "full";
-    coordinatorExpectedRequest.method = "GET";
-    coordinatorExpectedRequest.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
+    COORDINATOR_EXPECTED_REQUEST.path = "/druid/coordinator/v1/loadstatus";
+    COORDINATOR_EXPECTED_REQUEST.query = "full";
+    COORDINATOR_EXPECTED_REQUEST.method = "GET";
+    COORDINATOR_EXPECTED_REQUEST.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
 
     HttpURLConnection connection = ((HttpURLConnection)
         new URL(StringUtils.format(
-            "http://localhost:%d%s?%s", port, coordinatorExpectedRequest.path, coordinatorExpectedRequest.query
+            "http://localhost:%d%s?%s", port, COORDINATOR_EXPECTED_REQUEST.path, COORDINATOR_EXPECTED_REQUEST.query
         )).openConnection());
-    connection.setRequestMethod(coordinatorExpectedRequest.method);
+    connection.setRequestMethod(COORDINATOR_EXPECTED_REQUEST.method);
 
-    coordinatorExpectedRequest.headers.forEach(connection::setRequestProperty);
+    COORDINATOR_EXPECTED_REQUEST.headers.forEach(connection::setRequestProperty);
 
     Assert.assertEquals(200, connection.getResponseCode());
-    Assert.assertTrue("coordinator called", coordinatorExpectedRequest.called);
-    Assert.assertFalse("overlord called", overlordExpectedRequest.called);
+    Assert.assertTrue("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
   }
 
   @Test
   public void testCoordinatorEnable() throws Exception
   {
-    coordinatorExpectedRequest.path = "/druid/coordinator/v1/datasources/myDatasource";
-    coordinatorExpectedRequest.method = "POST";
+    COORDINATOR_EXPECTED_REQUEST.path = "/druid/coordinator/v1/datasources/myDatasource";
+    COORDINATOR_EXPECTED_REQUEST.method = "POST";
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(StringUtils.format("http://localhost:%d%s", port, coordinatorExpectedRequest.path))
+        new URL(StringUtils.format("http://localhost:%d%s", port, COORDINATOR_EXPECTED_REQUEST.path))
             .openConnection());
-    connection.setRequestMethod(coordinatorExpectedRequest.method);
+    connection.setRequestMethod(COORDINATOR_EXPECTED_REQUEST.method);
 
     Assert.assertEquals(200, connection.getResponseCode());
-    Assert.assertTrue("coordinator called", coordinatorExpectedRequest.called);
-    Assert.assertFalse("overlord called", overlordExpectedRequest.called);
+    Assert.assertTrue("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
   }
 
   @Test
   public void testCoordinatorDisable() throws Exception
   {
-    coordinatorExpectedRequest.path = "/druid/coordinator/v1/datasources/myDatasource/intervals/2016-06-27_2016-06-28";
-    coordinatorExpectedRequest.method = "DELETE";
+    COORDINATOR_EXPECTED_REQUEST.path = "/druid/coordinator/v1/datasources/myDatasource/intervals/2016-06-27_2016-06-28";
+    COORDINATOR_EXPECTED_REQUEST.method = "DELETE";
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(StringUtils.format("http://localhost:%d%s", port, coordinatorExpectedRequest.path))
+        new URL(StringUtils.format("http://localhost:%d%s", port, COORDINATOR_EXPECTED_REQUEST.path))
             .openConnection());
-    connection.setRequestMethod(coordinatorExpectedRequest.method);
+    connection.setRequestMethod(COORDINATOR_EXPECTED_REQUEST.method);
 
     Assert.assertEquals(200, connection.getResponseCode());
-    Assert.assertTrue("coordinator called", coordinatorExpectedRequest.called);
-    Assert.assertFalse("overlord called", overlordExpectedRequest.called);
+    Assert.assertTrue("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
   }
 
   @Test
   public void testCoordinatorProxyStatus() throws Exception
   {
-    coordinatorExpectedRequest.path = "/status";
-    coordinatorExpectedRequest.method = "GET";
-    coordinatorExpectedRequest.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
+    COORDINATOR_EXPECTED_REQUEST.path = "/status";
+    COORDINATOR_EXPECTED_REQUEST.method = "GET";
+    COORDINATOR_EXPECTED_REQUEST.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(StringUtils.format("http://localhost:%d/proxy/coordinator%s", port, coordinatorExpectedRequest.path))
+        new URL(StringUtils.format("http://localhost:%d/proxy/coordinator%s", port, COORDINATOR_EXPECTED_REQUEST.path))
             .openConnection());
-    connection.setRequestMethod(coordinatorExpectedRequest.method);
+    connection.setRequestMethod(COORDINATOR_EXPECTED_REQUEST.method);
 
-    coordinatorExpectedRequest.headers.forEach(connection::setRequestProperty);
+    COORDINATOR_EXPECTED_REQUEST.headers.forEach(connection::setRequestProperty);
 
     Assert.assertEquals(200, connection.getResponseCode());
-    Assert.assertTrue("coordinator called", coordinatorExpectedRequest.called);
-    Assert.assertFalse("overlord called", overlordExpectedRequest.called);
+    Assert.assertTrue("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
   }
 
   @Test
   public void testCoordinatorProxySegments() throws Exception
   {
-    coordinatorExpectedRequest.path = "/druid/coordinator/v1/metadata/datasources/myDatasource/segments";
-    coordinatorExpectedRequest.method = "POST";
-    coordinatorExpectedRequest.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
-    coordinatorExpectedRequest.body = "[\"2012-01-01T00:00:00.000/2012-01-03T00:00:00.000\", \"2012-01-05T00:00:00.000/2012-01-07T00:00:00.000\"]";
+    COORDINATOR_EXPECTED_REQUEST.path = "/druid/coordinator/v1/metadata/datasources/myDatasource/segments";
+    COORDINATOR_EXPECTED_REQUEST.method = "POST";
+    COORDINATOR_EXPECTED_REQUEST.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
+    COORDINATOR_EXPECTED_REQUEST.body = "[\"2012-01-01T00:00:00.000/2012-01-03T00:00:00.000\", \"2012-01-05T00:00:00.000/2012-01-07T00:00:00.000\"]";
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(StringUtils.format("http://localhost:%d/proxy/coordinator%s", port, coordinatorExpectedRequest.path))
+        new URL(StringUtils.format("http://localhost:%d/proxy/coordinator%s", port, COORDINATOR_EXPECTED_REQUEST.path))
             .openConnection());
-    connection.setRequestMethod(coordinatorExpectedRequest.method);
+    connection.setRequestMethod(COORDINATOR_EXPECTED_REQUEST.method);
 
-    coordinatorExpectedRequest.headers.forEach(connection::setRequestProperty);
+    COORDINATOR_EXPECTED_REQUEST.headers.forEach(connection::setRequestProperty);
 
     connection.setDoOutput(true);
     OutputStream os = connection.getOutputStream();
-    os.write(coordinatorExpectedRequest.body.getBytes(StandardCharsets.UTF_8));
+    os.write(COORDINATOR_EXPECTED_REQUEST.body.getBytes(StandardCharsets.UTF_8));
     os.close();
 
     Assert.assertEquals(200, connection.getResponseCode());
-    Assert.assertTrue("coordinator called", coordinatorExpectedRequest.called);
-    Assert.assertFalse("overlord called", overlordExpectedRequest.called);
+    Assert.assertTrue("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
   }
 
   @Test
   public void testOverlordPostTask() throws Exception
   {
-    overlordExpectedRequest.path = "/druid/indexer/v1/task";
-    overlordExpectedRequest.method = "POST";
-    overlordExpectedRequest.headers = ImmutableMap.of(
+    OVERLORD_EXPECTED_REQUEST.path = "/druid/indexer/v1/task";
+    OVERLORD_EXPECTED_REQUEST.method = "POST";
+    OVERLORD_EXPECTED_REQUEST.headers = ImmutableMap.of(
         "Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=",
         "Content-Type", "application/json"
     );
-    overlordExpectedRequest.body = "{\"type\": \"index\", \"spec\": \"stuffGoesHere\"}";
+    OVERLORD_EXPECTED_REQUEST.body = "{\"type\": \"index\", \"spec\": \"stuffGoesHere\"}";
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(StringUtils.format("http://localhost:%d%s", port, overlordExpectedRequest.path))
+        new URL(StringUtils.format("http://localhost:%d%s", port, OVERLORD_EXPECTED_REQUEST.path))
             .openConnection());
-    connection.setRequestMethod(overlordExpectedRequest.method);
+    connection.setRequestMethod(OVERLORD_EXPECTED_REQUEST.method);
 
-    overlordExpectedRequest.headers.forEach(connection::setRequestProperty);
+    OVERLORD_EXPECTED_REQUEST.headers.forEach(connection::setRequestProperty);
 
     connection.setDoOutput(true);
     OutputStream os = connection.getOutputStream();
-    os.write(overlordExpectedRequest.body.getBytes(StandardCharsets.UTF_8));
+    os.write(OVERLORD_EXPECTED_REQUEST.body.getBytes(StandardCharsets.UTF_8));
     os.close();
 
     Assert.assertEquals(200, connection.getResponseCode());
-    Assert.assertFalse("coordinator called", coordinatorExpectedRequest.called);
-    Assert.assertTrue("overlord called", overlordExpectedRequest.called);
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertTrue("overlord called", OVERLORD_EXPECTED_REQUEST.called);
   }
 
   @Test
   public void testOverlordTaskStatus() throws Exception
   {
-    overlordExpectedRequest.path = "/druid/indexer/v1/task/myTaskId/status";
-    overlordExpectedRequest.method = "GET";
-    overlordExpectedRequest.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
+    OVERLORD_EXPECTED_REQUEST.path = "/druid/indexer/v1/task/myTaskId/status";
+    OVERLORD_EXPECTED_REQUEST.method = "GET";
+    OVERLORD_EXPECTED_REQUEST.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(StringUtils.format("http://localhost:%d%s", port, overlordExpectedRequest.path))
+        new URL(StringUtils.format("http://localhost:%d%s", port, OVERLORD_EXPECTED_REQUEST.path))
             .openConnection());
-    connection.setRequestMethod(overlordExpectedRequest.method);
+    connection.setRequestMethod(OVERLORD_EXPECTED_REQUEST.method);
 
-    overlordExpectedRequest.headers.forEach(connection::setRequestProperty);
+    OVERLORD_EXPECTED_REQUEST.headers.forEach(connection::setRequestProperty);
 
     Assert.assertEquals(200, connection.getResponseCode());
-    Assert.assertFalse("coordinator called", coordinatorExpectedRequest.called);
-    Assert.assertTrue("overlord called", overlordExpectedRequest.called);
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertTrue("overlord called", OVERLORD_EXPECTED_REQUEST.called);
   }
 
   @Test
   public void testOverlordProxyLeader() throws Exception
   {
-    overlordExpectedRequest.path = "/druid/indexer/v1/leader";
-    overlordExpectedRequest.method = "GET";
-    overlordExpectedRequest.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
+    OVERLORD_EXPECTED_REQUEST.path = "/druid/indexer/v1/leader";
+    OVERLORD_EXPECTED_REQUEST.method = "GET";
+    OVERLORD_EXPECTED_REQUEST.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(StringUtils.format("http://localhost:%d/proxy/overlord%s", port, overlordExpectedRequest.path))
+        new URL(StringUtils.format("http://localhost:%d/proxy/overlord%s", port, OVERLORD_EXPECTED_REQUEST.path))
             .openConnection());
-    connection.setRequestMethod(overlordExpectedRequest.method);
+    connection.setRequestMethod(OVERLORD_EXPECTED_REQUEST.method);
 
-    overlordExpectedRequest.headers.forEach(connection::setRequestProperty);
+    OVERLORD_EXPECTED_REQUEST.headers.forEach(connection::setRequestProperty);
 
     Assert.assertEquals(200, connection.getResponseCode());
-    Assert.assertFalse("coordinator called", coordinatorExpectedRequest.called);
-    Assert.assertTrue("overlord called", overlordExpectedRequest.called);
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertTrue("overlord called", OVERLORD_EXPECTED_REQUEST.called);
   }
 
   @Test
@@ -325,8 +325,8 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     connection.setRequestMethod("GET");
 
     Assert.assertEquals(400, connection.getResponseCode());
-    Assert.assertFalse("coordinator called", coordinatorExpectedRequest.called);
-    Assert.assertFalse("overlord called", overlordExpectedRequest.called);
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
   }
 
   @Test
@@ -337,8 +337,8 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     connection.setRequestMethod("GET");
 
     Assert.assertEquals(404, connection.getResponseCode());
-    Assert.assertFalse("coordinator called", coordinatorExpectedRequest.called);
-    Assert.assertFalse("overlord called", overlordExpectedRequest.called);
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
   }
 
   private static Server makeTestServer(int port, ExpectedRequest expectedRequest)

@@ -30,9 +30,9 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.Segment;
 
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -91,7 +91,7 @@ public class SelectQueryRunnerFactory
     @Override
     public Sequence<Result<SelectResultValue>> run(
         QueryPlus<Result<SelectResultValue>> queryPlus,
-        Map<String, Object> responseContext
+        ResponseContext responseContext
     )
     {
       Query<Result<SelectResultValue>> input = queryPlus.getQuery();

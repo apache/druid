@@ -33,7 +33,7 @@ export interface CoordinatorDynamicConfigDialogProps {
 }
 
 export interface CoordinatorDynamicConfigDialogState {
-  dynamicConfig: Record<string, any> | null;
+  dynamicConfig?: Record<string, any>;
   historyRecords: any[];
 }
 
@@ -46,7 +46,6 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
   constructor(props: CoordinatorDynamicConfigDialogProps) {
     super(props);
     this.state = {
-      dynamicConfig: null,
       historyRecords: [],
     };
 
@@ -70,7 +69,7 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
   }
 
   async getClusterConfig() {
-    let config: Record<string, any> | null = null;
+    let config: Record<string, any> | undefined;
     try {
       const configResp = await axios.get('/druid/coordinator/v1/config');
       config = configResp.data;
@@ -112,14 +111,13 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
     onClose();
   };
 
-  render() {
+  render(): JSX.Element {
     const { onClose } = this.props;
     const { dynamicConfig, historyRecords } = this.state;
 
     return (
       <SnitchDialog
         className="coordinator-dynamic-config-dialog"
-        isOpen
         onSave={this.saveClusterConfig}
         onClose={onClose}
         title="Coordinator dynamic config"
@@ -136,6 +134,12 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
         <AutoForm
           fields={[
             {
+              name: 'maxSegmentsToMove',
+              type: 'number',
+              defaultValue: 5,
+              info: <>The maximum number of segments that can be moved at any given time.</>,
+            },
+            {
               name: 'balancerComputeThreads',
               type: 'number',
               defaultValue: 1,
@@ -150,6 +154,7 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
             {
               name: 'emitBalancingStats',
               type: 'boolean',
+              defaultValue: false,
               info: (
                 <>
                   Boolean flag for whether or not we should emit balancing stats. This is an
@@ -160,6 +165,7 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
             {
               name: 'killAllDataSources',
               type: 'boolean',
+              defaultValue: false,
               info: (
                 <>
                   Send kill tasks for ALL dataSources if property{' '}
@@ -206,12 +212,6 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
                   queue is unbounded)
                 </>
               ),
-            },
-            {
-              name: 'maxSegmentsToMove',
-              type: 'number',
-              defaultValue: 5,
-              info: <>The maximum number of segments that can be moved at any given time.</>,
             },
             {
               name: 'mergeBytesLimit',

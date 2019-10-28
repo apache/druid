@@ -24,15 +24,20 @@ import { QueryInput } from './query-input';
 describe('query input', () => {
   it('matches snapshot', () => {
     const sqlControl = (
-      <QueryInput
-        queryString="hello world"
-        onQueryStringChange={() => null}
-        runeMode={false}
-        columnMetadata={null}
-      />
+      <QueryInput queryString="hello world" onQueryStringChange={() => {}} runeMode={false} />
     );
 
     const { container } = render(sqlControl);
     expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('correctly formats helper HTML', () => {
+    expect(
+      QueryInput.completerToHtml({
+        caption: 'COUNT',
+        syntax: 'COUNT(*)',
+        description: 'Counts the number of things',
+      }),
+    ).toMatchSnapshot();
   });
 });

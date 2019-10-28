@@ -39,7 +39,6 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.utils.Runnables;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -166,12 +165,6 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
       catch (ParseException e) {
         return InputRowPlusRaw.of(raw, e);
       }
-    }
-
-    @Override
-    public Runnable commit()
-    {
-      return Runnables.getNoopRunnable();
     }
 
     @Override

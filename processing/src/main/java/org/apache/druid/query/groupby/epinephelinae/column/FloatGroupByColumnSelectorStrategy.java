@@ -19,12 +19,15 @@
 
 package org.apache.druid.query.groupby.epinephelinae.column;
 
+import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.Grouper;
+import org.apache.druid.query.groupby.epinephelinae.GrouperBufferComparatorUtils;
+import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Map;
 
 public class FloatGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
 {
@@ -39,12 +42,12 @@ public class FloatGroupByColumnSelectorStrategy implements GroupByColumnSelector
   public void processValueFromGroupingKey(
       GroupByColumnSelectorPlus selectorPlus,
       ByteBuffer key,
-      Map<String, Object> resultMap,
+      ResultRow resultRow,
       int keyBufferPosition
   )
   {
     final float val = key.getFloat(keyBufferPosition);
-    resultMap.put(selectorPlus.getOutputName(), val);
+    resultRow.set(selectorPlus.getResultRowPosition(), val);
   }
 
   @Override
@@ -63,6 +66,19 @@ public class FloatGroupByColumnSelectorStrategy implements GroupByColumnSelector
   public void writeToKeyBuffer(int keyBufferPosition, @Nullable Object obj, ByteBuffer keyBuffer)
   {
     keyBuffer.putFloat(keyBufferPosition, DimensionHandlerUtils.nullToZero((Float) obj));
+  }
+
+  @Override
+  public Grouper.BufferComparator bufferComparator(
+      int keyBufferPosition,
+      @Nullable StringComparator stringComparator
+  )
+  {
+    return GrouperBufferComparatorUtils.makeBufferComparatorForFloat(
+        keyBufferPosition,
+        true,
+        stringComparator
+    );
   }
 
   @Override
