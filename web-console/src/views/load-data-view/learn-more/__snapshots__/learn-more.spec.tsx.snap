@@ -5,7 +5,7 @@ exports[`learn more matches snapshot 1`] = `
   class="learn-more"
 >
   <a
-    href="https://druid.apache.org/docs/latest/development/extensions-core/kinesis-ingestion.html"
+    href="https://druid.apache.org/docs"
     rel="noopener noreferrer"
     target="_blank"
   >

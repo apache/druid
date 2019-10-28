@@ -31,6 +31,8 @@ import {
   Icon,
   IconName,
   Intent,
+  Menu,
+  MenuItem,
   Popover,
   Switch,
   TextArea,
@@ -49,6 +51,7 @@ import {
   JsonInput,
   Loader,
 } from '../../components';
+import { FormGroupWithInfo } from '../../components/form-group-with-info/form-group-with-info';
 import { AsyncActionDialog } from '../../dialogs';
 import { AppToaster } from '../../singletons/toaster';
 import { UrlBaser } from '../../singletons/url-baser';
@@ -140,6 +143,7 @@ import {
   SampleStrategy,
 } from '../../utils/sampler';
 import { computeFlattenPathsForData } from '../../utils/spec-utils';
+import { DRUID_DOCS_VERSION } from '../../variables';
 
 import { ExamplePicker } from './example-picker/example-picker';
 import { FilterTable, filterTableSelectedColumnName } from './filter-table/filter-table';
@@ -791,7 +795,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         return (
           <p>
             If you do not see your source of raw data here, you can try to ingest it by submitting a{' '}
-            <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/index.html">
+            <ExternalLink
+              href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/index.html`}
+            >
               JSON task or supervisor spec
             </ExternalLink>
             .
@@ -893,7 +899,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </p>
         <p>
           For more information please refer to the{' '}
-          <ExternalLink href="https://druid.apache.org/docs/latest/operations/including-extensions">
+          <ExternalLink
+            href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/operations/including-extensions`}
+          >
             documentation on loading extensions
           </ExternalLink>
           .
@@ -1029,7 +1037,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <Callout className="intro">
             <p>
               Druid ingests raw data and converts it into a custom,{' '}
-              <ExternalLink href="https://druid.apache.org/docs/latest/design/segments.html">
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/design/segments.html`}
+              >
                 indexed format
               </ExternalLink>{' '}
               that is optimized for analytic queries.
@@ -1264,7 +1274,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             {canFlatten && (
               <p>
                 If you have nested data, you can{' '}
-                <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/index.html#flattenspec">
+                <ExternalLink
+                  href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/index.html#flattenspec`}
+                >
                   flatten
                 </ExternalLink>{' '}
                 it here. If the provided flattening capabilities are not sufficient, please
@@ -1272,7 +1284,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </p>
             )}
             <p>Ensure that your data appears correctly in a row/column orientation.</p>
-            <LearnMore href="https://druid.apache.org/docs/latest/ingestion/data-formats.html" />
+            <LearnMore
+              href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/data-formats.html`}
+            />
           </Callout>
           {!selectedFlattenField && (
             <>
@@ -1362,8 +1376,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           />
           <div className="control-buttons">
             <Button
-              className="add-update"
-              text={selectedFlattenFieldIndex === -1 ? 'Add' : 'Update'}
+              text="Apply"
               intent={Intent.PRIMARY}
               onClick={() => {
                 this.updateSpec(
@@ -1376,8 +1389,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 close();
               }}
             />
+            <Button text="Cancel" onClick={close} />
             {selectedFlattenFieldIndex !== -1 && (
               <Button
+                className="right"
                 icon={IconNames.TRASH}
                 intent={Intent.DANGER}
                 onClick={() => {
@@ -1391,7 +1406,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 }}
               />
             )}
-            <Button className="cancel" text="Cancel" onClick={close} />
           </div>
         </div>
       );
@@ -1409,7 +1423,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           />
           <AnchorButton
             icon={IconNames.INFO_SIGN}
-            href="https://druid.apache.org/docs/latest/ingestion/flatten-json.html"
+            href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/flatten-json.html`}
             target="_blank"
             minimal
           />
@@ -1529,7 +1543,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               column. If you do not have any time columns, you can choose "Constant value" to create
               a default one.
             </p>
-            <LearnMore href="https://druid.apache.org/docs/latest/ingestion/index.html#timestampspec" />
+            <LearnMore
+              href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/index.html#timestampspec`}
+            />
           </Callout>
           <FormGroup label="Timestamp spec">
             <ButtonGroup>
@@ -1692,12 +1708,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <p className="optional">Optional</p>
             <p>
               Druid can perform per-row{' '}
-              <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/transform-spec.html#transforms">
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/transform-spec.html#transforms`}
+              >
                 transforms
               </ExternalLink>{' '}
               of column values allowing you to create new derived columns or alter existing column.
             </p>
-            <LearnMore href="https://druid.apache.org/docs/latest/ingestion/index.html#transforms" />
+            <LearnMore
+              href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/index.html#transforms`}
+            />
           </Callout>
           {Boolean(transformQueryState.error && transforms.length) && (
             <FormGroup>
@@ -1758,8 +1778,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           />
           <div className="control-buttons">
             <Button
-              className="add-update"
-              text={selectedTransformIndex === -1 ? 'Add' : 'Update'}
+              text="Apply"
               intent={Intent.PRIMARY}
               onClick={() => {
                 this.updateSpec(
@@ -1772,8 +1791,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 close();
               }}
             />
+            <Button text="Cancel" onClick={close} />
             {selectedTransformIndex !== -1 && (
               <Button
+                className="right"
                 icon={IconNames.TRASH}
                 intent={Intent.DANGER}
                 onClick={() => {
@@ -1787,7 +1808,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 }}
               />
             )}
-            <Button className="cancel" text="Cancel" onClick={close} />
           </div>
         </div>
       );
@@ -1935,12 +1955,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <p className="optional">Optional</p>
             <p>
               Druid can{' '}
-              <ExternalLink href="https://druid.apache.org/docs/latest/querying/filters.html">
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/querying/filters.html`}
+              >
                 filter
               </ExternalLink>{' '}
               out unwanted data by applying per-row filters.
             </p>
-            <LearnMore href="https://druid.apache.org/docs/latest/ingestion/index.html#filter" />
+            <LearnMore
+              href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/index.html#filter`}
+            />
           </Callout>
           {!showGlobalFilter && this.renderColumnFilterControls()}
           {!selectedFilter && this.renderGlobalFilterControls()}
@@ -1982,8 +2006,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           />
           <div className="control-buttons">
             <Button
-              className="add-update"
-              text={selectedFilterIndex === -1 ? 'Add' : 'Update'}
+              text="Apply"
               intent={Intent.PRIMARY}
               onClick={() => {
                 const curFilter = splitFilter(deepGet(spec, 'dataSchema.transformSpec.filter'));
@@ -1994,8 +2017,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 close();
               }}
             />
+            <Button text="Cancel" onClick={close} />
             {selectedFilterIndex !== -1 && (
               <Button
+                className="right"
                 icon={IconNames.TRASH}
                 intent={Intent.DANGER}
                 onClick={() => {
@@ -2008,7 +2033,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 }}
               />
             )}
-            <Button className="cancel" text="Cancel" onClick={close} />
           </div>
         </div>
       );
@@ -2068,17 +2092,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             />
           </FormGroup>
           <div className="control-buttons">
-            <Button
-              className="add-update"
-              text="Apply"
-              intent={Intent.PRIMARY}
-              onClick={() => this.queryForFilter()}
-            />
-            <Button
-              className="cancel"
-              text="Close"
-              onClick={() => this.setState({ showGlobalFilter: false })}
-            />
+            <Button text="Apply" intent={Intent.PRIMARY} onClick={() => this.queryForFilter()} />
+            <Button text="Cancel" onClick={() => this.setState({ showGlobalFilter: false })} />
           </div>
         </div>
       );
@@ -2205,11 +2220,36 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 want to change the type, click on the column header.
               </p>
             )}
-            <LearnMore href="https://druid.apache.org/docs/latest/ingestion/schema-design.html" />
+            <LearnMore
+              href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/schema-design.html`}
+            />
           </Callout>
           {!somethingSelected && (
             <>
-              <FormGroup>
+              <FormGroupWithInfo
+                inlineInfo
+                info={
+                  <div className="label-info-text">
+                    <p>
+                      Select whether or not you want to set an explicit list of{' '}
+                      <ExternalLink
+                        href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/ingestion-spec.html#dimensionsspec`}
+                      >
+                        dimensions
+                      </ExternalLink>{' '}
+                      and{' '}
+                      <ExternalLink
+                        href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/querying/aggregations.html`}
+                      >
+                        metrics
+                      </ExternalLink>
+                      . Explicitly setting dimensions and metrics can lead to better compression and
+                      performance. If you disable this option, Druid will try to auto-detect fields
+                      in your data and treat them as individual columns.
+                    </p>
+                  </div>
+                }
+              >
                 <Switch
                   checked={dimensionMode === 'specific'}
                   onChange={() =>
@@ -2219,29 +2259,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   }
                   label="Explicitly specify dimension list"
                 />
-                <Popover
-                  content={
-                    <div className="label-info-text">
-                      <p>
-                        Select whether or not you want to set an explicit list of{' '}
-                        <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/ingestion-spec.html#dimensionsspec">
-                          dimensions
-                        </ExternalLink>{' '}
-                        and{' '}
-                        <ExternalLink href="https://druid.apache.org/docs/latest/querying/aggregations.html">
-                          metrics
-                        </ExternalLink>
-                        . Explicitly setting dimensions and metrics can lead to better compression
-                        and performance. If you disable this option, Druid will try to auto-detect
-                        fields in your data and treat them as individual columns.
-                      </p>
-                    </div>
-                  }
-                  position="left-bottom"
-                >
-                  <Icon icon={IconNames.INFO_SIGN} iconSize={14} />
-                </Popover>
-              </FormGroup>
+              </FormGroupWithInfo>
               {dimensionMode === 'auto-detect' && (
                 <AutoForm
                   fields={[
@@ -2261,43 +2279,45 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   onChange={s => this.updateSpec(s)}
                 />
               )}
-              <FormGroup>
+              <FormGroupWithInfo
+                inlineInfo
+                info={
+                  <div className="label-info-text">
+                    <p>
+                      If you enable{' '}
+                      <ExternalLink
+                        href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/tutorials/tutorial-rollup.html`}
+                      >
+                        roll-up
+                      </ExternalLink>
+                      , Druid will try to pre-aggregate data before indexing it to conserve storage.
+                      The primary timestamp will be truncated to the specified query granularity,
+                      and rows containing the same string field values will be aggregated together.
+                    </p>
+                    <p>
+                      If you enable rollup, you must specify which columns are{' '}
+                      <a
+                        href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/ingestion-spec.html#dimensionsspec`}
+                      >
+                        dimensions
+                      </a>{' '}
+                      (fields you want to group and filter on), and which are{' '}
+                      <a
+                        href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/querying/aggregations.html`}
+                      >
+                        metrics
+                      </a>{' '}
+                      (fields you want to aggregate on).
+                    </p>
+                  </div>
+                }
+              >
                 <Switch
                   checked={rollup}
                   onChange={() => this.setState({ newRollup: !rollup })}
                   labelElement="Rollup"
                 />
-                <Popover
-                  content={
-                    <div className="label-info-text">
-                      <p>
-                        If you enable{' '}
-                        <ExternalLink href="https://druid.apache.org/docs/latest/tutorials/tutorial-rollup.html">
-                          roll-up
-                        </ExternalLink>
-                        , Druid will try to pre-aggregate data before indexing it to conserve
-                        storage. The primary timestamp will be truncated to the specified query
-                        granularity, and rows containing the same string field values will be
-                        aggregated together.
-                      </p>
-                      <p>
-                        If you enable rollup, you must specify which columns are{' '}
-                        <a href="https://druid.apache.org/docs/latest/ingestion/ingestion-spec.html#dimensionsspec">
-                          dimensions
-                        </a>{' '}
-                        (fields you want to group and filter on), and which are{' '}
-                        <a href="https://druid.apache.org/docs/latest/querying/aggregations.html">
-                          metrics
-                        </a>{' '}
-                        (fields you want to aggregate on).
-                      </p>
-                    </div>
-                  }
-                  position="left-bottom"
-                >
-                  <Icon icon={IconNames.INFO_SIGN} iconSize={14} />
-                </Popover>
-              </FormGroup>
+              </FormGroupWithInfo>
               <AutoForm
                 fields={[
                   {
@@ -2425,6 +2445,33 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       const curDimensions =
         deepGet(spec, `dataSchema.parser.parseSpec.dimensionsSpec.dimensions`) || EMPTY_ARRAY;
 
+      const toMetricMenu = (
+        <Menu>
+          <MenuItem
+            text="Convert to hyperUnique metric"
+            onClick={() => {
+              const specWithoutDimension = deepDelete(
+                spec,
+                `dataSchema.parser.parseSpec.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
+              );
+
+              const specWithMetric = deepSet(
+                specWithoutDimension,
+                `dataSchema.metricsSpec.[append]`,
+                {
+                  name: `unique_${selectedDimensionSpec.name}`,
+                  type: 'hyperUnique',
+                  fieldName: selectedDimensionSpec.name,
+                },
+              );
+
+              this.updateSpec(specWithMetric);
+              close();
+            }}
+          />
+        </Menu>
+      );
+
       return (
         <div className="edit-controls">
           <AutoForm
@@ -2432,10 +2479,20 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             model={selectedDimensionSpec}
             onChange={selectedDimensionSpec => this.setState({ selectedDimensionSpec })}
           />
+          {selectedDimensionSpecIndex !== -1 && deepGet(spec, 'dataSchema.metricsSpec') && (
+            <FormGroup>
+              <Popover content={toMetricMenu}>
+                <Button
+                  icon={IconNames.EXCHANGE}
+                  text="Change to metric..."
+                  disabled={curDimensions.length <= 1}
+                />
+              </Popover>
+            </FormGroup>
+          )}
           <div className="control-buttons">
             <Button
-              className="add-update"
-              text={selectedDimensionSpecIndex === -1 ? 'Add' : 'Update'}
+              text="Apply"
               intent={Intent.PRIMARY}
               onClick={() => {
                 this.updateSpec(
@@ -2448,8 +2505,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 close();
               }}
             />
+            <Button text="Cancel" onClick={close} />
             {selectedDimensionSpecIndex !== -1 && (
               <Button
+                className="right"
                 icon={IconNames.TRASH}
                 intent={Intent.DANGER}
                 disabled={curDimensions.length <= 1}
@@ -2466,7 +2525,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 }}
               />
             )}
-            <Button className="cancel" text="Cancel" onClick={close} />
           </div>
         </div>
       );
@@ -2511,8 +2569,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           />
           <div className="control-buttons">
             <Button
-              className="add-update"
-              text={selectedMetricSpecIndex === -1 ? 'Add' : 'Update'}
+              text="Apply"
               intent={Intent.PRIMARY}
               onClick={() => {
                 this.updateSpec(
@@ -2525,8 +2582,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 close();
               }}
             />
+            <Button text="Cancel" onClick={close} />
             {selectedMetricSpecIndex !== -1 && (
               <Button
+                className="right"
                 icon={IconNames.TRASH}
                 intent={Intent.DANGER}
                 onClick={() => {
@@ -2537,7 +2596,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 }}
               />
             )}
-            <Button className="cancel" text="Cancel" onClick={close} />
           </div>
         </div>
       );
@@ -2633,7 +2691,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <Callout className="intro">
             <p className="optional">Optional</p>
             <p>Configure how Druid will partition data.</p>
-            <LearnMore href="https://druid.apache.org/docs/latest/ingestion/index.html#partitioning" />
+            <LearnMore
+              href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/index.html#partitioning`}
+            />
           </Callout>
           {this.renderParallelPickerIfNeeded()}
         </div>
@@ -2698,7 +2758,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <Callout className="intro">
             <p className="optional">Optional</p>
             <p>Fine tune how Druid will ingest data.</p>
-            <LearnMore href="https://druid.apache.org/docs/latest/ingestion/index.html#tuningconfig" />
+            <LearnMore
+              href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/index.html#tuningconfig`}
+            />
           </Callout>
           {this.renderParallelPickerIfNeeded()}
         </div>

@@ -268,19 +268,19 @@
     padding: 10px;
     border-radius: 2px;
     margin-bottom: 15px;
+  }
 
-    .control-buttons {
-      position: relative;
+  .control-buttons {
+    position: relative;
 
-      .bp3-button {
-        margin-right: 15px;
-      }
+    .bp3-button {
+      margin-right: 15px;
+    }
 
-      .cancel {
-        position: absolute;
-        right: 0;
-        margin-right: 0;
-      }
+    .right {
+      position: absolute;
+      right: 0;
+      margin-right: 0;
     }
   }
 
