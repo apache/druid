@@ -44,13 +44,6 @@ public class DefaultDimensionSpec implements DimensionSpec
     return new DefaultDimensionSpec(dimensionName, dimensionName);
   }
 
-  public static List<DimensionSpec> toSpec(Iterable<String> dimensionNames)
-  {
-    return StreamSupport.stream(dimensionNames.spliterator(), false)
-                        .map(input -> new DefaultDimensionSpec(input, input))
-                        .collect(Collectors.toList());
-  }
-
   private static final byte CACHE_TYPE_ID = 0x0;
   private final String dimension;
   private final String outputName;
