@@ -16,7 +16,7 @@ exports[`about dialog matches snapshot 1`] = `
       tabindex="0"
     >
       <div
-        class="bp3-dialog"
+        class="bp3-dialog about-dialog"
       >
         <div
           class="bp3-dialog-header"

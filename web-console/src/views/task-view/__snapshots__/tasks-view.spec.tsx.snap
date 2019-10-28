@@ -17,10 +17,10 @@ exports[`tasks view matches snapshot 1`] = `
     <div
       className="top-pane"
     >
-      <ViewControlBar
+      <Memo(ViewControlBar)
         label="Supervisors"
       >
-        <RefreshButton
+        <Memo(RefreshButton)
           localStorageKey="supervisors-refresh-rate"
           onRefresh={[Function]}
         />
@@ -127,7 +127,7 @@ exports[`tasks view matches snapshot 1`] = `
             icon="more"
           />
         </Blueprint3.Popover>
-        <TableColumnSelector
+        <Memo(TableColumnSelector)
           columns={
             Array [
               "Datasource",
@@ -140,7 +140,7 @@ exports[`tasks view matches snapshot 1`] = `
           onChange={[Function]}
           tableColumnsHidden={Array []}
         />
-      </ViewControlBar>
+      </Memo(ViewControlBar)>
       <ReactTable
         AggregatedComponent={[Function]}
         ExpanderComponent={[Function]}
@@ -331,7 +331,7 @@ exports[`tasks view matches snapshot 1`] = `
     <div
       className="bottom-pane"
     >
-      <ViewControlBar
+      <Memo(ViewControlBar)
         label="Tasks"
       >
         <Component>
@@ -369,7 +369,7 @@ exports[`tasks view matches snapshot 1`] = `
             Status
           </Blueprint3.Button>
         </Blueprint3.ButtonGroup>
-        <RefreshButton
+        <Memo(RefreshButton)
           localStorageKey="task-refresh-rate"
           onRefresh={[Function]}
         />
@@ -457,7 +457,7 @@ exports[`tasks view matches snapshot 1`] = `
             icon="more"
           />
         </Blueprint3.Popover>
-        <TableColumnSelector
+        <Memo(TableColumnSelector)
           columns={
             Array [
               "Task ID",
@@ -474,7 +474,7 @@ exports[`tasks view matches snapshot 1`] = `
           onChange={[Function]}
           tableColumnsHidden={Array []}
         />
-      </ViewControlBar>
+      </Memo(ViewControlBar)>
       <ReactTable
         AggregatedComponent={[Function]}
         ExpanderComponent={[Function]}

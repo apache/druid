@@ -32,6 +32,7 @@ describe('run button', () => {
         onQueryContextChange={() => {}}
         onRun={() => {}}
         onExplain={() => {}}
+        onPrettier={() => {}}
       />
     );
 

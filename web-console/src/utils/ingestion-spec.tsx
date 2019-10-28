@@ -60,7 +60,8 @@ export type IngestionComboType =
   | 'index:ingestSegment'
   | 'index:inline'
   | 'index:static-s3'
-  | 'index:static-google-blobstore';
+  | 'index:static-google-blobstore'
+  | 'index:hdfs';
 
 // Some extra values that can be selected in the initial screen
 export type IngestionComboTypeWithExtra = IngestionComboType | 'hadoop' | 'example' | 'other';
@@ -81,7 +82,7 @@ function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): str
   }
 }
 
-export function getIngestionComboType(spec: IngestionSpec): IngestionComboType | null {
+export function getIngestionComboType(spec: IngestionSpec): IngestionComboType | undefined {
   const ioConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
 
   switch (ioConfig.type) {
@@ -99,11 +100,12 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
         case 'inline':
         case 'static-s3':
         case 'static-google-blobstore':
+        case 'hdfs':
           return `index:${firehose.type}` as IngestionComboType;
       }
   }
 
-  return null;
+  return;
 }
 
 export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): string {
@@ -125,6 +127,9 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
     case 'index:static-google-blobstore':
       return 'Google Cloud Storage';
+
+    case 'index:hdfs':
+      return 'HDFS';
 
     case 'kafka':
       return 'Apache Kafka';
@@ -152,6 +157,21 @@ export function getIngestionImage(ingestionType: IngestionComboTypeWithExtra): s
   return ingestionType;
 }
 
+export function getIngestionDocLink(spec: IngestionSpec): string {
+  const type = getSpecType(spec);
+
+  switch (type) {
+    case 'kafka':
+      return 'https://druid.apache.org/docs/latest/development/extensions-core/kafka-ingestion.html';
+
+    case 'kinesis':
+      return 'https://druid.apache.org/docs/latest/development/extensions-core/kinesis-ingestion.html';
+
+    default:
+      return 'https://druid.apache.org/docs/latest/ingestion/native-batch.html#firehoses';
+  }
+}
+
 export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): string | undefined {
   switch (ingestionType) {
     case 'index:static-s3':
@@ -159,6 +179,9 @@ export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): s
 
     case 'index:static-google-blobstore':
       return 'druid-google-extensions';
+
+    case 'index:hdfs':
+      return 'druid-hdfs-storage';
 
     case 'kafka':
       return 'druid-kafka-indexing-service';
@@ -226,6 +249,14 @@ export function getRollup(spec: IngestionSpec): boolean {
 export function getSpecType(spec: Partial<IngestionSpec>): IngestionType | undefined {
   return (
     deepGet(spec, 'type') || deepGet(spec, 'ioConfig.type') || deepGet(spec, 'tuningConfig.type')
+  );
+}
+
+export function isTask(spec: IngestionSpec) {
+  const type = String(getSpecType(spec));
+  return (
+    type.startsWith('index_') ||
+    ['index', 'compact', 'kill', 'append', 'merge', 'same_interval_merge'].includes(type)
   );
 }
 
@@ -318,14 +349,23 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
   {
     name: 'columns',
     type: 'string-array',
+    required: (p: ParseSpec) =>
+      ((p.format === 'csv' || p.format === 'tsv') && !p.hasHeaderRow) || p.format === 'regex',
     defined: (p: ParseSpec) =>
       ((p.format === 'csv' || p.format === 'tsv') && !p.hasHeaderRow) || p.format === 'regex',
   },
   {
+    name: 'delimiter',
+    type: 'string',
+    defaultValue: '\t',
+    defined: (p: ParseSpec) => p.format === 'tsv',
+    info: <>A custom delimiter for data values.</>,
+  },
+  {
     name: 'listDelimiter',
     type: 'string',
-    defaultValue: '|',
     defined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
+    info: <>A custom delimiter for multi-value dimensions.</>,
   },
 ];
 
@@ -547,7 +587,7 @@ export function getFlattenFieldFormFields() {
 }
 
 export interface TransformSpec {
-  transforms: Transform[];
+  transforms?: Transform[];
   filter?: any;
 }
 
@@ -766,6 +806,9 @@ export interface Firehose {
 
   // inline
   data?: string;
+
+  // hdfs
+  paths?: string;
 }
 
 export function getIoConfigFormFields(ingestionComboType: IngestionComboType): Field<IoConfig>[] {
@@ -773,7 +816,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     name: 'firehose.type',
     label: 'Firehose type',
     type: 'string',
-    suggestions: ['local', 'http', 'inline', 'static-s3', 'static-google-blobstore'],
+    suggestions: ['local', 'http', 'inline', 'static-s3', 'static-google-blobstore', 'hdfs'],
     info: (
       <p>
         Druid connects to raw data through{' '}
@@ -993,6 +1036,18 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
+    case 'index:hdfs':
+      return [
+        firehoseType,
+        {
+          name: 'firehose.paths',
+          label: 'Paths',
+          type: 'string',
+          placeholder: '/path/to/file.ext',
+          required: true,
+        },
+      ];
+
     case 'kafka':
       return [
         {
@@ -1140,6 +1195,12 @@ function issueWithFirehose(firehose: Firehose | undefined): string | undefined {
         return 'must have at least one blob';
       }
       break;
+
+    case 'hdfs':
+      if (!firehose.paths) {
+        return 'must have paths';
+      }
+      break;
   }
   return;
 }
@@ -1174,6 +1235,7 @@ export function getIoConfigTuningFormFields(
     case 'index:http':
     case 'index:static-s3':
     case 'index:static-google-blobstore':
+    case 'index:hdfs':
       return [
         {
           name: 'firehose.fetchTimeout',

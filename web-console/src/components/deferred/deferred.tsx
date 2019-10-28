@@ -16,10 +16,12 @@
  * limitations under the License.
  */
 
+import React from 'react';
+
 export interface DeferredProps {
   content: () => JSX.Element;
 }
 
-export function Deferred(props: DeferredProps) {
+export const Deferred = React.memo(function Deferred(props: DeferredProps) {
   return props.content();
-}
+});

@@ -47,7 +47,7 @@ export interface QueryOutputProps {
   runeMode: boolean;
 }
 
-export function QueryOutput(props: QueryOutputProps) {
+export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputProps) {
   const { queryResult, parsedQuery, loading, error } = props;
   const [showValue, setShowValue] = useState();
 
@@ -305,4 +305,4 @@ export function QueryOutput(props: QueryOutputProps) {
       {showValue && <ShowValueDialog onClose={() => setShowValue(undefined)} str={showValue} />}
     </div>
   );
-}
+});

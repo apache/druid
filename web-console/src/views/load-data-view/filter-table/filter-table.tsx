@@ -27,21 +27,31 @@ import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './filter-table.scss';
 
+export function filterTableSelectedColumnName(
+  sampleData: HeaderAndRows,
+  selectedFilter: DruidFilter | undefined,
+): string | undefined {
+  if (!selectedFilter) return;
+  const selectedFilterName = selectedFilter.dimension;
+  if (!sampleData.header.includes(selectedFilterName)) return;
+  return selectedFilterName;
+}
+
 export interface FilterTableProps {
   sampleData: HeaderAndRows;
   columnFilter: string;
   dimensionFilters: DruidFilter[];
-  selectedFilterIndex: number;
+  selectedFilterName: string | undefined;
   onShowGlobalFilter: () => void;
   onFilterSelect: (filter: DruidFilter, index: number) => void;
 }
 
-export function FilterTable(props: FilterTableProps) {
+export const FilterTable = React.memo(function FilterTable(props: FilterTableProps) {
   const {
     sampleData,
     columnFilter,
     dimensionFilters,
-    selectedFilterIndex,
+    selectedFilterName,
     onShowGlobalFilter,
     onFilterSelect,
   } = props;
@@ -58,7 +68,7 @@ export function FilterTable(props: FilterTableProps) {
 
         const columnClassName = classNames({
           filtered: filter,
-          selected: filter && filterIndex === selectedFilterIndex,
+          selected: columnName === selectedFilterName,
         });
         return {
           Header: (
@@ -90,4 +100,4 @@ export function FilterTable(props: FilterTableProps) {
       sortable={false}
     />
   );
-}
+});

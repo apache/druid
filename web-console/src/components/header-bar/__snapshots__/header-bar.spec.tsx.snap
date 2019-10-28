@@ -96,6 +96,15 @@ exports[`header bar matches snapshot 1`] = `
         <Blueprint3.Menu>
           <Blueprint3.MenuItem
             disabled={false}
+            icon="pulse"
+            multiline={false}
+            onClick={[Function]}
+            popoverProps={Object {}}
+            shouldDismissPopover={true}
+            text="Druid Doctor"
+          />
+          <Blueprint3.MenuItem
+            disabled={false}
             icon="settings"
             multiline={false}
             onClick={[Function]}

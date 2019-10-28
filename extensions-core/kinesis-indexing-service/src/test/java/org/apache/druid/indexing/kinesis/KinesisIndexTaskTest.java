@@ -2912,8 +2912,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
           @Override
           public boolean checkPointDataSourceMetadata(
               String supervisorId,
-              @Nullable Integer taskGroupId,
-              String baseSequenceName,
+              int taskGroupId,
               @Nullable DataSourceMetadata checkpointMetadata
           )
           {

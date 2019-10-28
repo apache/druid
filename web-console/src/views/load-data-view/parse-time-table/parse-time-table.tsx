@@ -32,6 +32,16 @@ import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './parse-time-table.scss';
 
+export function parseTimeTableSelectedColumnName(
+  sampleData: HeaderAndRows,
+  timestampSpec: TimestampSpec | undefined,
+): string | undefined {
+  if (!timestampSpec) return;
+  const timestampColumn = timestampSpec.column;
+  if (!timestampColumn || !sampleData.header.includes(timestampColumn)) return;
+  return timestampColumn;
+}
+
 export interface ParseTimeTableProps {
   sampleBundle: {
     headerAndRows: HeaderAndRows;
@@ -39,14 +49,16 @@ export interface ParseTimeTableProps {
   };
   columnFilter: string;
   possibleTimestampColumnsOnly: boolean;
+  selectedColumnName: string | undefined;
   onTimestampColumnSelect: (newTimestampSpec: TimestampSpec) => void;
 }
 
-export function ParseTimeTable(props: ParseTimeTableProps) {
+export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTimeTableProps) {
   const {
     sampleBundle,
     columnFilter,
     possibleTimestampColumnsOnly,
+    selectedColumnName,
     onTimestampColumnSelect,
   } = props;
   const { headerAndRows, timestampSpec } = sampleBundle;
@@ -62,7 +74,7 @@ export function ParseTimeTable(props: ParseTimeTableProps) {
         (columnName, i) => {
           const timestamp = columnName === '__time';
           if (!timestamp && !caseInsensitiveContains(columnName, columnFilter)) return;
-          const selected = timestampSpec.column === columnName;
+          const used = timestampSpec.column === columnName;
           const possibleFormat = timestamp
             ? null
             : possibleDruidFormatForValues(
@@ -72,7 +84,8 @@ export function ParseTimeTable(props: ParseTimeTableProps) {
 
           const columnClassName = classNames({
             timestamp,
-            selected,
+            used,
+            selected: selectedColumnName === columnName,
           });
           return {
             Header: (
@@ -123,4 +136,4 @@ export function ParseTimeTable(props: ParseTimeTableProps) {
       sortable={false}
     />
   );
-}
+});

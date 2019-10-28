@@ -352,6 +352,12 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     this.explainQueryManager.terminate();
   }
 
+  prettyPrintJson(): void {
+    this.setState(prevState => ({
+      queryString: Hjson.stringify(Hjson.parse(prevState.queryString)),
+    }));
+  }
+
   handleDownload = (filename: string, format: string) => {
     const { result } = this.state;
     if (!result) return;
@@ -516,6 +522,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
               onRun={emptyQuery ? undefined : this.handleRun}
               onExplain={emptyQuery ? undefined : this.handleExplain}
               onHistory={() => this.setState({ historyDialogOpen: true })}
+              onPrettier={() => this.prettyPrintJson()}
             />
             {this.renderAutoRunSwitch()}
             {this.renderWrapQueryLimitSelector()}

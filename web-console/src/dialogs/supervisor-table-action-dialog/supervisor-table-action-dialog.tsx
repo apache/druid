@@ -31,7 +31,9 @@ interface SupervisorTableActionDialogProps {
   onClose: () => void;
 }
 
-export function SupervisorTableActionDialog(props: SupervisorTableActionDialogProps) {
+export const SupervisorTableActionDialog = React.memo(function SupervisorTableActionDialog(
+  props: SupervisorTableActionDialogProps,
+) {
   const { supervisorId, actions, onClose } = props;
   const [activeTab, setActiveTab] = useState('status');
 
@@ -96,4 +98,4 @@ export function SupervisorTableActionDialog(props: SupervisorTableActionDialogPr
       )}
     </TableActionDialog>
   );
-}
+});

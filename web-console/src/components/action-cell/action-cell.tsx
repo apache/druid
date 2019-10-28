@@ -34,7 +34,7 @@ export interface ActionCellProps {
   actions?: BasicAction[];
 }
 
-export function ActionCell(props: ActionCellProps) {
+export const ActionCell = React.memo(function ActionCell(props: ActionCellProps) {
   const { onDetail, actions } = props;
   const actionsMenu = actions ? basicActionsToMenu(actions) : null;
 
@@ -48,4 +48,4 @@ export function ActionCell(props: ActionCellProps) {
       )}
     </div>
   );
-}
+});

@@ -93,7 +93,7 @@ export interface TimeMenuItemsProps {
   onQueryChange: (queryString: SqlQuery, run?: boolean) => void;
 }
 
-export function TimeMenuItems(props: TimeMenuItemsProps) {
+export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuItemsProps) {
   function renderFilterMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
     const now = new Date();
@@ -350,4 +350,4 @@ export function TimeMenuItems(props: TimeMenuItemsProps) {
       {renderAggregateMenu()}
     </>
   );
-}
+});

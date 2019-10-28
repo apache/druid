@@ -30,7 +30,9 @@ export interface QueryHistoryDialogProps {
   onClose: () => void;
 }
 
-export function QueryHistoryDialog(props: QueryHistoryDialogProps) {
+export const QueryHistoryDialog = React.memo(function QueryHistoryDialog(
+  props: QueryHistoryDialogProps,
+) {
   const [activeTab, setActiveTab] = useState(0);
   const { queryRecords, setQueryString, onClose } = props;
 
@@ -83,4 +85,4 @@ export function QueryHistoryDialog(props: QueryHistoryDialogProps) {
       </div>
     </Dialog>
   );
-}
+});
