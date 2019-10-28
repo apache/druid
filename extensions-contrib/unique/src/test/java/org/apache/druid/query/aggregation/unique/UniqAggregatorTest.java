@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.unique;
 
-import org.apache.druid.data.input.Row;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Accumulators;
@@ -27,6 +26,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.ResultRow;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -69,7 +69,7 @@ public class UniqAggregatorTest
   @Test
   public void buildBitmapAtIngestionTime() throws Exception
   {
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("unique.tsv").getFile()),
         String.join(
             "\n",
@@ -110,9 +110,9 @@ public class UniqAggregatorTest
             "}"
         )
     );
-    List<Row> results = seq.accumulate(new ArrayList<>(), Accumulators.list());
+    List<ResultRow> results = seq.accumulate(new ArrayList<>(), Accumulators.list());
     Assert.assertEquals(1, results.size());
-    Row row = results.get(0);
-    Assert.assertEquals(200, row.getMetric("unique"));
+    ResultRow row = results.get(0);
+    Assert.assertEquals(200, row.getArray()[0]);
   }
 }
