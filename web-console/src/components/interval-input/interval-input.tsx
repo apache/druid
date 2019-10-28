@@ -27,10 +27,12 @@ const CURRENT_YEAR = new Date().getUTCFullYear();
 
 export interface IntervalInputProps {
   interval?: string;
+  //   onChange: (interval: string) => void;
 }
 
 export interface IntervalInputState {
   currentInterval: string;
+  dateRange: DateRange;
 }
 
 export class IntervalInput extends React.PureComponent<IntervalInputProps, IntervalInputState> {
@@ -40,41 +42,66 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
       currentInterval: this.props.interval
         ? this.props.interval
         : `${CURRENT_YEAR - 1}-01-01/${CURRENT_YEAR}-01-01`,
+      dateRange: this.props.interval
+        ? this.parseInterval(this.props.interval)
+        : this.parseInterval(`${CURRENT_YEAR - 1}-01-01/${CURRENT_YEAR}-01-01`),
     };
   }
 
-  parseInterval(interval: string): [Date | undefined, Date | undefined] | undefined {
+  parseInterval(interval: string): DateRange {
     const dates = interval.split('/');
-    if (dates.length !== 2) return;
-    const startDate = new Date(dates[0]);
-    const endDate = new Date(dates[1]);
+    if (dates.length !== 2 || dates[0] === '' || dates[1] === '') return [undefined, undefined];
+    const startDateParts = dates[0].split('-');
+    const endDateParts = dates[1].split('-');
+    const startDate = new Date(
+      parseInt(startDateParts[0], 10),
+      parseInt(startDateParts[1], 10) - 1,
+      parseInt(startDateParts[2], 10),
+    );
+    const endDate = new Date(
+      parseInt(endDateParts[0], 10),
+      parseInt(endDateParts[1], 10) - 1,
+      parseInt(endDateParts[2], 10),
+    );
     return [startDate, endDate];
   }
+
+  parseDateRange(range: DateRange): string {
+    const [startDate, endDate] = range;
+    return `${
+      startDate
+        ? new Date(startDate.getTime() - startDate.getTimezoneOffset() * 6000)
+            .toISOString()
+            .substring(0, 10)
+        : ''
+    }/${
+      endDate
+        ? new Date(endDate.getTime() - endDate.getTimezoneOffset() * 6000)
+            .toISOString()
+            .substring(0, 10)
+        : ''
+    }`;
+  }
   render() {
-    const { currentInterval } = this.state;
-    console.log(currentInterval);
+    const { currentInterval, dateRange } = this.state;
+    // const { onChange } = this.props;
+    console.log(this.parseInterval(currentInterval));
     return (
       <>
         <InputGroup
           value={`${currentInterval}`}
+          placeholder={`2018-01-01/2019-01-01`}
           className={'interval-input'}
           rightElement={
             <Popover
               content={
                 <DateRangePicker
-                  value={this.parseInterval(currentInterval)}
+                  value={dateRange}
+                  contiguousCalendarMonths={false}
                   onChange={(selectedRange: DateRange) => {
-                    const [selectedStart, selectedEnd] = selectedRange;
-                    console.log(
-                      selectedStart ? selectedStart.toISOString().substring(0, 10) : 'nooo ',
-                    );
+                    this.setState({ dateRange: selectedRange });
                     this.setState({
-                      currentInterval:
-                        selectedStart && selectedEnd
-                          ? `${selectedStart
-                              .toISOString()
-                              .substring(0, 10)}/${selectedEnd.toISOString().substring(0, 10)}`
-                          : currentInterval,
+                      currentInterval: this.parseDateRange(selectedRange),
                     });
                   }}
                 />
@@ -84,7 +111,13 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
               <Button rightIcon={IconNames.CALENDAR} />
             </Popover>
           }
-          onChange={(e: any) => this.setState({ currentInterval: e.target.value })}
+          onChange={(e: any) => {
+            this.setState(
+              { currentInterval: e.target.value },
+              // , () => onChange(currentInterval)
+            );
+            this.setState({ dateRange: this.parseInterval(e.target.value) });
+          }}
         />
       </>
     );
