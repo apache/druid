@@ -31,6 +31,7 @@ import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -41,11 +42,6 @@ public class DefaultDimensionSpec implements DimensionSpec
   public static DefaultDimensionSpec of(String dimensionName)
   {
     return new DefaultDimensionSpec(dimensionName, dimensionName);
-  }
-
-  public static List<DimensionSpec> toSpec(String... dimensionNames)
-  {
-    return toSpec(Arrays.asList(dimensionNames));
   }
 
   public static List<DimensionSpec> toSpec(Iterable<String> dimensionNames)
@@ -174,13 +170,13 @@ public class DefaultDimensionSpec implements DimensionSpec
 
     DefaultDimensionSpec that = (DefaultDimensionSpec) o;
 
-    if (dimension != null ? !dimension.equals(that.dimension) : that.dimension != null) {
+    if (!Objects.equals(dimension, that.dimension)) {
       return false;
     }
-    if (outputName != null ? !outputName.equals(that.outputName) : that.outputName != null) {
+    if (!Objects.equals(outputName, that.outputName)) {
       return false;
     }
-    if (outputType != null ? !outputType.equals(that.outputType) : that.outputType != null) {
+    if (!Objects.equals(outputType, that.outputType)) {
       return false;
     }
 
