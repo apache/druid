@@ -81,7 +81,7 @@ function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): str
   }
 }
 
-export function getIngestionComboType(spec: IngestionSpec): IngestionComboType | null {
+export function getIngestionComboType(spec: IngestionSpec): IngestionComboType | undefined {
   const ioConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
 
   switch (ioConfig.type) {
@@ -103,7 +103,7 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
       }
   }
 
-  return null;
+  return;
 }
 
 export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): string {
@@ -150,6 +150,21 @@ export function getIngestionImage(ingestionType: IngestionComboTypeWithExtra): s
   const parts = ingestionType.split(':');
   if (parts.length === 2) return parts[1].toLowerCase();
   return ingestionType;
+}
+
+export function getIngestionDocLink(spec: IngestionSpec): string {
+  const type = getSpecType(spec);
+
+  switch (type) {
+    case 'kafka':
+      return 'https://druid.apache.org/docs/latest/development/extensions-core/kafka-ingestion.html';
+
+    case 'kinesis':
+      return 'https://druid.apache.org/docs/latest/development/extensions-core/kinesis-ingestion.html';
+
+    default:
+      return 'https://druid.apache.org/docs/latest/ingestion/native-batch.html#firehoses';
+  }
 }
 
 export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): string | undefined {
@@ -326,6 +341,8 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
   {
     name: 'columns',
     type: 'string-array',
+    required: (p: ParseSpec) =>
+      ((p.format === 'csv' || p.format === 'tsv') && !p.hasHeaderRow) || p.format === 'regex',
     defined: (p: ParseSpec) =>
       ((p.format === 'csv' || p.format === 'tsv') && !p.hasHeaderRow) || p.format === 'regex',
   },

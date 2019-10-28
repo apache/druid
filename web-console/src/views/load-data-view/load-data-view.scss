@@ -206,11 +206,19 @@
           &.timestamp {
             background: rgba(19, 129, 201, 0.5);
           }
+
+          &.used {
+            background: rgba(24, 201, 201, 0.5);
+          }
         }
 
         .rt-td {
           &.timestamp {
             background: rgba(19, 129, 201, 0.15);
+          }
+
+          &.used {
+            background: rgba(24, 201, 201, 0.15);
           }
         }
       }
@@ -235,6 +243,12 @@
     }
   }
 
+  .apply-button-bar {
+    .revert {
+      margin-left: 15px;
+    }
+  }
+
   .next-bar {
     grid-area: next;
     text-align: right;
@@ -255,7 +269,7 @@
     border-radius: 2px;
     margin-bottom: 15px;
 
-    .controls-buttons {
+    .control-buttons {
       position: relative;
 
       .bp3-button {
@@ -265,6 +279,7 @@
       .cancel {
         position: absolute;
         right: 0;
+        margin-right: 0;
       }
     }
   }
