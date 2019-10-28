@@ -61,12 +61,27 @@ public class UniqueBufferAggregator implements BufferAggregator
     }
 
     if (value instanceof ImmutableRoaringBitmap) {
-      List<ImmutableRoaringBitmap> bitmaps = bitmapCache.computeIfAbsent(buf, k -> new Int2ObjectOpenHashMap<>())
-                                                        .computeIfAbsent(position, k -> new ArrayList<>());
+      List<ImmutableRoaringBitmap> bitmaps = bitmapCache.get(buf)
+                                                        .get(position);
       ImmutableRoaringBitmap bitmap = (ImmutableRoaringBitmap) value;
       bitmaps.add(bitmap);
     } else {
       throw new UOE("Not implemented");
+    }
+  }
+
+  @Override
+  public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
+  {
+    List<ImmutableRoaringBitmap> bitmaps = bitmapCache.get(oldBuffer).get(oldPosition);
+
+    Int2ObjectMap<List<ImmutableRoaringBitmap>> map = bitmapCache.computeIfAbsent(newBuffer, buf -> new Int2ObjectOpenHashMap<>());
+    map.put(newPosition, bitmaps);
+
+    map = bitmapCache.get(oldBuffer);
+    map.remove(oldPosition);
+    if (map.isEmpty()) {
+      bitmapCache.remove(oldBuffer);
     }
   }
 
