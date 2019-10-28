@@ -87,7 +87,7 @@ public class RunRulesTest
         false,
         false,
         null,
-        ""
+        null
     );
     EasyMock.expect(coordinator.getConfig()).andReturn(config).anyTimes();
     mockPeon = EasyMock.createMock(LoadQueuePeon.class);

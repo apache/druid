@@ -190,7 +190,7 @@ public class StatsDEmitterTest
             client
     );
     client.time("druid.query.time", 10,
-            "druid_service:druid/broker", "dataSource:data-source", "type:groupBy", "hostname:brokerHost1"
+            "druid_service:druid/broker", "host:_t_host.brokerHost1", "dataSource:_t_dataSource.data-source", "type:_t_type.groupBy", "hostname:brokerHost1"
     );
     EasyMock.replay(client);
     emitter.emit(new ServiceMetricEvent.Builder()
