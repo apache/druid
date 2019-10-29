@@ -47,12 +47,7 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
 
   parseInterval(interval: string): DateRange {
     const dates = interval.split('/');
-    if (
-      dates.length !== 2 ||
-      !Date.parse(dates[0]) ||
-      !Date.parse(dates[1]) ||
-      interval.length !== 21
-    ) {
+    if (dates.length !== 2 || !Date.parse(dates[0]) || !Date.parse(dates[1])) {
       return [undefined, undefined];
     }
     const startDateParts = dates[0].split('-');
@@ -63,50 +58,32 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
     ) {
       return [undefined, undefined];
     }
-    const startDate = new Date(
-      parseInt(startDateParts[0], 10),
-      parseInt(startDateParts[1], 10) - 1,
-      parseInt(startDateParts[2], 10),
-    );
-    const endDate = new Date(
-      parseInt(endDateParts[0], 10),
-      parseInt(endDateParts[1], 10) - 1,
-      parseInt(endDateParts[2], 10),
-    );
+    const startDate = new Date(dates[0]);
+    const endDate = new Date(dates[1]);
     return [startDate, endDate];
   }
 
   parseDateRange(range: DateRange): string {
     const [startDate, endDate] = range;
-    return `${
-      startDate
-        ? new Date(startDate.getTime() - startDate.getTimezoneOffset() * 6000)
-            .toISOString()
-            .substring(0, 10)
-        : ''
-    }/${
-      endDate
-        ? new Date(endDate.getTime() - endDate.getTimezoneOffset() * 6000)
-            .toISOString()
-            .substring(0, 10)
-        : ''
+    console.log(range);
+    return `${startDate ? startDate.toISOString().substring(0, 19) : ''}/${
+      endDate ? endDate.toISOString().substring(0, 19) : ''
     }`;
   }
   render() {
     const { currentInterval, dateRange } = this.state;
-    // const { onChange } = this.props;
     const { onValueChange, placeholder } = this.props;
     return (
       <InputGroup
         value={`${currentInterval}`}
         placeholder={placeholder}
-        className={'interval-input'}
         rightElement={
           <div>
             <Popover
               popoverClassName={'calendar'}
               content={
                 <DateRangePicker
+                  timePrecision={'second'}
                   value={dateRange}
                   contiguousCalendarMonths={false}
                   onChange={(selectedRange: DateRange) => {
