@@ -2559,6 +2559,39 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     };
 
     if (selectedMetricSpec) {
+      const convertToDimension = (type: string) => {
+        const specWithoutMetric = deepDelete(
+          spec,
+          `dataSchema.metricsSpec.${selectedMetricSpecIndex}`,
+        );
+
+        const specWithDimension = deepSet(
+          specWithoutMetric,
+          `dataSchema.parser.parseSpec.dimensionsSpec.dimensions.[append]`,
+          {
+            type,
+            name: selectedMetricSpec.fieldName,
+          },
+        );
+
+        this.updateSpec(specWithDimension);
+        close();
+      };
+
+      const convertToDimensionMenu = (
+        <Menu>
+          <MenuItem
+            text="Convert to STRING dimension"
+            onClick={() => convertToDimension('STRING')}
+          />
+          <MenuItem text="Convert to LONG dimension" onClick={() => convertToDimension('LONG')} />
+          <MenuItem
+            text="Convert to DOUBLE dimension"
+            onClick={() => convertToDimension('DOUBLE')}
+          />
+        </Menu>
+      );
+
       return (
         <div className="edit-controls">
           <AutoForm
@@ -2566,6 +2599,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             model={selectedMetricSpec}
             onChange={selectedMetricSpec => this.setState({ selectedMetricSpec })}
           />
+          {selectedMetricSpecIndex !== -1 && (
+            <FormGroup>
+              <Popover content={convertToDimensionMenu}>
+                <Button icon={IconNames.EXCHANGE} text="Convert to dimension..." />
+              </Popover>
+            </FormGroup>
+          )}
           <div className="control-buttons">
             <Button
               text="Apply"
