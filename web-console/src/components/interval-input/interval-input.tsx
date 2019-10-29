@@ -108,6 +108,7 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
         rightElement={
           <div>
             <Popover
+              popoverClassName={'calendar'}
               content={
                 <DateRangePicker
                   value={dateRange}
