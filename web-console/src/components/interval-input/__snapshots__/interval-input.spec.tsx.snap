@@ -1,0 +1,59 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`interval calendar component matches snapshot 1`] = `
+<Blueprint3.InputGroup
+  className="interval-input"
+  onChange={[Function]}
+  placeholder="2010-01-01/2020-01-01"
+  rightElement={
+    <div>
+      <Blueprint3.Popover
+        boundary="scrollParent"
+        captureDismiss={false}
+        content={
+          <Blueprint3.DateRangePicker
+            allowSingleDayRange={false}
+            contiguousCalendarMonths={false}
+            dayPickerProps={Object {}}
+            maxDate={2019-12-31T22:22:38.247Z}
+            minDate={1999-01-01T22:22:38.247Z}
+            onChange={[Function]}
+            reverseMonthAndYearMenus={false}
+            shortcuts={true}
+            singleMonthOnly={false}
+            timePickerProps={Object {}}
+            value={
+              Array [
+                undefined,
+                undefined,
+              ]
+            }
+          />
+        }
+        defaultIsOpen={false}
+        disabled={false}
+        fill={false}
+        hasBackdrop={false}
+        hoverCloseDelay={300}
+        hoverOpenDelay={150}
+        inheritDarkTheme={true}
+        interactionKind="click"
+        minimal={false}
+        modifiers={Object {}}
+        openOnTargetFocus={true}
+        popoverClassName="calendar"
+        position="bottom-right"
+        targetTagName="span"
+        transitionDuration={300}
+        usePortal={true}
+        wrapperTagName="span"
+      >
+        <Blueprint3.Button
+          rightIcon="calendar"
+        />
+      </Blueprint3.Popover>
+    </div>
+  }
+  value="2010-01-01/2020-01-01"
+/>
+`;

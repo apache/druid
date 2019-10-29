@@ -26,7 +26,7 @@ import './interval-input.scss';
 const CURRENT_YEAR = new Date().getUTCFullYear();
 
 export interface IntervalInputProps {
-  interval?: string;
+  interval: string;
   placeholder: string | undefined;
   onValueChange: (interval: string) => void;
 }
@@ -40,12 +40,8 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
   constructor(props: IntervalInputProps) {
     super(props);
     this.state = {
-      currentInterval: this.props.interval
-        ? this.props.interval
-        : `${CURRENT_YEAR - 1}-01-01/${CURRENT_YEAR}-01-01`,
-      dateRange: this.props.interval
-        ? this.parseInterval(this.props.interval)
-        : this.parseInterval(`${CURRENT_YEAR - 1}-01-01/${CURRENT_YEAR}-01-01`),
+      currentInterval: this.props.interval,
+      dateRange: this.parseInterval(this.props.interval),
     };
   }
 
