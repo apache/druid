@@ -447,7 +447,7 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(someSize));
     input.add(nonBlockingSequence(someSize));
     input.add(nonBlockingSequence(someSize));
-    input.add(blockingSequence(someSize, 400, 500,1, 500, true));
+    input.add(blockingSequence(someSize, 400, 500, 1, 500, true));
     expectedException.expect(RuntimeException.class);
     expectedException.expectCause(Matchers.instanceOf(TimeoutException.class));
     expectedException.expectMessage("Sequence iterator timed out waiting for data");
@@ -689,7 +689,7 @@ public class ParallelMergeCombiningSequenceTest
                   final long currentNano = System.nanoTime();
                   if (rowCounter == 0 && currentNano < delayUntil) {
                     final long sleepMillis = Math.max(
-                        TimeUnit.MILLISECONDS.convert(delayUntil -  currentNano, TimeUnit.NANOSECONDS),
+                        TimeUnit.MILLISECONDS.convert(delayUntil - currentNano, TimeUnit.NANOSECONDS),
                         1
                     );
                     Thread.sleep(sleepMillis);

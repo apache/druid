@@ -19,7 +19,6 @@
 
 package org.apache.druid.benchmark.sequences;
 
-import org.apache.druid.java.util.common.logger.Logger;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;

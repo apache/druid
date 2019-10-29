@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark.sequences;
 
 import org.apache.druid.common.guava.CombiningSequence;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequence;
 import org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequenceTest;
@@ -38,7 +37,6 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Supplier;
 
