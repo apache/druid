@@ -50,9 +50,22 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
 
   parseInterval(interval: string): DateRange {
     const dates = interval.split('/');
-    if (dates.length !== 2 || dates[0] === '' || dates[1] === '') return [undefined, undefined];
+    if (
+      dates.length !== 2 ||
+      !Date.parse(dates[0]) ||
+      !Date.parse(dates[1]) ||
+      interval.length !== 21
+    ) {
+      return [undefined, undefined];
+    }
     const startDateParts = dates[0].split('-');
     const endDateParts = dates[1].split('-');
+    if (
+      parseInt(startDateParts[0], 10) < CURRENT_YEAR - 10 ||
+      parseInt(endDateParts[0], 10) > CURRENT_YEAR
+    ) {
+      return [undefined, undefined];
+    }
     const startDate = new Date(
       parseInt(startDateParts[0], 10),
       parseInt(startDateParts[1], 10) - 1,
@@ -85,7 +98,6 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
   render() {
     const { currentInterval, dateRange } = this.state;
     // const { onChange } = this.props;
-    console.log(this.parseInterval(currentInterval));
     return (
       <>
         <InputGroup
@@ -100,9 +112,12 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
                   contiguousCalendarMonths={false}
                   onChange={(selectedRange: DateRange) => {
                     this.setState({ dateRange: selectedRange });
-                    this.setState({
-                      currentInterval: this.parseDateRange(selectedRange),
-                    });
+                    this.setState(
+                      {
+                        currentInterval: this.parseDateRange(selectedRange),
+                      },
+                      // () => onChange(this.state.currentInterval)
+                    );
                   }}
                 />
               }
