@@ -50,10 +50,12 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
     if (dates.length !== 2 || !Date.parse(dates[0]) || !Date.parse(dates[1])) {
       return [undefined, undefined];
     }
+
     const startDateParts = dates[0].split('-');
     const endDateParts = dates[1].split('-');
+    console.log(startDateParts);
     if (
-      parseInt(startDateParts[0], 10) < CURRENT_YEAR - 10 ||
+      parseInt(startDateParts[0], 10) < CURRENT_YEAR - 20 ||
       parseInt(endDateParts[0], 10) > CURRENT_YEAR
     ) {
       return [undefined, undefined];
