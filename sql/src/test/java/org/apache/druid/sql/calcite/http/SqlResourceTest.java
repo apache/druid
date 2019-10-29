@@ -671,6 +671,48 @@ public class SqlResourceTest extends CalciteTestBase
     checkSqlRequestLog(false);
   }
 
+  @Test
+  public void testSubQueryWithLimit() throws Exception
+  {
+    final List<Map<String, Object>> rows = doPost(
+        new SqlQuery(
+            "SELECT COUNT(*) AS cnt FROM ( SELECT * FROM ( SELECT * FROM druid.foo LIMIT 10 ) tmpA ) tmpB",
+            null,
+            false,
+            null
+        )
+    ).rhs;
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("cnt", 6)
+        ),
+        rows
+    );
+    checkSqlRequestLog(true);
+  }
+
+  @Test
+  public void testSubQueryWithoutLimit() throws Exception
+  {
+    final List<Map<String, Object>> rows = doPost(
+        new SqlQuery(
+            "SELECT COUNT(*) AS cnt FROM ( SELECT * FROM ( SELECT * FROM druid.foo ) tmpA ) tmpB",
+            null,
+            false,
+            null
+        )
+    ).rhs;
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("cnt", 6)
+        ),
+        rows
+    );
+    checkSqlRequestLog(true);
+  }
+
   @SuppressWarnings("unchecked")
   private void checkSqlRequestLog(boolean success)
   {
