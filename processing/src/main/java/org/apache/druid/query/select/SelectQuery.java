@@ -38,7 +38,7 @@ import java.util.Map;
 public class SelectQuery implements Query<Object>
 {
   static final String REMOVED_ERROR_MESSAGE =
-      "The 'select' query has been removed, please use the near functionally equivalent 'scan' instead. See "
+      "The 'select' query has been removed, use 'scan' instead. See "
       + "https://druid.apache.org/docs/latest/querying/select-query.html for more details.";
 
   @JsonCreator
