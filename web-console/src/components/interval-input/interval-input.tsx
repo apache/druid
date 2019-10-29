@@ -27,7 +27,8 @@ const CURRENT_YEAR = new Date().getUTCFullYear();
 
 export interface IntervalInputProps {
   interval?: string;
-  //   onChange: (interval: string) => void;
+  placeholder: string | undefined;
+  onValueChange: (interval: string) => void;
 }
 
 export interface IntervalInputState {
@@ -98,13 +99,14 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
   render() {
     const { currentInterval, dateRange } = this.state;
     // const { onChange } = this.props;
+    const { onValueChange, placeholder } = this.props;
     return (
-      <>
-        <InputGroup
-          value={`${currentInterval}`}
-          placeholder={`2018-01-01/2019-01-01`}
-          className={'interval-input'}
-          rightElement={
+      <InputGroup
+        value={`${currentInterval}`}
+        placeholder={placeholder}
+        className={'interval-input'}
+        rightElement={
+          <div>
             <Popover
               content={
                 <DateRangePicker
@@ -116,7 +118,7 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
                       {
                         currentInterval: this.parseDateRange(selectedRange),
                       },
-                      // () => onChange(this.state.currentInterval)
+                      () => onValueChange(this.state.currentInterval),
                     );
                   }}
                 />
@@ -125,16 +127,15 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
             >
               <Button rightIcon={IconNames.CALENDAR} />
             </Popover>
-          }
-          onChange={(e: any) => {
-            this.setState(
-              { currentInterval: e.target.value },
-              // , () => onChange(currentInterval)
-            );
-            this.setState({ dateRange: this.parseInterval(e.target.value) });
-          }}
-        />
-      </>
+          </div>
+        }
+        onChange={(e: any) => {
+          this.setState({ currentInterval: e.target.value }, () => {
+            onValueChange(this.state.currentInterval);
+          });
+          this.setState({ dateRange: this.parseInterval(e.target.value) });
+        }}
+      />
     );
   }
 }
