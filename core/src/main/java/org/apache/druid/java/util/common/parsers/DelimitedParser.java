@@ -22,6 +22,7 @@ package org.apache.druid.java.util.common.parsers;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
+import org.apache.druid.common.config.NullHandling;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -94,7 +95,11 @@ public class DelimitedParser extends AbstractFlatTextFormatParser
     List<String> result = new ArrayList<String>();
 
     while (iterator.hasNext()) {
-      result.add(iterator.next());
+      String splitValue = iterator.next();
+      if (!NullHandling.replaceWithDefault() && splitValue.isEmpty()) {
+        result.add(null);
+      }
+      result.add(splitValue);
     }
 
     return Collections.unmodifiableList(result);
