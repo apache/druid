@@ -559,7 +559,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const previewSpecSame = this.isPreviewSpecSame();
 
     return (
-      <FormGroup className="apply-button-bar">
+      <FormGroup className="control-buttons">
         <Button
           text="Apply"
           disabled={previewSpecSame}
@@ -568,8 +568,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         />
         {!previewSpecSame && (
           <Button
-            className="revert"
-            icon={IconNames.UNDO}
+            text="Cancel"
             disabled={this.isPreviewSpecSame()}
             onClick={this.revertPreviewSpec}
           />
@@ -2445,7 +2444,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       const curDimensions =
         deepGet(spec, `dataSchema.parser.parseSpec.dimensionsSpec.dimensions`) || EMPTY_ARRAY;
 
-      const toMetricMenu = (
+      const convertToMetricMenu = (
         <Menu>
           <MenuItem
             text="Convert to hyperUnique metric"
@@ -2481,10 +2480,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           />
           {selectedDimensionSpecIndex !== -1 && deepGet(spec, 'dataSchema.metricsSpec') && (
             <FormGroup>
-              <Popover content={toMetricMenu}>
+              <Popover content={convertToMetricMenu}>
                 <Button
                   icon={IconNames.EXCHANGE}
-                  text="Change to metric..."
+                  text="Convert to metric..."
                   disabled={curDimensions.length <= 1}
                 />
               </Popover>
