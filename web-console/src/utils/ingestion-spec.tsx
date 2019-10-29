@@ -21,6 +21,7 @@ import React from 'react';
 
 import { Field } from '../components/auto-form/auto-form';
 import { ExternalLink } from '../components/external-link/external-link';
+import { DRUID_DOCS_VERSION } from '../variables';
 
 import {
   BASIC_TIME_FORMATS,
@@ -162,13 +163,13 @@ export function getIngestionDocLink(spec: IngestionSpec): string {
 
   switch (type) {
     case 'kafka':
-      return 'https://druid.apache.org/docs/latest/development/extensions-core/kafka-ingestion.html';
+      return `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kafka-ingestion.html`;
 
     case 'kinesis':
-      return 'https://druid.apache.org/docs/latest/development/extensions-core/kinesis-ingestion.html';
+      return `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kinesis-ingestion.html`;
 
     default:
-      return 'https://druid.apache.org/docs/latest/ingestion/native-batch.html#firehoses';
+      return `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/native-batch.html#firehoses`;
   }
 }
 
@@ -306,7 +307,9 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
         <p>The parser used to parse the data.</p>
         <p>
           For more information see{' '}
-          <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/data-formats.html">
+          <ExternalLink
+            href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/data-formats.html`}
+          >
             the documentation
           </ExternalLink>
           .
@@ -573,7 +576,9 @@ const FLATTEN_FIELD_FORM_FIELDS: Field<FlattenField>[] = [
     info: (
       <>
         Specify a flatten{' '}
-        <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/flatten-json">
+        <ExternalLink
+          href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/flatten-json`}
+        >
           expression
         </ExternalLink>
         .
@@ -618,7 +623,9 @@ const TRANSFORM_FORM_FIELDS: Field<Transform>[] = [
     info: (
       <>
         A valid Druid{' '}
-        <ExternalLink href="https://druid.apache.org/docs/latest/misc/math-expr.html">
+        <ExternalLink
+          href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/misc/math-expr.html`}
+        >
           expression
         </ExternalLink>
         .
@@ -820,7 +827,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     info: (
       <p>
         Druid connects to raw data through{' '}
-        <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html">
+        <ExternalLink
+          href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/firehose.html`}
+        >
           firehoses
         </ExternalLink>
         . You can change your selected firehose here.
@@ -873,7 +882,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           required: true,
           info: (
             <>
-              <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html#localfirehose">
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/firehose.html#localfirehose`}
+              >
                 firehose.baseDir
               </ExternalLink>
               <p>Specifies the directory to search recursively for files to be ingested.</p>
@@ -888,7 +899,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           suggestions: ['*', '*.json', '*.json.gz', '*.csv', '*.tsv'],
           info: (
             <>
-              <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html#localfirehose">
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/firehose.html#localfirehose`}
+              >
                 firehose.filter
               </ExternalLink>
               <p>
@@ -963,7 +976,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <p>
               The{' '}
-              <ExternalLink href="https://druid.apache.org/docs/latest/querying/filters.html">
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/querying/filters.html`}
+              >
                 filter
               </ExternalLink>{' '}
               to apply to the data as part of querying.
@@ -1026,7 +1041,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink href="https://druid.apache.org/docs/latest/development/extensions-contrib/google.html">
+                <ExternalLink
+                  href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-contrib/google.html`}
+                >
                   Google Blobs
                 </ExternalLink>
                 .
@@ -1057,7 +1074,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           required: true,
           info: (
             <>
-              <ExternalLink href="https://druid.apache.org/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig">
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
+              >
                 consumerProperties
               </ExternalLink>
               <p>
@@ -1079,7 +1098,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           defaultValue: {},
           info: (
             <>
-              <ExternalLink href="https://druid.apache.org/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig">
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
+              >
                 consumerProperties
               </ExternalLink>
               <p>A map of properties to be passed to the Kafka consumer.</p>
@@ -1129,7 +1150,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <>
               The Amazon Kinesis stream endpoint for a region. You can find a list of endpoints{' '}
-              <ExternalLink href="http://docs.aws.amazon.com/general/latest/gr/rande.html#ak_region">
+              <ExternalLink
+                href={`http://docs.aws.amazon.com/general/${DRUID_DOCS_VERSION}/gr/rande.html#ak_region`}
+              >
                 here
               </ExternalLink>
               .

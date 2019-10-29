@@ -88,7 +88,7 @@
           bottom: 0;
           left: 0;
           content: '';
-          border: 2px solid #48aff0;
+          border: 2px solid #008adc;
           border-radius: 2px;
         }
 
@@ -195,7 +195,7 @@
             left: 0;
             right: 0;
             content: '';
-            border: 2px solid #ff5d10;
+            border: 2px solid #008adc;
             border-radius: 2px;
           }
 
@@ -208,7 +208,7 @@
           }
 
           &.used {
-            background: rgba(24, 201, 201, 0.5);
+            background: rgba(99, 129, 137, 0.5);
           }
         }
 
@@ -218,7 +218,7 @@
           }
 
           &.used {
-            background: rgba(24, 201, 201, 0.15);
+            background: rgba(99, 129, 137, 0.15);
           }
         }
       }
@@ -243,12 +243,6 @@
     }
   }
 
-  .apply-button-bar {
-    .revert {
-      margin-left: 15px;
-    }
-  }
-
   .next-bar {
     grid-area: next;
     text-align: right;
@@ -268,19 +262,19 @@
     padding: 10px;
     border-radius: 2px;
     margin-bottom: 15px;
+  }
 
-    .control-buttons {
-      position: relative;
+  .control-buttons {
+    position: relative;
 
-      .bp3-button {
-        margin-right: 15px;
-      }
+    .bp3-button {
+      margin-right: 15px;
+    }
 
-      .cancel {
-        position: absolute;
-        right: 0;
-        margin-right: 0;
-      }
+    .right {
+      position: absolute;
+      right: 0;
+      margin-right: 0;
     }
   }
 

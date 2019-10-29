@@ -16,49 +16,20 @@
  * limitations under the License.
  */
 
-@import '../node_modules/normalize.css/normalize';
-@import '../node_modules/@blueprintjs/core/lib/css/blueprint';
-@import '../lib/react-table';
-@import '../node_modules/react-splitter-layout/lib/index.css';
+import { render } from '@testing-library/react';
+import React from 'react';
 
-html,
-body {
-  //font-family: 'Open Sans', Helvetica, Arial, sans-serif;
-  position: fixed;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-  font-size: 13px;
-}
+import { FormGroupWithInfo } from './form-group-with-info';
 
-body {
-  &.bp3-dark {
-    background: rgb(41, 55, 66);
-  }
+describe('form group with info', () => {
+  it('matches snapshot', () => {
+    const formGroupWithInfo = (
+      <FormGroupWithInfo label="Goodies" info={<div>Information is gold</div>}>
+        Some buttons and stuff
+      </FormGroupWithInfo>
+    );
 
-  &.mouse-mode {
-    *:focus {
-      outline: none !important;
-    }
-  }
-}
-
-svg {
-  width: auto;
-  height: auto;
-}
-
-.app-container {
-  position: absolute;
-  height: 100%;
-  width: 100%;
-}
-
-.label-info-text {
-  max-width: 400px;
-  padding: 15px;
-
-  p:last-child {
-    margin-bottom: 0;
-  }
-}
+    const { container } = render(formGroupWithInfo);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

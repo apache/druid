@@ -19,7 +19,7 @@ exports[`history dialog matches snapshot 1`] = `
         class="bp3-dialog history-dialog"
       >
         <div
-          class="history-record-container"
+          class="bp3-dialog-body history-record-container"
         >
           <span
             class="history-dialog-title"
@@ -124,6 +124,13 @@ exports[`history dialog matches snapshot 1`] = `
               </div>
             </div>
           </div>
+        </div>
+        <div
+          class="bp3-dialog-footer"
+        >
+          <div
+            class="bp3-dialog-footer-actions"
+          />
         </div>
       </div>
     </div>
