@@ -53,7 +53,6 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
 
     const startDateParts = dates[0].split('-');
     const endDateParts = dates[1].split('-');
-    console.log(startDateParts);
     if (
       parseInt(startDateParts[0], 10) < CURRENT_YEAR - 20 ||
       parseInt(endDateParts[0], 10) > CURRENT_YEAR
@@ -67,7 +66,6 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
 
   parseDateRange(range: DateRange): string {
     const [startDate, endDate] = range;
-    console.log(range);
     return `${startDate ? startDate.toISOString().substring(0, 19) : ''}/${
       endDate ? endDate.toISOString().substring(0, 19) : ''
     }`;
