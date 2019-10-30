@@ -3135,15 +3135,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @VisibleForTesting
-  public boolean removePartitionId(PartitionIdType partitionId)
+  public boolean isPartitionIdsEmpty()
   {
-    return this.partitionIds.remove(partitionId);
-  }
-
-  @VisibleForTesting
-  public List<PartitionIdType> getParitionIds()
-  {
-    return this.partitionIds;
+    return this.partitionIds.isEmpty();
   }
 
   /**
