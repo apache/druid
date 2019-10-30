@@ -23,12 +23,7 @@ sidebar_label: "Select"
   ~ under the License.
   -->
 
+ 
+Older versions of Apache Druid (incubating) included a Select query type. Since Druid 0.17.0, it has been removed and replaced by the [Scan query](../querying/scan-query.md), which offers improved memory usage and performance. This solves issues that users had with Select queries causing Druid to run out of memory or slow down.
 
-> The native Druid Select query has been removed in favor of the [Scan query](../querying/scan-query.md), which should
-> be used instead.
-> In situations involving larger numbers of segments, the Select query had very high memory and performance overhead.
-> The Scan query does not have this issue.
-> The major difference between the two is that the Scan query does not support pagination.
-> However, the Scan query type is able to return a virtually unlimited number of results even without pagination, 
-> making it unnecessary in many cases.
-
+The Scan query has a different syntax, but supports many of the features of the Select query, including time ordering and limiting. Scan does not include the Select query's pagination feature; however, in many cases pagination is unnecessary with Scan due to its ability to return a virtually unlimited number of results in one call.
