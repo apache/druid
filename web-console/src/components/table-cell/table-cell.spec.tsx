@@ -58,7 +58,7 @@ describe('table cell', () => {
   });
 
   it('matches snapshot truncate', () => {
-    const longString = new Array(100).join('test');
+    const longString = new Array(100).join('test_');
     const tableCell = <TableCell value={longString} />;
 
     const { container } = render(tableCell);
@@ -66,7 +66,7 @@ describe('table cell', () => {
   });
 
   it('matches snapshot unlimited', () => {
-    const longString = new Array(100).join('test');
+    const longString = new Array(100).join('test_');
     const tableCell = <TableCell value={longString} unlimited />;
 
     const { container } = render(tableCell);
@@ -74,7 +74,7 @@ describe('table cell', () => {
   });
 
   it('matches snapshot unlimited (absolute max)', () => {
-    const longString = new Array(5000).join('test');
+    const longString = new Array(5000).join('test_');
     const tableCell = <TableCell value={longString} unlimited />;
 
     const { container } = render(tableCell);

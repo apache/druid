@@ -530,9 +530,9 @@ exports[`query output matches snapshot 1`] = `
                     class="bp3-popover-target"
                   >
                     <span
-                      class="table-cell plain"
+                      class="table-cell null"
                     >
-                      Java
+                      null
                     </span>
                   </span>
                 </span>
@@ -551,9 +551,9 @@ exports[`query output matches snapshot 1`] = `
                     class="bp3-popover-target"
                   >
                     <span
-                      class="table-cell plain"
+                      class="table-cell null"
                     >
-                      42
+                      null
                     </span>
                   </span>
                 </span>
@@ -572,9 +572,9 @@ exports[`query output matches snapshot 1`] = `
                     class="bp3-popover-target"
                   >
                     <span
-                      class="table-cell plain"
+                      class="table-cell null"
                     >
-                      1
+                      null
                     </span>
                   </span>
                 </span>
@@ -593,9 +593,9 @@ exports[`query output matches snapshot 1`] = `
                     class="bp3-popover-target"
                   >
                     <span
-                      class="table-cell plain"
+                      class="table-cell null"
                     >
-                      0
+                      null
                     </span>
                   </span>
                 </span>
@@ -608,7 +608,7 @@ exports[`query output matches snapshot 1`] = `
           role="rowgroup"
         >
           <div
-            class="rt-tr -even"
+            class="rt-tr -padRow -even"
             role="row"
           >
             <div
@@ -616,84 +616,36 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      C++
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      28
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
           </div>
         </div>
@@ -702,7 +654,7 @@ exports[`query output matches snapshot 1`] = `
           role="rowgroup"
         >
           <div
-            class="rt-tr -odd"
+            class="rt-tr -padRow -odd"
             role="row"
           >
             <div
@@ -710,84 +662,36 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      Go
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      24
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
           </div>
         </div>
@@ -796,7 +700,7 @@ exports[`query output matches snapshot 1`] = `
           role="rowgroup"
         >
           <div
-            class="rt-tr -even"
+            class="rt-tr -padRow -even"
             role="row"
           >
             <div
@@ -804,84 +708,36 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      Ruby
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      20
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
           </div>
         </div>
@@ -890,7 +746,7 @@ exports[`query output matches snapshot 1`] = `
           role="rowgroup"
         >
           <div
-            class="rt-tr -odd"
+            class="rt-tr -padRow -odd"
             role="row"
           >
             <div
@@ -898,84 +754,36 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      C#
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      14
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
           </div>
         </div>
@@ -984,7 +792,7 @@ exports[`query output matches snapshot 1`] = `
           role="rowgroup"
         >
           <div
-            class="rt-tr -even"
+            class="rt-tr -padRow -even"
             role="row"
           >
             <div
@@ -992,84 +800,36 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      C
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      13
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
           </div>
         </div>
@@ -1078,7 +838,7 @@ exports[`query output matches snapshot 1`] = `
           role="rowgroup"
         >
           <div
-            class="rt-tr -odd"
+            class="rt-tr -padRow -odd"
             role="row"
           >
             <div
@@ -1086,84 +846,36 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      CSS
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      13
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
           </div>
         </div>
@@ -1172,7 +884,7 @@ exports[`query output matches snapshot 1`] = `
           role="rowgroup"
         >
           <div
-            class="rt-tr -even"
+            class="rt-tr -padRow -even"
             role="row"
           >
             <div
@@ -1180,84 +892,36 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      Shell
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      12
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
           </div>
         </div>
@@ -1266,7 +930,7 @@ exports[`query output matches snapshot 1`] = `
           role="rowgroup"
         >
           <div
-            class="rt-tr -odd"
+            class="rt-tr -padRow -odd"
             role="row"
           >
             <div
@@ -1274,84 +938,36 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      Makefile
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      10
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
           </div>
         </div>
@@ -1360,7 +976,7 @@ exports[`query output matches snapshot 1`] = `
           role="rowgroup"
         >
           <div
-            class="rt-tr -even"
+            class="rt-tr -padRow -even"
             role="row"
           >
             <div
@@ -1368,84 +984,36 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      PHP
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      9
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
           </div>
         </div>
@@ -1454,7 +1022,7 @@ exports[`query output matches snapshot 1`] = `
           role="rowgroup"
         >
           <div
-            class="rt-tr -odd"
+            class="rt-tr -padRow -odd"
             role="row"
           >
             <div
@@ -1462,84 +1030,36 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      Scala
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      8
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
           </div>
         </div>
@@ -1548,7 +1068,7 @@ exports[`query output matches snapshot 1`] = `
           role="rowgroup"
         >
           <div
-            class="rt-tr -even"
+            class="rt-tr -padRow -even"
             role="row"
           >
             <div
@@ -1556,84 +1076,36 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      HCL
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      6
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
           </div>
         </div>
@@ -1642,7 +1114,7 @@ exports[`query output matches snapshot 1`] = `
           role="rowgroup"
         >
           <div
-            class="rt-tr -odd"
+            class="rt-tr -padRow -odd"
             role="row"
           >
             <div
@@ -1650,84 +1122,36 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      Jupyter Notebook
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      6
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
           </div>
         </div>
@@ -1736,7 +1160,7 @@ exports[`query output matches snapshot 1`] = `
           role="rowgroup"
         >
           <div
-            class="rt-tr -even"
+            class="rt-tr -padRow -even"
             role="row"
           >
             <div
@@ -1744,84 +1168,36 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      Smarty
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      4
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
           </div>
         </div>
@@ -1830,7 +1206,7 @@ exports[`query output matches snapshot 1`] = `
           role="rowgroup"
         >
           <div
-            class="rt-tr -odd"
+            class="rt-tr -padRow -odd"
             role="row"
           >
             <div
@@ -1838,84 +1214,36 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      Elm
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      4
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
           </div>
         </div>
@@ -1924,7 +1252,7 @@ exports[`query output matches snapshot 1`] = `
           role="rowgroup"
         >
           <div
-            class="rt-tr -even"
+            class="rt-tr -padRow -even"
             role="row"
           >
             <div
@@ -1932,84 +1260,36 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      Roff
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      3
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
             <div
               class="rt-td aggregate-column"
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              <div>
-                <span
-                  class="bp3-popover-wrapper"
-                >
-                  <span
-                    class="bp3-popover-target"
-                  >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
-                  </span>
-                </span>
-              </div>
+              <span>
+                 
+              </span>
             </div>
           </div>
         </div>
@@ -2055,7 +1335,7 @@ exports[`query output matches snapshot 1`] = `
             <span
               class="-totalPages"
             >
-              2
+              1
             </span>
           </span>
           <span
@@ -2102,6 +1382,7 @@ exports[`query output matches snapshot 1`] = `
         >
           <button
             class="-btn"
+            disabled=""
             type="button"
           >
             Next
