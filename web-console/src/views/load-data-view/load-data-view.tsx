@@ -2479,6 +2479,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             onClick={() => convertToMetric('HLLSketchBuild', 'hll')}
           />
           <MenuItem
+            text="Convert to quantilesDoublesSketch metric"
+            onClick={() => convertToMetric('quantilesDoublesSketch', 'quantiles_doubles')}
+          />
+          <MenuItem
             text="Convert to hyperUnique metric"
             onClick={() => convertToMetric('hyperUnique', 'unique')}
           />
