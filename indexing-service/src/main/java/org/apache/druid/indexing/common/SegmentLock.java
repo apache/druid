@@ -180,7 +180,7 @@ public class SegmentLock implements TaskLock
       if (interval.equals(request.getInterval())) {
         final SpecificSegmentLockRequest specificSegmentLockRequest = (SpecificSegmentLockRequest) request;
         // Lock conflicts only if the interval is same and the partitionIds intersect.
-        return specificSegmentLockRequest.getPartitionId() == partitionId;
+        return specificSegmentLockRequest.getPartitionId().equals(partitionId);
       } else {
         // For different interval, all overlapping intervals cause conflict.
         return interval.overlaps(request.getInterval());
@@ -200,7 +200,7 @@ public class SegmentLock implements TaskLock
       return false;
     }
     SegmentLock that = (SegmentLock) o;
-    return partitionId == that.partitionId &&
+    return Objects.equals(partitionId, that.partitionId) &&
            priority == that.priority &&
            revoked == that.revoked &&
            lockType == that.lockType &&
