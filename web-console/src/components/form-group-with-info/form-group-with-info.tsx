@@ -16,16 +16,38 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
+import { FormGroup, Icon, Popover } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
-import { LearnMore } from './learn-more';
+import './form-group-with-info.scss';
 
-describe('learn more', () => {
-  it('matches snapshot', () => {
-    const learnMore = <LearnMore href={`https://druid.apache.org/docs`} />;
+export interface FormGroupWithInfoProps {
+  label?: React.ReactNode;
+  info?: JSX.Element | string;
+  inlineInfo?: boolean;
+  children?: React.ReactNode;
+}
 
-    const { container } = render(learnMore);
-    expect(container.firstChild).toMatchSnapshot();
-  });
+export const FormGroupWithInfo = React.memo(function FormGroupWithInfo(
+  props: FormGroupWithInfoProps,
+) {
+  const { label, info, inlineInfo, children } = props;
+
+  const popover = (
+    <Popover content={info} position="left-bottom">
+      <Icon icon={IconNames.INFO_SIGN} iconSize={14} />
+    </Popover>
+  );
+
+  return (
+    <FormGroup
+      className="form-group-with-info"
+      label={label}
+      labelInfo={info && !inlineInfo && popover}
+    >
+      {children}
+      {info && inlineInfo && popover}
+    </FormGroup>
+  );
 });
