@@ -20,14 +20,35 @@
 use strict;
 use warnings;
 
+sub fail_check {
+  my ($current_version) = @_;
+  my $current_version_text =
+    $current_version ? " Your current version is: $current_version." : "";
+
+  print STDERR <<"EOT";
+Druid requires Java 8.$current_version_text
+
+If you believe this check is in error, you can skip it using an
+environment variable:
+
+  export DRUID_SKIP_JAVA_CHECK=1
+
+Otherwise, install Java 8 and try again.
+EOT
+  exit 1;
+}
+
+my $skip_var = $ENV{'DRUID_SKIP_JAVA_CHECK'};
+if ($skip_var && $skip_var ne "0" && $skip_var ne "false" && $skip_var ne "f") {
+  exit 0;
+}
+
 my $java_version = qx[java -version 2>&1];
 if ($?) {
-  die "Please install Java 8 or better!\n";
+  fail_check();
 }
 
 # If we know it won't work, die. Otherwise hope for the best.
-if ($java_version =~ /java version \"((\d+)\.(\d+).*?)\"/ && ($2 < 1 || $3 < 8)) {
-  die "Please upgrade to Java 8 or better! Your current version is: $1\n";
+if ($java_version =~ /version \"((\d+)\.(\d+).*?)\"/ && ($2 != 1 || $3 != 8)) {
+  fail_check($1);
 }
-
-exit 0;

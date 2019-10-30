@@ -21,12 +21,28 @@ use strict;
 use warnings;
 use Socket;
 
-my @ports = (1527, 2181, 8081, 8082, 8083, 8090, 8091, 8200, 9095);
+my $skip_var = $ENV{'DRUID_SKIP_PORT_CHECK'};
+if ($skip_var && $skip_var ne "0" && $skip_var ne "false" && $skip_var ne "f") {
+  exit 0;
+}
+
+my @ports = (1527, 2181, 8081, 8082, 8083, 8090, 8091, 8200, 8888);
 
 my $tcp = getprotobyname("tcp");
 for my $port (@ports) {
   socket(my $sock, PF_INET, SOCK_STREAM, $tcp) or die "socket: $!";
   setsockopt($sock, SOL_SOCKET, SO_REUSEADDR, pack("l", 1)) or die "setsockopt: $!";
-  bind($sock, sockaddr_in($port, INADDR_ANY)) or die "Cannot start up because port[$port] is already in use.\n";
-  close $sock;
+  if (!bind($sock, sockaddr_in($port, INADDR_ANY))) {
+    print STDERR <<"EOT";
+Cannot start up because port $port is already in use.
+
+If you believe this check is in error, you can skip it using an
+environment variable:
+
+  export DRUID_SKIP_PORT_CHECK=1
+
+Otherwise, free up port $port and try again.
+EOT
+    exit 1;
+  }
 }
