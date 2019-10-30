@@ -26,9 +26,8 @@ sidebar_label: "Apache Kafka"
 
 The Kafka indexing service enables the configuration of *supervisors* on the Overlord, which facilitate ingestion from
 Kafka by managing the creation and lifetime of Kafka indexing tasks. These indexing tasks read events using Kafka's own
-partition and offset mechanism and are therefore able to provide guarantees of exactly-once ingestion. They are also
-able to read non-recent events from Kafka and are not subject to the window period considerations imposed on other
-ingestion mechanisms using Tranquility. The supervisor oversees the state of the indexing tasks to coordinate handoffs,
+partition and offset mechanism and are therefore able to provide guarantees of exactly-once ingestion.
+The supervisor oversees the state of the indexing tasks to coordinate handoffs,
 manage failures, and ensure that the scalability and replication requirements are maintained.
 
 This service is provided in the `druid-kafka-indexing-service` core Apache Druid (incubating) extension (see

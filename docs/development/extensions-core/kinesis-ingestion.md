@@ -26,9 +26,8 @@ sidebar_label: "Amazon Kinesis"
 
 Similar to the [Kafka indexing service](./kafka-ingestion.md), the Kinesis indexing service enables the configuration of *supervisors* on the Overlord, which facilitate ingestion from
 Kinesis by managing the creation and lifetime of Kinesis indexing tasks. These indexing tasks read events using Kinesis's own
-Shards and Sequence Number mechanism and are therefore able to provide guarantees of exactly-once ingestion. They are also
-able to read non-recent events from Kinesis and are not subject to the window period considerations imposed on other
-ingestion mechanisms using Tranquility. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
+Shards and Sequence Number mechanism and are therefore able to provide guarantees of exactly-once ingestion.
+The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
 and ensure that the scalability and replication requirements are maintained.
 
 The Kinesis indexing service is provided as the `druid-kinesis-indexing-service` core Apache Druid (incubating) extension (see
