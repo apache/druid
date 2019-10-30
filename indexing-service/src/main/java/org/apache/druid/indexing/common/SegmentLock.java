@@ -75,7 +75,7 @@ public class SegmentLock implements TaskLock
       String dataSource,
       Interval interval,
       String version,
-      int partitionId,
+      Object partitionId,
       int priority
   )
   {

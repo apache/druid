@@ -81,7 +81,7 @@ public class SpecificSegmentLockRequest implements LockRequest
         newId.getDataSource(),
         newId.getInterval(),
         newId.getVersion(),
-        newId.getShardSpec().getPartitionNum(),
+        newId.getShardSpec().getIdentifier(),
         request.getPriority(),
         request.isRevoked()
     );
