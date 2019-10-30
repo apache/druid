@@ -159,6 +159,9 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     );
   }
 
+  /**
+   * Required for NamespacedVersionedIntervalTimeline
+   */
   public int getNumObjects()
   {
     return numObjects.get();
@@ -301,6 +304,31 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
           TimelineEntry foundEntry = entry.getValue().get(version);
           if (foundEntry != null) {
             return foundEntry.getPartitionHolder().getChunk(partitionNum);
+          }
+        }
+      }
+
+      return null;
+    }
+    finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  // Should be unsupported in this timeline.
+  // For now make it return entries for null namespace so tests pass.
+  /*@Override
+   * This method is deprecated and might be required to be removed.
+   * */
+  public @Nullable PartitionHolder<ObjectType> findEntry(Interval interval, VersionType version)
+  {
+    lock.readLock().lock();
+    try {
+      for (Entry<Interval, TreeMap<VersionType, TimelineEntry>> entry : allTimelineEntries.entrySet()) {
+        if (entry.getKey().equals(interval) || entry.getKey().contains(interval)) {
+          TimelineEntry foundEntry = entry.getValue().get(version);
+          if (foundEntry != null) {
+            return foundEntry.getPartitionHolder();
           }
         }
       }

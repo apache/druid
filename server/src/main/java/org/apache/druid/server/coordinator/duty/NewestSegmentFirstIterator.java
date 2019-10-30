@@ -45,6 +45,7 @@ import org.apache.druid.server.coordinator.CompactionStatistics;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.NamespacedVersionedIntervalTimeline;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -100,7 +101,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   NewestSegmentFirstIterator(
       ObjectMapper objectMapper,
       Map<String, DataSourceCompactionConfig> compactionConfigs,
-      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
+      Map<String, NamespacedVersionedIntervalTimeline<String, DataSegment>> dataSources,
       Map<String, List<Interval>> skipIntervals
   )
   {
@@ -108,60 +109,62 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     this.compactionConfigs = compactionConfigs;
     this.timelineIterators = Maps.newHashMapWithExpectedSize(dataSources.size());
 
-    dataSources.forEach((String dataSource, VersionedIntervalTimeline<String, DataSegment> timeline) -> {
+    dataSources.forEach((String dataSource, NamespacedVersionedIntervalTimeline<String, DataSegment> timelines) -> {
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSource);
-      Granularity configuredSegmentGranularity = null;
-      if (config != null && !timeline.isEmpty()) {
-        VersionedIntervalTimeline<String, DataSegment> originalTimeline = null;
-        if (config.getGranularitySpec() != null && config.getGranularitySpec().getSegmentGranularity() != null) {
-          String temporaryVersion = DateTimes.nowUtc().toString();
-          Map<Interval, Set<DataSegment>> intervalToPartitionMap = new HashMap<>();
-          configuredSegmentGranularity = config.getGranularitySpec().getSegmentGranularity();
-          // Create a new timeline to hold segments in the new configured segment granularity
-          VersionedIntervalTimeline<String, DataSegment> timelineWithConfiguredSegmentGranularity = new VersionedIntervalTimeline<>(Comparator.naturalOrder());
-          Set<DataSegment> segments = timeline.findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
-          for (DataSegment segment : segments) {
-            // Convert original segmentGranularity to new granularities bucket by configuredSegmentGranularity
-            // For example, if the original is interval of 2020-01-28/2020-02-03 with WEEK granularity
-            // and the configuredSegmentGranularity is MONTH, the segment will be split to two segments
-            // of 2020-01/2020-02 and 2020-02/2020-03.
-            for (Interval interval : configuredSegmentGranularity.getIterable(segment.getInterval())) {
-              intervalToPartitionMap.computeIfAbsent(interval, k -> new HashSet<>()).add(segment);
+      for (VersionedIntervalTimeline timeline : timelines.getTimelines().values()) {
+        Granularity configuredSegmentGranularity = null;
+        if (config != null && !timeline.isEmpty()) {
+          VersionedIntervalTimeline<String, DataSegment> originalTimeline = null;
+          if (config.getGranularitySpec() != null && config.getGranularitySpec().getSegmentGranularity() != null) {
+            String temporaryVersion = DateTimes.nowUtc().toString();
+            Map<Interval, Set<DataSegment>> intervalToPartitionMap = new HashMap<>();
+            configuredSegmentGranularity = config.getGranularitySpec().getSegmentGranularity();
+            // Create a new timeline to hold segments in the new configured segment granularity
+            VersionedIntervalTimeline<String, DataSegment> timelineWithConfiguredSegmentGranularity = new VersionedIntervalTimeline<>(Comparator.naturalOrder());
+            Set<DataSegment> segments = timeline.findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
+            for (DataSegment segment : segments) {
+              // Convert original segmentGranularity to new granularities bucket by configuredSegmentGranularity
+              // For example, if the original is interval of 2020-01-28/2020-02-03 with WEEK granularity
+              // and the configuredSegmentGranularity is MONTH, the segment will be split to two segments
+              // of 2020-01/2020-02 and 2020-02/2020-03.
+              for (Interval interval : configuredSegmentGranularity.getIterable(segment.getInterval())) {
+                intervalToPartitionMap.computeIfAbsent(interval, k -> new HashSet<>()).add(segment);
+              }
             }
-          }
-          for (Map.Entry<Interval, Set<DataSegment>> partitionsPerInterval : intervalToPartitionMap.entrySet()) {
-            Interval interval = partitionsPerInterval.getKey();
-            int partitionNum = 0;
-            Set<DataSegment> segmentSet = partitionsPerInterval.getValue();
-            int partitions = segmentSet.size();
-            for (DataSegment segment : segmentSet) {
-              DataSegment segmentsForCompact = segment.withShardSpec(new NumberedShardSpec(partitionNum, partitions));
-              timelineWithConfiguredSegmentGranularity.add(
-                  interval,
-                  temporaryVersion,
-                  NumberedPartitionChunk.make(partitionNum, partitions, segmentsForCompact)
-              );
-              partitionNum += 1;
+            for (Map.Entry<Interval, Set<DataSegment>> partitionsPerInterval : intervalToPartitionMap.entrySet()) {
+              Interval interval = partitionsPerInterval.getKey();
+              int partitionNum = 0;
+              Set<DataSegment> segmentSet = partitionsPerInterval.getValue();
+              int partitions = segmentSet.size();
+              for (DataSegment segment : segmentSet) {
+                DataSegment segmentsForCompact = segment.withShardSpec(new NumberedShardSpec(partitionNum, partitions));
+                timelineWithConfiguredSegmentGranularity.add(
+                        interval,
+                        temporaryVersion,
+                        NumberedPartitionChunk.make(partitionNum, partitions, segmentsForCompact)
+                );
+                partitionNum += 1;
+              }
             }
+            // PartitionHolder can only holds chunks of one partition space
+            // However, partition in the new timeline (timelineWithConfiguredSegmentGranularity) can be hold multiple
+            // partitions of the original timeline (when the new segmentGranularity is larger than the original
+            // segmentGranularity). Hence, we group all the segments of the original timeline into intervals bucket
+            // by the new configuredSegmentGranularity. We then convert each segment into a new partition space so that
+            // there is no duplicate partitionNum across all segments of each new Interval.
+            // Similarly, segment versions may be mixed in the same time chunk based on new segment granularity
+            // Hence we create the new timeline with a temporary version, setting the fake version to all be the same
+            // for the same new time bucket.
+            // We need to save and store the originalTimeline so that we can use it
+            // to get the original ShardSpec and original version back (when converting the segment back to return from this iterator).
+            originalTimeline = timeline;
+            timeline = timelineWithConfiguredSegmentGranularity;
           }
-          // PartitionHolder can only holds chunks of one partition space
-          // However, partition in the new timeline (timelineWithConfiguredSegmentGranularity) can be hold multiple
-          // partitions of the original timeline (when the new segmentGranularity is larger than the original
-          // segmentGranularity). Hence, we group all the segments of the original timeline into intervals bucket
-          // by the new configuredSegmentGranularity. We then convert each segment into a new partition space so that
-          // there is no duplicate partitionNum across all segments of each new Interval.
-          // Similarly, segment versions may be mixed in the same time chunk based on new segment granularity
-          // Hence we create the new timeline with a temporary version, setting the fake version to all be the same
-          // for the same new time bucket.
-          // We need to save and store the originalTimeline so that we can use it
-          // to get the original ShardSpec and original version back (when converting the segment back to return from this iterator).
-          originalTimeline = timeline;
-          timeline = timelineWithConfiguredSegmentGranularity;
-        }
-        final List<Interval> searchIntervals =
-            findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest(), configuredSegmentGranularity, skipIntervals.get(dataSource));
-        if (!searchIntervals.isEmpty()) {
-          timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals, originalTimeline));
+          final List<Interval> searchIntervals =
+                  findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest(), configuredSegmentGranularity, skipIntervals.get(dataSource));
+          if (!searchIntervals.isEmpty()) {
+            timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals, originalTimeline));
+          }
         }
       }
     });
