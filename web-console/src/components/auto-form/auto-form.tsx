@@ -16,20 +16,12 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  ButtonGroup,
-  FormGroup,
-  Icon,
-  Intent,
-  NumericInput,
-  Popover,
-} from '@blueprintjs/core';
-import { IconNames } from '@blueprintjs/icons';
+import { Button, ButtonGroup, FormGroup, Intent, NumericInput } from '@blueprintjs/core';
 import React from 'react';
 
 import { deepDelete, deepGet, deepSet } from '../../utils/object-change';
 import { ArrayInput } from '../array-input/array-input';
+import { FormGroupWithInfo } from '../form-group-with-info/form-group-with-info';
 import { JsonInput } from '../json-input/json-input';
 import { SuggestibleInput, SuggestionGroup } from '../suggestible-input/suggestible-input';
 
@@ -326,22 +318,13 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
     const label = field.label || AutoForm.makeLabelName(field.name);
     return (
-      <FormGroup
+      <FormGroupWithInfo
         key={field.name}
         label={label}
-        labelInfo={
-          field.info && (
-            <Popover
-              content={<div className="label-info-text">{field.info}</div>}
-              position="left-bottom"
-            >
-              <Icon icon={IconNames.INFO_SIGN} iconSize={14} />
-            </Popover>
-          )
-        }
+        info={field.info ? <div className="label-info-text">{field.info}</div> : undefined}
       >
         {this.renderFieldInput(field)}
-      </FormGroup>
+      </FormGroupWithInfo>
     );
   };
 

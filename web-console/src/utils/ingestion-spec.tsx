@@ -21,6 +21,7 @@ import React from 'react';
 
 import { Field } from '../components/auto-form/auto-form';
 import { ExternalLink } from '../components/external-link/external-link';
+import { DRUID_DOCS_VERSION } from '../variables';
 
 import {
   BASIC_TIME_FORMATS,
@@ -60,7 +61,8 @@ export type IngestionComboType =
   | 'index:ingestSegment'
   | 'index:inline'
   | 'index:static-s3'
-  | 'index:static-google-blobstore';
+  | 'index:static-google-blobstore'
+  | 'index:hdfs';
 
 // Some extra values that can be selected in the initial screen
 export type IngestionComboTypeWithExtra = IngestionComboType | 'hadoop' | 'example' | 'other';
@@ -81,7 +83,7 @@ function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): str
   }
 }
 
-export function getIngestionComboType(spec: IngestionSpec): IngestionComboType | null {
+export function getIngestionComboType(spec: IngestionSpec): IngestionComboType | undefined {
   const ioConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
 
   switch (ioConfig.type) {
@@ -99,11 +101,12 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
         case 'inline':
         case 'static-s3':
         case 'static-google-blobstore':
+        case 'hdfs':
           return `index:${firehose.type}` as IngestionComboType;
       }
   }
 
-  return null;
+  return;
 }
 
 export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): string {
@@ -125,6 +128,9 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
     case 'index:static-google-blobstore':
       return 'Google Cloud Storage';
+
+    case 'index:hdfs':
+      return 'HDFS';
 
     case 'kafka':
       return 'Apache Kafka';
@@ -152,6 +158,21 @@ export function getIngestionImage(ingestionType: IngestionComboTypeWithExtra): s
   return ingestionType;
 }
 
+export function getIngestionDocLink(spec: IngestionSpec): string {
+  const type = getSpecType(spec);
+
+  switch (type) {
+    case 'kafka':
+      return `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kafka-ingestion.html`;
+
+    case 'kinesis':
+      return `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kinesis-ingestion.html`;
+
+    default:
+      return `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/native-batch.html#firehoses`;
+  }
+}
+
 export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): string | undefined {
   switch (ingestionType) {
     case 'index:static-s3':
@@ -159,6 +180,9 @@ export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): s
 
     case 'index:static-google-blobstore':
       return 'druid-google-extensions';
+
+    case 'index:hdfs':
+      return 'druid-hdfs-storage';
 
     case 'kafka':
       return 'druid-kafka-indexing-service';
@@ -283,7 +307,9 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
         <p>The parser used to parse the data.</p>
         <p>
           For more information see{' '}
-          <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/data-formats.html">
+          <ExternalLink
+            href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/data-formats.html`}
+          >
             the documentation
           </ExternalLink>
           .
@@ -326,6 +352,8 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
   {
     name: 'columns',
     type: 'string-array',
+    required: (p: ParseSpec) =>
+      ((p.format === 'csv' || p.format === 'tsv') && !p.hasHeaderRow) || p.format === 'regex',
     defined: (p: ParseSpec) =>
       ((p.format === 'csv' || p.format === 'tsv') && !p.hasHeaderRow) || p.format === 'regex',
   },
@@ -548,7 +576,9 @@ const FLATTEN_FIELD_FORM_FIELDS: Field<FlattenField>[] = [
     info: (
       <>
         Specify a flatten{' '}
-        <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/flatten-json">
+        <ExternalLink
+          href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/flatten-json`}
+        >
           expression
         </ExternalLink>
         .
@@ -593,7 +623,9 @@ const TRANSFORM_FORM_FIELDS: Field<Transform>[] = [
     info: (
       <>
         A valid Druid{' '}
-        <ExternalLink href="https://druid.apache.org/docs/latest/misc/math-expr.html">
+        <ExternalLink
+          href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/misc/math-expr.html`}
+        >
           expression
         </ExternalLink>
         .
@@ -781,6 +813,9 @@ export interface Firehose {
 
   // inline
   data?: string;
+
+  // hdfs
+  paths?: string;
 }
 
 export function getIoConfigFormFields(ingestionComboType: IngestionComboType): Field<IoConfig>[] {
@@ -788,11 +823,13 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     name: 'firehose.type',
     label: 'Firehose type',
     type: 'string',
-    suggestions: ['local', 'http', 'inline', 'static-s3', 'static-google-blobstore'],
+    suggestions: ['local', 'http', 'inline', 'static-s3', 'static-google-blobstore', 'hdfs'],
     info: (
       <p>
         Druid connects to raw data through{' '}
-        <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html">
+        <ExternalLink
+          href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/firehose.html`}
+        >
           firehoses
         </ExternalLink>
         . You can change your selected firehose here.
@@ -845,7 +882,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           required: true,
           info: (
             <>
-              <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html#localfirehose">
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/firehose.html#localfirehose`}
+              >
                 firehose.baseDir
               </ExternalLink>
               <p>Specifies the directory to search recursively for files to be ingested.</p>
@@ -860,7 +899,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           suggestions: ['*', '*.json', '*.json.gz', '*.csv', '*.tsv'],
           info: (
             <>
-              <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html#localfirehose">
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/firehose.html#localfirehose`}
+              >
                 firehose.filter
               </ExternalLink>
               <p>
@@ -935,7 +976,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <p>
               The{' '}
-              <ExternalLink href="https://druid.apache.org/docs/latest/querying/filters.html">
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/querying/filters.html`}
+              >
                 filter
               </ExternalLink>{' '}
               to apply to the data as part of querying.
@@ -998,13 +1041,27 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink href="https://druid.apache.org/docs/latest/development/extensions-contrib/google.html">
+                <ExternalLink
+                  href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-contrib/google.html`}
+                >
                   Google Blobs
                 </ExternalLink>
                 .
               </p>
             </>
           ),
+        },
+      ];
+
+    case 'index:hdfs':
+      return [
+        firehoseType,
+        {
+          name: 'firehose.paths',
+          label: 'Paths',
+          type: 'string',
+          placeholder: '/path/to/file.ext',
+          required: true,
         },
       ];
 
@@ -1017,7 +1074,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           required: true,
           info: (
             <>
-              <ExternalLink href="https://druid.apache.org/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig">
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
+              >
                 consumerProperties
               </ExternalLink>
               <p>
@@ -1039,7 +1098,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           defaultValue: {},
           info: (
             <>
-              <ExternalLink href="https://druid.apache.org/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig">
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
+              >
                 consumerProperties
               </ExternalLink>
               <p>A map of properties to be passed to the Kafka consumer.</p>
@@ -1089,7 +1150,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <>
               The Amazon Kinesis stream endpoint for a region. You can find a list of endpoints{' '}
-              <ExternalLink href="http://docs.aws.amazon.com/general/latest/gr/rande.html#ak_region">
+              <ExternalLink
+                href={`http://docs.aws.amazon.com/general/${DRUID_DOCS_VERSION}/gr/rande.html#ak_region`}
+              >
                 here
               </ExternalLink>
               .
@@ -1155,6 +1218,12 @@ function issueWithFirehose(firehose: Firehose | undefined): string | undefined {
         return 'must have at least one blob';
       }
       break;
+
+    case 'hdfs':
+      if (!firehose.paths) {
+        return 'must have paths';
+      }
+      break;
   }
   return;
 }
@@ -1189,6 +1258,7 @@ export function getIoConfigTuningFormFields(
     case 'index:http':
     case 'index:static-s3':
     case 'index:static-google-blobstore':
+    case 'index:hdfs':
       return [
         {
           name: 'firehose.fetchTimeout',

@@ -16,35 +16,38 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
+import { FormGroup, Icon, Popover } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
-import { FilterTable } from './filter-table';
+import './form-group-with-info.scss';
 
-describe('filter table', () => {
-  it('matches snapshot', () => {
-    const sampleData = {
-      header: ['c1'],
-      rows: [
-        {
-          raw: `{"c1":"hello"}`,
-          parsed: { c1: 'hello' },
-        },
-      ],
-    };
+export interface FormGroupWithInfoProps {
+  label?: React.ReactNode;
+  info?: JSX.Element | string;
+  inlineInfo?: boolean;
+  children?: React.ReactNode;
+}
 
-    const filterTable = (
-      <FilterTable
-        sampleData={sampleData}
-        columnFilter=""
-        dimensionFilters={[]}
-        selectedFilterName={undefined}
-        onShowGlobalFilter={() => {}}
-        onFilterSelect={() => {}}
-      />
-    );
+export const FormGroupWithInfo = React.memo(function FormGroupWithInfo(
+  props: FormGroupWithInfoProps,
+) {
+  const { label, info, inlineInfo, children } = props;
 
-    const { container } = render(filterTable);
-    expect(container.firstChild).toMatchSnapshot();
-  });
+  const popover = (
+    <Popover content={info} position="left-bottom">
+      <Icon icon={IconNames.INFO_SIGN} iconSize={14} />
+    </Popover>
+  );
+
+  return (
+    <FormGroup
+      className="form-group-with-info"
+      label={label}
+      labelInfo={info && !inlineInfo && popover}
+    >
+      {children}
+      {info && inlineInfo && popover}
+    </FormGroup>
+  );
 });

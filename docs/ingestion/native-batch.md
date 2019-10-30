@@ -63,13 +63,14 @@ As in the single phase execution, the created segments are reported to the super
 To use this task, the `firehose` in `ioConfig` should be _splittable_ and `maxNumConcurrentSubTasks` should be set something larger than 1 in `tuningConfig`.
 Otherwise, this task runs sequentially. Here is the list of currently splittable firehoses.
 
-- [`LocalFirehose`](#local-firehose)
-- [`IngestSegmentFirehose`](#segment-firehose)
-- [`HttpFirehose`](#http-firehose)
-- [`StaticS3Firehose`](../development/extensions-core/s3.md#firehose)
-- [`StaticAzureBlobStoreFirehose`](../development/extensions-contrib/azure.md#firehose)
-- [`StaticGoogleBlobStoreFirehose`](../development/extensions-core/google.md#firehose)
-- [`StaticCloudFilesFirehose`](../development/extensions-contrib/cloudfiles.md#firehose)
+- [`local`](#local-firehose)
+- [`ingestSegment`](#segment-firehose)
+- [`http`](#http-firehose)
+- [`s3`](../development/extensions-core/s3.md#firehose)
+- [`hdfs`](../development/extensions-core/hdfs.md#firehose)
+- [`static-azure-blobstore`](../development/extensions-contrib/azure.md#firehose)
+- [`static-google-blobstore`](../development/extensions-core/google.md#firehose)
+- [`static-cloudfiles`](../development/extensions-contrib/cloudfiles.md#firehose)
 
 The splittable firehose is responsible for generating _splits_. The supervisor task generates _worker task specs_ containing a split
 and submits worker tasks using those specs. As a result, the number of worker tasks depends on

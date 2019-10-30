@@ -79,8 +79,6 @@ writeFile(
  * limitations under the License.
  */
 
-import { IconNames } from '@blueprintjs/icons';
-import classNames from 'classnames';
 import React from 'react';
 
 import './${name}.scss';
@@ -88,22 +86,13 @@ import './${name}.scss';
 export interface ${camelName}Props {
 }
 
-export interface ${camelName}State {
-}
-
-export class ${camelName} extends React.PureComponent<${camelName}Props, ${camelName}State> {
-  constructor(props: ${camelName}Props, context: any) {
-    super(props, context);
-    // this.state = {};
-
-  }
-
-  render(): JSX.Element {
-    return <div className="${name}">
+export const ${camelName} = React.memo(function ${camelName}(props: ${camelName}Props) {
+  return (
+    <div className="${name}">
       Stuff...
-    </div>;
-  }
-}
+    </div>
+  );
+});
 `,
 );
 
