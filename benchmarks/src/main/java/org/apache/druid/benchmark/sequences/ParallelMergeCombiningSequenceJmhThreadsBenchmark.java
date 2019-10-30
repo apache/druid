@@ -25,6 +25,7 @@ import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
@@ -55,6 +56,12 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 10)
 public class ParallelMergeCombiningSequenceJmhThreadsBenchmark extends BaseParallelMergeCombiningSequenceBenchmark
 {
+  /**
+   * each thread of benchmark method will delay randomly up to this many milliseconds
+   */
+  @Param({"0", "20", "50"})
+  public int startRangeMillis;
+
   @Threads(1)
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
@@ -125,6 +132,20 @@ public class ParallelMergeCombiningSequenceJmhThreadsBenchmark extends BaseParal
   public void execSixtyFour(Blackhole blackhole)
   {
     consumeSequence(blackhole);
+  }
+
+  @Override
+  void consumeSequence(Blackhole blackhole)
+  {
+    try {
+      if (startRangeMillis > 0) {
+        Thread.sleep(startRangeMillis);
+      }
+      super.consumeSequence(blackhole);
+    }
+    catch (InterruptedException iex) {
+      throw new RuntimeException(iex);
+    }
   }
 
   public static void main(String[] args) throws RunnerException

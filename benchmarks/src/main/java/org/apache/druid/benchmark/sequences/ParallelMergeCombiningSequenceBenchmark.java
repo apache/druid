@@ -55,6 +55,9 @@ public class ParallelMergeCombiningSequenceBenchmark extends BaseParallelMergeCo
   // this should be as large as the largest value of concurrentSequenceConsumers
   private static final ExecutorService CONSUMER_POOL = Execs.multiThreaded(64, "mock-http-thread");
 
+  /**
+   * Number of threads to run on {@link #CONSUMER_POOL}, each running {@link #consumeSequence}
+   */
   @Param({
       "1",
       "2",
@@ -66,6 +69,9 @@ public class ParallelMergeCombiningSequenceBenchmark extends BaseParallelMergeCo
   })
   private int concurrentSequenceConsumers;
 
+  /**
+   * Offset to start each thread of {@link #concurrentSequenceConsumers}
+   */
   @Param({
       "0",
       "10",

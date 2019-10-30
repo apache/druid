@@ -70,6 +70,15 @@ public class BaseParallelMergeCombiningSequenceBenchmark
   })
   int rowsPerSequence;
 
+  /**
+   * Strategy encodes the type of sequence and configuration parameters for that sequence.
+   *
+   * Strategies of the form: 'parallelism-{parallelism}-{targetTime}ms-{batchSize}-{yieldAfter}'
+   * encode the parameters for a {@link ParallelMergeCombiningSequence}.
+   *
+   * A strategy of: 'combiningMergeSequence-same-thread' (or an unrecognized value) will use a
+   * {@link CombiningSequence} that wraps a {@link MergeSequence}
+   */
   @Param({
       "combiningMergeSequence-same-thread",
       "parallelism-1-10ms-256-1024",
@@ -88,12 +97,28 @@ public class BaseParallelMergeCombiningSequenceBenchmark
   String strategy;
 
 
+  /**
+   * This encodes the type of input sequences and parameters that control their behavior.
+   * 'non-blocking-sequence' uses {@link ParallelMergeCombiningSequenceTest#nonBlockingSequence} to as you might expect
+   * create an input sequence that is lazily generated and will not block while being consumed.
+   *
+   * 'initially-blocking-sequence-{startDelayStart}-{startDelayEnd}ms' uses
+   * {@link ParallelMergeCombiningSequenceTest#blockingSequence} to create a lazily generated input sequence that will
+   * initially block for a random time within the range specified in the parameter, and will not perform any additional
+   * blocking during further processing.
+   *
+   * 'blocking-sequence-{startDelayStart}-{startDelayEnd}ms-{numberOfTimesToBlock}-{frequencyDelay}ms' uses
+   * {@link ParallelMergeCombiningSequenceTest#blockingSequence} to create a lazily generated input sequence that will
+   * initially block for a random time within the range specified in the parameter, and additionally will randomly block
+   * up to the number of occurrences for up to the delay encoded in the parameter.
+   *
+   * note: beware when using the blocking sequences for a direct comparison between strategies
+   * at minimum they are useful for gauging behavior when sequences block, but because the sequences are not stable
+   * between strategies or number of sequences, much less between iterations of the same strategy, compensation in
+   * the form of running a lot of iterations could potentially make them more directly comparable
+   */
   @Param({
       "non-blocking-sequence",
-      // note: beware when using the blocking sequences for a direct comparison between strategies
-      // at minimum they are useful for gauging behavior when sequences block, but because the sequences are not stable
-      // between strategies or number of sequences, much less between iterations of the same strategy, compensation in
-      // the form of running a lot of iterations could potentially make them more directly comparable
       "initially-blocking-sequence-100-500ms",
       "initially-blocking-sequence-4000-5000ms",
       "blocking-sequence-10-100ms-10-1ms"
@@ -166,7 +191,7 @@ public class BaseParallelMergeCombiningSequenceBenchmark
   }
 
 
-  List<Sequence<ParallelMergeCombiningSequenceTest.IntPair>> createInputSequences()
+  private List<Sequence<ParallelMergeCombiningSequenceTest.IntPair>> createInputSequences()
   {
     List<Sequence<ParallelMergeCombiningSequenceTest.IntPair>> inputSequences = new ArrayList<>(numSequences);
     for (int j = 0; j < numSequences; j++) {
@@ -175,7 +200,7 @@ public class BaseParallelMergeCombiningSequenceBenchmark
     return inputSequences;
   }
 
-  Sequence<ParallelMergeCombiningSequenceTest.IntPair> createParallelSequence()
+  private Sequence<ParallelMergeCombiningSequenceTest.IntPair> createParallelSequence()
   {
     return new ParallelMergeCombiningSequence<>(
         MERGE_POOL,
@@ -192,7 +217,7 @@ public class BaseParallelMergeCombiningSequenceBenchmark
     );
   }
 
-  Sequence<ParallelMergeCombiningSequenceTest.IntPair> createCombiningMergeSequence()
+  private Sequence<ParallelMergeCombiningSequenceTest.IntPair> createCombiningMergeSequence()
   {
     return CombiningSequence.create(
         new MergeSequence<>(
