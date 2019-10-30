@@ -288,7 +288,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
 
   /**
    * Does a lookup for the objects representing the given time interval.  Will *only* return
-   * PartitionHolders that are complete.
+   * PartitionHolders that are {@linkplain PartitionHolder#isComplete() complete}.
    *
    * @param interval interval to find objects for
    *

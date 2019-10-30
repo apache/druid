@@ -37,7 +37,7 @@ import java.util.Set;
 public interface IndexerMetadataStorageCoordinator
 {
   /**
-   * Get all segments which may include any data in the interval and are marked as used.
+   * Get all published segments which may include any data in the interval and are marked as used.
    *
    * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
    * the collection only once.
@@ -46,9 +46,9 @@ public interface IndexerMetadataStorageCoordinator
    * @param interval   The interval for which all applicable and used datasources are requested. Start is inclusive,
    *                   end is exclusive
    * @param visibility Whether only visible or visible as well as overshadowed segments should be returned. The
-   *                   visibility is considered within the specified interval: that is, a segment which is globally
-   *                   visible, but overshadowed on the specified interval will not be returned if {@link
-   *                   Segments#ONLY_VISIBLE} is passed.
+   *                   visibility is considered within the specified interval: that is, a segment which is visible
+   *                   outside of the specified interval, but overshadowed within the specified interval will not be
+   *                   returned if {@link Segments#ONLY_VISIBLE} is passed.
    * @return The DataSegments which include data in the requested interval. These segments may contain data outside the
    *         requested interval.
    *
@@ -63,7 +63,8 @@ public interface IndexerMetadataStorageCoordinator
   }
 
   /**
-   * Get all used segments and the created_date of these segments in a given datasource and interval
+   * Get all published segments which are marked as used and the created_date of these segments in a given datasource
+   * and interval.
    *
    * @param dataSource The datasource to query
    * @param interval   The interval for which all applicable and used datasources are requested. Start is inclusive,
@@ -74,7 +75,7 @@ public interface IndexerMetadataStorageCoordinator
   Collection<Pair<DataSegment, String>> getUsedSegmentAndCreatedDateForInterval(String dataSource, Interval interval);
 
   /**
-   * Get all segments which may include any data in the interval and are marked as used.
+   * Get all published segments which may include any data in the interval and are marked as used.
    *
    * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
    * the collection only once.
@@ -82,9 +83,9 @@ public interface IndexerMetadataStorageCoordinator
    * @param dataSource The datasource to query
    * @param intervals  The intervals for which all applicable and used datasources are requested.
    * @param visibility Whether only visible or visible as well as overshadowed segments should be returned. The
-   *                   visibility is considered within the specified intervals: that is, a segment which is globally
-   *                   visible, but overshadowed on the specified intervals will not be returned if {@link
-   *                   Segments#ONLY_VISIBLE} is passed.
+   *                   visibility is considered within the specified intervals: that is, a segment which is visible
+   *                   outside of the specified intervals, but overshadowed on the specified intervals will not be
+   *                   returned if {@link Segments#ONLY_VISIBLE} is passed.
    * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the
    *         requested interval.
    *
@@ -215,7 +216,7 @@ public interface IndexerMetadataStorageCoordinator
   void deleteSegments(Set<DataSegment> segments);
 
   /**
-   * Get all segments which include ONLY data within the given interval and are not marked as used.
+   * Get all published segments which include ONLY data within the given interval and are not marked as used.
    *
    * @param dataSource The datasource the segments belong to
    * @param interval   Filter the data segments to ones that include data in this interval exclusively. Start is

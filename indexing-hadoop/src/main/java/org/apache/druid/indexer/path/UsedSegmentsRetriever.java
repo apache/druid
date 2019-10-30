@@ -40,9 +40,9 @@ public interface UsedSegmentsRetriever
    * @param dataSource The datasource to query
    * @param intervals  The intervals for which used segments are to be returned
    * @param visibility Whether only visible or visible as well as overshadowed segments should be returned. The
-   *                   visibility is considered within the specified intervals: that is, a segment which is globally
-   *                   visible, but overshadowed on the specified intervals will not be returned if {@link
-   *                   Segments#ONLY_VISIBLE} is passed.
+   *                   visibility is considered within the specified intervals: that is, a segment which is visible
+   *                   outside of the specified intervals, but overshadowed on the specified intervals will not be
+   *                   returned if {@link Segments#ONLY_VISIBLE} is passed.
    * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the
    *         requested interval.
    *

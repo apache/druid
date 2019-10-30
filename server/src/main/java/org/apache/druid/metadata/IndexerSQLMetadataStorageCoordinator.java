@@ -196,6 +196,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         .list();
   }
 
+  /**
+   * Creates a query to the metadata store which selects payload from the segments table for all segments which are
+   * marked as used and whose interval intersects (not just abuts) with any of the intervals given to this method.
+   */
   private Query<Map<String, Object>> createUsedSegmentsSqlQueryForIntervals(
       Handle handle,
       String dataSource,

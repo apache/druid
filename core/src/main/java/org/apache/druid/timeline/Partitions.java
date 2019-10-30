@@ -21,7 +21,8 @@ package org.apache.druid.timeline;
 
 /**
  * This enum is used a parameter for several methods in {@link VersionedIntervalTimeline}, specifying whether only
- * complete partitions should be considered, or incomplete partitions as well.
+ * {@linkplain org.apache.druid.timeline.partition.PartitionHolder#isComplete() complete} partitions should be
+ * considered, or incomplete partitions as well.
  */
 public enum Partitions
 {

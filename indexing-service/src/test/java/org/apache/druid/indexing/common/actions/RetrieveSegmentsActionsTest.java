@@ -36,7 +36,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-public class SegmentListActionsTest
+public class RetrieveSegmentsActionsTest
 {
   private static final Interval INTERVAL = Intervals.of("2017-10-01/2017-10-15");
 
