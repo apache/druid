@@ -66,8 +66,18 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
 
   parseDateRange(range: DateRange): string {
     const [startDate, endDate] = range;
-    return `${startDate ? startDate.toISOString().substring(0, 19) : ''}/${
-      endDate ? endDate.toISOString().substring(0, 19) : ''
+    return `${
+      startDate
+        ? new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000)
+            .toISOString()
+            .substring(0, 19)
+        : ''
+    }/${
+      endDate
+        ? new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000)
+            .toISOString()
+            .substring(0, 19)
+        : ''
     }`;
   }
   render() {
