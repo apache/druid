@@ -785,7 +785,7 @@ public class TaskLockbox
         final boolean match = (partitionId == null && taskLock.getGranularity() == LockGranularity.TIME_CHUNK)
                               || (partitionId != null
                                   && taskLock.getGranularity() == LockGranularity.SEGMENT
-                                  && ((SegmentLock) taskLock).getPartitionId() == partitionId);
+                                  && ((SegmentLock) taskLock).getPartitionId().equals(partitionId));
 
         if (match) {
           // Remove task from live list
