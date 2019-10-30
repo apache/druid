@@ -49,6 +49,14 @@ exports[`table cell matches snapshot null 1`] = `
 </span>
 `;
 
+exports[`table cell matches snapshot object 1`] = `
+<span
+  class="table-cell plain"
+>
+  {"hello":"world"}
+</span>
+`;
+
 exports[`table cell matches snapshot simple 1`] = `
 <span
   class="table-cell plain"

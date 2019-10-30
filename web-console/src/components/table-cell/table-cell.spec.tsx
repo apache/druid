@@ -50,6 +50,13 @@ describe('table cell', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
+  it('matches snapshot object', () => {
+    const tableCell = <TableCell value={{ hello: 'world' }} />;
+
+    const { container } = render(tableCell);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
   it('matches snapshot truncate', () => {
     const longString = new Array(100).join('test');
     const tableCell = <TableCell value={longString} />;

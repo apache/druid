@@ -97,6 +97,8 @@ export const TableCell = React.memo(function TableCell(props: TableCellProps) {
       );
     } else if (Array.isArray(value)) {
       return renderTruncated(`[${value.join(', ')}]`);
+    } else if (typeof value === 'object') {
+      return renderTruncated(JSON.stringify(value));
     } else {
       return renderTruncated(String(value));
     }
