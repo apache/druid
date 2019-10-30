@@ -92,7 +92,7 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
           className: columnClassName,
           id: String(i),
           accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-          Cell: row => <TableCell value={row.value} timestamp={timestamp} />,
+          Cell: row => <TableCell value={timestamp ? new Date(row.value) : row.value} />,
         };
       })}
       defaultPageSize={50}

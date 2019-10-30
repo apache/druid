@@ -16,34 +16,22 @@
  * limitations under the License.
  */
 
-.table-cell {
-  &.null {
-    font-style: italic;
-  }
+import React from 'react';
 
-  &.timestamp {
-    font-weight: bold;
-  }
+import './table-cell-unparseable.scss';
 
-  &.truncated {
-    position: relative;
-    width: 100%;
-    display: inline-block;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    padding-right: 16px;
-
-    .omitted {
-      margin: 0 0.2em;
-      font-style: italic;
-    }
-
-    .action-icon {
-      position: absolute;
-      top: 0;
-      right: 0;
-      color: #f5f8fa;
-    }
-  }
+export interface TableCellUnparseableProps {
+  timestamp?: boolean;
 }
+
+export const TableCellUnparseable = React.memo(function TableCellUnparseable(
+  props: TableCellUnparseableProps,
+) {
+  const { timestamp } = props;
+
+  return (
+    <div className="table-cell-unparseable">
+      {timestamp ? 'unparseable timestamp' : 'unparseable'}
+    </div>
+  );
+});

@@ -146,7 +146,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell null"
+                    >
+                      null
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
             <div
               class="rt-td aggregate-column"
@@ -160,11 +174,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       6881
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -181,11 +195,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -195,7 +209,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -219,11 +247,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       JavaScript
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -240,11 +268,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       166
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -261,11 +289,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -275,7 +303,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -299,11 +341,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       Python
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -320,11 +362,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       62
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -341,11 +383,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -355,7 +397,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -379,11 +435,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       HTML
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -400,11 +456,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       46
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -421,11 +477,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -435,7 +491,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -459,11 +529,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       Java
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -480,11 +550,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       42
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -501,11 +571,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -515,7 +585,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -539,11 +623,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       C++
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -560,11 +644,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       28
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -581,11 +665,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -595,7 +679,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -619,11 +717,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       Go
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -640,11 +738,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       24
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -661,11 +759,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -675,7 +773,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -699,11 +811,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       Ruby
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -720,11 +832,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       20
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -741,11 +853,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -755,7 +867,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -779,11 +905,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       C#
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -800,11 +926,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       14
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -821,11 +947,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -835,7 +961,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -859,11 +999,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       C
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -880,11 +1020,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       13
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -901,11 +1041,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -915,7 +1055,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -939,11 +1093,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       CSS
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -960,11 +1114,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       13
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -981,11 +1135,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -995,7 +1149,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -1019,11 +1187,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       Shell
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1040,11 +1208,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       12
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1061,11 +1229,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1075,7 +1243,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -1099,11 +1281,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       Makefile
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1120,11 +1302,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       10
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1141,11 +1323,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1155,7 +1337,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -1179,11 +1375,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       PHP
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1200,11 +1396,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       9
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1221,11 +1417,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1235,7 +1431,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -1259,11 +1469,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       Scala
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1280,11 +1490,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       8
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1301,11 +1511,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1315,7 +1525,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -1339,11 +1563,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       HCL
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1360,11 +1584,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       6
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1381,11 +1605,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1395,7 +1619,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -1419,11 +1657,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       Jupyter Notebook
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1440,11 +1678,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       6
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1461,11 +1699,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1475,7 +1713,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -1499,11 +1751,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       Smarty
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1520,11 +1772,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       4
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1541,11 +1793,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1555,7 +1807,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -1579,11 +1845,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       Elm
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1600,11 +1866,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       4
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1621,11 +1887,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1635,7 +1901,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -1659,11 +1939,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       Roff
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1680,11 +1960,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       3
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1701,11 +1981,11 @@ exports[`query output matches snapshot 1`] = `
                   <span
                     class="bp3-popover-target"
                   >
-                    <div
-                      class=""
+                    <span
+                      class="table-cell plain"
                     >
                       1
-                    </div>
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1715,7 +1995,21 @@ exports[`query output matches snapshot 1`] = `
               role="gridcell"
               style="flex: 100 0 auto; width: 100px;"
             >
-              0
+              <div>
+                <span
+                  class="bp3-popover-wrapper"
+                >
+                  <span
+                    class="bp3-popover-target"
+                  >
+                    <span
+                      class="table-cell plain"
+                    >
+                      0
+                    </span>
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>

@@ -21,6 +21,7 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
+import { TableCellUnparseable } from '../../../components/table-cell-unparseable/table-cell-unparseable';
 import { caseInsensitiveContains, filterMap, parseJson } from '../../../utils';
 import { FlattenField } from '../../../utils/ingestion-spec';
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
@@ -74,7 +75,7 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
           accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
           Cell: row => {
             if (row.original.unparseable) {
-              return <TableCell unparseable />;
+              return <TableCellUnparseable />;
             }
             return <TableCell value={row.value} />;
           },
