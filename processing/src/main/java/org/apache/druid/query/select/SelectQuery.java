@@ -35,6 +35,7 @@ import org.joda.time.Interval;
 import java.util.List;
 import java.util.Map;
 
+@Deprecated
 public class SelectQuery implements Query<Object>
 {
   static final String REMOVED_ERROR_MESSAGE =
