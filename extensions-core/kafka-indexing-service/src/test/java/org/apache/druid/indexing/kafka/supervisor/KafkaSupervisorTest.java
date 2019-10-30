@@ -621,8 +621,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     List<Task> tasks = captured.getValues();
 
-    EasyMock.reset(taskStorage);
-    EasyMock.reset(taskClient);
+    EasyMock.reset(taskStorage, taskClient);
 
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(Status.NOT_STARTED))
@@ -655,15 +654,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.runInternal();
     verifyAll();
 
-    // test that a task succeeding causes a new task to be re-queued with the next offset range and causes any replica
-    // tasks to be shutdown
+    // test that a task succeeding causes a new task to be re-queued with the next offset range
     Capture<Task> newTasksCapture = Capture.newInstance(CaptureType.ALL);
     Capture<String> shutdownTaskIdCapture = Capture.newInstance();
     List<Task> imStillRunning = tasks.subList(1, 4);
     KafkaIndexTask iAmSuccess = (KafkaIndexTask) tasks.get(0);
-    EasyMock.reset(taskStorage);
-    EasyMock.reset(taskQueue);
-    EasyMock.reset(taskClient);
+    EasyMock.reset(taskStorage, taskQueue, taskClient);
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(imStillRunning).anyTimes();
     for (Task task : imStillRunning) {
       EasyMock.expect(taskStorage.getStatus(task.getId()))
@@ -677,11 +673,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskQueue.add(EasyMock.capture(newTasksCapture))).andReturn(true).times(2);
     EasyMock.expect(taskClient.stopAsync(EasyMock.capture(shutdownTaskIdCapture), EasyMock.eq(false)))
             .andReturn(Futures.immediateFuture(true));
-    EasyMock.replay(taskStorage);
-    EasyMock.replay(taskQueue);
-    EasyMock.replay(taskClient);
-    supervisor.removePartitionId(0);
+    EasyMock.replay(taskStorage, taskQueue, taskClient);
 
+    // make sure partitionIds get updated
+    Assert.assertFalse(supervisor.getParitionIds().isEmpty());
+    supervisor.removePartitionId(0);
     supervisor.runInternal();
     verifyAll();
     KafkaIndexTask task = (KafkaIndexTask) newTasksCapture.getValues().get(0);

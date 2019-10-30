@@ -3140,6 +3140,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return this.partitionIds.remove(partitionId);
   }
 
+  @VisibleForTesting
+  public List<PartitionIdType> getParitionIds()
+  {
+    return this.partitionIds;
+  }
+
   /**
    * creates a specific task IOConfig instance for Kafka/Kinesis
    *
