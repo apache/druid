@@ -2,7 +2,6 @@
 
 exports[`interval calendar component matches snapshot 1`] = `
 <Blueprint3.InputGroup
-  className="interval-input"
   onChange={[Function]}
   placeholder="2010-01-01/2020-01-01"
   rightElement={
@@ -15,13 +14,14 @@ exports[`interval calendar component matches snapshot 1`] = `
             allowSingleDayRange={false}
             contiguousCalendarMonths={false}
             dayPickerProps={Object {}}
-            maxDate={2019-12-31T22:22:38.247Z}
-            minDate={1999-01-01T22:22:38.247Z}
+            maxDate={2019-12-31T21:43:30.506Z}
+            minDate={1999-01-01T21:43:30.506Z}
             onChange={[Function]}
             reverseMonthAndYearMenus={false}
             shortcuts={true}
             singleMonthOnly={false}
             timePickerProps={Object {}}
+            timePrecision="second"
             value={
               Array [
                 undefined,
