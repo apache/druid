@@ -31,7 +31,7 @@ A recommended way of organizing Druid configuration files can be seen in the `co
 
 ```
 $ ls -R conf
-druid       tranquility
+druid
 
 conf/druid:
 _common       broker        coordinator   historical    middleManager overlord
@@ -53,9 +53,6 @@ jvm.config         runtime.properties
 
 conf/druid/overlord:
 jvm.config         runtime.properties
-
-conf/tranquility:
-kafka.json  server.json
 ```
 
 Each directory has a `runtime.properties` file containing configuration properties for the specific Druid process corresponding to the directory (e.g., `historical`).
