@@ -23,7 +23,7 @@ package org.apache.druid.indexing.overlord;
  * This enum is used as a parameter for several methods in {@link IndexerMetadataStorageCoordinator}, specifying whether
  * only visible segments, or visible as well as overshadowed segments should be included in results.
  *
- * Visibility (and overshadowness - these termms are antonyms) may be defined on an interval (or a series of intervals).
+ * Visibility (and overshadowness - these terms are antonyms) may be defined on an interval (or a series of intervals).
  * Consider the following example:
  *
  * |----| I
