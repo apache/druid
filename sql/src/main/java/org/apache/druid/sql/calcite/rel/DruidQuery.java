@@ -571,11 +571,6 @@ public class DruidQuery
     return VirtualColumns.create(columns);
   }
 
-  public DataSource getDataSource()
-  {
-    return dataSource;
-  }
-
   @Nullable
   public Grouping getGrouping()
   {

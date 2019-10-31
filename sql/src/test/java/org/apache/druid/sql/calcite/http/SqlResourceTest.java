@@ -684,9 +684,7 @@ public class SqlResourceTest extends CalciteTestBase
     ).rhs;
 
     Assert.assertEquals(
-        ImmutableList.of(
-            ImmutableMap.of("cnt", 6)
-        ),
+        ImmutableList.of(),
         rows
     );
     checkSqlRequestLog(true);
