@@ -16,34 +16,23 @@
  * limitations under the License.
  */
 
-.table-cell {
-  &.null {
-    font-style: italic;
-  }
+import { render } from '@testing-library/react';
+import React from 'react';
 
-  &.timestamp {
-    font-weight: bold;
-  }
+import { TableCellUnparseable } from './table-cell-unparseable';
 
-  &.truncated {
-    position: relative;
-    width: 100%;
-    display: inline-block;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    padding-right: 16px;
+describe('table cell unparseable', () => {
+  it('matches snapshot not timestamp', () => {
+    const tableCellUnparseable = <TableCellUnparseable />;
 
-    .omitted {
-      margin: 0 0.2em;
-      font-style: italic;
-    }
+    const { container } = render(tableCellUnparseable);
+    expect(container.firstChild).toMatchSnapshot();
+  });
 
-    .action-icon {
-      position: absolute;
-      top: 0;
-      right: 0;
-      color: #f5f8fa;
-    }
-  }
-}
+  it('matches snapshot timestamp', () => {
+    const tableCellUnparseable = <TableCellUnparseable timestamp />;
+
+    const { container } = render(tableCellUnparseable);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
