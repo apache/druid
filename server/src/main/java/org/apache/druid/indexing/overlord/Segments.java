@@ -34,7 +34,7 @@ package org.apache.druid.indexing.overlord;
  * Segment S is overshadowed (by S') on the interval I, though it's visible (non-overshadowed) outside of I: more
  * specifically, it's visible on the interval [end of S', end of S].
  *
- * A segment is considered visible on a series of interval if it's visible on any of the intervals in the series. A
+ * A segment is considered visible on a series of intervals if it's visible on any of the intervals in the series. A
  * segment is considered (fully) overshadowed on a series of intervals if it's overshadowed (= non-visible) on all of
  * the intervals in the series.
  *
