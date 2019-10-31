@@ -171,9 +171,18 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
       localClassLoaderURLs.addAll(Arrays.asList(hadoopLoader.getURLs()));
     }
 
+    ClassLoader parent = null;
+    if (JvmUtils.isIsJava9Compatible()) {
+      try {
+        parent = (ClassLoader) ClassLoader.class.getMethod("getPlatformClassLoader").invoke(null);
+      }
+      catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+        throw new RuntimeException(e);
+      }
+    }
     final ClassLoader classLoader = new URLClassLoader(
         localClassLoaderURLs.toArray(new URL[0]),
-        null
+        parent
     );
 
     final String hadoopContainerDruidClasspathJars;
