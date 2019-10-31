@@ -100,8 +100,7 @@ export class ConsoleApplication extends React.PureComponent<
   }
 
   static shownNotifications(capabilities: string) {
-    let message: JSX.Element = <></>;
-
+    let message: JSX.Element;
     switch (capabilities) {
       case 'no-sql':
         message = (
