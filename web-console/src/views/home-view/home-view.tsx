@@ -40,7 +40,7 @@ export const HomeView = React.memo(function HomeView(props: HomeViewProps) {
       <StatusCard />
       <DatasourcesCard noSqlMode={noSqlMode} />
       <SegmentsCard noSqlMode={noSqlMode} />
-      <SupervisorsCard />
+      <SupervisorsCard noSqlMode={noSqlMode} />
       <TasksCard noSqlMode={noSqlMode} />
       <ServersCard noSqlMode={noSqlMode} />
       <LookupsCard />
