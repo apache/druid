@@ -112,6 +112,12 @@
             </includes>
         </fileSet>
     </fileSets>
+    <files>
+        <file>
+            <source>Dockerfile</source>
+            <outputDirectory>/</outputDirectory>
+        </file>
+    </files>
     <dependencySets>
         <dependencySet>
             <useProjectArtifact>false</useProjectArtifact>
