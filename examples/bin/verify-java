@@ -22,11 +22,12 @@ use warnings;
 
 sub fail_check {
   my ($current_version) = @_;
-  my $current_version_text =
-    $current_version ? " Your current version is: $current_version." : "";
+  my $current_version_text = $current_version
+    ? "Your current version is: $current_version."
+    : "Make sure that "java" is installed and on your PATH.";
 
   print STDERR <<"EOT";
-Druid requires Java 8.$current_version_text
+Druid requires Java 8. $current_version_text
 
 If you believe this check is in error, you can skip it using an
 environment variable:

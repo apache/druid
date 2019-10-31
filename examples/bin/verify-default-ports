@@ -36,12 +36,16 @@ for my $port (@ports) {
     print STDERR <<"EOT";
 Cannot start up because port $port is already in use.
 
-If you believe this check is in error, you can skip it using an
-environment variable:
+If you need to change your ports away from the defaults, check out the
+configuration documentation:
+
+  https://druid.apache.org/docs/latest/configuration/index.html
+
+If you believe this check is in error, or if you have changed your ports away
+from the defaults, you can skip the check using an environment variable:
 
   export DRUID_SKIP_PORT_CHECK=1
 
-Otherwise, free up port $port and try again.
 EOT
     exit 1;
   }
