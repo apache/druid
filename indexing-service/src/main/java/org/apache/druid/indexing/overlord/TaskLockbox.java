@@ -1147,7 +1147,7 @@ public class TaskLockbox
               final SpecificSegmentLockRequest specificSegmentLockRequest = (SpecificSegmentLockRequest) request;
               return segmentLock.getInterval().contains(specificSegmentLockRequest.getInterval())
                      && segmentLock.getGroupId().equals(specificSegmentLockRequest.getGroupId())
-                     && specificSegmentLockRequest.getPartitionId() == segmentLock.getPartitionId();
+                     && specificSegmentLockRequest.getPartitionId().equals(segmentLock.getPartitionId());
             } else {
               throw new ISE("Unknown request type[%s]", request);
             }

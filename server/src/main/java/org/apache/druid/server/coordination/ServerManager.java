@@ -155,7 +155,8 @@ public class ServerManager implements QuerySegmentWalker
                           new SegmentDescriptor(
                               holder.getInterval(),
                               holder.getVersion(),
-                              partitionChunk.getChunkNumber()
+                              partitionChunk.getChunkNumber(),
+                              partitionChunk.getChunkIdentifier()
                           )
                   );
             }
