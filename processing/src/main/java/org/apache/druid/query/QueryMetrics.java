@@ -154,8 +154,7 @@ import java.util.List;
  * dimensions than the default generic QueryMetrics. So those subinterfaces shouldn't be taken as direct examples for
  * following the plan specified above.
  *
- * Refer {@link SearchQueryMetricsFactory}
- * and {@link org.apache.druid.query.select.SelectQueryMetricsFactory} as an implementation example of this procedure.
+ * Refer {@link SearchQueryMetricsFactory} as an implementation example of this procedure.
  *
  * @param <QueryType>
  */
