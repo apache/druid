@@ -586,7 +586,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   /**
-   * Test if always use earliest offset on newly discovered partitions
+   * Test if partitionIds get updated
    */
   @Test
   public void testPartitionIdsUpdates() throws Exception
