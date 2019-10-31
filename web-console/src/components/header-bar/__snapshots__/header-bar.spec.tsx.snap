@@ -15,6 +15,7 @@ exports[`header bar matches snapshot 1`] = `
     <Blueprint3.NavbarDivider />
     <Blueprint3.AnchorButton
       active={true}
+      disabled={false}
       href="#load-data"
       icon="cloud-upload"
       intent="none"
@@ -84,6 +85,7 @@ exports[`header bar matches snapshot 1`] = `
       wrapperTagName="span"
     >
       <Blueprint3.Button
+        disabled={false}
         icon="share"
         minimal={true}
         text="Legacy"
@@ -151,6 +153,7 @@ exports[`header bar matches snapshot 1`] = `
       wrapperTagName="span"
     >
       <Blueprint3.Button
+        disabled={false}
         icon="cog"
         minimal={true}
       />

@@ -28,7 +28,7 @@ describe('data source view', () => {
         goToQuery={() => {}}
         goToTask={() => null}
         goToSegments={() => {}}
-        noSqlMode={false}
+        capabilities="full"
       />,
     );
     expect(dataSourceView).toMatchSnapshot();

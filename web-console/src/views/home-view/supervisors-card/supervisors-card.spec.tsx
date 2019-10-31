@@ -23,7 +23,7 @@ import { SupervisorsCard } from './supervisors-card';
 
 describe('supervisors card', () => {
   it('matches snapshot', () => {
-    const supervisorsCard = <SupervisorsCard noSqlMode={false} />;
+    const supervisorsCard = <SupervisorsCard capabilities="full" />;
 
     const { container } = render(supervisorsCard);
     expect(container.firstChild).toMatchSnapshot();

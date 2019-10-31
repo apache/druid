@@ -21,10 +21,11 @@ import axios from 'axios';
 import React from 'react';
 
 import { pluralIfNeeded, queryDruidSql, QueryManager } from '../../../utils';
+import { Capabilities } from '../../../utils/capabilities';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface SupervisorsCardProps {
-  noSqlMode: boolean;
+  capabilities: Capabilities;
 }
 
 export interface SupervisorsCardState {
@@ -38,7 +39,7 @@ export class SupervisorsCard extends React.PureComponent<
   SupervisorsCardProps,
   SupervisorsCardState
 > {
-  private supervisorQueryManager: QueryManager<boolean, any>;
+  private supervisorQueryManager: QueryManager<Capabilities, any>;
 
   constructor(props: SupervisorsCardProps, context: any) {
     super(props, context);
@@ -49,8 +50,8 @@ export class SupervisorsCard extends React.PureComponent<
     };
 
     this.supervisorQueryManager = new QueryManager({
-      processQuery: async noSqlMode => {
-        if (!noSqlMode) {
+      processQuery: async capabilities => {
+        if (capabilities !== 'no-sql') {
           return (await queryDruidSql({
             query: `SELECT
   COUNT(*) FILTER (WHERE "suspended" = 0) AS "runningSupervisorCount",
@@ -81,9 +82,9 @@ FROM sys.supervisors`,
   }
 
   componentDidMount(): void {
-    const { noSqlMode } = this.props;
+    const { capabilities } = this.props;
 
-    this.supervisorQueryManager.runQuery(noSqlMode);
+    this.supervisorQueryManager.runQuery(capabilities);
   }
 
   componentWillUnmount(): void {

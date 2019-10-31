@@ -53,12 +53,13 @@ import {
   QueryManager,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
+import { Capabilities } from '../../utils/capabilities';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 import { deepGet } from '../../utils/object-change';
 
 import './servers-view.scss';
 
-const serverTableColumns: string[] = [
+const allColumns: string[] = [
   'Server',
   'Type',
   'Tier',
@@ -70,6 +71,13 @@ const serverTableColumns: string[] = [
   'Detail',
   ACTION_COLUMN_LABEL,
 ];
+
+const tableColumns: Record<Capabilities, string[]> = {
+  full: allColumns,
+  'no-sql': allColumns,
+  'no-proxy': ['Server', 'Type', 'Tier', 'Host', 'Port', 'Curr size', 'Max size', 'Usage'],
+  broken: ['Server'],
+};
 
 function formatQueues(
   segmentsToLoad: number,
@@ -95,7 +103,7 @@ export interface ServersViewProps {
   middleManager: string | undefined;
   goToQuery: (initSql: string) => void;
   goToTask: (taskId: string) => void;
-  noSqlMode: boolean;
+  capabilities: Capabilities;
 }
 
 export interface ServersViewState {
@@ -150,7 +158,7 @@ interface ServerResultRow
     Partial<MiddleManagerQueryResultRow> {}
 
 export class ServersView extends React.PureComponent<ServersViewProps, ServersViewState> {
-  private serverQueryManager: QueryManager<boolean, ServerResultRow[]>;
+  private serverQueryManager: QueryManager<Capabilities, ServerResultRow[]>;
 
   // Ranking
   //   coordinator => 7
@@ -207,12 +215,16 @@ ORDER BY "rank" DESC, "server" DESC`;
     };
 
     this.serverQueryManager = new QueryManager({
-      processQuery: async noSqlMode => {
+      processQuery: async capabilities => {
         let servers: ServerQueryResultRow[];
-        if (!noSqlMode) {
+        if (capabilities !== 'no-sql') {
           servers = await queryDruidSql({ query: ServersView.SERVER_SQL });
         } else {
           servers = await ServersView.getServers();
+        }
+
+        if (capabilities === 'no-proxy') {
+          return servers;
         }
 
         const loadQueueResponse = await axios.get('/druid/coordinator/v1/loadqueue?simple');
@@ -264,8 +276,8 @@ ORDER BY "rank" DESC, "server" DESC`;
   }
 
   componentDidMount(): void {
-    const { noSqlMode } = this.props;
-    this.serverQueryManager.runQuery(noSqlMode);
+    const { capabilities } = this.props;
+    this.serverQueryManager.runQuery(capabilities);
   }
 
   componentWillUnmount(): void {
@@ -273,6 +285,7 @@ ORDER BY "rank" DESC, "server" DESC`;
   }
 
   renderServersTable() {
+    const { capabilities } = this.props;
     const {
       servers,
       serversLoading,
@@ -528,7 +541,7 @@ ORDER BY "rank" DESC, "server" DESC`;
                 segmentsToDropSize,
               );
             },
-            show: hiddenColumns.exists('Detail'),
+            show: capabilities !== 'no-proxy' && hiddenColumns.exists('Detail'),
           },
           {
             Header: ACTION_COLUMN_LABEL,
@@ -542,7 +555,7 @@ ORDER BY "rank" DESC, "server" DESC`;
               const workerActions = this.getWorkerActions(row.value.host, disabled);
               return <ActionCell actions={workerActions} />;
             },
-            show: hiddenColumns.exists(ACTION_COLUMN_LABEL),
+            show: capabilities !== 'no-proxy' && hiddenColumns.exists(ACTION_COLUMN_LABEL),
           },
         ]}
       />
@@ -628,11 +641,11 @@ ORDER BY "rank" DESC, "server" DESC`;
   }
 
   renderBulkServersActions() {
-    const { goToQuery, noSqlMode } = this.props;
+    const { goToQuery, capabilities } = this.props;
 
     const bulkserversActionsMenu = (
       <Menu>
-        {!noSqlMode && (
+        {capabilities !== 'no-sql' && (
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"
@@ -652,6 +665,7 @@ ORDER BY "rank" DESC, "server" DESC`;
   }
 
   render(): JSX.Element {
+    const { capabilities } = this.props;
     const { groupServersBy, hiddenColumns } = this.state;
 
     return (
@@ -684,7 +698,7 @@ ORDER BY "rank" DESC, "server" DESC`;
           />
           {this.renderBulkServersActions()}
           <TableColumnSelector
-            columns={serverTableColumns}
+            columns={tableColumns[capabilities]}
             onChange={column =>
               this.setState(prevState => ({
                 hiddenColumns: prevState.hiddenColumns.toggle(column),

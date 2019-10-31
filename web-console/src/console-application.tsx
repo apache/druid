@@ -26,6 +26,7 @@ import { HashRouter, Route, Switch } from 'react-router-dom';
 import { ExternalLink, HeaderActiveTab, HeaderBar, Loader } from './components';
 import { AppToaster } from './singletons/toaster';
 import { localStorageGet, LocalStorageKeys, QueryManager } from './utils';
+import { Capabilities } from './utils/capabilities';
 import { DRUID_DOCS_API, DRUID_DOCS_SQL } from './variables';
 import {
   DatasourcesView,
@@ -40,15 +41,13 @@ import {
 
 import './console-application.scss';
 
-type Capabilities = 'working-with-sql' | 'working-without-sql' | 'broken';
-
 export interface ConsoleApplicationProps {
   hideLegacy: boolean;
   exampleManifestsUrl?: string;
 }
 
 export interface ConsoleApplicationState {
-  noSqlMode: boolean;
+  capabilities: Capabilities;
   capabilitiesLoading: boolean;
 }
 
@@ -64,6 +63,7 @@ export class ConsoleApplication extends React.PureComponent<
     const capabilitiesOverride = localStorageGet(LocalStorageKeys.CAPABILITIES_OVERRIDE);
     if (capabilitiesOverride) return capabilitiesOverride as Capabilities;
 
+    // Check SQL endpoint
     try {
       await axios.post(
         '/druid/v2/sql',
@@ -73,7 +73,7 @@ export class ConsoleApplication extends React.PureComponent<
     } catch (e) {
       const { response } = e;
       if (response.status !== 405 || response.statusText !== 'Method Not Allowed') {
-        return 'working-with-sql'; // other failure
+        return 'full'; // other failure
       }
       try {
         await axios.get('/status', { timeout: ConsoleApplication.STATUS_TIMEOUT });
@@ -81,27 +81,60 @@ export class ConsoleApplication extends React.PureComponent<
         return 'broken'; // total failure
       }
       // Status works but SQL 405s => the SQL endpoint is disabled
-      return 'working-without-sql';
+      return 'no-sql';
     }
-    return 'working-with-sql';
+
+    // Check proxy
+    try {
+      await axios.get('/proxy/coordinator/status');
+    } catch (e) {
+      const { response } = e;
+      if (response.status !== 404) {
+        console.log('response.statusText', response.statusText);
+        return 'full'; // other failure
+      }
+      return 'no-proxy';
+    }
+
+    return 'full';
   }
 
   static shownNotifications(capabilities: string) {
     let message: JSX.Element = <></>;
 
-    if (capabilities === 'working-without-sql') {
-      message = (
-        <>
-          It appears that the SQL endpoint is disabled. The console will fall back to{' '}
-          <ExternalLink href={DRUID_DOCS_API}>native Druid APIs</ExternalLink> and will be limited
-          in functionality. Look at <ExternalLink href={DRUID_DOCS_SQL}>the SQL docs</ExternalLink>{' '}
-          to enable the SQL endpoint.
-        </>
-      );
-    } else if (capabilities === 'broken') {
-      message = (
-        <>It appears that the Druid is not responding. Data cannot be retrieved right now</>
-      );
+    switch (capabilities) {
+      case 'no-sql':
+        message = (
+          <>
+            It appears that the SQL endpoint is disabled. The console will fall back to{' '}
+            <ExternalLink href={DRUID_DOCS_API}>native Druid APIs</ExternalLink> and will be limited
+            in functionality. Look at{' '}
+            <ExternalLink href={DRUID_DOCS_SQL}>the SQL docs</ExternalLink> to enable the SQL
+            endpoint.
+          </>
+        );
+        break;
+
+      case 'no-proxy':
+        message = (
+          <>
+            It appears that the management proxy is not enabled, the console will operate with
+            limited functionality.
+          </>
+        );
+        break;
+
+      case 'broken':
+        message = (
+          <>
+            It appears that the the Router node is not responding. The console can not function at
+            the moment
+          </>
+        );
+        break;
+
+      default:
+        return;
     }
 
     AppToaster.show({
@@ -123,21 +156,21 @@ export class ConsoleApplication extends React.PureComponent<
   constructor(props: ConsoleApplicationProps, context: any) {
     super(props, context);
     this.state = {
-      noSqlMode: false,
+      capabilities: 'full',
       capabilitiesLoading: true,
     };
 
     this.capabilitiesQueryManager = new QueryManager({
       processQuery: async () => {
         const capabilities = await ConsoleApplication.discoverCapabilities();
-        if (capabilities !== 'working-with-sql') {
+        if (capabilities !== 'full') {
           ConsoleApplication.shownNotifications(capabilities);
         }
         return capabilities;
       },
       onStateChange: ({ result, loading }) => {
         this.setState({
-          noSqlMode: result !== 'working-with-sql',
+          capabilities: result || 'full',
           capabilitiesLoading: loading,
         });
       },
@@ -216,18 +249,19 @@ export class ConsoleApplication extends React.PureComponent<
     classType: 'normal' | 'narrow-pad' = 'normal',
   ) => {
     const { hideLegacy } = this.props;
+    const { capabilities } = this.state;
 
     return (
       <>
-        <HeaderBar active={active} hideLegacy={hideLegacy} />
+        <HeaderBar active={active} hideLegacy={hideLegacy} capabilities={capabilities} />
         <div className={classNames('view-container', classType)}>{el}</div>
       </>
     );
   };
 
   private wrappedHomeView = () => {
-    const { noSqlMode } = this.state;
-    return this.wrapInViewContainer(null, <HomeView noSqlMode={noSqlMode} />);
+    const { capabilities } = this.state;
+    return this.wrapInViewContainer(null, <HomeView capabilities={capabilities} />);
   };
 
   private wrappedLoadDataView = () => {
@@ -250,7 +284,7 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private wrappedDatasourcesView = () => {
-    const { noSqlMode } = this.state;
+    const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'datasources',
       <DatasourcesView
@@ -258,26 +292,26 @@ export class ConsoleApplication extends React.PureComponent<
         goToQuery={this.goToQuery}
         goToTask={this.goToTaskWithDatasource}
         goToSegments={this.goToSegments}
-        noSqlMode={noSqlMode}
+        capabilities={capabilities}
       />,
     );
   };
 
   private wrappedSegmentsView = () => {
-    const { noSqlMode } = this.state;
+    const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'segments',
       <SegmentsView
         datasource={this.datasource}
         onlyUnavailable={this.onlyUnavailable}
         goToQuery={this.goToQuery}
-        noSqlMode={noSqlMode}
+        capabilities={capabilities}
       />,
     );
   };
 
   private wrappedTasksView = () => {
-    const { noSqlMode } = this.state;
+    const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'tasks',
       <TasksView
@@ -288,20 +322,20 @@ export class ConsoleApplication extends React.PureComponent<
         goToQuery={this.goToQuery}
         goToMiddleManager={this.goToMiddleManager}
         goToLoadData={this.goToLoadData}
-        noSqlMode={noSqlMode}
+        capabilities={capabilities}
       />,
     );
   };
 
   private wrappedServersView = () => {
-    const { noSqlMode } = this.state;
+    const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'servers',
       <ServersView
         middleManager={this.middleManager}
         goToQuery={this.goToQuery}
         goToTask={this.goToTaskWithTaskId}
-        noSqlMode={noSqlMode}
+        capabilities={capabilities}
       />,
     );
   };
@@ -316,7 +350,7 @@ export class ConsoleApplication extends React.PureComponent<
     if (capabilitiesLoading) {
       return (
         <div className="loading-capabilities">
-          <Loader loadingText="" loading={capabilitiesLoading} />
+          <Loader loadingText="" loading />
         </div>
       );
     }

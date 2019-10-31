@@ -63,6 +63,7 @@ import {
   QueryManager,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
+import { Capabilities } from '../../utils/capabilities';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 import { deepGet } from '../../utils/object-change';
 
@@ -117,7 +118,7 @@ export interface TasksViewProps {
   goToQuery: (initSql: string) => void;
   goToMiddleManager: (middleManager: string) => void;
   goToLoadData: (supervisorId?: string, taskId?: string) => void;
-  noSqlMode: boolean;
+  capabilities: Capabilities;
 }
 
 export interface TasksViewState {
@@ -195,8 +196,8 @@ function stateToColor(status: string): string {
 }
 
 export class TasksView extends React.PureComponent<TasksViewProps, TasksViewState> {
-  private supervisorQueryManager: QueryManager<boolean, SupervisorQueryResultRow[]>;
-  private taskQueryManager: QueryManager<boolean, TaskQueryResultRow[]>;
+  private supervisorQueryManager: QueryManager<Capabilities, SupervisorQueryResultRow[]>;
+  private taskQueryManager: QueryManager<Capabilities, TaskQueryResultRow[]>;
   static statusRanking: Record<string, number> = {
     RUNNING: 4,
     PENDING: 3,
@@ -257,8 +258,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     };
 
     this.supervisorQueryManager = new QueryManager({
-      processQuery: async noSqlMode => {
-        if (!noSqlMode) {
+      processQuery: async capabilities => {
+        if (capabilities !== 'no-sql') {
           return await queryDruidSql({
             query: TasksView.SUPERVISOR_SQL,
           });
@@ -290,8 +291,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     });
 
     this.taskQueryManager = new QueryManager({
-      processQuery: async noSqlMode => {
-        if (!noSqlMode) {
+      processQuery: async capabilities => {
+        if (capabilities !== 'no-sql') {
           return await queryDruidSql({
             query: TasksView.TASK_SQL,
           });
@@ -344,10 +345,10 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   }
 
   componentDidMount(): void {
-    const { noSqlMode } = this.props;
+    const { capabilities } = this.props;
 
-    this.supervisorQueryManager.runQuery(noSqlMode);
-    this.taskQueryManager.runQuery(noSqlMode);
+    this.supervisorQueryManager.runQuery(capabilities);
+    this.taskQueryManager.runQuery(capabilities);
   }
 
   componentWillUnmount(): void {
@@ -929,11 +930,11 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   }
 
   renderBulkSupervisorActions() {
-    const { noSqlMode, goToQuery } = this.props;
+    const { capabilities, goToQuery } = this.props;
 
     const bulkSupervisorActionsMenu = (
       <Menu>
-        {!noSqlMode && (
+        {capabilities !== 'no-sql' && (
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"
@@ -1055,11 +1056,11 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   }
 
   renderBulkTasksActions() {
-    const { goToQuery, noSqlMode } = this.props;
+    const { goToQuery, capabilities } = this.props;
 
     const bulkTaskActionsMenu = (
       <Menu>
-        {!noSqlMode && (
+        {capabilities !== 'no-sql' && (
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"
