@@ -60,7 +60,13 @@ export type HeaderActiveTab =
 function Logo() {
   return (
     <div className="logo">
-      <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 288 134">
+      <svg
+        version="1.1"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 288 134"
+        width="288"
+        height="134"
+      >
         <path
           fill="#FFFFFF"
           d="M136.7,67.5c0.5-6.1,5-10.4,10.6-10.4c3.9,0,6.5,2,7.4,4.3l1.1-12.4c0-0.1,0.3-0.2,0.7-0.2
