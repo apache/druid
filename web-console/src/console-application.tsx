@@ -27,7 +27,7 @@ import { ExternalLink, HeaderActiveTab, HeaderBar, Loader } from './components';
 import { AppToaster } from './singletons/toaster';
 import { localStorageGet, LocalStorageKeys, QueryManager } from './utils';
 import { Capabilities } from './utils/capabilities';
-import { DRUID_DOCS_API, DRUID_DOCS_SQL } from './variables';
+import { DRUID_DOCS_API, DRUID_DOCS_SQL, DRUID_DOCS_VERSION } from './variables';
 import {
   DatasourcesView,
   HomeView,
@@ -86,7 +86,7 @@ export class ConsoleApplication extends React.PureComponent<
 
     // Check proxy
     try {
-      await axios.get('/proxy/coordinator/status');
+      await axios.get('/proxy/coordinator/status', { timeout: ConsoleApplication.STATUS_TIMEOUT });
     } catch (e) {
       const { response } = e;
       if (response.status !== 404) {
@@ -99,7 +99,7 @@ export class ConsoleApplication extends React.PureComponent<
     return 'full';
   }
 
-  static shownNotifications(capabilities: string) {
+  static shownNotifications(capabilities: Capabilities) {
     let message: JSX.Element;
     switch (capabilities) {
       case 'no-sql':
@@ -118,7 +118,13 @@ export class ConsoleApplication extends React.PureComponent<
         message = (
           <>
             It appears that the management proxy is not enabled, the console will operate with
-            limited functionality.
+            limited functionality. Look at{' '}
+            <ExternalLink
+              href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/operations/management-uis.html#druid-console`}
+            >
+              the console docs
+            </ExternalLink>{' '}
+            for more info on how to enable the management proxy.
           </>
         );
         break;
@@ -126,7 +132,7 @@ export class ConsoleApplication extends React.PureComponent<
       case 'broken':
         message = (
           <>
-            It appears that the the Router node is not responding. The console can not function at
+            It appears that the the Router node is not responding. The console will not function at
             the moment
           </>
         );
