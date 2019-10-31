@@ -326,12 +326,13 @@ export class ConsoleApplication extends React.PureComponent<
         <div className="console-application">
           <Switch>
             <Route path="/load-data" component={this.wrappedLoadDataView} />
-            <Route path="/query" component={this.wrappedQueryView} />
 
             <Route path="/datasources" component={this.wrappedDatasourcesView} />
             <Route path="/segments" component={this.wrappedSegmentsView} />
             <Route path="/tasks" component={this.wrappedTasksView} />
             <Route path="/servers" component={this.wrappedServersView} />
+
+            <Route path="/query" component={this.wrappedQueryView} />
 
             <Route path="/lookups" component={this.wrappedLookupsView} />
             <Route component={this.wrappedHomeView} />

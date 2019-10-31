@@ -64,6 +64,7 @@ import {
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
+import { deepGet } from '../../utils/object-change';
 
 import './tasks-view.scss';
 
@@ -86,6 +87,28 @@ const taskTableColumns: string[] = [
   ACTION_COLUMN_LABEL,
 ];
 
+interface SupervisorQueryResultRow {
+  supervisor_id: string;
+  type: string;
+  source: string;
+  state: string;
+  detailed_state: string;
+  suspended: number;
+}
+
+interface TaskQueryResultRow {
+  task_id: string;
+  group_id: string;
+  type: string;
+  created_time: string;
+  datasource: string;
+  duration: number;
+  error_msg: string | null;
+  location: string | null;
+  status: string;
+  rank: number;
+}
+
 export interface TasksViewProps {
   taskId: string | undefined;
   datasourceId: string | undefined;
@@ -99,7 +122,7 @@ export interface TasksViewProps {
 
 export interface TasksViewState {
   supervisorsLoading: boolean;
-  supervisors: any[];
+  supervisors?: SupervisorQueryResultRow[];
   supervisorsError?: string;
 
   resumeSupervisorId?: string;
@@ -112,7 +135,7 @@ export interface TasksViewState {
   showTerminateAllSupervisors: boolean;
 
   tasksLoading: boolean;
-  tasks?: any[];
+  tasks?: TaskQueryResultRow[];
   tasksError?: string;
 
   taskFilter: Filter[];
@@ -133,23 +156,6 @@ export interface TasksViewState {
   supervisorTableActionDialogActions: BasicAction[];
   hiddenTaskColumns: LocalStorageBackedArray<string>;
   hiddenSupervisorColumns: LocalStorageBackedArray<string>;
-}
-
-interface TaskQueryResultRow {
-  created_time: string;
-  datasource: string;
-  duration: number;
-  error_msg: string | null;
-  location: string | null;
-  status: string;
-  task_id: string;
-  type: string;
-  rank: number;
-}
-
-interface SupervisorQueryResultRow {
-  id: string;
-  spec: any;
 }
 
 function statusToColor(status: string): string {
@@ -189,7 +195,7 @@ function stateToColor(status: string): string {
 }
 
 export class TasksView extends React.PureComponent<TasksViewProps, TasksViewState> {
-  private supervisorQueryManager: QueryManager<null, SupervisorQueryResultRow[]>;
+  private supervisorQueryManager: QueryManager<boolean, SupervisorQueryResultRow[]>;
   private taskQueryManager: QueryManager<boolean, TaskQueryResultRow[]>;
   static statusRanking: Record<string, number> = {
     RUNNING: 4,
@@ -198,6 +204,9 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
     SUCCESS: 1,
     FAILED: 1,
   };
+
+  static SUPERVISOR_SQL = `SELECT "supervisor_id", "type", "source", "state", "detailed_state", "suspended"
+FROM sys.supervisors`;
 
   static TASK_SQL = `SELECT
   "task_id", "group_id", "type", "datasource", "created_time", "location", "duration", "error_msg",
@@ -248,9 +257,28 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     };
 
     this.supervisorQueryManager = new QueryManager({
-      processQuery: async () => {
-        const resp = await axios.get('/druid/indexer/v1/supervisor?full');
-        return resp.data;
+      processQuery: async noSqlMode => {
+        if (!noSqlMode) {
+          return await queryDruidSql({
+            query: TasksView.SUPERVISOR_SQL,
+          });
+        } else {
+          const supervisors = (await axios.get('/druid/indexer/v1/supervisor?full')).data;
+          if (!Array.isArray(supervisors)) throw new Error(`Unexpected results`);
+          return supervisors.map((sup: any) => {
+            return {
+              supervisor_id: deepGet(sup, 'id'),
+              type: deepGet(sup, 'spec.tuningConfig.type'),
+              source:
+                deepGet(sup, 'spec.ioConfig.topic') ||
+                deepGet(sup, 'spec.ioConfig.stream') ||
+                'n/a',
+              state: deepGet(sup, 'state'),
+              detailed_state: deepGet(sup, 'detailedState'),
+              suspended: Number(deepGet(sup, 'suspended')),
+            };
+          });
+        }
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
@@ -280,7 +308,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               return TasksView.parseTasks(resp.data);
             }),
           );
-          return ([] as TaskQueryResultRow[]).concat.apply([], result);
+          return result.flat();
         }
       },
       onStateChange: ({ result, loading, error }) => {
@@ -296,14 +324,15 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   static parseTasks = (data: any[]): TaskQueryResultRow[] => {
     return data.map((d: any) => {
       return {
+        task_id: d.id,
+        group_id: d.groupId,
+        type: d.type,
         created_time: d.createdTime,
         datasource: d.dataSource,
         duration: d.duration ? d.duration : 0,
         error_msg: d.errorMsg,
         location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
         status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
-        task_id: d.id,
-        type: d.typTasksView,
         rank:
           TasksView.statusRanking[d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode],
       };
@@ -317,7 +346,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   componentDidMount(): void {
     const { noSqlMode } = this.props;
 
-    this.supervisorQueryManager.runQuery(null);
+    this.supervisorQueryManager.runQuery(noSqlMode);
     this.taskQueryManager.runQuery(noSqlMode);
   }
 
@@ -571,62 +600,45 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             {
               Header: 'Datasource',
               id: 'datasource',
-              accessor: 'id',
+              accessor: 'supervisor_id',
               width: 300,
               show: hiddenSupervisorColumns.exists('Datasource'),
             },
             {
               Header: 'Type',
               id: 'type',
-              accessor: row => {
-                const { spec } = row;
-                if (!spec) return '';
-                const { tuningConfig } = spec;
-                if (!tuningConfig) return '';
-                return tuningConfig.type;
-              },
+              accessor: row => row.type,
               show: hiddenSupervisorColumns.exists('Type'),
             },
             {
               Header: 'Topic/Stream',
-              id: 'topic',
-              accessor: row => {
-                const { spec } = row;
-                if (!spec) return '';
-                const { ioConfig } = spec;
-                if (!ioConfig) return '';
-                return ioConfig.topic || ioConfig.stream || '';
-              },
+              id: 'source',
+              accessor: row => row.source,
               show: hiddenSupervisorColumns.exists('Topic/Stream'),
             },
             {
               Header: 'Status',
               id: 'status',
               width: 300,
-              accessor: row => {
-                return row.detailedState;
-              },
-              Cell: row => {
-                const value = row.original.detailedState;
-                return (
-                  <span>
-                    <span style={{ color: stateToColor(row.original.state) }}>&#x25cf;&nbsp;</span>
-                    {value}
-                  </span>
-                );
-              },
+              accessor: row => row.detailed_state,
+              Cell: row => (
+                <span>
+                  <span style={{ color: stateToColor(row.original.state) }}>&#x25cf;&nbsp;</span>
+                  {row.value}
+                </span>
+              ),
               show: hiddenSupervisorColumns.exists('Status'),
             },
             {
               Header: ACTION_COLUMN_LABEL,
               id: ACTION_COLUMN_ID,
-              accessor: 'id',
+              accessor: 'supervisor_id',
               width: ACTION_COLUMN_WIDTH,
               filterable: false,
               Cell: row => {
                 const id = row.value;
-                const type = row.row.type;
-                const supervisorSuspended = row.original.spec.suspended;
+                const type = row.original.type;
+                const supervisorSuspended = row.original.suspended;
                 const supervisorActions = this.getSupervisorActions(id, supervisorSuspended, type);
                 return (
                   <ActionCell
@@ -917,8 +929,22 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   }
 
   renderBulkSupervisorActions() {
+    const { noSqlMode, goToQuery } = this.props;
+
     const bulkSupervisorActionsMenu = (
       <Menu>
+        {!noSqlMode && (
+          <MenuItem
+            icon={IconNames.APPLICATION}
+            text="View SQL query for table"
+            onClick={() => goToQuery(TasksView.SUPERVISOR_SQL)}
+          />
+        )}
+        <MenuItem
+          icon={IconNames.MANUALLY_ENTERED_DATA}
+          text="Submit JSON supervisor"
+          onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
+        />
         <MenuItem
           icon={IconNames.PLAY}
           text="Resume all supervisors"
@@ -1040,6 +1066,11 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             onClick={() => goToQuery(TasksView.TASK_SQL)}
           />
         )}
+        <MenuItem
+          icon={IconNames.MANUALLY_ENTERED_DATA}
+          text="Submit JSON task"
+          onClick={() => this.setState({ taskSpecDialogOpen: true })}
+        />
       </Menu>
     );
 
@@ -1053,7 +1084,6 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   }
 
   render(): JSX.Element {
-    const { goToLoadData } = this.props;
     const {
       groupTasksBy,
       supervisorSpecDialogOpen,
@@ -1067,36 +1097,6 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       hiddenSupervisorColumns,
       hiddenTaskColumns,
     } = this.state;
-
-    const submitSupervisorMenu = (
-      <Menu>
-        <MenuItem
-          icon={IconNames.CLOUD_UPLOAD}
-          text="Go to data loader"
-          onClick={() => goToLoadData()}
-        />
-        <MenuItem
-          icon={IconNames.MANUALLY_ENTERED_DATA}
-          text="Submit JSON supervisor"
-          onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
-        />
-      </Menu>
-    );
-
-    const submitTaskMenu = (
-      <Menu>
-        <MenuItem
-          icon={IconNames.CLOUD_UPLOAD}
-          text="Go to data loader"
-          onClick={() => goToLoadData()}
-        />
-        <MenuItem
-          icon={IconNames.MANUALLY_ENTERED_DATA}
-          text="Submit JSON task"
-          onClick={() => this.setState({ taskSpecDialogOpen: true })}
-        />
-      </Menu>
-    );
 
     return (
       <>
@@ -1117,9 +1117,6 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                 localStorageKey={LocalStorageKeys.SUPERVISORS_REFRESH_RATE}
                 onRefresh={auto => this.supervisorQueryManager.rerunLastQuery(auto)}
               />
-              <Popover content={submitSupervisorMenu} position={Position.BOTTOM_LEFT}>
-                <Button icon={IconNames.PLUS} text="Submit supervisor" />
-              </Popover>
               {this.renderBulkSupervisorActions()}
               <TableColumnSelector
                 columns={supervisorTableColumns}
@@ -1172,9 +1169,6 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                 localStorageKey={LocalStorageKeys.TASKS_REFRESH_RATE}
                 onRefresh={auto => this.taskQueryManager.rerunLastQuery(auto)}
               />
-              <Popover content={submitTaskMenu} position={Position.BOTTOM_LEFT}>
-                <Button icon={IconNames.PLUS} text="Submit task" />
-              </Popover>
               {this.renderBulkTasksActions()}
               <TableColumnSelector
                 columns={taskTableColumns}
