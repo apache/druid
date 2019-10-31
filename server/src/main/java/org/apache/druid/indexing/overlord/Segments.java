@@ -22,6 +22,24 @@ package org.apache.druid.indexing.overlord;
 /**
  * This enum is used as a parameter for several methods in {@link IndexerMetadataStorageCoordinator}, specifying whether
  * only visible segments, or visible as well as overshadowed segments should be included in results.
+ *
+ * Visibility (and overshadowness - these termms are antonyms) may be defined on an interval (or a series of intervals).
+ * Consider the following example:
+ *
+ * |----| I
+ *   |----| S'
+ *   |-------| S
+ *
+ * Here, I denotes an interval in question, S and S' are segments. S' is newer (has a higher version) than S.
+ * Segment S is overshadowed (by S') on the interval I, though it's visible (non-overshadowed) outside of I: more
+ * specifically, it's visible on the interval [end of S', end of S].
+ *
+ * A segment is considered visible on a series of interval if it's visible on any of the intervals in the series. A
+ * segment is considered (fully) overshadowed on a series of intervals if it's overshadowed (= non-visible) on all of
+ * the intervals in the series.
+ *
+ * If not specified otherwise, visibility (or overshadowness) should be assumed on the interval (-inf, +inf). This
+ * visibility may also be called "global" or "general" visibility.
  */
 public enum Segments
 {

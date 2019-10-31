@@ -48,7 +48,8 @@ public interface IndexerMetadataStorageCoordinator
    * @param visibility Whether only visible or visible as well as overshadowed segments should be returned. The
    *                   visibility is considered within the specified interval: that is, a segment which is visible
    *                   outside of the specified interval, but overshadowed within the specified interval will not be
-   *                   returned if {@link Segments#ONLY_VISIBLE} is passed.
+   *                   returned if {@link Segments#ONLY_VISIBLE} is passed. See more precise description in the doc for
+   *                   {@link Segments}.
    * @return The DataSegments which include data in the requested interval. These segments may contain data outside the
    *         requested interval.
    *
@@ -85,7 +86,8 @@ public interface IndexerMetadataStorageCoordinator
    * @param visibility Whether only visible or visible as well as overshadowed segments should be returned. The
    *                   visibility is considered within the specified intervals: that is, a segment which is visible
    *                   outside of the specified intervals, but overshadowed on the specified intervals will not be
-   *                   returned if {@link Segments#ONLY_VISIBLE} is passed.
+   *                   returned if {@link Segments#ONLY_VISIBLE} is passed. See more precise description in the doc for
+   *                   {@link Segments}.
    * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the
    *         requested interval.
    *
