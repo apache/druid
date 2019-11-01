@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import kafka.admin.AdminUtils;
+import kafka.admin.BrokerMetadata;
 import kafka.admin.RackAwareMode;
 import kafka.utils.ZkUtils;
 import org.apache.curator.test.TestingCluster;
@@ -102,9 +103,12 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import scala.Option;
+import scala.collection.Seq;
 
 import java.io.File;
 import java.io.IOException;
@@ -611,6 +615,80 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertFalse(supervisor.isPartitionIdsEmpty());
+  }
+
+
+  /**
+   * Regression Test for if always use earliest offset on newly discovered partitions
+   */
+  @Ignore
+  @Test
+  public void testLatestOffsetOnDiscovery() throws Exception
+  {
+    supervisor = getTestableSupervisor(1, 1, false, "PT1H", null, null);
+    addSomeEvents(9);
+
+    Capture<KafkaIndexTask> captured = Capture.newInstance();
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
+    replayAll();
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    KafkaIndexTask task = captured.getValue();
+    Assert.assertEquals(
+        10,
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(0).longValue()
+    );
+    Assert.assertEquals(
+        10,
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(1).longValue()
+    );
+    Assert.assertEquals(
+        10,
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(2).longValue()
+    );
+
+    addMoreEvents(9, 6);
+    Thread.sleep(10000);
+    EasyMock.reset(taskQueue, taskStorage);
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    Capture<KafkaIndexTask> tmp = Capture.newInstance();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(tmp))).andReturn(true);
+    EasyMock.replay(taskStorage, taskQueue);
+    supervisor.runInternal();
+    verifyAll();
+
+    EasyMock.reset(taskQueue, taskStorage);
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    Capture<KafkaIndexTask> newcaptured = Capture.newInstance();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(newcaptured))).andReturn(true);
+    EasyMock.replay(taskStorage, taskQueue);
+    supervisor.runInternal();
+    verifyAll();
+
+    //check if start from earliest offset
+    task = newcaptured.getValue();
+    Assert.assertEquals(
+        0,
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(3).longValue()
+    );
+    Assert.assertEquals(
+        0,
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(4).longValue()
+    );
+    Assert.assertEquals(
+        0,
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(5).longValue()
+    );
   }
 
   /**
@@ -3182,6 +3260,46 @@ public class KafkaSupervisorTest extends EasyMockSupport
       kafkaProducer.commitTransaction();
     }
   }
+
+  private void addMoreEvents(int numEventsPerPartition, int num_partitions) throws Exception
+  {
+    Seq<BrokerMetadata> brokerList = AdminUtils.getBrokerMetadatas(
+        zkUtils,
+        RackAwareMode.Enforced$.MODULE$,
+        Option.apply(zkUtils.getSortedBrokerList())
+    );
+    scala.collection.Map<Object, Seq<Object>> replicaAssignment = AdminUtils.assignReplicasToBrokers(
+        brokerList,
+        num_partitions,
+        1, 0, 0
+    );
+    AdminUtils.createOrUpdateTopicPartitionAssignmentPathInZK(
+        zkUtils,
+        topic,
+        replicaAssignment,
+        new Properties(),
+        true
+    );
+
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
+      kafkaProducer.initTransactions();
+      kafkaProducer.beginTransaction();
+      for (int i = NUM_PARTITIONS; i < num_partitions; i++) {
+        for (int j = 0; j < numEventsPerPartition; j++) {
+          kafkaProducer.send(
+              new ProducerRecord<>(
+                  topic,
+                  i,
+                  null,
+                  StringUtils.toUtf8(StringUtils.format("event-%d", j))
+              )
+          ).get();
+        }
+      }
+      kafkaProducer.commitTransaction();
+    }
+  }
+
 
   private TestableKafkaSupervisor getTestableSupervisor(
       int replicas,
