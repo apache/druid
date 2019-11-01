@@ -17,12 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.impl;
+package org.apache.druid.java.util.common.parsers;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.opencsv.RFC4180Parser;
-import org.apache.druid.java.util.common.parsers.CSVParser;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -33,8 +31,6 @@ import java.util.Map;
 
 public class CSVParserTest
 {
-  private final RFC4180Parser parser = new RFC4180Parser();
-
   @Test
   public void testBasic() throws IOException
   {
@@ -82,7 +78,7 @@ public class CSVParserTest
       parsedResult.add(parsedLineList);
     }
 
-    Assert.assertTrue(expectedResult.equals(parsedResult));
+    Assert.assertEquals(expectedResult, parsedResult);
   }
 
   @Test
@@ -96,7 +92,7 @@ public class CSVParserTest
     );
     final Map<String, Object> parsedInput = parser.parseToMap(input);
 
-    Assert.assertTrue(parsedInput.get("Comment").getClass().equals(String.class));
-    Assert.assertTrue(expect.equals(parsedInput));
+    Assert.assertEquals(String.class, parsedInput.get("Comment").getClass());
+    Assert.assertEquals(expect, parsedInput);
   }
 }
