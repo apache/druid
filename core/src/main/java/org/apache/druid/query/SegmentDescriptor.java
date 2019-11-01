@@ -133,7 +133,7 @@ public class SegmentDescriptor
   public String toString()
   {
     String identifierString = "";
-    if (partitionIdentifier != null && partitionIdentifier != (Object) 0) {
+    if (partitionIdentifier != null && partitionIdentifier.equals((Object) 0)) {
       identifierString = ", partitionIdentifier=" + partitionIdentifier.toString();
     }
     return "SegmentDescriptor{" +
