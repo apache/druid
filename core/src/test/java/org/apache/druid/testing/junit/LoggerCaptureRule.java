@@ -94,7 +94,7 @@ public class LoggerCaptureRule extends ExternalResource
 
     List<LogEvent> getLogEvents()
     {
-      return Collections.unmodifiableList(logEvents);
+      return Collections.synchronizedList(logEvents);
     }
 
     void clearLogEvents()
