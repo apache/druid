@@ -16,4 +16,63 @@
  * limitations under the License.
  */
 
-export type Capabilities = 'full' | 'no-sql' | 'no-proxy' | 'broken';
+export type CapabilitiesMode = 'full' | 'no-sql' | 'no-proxy';
+
+export interface CapabilitiesOptions {
+  native: boolean;
+  sql: boolean;
+  coordinator: boolean;
+  overlord: boolean;
+}
+
+export class Capabilities {
+  static FULL: Capabilities;
+
+  private native: boolean;
+  private sql: boolean;
+  private coordinator: boolean;
+  private overlord: boolean;
+
+  static fromMode(mode: CapabilitiesMode): Capabilities {
+    return new Capabilities({
+      native: mode !== 'no-sql',
+      sql: mode !== 'no-sql',
+      coordinator: mode !== 'no-proxy',
+      overlord: mode !== 'no-proxy',
+    });
+  }
+
+  constructor(options: CapabilitiesOptions) {
+    this.native = options.native;
+    this.sql = options.sql;
+    this.coordinator = options.coordinator;
+    this.overlord = options.overlord;
+  }
+
+  public getMode(): CapabilitiesMode {
+    if (!this.hasSql()) return 'no-sql';
+    if (!this.hasCoordinatorAccess()) return 'no-proxy';
+    return 'full';
+  }
+
+  public hasEverything(): boolean {
+    return this.native && this.sql && this.coordinator && this.overlord;
+  }
+
+  public hasNative(): boolean {
+    return this.native;
+  }
+
+  public hasSql(): boolean {
+    return this.sql;
+  }
+
+  public hasCoordinatorAccess(): boolean {
+    return this.coordinator;
+  }
+
+  public hasOverlordAccess(): boolean {
+    return this.overlord;
+  }
+}
+Capabilities.FULL = Capabilities.fromMode('full');

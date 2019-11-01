@@ -53,7 +53,7 @@ import {
   QueryManager,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { Capabilities } from '../../utils/capabilities';
+import { Capabilities, CapabilitiesMode } from '../../utils/capabilities';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 import { deepGet } from '../../utils/object-change';
 
@@ -72,11 +72,10 @@ const allColumns: string[] = [
   ACTION_COLUMN_LABEL,
 ];
 
-const tableColumns: Record<Capabilities, string[]> = {
+const tableColumns: Record<CapabilitiesMode, string[]> = {
   full: allColumns,
   'no-sql': allColumns,
   'no-proxy': ['Server', 'Type', 'Tier', 'Host', 'Port', 'Curr size', 'Max size', 'Usage'],
-  broken: ['Server'],
 };
 
 function formatQueues(
@@ -217,53 +216,55 @@ ORDER BY "rank" DESC, "server" DESC`;
     this.serverQueryManager = new QueryManager({
       processQuery: async capabilities => {
         let servers: ServerQueryResultRow[];
-        if (capabilities !== 'no-sql') {
+        if (capabilities.hasSql()) {
           servers = await queryDruidSql({ query: ServersView.SERVER_SQL });
         } else {
           servers = await ServersView.getServers();
         }
 
-        if (capabilities === 'no-proxy') {
-          return servers;
+        if (capabilities.hasCoordinatorAccess()) {
+          const loadQueueResponse = await axios.get('/druid/coordinator/v1/loadqueue?simple');
+          const loadQueues: Record<string, LoadQueueStatus> = loadQueueResponse.data;
+          servers = servers.map((s: any) => {
+            const loadQueueInfo = loadQueues[s.server];
+            if (loadQueueInfo) {
+              s = Object.assign(s, loadQueueInfo);
+            }
+            return s;
+          });
         }
 
-        const loadQueueResponse = await axios.get('/druid/coordinator/v1/loadqueue?simple');
-        const loadQueues: Record<string, LoadQueueStatus> = loadQueueResponse.data;
-        servers = servers.map((s: any) => {
-          const loadQueueInfo = loadQueues[s.server];
-          if (loadQueueInfo) {
-            s = Object.assign(s, loadQueueInfo);
+        if (capabilities.hasOverlordAccess()) {
+          let middleManagers: MiddleManagerQueryResultRow[];
+          try {
+            const middleManagerResponse = await axios.get('/druid/indexer/v1/workers');
+            middleManagers = middleManagerResponse.data;
+          } catch (e) {
+            if (
+              e.response &&
+              typeof e.response.data === 'object' &&
+              e.response.data.error === 'Task Runner does not support worker listing'
+            ) {
+              // Swallow this error because it simply a reflection of a local task runner.
+              middleManagers = [];
+            } else {
+              // Otherwise re-throw.
+              throw e;
+            }
           }
-          return s;
-        });
 
-        let middleManagers: MiddleManagerQueryResultRow[];
-        try {
-          const middleManagerResponse = await axios.get('/druid/indexer/v1/workers');
-          middleManagers = middleManagerResponse.data;
-        } catch (e) {
-          if (
-            e.response &&
-            typeof e.response.data === 'object' &&
-            e.response.data.error === 'Task Runner does not support worker listing'
-          ) {
-            // Swallow this error because it simply a reflection of a local task runner.
-            middleManagers = [];
-          } else {
-            // Otherwise re-throw.
-            throw e;
-          }
+          const middleManagersLookup = lookupBy(middleManagers, m => m.worker.host);
+
+          servers = servers.map((s: any) => {
+            const middleManagerInfo = middleManagersLookup[s.server];
+            if (middleManagerInfo) {
+              s = Object.assign(s, middleManagerInfo);
+            }
+            return s;
+          });
         }
 
-        const middleManagersLookup = lookupBy(middleManagers, m => m.worker.host);
-
-        return servers.map((s: any) => {
-          const middleManagerInfo = middleManagersLookup[s.server];
-          if (middleManagerInfo) {
-            s = Object.assign(s, middleManagerInfo);
-          }
-          return s;
-        });
+        return servers;
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
@@ -541,7 +542,7 @@ ORDER BY "rank" DESC, "server" DESC`;
                 segmentsToDropSize,
               );
             },
-            show: capabilities !== 'no-proxy' && hiddenColumns.exists('Detail'),
+            show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Detail'),
           },
           {
             Header: ACTION_COLUMN_LABEL,
@@ -555,7 +556,7 @@ ORDER BY "rank" DESC, "server" DESC`;
               const workerActions = this.getWorkerActions(row.value.host, disabled);
               return <ActionCell actions={workerActions} />;
             },
-            show: capabilities !== 'no-proxy' && hiddenColumns.exists(ACTION_COLUMN_LABEL),
+            show: capabilities.hasOverlordAccess() && hiddenColumns.exists(ACTION_COLUMN_LABEL),
           },
         ]}
       />
@@ -645,7 +646,7 @@ ORDER BY "rank" DESC, "server" DESC`;
 
     const bulkserversActionsMenu = (
       <Menu>
-        {capabilities !== 'no-sql' && (
+        {capabilities.hasSql() && (
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"
@@ -698,7 +699,7 @@ ORDER BY "rank" DESC, "server" DESC`;
           />
           {this.renderBulkServersActions()}
           <TableColumnSelector
-            columns={tableColumns[capabilities]}
+            columns={tableColumns[capabilities.getMode()]}
             onChange={column =>
               this.setState(prevState => ({
                 hiddenColumns: prevState.hiddenColumns.toggle(column),

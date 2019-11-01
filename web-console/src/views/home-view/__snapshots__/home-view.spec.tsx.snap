@@ -6,19 +6,39 @@ exports[`home view matches snapshot 1`] = `
 >
   <StatusCard />
   <DatasourcesCard
-    capabilities="full"
+    capabilities={
+      Capabilities {
+        "mode": "full",
+      }
+    }
   />
   <SegmentsCard
-    capabilities="full"
+    capabilities={
+      Capabilities {
+        "mode": "full",
+      }
+    }
   />
   <SupervisorsCard
-    capabilities="full"
+    capabilities={
+      Capabilities {
+        "mode": "full",
+      }
+    }
   />
   <TasksCard
-    capabilities="full"
+    capabilities={
+      Capabilities {
+        "mode": "full",
+      }
+    }
   />
   <ServersCard
-    capabilities="full"
+    capabilities={
+      Capabilities {
+        "mode": "full",
+      }
+    }
   />
   <LookupsCard />
 </div>

@@ -51,7 +51,7 @@ export class SupervisorsCard extends React.PureComponent<
 
     this.supervisorQueryManager = new QueryManager({
       processQuery: async capabilities => {
-        if (capabilities !== 'no-sql') {
+        if (capabilities.hasSql()) {
           return (await queryDruidSql({
             query: `SELECT
   COUNT(*) FILTER (WHERE "suspended" = 0) AS "runningSupervisorCount",

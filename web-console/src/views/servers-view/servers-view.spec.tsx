@@ -19,6 +19,8 @@
 import { shallow } from 'enzyme';
 import React from 'react';
 
+import { Capabilities } from '../../utils/capabilities';
+
 import { ServersView } from './servers-view';
 
 describe('servers view', () => {
@@ -28,7 +30,7 @@ describe('servers view', () => {
         middleManager={'test'}
         goToQuery={() => {}}
         goToTask={() => {}}
-        capabilities="full"
+        capabilities={Capabilities.FULL}
       />,
     );
     expect(serversView).toMatchSnapshot();

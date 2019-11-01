@@ -50,7 +50,7 @@ export class DatasourcesCard extends React.PureComponent<
     this.datasourceQueryManager = new QueryManager({
       processQuery: async capabilities => {
         let datasources: string[];
-        if (capabilities !== 'no-sql') {
+        if (capabilities.hasSql()) {
           datasources = await queryDruidSql({
             query: `SELECT datasource FROM sys.segments GROUP BY 1`,
           });

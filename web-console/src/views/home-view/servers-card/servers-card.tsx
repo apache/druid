@@ -74,7 +74,7 @@ export class ServersCard extends React.PureComponent<ServersCardProps, ServersCa
 
     this.serverQueryManager = new QueryManager({
       processQuery: async capabilities => {
-        if (capabilities === 'no-sql') {
+        if (!capabilities.hasSql()) {
           const serversResp = await axios.get('/druid/coordinator/v1/servers?simple');
           const middleManagerResp = await axios.get('/druid/indexer/v1/workers');
           return {

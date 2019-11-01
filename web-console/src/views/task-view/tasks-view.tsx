@@ -259,7 +259,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
 
     this.supervisorQueryManager = new QueryManager({
       processQuery: async capabilities => {
-        if (capabilities !== 'no-sql') {
+        if (capabilities.hasSql()) {
           return await queryDruidSql({
             query: TasksView.SUPERVISOR_SQL,
           });
@@ -292,7 +292,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
 
     this.taskQueryManager = new QueryManager({
       processQuery: async capabilities => {
-        if (capabilities !== 'no-sql') {
+        if (capabilities.hasSql()) {
           return await queryDruidSql({
             query: TasksView.TASK_SQL,
           });
@@ -934,7 +934,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
 
     const bulkSupervisorActionsMenu = (
       <Menu>
-        {capabilities !== 'no-sql' && (
+        {capabilities.hasSql() && (
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"
@@ -1060,7 +1060,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
 
     const bulkTaskActionsMenu = (
       <Menu>
-        {capabilities !== 'no-sql' && (
+        {capabilities.hasSql() && (
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"

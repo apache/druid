@@ -50,7 +50,7 @@ export class SegmentsCard extends React.PureComponent<SegmentsCardProps, Segment
 
     this.segmentQueryManager = new QueryManager({
       processQuery: async capabilities => {
-        if (capabilities === 'no-sql') {
+        if (!capabilities.hasSql()) {
           const loadstatusResp = await axios.get('/druid/coordinator/v1/loadstatus?simple');
           const loadstatus = loadstatusResp.data;
           const unavailableSegmentNum = sum(Object.keys(loadstatus), key => loadstatus[key]);

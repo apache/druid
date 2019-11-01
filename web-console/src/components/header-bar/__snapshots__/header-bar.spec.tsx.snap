@@ -10,7 +10,7 @@ exports[`header bar matches snapshot 1`] = `
     <a
       href="#"
     >
-      <Logo />
+      <Memo(DruidLogo) />
     </a>
     <Blueprint3.NavbarDivider />
     <Blueprint3.AnchorButton
@@ -66,7 +66,15 @@ exports[`header bar matches snapshot 1`] = `
     <Blueprint3.Popover
       boundary="scrollParent"
       captureDismiss={false}
-      content={<LegacyMenu />}
+      content={
+        <Memo(LegacyMenu)
+          capabilities={
+            Capabilities {
+              "mode": "full",
+            }
+          }
+        />
+      }
       defaultIsOpen={false}
       disabled={false}
       fill={false}
@@ -85,7 +93,6 @@ exports[`header bar matches snapshot 1`] = `
       wrapperTagName="span"
     >
       <Blueprint3.Button
-        disabled={false}
         icon="share"
         minimal={true}
         text="Legacy"
@@ -153,7 +160,6 @@ exports[`header bar matches snapshot 1`] = `
       wrapperTagName="span"
     >
       <Blueprint3.Button
-        disabled={false}
         icon="cog"
         minimal={true}
       />

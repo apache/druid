@@ -57,11 +57,11 @@ export class ConsoleApplication extends React.PureComponent<
 > {
   static STATUS_TIMEOUT = 2000;
 
-  private capabilitiesQueryManager: QueryManager<null, Capabilities>;
+  private capabilitiesQueryManager: QueryManager<null, Capabilities | null>;
 
-  static async discoverCapabilities(): Promise<Capabilities> {
+  static async discoverCapabilities(): Promise<Capabilities | null> {
     const capabilitiesOverride = localStorageGet(LocalStorageKeys.CAPABILITIES_OVERRIDE);
-    if (capabilitiesOverride) return capabilitiesOverride as Capabilities;
+    if (capabilitiesOverride) return Capabilities.fromMode(capabilitiesOverride as any);
 
     // Check SQL endpoint
     try {
@@ -73,15 +73,15 @@ export class ConsoleApplication extends React.PureComponent<
     } catch (e) {
       const { response } = e;
       if (response.status !== 405 || response.statusText !== 'Method Not Allowed') {
-        return 'full'; // other failure
+        return Capabilities.FULL; // other failure
       }
       try {
         await axios.get('/status', { timeout: ConsoleApplication.STATUS_TIMEOUT });
       } catch (e) {
-        return 'broken'; // total failure
+        return null; // total failure
       }
       // Status works but SQL 405s => the SQL endpoint is disabled
-      return 'no-sql';
+      return Capabilities.fromMode('no-sql');
     }
 
     // Check proxy
@@ -91,55 +91,55 @@ export class ConsoleApplication extends React.PureComponent<
       const { response } = e;
       if (response.status !== 404) {
         console.log('response.statusText', response.statusText);
-        return 'full'; // other failure
+        return Capabilities.FULL; // other failure
       }
-      return 'no-proxy';
+      return Capabilities.fromMode('no-proxy');
     }
 
-    return 'full';
+    return Capabilities.FULL;
   }
 
-  static shownNotifications(capabilities: Capabilities) {
+  static shownNotifications(capabilities: Capabilities | null) {
     let message: JSX.Element;
-    switch (capabilities) {
-      case 'no-sql':
-        message = (
-          <>
-            It appears that the SQL endpoint is disabled. The console will fall back to{' '}
-            <ExternalLink href={DRUID_DOCS_API}>native Druid APIs</ExternalLink> and will be limited
-            in functionality. Look at{' '}
-            <ExternalLink href={DRUID_DOCS_SQL}>the SQL docs</ExternalLink> to enable the SQL
-            endpoint.
-          </>
-        );
-        break;
+    if (capabilities === null) {
+      message = (
+        <>
+          It appears that the the Router node is not responding. The console will not function at
+          the moment
+        </>
+      );
+    } else {
+      switch (capabilities.getMode()) {
+        case 'no-sql':
+          message = (
+            <>
+              It appears that the SQL endpoint is disabled. The console will fall back to{' '}
+              <ExternalLink href={DRUID_DOCS_API}>native Druid APIs</ExternalLink> and will be
+              limited in functionality. Look at{' '}
+              <ExternalLink href={DRUID_DOCS_SQL}>the SQL docs</ExternalLink> to enable the SQL
+              endpoint.
+            </>
+          );
+          break;
 
-      case 'no-proxy':
-        message = (
-          <>
-            It appears that the management proxy is not enabled, the console will operate with
-            limited functionality. Look at{' '}
-            <ExternalLink
-              href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/operations/management-uis.html#druid-console`}
-            >
-              the console docs
-            </ExternalLink>{' '}
-            for more info on how to enable the management proxy.
-          </>
-        );
-        break;
+        case 'no-proxy':
+          message = (
+            <>
+              It appears that the management proxy is not enabled, the console will operate with
+              limited functionality. Look at{' '}
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/operations/management-uis.html#druid-console`}
+              >
+                the console docs
+              </ExternalLink>{' '}
+              for more info on how to enable the management proxy.
+            </>
+          );
+          break;
 
-      case 'broken':
-        message = (
-          <>
-            It appears that the the Router node is not responding. The console will not function at
-            the moment
-          </>
-        );
-        break;
-
-      default:
-        return;
+        default:
+          return;
+      }
     }
 
     AppToaster.show({
@@ -161,21 +161,19 @@ export class ConsoleApplication extends React.PureComponent<
   constructor(props: ConsoleApplicationProps, context: any) {
     super(props, context);
     this.state = {
-      capabilities: 'full',
+      capabilities: Capabilities.FULL,
       capabilitiesLoading: true,
     };
 
     this.capabilitiesQueryManager = new QueryManager({
       processQuery: async () => {
         const capabilities = await ConsoleApplication.discoverCapabilities();
-        if (capabilities !== 'full') {
-          ConsoleApplication.shownNotifications(capabilities);
-        }
+        ConsoleApplication.shownNotifications(capabilities);
         return capabilities;
       },
       onStateChange: ({ result, loading }) => {
         this.setState({
-          capabilities: result || 'full',
+          capabilities: result || Capabilities.FULL,
           capabilitiesLoading: loading,
         });
       },

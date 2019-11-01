@@ -54,7 +54,7 @@ export class TasksCard extends React.PureComponent<TasksCardProps, TasksCardStat
 
     this.taskQueryManager = new QueryManager({
       processQuery: async capabilities => {
-        if (capabilities === 'no-sql') {
+        if (!capabilities.hasSql()) {
           const completeTasksResp = await axios.get('/druid/indexer/v1/completeTasks');
           const runningTasksResp = await axios.get('/druid/indexer/v1/runningTasks');
           const pendingTasksResp = await axios.get('/druid/indexer/v1/pendingTasks');
