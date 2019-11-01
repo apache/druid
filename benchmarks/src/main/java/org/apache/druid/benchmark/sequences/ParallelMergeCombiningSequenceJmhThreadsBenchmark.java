@@ -48,12 +48,12 @@ import java.util.concurrent.TimeUnit;
  * {@link ParallelMergeCombiningSequenceBenchmark} benchmark is also able to introduce a delay between the concurrent
  * processing threads to simulate other more realistic patterns than a simulataneous burst of concurrent threads.
  *
- * Yes, this benchmark is sort of lame, unfortunately I could not figure out how to parameterize @Threads.
+ * Yes, this benchmark is sort of lame, unfortunately I could not figure out how to parameterize @Threads yet.
  */
 @State(Scope.Benchmark)
 @Fork(value = 1, jvmArgsAppend = "-XX:+UseG1GC")
 @Warmup(iterations = 5)
-@Measurement(iterations = 10)
+@Measurement(iterations = 25)
 public class ParallelMergeCombiningSequenceJmhThreadsBenchmark extends BaseParallelMergeCombiningSequenceBenchmark
 {
   /**

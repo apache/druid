@@ -47,8 +47,8 @@ import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
 @Fork(value = 1, jvmArgsAppend = "-XX:+UseG1GC")
-@Warmup(iterations = 5)
-@Measurement(iterations = 10)
+@Warmup(iterations = 1)
+@Measurement(iterations = 1)
 public class ParallelMergeCombiningSequenceBenchmark extends BaseParallelMergeCombiningSequenceBenchmark
 {
   private static final Logger log = new Logger(ParallelMergeCombiningSequenceBenchmark.class);

@@ -38,6 +38,8 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 @State(Scope.Benchmark)
@@ -62,13 +64,6 @@ public class BaseParallelMergeCombiningSequenceBenchmark
       "64"
   })
   int numSequences;
-
-  @Param({
-      "1000",
-      "75000",
-      "10000000"
-  })
-  int rowsPerSequence;
 
   /**
    * Strategy encodes the type of sequence and configuration parameters for that sequence.
@@ -99,18 +94,25 @@ public class BaseParallelMergeCombiningSequenceBenchmark
 
   /**
    * This encodes the type of input sequences and parameters that control their behavior.
-   * 'non-blocking-sequence' uses {@link ParallelMergeCombiningSequenceTest#nonBlockingSequence} to as you might expect
-   * create an input sequence that is lazily generated and will not block while being consumed.
+   * 'non-blocking-sequence-{numRows}' uses {@link ParallelMergeCombiningSequenceTest#nonBlockingSequence} to as you
+   * might expect create an input sequence that is lazily generated and will not block while being consumed.
    *
-   * 'initially-blocking-sequence-{startDelayStart}-{startDelayEnd}ms' uses
+   * 'initially-blocking-sequence-{numRows}-{startDelayStart}-{startDelayEnd}ms' uses
    * {@link ParallelMergeCombiningSequenceTest#blockingSequence} to create a lazily generated input sequence that will
    * initially block for a random time within the range specified in the parameter, and will not perform any additional
    * blocking during further processing.
    *
-   * 'blocking-sequence-{startDelayStart}-{startDelayEnd}ms-{numberOfTimesToBlock}-{frequencyDelay}ms' uses
+   * 'blocking-sequence-{numRows}-{startDelayStart}-{startDelayEnd}ms-{numberOfTimesToBlock}-{frequencyDelay}ms' uses
    * {@link ParallelMergeCombiningSequenceTest#blockingSequence} to create a lazily generated input sequence that will
    * initially block for a random time within the range specified in the parameter, and additionally will randomly block
    * up to the number of occurrences for up to the delay encoded in the parameter.
+   *
+   * 'typical-distribution-sequence' will randomly produce a 'class' of input sequences at the following rates:
+   * - 80% probability of a small result set which has a short initial delay on the order of tens to hundreds of millis
+   *   and input row counts of up to a few thousand
+   * - 20% probability produce a moderately large result set which has an initial delay in the range of a few seconds
+   *   and input sequence row counts in the 50k-75k range
+   * This input sequence is only useful when testing a large number of concurrent threads
    *
    * note: beware when using the blocking sequences for a direct comparison between strategies
    * at minimum they are useful for gauging behavior when sequences block, but because the sequences are not stable
@@ -118,10 +120,19 @@ public class BaseParallelMergeCombiningSequenceBenchmark
    * the form of running a lot of iterations could potentially make them more directly comparable
    */
   @Param({
-      "non-blocking-sequence",
-      "initially-blocking-sequence-100-500ms",
-      "initially-blocking-sequence-4000-5000ms",
-      "blocking-sequence-10-100ms-10-1ms"
+      "non-blocking-sequence-1000",
+      "non-blocking-sequence-75000",
+      "non-blocking-sequence-10000000",
+      "initially-blocking-sequence-1000-100-500ms",
+      "initially-blocking-sequence-75000-100-500ms",
+      "initially-blocking-sequence-10000000-100-500ms",
+      "initially-blocking-sequence-1000-4000-5000ms",
+      "initially-blocking-sequence-75000-4000-5000ms",
+      "initially-blocking-sequence-10000000-4000-5000ms",
+      "blocking-sequence-1000-10-500ms-10-1ms",
+      "blocking-sequence-75000-10-500ms-10-1ms",
+      "blocking-sequence-10000000-10-500ms-10-1ms",
+      "typical-distribution-sequence"
   })
   String inputSequenceType;
 
@@ -130,7 +141,8 @@ public class BaseParallelMergeCombiningSequenceBenchmark
   private int batchSize;
   private int yieldAfter;
 
-  private Supplier<Sequence<ParallelMergeCombiningSequenceTest.IntPair>> inputSequenceFactory;
+  private Supplier<Sequence<ParallelMergeCombiningSequenceTest.IntPair>> homogenousInputSequenceFactory;
+  private Function<Double, Sequence<ParallelMergeCombiningSequenceTest.IntPair>> randomInputSequenceFactory;
   private Supplier<Sequence<ParallelMergeCombiningSequenceTest.IntPair>> outputSequenceFactory;
 
   @Setup(Level.Trial)
@@ -138,14 +150,15 @@ public class BaseParallelMergeCombiningSequenceBenchmark
   {
     String[] inputSequenceTypeSplit = inputSequenceType.split("-");
     if ("initially".equals(inputSequenceTypeSplit[0])) {
-      // e.g. "initially-blocking-sequence-{startDelayStart}-{startDelayEnd}ms"
-      final int startDelayStartMillis = Integer.parseInt(inputSequenceTypeSplit[3]);
+      // e.g. "initially-blocking-sequence-{numRows}-{startDelayStart}-{startDelayEnd}ms"
+      final int numRows = Integer.parseInt(inputSequenceTypeSplit[3]);
+      final int startDelayStartMillis = Integer.parseInt(inputSequenceTypeSplit[4]);
       final int startDelayEndMillis = Integer.parseInt(
-          inputSequenceTypeSplit[4].substring(0, inputSequenceTypeSplit[4].length() - 2)
+          inputSequenceTypeSplit[5].substring(0, inputSequenceTypeSplit[5].length() - 2)
       );
-      inputSequenceFactory = () ->
+      homogenousInputSequenceFactory = () ->
           ParallelMergeCombiningSequenceTest.blockingSequence(
-              rowsPerSequence,
+              numRows,
               startDelayStartMillis,
               startDelayEndMillis,
               -1,
@@ -153,28 +166,57 @@ public class BaseParallelMergeCombiningSequenceBenchmark
               true
           );
     } else if ("blocking".equals(inputSequenceTypeSplit[0])) {
-      // e.g. "blocking-sequence-{startDelayStart}-{startDelayEnd}ms-{numberOfTimesToBlock}-{frequencyDelay}ms"
-      final int startDelayStartMillis = Integer.parseInt(inputSequenceTypeSplit[2]);
+      // e.g. "blocking-sequence-{numRows}-{startDelayStart}-{startDelayEnd}ms-{numberOfTimesToBlock}-{frequencyDelay}ms"
+      final int numRows = Integer.parseInt(inputSequenceTypeSplit[2]);
+      final int startDelayStartMillis = Integer.parseInt(inputSequenceTypeSplit[3]);
       final int startDelayEndMillis = Integer.parseInt(
-          inputSequenceTypeSplit[3].substring(0, inputSequenceTypeSplit[3].length() - 2)
+          inputSequenceTypeSplit[4].substring(0, inputSequenceTypeSplit[4].length() - 2)
       );
-      final int numberOfTimesToBlock = Integer.parseInt(inputSequenceTypeSplit[4]);
+      final int numberOfTimesToBlock = Integer.parseInt(inputSequenceTypeSplit[5]);
       final int maxIterationDelayMillis = Integer.parseInt(
-          inputSequenceTypeSplit[5].substring(0, inputSequenceTypeSplit[5].length() - 2)
+          inputSequenceTypeSplit[6].substring(0, inputSequenceTypeSplit[6].length() - 2)
       );
-      final int frequency = rowsPerSequence / numberOfTimesToBlock;
-      inputSequenceFactory = () ->
+      final int frequency = numRows / numberOfTimesToBlock;
+      homogenousInputSequenceFactory = () ->
           ParallelMergeCombiningSequenceTest.blockingSequence(
-              rowsPerSequence,
+              numRows,
               startDelayStartMillis,
               startDelayEndMillis,
               frequency,
               maxIterationDelayMillis,
               true
           );
-    } else { // non-blocking sequence
-      inputSequenceFactory = () ->
-          ParallelMergeCombiningSequenceTest.nonBlockingSequence(rowsPerSequence, true);
+    }  else if ("non".equals(inputSequenceTypeSplit[0])) {
+      // e.g. "non-blocking-sequence-{numRows}"
+      final int numRows = Integer.parseInt(inputSequenceTypeSplit[3]);
+      homogenousInputSequenceFactory = () ->
+          ParallelMergeCombiningSequenceTest.nonBlockingSequence(numRows, true);
+    } else { // "typical distribution" input sequence
+      // approximately 80% of threads will merge/combine small result sets between 500-10k results per input sequence
+      // blocking for 50-200 ms before initial results are yielded
+      // approximately 20% of threads will merge/combine moderate sized result sets between 50k-75k per input
+      // sequence, blocking for 1000-2500 ms before initial results are yielded
+      randomInputSequenceFactory = (d) -> {
+        if (d < 0.80) { // small queries
+          return ParallelMergeCombiningSequenceTest.blockingSequence(
+              ThreadLocalRandom.current().nextInt(500, 10000),
+              50,
+              200,
+              -1,
+              0,
+              true
+          );
+        } else { // moderately large queries
+          return ParallelMergeCombiningSequenceTest.blockingSequence(
+              ThreadLocalRandom.current().nextInt(50_000, 75_000),
+              1000,
+              2500,
+              -1,
+              0,
+              true
+          );
+        }
+      };
     }
 
     String[] strategySplit = strategy.split("-");
@@ -194,8 +236,13 @@ public class BaseParallelMergeCombiningSequenceBenchmark
   private List<Sequence<ParallelMergeCombiningSequenceTest.IntPair>> createInputSequences()
   {
     List<Sequence<ParallelMergeCombiningSequenceTest.IntPair>> inputSequences = new ArrayList<>(numSequences);
+    final double d = ThreadLocalRandom.current().nextDouble(0.0, 1.0);
     for (int j = 0; j < numSequences; j++) {
-      inputSequences.add(inputSequenceFactory.get());
+      if (randomInputSequenceFactory != null) {
+        inputSequences.add(randomInputSequenceFactory.apply(d));
+      } else {
+        inputSequences.add(homogenousInputSequenceFactory.get());
+      }
     }
     return inputSequences;
   }
