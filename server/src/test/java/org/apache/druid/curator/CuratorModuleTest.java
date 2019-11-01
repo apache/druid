@@ -130,6 +130,7 @@ public final class CuratorModuleTest
     );
   }
 
+  @Ignore
   @Test
   public void exitsJvmWhenMaxRetriesExceeded() throws Exception
   {
