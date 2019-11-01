@@ -8,35 +8,50 @@ exports[`home view matches snapshot 1`] = `
   <DatasourcesCard
     capabilities={
       Capabilities {
-        "mode": "full",
+        "coordinator": true,
+        "native": true,
+        "overlord": true,
+        "sql": true,
       }
     }
   />
   <SegmentsCard
     capabilities={
       Capabilities {
-        "mode": "full",
+        "coordinator": true,
+        "native": true,
+        "overlord": true,
+        "sql": true,
       }
     }
   />
   <SupervisorsCard
     capabilities={
       Capabilities {
-        "mode": "full",
+        "coordinator": true,
+        "native": true,
+        "overlord": true,
+        "sql": true,
       }
     }
   />
   <TasksCard
     capabilities={
       Capabilities {
-        "mode": "full",
+        "coordinator": true,
+        "native": true,
+        "overlord": true,
+        "sql": true,
       }
     }
   />
   <ServersCard
     capabilities={
       Capabilities {
-        "mode": "full",
+        "coordinator": true,
+        "native": true,
+        "overlord": true,
+        "sql": true,
       }
     }
   />

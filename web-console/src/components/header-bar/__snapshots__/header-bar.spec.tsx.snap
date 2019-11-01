@@ -54,6 +54,7 @@ exports[`header bar matches snapshot 1`] = `
     <Blueprint3.NavbarDivider />
     <Blueprint3.AnchorButton
       active={false}
+      disabled={false}
       href="#query"
       icon="application"
       minimal={true}
@@ -70,7 +71,10 @@ exports[`header bar matches snapshot 1`] = `
         <Memo(LegacyMenu)
           capabilities={
             Capabilities {
-              "mode": "full",
+              "coordinator": true,
+              "native": true,
+              "overlord": true,
+              "sql": true,
             }
           }
         />
