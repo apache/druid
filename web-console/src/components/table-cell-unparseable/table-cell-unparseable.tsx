@@ -16,44 +16,22 @@
  * limitations under the License.
  */
 
-@import '../node_modules/normalize.css/normalize';
-@import '../node_modules/@blueprintjs/core/lib/css/blueprint';
-@import '../lib/react-table';
-@import '../node_modules/react-splitter-layout/lib/index.css';
+import React from 'react';
 
-html,
-body {
-  //font-family: 'Open Sans', Helvetica, Arial, sans-serif;
-  position: fixed;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-  font-size: 13px;
+import './table-cell-unparseable.scss';
+
+export interface TableCellUnparseableProps {
+  timestamp?: boolean;
 }
 
-body {
-  &.bp3-dark {
-    background: rgb(41, 55, 66);
-  }
+export const TableCellUnparseable = React.memo(function TableCellUnparseable(
+  props: TableCellUnparseableProps,
+) {
+  const { timestamp } = props;
 
-  &.mouse-mode {
-    *:focus {
-      outline: none !important;
-    }
-  }
-}
-
-.app-container {
-  position: absolute;
-  height: 100%;
-  width: 100%;
-}
-
-.label-info-text {
-  max-width: 400px;
-  padding: 15px;
-
-  p:last-child {
-    margin-bottom: 0;
-  }
-}
+  return (
+    <div className="table-cell-unparseable">
+      {timestamp ? 'unparseable timestamp' : 'unparseable'}
+    </div>
+  );
+});

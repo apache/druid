@@ -21,10 +21,11 @@ import axios from 'axios';
 import React from 'react';
 
 import { compact, lookupBy, pluralIfNeeded, queryDruidSql, QueryManager } from '../../../utils';
+import { Capabilities } from '../../../utils/capabilities';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface ServersCardProps {
-  noSqlMode: boolean;
+  capabilities: Capabilities;
 }
 
 export interface ServersCardState {
@@ -55,7 +56,7 @@ export class ServersCard extends React.PureComponent<ServersCardProps, ServersCa
     return <p>{text}</p>;
   }
 
-  private serverQueryManager: QueryManager<boolean, any>;
+  private serverQueryManager: QueryManager<Capabilities, any>;
 
   constructor(props: ServersCardProps, context: any) {
     super(props, context);
@@ -72,8 +73,8 @@ export class ServersCard extends React.PureComponent<ServersCardProps, ServersCa
     };
 
     this.serverQueryManager = new QueryManager({
-      processQuery: async noSqlMode => {
-        if (noSqlMode) {
+      processQuery: async capabilities => {
+        if (capabilities === 'no-sql') {
           const serversResp = await axios.get('/druid/coordinator/v1/servers?simple');
           const middleManagerResp = await axios.get('/druid/indexer/v1/workers');
           return {
@@ -109,9 +110,9 @@ export class ServersCard extends React.PureComponent<ServersCardProps, ServersCa
   }
 
   componentDidMount(): void {
-    const { noSqlMode } = this.props;
+    const { capabilities } = this.props;
 
-    this.serverQueryManager.runQuery(noSqlMode);
+    this.serverQueryManager.runQuery(capabilities);
   }
 
   componentWillUnmount(): void {

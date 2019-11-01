@@ -36,6 +36,7 @@ import { AboutDialog } from '../../dialogs/about-dialog/about-dialog';
 import { CoordinatorDynamicConfigDialog } from '../../dialogs/coordinator-dynamic-config-dialog/coordinator-dynamic-config-dialog';
 import { DoctorDialog } from '../../dialogs/doctor-dialog/doctor-dialog';
 import { OverlordDynamicConfigDialog } from '../../dialogs/overlord-dynamic-config-dialog/overlord-dynamic-config-dialog';
+import { Capabilities } from '../../utils/capabilities';
 import {
   DRUID_ASF_SLACK,
   DRUID_DOCS,
@@ -60,7 +61,13 @@ export type HeaderActiveTab =
 function Logo() {
   return (
     <div className="logo">
-      <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 288 134">
+      <svg
+        version="1.1"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 288 134"
+        width="288"
+        height="134"
+      >
         <path
           fill="#FFFFFF"
           d="M136.7,67.5c0.5-6.1,5-10.4,10.6-10.4c3.9,0,6.5,2,7.4,4.3l1.1-12.4c0-0.1,0.3-0.2,0.7-0.2
@@ -130,10 +137,11 @@ function LegacyMenu() {
 export interface HeaderBarProps {
   active: HeaderActiveTab;
   hideLegacy: boolean;
+  capabilities: Capabilities;
 }
 
 export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
-  const { active, hideLegacy } = props;
+  const { active, hideLegacy, capabilities } = props;
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [doctorDialogOpen, setDoctorDialogOpen] = useState(false);
   const [coordinatorDynamicConfigDialogOpen, setCoordinatorDynamicConfigDialogOpen] = useState(
@@ -198,6 +206,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           href="#load-data"
           minimal={!loadDataPrimary}
           intent={loadDataPrimary ? Intent.PRIMARY : Intent.NONE}
+          disabled={capabilities === 'no-proxy'}
         />
 
         <NavbarDivider />
@@ -241,12 +250,25 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
         {!hideLegacy && (
-          <Popover content={<LegacyMenu />} position={Position.BOTTOM_RIGHT}>
-            <Button minimal icon={IconNames.SHARE} text="Legacy" />
+          <Popover
+            content={<LegacyMenu />}
+            position={Position.BOTTOM_RIGHT}
+            disabled={capabilities === 'no-proxy'}
+          >
+            <Button
+              minimal
+              icon={IconNames.SHARE}
+              text="Legacy"
+              disabled={capabilities === 'no-proxy'}
+            />
           </Popover>
         )}
-        <Popover content={configMenu} position={Position.BOTTOM_RIGHT}>
-          <Button minimal icon={IconNames.COG} />
+        <Popover
+          content={configMenu}
+          position={Position.BOTTOM_RIGHT}
+          disabled={capabilities === 'no-proxy'}
+        >
+          <Button minimal icon={IconNames.COG} disabled={capabilities === 'no-proxy'} />
         </Popover>
         <Popover content={helpMenu} position={Position.BOTTOM_RIGHT}>
           <Button minimal icon={IconNames.HELP} />

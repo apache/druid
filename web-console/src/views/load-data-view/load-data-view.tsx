@@ -2444,29 +2444,47 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       const curDimensions =
         deepGet(spec, `dataSchema.parser.parseSpec.dimensionsSpec.dimensions`) || EMPTY_ARRAY;
 
+      const convertToMetric = (type: string, prefix: string) => {
+        const specWithoutDimension = deepDelete(
+          spec,
+          `dataSchema.parser.parseSpec.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
+        );
+
+        const specWithMetric = deepSet(specWithoutDimension, `dataSchema.metricsSpec.[append]`, {
+          name: `${prefix}_${selectedDimensionSpec.name}`,
+          type,
+          fieldName: selectedDimensionSpec.name,
+        });
+
+        this.updateSpec(specWithMetric);
+        close();
+      };
+
       const convertToMetricMenu = (
         <Menu>
           <MenuItem
+            text="Convert to longSum metric"
+            onClick={() => convertToMetric('longSum', 'sum')}
+          />
+          <MenuItem
+            text="Convert to doubleSum metric"
+            onClick={() => convertToMetric('doubleSum', 'sum')}
+          />
+          <MenuItem
+            text="Convert to thetaSketch metric"
+            onClick={() => convertToMetric('thetaSketch', 'theta')}
+          />
+          <MenuItem
+            text="Convert to HLLSketchBuild metric"
+            onClick={() => convertToMetric('HLLSketchBuild', 'hll')}
+          />
+          <MenuItem
+            text="Convert to quantilesDoublesSketch metric"
+            onClick={() => convertToMetric('quantilesDoublesSketch', 'quantiles_doubles')}
+          />
+          <MenuItem
             text="Convert to hyperUnique metric"
-            onClick={() => {
-              const specWithoutDimension = deepDelete(
-                spec,
-                `dataSchema.parser.parseSpec.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
-              );
-
-              const specWithMetric = deepSet(
-                specWithoutDimension,
-                `dataSchema.metricsSpec.[append]`,
-                {
-                  name: `unique_${selectedDimensionSpec.name}`,
-                  type: 'hyperUnique',
-                  fieldName: selectedDimensionSpec.name,
-                },
-              );
-
-              this.updateSpec(specWithMetric);
-              close();
-            }}
+            onClick={() => convertToMetric('hyperUnique', 'unique')}
           />
         </Menu>
       );
@@ -2483,7 +2501,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <Popover content={convertToMetricMenu}>
                 <Button
                   icon={IconNames.EXCHANGE}
-                  text="Convert to metric..."
+                  text="Convert to metric"
+                  rightIcon={IconNames.CARET_DOWN}
                   disabled={curDimensions.length <= 1}
                 />
               </Popover>
@@ -2602,7 +2621,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {selectedMetricSpecIndex !== -1 && (
             <FormGroup>
               <Popover content={convertToDimensionMenu}>
-                <Button icon={IconNames.EXCHANGE} text="Convert to dimension..." />
+                <Button
+                  icon={IconNames.EXCHANGE}
+                  text="Convert to dimension"
+                  rightIcon={IconNames.CARET_DOWN}
+                />
               </Popover>
             </FormGroup>
           )}

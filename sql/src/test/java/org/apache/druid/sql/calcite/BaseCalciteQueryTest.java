@@ -54,7 +54,6 @@ import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.query.select.PagingSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -214,7 +213,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   // Matches QUERY_CONTEXT_LOS_ANGELES
   public static final Map<String, Object> TIMESERIES_CONTEXT_LOS_ANGELES = new HashMap<>();
-  public static final PagingSpec FIRST_PAGING_SPEC = new PagingSpec(null, 1000, true);
 
   public static QueryRunnerFactoryConglomerate conglomerate;
   public static Closer resourceCloser;

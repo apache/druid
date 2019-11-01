@@ -59,6 +59,7 @@ exports[`retention dialog matches snapshot 1`] = `
              
             <a
               href="https://druid.apache.org/docs/0.16.0-incubating/operations/rule-configuration.html"
+              rel="noopener noreferrer"
               target="_blank"
             >
               documentation

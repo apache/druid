@@ -4611,6 +4611,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         false
     );
 
@@ -4743,6 +4744,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
         recordsPerFetch,
         fetchDelayMillis,
         null,
@@ -4827,6 +4829,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
         recordsPerFetch,
         fetchDelayMillis,
         null,
@@ -4913,6 +4916,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
         recordsPerFetch,
         fetchDelayMillis,
         null,
