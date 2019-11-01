@@ -252,7 +252,7 @@ public class DirectDruidClientTest
         )
     )
             .andReturn(cancellationFuture)
-            .once();
+            .anyTimes();
 
     EasyMock.replay(httpClient);
 
