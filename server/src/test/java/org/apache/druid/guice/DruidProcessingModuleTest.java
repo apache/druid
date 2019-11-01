@@ -23,6 +23,7 @@ import com.google.inject.ProvisionException;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.utils.JvmUtils;
 import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class DruidProcessingModuleTest
@@ -57,6 +58,7 @@ public class DruidProcessingModuleTest
     });
   }
 
+  @Ignore
   @Test
   public void testMemoryCheckIsChillByDefaultIfNothingSet()
   {
