@@ -23,7 +23,7 @@ import { TasksCard } from './tasks-card';
 
 describe('tasks card', () => {
   it('matches snapshot', () => {
-    const tasksCard = <TasksCard noSqlMode={false} />;
+    const tasksCard = <TasksCard capabilities="full" />;
 
     const { container } = render(tasksCard);
     expect(container.firstChild).toMatchSnapshot();

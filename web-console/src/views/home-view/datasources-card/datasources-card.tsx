@@ -21,10 +21,11 @@ import axios from 'axios';
 import React from 'react';
 
 import { pluralIfNeeded, queryDruidSql, QueryManager } from '../../../utils';
+import { Capabilities } from '../../../utils/capabilities';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface DatasourcesCardProps {
-  noSqlMode: boolean;
+  capabilities: Capabilities;
 }
 
 export interface DatasourcesCardState {
@@ -37,7 +38,7 @@ export class DatasourcesCard extends React.PureComponent<
   DatasourcesCardProps,
   DatasourcesCardState
 > {
-  private datasourceQueryManager: QueryManager<boolean, any>;
+  private datasourceQueryManager: QueryManager<Capabilities, any>;
 
   constructor(props: DatasourcesCardProps, context: any) {
     super(props, context);
@@ -47,9 +48,9 @@ export class DatasourcesCard extends React.PureComponent<
     };
 
     this.datasourceQueryManager = new QueryManager({
-      processQuery: async noSqlMode => {
+      processQuery: async capabilities => {
         let datasources: string[];
-        if (!noSqlMode) {
+        if (capabilities !== 'no-sql') {
           datasources = await queryDruidSql({
             query: `SELECT datasource FROM sys.segments GROUP BY 1`,
           });
@@ -70,9 +71,9 @@ export class DatasourcesCard extends React.PureComponent<
   }
 
   componentDidMount(): void {
-    const { noSqlMode } = this.props;
+    const { capabilities } = this.props;
 
-    this.datasourceQueryManager.runQuery(noSqlMode);
+    this.datasourceQueryManager.runQuery(capabilities);
   }
 
   componentWillUnmount(): void {

@@ -23,7 +23,7 @@ import { DatasourcesCard } from './datasources-card';
 
 describe('datasources card', () => {
   it('matches snapshot', () => {
-    const datasourcesCard = <DatasourcesCard noSqlMode={false} />;
+    const datasourcesCard = <DatasourcesCard capabilities="full" />;
 
     const { container } = render(datasourcesCard);
     expect(container.firstChild).toMatchSnapshot();

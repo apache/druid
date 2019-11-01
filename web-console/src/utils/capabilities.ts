@@ -16,21 +16,4 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
-import React from 'react';
-
-import { ServersView } from './servers-view';
-
-describe('servers view', () => {
-  it('action servers view', () => {
-    const serversView = shallow(
-      <ServersView
-        middleManager={'test'}
-        goToQuery={() => {}}
-        goToTask={() => {}}
-        capabilities="full"
-      />,
-    );
-    expect(serversView).toMatchSnapshot();
-  });
-});
+export type Capabilities = 'full' | 'no-sql' | 'no-proxy' | 'broken';

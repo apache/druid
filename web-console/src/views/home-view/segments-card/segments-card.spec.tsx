@@ -23,7 +23,7 @@ import { SegmentsCard } from './segments-card';
 
 describe('segments card', () => {
   it('matches snapshot', () => {
-    const segmentsCard = <SegmentsCard noSqlMode={false} />;
+    const segmentsCard = <SegmentsCard capabilities="full" />;
 
     const { container } = render(segmentsCard);
     expect(container.firstChild).toMatchSnapshot();
