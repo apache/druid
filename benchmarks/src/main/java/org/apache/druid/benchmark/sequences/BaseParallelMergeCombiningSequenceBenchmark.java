@@ -186,7 +186,7 @@ public class BaseParallelMergeCombiningSequenceBenchmark
               maxIterationDelayMillis,
               true
           );
-    }  else if ("non".equals(inputSequenceTypeSplit[0])) {
+    } else if ("non".equals(inputSequenceTypeSplit[0])) {
       // e.g. "non-blocking-sequence-{numRows}"
       final int numRows = Integer.parseInt(inputSequenceTypeSplit[3]);
       homogeneousInputSequenceFactory = () ->
