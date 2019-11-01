@@ -469,45 +469,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             {
               openConnections.getAndDecrement();
               if (future.isCancelled()) {
-                cancel();
+                cancelQuery(query, cancelUrl);
               }
-            }
-
-            private void cancel()
-            {
-              Runnable cancelRunnable = () -> {
-                try {
-                  Future<StatusResponseHolder> responseFuture = httpClient.go(
-                      new Request(HttpMethod.DELETE, new URL(cancelUrl))
-                      .setContent(objectMapper.writeValueAsBytes(query))
-                      .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON),
-                      StatusResponseHandler.getInstance(),
-                      Duration.standardSeconds(1));
-
-                  Runnable checkRunnable = () -> {
-                    try {
-                      if (!responseFuture.isDone()) {
-                        log.error("Error cancelling query[%s]: ", query);
-                      }
-                      StatusResponseHolder response = responseFuture.get();
-                      if (response.getStatus().getCode() >= 500) {
-                        log.error("Error cancelling query[%s]: queriable node returned status[%d] [%s].",
-                            query,
-                            response.getStatus().getCode(),
-                            response.getStatus().getReasonPhrase());
-                      }
-                    }
-                    catch (ExecutionException | InterruptedException e) {
-                      log.error("Error cancelling query[%s]: ", query);
-                    }
-                  };
-                  queryCancellationExecutor.schedule(checkRunnable, 5, TimeUnit.SECONDS);
-                }
-                catch (IOException e) {
-                  log.error("Error cancelling query[%s]: ", query);
-                }
-              };
-              queryCancellationExecutor.submit(cancelRunnable);
             }
           },
           // The callback is non-blocking and quick, so it's OK to schedule it using directExecutor()
@@ -556,6 +519,43 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     }
 
     return retVal;
+  }
+
+  private <T> void cancelQuery(Query<T> query, String cancelUrl)
+  {
+    Runnable cancelRunnable = () -> {
+      try {
+        Future<StatusResponseHolder> responseFuture = httpClient.go(
+            new Request(HttpMethod.DELETE, new URL(cancelUrl))
+            .setContent(objectMapper.writeValueAsBytes(query))
+            .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON),
+            StatusResponseHandler.getInstance(),
+            Duration.standardSeconds(1));
+
+        Runnable checkRunnable = () -> {
+          try {
+            if (!responseFuture.isDone()) {
+              log.error("Error cancelling query[%s]: ", query);
+            }
+            StatusResponseHolder response = responseFuture.get();
+            if (response.getStatus().getCode() >= 500) {
+              log.error("Error cancelling query[%s]: queriable node returned status[%d] [%s].",
+                  query,
+                  response.getStatus().getCode(),
+                  response.getStatus().getReasonPhrase());
+            }
+          }
+          catch (ExecutionException | InterruptedException e) {
+            log.error("Error cancelling query[%s]: ", query);
+          }
+        };
+        queryCancellationExecutor.schedule(checkRunnable, 5, TimeUnit.SECONDS);
+      }
+      catch (IOException e) {
+        log.error("Error cancelling query[%s]: ", query);
+      }
+    };
+    queryCancellationExecutor.submit(cancelRunnable);
   }
 
   @Override
