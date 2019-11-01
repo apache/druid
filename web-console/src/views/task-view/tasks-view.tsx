@@ -263,7 +263,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           return await queryDruidSql({
             query: TasksView.SUPERVISOR_SQL,
           });
-        } else {
+        } else if (capabilities.hasOverlordAccess()) {
           const supervisors = (await axios.get('/druid/indexer/v1/supervisor?full')).data;
           if (!Array.isArray(supervisors)) throw new Error(`Unexpected results`);
           return supervisors.map((sup: any) => {
@@ -279,6 +279,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               suspended: Number(deepGet(sup, 'suspended')),
             };
           });
+        } else {
+          throw new Error(`must have SQL or overlord access`);
         }
       },
       onStateChange: ({ result, loading, error }) => {
@@ -296,7 +298,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           return await queryDruidSql({
             query: TasksView.TASK_SQL,
           });
-        } else {
+        } else if (capabilities.hasOverlordAccess()) {
           const taskEndpoints: string[] = [
             'completeTasks',
             'runningTasks',
@@ -310,6 +312,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             }),
           );
           return result.flat();
+        } else {
+          throw new Error(`must have SQL or overlord access`);
         }
       },
       onStateChange: ({ result, loading, error }) => {

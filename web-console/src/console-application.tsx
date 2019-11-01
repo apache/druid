@@ -90,7 +90,6 @@ export class ConsoleApplication extends React.PureComponent<
     } catch (e) {
       const { response } = e;
       if (response.status !== 404) {
-        console.log('response.statusText', response.statusText);
         return Capabilities.FULL; // other failure
       }
       return Capabilities.fromMode('no-proxy');

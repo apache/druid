@@ -50,7 +50,15 @@ export class SegmentsCard extends React.PureComponent<SegmentsCardProps, Segment
 
     this.segmentQueryManager = new QueryManager({
       processQuery: async capabilities => {
-        if (!capabilities.hasSql()) {
+        if (capabilities.hasSql()) {
+          const segments = await queryDruidSql({
+            query: `SELECT
+  COUNT(*) as "count",
+  COUNT(*) FILTER (WHERE is_available = 0) as "unavailable"
+FROM sys.segments`,
+          });
+          return segments.length === 1 ? segments[0] : null;
+        } else if (capabilities.hasCoordinatorAccess()) {
           const loadstatusResp = await axios.get('/druid/coordinator/v1/loadstatus?simple');
           const loadstatus = loadstatusResp.data;
           const unavailableSegmentNum = sum(Object.keys(loadstatus), key => loadstatus[key]);
@@ -66,13 +74,7 @@ export class SegmentsCard extends React.PureComponent<SegmentsCardProps, Segment
             unavailable: unavailableSegmentNum,
           };
         } else {
-          const segments = await queryDruidSql({
-            query: `SELECT
-  COUNT(*) as "count",
-  COUNT(*) FILTER (WHERE is_available = 0) as "unavailable"
-FROM sys.segments`,
-          });
-          return segments.length === 1 ? segments[0] : null;
+          throw new Error(`must have SQL or coordinator access`);
         }
       },
       onStateChange: ({ result, loading, error }) => {

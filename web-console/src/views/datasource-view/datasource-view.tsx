@@ -248,7 +248,7 @@ GROUP BY 1`;
         let datasources: DatasourceQueryResultRow[];
         if (capabilities.hasSql()) {
           datasources = await queryDruidSql({ query: DatasourcesView.DATASOURCE_SQL });
-        } else {
+        } else if (capabilities.hasCoordinatorAccess()) {
           const datasourcesResp = await axios.get('/druid/coordinator/v1/datasources?simple');
           const loadstatusResp = await axios.get('/druid/coordinator/v1/loadstatus?simple');
           const loadstatus = loadstatusResp.data;
@@ -271,6 +271,8 @@ GROUP BY 1`;
               };
             },
           );
+        } else {
+          throw new Error(`must have SQL or coordinator access`);
         }
 
         if (!capabilities.hasCoordinatorAccess()) {

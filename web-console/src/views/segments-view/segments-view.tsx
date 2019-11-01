@@ -338,7 +338,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
   componentDidMount(): void {
     const { capabilities } = this.props;
-    if (!capabilities.hasSql()) {
+    if (!capabilities.hasSql() && capabilities.hasCoordinatorAccess()) {
       this.segmentsNoSqlQueryManager.runQuery(null);
     }
   }
@@ -425,21 +425,21 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         onFilteredChange={filtered => {
           this.setState({ segmentFilter: filtered });
         }}
-        onFetchData={
-          !capabilities.hasSql()
-            ? this.fetchClientSideData
-            : state => {
-                this.setState({
-                  page: state.page,
-                  pageSize: state.pageSize,
-                  filtered: state.filtered,
-                  sorted: state.sorted,
-                });
-                if (this.segmentsSqlQueryManager.getLastQuery) {
-                  this.fetchData(groupByInterval, state);
-                }
-              }
-        }
+        onFetchData={state => {
+          if (capabilities.hasSql()) {
+            this.setState({
+              page: state.page,
+              pageSize: state.pageSize,
+              filtered: state.filtered,
+              sorted: state.sorted,
+            });
+            if (this.segmentsSqlQueryManager.getLastQuery) {
+              this.fetchData(groupByInterval, state);
+            }
+          } else if (capabilities.hasCoordinatorAccess()) {
+            this.fetchClientSideData();
+          }
+        }}
         showPageJump={false}
         ofText=""
         pivotBy={groupByInterval ? ['interval'] : []}
@@ -713,7 +713,11 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 active={!groupByInterval}
                 onClick={() => {
                   this.setState({ groupByInterval: false });
-                  !capabilities.hasSql() ? this.fetchClientSideData() : this.fetchData(false);
+                  if (capabilities.hasSql()) {
+                    this.fetchData(false);
+                  } else {
+                    this.fetchClientSideData();
+                  }
                 }}
               >
                 None

@@ -74,15 +74,7 @@ export class ServersCard extends React.PureComponent<ServersCardProps, ServersCa
 
     this.serverQueryManager = new QueryManager({
       processQuery: async capabilities => {
-        if (!capabilities.hasSql()) {
-          const serversResp = await axios.get('/druid/coordinator/v1/servers?simple');
-          const middleManagerResp = await axios.get('/druid/indexer/v1/workers');
-          return {
-            historical: serversResp.data.filter((s: any) => s.type === 'historical').length,
-            middle_manager: middleManagerResp.data.length,
-            peon: serversResp.data.filter((s: any) => s.type === 'indexer-executor').length,
-          };
-        } else {
+        if (capabilities.hasSql()) {
           const serverCountsFromQuery: {
             server_type: string;
             count: number;
@@ -90,6 +82,22 @@ export class ServersCard extends React.PureComponent<ServersCardProps, ServersCa
             query: `SELECT server_type, COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
           });
           return lookupBy(serverCountsFromQuery, x => x.server_type, x => x.count);
+        } else if (capabilities.hasCoordinatorAccess() || capabilities.hasOverlordAccess()) {
+          const servers = capabilities.hasCoordinatorAccess()
+            ? (await axios.get('/druid/coordinator/v1/servers?simple')).data
+            : [];
+
+          const middleManager = capabilities.hasOverlordAccess()
+            ? (await axios.get('/druid/indexer/v1/workers')).data
+            : [];
+
+          return {
+            historical: servers.filter((s: any) => s.type === 'historical').length,
+            middle_manager: middleManager.length,
+            peon: servers.filter((s: any) => s.type === 'indexer-executor').length,
+          };
+        } else {
+          throw new Error(`must have SQL or coordinator/overlord access`);
         }
       },
       onStateChange: ({ result, loading, error }) => {

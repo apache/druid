@@ -218,8 +218,10 @@ ORDER BY "rank" DESC, "server" DESC`;
         let servers: ServerQueryResultRow[];
         if (capabilities.hasSql()) {
           servers = await queryDruidSql({ query: ServersView.SERVER_SQL });
-        } else {
+        } else if (capabilities.hasCoordinatorAccess()) {
           servers = await ServersView.getServers();
+        } else {
+          throw new Error(`must have SQL or coordinator access`);
         }
 
         if (capabilities.hasCoordinatorAccess()) {
