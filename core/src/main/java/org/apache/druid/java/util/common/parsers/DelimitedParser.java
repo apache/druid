@@ -98,8 +98,9 @@ public class DelimitedParser extends AbstractFlatTextFormatParser
       String splitValue = iterator.next();
       if (!NullHandling.replaceWithDefault() && splitValue.isEmpty()) {
         result.add(null);
+      } else {
+        result.add(splitValue);
       }
-      result.add(splitValue);
     }
 
     return Collections.unmodifiableList(result);
