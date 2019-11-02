@@ -535,7 +535,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         Runnable checkRunnable = () -> {
           try {
             if (!responseFuture.isDone()) {
-              log.error("Error cancelling query[%s]: ", query);
+              log.error("Error cancelling query[%s]", query);
             }
             StatusResponseHolder response = responseFuture.get();
             if (response.getStatus().getCode() >= 500) {
@@ -546,13 +546,13 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             }
           }
           catch (ExecutionException | InterruptedException e) {
-            log.error("Error cancelling query[%s]: ", query);
+            log.error(e, "Error cancelling query[%s]", query);
           }
         };
         queryCancellationExecutor.schedule(checkRunnable, 5, TimeUnit.SECONDS);
       }
       catch (IOException e) {
-        log.error("Error cancelling query[%s]: ", query);
+        log.error(e, "Error cancelling query[%s]", query);
       }
     };
     queryCancellationExecutor.submit(cancelRunnable);
