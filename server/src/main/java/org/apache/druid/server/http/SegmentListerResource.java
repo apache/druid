@@ -29,6 +29,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.HttpServerInventoryView;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.BatchDataSegmentAnnouncer;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
@@ -54,6 +55,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Endpoints exposed here are to be used only for druid internal management of segments by Coordinators, Brokers etc.
@@ -68,6 +70,7 @@ public class SegmentListerResource
   protected final ObjectMapper smileMapper;
   private final BatchDataSegmentAnnouncer announcer;
   private final SegmentLoadDropHandler loadDropRequestHandler;
+  private final ExecutorService jsonWriter;
 
   @Inject
   public SegmentListerResource(
@@ -81,6 +84,7 @@ public class SegmentListerResource
     this.smileMapper = smileMapper;
     this.announcer = announcer;
     this.loadDropRequestHandler = loadDropRequestHandler;
+    this.jsonWriter = Execs.singleThreaded("json-writer");
   }
 
   /**
@@ -205,7 +209,8 @@ public class SegmentListerResource
               log.debug(ex, "Request timed out or closed already.");
             }
           }
-        }
+        },
+        jsonWriter
     );
 
     asyncContext.setTimeout(timeout);
@@ -317,7 +322,8 @@ public class SegmentListerResource
               log.debug(ex, "Request timed out or closed already.");
             }
           }
-        }
+        },
+        jsonWriter
     );
 
     asyncContext.setTimeout(timeout);

@@ -74,6 +74,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.collect.Utils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -126,6 +127,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -219,6 +221,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private final List<ListenableFuture<SegmentsAndMetadata>> handOffWaitList = new ArrayList<>();
 
   private final LockGranularity lockGranularityToUse;
+  private final ExecutorService sequencePersistExecutor;
 
   private volatile DateTime startTime;
   private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
@@ -268,6 +271,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.sequences = new CopyOnWriteArrayList<>();
     this.ingestionState = IngestionState.NOT_STARTED;
     this.lockGranularityToUse = lockGranularityToUse;
+    this.sequencePersistExecutor = Execs.singleThreaded("sequence-persist-executor");
 
     resetNextCheckpointTime();
   }
@@ -733,7 +737,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                           log.error("Persist failed, dying");
                           backgroundThreadException = t;
                         }
-                      }
+                      },
+                      // The callback is non-blocking and quick, so it's OK to schedule it using directExecutor()
+                      Execs.directExecutor()
                   );
                 }
               }
@@ -1065,7 +1071,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             log.error(t, "Error while publishing segments for sequenceNumber[%s]", sequenceMetadata);
             handoffFuture.setException(t);
           }
-        }
+        },
+        sequencePersistExecutor
     );
   }
 

@@ -256,7 +256,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                           waitingForMonitor.notifyAll();
                         }
                       }
-                    }
+                    },
+                    // The callback is non-blocking and quick, so it's OK to schedule it using directExecutor()
+                    Execs.directExecutor()
                 );
                 break;
               case CHILD_UPDATED:
@@ -1200,7 +1202,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           {
             removedWorkerCleanups.remove(worker, cleanupTask);
           }
-        }
+        },
+        // The callback is non-blocking and quick, so it's OK to schedule it using directExecutor()
+        Execs.directExecutor()
     );
   }
 

@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.hrtr.WorkerHolder;
 import org.apache.druid.indexing.worker.WorkerHistoryItem;
 import org.apache.druid.indexing.worker.WorkerTaskMonitor;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
@@ -53,6 +54,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Endpoints used by Overlord to Manage tasks on this Middle Manager.
@@ -66,6 +68,7 @@ public class TaskManagementResource
   protected final ObjectMapper jsonMapper;
   protected final ObjectMapper smileMapper;
   private final WorkerTaskMonitor workerTaskMonitor;
+  private final ExecutorService jsonWriter;
 
   @Inject
   public TaskManagementResource(
@@ -77,6 +80,7 @@ public class TaskManagementResource
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
     this.workerTaskMonitor = workerTaskMonitor;
+    this.jsonWriter = Execs.singleThreaded("json-writer");
   }
 
   /**
@@ -192,7 +196,8 @@ public class TaskManagementResource
               log.debug(ex, "Request timed out or closed already.");
             }
           }
-        }
+        },
+        jsonWriter
     );
 
     asyncContext.setTimeout(timeout);

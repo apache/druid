@@ -359,7 +359,9 @@ public class CachingClusteredClientTest
                   {
                     pair.lhs.setException(t);
                   }
-                }
+                },
+                // The callback is non-blocking and quick, so it's OK to schedule it using directExecutor()
+                Execs.directExecutor()
             );
           }
         }

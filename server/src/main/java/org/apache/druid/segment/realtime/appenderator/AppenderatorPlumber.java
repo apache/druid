@@ -330,7 +330,9 @@ public class AppenderatorPlumber implements Plumber
             // TODO: Retry?
             log.warn(e, "Failed to drop segment: %s", identifier);
           }
-        }
+        },
+        // The callback is non-blocking and quick, so it's OK to schedule it using directExecutor()
+        Execs.directExecutor()
     );
   }
 
@@ -483,7 +485,8 @@ public class AppenderatorPlumber implements Plumber
             log.warn(e, "Failed to push [%,d] segments.", segmentsToPush.size());
             errorHandler.apply(e);
           }
-        }
+        },
+        scheduledExecutor
     );
   }
 }

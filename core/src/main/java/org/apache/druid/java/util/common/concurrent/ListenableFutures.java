@@ -61,7 +61,9 @@ public class ListenableFutures
           {
             finalFuture.setException(t);
           }
-        });
+        },
+            // The callback is non-blocking and quick, so it's OK to schedule it using directExecutor()
+            Execs.directExecutor());
       }
 
       @Override
@@ -69,7 +71,9 @@ public class ListenableFutures
       {
         finalFuture.setException(t);
       }
-    });
+    },
+        // The callback is non-blocking and quick, so it's OK to schedule it using directExecutor()
+        Execs.directExecutor());
     return finalFuture;
   }
 }

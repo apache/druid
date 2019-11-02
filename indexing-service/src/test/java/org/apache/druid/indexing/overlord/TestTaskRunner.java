@@ -228,7 +228,9 @@ public class TestTaskRunner implements TaskRunner, QuerySegmentWalker
           {
             runningItems.remove(taskRunnerWorkItem);
           }
-        }
+        },
+        // The callback is non-blocking and quick, so it's OK to schedule it using directExecutor()
+        Execs.directExecutor()
     );
 
     return statusFuture;

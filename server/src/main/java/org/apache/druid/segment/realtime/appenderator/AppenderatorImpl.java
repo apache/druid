@@ -328,7 +328,9 @@ public class AppenderatorImpl implements Appenderator
               {
                 persistError = t;
               }
-            }
+            },
+            // The callback is non-blocking and quick, so it's OK to schedule it using directExecutor()
+            Execs.directExecutor()
         );
       } else {
         isPersistRequired = true;

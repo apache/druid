@@ -40,6 +40,7 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -89,6 +90,7 @@ public class TaskQueue
   private final TaskActionClientFactory taskActionClientFactory;
   private final TaskLockbox taskLockbox;
   private final ServiceEmitter emitter;
+  private final ExecutorService statusHandler;
 
   private final ReentrantLock giant = new ReentrantLock(true);
   private final Condition managementMayBeNecessary = giant.newCondition();
@@ -129,6 +131,7 @@ public class TaskQueue
     this.taskActionClientFactory = Preconditions.checkNotNull(taskActionClientFactory, "taskActionClientFactory");
     this.taskLockbox = Preconditions.checkNotNull(taskLockbox, "taskLockbox");
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
+    this.statusHandler = Execs.singleThreaded("status-handler");
   }
 
   /**
@@ -583,7 +586,8 @@ public class TaskQueue
                  .emit();
             }
           }
-        }
+        },
+        statusHandler
     );
     return statusFuture;
   }

@@ -644,7 +644,9 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           {
             removedWorkerCleanups.remove(workerHostAndPort, cleanupTask);
           }
-        }
+        },
+        // The callback is non-blocking and quick, so it's OK to schedule it using directExecutor()
+        Execs.directExecutor()
     );
   }
 

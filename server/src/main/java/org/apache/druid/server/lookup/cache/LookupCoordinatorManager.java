@@ -435,7 +435,9 @@ public class LookupCoordinatorManager
                   LOG.makeAlert(t, "Background lookup manager exited with error!").emit();
                 }
               }
-            }
+            },
+            // The callback is non-blocking and quick, so it's OK to schedule it using directExecutor()
+            Execs.directExecutor()
         );
 
         LOG.debug("Started");

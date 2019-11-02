@@ -38,6 +38,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.MonitorEntry;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
@@ -52,6 +53,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -82,6 +84,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   // subTaskId -> report
   private final ConcurrentHashMap<String, SubTaskReportType> reportsMap = new ConcurrentHashMap<>();
 
+  private final ExecutorService blockingQueueHandler;
   private volatile boolean subTaskScheduleAndMonitorStopped;
   private volatile TaskMonitor<SubTaskType> taskMonitor;
 
@@ -103,6 +106,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     this.context = context;
     this.maxNumConcurrentSubTasks = tuningConfig.getMaxNumConcurrentSubTasks();
     this.indexingServiceClient = Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient");
+    this.blockingQueueHandler = Execs.singleThreaded("blocking-queue-handler");
   }
 
   /**
@@ -284,7 +288,8 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
             LOG.error(t, "Error while running a task for subTaskSpec[%s]", spec);
             taskCompleteEvents.offer(SubTaskCompleteEvent.fail(spec, t));
           }
-        }
+        },
+        blockingQueueHandler
     );
   }
 
