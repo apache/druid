@@ -206,6 +206,9 @@ public class IndexTaskTest extends IngestionTestBase
             false
         ),
         null,
+        null,
+        null,
+        null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
         rowIngestionMetersFactory,
@@ -260,6 +263,9 @@ public class IndexTaskTest extends IngestionTestBase
             false
         ),
         null,
+        null,
+        null,
+        null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
         rowIngestionMetersFactory,
@@ -306,6 +312,9 @@ public class IndexTaskTest extends IngestionTestBase
             false
         ),
         null,
+        null,
+        null,
+        null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
         rowIngestionMetersFactory,
@@ -345,6 +354,9 @@ public class IndexTaskTest extends IngestionTestBase
             false
         ),
         null,
+        null,
+        null,
+        null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
         rowIngestionMetersFactory,
@@ -379,6 +391,9 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithNumShards(1, null, true),
             false
         ),
+        null,
+        null,
+        null,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
@@ -419,6 +434,9 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithNumShards(2, ImmutableList.of("dim"), true),
             false
         ),
+        null,
+        null,
+        null,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
@@ -496,6 +514,9 @@ public class IndexTaskTest extends IngestionTestBase
             true
         ),
         null,
+        null,
+        null,
+        null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
         rowIngestionMetersFactory,
@@ -547,6 +568,9 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithMaxRowsPerSegment(2, true),
             false
         ),
+        null,
+        null,
+        null,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
@@ -613,6 +637,9 @@ public class IndexTaskTest extends IngestionTestBase
             false
         ),
         null,
+        null,
+        null,
+        null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
         rowIngestionMetersFactory,
@@ -667,6 +694,9 @@ public class IndexTaskTest extends IngestionTestBase
             false
         ),
         null,
+        null,
+        null,
+        null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
         rowIngestionMetersFactory,
@@ -716,6 +746,9 @@ public class IndexTaskTest extends IngestionTestBase
             false
         ),
         null,
+        null,
+        null,
+        null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
         rowIngestionMetersFactory,
@@ -763,6 +796,9 @@ public class IndexTaskTest extends IngestionTestBase
             false
         ),
         null,
+        null,
+        null,
+        null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
         rowIngestionMetersFactory,
@@ -808,6 +844,9 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfig(3, 2, null, 2L, null, null, false, true),
             false
         ),
+        null,
+        null,
+        null,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
@@ -887,6 +926,8 @@ public class IndexTaskTest extends IngestionTestBase
     IndexTask indexTask = new IndexTask(
         null,
         null,
+        null,
+        null,
         parseExceptionIgnoreSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
@@ -940,6 +981,8 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     IndexTask indexTask = new IndexTask(
+        null,
+        null,
         null,
         null,
         parseExceptionIgnoreSpec,
@@ -1037,6 +1080,8 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     IndexTask indexTask = new IndexTask(
+        null,
+        null,
         null,
         null,
         parseExceptionIgnoreSpec,
@@ -1166,6 +1211,8 @@ public class IndexTaskTest extends IngestionTestBase
     IndexTask indexTask = new IndexTask(
         null,
         null,
+        null,
+        null,
         parseExceptionIgnoreSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
@@ -1284,6 +1331,8 @@ public class IndexTaskTest extends IngestionTestBase
     IndexTask indexTask = new IndexTask(
         null,
         null,
+        null,
+        null,
         parseExceptionIgnoreSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
@@ -1385,6 +1434,8 @@ public class IndexTaskTest extends IngestionTestBase
     IndexTask indexTask = new IndexTask(
         null,
         null,
+        null,
+        null,
         parseExceptionIgnoreSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
@@ -1457,6 +1508,8 @@ public class IndexTaskTest extends IngestionTestBase
     IndexTask indexTask = new IndexTask(
         null,
         null,
+        null,
+        null,
         parseExceptionIgnoreSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
@@ -1507,6 +1560,9 @@ public class IndexTaskTest extends IngestionTestBase
               createTuningConfig(3, 2, null, 2L, null, null, false, true),
               false
           ),
+          null,
+          null,
+          null,
           null,
           AuthTestUtils.TEST_AUTHORIZER_MAPPER,
           null,
@@ -1575,6 +1631,9 @@ public class IndexTaskTest extends IngestionTestBase
               createTuningConfig(3, 2, null, 2L, null, null, false, true),
               false
           ),
+          null,
+          null,
+          null,
           null,
           AuthTestUtils.TEST_AUTHORIZER_MAPPER,
           null,

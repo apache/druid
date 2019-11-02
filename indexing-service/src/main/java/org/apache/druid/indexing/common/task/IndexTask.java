@@ -123,9 +123,24 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   private static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
   private static final String TYPE = "index";
 
-  private static String makeGroupId(IndexIngestionSpec ingestionSchema)
+  private static String makeGroupId(
+      IndexIngestionSpec ingestionSchema,
+      DataSchema dataSchema,
+      IndexIOConfig ioConfig,
+      TuningConfig tuningConfig
+  )
   {
-    return makeGroupId(ingestionSchema.ioConfig.appendToExisting, ingestionSchema.dataSchema.getDataSource());
+    final boolean isValid = (ingestionSchema != null) ^ (dataSchema != null
+                                                         && ioConfig != null
+                                                         && tuningConfig != null);
+    if (!isValid) {
+      throw new ISE("invalid spec input");
+    }
+    if (ingestionSchema == null) {
+      return makeGroupId(ioConfig.appendToExisting, dataSchema.getDataSource());
+    } else {
+      return makeGroupId(ingestionSchema.ioConfig.appendToExisting, ingestionSchema.dataSchema.getDataSource());
+    }
   }
 
   private static String makeGroupId(boolean isAppendToExisting, String dataSource)
@@ -174,6 +189,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       @JsonProperty("id") final String id,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("spec") final IndexIngestionSpec ingestionSchema,
+      @JsonProperty("dataSchema") DataSchema dataSchema,
+      @JsonProperty("ioConfig") IndexIOConfig ioConfig,
+      @JsonProperty("tuningConfig") IndexTuningConfig tuningConfig,
       @JsonProperty("context") final Map<String, Object> context,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
@@ -183,10 +201,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   {
     this(
         id,
-        makeGroupId(ingestionSchema),
+        makeGroupId(ingestionSchema, dataSchema, ioConfig, tuningConfig),
         taskResource,
-        ingestionSchema.dataSchema.getDataSource(),
-        ingestionSchema,
+        ingestionSchema == null ? dataSchema.getDataSource() : ingestionSchema.dataSchema.getDataSource(),
+        ingestionSchema == null ? new IndexIngestionSpec(dataSchema, ioConfig, tuningConfig) : ingestionSchema,
         context,
         authorizerMapper,
         chatHandlerProvider,
