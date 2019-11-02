@@ -437,7 +437,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               this.fetchData(groupByInterval, state);
             }
           } else if (capabilities.hasCoordinatorAccess()) {
-            this.fetchClientSideData();
+            this.fetchClientSideData(state);
           }
         }}
         showPageJump={false}

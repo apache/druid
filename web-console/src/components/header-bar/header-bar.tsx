@@ -258,7 +258,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           icon={IconNames.APPLICATION}
           text="Query"
           href="#query"
-          disabled={!capabilities.hasNative() && !capabilities.hasSql()}
+          disabled={!capabilities.hasQuerying()}
         />
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>

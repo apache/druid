@@ -18,14 +18,13 @@
 
 import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import classNames from 'classnames';
 import React from 'react';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
 import { ExternalLink, HeaderActiveTab, HeaderBar, Loader } from './components';
 import { AppToaster } from './singletons/toaster';
-import { localStorageGet, LocalStorageKeys, QueryManager } from './utils';
+import { QueryManager } from './utils';
 import { Capabilities } from './utils/capabilities';
 import { DRUID_DOCS_API, DRUID_DOCS_SQL, DRUID_DOCS_VERSION } from './variables';
 import {
@@ -55,52 +54,11 @@ export class ConsoleApplication extends React.PureComponent<
   ConsoleApplicationProps,
   ConsoleApplicationState
 > {
-  static STATUS_TIMEOUT = 2000;
+  private capabilitiesQueryManager: QueryManager<null, Capabilities>;
 
-  private capabilitiesQueryManager: QueryManager<null, Capabilities | null>;
-
-  static async discoverCapabilities(): Promise<Capabilities | null> {
-    const capabilitiesOverride = localStorageGet(LocalStorageKeys.CAPABILITIES_OVERRIDE);
-    if (capabilitiesOverride) return Capabilities.fromMode(capabilitiesOverride as any);
-
-    // Check SQL endpoint
-    try {
-      await axios.post(
-        '/druid/v2/sql',
-        { query: 'SELECT 1337', context: { timeout: ConsoleApplication.STATUS_TIMEOUT } },
-        { timeout: ConsoleApplication.STATUS_TIMEOUT },
-      );
-    } catch (e) {
-      const { response } = e;
-      if (response.status !== 405 || response.statusText !== 'Method Not Allowed') {
-        return Capabilities.FULL; // other failure
-      }
-      try {
-        await axios.get('/status', { timeout: ConsoleApplication.STATUS_TIMEOUT });
-      } catch (e) {
-        return null; // total failure
-      }
-      // Status works but SQL 405s => the SQL endpoint is disabled
-      return Capabilities.fromMode('no-sql');
-    }
-
-    // Check proxy
-    try {
-      await axios.get('/proxy/coordinator/status', { timeout: ConsoleApplication.STATUS_TIMEOUT });
-    } catch (e) {
-      const { response } = e;
-      if (response.status !== 404) {
-        return Capabilities.FULL; // other failure
-      }
-      return Capabilities.fromMode('no-proxy');
-    }
-
-    return Capabilities.FULL;
-  }
-
-  static shownNotifications(capabilities: Capabilities | null) {
+  static shownNotifications(capabilities: Capabilities | undefined) {
     let message: JSX.Element;
-    if (capabilities === null) {
+    if (!capabilities) {
       message = (
         <>
           It appears that the the Router node is not responding. The console will not function at
@@ -166,9 +124,9 @@ export class ConsoleApplication extends React.PureComponent<
 
     this.capabilitiesQueryManager = new QueryManager({
       processQuery: async () => {
-        const capabilities = await ConsoleApplication.discoverCapabilities();
+        const capabilities = await Capabilities.detectCapabilities();
         ConsoleApplication.shownNotifications(capabilities);
-        return capabilities;
+        return capabilities || Capabilities.FULL;
       },
       onStateChange: ({ result, loading }) => {
         this.setState({
