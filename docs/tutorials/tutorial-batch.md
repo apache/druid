@@ -134,8 +134,7 @@ which has been configured to read the `quickstart/tutorial/wikiticker-2015-09-12
 
 ```json
 {
-  "type" : "index",
-  "spec" : {
+    "type" : "index",
     "dataSchema" : {
       "dataSource" : "wikipedia",
       "parser" : {
@@ -194,7 +193,6 @@ which has been configured to read the `quickstart/tutorial/wikiticker-2015-09-12
       "maxRowsPerSegment" : 5000000,
       "maxRowsInMemory" : 25000
     }
-  }
 }
 ```
 
