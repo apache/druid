@@ -530,7 +530,7 @@ public class DruidCoordinator
       final List<Pair<? extends CoordinatorRunnable, Duration>> coordinatorRunnables = new ArrayList<>();
       coordinatorRunnables.add(
           Pair.of(
-              new CoordinatorHistoricalManagerRunnable(startingLeaderCounter),
+              new CoordinatorHistoricalManagerRunnable(this, startingLeaderCounter),
               config.getCoordinatorPeriod()
           )
       );
@@ -689,11 +689,11 @@ public class DruidCoordinator
 
   private class CoordinatorHistoricalManagerRunnable extends CoordinatorRunnable
   {
-    public CoordinatorHistoricalManagerRunnable(final int startingLeaderCounter)
+    public CoordinatorHistoricalManagerRunnable(final DruidCoordinator druidCoordinator, final int startingLeaderCounter)
     {
       super(
           ImmutableList.of(
-              new DruidCoordinatorSegmentInfoLoader(DruidCoordinator.this),
+              new DruidCoordinatorSegmentInfoLoader(druidCoordinator),
               params -> {
                 List<ImmutableDruidServer> servers = serverInventoryView
                     .getInventory()
@@ -756,11 +756,11 @@ public class DruidCoordinator
                              .withBalancerReferenceTimestamp(DateTimes.nowUtc())
                              .build();
               },
-              new DruidCoordinatorRuleRunner(DruidCoordinator.this),
+              new DruidCoordinatorRuleRunner(druidCoordinator),
               new DruidCoordinatorCleanupUnneeded(),
-              new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
-              new DruidCoordinatorBalancer(DruidCoordinator.this),
-              new DruidCoordinatorLogger(DruidCoordinator.this)
+              new DruidCoordinatorCleanupOvershadowed(druidCoordinator),
+              new DruidCoordinatorBalancer(druidCoordinator),
+              new DruidCoordinatorLogger(druidCoordinator)
           ),
           startingLeaderCounter
       );
