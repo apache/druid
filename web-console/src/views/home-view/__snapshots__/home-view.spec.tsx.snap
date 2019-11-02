@@ -9,9 +9,8 @@ exports[`home view matches snapshot 1`] = `
     capabilities={
       Capabilities {
         "coordinator": true,
-        "native": true,
         "overlord": true,
-        "sql": true,
+        "queryType": "nativeAndSql",
       }
     }
   />
@@ -19,9 +18,8 @@ exports[`home view matches snapshot 1`] = `
     capabilities={
       Capabilities {
         "coordinator": true,
-        "native": true,
         "overlord": true,
-        "sql": true,
+        "queryType": "nativeAndSql",
       }
     }
   />
@@ -29,9 +27,8 @@ exports[`home view matches snapshot 1`] = `
     capabilities={
       Capabilities {
         "coordinator": true,
-        "native": true,
         "overlord": true,
-        "sql": true,
+        "queryType": "nativeAndSql",
       }
     }
   />
@@ -39,9 +36,8 @@ exports[`home view matches snapshot 1`] = `
     capabilities={
       Capabilities {
         "coordinator": true,
-        "native": true,
         "overlord": true,
-        "sql": true,
+        "queryType": "nativeAndSql",
       }
     }
   />
@@ -49,9 +45,8 @@ exports[`home view matches snapshot 1`] = `
     capabilities={
       Capabilities {
         "coordinator": true,
-        "native": true,
         "overlord": true,
-        "sql": true,
+        "queryType": "nativeAndSql",
       }
     }
   />

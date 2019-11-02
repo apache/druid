@@ -72,9 +72,8 @@ exports[`header bar matches snapshot 1`] = `
           capabilities={
             Capabilities {
               "coordinator": true,
-              "native": true,
               "overlord": true,
-              "sql": true,
+              "queryType": "nativeAndSql",
             }
           }
         />
