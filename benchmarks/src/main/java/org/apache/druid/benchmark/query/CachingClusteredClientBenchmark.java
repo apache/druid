@@ -429,7 +429,7 @@ public class CachingClusteredClientBenchmark
   private <T> List<T> runQuery()
   {
     //noinspection unchecked
-    QueryRunner<T> theRunner = new FluentQueryRunnerBuilder<>(toolChestWarehouse.getToolChest(query))
+    QueryRunner<T> theRunner = new FluentQueryRunnerBuilder<T>(toolChestWarehouse.getToolChest(query))
         .create(cachingClusteredClient.getQueryRunnerForIntervals(query, query.getIntervals()))
         .applyPreMergeDecoration()
         .mergeResults()
