@@ -46,6 +46,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 class ExpressionTestHelper
@@ -197,7 +198,7 @@ class ExpressionTestHelper
   )
   {
     RelDataType returnType = createSqlType(sqlTypeName);
-    testExpression(rexBuilder.makeCall(returnType, op, exprs), expectedExpression, expectedResult);
+    testExpressionUsingFunction(rexBuilder.makeCall(returnType, op, exprs), expectedExpression, expectedResult::equals);
   }
 
   void testExpression(
@@ -207,7 +208,11 @@ class ExpressionTestHelper
       Object expectedResult
   )
   {
-    testExpression(op, Collections.singletonList(expr), expectedExpression, expectedResult);
+    testExpressionUsingFunction(
+        rexBuilder.makeCall(op, Collections.singletonList(expr)),
+        expectedExpression,
+        expectedResult::equals
+    );
   }
 
   void testExpression(
@@ -217,7 +222,17 @@ class ExpressionTestHelper
       Object expectedResult
   )
   {
-    testExpression(rexBuilder.makeCall(op, exprs), expectedExpression, expectedResult);
+    testExpressionUsingFunction(rexBuilder.makeCall(op, exprs), expectedExpression, expectedResult::equals);
+  }
+
+  void testExpressionUsingFunction(
+      SqlOperator op,
+      List<? extends RexNode> exprs,
+      DruidExpression expectedExpression,
+      Function<Object, Boolean> resultChecker
+  )
+  {
+    testExpressionUsingFunction(rexBuilder.makeCall(op, exprs), expectedExpression, resultChecker);
   }
 
   void testExpression(
@@ -226,11 +241,20 @@ class ExpressionTestHelper
       Object expectedResult
   )
   {
+    testExpressionUsingFunction(rexNode, expectedExpression, expectedResult::equals);
+  }
+
+  void testExpressionUsingFunction(
+      RexNode rexNode,
+      DruidExpression expectedExpression,
+      Function<Object, Boolean> resultChecker
+  )
+  {
     DruidExpression expression = Expressions.toDruidExpression(PLANNER_CONTEXT, rowSignature, rexNode);
     Assert.assertEquals("Expression for: " + rexNode, expectedExpression, expression);
 
     ExprEval result = Parser.parse(expression.getExpression(), PLANNER_CONTEXT.getExprMacroTable())
-                                  .eval(Parser.withMap(bindings));
-    Assert.assertEquals("Result for: " + rexNode, expectedResult, result.value());
+                            .eval(Parser.withMap(bindings));
+    Assert.assertTrue("Result for: " + rexNode, resultChecker.apply(result.value()));
   }
 }

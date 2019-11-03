@@ -30,6 +30,7 @@ import org.apache.druid.query.expression.IPv4AddressMatchExprMacro;
 import org.apache.druid.query.expression.IPv4AddressParseExprMacro;
 import org.apache.druid.query.expression.IPv4AddressStringifyExprMacro;
 import org.apache.druid.query.expression.LikeExprMacro;
+import org.apache.druid.query.expression.RandExprMacro;
 import org.apache.druid.query.expression.RegexpExtractExprMacro;
 import org.apache.druid.query.expression.TimestampCeilExprMacro;
 import org.apache.druid.query.expression.TimestampExtractExprMacro;
@@ -41,8 +42,6 @@ import org.apache.druid.query.expression.TrimExprMacro;
 
 import java.util.List;
 
-/**
- */
 public class ExpressionModule implements DruidModule
 {
   public static final List<Class<? extends ExprMacroTable.ExprMacro>> EXPR_MACROS =
@@ -51,6 +50,7 @@ public class ExpressionModule implements DruidModule
           .add(IPv4AddressParseExprMacro.class)
           .add(IPv4AddressStringifyExprMacro.class)
           .add(LikeExprMacro.class)
+          .add(RandExprMacro.class)
           .add(RegexpExtractExprMacro.class)
           .add(TimestampCeilExprMacro.class)
           .add(TimestampExtractExprMacro.class)

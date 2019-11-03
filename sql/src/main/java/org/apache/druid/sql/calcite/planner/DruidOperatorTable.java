@@ -232,6 +232,7 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new DirectOperatorConversion(SqlStdOperatorTable.LOWER, "lower"))
           .add(new DirectOperatorConversion(SqlStdOperatorTable.LOG10, "log10"))
           .add(new DirectOperatorConversion(SqlStdOperatorTable.POWER, "pow"))
+          .add(new DirectOperatorConversion(SqlStdOperatorTable.RAND, "rand"))
           .add(new DirectOperatorConversion(SqlStdOperatorTable.REPLACE, "replace"))
           .add(new DirectOperatorConversion(SqlStdOperatorTable.SQRT, "sqrt"))
           .add(new DirectOperatorConversion(SqlStdOperatorTable.UPPER, "upper"))

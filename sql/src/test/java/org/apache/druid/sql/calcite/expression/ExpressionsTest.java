@@ -59,6 +59,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.Map;
 
 public class ExpressionsTest extends ExpressionTestBase
@@ -467,6 +468,28 @@ public class ExpressionsTest extends ExpressionTestBase
         ),
         DruidExpression.fromExpression("(cast(cast(\"z\" * 0.1,'long'),'double') / 0.1)"),
         0.0
+    );
+  }
+
+  @Test
+  public void testRand()
+  {
+    final SqlFunction randFunction = SqlStdOperatorTable.RAND;
+
+    // With seed
+    testHelper.testExpression(
+        randFunction,
+        testHelper.makeLiteral(100),
+        DruidExpression.fromExpression("rand(100)"),
+        0.7220096548596434
+    );
+
+    // Testing without seed means the result is nondeterministic. We need to get creative.
+    testHelper.testExpressionUsingFunction(
+        randFunction,
+        Collections.emptyList(),
+        DruidExpression.fromExpression("rand()"),
+        v -> (double) v >= 0.0 && (double) v < 1.0
     );
   }
 
