@@ -30,6 +30,7 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -48,10 +49,18 @@ public class Aggregations
       final Project project
   )
   {
-    return call.getArgList().stream()
-               .map(i -> Expressions.fromFieldAccess(rowSignature, project, i))
-               .map(rexNode -> toDruidExpressionForSimpleAggregator(plannerContext, rowSignature, rexNode))
-               .collect(Collectors.toList());
+    final List<DruidExpression> args = call
+        .getArgList()
+        .stream()
+        .map(i -> Expressions.fromFieldAccess(rowSignature, project, i))
+        .map(rexNode -> toDruidExpressionForSimpleAggregator(plannerContext, rowSignature, rexNode))
+        .collect(Collectors.toList());
+
+    if (args.stream().noneMatch(Objects::isNull)) {
+      return args;
+    } else {
+      return null;
+    }
   }
 
   private static DruidExpression toDruidExpressionForSimpleAggregator(
@@ -68,7 +77,8 @@ public class Aggregations
     if (druidExpression.isSimpleExtraction() &&
         (!druidExpression.isDirectColumnAccess()
          || rowSignature.getColumnType(druidExpression.getDirectColumn()) == ValueType.STRING)) {
-      // Aggregators are unable to implicitly cast strings to numbers. So remove the simple extraction in this case.
+      // Aggregators are unable to implicitly cast strings to numbers.
+      // So remove the simple extraction, which forces the expression to be used instead of the direct column access.
       return druidExpression.map(simpleExtraction -> null, Function.identity());
     } else {
       return druidExpression;
