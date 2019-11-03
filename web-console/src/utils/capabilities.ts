@@ -69,7 +69,9 @@ export class Capabilities {
           { timeout: Capabilities.STATUS_TIMEOUT },
         );
       } catch (e) {
-        console.log(response.status, response.statusText);
+        if (response.status !== 405 && response.status !== 404) {
+          return; // other failure
+        }
 
         return 'none';
       }
@@ -108,12 +110,6 @@ export class Capabilities {
 
     const overlord = await Capabilities.detectNode('overlord');
     if (typeof overlord === 'undefined') return;
-
-    console.log({
-      queryType,
-      coordinator,
-      overlord,
-    });
 
     return new Capabilities({
       queryType,
