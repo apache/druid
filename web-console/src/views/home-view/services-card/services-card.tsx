@@ -29,7 +29,7 @@ export interface ServicesCardProps {
 }
 
 export interface ServicesCardState {
-  serverCountLoading: boolean;
+  serviceCountLoading: boolean;
   coordinatorCount: number;
   overlordCount: number;
   routerCount: number;
@@ -38,7 +38,7 @@ export interface ServicesCardState {
   middleManagerCount: number;
   peonCount: number;
   indexerCount: number;
-  serverCountError?: string;
+  serviceCountError?: string;
 }
 
 export class ServicesCard extends React.PureComponent<ServicesCardProps, ServicesCardState> {
@@ -56,12 +56,12 @@ export class ServicesCard extends React.PureComponent<ServicesCardProps, Service
     return <p>{text}</p>;
   }
 
-  private serverQueryManager: QueryManager<Capabilities, any>;
+  private serviceQueryManager: QueryManager<Capabilities, any>;
 
   constructor(props: ServicesCardProps, context: any) {
     super(props, context);
     this.state = {
-      serverCountLoading: false,
+      serviceCountLoading: false,
       coordinatorCount: 0,
       overlordCount: 0,
       routerCount: 0,
@@ -72,16 +72,16 @@ export class ServicesCard extends React.PureComponent<ServicesCardProps, Service
       indexerCount: 0,
     };
 
-    this.serverQueryManager = new QueryManager({
+    this.serviceQueryManager = new QueryManager({
       processQuery: async capabilities => {
         if (capabilities.hasSql()) {
-          const serverCountsFromQuery: {
+          const serviceCountsFromQuery: {
             service_type: string;
             count: number;
           }[] = await queryDruidSql({
             query: `SELECT server_type AS "service_type", COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
           });
-          return lookupBy(serverCountsFromQuery, x => x.service_type, x => x.count);
+          return lookupBy(serviceCountsFromQuery, x => x.service_type, x => x.count);
         } else if (capabilities.hasCoordinatorAccess() || capabilities.hasOverlordAccess()) {
           const services = capabilities.hasCoordinatorAccess()
             ? (await axios.get('/druid/coordinator/v1/servers?simple')).data
@@ -102,7 +102,7 @@ export class ServicesCard extends React.PureComponent<ServicesCardProps, Service
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
-          serverCountLoading: loading,
+          serviceCountLoading: loading,
           coordinatorCount: result ? result.coordinator : 0,
           overlordCount: result ? result.overlord : 0,
           routerCount: result ? result.router : 0,
@@ -111,7 +111,7 @@ export class ServicesCard extends React.PureComponent<ServicesCardProps, Service
           middleManagerCount: result ? result.middle_manager : 0,
           peonCount: result ? result.peon : 0,
           indexerCount: result ? result.indexer : 0,
-          serverCountError: error,
+          serviceCountError: error,
         });
       },
     });
@@ -120,16 +120,16 @@ export class ServicesCard extends React.PureComponent<ServicesCardProps, Service
   componentDidMount(): void {
     const { capabilities } = this.props;
 
-    this.serverQueryManager.runQuery(capabilities);
+    this.serviceQueryManager.runQuery(capabilities);
   }
 
   componentWillUnmount(): void {
-    this.serverQueryManager.terminate();
+    this.serviceQueryManager.terminate();
   }
 
   render(): JSX.Element {
     const {
-      serverCountLoading,
+      serviceCountLoading,
       coordinatorCount,
       overlordCount,
       routerCount,
@@ -138,7 +138,7 @@ export class ServicesCard extends React.PureComponent<ServicesCardProps, Service
       middleManagerCount,
       peonCount,
       indexerCount,
-      serverCountError,
+      serviceCountError,
     } = this.state;
     return (
       <HomeViewCard
@@ -146,8 +146,8 @@ export class ServicesCard extends React.PureComponent<ServicesCardProps, Service
         href={'#services'}
         icon={IconNames.DATABASE}
         title={'Services'}
-        loading={serverCountLoading}
-        error={serverCountError}
+        loading={serviceCountLoading}
+        error={serviceCountError}
       >
         {ServicesCard.renderPluralIfNeededPair(
           overlordCount,
