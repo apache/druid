@@ -40,6 +40,7 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
+import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
@@ -533,7 +534,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     {
       QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
           queryMetricsFactory,
-          warehouse.getToolChest(query),
+          (QueryToolChest) warehouse.getToolChest(query),
           query,
           req.getRemoteAddr()
       );
