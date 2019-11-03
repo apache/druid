@@ -24,11 +24,11 @@ import { compact, lookupBy, pluralIfNeeded, queryDruidSql, QueryManager } from '
 import { Capabilities } from '../../../utils/capabilities';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
-export interface ServersCardProps {
+export interface ServicesCardProps {
   capabilities: Capabilities;
 }
 
-export interface ServersCardState {
+export interface ServicesCardState {
   serverCountLoading: boolean;
   coordinatorCount: number;
   overlordCount: number;
@@ -41,7 +41,7 @@ export interface ServersCardState {
   serverCountError?: string;
 }
 
-export class ServersCard extends React.PureComponent<ServersCardProps, ServersCardState> {
+export class ServicesCard extends React.PureComponent<ServicesCardProps, ServicesCardState> {
   static renderPluralIfNeededPair(
     count1: number,
     singular1: string,
@@ -58,7 +58,7 @@ export class ServersCard extends React.PureComponent<ServersCardProps, ServersCa
 
   private serverQueryManager: QueryManager<Capabilities, any>;
 
-  constructor(props: ServersCardProps, context: any) {
+  constructor(props: ServicesCardProps, context: any) {
     super(props, context);
     this.state = {
       serverCountLoading: false,
@@ -76,14 +76,14 @@ export class ServersCard extends React.PureComponent<ServersCardProps, ServersCa
       processQuery: async capabilities => {
         if (capabilities.hasSql()) {
           const serverCountsFromQuery: {
-            server_type: string;
+            service_type: string;
             count: number;
           }[] = await queryDruidSql({
-            query: `SELECT server_type, COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
+            query: `SELECT server_type AS "service_type", COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
           });
-          return lookupBy(serverCountsFromQuery, x => x.server_type, x => x.count);
+          return lookupBy(serverCountsFromQuery, x => x.service_type, x => x.count);
         } else if (capabilities.hasCoordinatorAccess() || capabilities.hasOverlordAccess()) {
-          const servers = capabilities.hasCoordinatorAccess()
+          const services = capabilities.hasCoordinatorAccess()
             ? (await axios.get('/druid/coordinator/v1/servers?simple')).data
             : [];
 
@@ -92,9 +92,9 @@ export class ServersCard extends React.PureComponent<ServersCardProps, ServersCa
             : [];
 
           return {
-            historical: servers.filter((s: any) => s.type === 'historical').length,
+            historical: services.filter((s: any) => s.type === 'historical').length,
             middle_manager: middleManager.length,
-            peon: servers.filter((s: any) => s.type === 'indexer-executor').length,
+            peon: services.filter((s: any) => s.type === 'indexer-executor').length,
           };
         } else {
           throw new Error(`must have SQL or coordinator/overlord access`);
@@ -142,27 +142,27 @@ export class ServersCard extends React.PureComponent<ServersCardProps, ServersCa
     } = this.state;
     return (
       <HomeViewCard
-        className="servers-card"
-        href={'#servers'}
+        className="services-card"
+        href={'#services'}
         icon={IconNames.DATABASE}
-        title={'Servers'}
+        title={'Services'}
         loading={serverCountLoading}
         error={serverCountError}
       >
-        {ServersCard.renderPluralIfNeededPair(
+        {ServicesCard.renderPluralIfNeededPair(
           overlordCount,
           'overlord',
           coordinatorCount,
           'coordinator',
         )}
-        {ServersCard.renderPluralIfNeededPair(routerCount, 'router', brokerCount, 'broker')}
-        {ServersCard.renderPluralIfNeededPair(
+        {ServicesCard.renderPluralIfNeededPair(routerCount, 'router', brokerCount, 'broker')}
+        {ServicesCard.renderPluralIfNeededPair(
           historicalCount,
           'historical',
           middleManagerCount,
           'middle manager',
         )}
-        {ServersCard.renderPluralIfNeededPair(peonCount, 'peon', indexerCount, 'indexer')}
+        {ServicesCard.renderPluralIfNeededPair(peonCount, 'peon', indexerCount, 'indexer')}
       </HomeViewCard>
     );
   }

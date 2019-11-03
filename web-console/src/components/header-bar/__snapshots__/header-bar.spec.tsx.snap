@@ -46,10 +46,10 @@ exports[`header bar matches snapshot 1`] = `
     />
     <Blueprint3.AnchorButton
       active={false}
-      href="#servers"
+      href="#services"
       icon="database"
       minimal={true}
-      text="Servers"
+      text="Services"
     />
     <Blueprint3.NavbarDivider />
     <Blueprint3.AnchorButton

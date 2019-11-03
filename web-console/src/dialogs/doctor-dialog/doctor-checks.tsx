@@ -341,13 +341,13 @@ ORDER BY "server" DESC`,
       for (const server of sqlResult) {
         if (server['fill'] > 0.95) {
           controls.addIssue(
-            `Server "${server['server']}" appears to be over 95% full (is ${formatPercent(
+            `Service "${server['server']}" appears to be over 95% full (is ${formatPercent(
               server,
             )}%). Increase capacity.`,
           );
         } else {
           controls.addSuggestion(
-            `Server "${server['server']}" appears to be over 90% full (is ${formatPercent(
+            `Service "${server['server']}" appears to be over 90% full (is ${formatPercent(
               server,
             )}%)`,
           );

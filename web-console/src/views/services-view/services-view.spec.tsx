@@ -21,18 +21,18 @@ import React from 'react';
 
 import { Capabilities } from '../../utils/capabilities';
 
-import { ServersView } from './servers-view';
+import { ServicesView } from './services-view';
 
-describe('servers view', () => {
-  it('action servers view', () => {
-    const serversView = shallow(
-      <ServersView
+describe('services view', () => {
+  it('action services view', () => {
+    const servicesView = shallow(
+      <ServicesView
         middleManager={'test'}
         goToQuery={() => {}}
         goToTask={() => {}}
         capabilities={Capabilities.FULL}
       />,
     );
-    expect(serversView).toMatchSnapshot();
+    expect(servicesView).toMatchSnapshot();
   });
 });

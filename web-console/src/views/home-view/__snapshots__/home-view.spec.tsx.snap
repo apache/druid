@@ -41,7 +41,7 @@ exports[`home view matches snapshot 1`] = `
       }
     }
   />
-  <ServersCard
+  <ServicesCard
     capabilities={
       Capabilities {
         "coordinator": true,

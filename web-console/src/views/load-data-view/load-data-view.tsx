@@ -1071,7 +1071,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {deepGet(spec, 'ioConfig.firehose.type') === 'local' && (
             <FormGroup>
               <Callout intent={Intent.WARNING}>
-                This path must be available on the local filesystem of all Druid servers.
+                This path must be available on the local filesystem of all Druid services.
               </Callout>
             </FormGroup>
           )}

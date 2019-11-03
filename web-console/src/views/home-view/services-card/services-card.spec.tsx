@@ -21,13 +21,13 @@ import React from 'react';
 
 import { Capabilities } from '../../../utils/capabilities';
 
-import { ServersCard } from './servers-card';
+import { ServicesCard } from './services-card';
 
-describe('servers card', () => {
+describe('services card', () => {
   it('matches snapshot', () => {
-    const serversCard = <ServersCard capabilities={Capabilities.FULL} />;
+    const servicesCard = <ServicesCard capabilities={Capabilities.FULL} />;
 
-    const { container } = render(serversCard);
+    const { container } = render(servicesCard);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

@@ -34,7 +34,7 @@ import {
   LookupsView,
   QueryView,
   SegmentsView,
-  ServersView,
+  ServicesView,
   TasksView,
 } from './views';
 
@@ -193,7 +193,7 @@ export class ConsoleApplication extends React.PureComponent<
 
   private goToMiddleManager = (middleManager: string) => {
     this.middleManager = middleManager;
-    window.location.hash = 'servers';
+    window.location.hash = 'services';
     this.resetInitialsWithDelay();
   };
 
@@ -287,11 +287,11 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private wrappedServersView = () => {
+  private wrappedServicesView = () => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
-      'servers',
-      <ServersView
+      'services',
+      <ServicesView
         middleManager={this.middleManager}
         goToQuery={this.goToQuery}
         goToTask={this.goToTaskWithTaskId}
@@ -324,7 +324,7 @@ export class ConsoleApplication extends React.PureComponent<
             <Route path="/datasources" component={this.wrappedDatasourcesView} />
             <Route path="/segments" component={this.wrappedSegmentsView} />
             <Route path="/tasks" component={this.wrappedTasksView} />
-            <Route path="/servers" component={this.wrappedServersView} />
+            <Route path="/services" component={this.wrappedServicesView} />
 
             <Route path="/query" component={this.wrappedQueryView} />
 

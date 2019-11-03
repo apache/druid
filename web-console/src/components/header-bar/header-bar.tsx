@@ -55,7 +55,7 @@ export type HeaderActiveTab =
   | 'datasources'
   | 'segments'
   | 'tasks'
-  | 'servers'
+  | 'services'
   | 'lookups';
 
 const DruidLogo = React.memo(function DruidLogo() {
@@ -245,10 +245,10 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         />
         <AnchorButton
           minimal
-          active={active === 'servers'}
+          active={active === 'services'}
           icon={IconNames.DATABASE}
-          text="Servers"
-          href="#servers"
+          text="Services"
+          href="#services"
         />
 
         <NavbarDivider />
