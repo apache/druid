@@ -326,7 +326,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     let spec = parseJson(String(localStorageGet(LocalStorageKeys.INGESTION_SPEC)));
     if (!spec || typeof spec !== 'object') spec = {};
     this.state = {
-      step: 'welcome',
+      step: 'loading',
       spec,
       specPreview: spec,
 
@@ -534,6 +534,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     return (
       <div className={classNames('load-data-view', 'app-view', step)}>
         {this.renderStepNav()}
+        {step === 'loading' && <Loader loading />}
+
         {step === 'welcome' && this.renderWelcomeStep()}
         {step === 'connect' && this.renderConnectStep()}
         {step === 'parser' && this.renderParserStep()}
@@ -548,7 +550,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         {step === 'publish' && this.renderPublishStep()}
 
         {step === 'spec' && this.renderSpecStep()}
-        {step === 'loading' && this.renderLoading()}
 
         {this.renderResetConfirm()}
       </div>
@@ -2999,10 +3000,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       });
     }
   };
-
-  renderLoading() {
-    return <Loader loading />;
-  }
 
   renderSpecStep() {
     const { spec, submitting } = this.state;

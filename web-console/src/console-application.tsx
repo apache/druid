@@ -61,8 +61,8 @@ export class ConsoleApplication extends React.PureComponent<
     if (!capabilities) {
       message = (
         <>
-          It appears that the the Router node is not responding. The console will not function at
-          the moment
+          It appears that the the service serving this console is not responding. The console will
+          not function at the moment
         </>
       );
     } else {
