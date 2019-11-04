@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -29,6 +30,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -39,12 +41,14 @@ public class PeriodLoadRule extends LoadRule
   static final boolean DEFAULT_INCLUDE_FUTURE = true;
 
   private final Period period;
+  private final Optional<String> identifierPrefix;
   private final boolean includeFuture;
   private final Map<String, Integer> tieredReplicants;
 
   @JsonCreator
   public PeriodLoadRule(
       @JsonProperty("period") Period period,
+      @Nullable @JsonProperty("identifierPrefix") String identifierPrefix,
       @JsonProperty("includeFuture") Boolean includeFuture,
       @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants
   )
@@ -52,7 +56,19 @@ public class PeriodLoadRule extends LoadRule
     this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS) : tieredReplicants;
     validateTieredReplicants(this.tieredReplicants);
     this.period = period;
+    this.identifierPrefix = identifierPrefix == null || identifierPrefix.isEmpty()
+                            ? Optional.absent()
+                            : Optional.of(identifierPrefix);
     this.includeFuture = includeFuture == null ? DEFAULT_INCLUDE_FUTURE : includeFuture;
+  }
+
+  public PeriodLoadRule(
+      Period period,
+      Boolean includeFuture,
+      Map<String, Integer> tieredReplicants
+  )
+  {
+    this(period, null, includeFuture, tieredReplicants);
   }
 
   @Override
@@ -60,6 +76,13 @@ public class PeriodLoadRule extends LoadRule
   public String getType()
   {
     return "loadByPeriod";
+  }
+
+  @Nullable
+  @JsonProperty
+  public String getIdentifierPrefix()
+  {
+    return identifierPrefix.orNull();
   }
 
   @JsonProperty
@@ -91,7 +114,11 @@ public class PeriodLoadRule extends LoadRule
   @Override
   public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
   {
-    return appliesTo(segment.getInterval(), referenceTimestamp);
+    return (!identifierPrefix.isPresent() || (segment.getShardSpec()
+                                                     .getIdentifier()
+                                                     .toString()
+                                                     .startsWith(identifierPrefix.get())))
+           && appliesTo(segment.getInterval(), referenceTimestamp);
   }
 
   @Override

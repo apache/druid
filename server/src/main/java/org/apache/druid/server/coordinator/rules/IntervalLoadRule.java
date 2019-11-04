@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -28,6 +29,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -37,17 +39,30 @@ public class IntervalLoadRule extends LoadRule
   private static final Logger log = new Logger(IntervalLoadRule.class);
 
   private final Interval interval;
+  private final Optional<String> identifierPrefix;
   private final Map<String, Integer> tieredReplicants;
 
   @JsonCreator
   public IntervalLoadRule(
       @JsonProperty("interval") Interval interval,
+      @Nullable @JsonProperty("identifierPrefix") String identifierPrefix,
       @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants
   )
   {
     this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS) : tieredReplicants;
     validateTieredReplicants(this.tieredReplicants);
     this.interval = interval;
+    this.identifierPrefix = identifierPrefix == null || identifierPrefix.isEmpty()
+                            ? Optional.absent()
+                            : Optional.of(identifierPrefix);
+  }
+
+  public IntervalLoadRule(
+      Interval interval,
+      Map<String, Integer> tieredReplicants
+  )
+  {
+    this(interval, null, tieredReplicants);
   }
 
   @Override
@@ -55,6 +70,13 @@ public class IntervalLoadRule extends LoadRule
   public String getType()
   {
     return "loadByInterval";
+  }
+
+  @Nullable
+  @JsonProperty
+  public String getIdentifierPrefix()
+  {
+    return identifierPrefix.orNull();
   }
 
   @Override
@@ -80,7 +102,11 @@ public class IntervalLoadRule extends LoadRule
   @Override
   public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
   {
-    return appliesTo(segment.getInterval(), referenceTimestamp);
+    return (!identifierPrefix.isPresent() || (segment.getShardSpec()
+                                                     .getIdentifier()
+                                                     .toString()
+                                                     .startsWith(identifierPrefix.get()))) &&
+           appliesTo(segment.getInterval(), referenceTimestamp);
   }
 
   @Override

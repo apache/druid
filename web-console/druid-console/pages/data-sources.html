@@ -1,0 +1,155 @@
+<header>
+  <h1>druid {{ env ? env : 'cluster' }}</h1>
+  <site-nav></site-nav>
+</header>
+
+<div class="primary-view data-sources-view" ng-init="enabled = 'enabled'">
+
+  <div id="middle">
+
+    <div id="data-sources" ng-if="dataSources">
+      <h2>
+        <span ng-if="dataSources">{{ dataSources.length }}
+        <div class="btn-group" data-toggle="buttons">
+          <button href="#" class="btn btn-default btn-sm" ng-class="show == 'enabled' ? 'active' : ''" ng-click="setEnabled('enabled')">enabled</button>
+          <button href="#" class="btn btn-default btn-sm" ng-class="show == 'disabled' ? 'active' : ''" ng-click="setEnabled('disabled')">disabled</button>
+          &nbsp; datasources
+        </span>
+      </h2>
+      <table ng-init="showFootprints = false" ng-if="enabled == 'enabled'">
+        <thead>
+          <tr>
+            <th class="load-status" title="available">a</th>
+            <th><input id="data-source-query" ng-model="query.id" placeholder="filter datasources" class="name"></th>
+            <th class="rules">rules</th>
+            <th class="footprint">
+              <button class="btn btn-default btn-sm" ng-hide="footprintsLoaded || footprintsLoading" ng-click="loadFootprints()"><span class="fa fa-bar-chart-o"></span> show footprints</button>
+              <i class="fa fa-spinner fa-spin fa-lg" ng-show="footprintsLoading"></i>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="data-source" ng-repeat="dataSource in [defaultRules]">
+            <td>
+            </td>
+            <td class="name">
+              <a>default rules</a>
+              <span class="rule-editor-link" ng-controller="RuleEditorCtrl" ng-show="dataSource.hasOwnProperty('rules') && tierNames" tooltip="edit {{ dataSource.id }} rules" tooltip-trigger="mouseenter"><a ng-click="open()" title="edit rules"><span class="fa fa-pencil"></span></a></span>
+
+              <audit-history
+                load-history="loadDefaultRulesHistory"
+                id="{{ dataSource.id }}"
+                button="false"
+              ></audit-history>
+            </td>
+            <td class="rules">
+              <div class="no-rule" ng-if="dataSource.rules.length == 0">
+                no rules set
+              </div>
+
+              <one-line-rule
+                rule="rule"
+                ng-repeat="rule in dataSource.rules"
+              ></one-line-rule>
+
+            </td>
+            <td class="footprint">
+              <div ng-if="dataSource.rules">
+                <div rules-timeline></div>
+              </div>
+            </td>
+          </tr>
+          <tr class="data-source" ng-repeat="dataSource in dataSources | filter:query">
+            <td>
+              <div ng-if="dataSource.hasOwnProperty('loadStatus')"
+                   class="load-status {{ dataSource.loadStatus < 0 ? 'indexing' : (dataSource.loadStatus >= 100 ? 'loaded' : (dataSource.loadStatus >= 99 ? 'one-percent' : 'unloaded')) }}"
+                   tooltip="{{ dataSource.id }}: {{ dataSource.loadStatus < 0 ? ' actively indexing realtime segments' : (1 - dataSource.loadStatus/100.0 | percentRound) + ' to load until available' }}"
+                   tooltip-trigger="mouseenter"
+                   tooltip-placement="right"
+              >
+                <i class="fa {{ dataSource.loadStatus >= 100 || dataSource.loadStatus < 0 ? 'fa-circle-o' : (dataSource.loadStatus > 99 ? 'fa-dot-circle-o' : 'fa-circle')}}"></i>
+              </div>
+            </td>
+            <td class="name">
+              <a ui-sref="dataSource({id: dataSource.id})">{{ dataSource.id }}</a>
+              <span class="rule-editor-link" ng-controller="RuleEditorCtrl" ng-show="dataSource.hasOwnProperty('rules') && tierNames" tooltip="edit {{ dataSource.id }} rules" tooltip-trigger="mouseenter"><a ng-click="open()" title="edit rules"><span class="fa fa-pencil"></span></a></span>
+              <audit-history
+                load-history="dataSource.loadRulesHistory"
+                id="{{ dataSource.id }}"
+                button="false"
+              ></audit-history>
+            </td>
+            <td class="rules">
+              <div class="no-rule" ng-if="dataSource.rules.length == 0">
+                no rules set
+              </div>
+
+              <one-line-rule
+                rule="rule"
+                ng-repeat="rule in dataSource.rules"
+              ></one-line-rule>
+
+            </td>
+            <td class="footprint">
+              <div ng-if="dataSource.rules">
+                <div rules-timeline></div>
+              </div>
+            </td>
+          </tr>
+          <tr class="key">
+            <td colspan="2">Key</td>
+          </tr>
+          <tr class="data-source">
+            <td>
+              <div class="load-status loaded" title="nothing to load">
+                <i class="fa fa-circle-o"></i>
+              </div>
+            </td>
+            <td class="name">fully available</td>
+          </tr>
+          <tr class="data-source">
+            <td>
+              <div class="load-status one-percent" title="< 1% to load">
+                <i class="fa fa-dot-circle-o"></i>
+              </div>
+            </td>
+            <td class="name">> 99% available</td>
+          </tr>
+          <tr class="data-source">
+            <td>
+              <div class="load-status unloaded" title="> 1% to load">
+                <i class="fa fa-circle"></i>
+              </div>
+            </td>
+            <td class="name">≤ 99% available</td>
+          </tr>
+          <tr class="data-source">
+            <td>
+              <div class="load-status indexing" title="realtime only">
+                <i class="fa fa-circle-o"></i>
+              </div>
+            </td>
+            <td class="name">actively indexing</td>
+          </tr>
+          <tr class="data-source"><td></td><td>(not persisted)</td></tr>
+          <tr class="data-source">
+            <td colspan="2">Hover over the icon next to each datasource for its specific availability.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="disabled-data-sources" ng-if="enabled == 'disabled'">
+
+        <input id="data-source-query" ng-model="disabledDataSourceQuery" placeholder="filter datasources" class="name">
+        <ul>
+          <li ng-repeat="dataSourceId in disabledDataSources | filter:disabledDataSourceQuery">
+            <span class="fa fa-rocket"></span>
+            <span ng-controller="DataSourceEnableCtrl">
+              <a ng-click="open()" title="enable dataSource {{ dataSourceId }}"> {{ dataSourceId }}</a>
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
