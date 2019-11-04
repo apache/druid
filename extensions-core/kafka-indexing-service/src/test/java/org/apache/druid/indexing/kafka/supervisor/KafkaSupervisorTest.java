@@ -619,9 +619,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
 
   /**
-   * Regression Test for if always use earliest offset on newly discovered partitions
+   * Test For if always use earliest offset on newly discovered partitions
    */
-  @Ignore
+  @Ignore("This is a regression test that needs to wait 10s+, ignore for now")
   @Test
   public void testLatestOffsetOnDiscovery() throws Exception
   {
