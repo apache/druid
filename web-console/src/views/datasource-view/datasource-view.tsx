@@ -831,7 +831,7 @@ GROUP BY 1`;
                   return (
                     <span>
                       <span style={{ color: DatasourcesView.PARTIALLY_AVAILABLE_COLOR }}>
-                        &#x25cf;&nbsp;
+                        {num_available_segments ? '\u25cf' : '\u25cb'}&nbsp;
                       </span>
                       {percentAvailable}% available ({segmentsEl}, {segmentsMissingEl})
                     </span>
