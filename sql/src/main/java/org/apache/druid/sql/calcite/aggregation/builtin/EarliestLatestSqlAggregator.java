@@ -62,8 +62,8 @@ import java.util.stream.Stream;
 
 public class EarliestLatestSqlAggregator implements SqlAggregator
 {
-  public static SqlAggregator EARLIEST = new EarliestLatestSqlAggregator(EarliestOrLatest.EARLIEST);
-  public static SqlAggregator LATEST = new EarliestLatestSqlAggregator(EarliestOrLatest.LATEST);
+  public static final SqlAggregator EARLIEST = new EarliestLatestSqlAggregator(EarliestOrLatest.EARLIEST);
+  public static final SqlAggregator LATEST = new EarliestLatestSqlAggregator(EarliestOrLatest.LATEST);
 
   enum EarliestOrLatest
   {
