@@ -29,6 +29,8 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.DoubleSupplier;
 
 public class RandExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -41,16 +43,17 @@ public class RandExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(List<Expr> args)
   {
-    final Random randomGenerator;
+    final DoubleSupplier randomGenerator;
 
     if (args.isEmpty()) {
-      randomGenerator = new Random();
+      randomGenerator = () -> ThreadLocalRandom.current().nextDouble();
     } else if (args.size() == 1) {
       final Expr seedArg = Iterables.getOnlyElement(args);
       if (seedArg.isLiteral()) {
         final Long seedValue = DimensionHandlerUtils.convertObjectToLong(seedArg.getLiteralValue());
         if (seedValue != null) {
-          randomGenerator = new Random(seedValue);
+          final Random random = new Random(seedValue);
+          randomGenerator = random::nextDouble;
         } else {
           throw new IAE("Function[%s] first argument must be a number literal");
         }
@@ -71,7 +74,7 @@ public class RandExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public ExprEval eval(ObjectBinding bindings)
       {
-        return ExprEval.of(randomGenerator.nextDouble());
+        return ExprEval.of(randomGenerator.getAsDouble());
       }
 
       @Override

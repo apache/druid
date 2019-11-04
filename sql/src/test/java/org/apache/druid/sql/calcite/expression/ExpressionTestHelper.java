@@ -46,6 +46,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -194,24 +195,28 @@ class ExpressionTestHelper
       SqlOperator op,
       List<RexNode> exprs,
       DruidExpression expectedExpression,
-      Object expectedResult
+      @Nullable Object expectedResult
   )
   {
     RelDataType returnType = createSqlType(sqlTypeName);
-    testExpressionUsingFunction(rexBuilder.makeCall(returnType, op, exprs), expectedExpression, expectedResult::equals);
+    testExpressionUsingFunction(
+        rexBuilder.makeCall(returnType, op, exprs),
+        expectedExpression,
+        result -> Objects.equals(expectedResult, result)
+    );
   }
 
   void testExpression(
       SqlOperator op,
       RexNode expr,
       DruidExpression expectedExpression,
-      Object expectedResult
+      @Nullable Object expectedResult
   )
   {
     testExpressionUsingFunction(
         rexBuilder.makeCall(op, Collections.singletonList(expr)),
         expectedExpression,
-        expectedResult::equals
+        result -> Objects.equals(expectedResult, result)
     );
   }
 
@@ -219,10 +224,14 @@ class ExpressionTestHelper
       SqlOperator op,
       List<? extends RexNode> exprs,
       DruidExpression expectedExpression,
-      Object expectedResult
+      @Nullable Object expectedResult
   )
   {
-    testExpressionUsingFunction(rexBuilder.makeCall(op, exprs), expectedExpression, expectedResult::equals);
+    testExpressionUsingFunction(
+        rexBuilder.makeCall(op, exprs),
+        expectedExpression,
+        result -> Objects.equals(expectedResult, result)
+    );
   }
 
   void testExpressionUsingFunction(
@@ -238,10 +247,10 @@ class ExpressionTestHelper
   void testExpression(
       RexNode rexNode,
       DruidExpression expectedExpression,
-      Object expectedResult
+      @Nullable Object expectedResult
   )
   {
-    testExpressionUsingFunction(rexNode, expectedExpression, expectedResult::equals);
+    testExpressionUsingFunction(rexNode, expectedExpression, result -> Objects.equals(expectedResult, result));
   }
 
   void testExpressionUsingFunction(
