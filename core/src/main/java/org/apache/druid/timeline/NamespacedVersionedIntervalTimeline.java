@@ -122,8 +122,8 @@ public class NamespacedVersionedIntervalTimeline<VersionType, ObjectType extends
       allObjects.addAll(versionedIntervalTimeline.iterateAllObjects());
     }
     return CollectionUtils.createLazyCollectionFromStream(
-            () -> allObjects.stream(),
-            allObjects.size()
+        () -> allObjects.stream(),
+        allObjects.size()
     );
   }
 
