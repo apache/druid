@@ -45,7 +45,8 @@ public class ParallelMergeCombiningSequenceThreadedBenchmark extends BaseParalle
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   @Group("consumers")
   @GroupThreads(4)
-  public void consumeSmall(Blackhole blackhole) {
+  public void consumeSmall(Blackhole blackhole)
+  {
     consumeSequence(blackhole, this::generateSmallSequence);
   }
 
@@ -54,7 +55,8 @@ public class ParallelMergeCombiningSequenceThreadedBenchmark extends BaseParalle
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   @Group("consumers")
   @GroupThreads(1)
-  public void consumeModeratelyLarge(Blackhole blackhole) {
+  public void consumeModeratelyLarge(Blackhole blackhole)
+  {
     consumeSequence(blackhole, this::generateModeratelyLargeSequence);
   }
 }
