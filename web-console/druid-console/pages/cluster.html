@@ -1,0 +1,175 @@
+<header>
+  <h1>druid {{ env ? env : 'cluster' }}
+    <span
+      class="rule-editor-link"
+      ng-controller="ClusterConfigCtrl"
+      tooltip="edit {{ env ? env : 'cluster' }} cluster configuration"
+      tooltip-trigger="mouseenter"
+      tooltip-placement="bottom"
+    >
+      <a ng-click="open()"><span class="fa fa-pencil"></span></a>
+    </span>
+    <audit-history
+      load-history="loadConfigHistory"
+      id="cluster"
+      tooltip-placement="bottom"
+      button="false"
+    ></audit-history>
+  </h1>
+
+  <site-nav></site-nav>
+  <heartbeat reload-data="loadAllData" loaded-at="loadedAt" initial-load="initialLoad"></heartbeat>
+</header>
+
+<div class="primary-view cluster-view">
+
+  <div id="middle">
+
+    <div id="data-sources">
+      <h2 ng-init="showQuery = false" ng-click="showQuery = !showQuery">
+        <span><a ui-sref="dataSources"><span ng-if="dataSources">{{ dataSources.length }}</span> datasources</a></span>
+      </h2>
+      <table ng-if="dataSources">
+        <thead>
+          <tr>
+            <th class="load-status" title="available">a</th>
+            <th><input id="data-source-query" ng-model="query.id" placeholder="filter datasources" class="name"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="data-source" ng-repeat="ds in dataSources | filter:query">
+            <td>
+              <div ng-if="ds.hasOwnProperty('loadStatus')"
+                class="load-status {{ ds.loadStatus < 0 ? 'indexing' : (ds.loadStatus >= 100 ? 'loaded' : (ds.loadStatus >= 99 ? 'one-percent' : 'unloaded'))}}"
+                tooltip="{{ ds.id }}: {{ ds.loadStatus < 0 ? ' actively indexing realtime segments' : (1 - ds.loadStatus/100.0 | percentRound) + ' to load until available' }}"
+                tooltip-trigger="mouseenter"
+                tooltip-placement="right"
+              >
+                <i class="fa {{ (ds.loadStatus >= 100 || ds.loadStatus < 0) ? 'fa-circle-o' : (ds.loadStatus > 99 ? 'fa-dot-circle-o' : 'fa-circle')}}"></i>
+              </div>
+            </td>
+            <td class="name">
+              <a ui-sref="dataSource({id:ds.id})"
+                tooltip="{{indexing.dataSources[ds.id].length || 'no'}} realtime tasks"
+                tooltip-trigger="mouseenter"
+                tooltip-placement="right"
+              >{{ ds.id }}<i ng-show="indexing.dataSources[ds.id].length" class="fa fa-bolt realtime"></i></a>
+            </td>
+          </tr>
+          <tr class="key">
+            <td colspan="2">Key</td>
+          </tr>
+          <tr class="data-source">
+            <td>
+              <div class="load-status loaded" title="nothing to load">
+                <i class="fa fa-circle-o"></i>
+              </div>
+            </td>
+            <td class="name">fully available</td>
+          </tr>
+          <tr class="data-source">
+            <td>
+              <div class="load-status one-percent" title="< 1% to load">
+                <i class="fa fa-dot-circle-o"></i>
+              </div>
+            </td>
+            <td class="name">> 99% available</td>
+          </tr>
+          <tr class="data-source">
+            <td>
+              <div class="load-status unloaded" title="> 1% to load">
+                <i class="fa fa-circle"></i>
+              </div>
+            </td>
+            <td class="name">≤ 99% available</td>
+          </tr>
+          <tr class="data-source">
+            <td>
+              <div class="load-status indexing" title="realtime only">
+                <i class="fa fa-circle-o"></i>
+              </div>
+            </td>
+            <td class="name">actively indexing</td>
+          </tr>
+          <tr class="data-source"><td></td><td>(not persisted)</td></tr>
+          <tr class="data-source">
+            <td colspan="2">Hover over the icon next to each datasource for its specific availability.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="cluster">
+
+      <div id="historical">
+        <div class="tier" ng-repeat="tier in tiers">
+          <h2>
+            {{ tier.tier | tierName  }}
+            <div ng-show="tier.loadQueueLoaded">
+              <div class="load queue">
+                <div ng-if="tier.segmentsToLoad == 0" class="loaded">
+                  nothing to load
+                </div>
+                <div ng-if="tier.segmentsToLoad > 0" class="unloaded">
+                  <span class="bytes">
+                    {{ tier.segmentsToLoadSize | bytes }}
+                  </span>
+                  ({{ tier.segmentsToLoad | number }} segments) to load
+                </div>
+              </div>
+              <div class="drop queue">
+                <div ng-if="tier.segmentsToDrop == 0">
+                  nothing to drop
+                </div>
+                <div ng-if="tier.segmentsToDrop > 0">
+                  <span class="bytes">
+                    {{ tier.segmentsToDropSize | bytes }}
+                  </span>
+                  ({{ tier.segmentsToDrop | number }} segments) to drop
+                </div>
+              </div>
+            </div>
+          </h2>
+          <tier-capacity></tier-capacity>
+          <div class="capacity-history"></div>
+          <div class="node-toggle" ng-click="showNodes = ! showNodes">
+            {{ showNodes ? 'hide' : 'show' }} nodes
+          </div>
+          <div ng-show="showNodes">
+            <tier-nodes></tier-nodes>
+          </div>
+        </div>
+      </div>
+
+      <div id="indexing" ng-show="indexing">
+        <h2>
+          <a ui-sref="indexing-service">Indexing Service</a>
+          <span ng-show="indexing.slots"> using {{ indexing.slots.used }} / {{ indexing.slots.capacity }} slots ({{ indexing.slots.used / indexing.slots.capacity | percentRound }})</span>
+        </h2>
+        <div id="realtime" ng-show="indexing.tasks.running">
+          <h3>
+            Indexing tasks:
+            {{ indexing.tasks.running.all.length }} running,
+            {{ indexing.tasks.pending.all.length || 0 }} pending,
+            {{ indexing.tasks.waiting.all.length }} waiting
+          </h3>
+          <running-tasks
+            tasks="indexing.tasks.running.all"
+          ></running-tasks>
+        </div>
+        <div id="scaling" ng-show="indexing.scaling && indexing.workers">
+          <h3>
+            Scaling Activity - {{ indexing.workers.length }} workers currently provisioned
+          </h3>
+
+          <scaling-activity
+            scaling="indexing.scaling"
+            workers="indexing.workers"
+          ></scaling-activity>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+</div>

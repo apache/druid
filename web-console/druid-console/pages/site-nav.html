@@ -1,0 +1,18 @@
+<ul class="nav nav-pills">
+  <li ui-sref-active="active"><a ui-sref="cluster">cluster</a></li>
+  <li ui-sref-active="active"><a ui-sref="indexing-service">indexing</a></li>
+  <li ui-sref-active="active"><a ui-sref="dataSources">datasources</a></li>
+</ul>
+<div class="og-console-links" ng-if="coordinator">
+  <div>
+    <a href="http://{{ coordinator }}/old-console/">coordinator @ {{ coordinator }}</a>
+  </div>
+  <div>
+    <a href="http://{{ overlord }}/console.html">overlord @ {{ overlord }}</a>
+  </div>
+</div>
+<div class="og-console-links" ng-if="!coordinator">
+  <div>
+    <a href="/old-console/">old coordinator console</a>
+  </div>
+</div>
