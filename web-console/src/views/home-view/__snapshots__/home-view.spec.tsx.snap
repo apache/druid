@@ -6,17 +6,19 @@ exports[`home view matches snapshot 1`] = `
 >
   <StatusCard />
   <DatasourcesCard
-    noSqlMode={false}
+    capabilities="full"
   />
   <SegmentsCard
-    noSqlMode={false}
+    capabilities="full"
   />
-  <SupervisorsCard />
+  <SupervisorsCard
+    capabilities="full"
+  />
   <TasksCard
-    noSqlMode={false}
+    capabilities="full"
   />
   <ServersCard
-    noSqlMode={false}
+    capabilities="full"
   />
   <LookupsCard />
 </div>

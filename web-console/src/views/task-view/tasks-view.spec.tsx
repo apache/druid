@@ -32,7 +32,7 @@ describe('tasks view', () => {
         goToQuery={() => {}}
         goToMiddleManager={() => {}}
         goToLoadData={() => {}}
-        noSqlMode={false}
+        capabilities="full"
       />,
     );
     expect(taskView).toMatchSnapshot();

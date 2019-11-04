@@ -23,7 +23,7 @@ import { HomeView } from './home-view';
 
 describe('home view', () => {
   it('matches snapshot', () => {
-    const homeView = shallow(<HomeView noSqlMode={false} />);
+    const homeView = shallow(<HomeView capabilities="full" />);
     expect(homeView).toMatchSnapshot();
   });
 });

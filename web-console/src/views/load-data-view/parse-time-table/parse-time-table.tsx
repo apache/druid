@@ -21,6 +21,7 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
+import { TableCellUnparseable } from '../../../components/table-cell-unparseable/table-cell-unparseable';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
 import { possibleDruidFormatForValues } from '../../../utils/druid-time';
 import {
@@ -122,9 +123,9 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
                 return <TableCell value={row.original.error} />;
               }
               if (row.original.unparseable) {
-                return <TableCell unparseable />;
+                return <TableCellUnparseable timestamp={timestamp} />;
               }
-              return <TableCell value={row.value} timestamp={timestamp} />;
+              return <TableCell value={timestamp ? new Date(row.value) : row.value} />;
             },
             minWidth: timestamp ? 200 : 100,
             resizable: !timestamp,

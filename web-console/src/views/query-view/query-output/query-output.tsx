@@ -26,6 +26,7 @@ import {
 import React, { useState } from 'react';
 import ReactTable from 'react-table';
 
+import { TableCell } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
 import { copyAndAlert } from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
@@ -288,11 +289,10 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
             accessor: String(i),
             Cell: row => {
               const value = row.value;
-              if (!value) return value == null ? null : value;
               return (
                 <div>
                   <Popover content={getCellMenu(h, value)}>
-                    <div>{value}</div>
+                    <TableCell value={value} unlimited />
                   </Popover>
                 </div>
               );

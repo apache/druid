@@ -16,44 +16,23 @@
  * limitations under the License.
  */
 
-@import '../node_modules/normalize.css/normalize';
-@import '../node_modules/@blueprintjs/core/lib/css/blueprint';
-@import '../lib/react-table';
-@import '../node_modules/react-splitter-layout/lib/index.css';
+import { render } from '@testing-library/react';
+import React from 'react';
 
-html,
-body {
-  //font-family: 'Open Sans', Helvetica, Arial, sans-serif;
-  position: fixed;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-  font-size: 13px;
-}
+import { TableCellUnparseable } from './table-cell-unparseable';
 
-body {
-  &.bp3-dark {
-    background: rgb(41, 55, 66);
-  }
+describe('table cell unparseable', () => {
+  it('matches snapshot not timestamp', () => {
+    const tableCellUnparseable = <TableCellUnparseable />;
 
-  &.mouse-mode {
-    *:focus {
-      outline: none !important;
-    }
-  }
-}
+    const { container } = render(tableCellUnparseable);
+    expect(container.firstChild).toMatchSnapshot();
+  });
 
-.app-container {
-  position: absolute;
-  height: 100%;
-  width: 100%;
-}
+  it('matches snapshot timestamp', () => {
+    const tableCellUnparseable = <TableCellUnparseable timestamp />;
 
-.label-info-text {
-  max-width: 400px;
-  padding: 15px;
-
-  p:last-child {
-    margin-bottom: 0;
-  }
-}
+    const { container } = render(tableCellUnparseable);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

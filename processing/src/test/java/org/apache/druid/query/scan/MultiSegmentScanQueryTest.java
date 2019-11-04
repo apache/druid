@@ -25,6 +25,7 @@ import com.google.common.io.CharSource;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.MergeSequence;
@@ -38,7 +39,8 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.select.SelectQueryRunnerTest;
+import org.apache.druid.query.spec.LegacySegmentSpec;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
@@ -75,6 +77,8 @@ public class MultiSegmentScanQueryTest
       new ScanQueryEngine(),
       new ScanQueryConfig()
   );
+  private static final Interval I_0112_0114 = Intervals.of("2011-01-12/2011-01-14");
+  public static final QuerySegmentSpec I_0112_0114_SPEC = new LegacySegmentSpec(I_0112_0114);
 
   // time modified version of druid.sample.numeric.tsv
   public static final String[] V_0112 = {
@@ -182,7 +186,7 @@ public class MultiSegmentScanQueryTest
   {
     return Druids.newScanQueryBuilder()
                     .dataSource(new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE))
-                    .intervals(SelectQueryRunnerTest.I_0112_0114_SPEC)
+                    .intervals(I_0112_0114_SPEC)
                     .batchSize(batchSize)
                     .columns(Collections.emptyList())
                     .legacy(false)
