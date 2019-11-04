@@ -83,7 +83,8 @@
 
             <div class="identifier-prefix" ng-if="rule.timeType == 'ByPeriod' || rule.timeType == 'ByInterval'">
               <input type="text" class="form-control" ng-model="rule.identifierPrefix"
-                name="identifierPrefix" placeholder="Leave empty to include all">
+                name="identifierPrefix" placeholder="Namespace prefix">
+              <small>Leave empty to include all namespaces</small>
             </div>
 
             <div class="replicants" ng-if="rule.direction == 'load'">
