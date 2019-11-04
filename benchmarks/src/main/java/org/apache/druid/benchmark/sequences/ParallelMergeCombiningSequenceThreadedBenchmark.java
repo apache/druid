@@ -19,6 +19,8 @@
 
 package org.apache.druid.benchmark.sequences;
 
+import org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequenceTest;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -27,12 +29,15 @@ import org.openjdk.jmh.annotations.GroupThreads;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 @State(Scope.Benchmark)
 @Fork(value = 1, jvmArgsAppend = "-XX:+UseG1GC")
@@ -40,6 +45,13 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class ParallelMergeCombiningSequenceThreadedBenchmark extends BaseParallelMergeCombiningSequenceBenchmark
 {
+  @Param({
+      "0",
+      "100",
+      "500"
+  })
+  int maxThreadStartDelay;
+
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
@@ -58,5 +70,19 @@ public class ParallelMergeCombiningSequenceThreadedBenchmark extends BaseParalle
   public void consumeModeratelyLarge(Blackhole blackhole)
   {
     consumeSequence(blackhole, this::generateModeratelyLargeSequence);
+  }
+
+  @Override
+  void consumeSequence(Blackhole blackhole, Supplier<Sequence<ParallelMergeCombiningSequenceTest.IntPair>> supplier)
+  {
+    int delay = maxThreadStartDelay > 0 ? ThreadLocalRandom.current().nextInt(0, maxThreadStartDelay) : 0;
+    if (delay > 0) {
+      try {
+        Thread.sleep(delay);
+      } catch (InterruptedException ex) {
+        throw new RuntimeException(ex);
+      }
+    }
+    super.consumeSequence(blackhole, supplier);
   }
 }
