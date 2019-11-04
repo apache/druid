@@ -77,7 +77,7 @@ public class LoggerCaptureRule extends ExternalResource
   {
     static final String NAME = InMemoryAppender.class.getName();
 
-    // need copy-on-write collection for thread safety of iteration and modification concurrently outside of a critical section
+    // logEvents has concurrent iteration and modification in CuratorModuleTest::exitsJvmWhenMaxRetriesExceeded(), needs to be thread safe
     private final CopyOnWriteArrayList<LogEvent> logEvents;
 
     InMemoryAppender()
