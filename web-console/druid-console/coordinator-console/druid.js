@@ -12067,6 +12067,7 @@ module.exports = function($scope, $modal, $historical, $hUtils) {
     var modalInstance;
     modalInstance = $modal.open({
       templateUrl: '/pages/rules.html',
+      size: 'lg',
       controller: RuleEditorInstanceCtrl,
       resolve: {
         originalRules: function() {
@@ -12482,7 +12483,7 @@ module.exports = function() {
     scope: {
       rule: '=rule'
     },
-    template: "<div class=\"rule\">\n  <span class=\"direction\" ng-class=\"rule.direction\">\n    {{ rule.direction }}\n  </span>\n\n  <span class=\"forever\" ng-if=\"rule.timeType == 'Forever'\">Forever</span>\n\n  <span class=\"period\" ng-if=\"rule.period\">\n    <span class=\"value\">{{ rule.period }}</span><span ng-if=\"rule.direction == 'load'\">:</span>\n  </span>\n\n  <span class=\"interval\" ng-if=\"rule.interval\">\n    <span class=\"value\" ng-bind-html=\"rule.interval | simplifyInterval\"></span><span ng-if=\"rule.direction == 'load'\">:</span>\n  </span>\n\n  <span class=\"replicants\">\n    <span class=\"replicant\" ng-repeat=\"(tier, n) in rule.tieredReplicants\">\n      <span class=\"value\">{{ n }}</span>\n      in\n      <span class=\"tier\" ng-class=\"tier\">{{ tier | tierName }}</span>{{ $last ? '' : ',' }}\n    </span>\n  </span>\n</div>"
+    template: "<div class=\"rule\">\n  <span class=\"direction\" ng-class=\"rule.direction\">\n    {{ rule.direction }}\n  </span>\n\n  <span class=\"forever\" ng-if=\"rule.timeType == 'Forever'\">Forever</span>\n\n  <span class=\"period\" ng-if=\"rule.period\">\n    <span class=\"value\">{{ rule.period }}</span><span ng-if=\"rule.direction == 'load'\">:</span>\n  </span>\n\n  <span class=\"interval\" ng-if=\"rule.interval\">\n    <span class=\"value\" ng-bind-html=\"rule.interval | simplifyInterval\"></span><span ng-if=\"rule.direction == 'load'\">:</span>\n  </span>\n\n  <div class=\"identifier-prefix\" ng-if=\"rule.timeType == 'ByPeriod' || rule.timeType == 'ByInterval'\">\n    <span class=\"value\">{{ rule.identifierPrefix }}</span>\n  </div>\n\n  <span class=\"replicants\">\n    <span class=\"replicant\" ng-repeat=\"(tier, n) in rule.tieredReplicants\">\n      <span class=\"value\">{{ n }}</span>\n      in\n      <span class=\"tier\" ng-class=\"tier\">{{ tier | tierName }}</span>{{ $last ? '' : ',' }}\n    </span>\n  </span>\n</div>"
   };
 };
 
@@ -12589,9 +12590,9 @@ module.exports = function($window, $filter, $compile) {
         }).attr('dx', '-0.25em').attr('dy', '-0.2em').text(function(d) {
           switch (d.timeType) {
             case 'ByPeriod':
-              return d.period;
+              return `${d.period} ${d.identifierPrefix}`;
             case 'ByInterval':
-              return $filter('simplifyInterval')(d.interval, false);
+              return $filter('simplifyInterval')(`${d.interval} ${d.identifierPrefix}`, false);
             case 'Forever':
               return 'forever';
           }
@@ -13150,9 +13151,9 @@ module.exports = function($window, $filter, $compile) {
         }).attr('dx', '-0.25em').attr('dy', '-0.2em').text(function(d) {
           switch (d.timeType) {
             case 'ByPeriod':
-              return d.period;
+              return `${d.period} ${d.identifierPrefix}`;
             case 'ByInterval':
-              return $filter('simplifyInterval')(d.interval, false);
+              return $filter('simplifyInterval')(`${d.interval} ${d.identifierPrefix}`, false);
             case 'Forever':
               return 'forever';
           }

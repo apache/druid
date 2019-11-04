@@ -995,7 +995,7 @@ body .rules-editor .rule .edit .interval-period .alert {
 }
 
 body .rules-editor .rule .edit .identifier-prefix {
-  width: 100px;
+  width: 200px;
 }
 
 body .rules-editor .rule .edit .replicants {
