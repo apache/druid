@@ -73,6 +73,7 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
+import org.apache.druid.indexing.overlord.autoscaling.CategoriedProvisioningStrategy;
 import org.apache.druid.indexing.overlord.autoscaling.PendingTaskBasedWorkerProvisioningConfig;
 import org.apache.druid.indexing.overlord.autoscaling.PendingTaskBasedWorkerProvisioningStrategy;
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfig;
@@ -124,6 +125,7 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import java.util.List;
 
 /**
+ *
  */
 @Command(
     name = "overlord",
@@ -326,6 +328,7 @@ public class CliOverlord extends ServerRunnable
             );
             biddy.addBinding("simple").to(SimpleWorkerProvisioningStrategy.class);
             biddy.addBinding("pendingTaskBased").to(PendingTaskBasedWorkerProvisioningStrategy.class);
+            biddy.addBinding("categoriedTaskBased").to(CategoriedProvisioningStrategy.class);
           }
 
           private void configureOverlordHelpers(Binder binder)
@@ -345,6 +348,7 @@ public class CliOverlord extends ServerRunnable
   }
 
   /**
+   *
    */
   private static class OverlordJettyServerInitializer implements JettyServerInitializer
   {

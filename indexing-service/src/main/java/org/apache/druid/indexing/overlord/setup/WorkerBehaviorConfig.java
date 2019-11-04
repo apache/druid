@@ -34,7 +34,8 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DefaultWorkerBehaviorConfig.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "default", value = DefaultWorkerBehaviorConfig.class)
+    @JsonSubTypes.Type(name = "default", value = DefaultWorkerBehaviorConfig.class),
+    @JsonSubTypes.Type(name = "categoried", value = CategoriedWorkerBehaviorConfig.class)
 })
 @ExtensionPoint
 public interface WorkerBehaviorConfig
