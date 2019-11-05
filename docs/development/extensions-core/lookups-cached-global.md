@@ -370,9 +370,9 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 
 > If using JDBC, you will need to add your database's client JAR files to the extension's directory.
 > For MySQL, you can get it from https://dev.mysql.com/downloads/connector/j/, and for Postgres, from
-> https://jdbc.postgresql.org/download.html or from the `extensions/postgresql-metadata-storage/`.
+> https://jdbc.postgresql.org/download.html or from `extensions/postgresql-metadata-storage/`.
 > Copy or symlink the downloaded file to
-> `extensions/lookups-cached-global` under the distribution root directory.
+> `extensions/druid-lookups-cached-global` under the distribution root directory.
 
 ## Introspection
 
