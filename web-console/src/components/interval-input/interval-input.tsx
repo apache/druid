@@ -19,7 +19,7 @@
 import { Button, InputGroup, Popover, Position } from '@blueprintjs/core';
 import { DateRange, DateRangePicker } from '@blueprintjs/datetime';
 import { IconNames } from '@blueprintjs/icons';
-import React from 'react';
+import React, { useState } from 'react';
 
 import './interval-input.scss';
 
@@ -36,91 +36,84 @@ export interface IntervalInputState {
   dateRange: DateRange;
 }
 
-export class IntervalInput extends React.PureComponent<IntervalInputProps, IntervalInputState> {
-  constructor(props: IntervalInputProps) {
-    super(props);
-    this.state = {
-      currentInterval: this.props.interval,
-      dateRange: IntervalInput.parseInterval(this.props.interval),
-    };
+export const IntervalInput = React.memo(function IntervalInput(props: IntervalInputProps) {
+  const [tempInterval, setTempInterval] = useState();
+  const { interval, placeholder, onValueChange } = props;
+
+  function removeLocalTimezone(localDate: Date): Date {
+    // Function removes the local timezone of the date and displays it in UTC
+    return new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000);
   }
 
-  static removeLocalTimezone(localDate: Date): string {
-    // Function removes the local timezone of the date and displays it in UTC as a string, up to seconds
-    return new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000)
-      .toISOString()
-      .substring(0, 19);
-  }
-
-  static parseInterval(interval: string): DateRange {
+  function parseInterval(interval: string): DateRange {
     const dates = interval.split('/');
-    if (dates.length !== 2 || !Date.parse(dates[0]) || !Date.parse(dates[1])) {
+    if (dates.length !== 2) {
       return [undefined, undefined];
     }
-
-    const startDateParts = dates[0].split('-');
-    const endDateParts = dates[1].split('-');
-    if (
-      parseInt(startDateParts[0], 10) < CURRENT_YEAR - 20 ||
-      parseInt(endDateParts[0], 10) > CURRENT_YEAR
-    ) {
-      return [undefined, undefined];
-    }
-    const startDate = new Date(dates[0]);
-    const endDate = new Date(dates[1]);
-    return [startDate, endDate];
+    const startDate = Date.parse(dates[0]) ? new Date(dates[0]) : undefined;
+    const endDate = Date.parse(dates[1]) ? new Date(dates[1]) : undefined;
+    // Must check if the start and end dates are within range
+    return [
+      startDate && startDate.getFullYear() < CURRENT_YEAR - 20 ? undefined : startDate,
+      endDate && endDate.getFullYear() > CURRENT_YEAR ? undefined : endDate,
+    ];
   }
-
-  static parseDateRange(localRange: DateRange): string {
+  function parseDateRange(localRange: DateRange): string {
     // This function takes in the dates selected from datepicker in local time, and displays them in UTC
     // Shall Blueprint make any changes to the way dates are selected, this function will have to be reworked
     const [localStartDate, localEndDate] = localRange;
-    return `${localStartDate ? IntervalInput.removeLocalTimezone(localStartDate) : ''}/${
-      localEndDate ? IntervalInput.removeLocalTimezone(localEndDate) : ''
+    return `${
+      localStartDate
+        ? removeLocalTimezone(localStartDate)
+            .toISOString()
+            .substring(0, 19)
+        : ''
+    }/${
+      localEndDate
+        ? removeLocalTimezone(localEndDate)
+            .toISOString()
+            .substring(0, 19)
+        : ''
     }`;
   }
-  render() {
-    const { currentInterval, dateRange } = this.state;
-    const { onValueChange, placeholder } = this.props;
-    return (
-      <InputGroup
-        value={`${currentInterval}`}
-        placeholder={placeholder}
-        rightElement={
-          <div>
-            <Popover
-              popoverClassName={'calendar'}
-              content={
-                <DateRangePicker
-                  timePrecision={'second'}
-                  value={dateRange}
-                  contiguousCalendarMonths={false}
-                  onChange={(selectedRange: DateRange) => {
-                    this.setState({ dateRange: selectedRange });
-                    this.setState(
-                      {
-                        currentInterval: IntervalInput.parseDateRange(selectedRange),
-                      },
-                      () => onValueChange(this.state.currentInterval),
-                    );
-                  }}
-                />
-              }
-              position={Position.BOTTOM_RIGHT}
-            >
-              <Button rightIcon={IconNames.CALENDAR} />
-            </Popover>
-          </div>
-        }
-        onChange={(e: any) => {
-          if (e.target.value.match(/^[\-0-9T:/]+$/g) && e.target.value.length <= 39) {
-            this.setState({ currentInterval: e.target.value }, () => {
-              onValueChange(this.state.currentInterval);
-            });
-            this.setState({ dateRange: IntervalInput.parseInterval(e.target.value) });
+
+  return (
+    <InputGroup
+      value={`${interval || tempInterval}`}
+      placeholder={placeholder}
+      rightElement={
+        <div>
+          <Popover
+            popoverClassName={'calendar'}
+            content={
+              <DateRangePicker
+                timePrecision={'second'}
+                value={parseInterval(interval)}
+                contiguousCalendarMonths={false}
+                onChange={(selectedRange: DateRange) => {
+                  onValueChange(parseDateRange(selectedRange));
+                }}
+              />
+            }
+            position={Position.BOTTOM_RIGHT}
+          >
+            <Button rightIcon={IconNames.CALENDAR} />
+          </Popover>
+        </div>
+      }
+      onChange={(e: any) => {
+        if (
+          (e.target.value.match(/^[\-0-9T:/]+$/g) && e.target.value.length <= 39) ||
+          e.target.value === ''
+        ) {
+          if (parseInterval(e.target.value) !== [undefined, undefined]) {
+            onValueChange(e.target.value);
+            setTempInterval('');
+          } else {
+            setTempInterval({ tempInterval: e.target.value });
           }
-        }}
-      />
-    );
-  }
-}
+        }
+      }}
+    />
+  );
+});
