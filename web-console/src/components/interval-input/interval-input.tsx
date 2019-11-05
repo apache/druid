@@ -31,11 +31,6 @@ export interface IntervalInputProps {
   onValueChange: (interval: string) => void;
 }
 
-export interface IntervalInputState {
-  currentInterval: string;
-  dateRange: DateRange;
-}
-
 export const IntervalInput = React.memo(function IntervalInput(props: IntervalInputProps) {
   const [tempInterval, setTempInterval] = useState();
   const { interval, placeholder, onValueChange } = props;
