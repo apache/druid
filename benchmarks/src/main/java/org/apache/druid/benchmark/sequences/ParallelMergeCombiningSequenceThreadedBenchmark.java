@@ -79,7 +79,8 @@ public class ParallelMergeCombiningSequenceThreadedBenchmark extends BaseParalle
     if (delay > 0) {
       try {
         Thread.sleep(delay);
-      } catch (InterruptedException ex) {
+      }
+      catch (InterruptedException ex) {
         throw new RuntimeException(ex);
       }
     }
