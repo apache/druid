@@ -21,11 +21,14 @@ package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.data.input.impl.NoopInputFormat;
+import org.apache.druid.data.input.impl.NoopInputSource;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
@@ -100,7 +103,11 @@ public class TestUtils
           @Override
           public void setupModule(SetupContext context)
           {
-            context.registerSubtypes(LocalLoadSpec.class);
+            context.registerSubtypes(
+                new NamedType(LocalLoadSpec.class, "local"),
+                new NamedType(NoopInputSource.class, "noop"),
+                new NamedType(NoopInputFormat.class, "noop")
+            );
           }
         }
     );

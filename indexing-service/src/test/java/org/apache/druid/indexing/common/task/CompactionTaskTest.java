@@ -1057,10 +1057,10 @@ public class CompactionTaskTest
       final DataSchema dataSchema = ingestionSchema.getDataSchema();
       Assert.assertEquals(DATA_SOURCE, dataSchema.getDataSource());
 
-      Assert.assertEquals(new TimestampSpec(null, null, null), dataSchema.getTimestampSpec());
+      Assert.assertEquals(new TimestampSpec(null, null, null), dataSchema.getNonNullTimestampSpec());
       Assert.assertEquals(
           new HashSet<>(expectedDimensionsSpec.getDimensions()),
-          new HashSet<>(dataSchema.getDimensionsSpec().getDimensions())
+          new HashSet<>(dataSchema.getNonNullDimensionsSpec().getDimensions())
       );
 
       // metrics
