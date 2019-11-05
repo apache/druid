@@ -618,12 +618,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
 
-  /**
-   * Test For if always use earliest offset on newly discovered partitions
-   */
-  @Ignore("This is a regression test that needs to wait 10s+, ignore for now")
+//  @Ignore("This is a regression test that needs to wait 10s+, ignore for now")
   @Test
-  public void testLatestOffsetOnDiscovery() throws Exception
+  public void testAlwaysUsesEarliestOffsetForNewlyDiscoveredPartitions() throws Exception
   {
     supervisor = getTestableSupervisor(1, 1, false, "PT1H", null, null);
     addSomeEvents(9);
@@ -658,6 +655,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
 
     addMoreEvents(9, 6);
+    // sleep 10s to wait for kafka consumer refresh kafka server metadata
     Thread.sleep(10000);
     EasyMock.reset(taskQueue, taskStorage);
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
