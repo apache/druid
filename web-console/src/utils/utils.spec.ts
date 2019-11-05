@@ -38,13 +38,16 @@ import {
 } from './sampler';
 
 describe('test-utils', () => {
-  const ingestionSpec = {
+  const ingestionSpec: IngestionSpec = {
     type: 'index_parallel',
     ioConfig: {
       type: 'index_parallel',
-      firehose: {
+      inputSource: {
         type: 'http',
         uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+      },
+      inputFormat: {
+        type: 'json',
       },
     },
     tuningConfig: {
@@ -57,21 +60,15 @@ describe('test-utils', () => {
         segmentGranularity: 'DAY',
         queryGranularity: 'HOUR',
       },
-      parser: {
-        type: 'string',
-        parseSpec: {
-          format: 'json',
-          timestampSpec: {
-            column: 'timestamp',
-            format: 'iso',
-          },
-          dimensionsSpec: {},
-        },
+      timestampSpec: {
+        column: 'timestamp',
+        format: 'iso',
       },
+      dimensionsSpec: {},
     },
   };
   it('spec-utils getSamplerType', () => {
-    expect(getSamplerType(ingestionSpec as IngestionSpec)).toMatchInlineSnapshot(`"index"`);
+    expect(getSamplerType(ingestionSpec)).toMatchInlineSnapshot(`"index"`);
   });
   it('spec-utils headerFromSampleResponse', () => {
     expect(headerFromSampleResponse({ cacheKey: 'abc123', data: [] })).toMatchInlineSnapshot(
@@ -79,34 +76,26 @@ describe('test-utils', () => {
     );
   });
   it('spec-utils sampleForParser', () => {
-    expect(
-      sampleForParser(ingestionSpec as IngestionSpec, 'start', 'abc123'),
-    ).toMatchInlineSnapshot(`Promise {}`);
+    expect(sampleForParser(ingestionSpec, 'start', 'abc123')).toMatchInlineSnapshot(`Promise {}`);
   });
   it('spec-utils SampleSpec', () => {
-    expect(sampleForConnect(ingestionSpec as IngestionSpec, 'start')).toMatchInlineSnapshot(
+    expect(sampleForConnect(ingestionSpec, 'start')).toMatchInlineSnapshot(`Promise {}`);
+  });
+  it('spec-utils sampleForTimestamp', () => {
+    expect(sampleForTimestamp(ingestionSpec, 'start', 'abc123')).toMatchInlineSnapshot(
       `Promise {}`,
     );
   });
-  it('spec-utils sampleForTimestamp', () => {
-    expect(
-      sampleForTimestamp(ingestionSpec as IngestionSpec, 'start', 'abc123'),
-    ).toMatchInlineSnapshot(`Promise {}`);
-  });
   it('spec-utils sampleForTransform', () => {
-    expect(
-      sampleForTransform(ingestionSpec as IngestionSpec, 'start', 'abc123'),
-    ).toMatchInlineSnapshot(`Promise {}`);
+    expect(sampleForTransform(ingestionSpec, 'start', 'abc123')).toMatchInlineSnapshot(
+      `Promise {}`,
+    );
   });
   it('spec-utils sampleForFilter', () => {
-    expect(
-      sampleForFilter(ingestionSpec as IngestionSpec, 'start', 'abc123'),
-    ).toMatchInlineSnapshot(`Promise {}`);
+    expect(sampleForFilter(ingestionSpec, 'start', 'abc123')).toMatchInlineSnapshot(`Promise {}`);
   });
   it('spec-utils sampleForSchema', () => {
-    expect(
-      sampleForSchema(ingestionSpec as IngestionSpec, 'start', 'abc123'),
-    ).toMatchInlineSnapshot(`Promise {}`);
+    expect(sampleForSchema(ingestionSpec, 'start', 'abc123')).toMatchInlineSnapshot(`Promise {}`);
   });
   it('spec-utils sampleForExampleManifests', () => {
     expect(sampleForExampleManifests('abc123')).toMatchInlineSnapshot(`Promise {}`);
@@ -114,13 +103,16 @@ describe('test-utils', () => {
 });
 
 describe('druid-type.ts', () => {
-  const ingestionSpec = {
+  const ingestionSpec: IngestionSpec = {
     type: 'index_parallel',
     ioConfig: {
       type: 'index_parallel',
-      firehose: {
+      inputSource: {
         type: 'http',
         uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+      },
+      inputFormat: {
+        type: 'json',
       },
     },
     tuningConfig: {
@@ -133,17 +125,11 @@ describe('druid-type.ts', () => {
         segmentGranularity: 'DAY',
         queryGranularity: 'HOUR',
       },
-      parser: {
-        type: 'string',
-        parseSpec: {
-          format: 'json',
-          timestampSpec: {
-            column: 'timestamp',
-            format: 'iso',
-          },
-          dimensionsSpec: {},
-        },
+      timestampSpec: {
+        column: 'timestamp',
+        format: 'iso',
       },
+      dimensionsSpec: {},
     },
   };
   it('spec-utils getSamplerType', () => {
@@ -173,12 +159,7 @@ describe('druid-type.ts', () => {
   });
   it('spec-utils updateSchemaWithSample', () => {
     expect(
-      updateSchemaWithSample(
-        ingestionSpec as IngestionSpec,
-        { header: ['header'], rows: [] },
-        'specific',
-        true,
-      ),
+      updateSchemaWithSample(ingestionSpec, { header: ['header'], rows: [] }, 'specific', true),
     ).toMatchInlineSnapshot(`
       Object {
         "dataSchema": Object {

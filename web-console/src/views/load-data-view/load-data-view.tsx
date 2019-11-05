@@ -75,7 +75,7 @@ import {
   EMPTY_ARRAY,
   EMPTY_OBJECT,
   fillDataSourceNameIfNeeded,
-  fillParser,
+  fillInputFormat,
   FlattenField,
   getDimensionMode,
   getDimensionSpecFormFields,
@@ -86,10 +86,10 @@ import {
   getIngestionDocLink,
   getIngestionImage,
   getIngestionTitle,
+  getInputFormatFormFields,
   getIoConfigFormFields,
   getIoConfigTuningFormFields,
   getMetricSpecFormFields,
-  getParseSpecFormFields,
   getPartitionRelatedTuningSpecFormFields,
   getRequiredModule,
   getRollup,
@@ -101,6 +101,8 @@ import {
   hasParallelAbility,
   IngestionComboTypeWithExtra,
   IngestionSpec,
+  InputFormat,
+  inputFormatCanFlatten,
   invalidIoConfig,
   invalidTuningConfig,
   IoConfig,
@@ -108,16 +110,13 @@ import {
   isEmptyIngestionSpec,
   isIngestSegment,
   isParallel,
+  issueWithInputFormat,
   issueWithIoConfig,
-  issueWithParser,
   isTask,
   joinFilter,
   MAX_INLINE_DATA_LENGTH,
   MetricSpec,
   normalizeSpec,
-  Parser,
-  ParseSpec,
-  parseSpecHasFlatten,
   splitFilter,
   TimestampSpec,
   Transform,
@@ -127,7 +126,7 @@ import {
 import { deepDelete, deepGet, deepSet } from '../../utils/object-change';
 import {
   ExampleManifest,
-  getOverlordModules,
+  getProxyOverlordModules,
   HeaderAndRows,
   headerAndRowsFromSampleResponse,
   SampleEntry,
@@ -339,7 +338,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       columnFilter: '',
       specialColumnsOnly: false,
 
-      // for firehose
+      // for inputSource
       inputQueryState: QueryState.INIT,
 
       // for parser
@@ -395,7 +394,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   async getOverlordModules() {
     let overlordModules: string[];
     try {
-      overlordModules = await getOverlordModules();
+      overlordModules = await getProxyOverlordModules();
     } catch (e) {
       AppToaster.show({
         message: `Failed to get overlord modules: ${e.message}`,
@@ -411,7 +410,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   isStepEnabled(step: Step): boolean {
     const { spec } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
-    const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
+    const inputFormat: InputFormat = deepGet(spec, 'ioConfig.inputFormat') || EMPTY_OBJECT;
 
     switch (step) {
       case 'connect':
@@ -425,7 +424,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'partition':
       case 'tuning':
       case 'publish':
-        return Boolean(spec.type && !issueWithIoConfig(ioConfig) && !issueWithParser(parser));
+        return Boolean(
+          spec.type && !issueWithIoConfig(ioConfig) && !issueWithInputFormat(inputFormat),
+        );
 
       default:
         return true;
@@ -949,7 +950,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
 
     let issue: string | undefined;
-    if (issueWithIoConfig(ioConfig)) {
+    if (issueWithIoConfig(ioConfig, true)) {
       issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
     }
 
@@ -984,7 +985,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { specPreview: spec, inputQueryState, sampleStrategy } = this.state;
     const specType = getSpecType(spec);
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
-    const inlineMode = deepGet(spec, 'ioConfig.firehose.type') === 'inline';
+    const inlineMode = deepGet(spec, 'ioConfig.inputSource.type') === 'inline';
 
     let mainFill: JSX.Element | string = '';
     if (inlineMode) {
@@ -992,10 +993,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         <TextArea
           className="inline-data"
           placeholder="Paste your data here"
-          value={deepGet(spec, 'ioConfig.firehose.data')}
+          value={deepGet(spec, 'ioConfig.inputSource.data')}
           onChange={(e: any) => {
             const stringValue = e.target.value.substr(0, MAX_INLINE_DATA_LENGTH);
-            this.updateSpecPreview(deepSet(spec, 'ioConfig.firehose.data', stringValue));
+            this.updateSpecPreview(deepSet(spec, 'ioConfig.inputSource.data', stringValue));
           }}
         />
       );
@@ -1068,7 +1069,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               />
             </FormGroup>
           )}
-          {deepGet(spec, 'ioConfig.firehose.type') === 'local' && (
+          {deepGet(spec, 'ioConfig.inputSource.type') === 'local' && (
             <FormGroup>
               <Callout intent={Intent.WARNING}>
                 This path must be available on the local filesystem of all Druid servers.
@@ -1095,18 +1096,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             const inputData = inputQueryState.data;
 
             if (isIngestSegment(spec)) {
-              let newSpec = fillParser(spec, []);
+              let newSpec = fillInputFormat(spec, []);
 
               if (typeof inputData.rollup === 'boolean') {
                 newSpec = deepSet(newSpec, 'dataSchema.granularitySpec.rollup', inputData.rollup);
               }
 
               if (inputData.timestampSpec) {
-                newSpec = deepSet(
-                  newSpec,
-                  'dataSchema.parser.parseSpec.timestampSpec',
-                  inputData.timestampSpec,
-                );
+                newSpec = deepSet(newSpec, 'dataSchema.timestampSpec', inputData.timestampSpec);
               }
 
               if (inputData.queryGranularity) {
@@ -1121,7 +1118,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 const aggregators = inputData.aggregators || {};
                 newSpec = deepSet(
                   newSpec,
-                  'dataSchema.parser.parseSpec.dimensionsSpec.dimensions',
+                  'dataSchema.dimensionsSpec.dimensions',
                   Object.keys(inputData.columns)
                     .filter(k => k !== '__time' && !aggregators[k])
                     .map(k => ({
@@ -1143,7 +1140,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             } else {
               this.updateSpec(
                 fillDataSourceNameIfNeeded(
-                  fillParser(spec, inputQueryState.data.data.map(l => l.raw)),
+                  fillInputFormat(spec, inputQueryState.data.data.map(l => l.raw)),
                 ),
               );
             }
@@ -1158,14 +1155,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   async queryForParser(initRun = false) {
     const { spec, sampleStrategy, cacheKey } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
-    const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
-    const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
+    const inputFormatColumns: string[] =
+      deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
 
     let issue: string | undefined;
     if (issueWithIoConfig(ioConfig)) {
       issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
-    } else if (issueWithParser(parser)) {
-      issue = `Parser not ready, ${issueWithParser(parser)}`;
     }
 
     if (issue) {
@@ -1192,7 +1187,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     this.setState({
       cacheKey: sampleResponse.cacheKey,
       parserQueryState: new QueryState({
-        data: headerAndRowsFromSampleResponse(sampleResponse, '__time', parserColumns),
+        data: headerAndRowsFromSampleResponse(sampleResponse, '__time', inputFormatColumns),
       }),
     });
   }
@@ -1205,11 +1200,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       parserQueryState,
       selectedFlattenField,
     } = this.state;
-    const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || EMPTY_OBJECT;
+    const inputFormat: InputFormat = deepGet(spec, 'ioConfig.inputFormat') || EMPTY_OBJECT;
     const flattenFields: FlattenField[] =
-      deepGet(spec, 'dataSchema.parser.parseSpec.flattenSpec.fields') || EMPTY_ARRAY;
+      deepGet(spec, 'ioConfig.inputFormat.flattenSpec.fields') || EMPTY_ARRAY;
 
-    const canFlatten = parseSpec.format === 'json';
+    const canFlatten = inputFormatCanFlatten(inputFormat);
 
     let mainFill: JSX.Element | string = '';
     if (parserQueryState.isInit()) {
@@ -1290,11 +1285,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {!selectedFlattenField && (
             <>
               <AutoForm
-                fields={getParseSpecFormFields()}
-                model={parseSpec}
-                onChange={p =>
-                  this.updateSpecPreview(deepSet(spec, 'dataSchema.parser.parseSpec', p))
-                }
+                fields={getInputFormatFormFields()}
+                model={inputFormat}
+                onChange={p => this.updateSpecPreview(deepSet(spec, 'ioConfig.inputFormat', p))}
               />
               {this.renderApplyButtonBar()}
             </>
@@ -1307,11 +1300,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 text="Auto add flatten specs"
                 onClick={() => {
                   this.updateSpec(
-                    deepSet(
-                      spec,
-                      'dataSchema.parser.parseSpec.flattenSpec.fields',
-                      sugestedFlattenFields,
-                    ),
+                    deepSet(spec, 'ioConfig.inputFormat.flattenSpec.fields', sugestedFlattenFields),
                   );
                 }}
               />
@@ -1335,7 +1324,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             if (possibleTimestampSpec) {
               const newSpec: IngestionSpec = deepSet(
                 spec,
-                'dataSchema.parser.parseSpec.timestampSpec',
+                'dataSchema.timestampSpec',
                 possibleTimestampSpec,
               );
               this.updateSpec(newSpec);
@@ -1355,8 +1344,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   renderFlattenControls(): JSX.Element | undefined {
     const { spec, selectedFlattenField, selectedFlattenFieldIndex } = this.state;
-    const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || EMPTY_OBJECT;
-    if (!parseSpecHasFlatten(parseSpec)) return;
+    const inputFormat: InputFormat = deepGet(spec, 'ioConfig.inputFormat') || EMPTY_OBJECT;
+    if (!inputFormatCanFlatten(inputFormat)) return;
 
     const close = () => {
       this.setState({
@@ -1381,7 +1370,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 this.updateSpec(
                   deepSet(
                     spec,
-                    `dataSchema.parser.parseSpec.flattenSpec.fields.${selectedFlattenFieldIndex}`,
+                    `ioConfig.inputFormat.flattenSpec.fields.${selectedFlattenFieldIndex}`,
                     selectedFlattenField,
                   ),
                 );
@@ -1398,7 +1387,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   this.updateSpec(
                     deepDelete(
                       spec,
-                      `dataSchema.parser.parseSpec.flattenSpec.fields.${selectedFlattenFieldIndex}`,
+                      `ioConfig.inputFormat.flattenSpec.fields.${selectedFlattenFieldIndex}`,
                     ),
                   );
                   close();
@@ -1436,16 +1425,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   async queryForTimestamp(initRun = false) {
     const { spec, sampleStrategy, cacheKey } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
-    const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
-    const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
-    const timestampSpec =
-      deepGet(spec, 'dataSchema.parser.parseSpec.timestampSpec') || EMPTY_OBJECT;
+    const inputFormatColumns: string[] =
+      deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
+    const timestampSpec = deepGet(spec, 'dataSchema.timestampSpec') || EMPTY_OBJECT;
 
     let issue: string | undefined;
     if (issueWithIoConfig(ioConfig)) {
       issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
-    } else if (issueWithParser(parser)) {
-      issue = `Parser not ready, ${issueWithParser(parser)}`;
     }
 
     if (issue) {
@@ -1476,7 +1462,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           headerAndRows: headerAndRowsFromSampleResponse(
             sampleResponse,
             undefined,
-            ['__time'].concat(parserColumns),
+            ['__time'].concat(inputFormatColumns),
           ),
           timestampSpec,
         },
@@ -1486,8 +1472,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   renderTimestampStep() {
     const { specPreview: spec, columnFilter, specialColumnsOnly, timestampQueryState } = this.state;
-    const timestampSpec: TimestampSpec =
-      deepGet(spec, 'dataSchema.parser.parseSpec.timestampSpec') || EMPTY_OBJECT;
+    const timestampSpec: TimestampSpec = deepGet(spec, 'dataSchema.timestampSpec') || EMPTY_OBJECT;
     const timestampSpecFromColumn = isColumnTimestampSpec(timestampSpec);
 
     let mainFill: JSX.Element | string = '';
@@ -1556,9 +1541,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     column: 'timestamp',
                     format: 'auto',
                   };
-                  this.updateSpecPreview(
-                    deepSet(spec, 'dataSchema.parser.parseSpec.timestampSpec', timestampSpec),
-                  );
+                  this.updateSpecPreview(deepSet(spec, 'dataSchema.timestampSpec', timestampSpec));
                 }}
               />
               <Button
@@ -1566,11 +1549,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 active={!timestampSpecFromColumn}
                 onClick={() => {
                   this.updateSpecPreview(
-                    deepSet(
-                      spec,
-                      'dataSchema.parser.parseSpec.timestampSpec',
-                      getEmptyTimestampSpec(),
-                    ),
+                    deepSet(spec, 'dataSchema.timestampSpec', getEmptyTimestampSpec()),
                   );
                 }}
               />
@@ -1580,9 +1559,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             fields={getTimestampSpecFormFields(timestampSpec)}
             model={timestampSpec}
             onChange={timestampSpec => {
-              this.updateSpecPreview(
-                deepSet(spec, 'dataSchema.parser.parseSpec.timestampSpec', timestampSpec),
-              );
+              this.updateSpecPreview(deepSet(spec, 'dataSchema.timestampSpec', timestampSpec));
             }}
           />
           {this.renderApplyButtonBar()}
@@ -1596,9 +1573,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   private onTimestampColumnSelect = (newTimestampSpec: TimestampSpec) => {
     const { specPreview } = this.state;
-    this.updateSpecPreview(
-      deepSet(specPreview, 'dataSchema.parser.parseSpec.timestampSpec', newTimestampSpec),
-    );
+    this.updateSpecPreview(deepSet(specPreview, 'dataSchema.timestampSpec', newTimestampSpec));
   };
 
   // ==================================================================
@@ -1606,14 +1581,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   async queryForTransform(initRun = false) {
     const { spec, sampleStrategy, cacheKey } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
-    const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
-    const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
+    const inputFormatColumns: string[] =
+      deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
 
     let issue: string | undefined;
     if (issueWithIoConfig(ioConfig)) {
       issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
-    } else if (issueWithParser(parser)) {
-      issue = `Parser not ready, ${issueWithParser(parser)}`;
     }
 
     if (issue) {
@@ -1643,7 +1616,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         data: headerAndRowsFromSampleResponse(
           sampleResponse,
           undefined,
-          ['__time'].concat(parserColumns),
+          ['__time'].concat(inputFormatColumns),
         ),
       }),
     });
@@ -1832,14 +1805,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   async queryForFilter(initRun = false) {
     const { spec, sampleStrategy, cacheKey } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
-    const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
-    const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
+    const inputFormatColumns: string[] =
+      deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
 
     let issue: string | undefined;
     if (issueWithIoConfig(ioConfig)) {
       issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
-    } else if (issueWithParser(parser)) {
-      issue = `Parser not ready, ${issueWithParser(parser)}`;
     }
 
     if (issue) {
@@ -1870,7 +1841,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           data: headerAndRowsFromSampleResponse(
             sampleResponse,
             undefined,
-            ['__time'].concat(parserColumns),
+            ['__time'].concat(inputFormatColumns),
             true,
           ),
         }),
@@ -1893,7 +1864,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const headerAndRowsNoFilter = headerAndRowsFromSampleResponse(
       sampleResponseNoFilter,
       undefined,
-      ['__time'].concat(parserColumns),
+      ['__time'].concat(inputFormatColumns),
       true,
     );
 
@@ -2113,17 +2084,15 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   async queryForSchema(initRun = false) {
     const { spec, sampleStrategy, cacheKey } = this.state;
     const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
-    const parser: Parser = deepGet(spec, 'dataSchema.parser') || EMPTY_OBJECT;
-    const parserColumns: string[] = deepGet(parser, 'parseSpec.columns') || [];
+    const inputFormatColumns: string[] =
+      deepGet(spec, 'ioConfig.inputFormat.columns') || EMPTY_ARRAY;
     const metricsSpec: MetricSpec[] = deepGet(spec, 'dataSchema.metricsSpec') || EMPTY_ARRAY;
     const dimensionsSpec: DimensionsSpec =
-      deepGet(spec, 'dataSchema.parser.parseSpec.dimensionsSpec') || EMPTY_OBJECT;
+      deepGet(spec, 'dataSchema.dimensionsSpec') || EMPTY_OBJECT;
 
     let issue: string | undefined;
     if (issueWithIoConfig(ioConfig)) {
       issue = `IoConfig not ready, ${issueWithIoConfig(ioConfig)}`;
-    } else if (issueWithParser(parser)) {
-      issue = `Parser not ready, ${issueWithParser(parser)}`;
     }
 
     if (issue) {
@@ -2154,7 +2123,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           headerAndRows: headerAndRowsFromSampleResponse(
             sampleResponse,
             undefined,
-            ['__time'].concat(parserColumns),
+            ['__time'].concat(inputFormatColumns),
           ),
           dimensionsSpec,
           metricsSpec,
@@ -2263,7 +2232,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 <AutoForm
                   fields={[
                     {
-                      name: 'dataSchema.parser.parseSpec.dimensionsSpec.dimensionExclusions',
+                      name: 'dataSchema.dimensionsSpec.dimensionExclusions',
                       label: 'Exclusions',
                       type: 'string-array',
                       info: (
@@ -2441,13 +2410,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     };
 
     if (selectedDimensionSpec) {
-      const curDimensions =
-        deepGet(spec, `dataSchema.parser.parseSpec.dimensionsSpec.dimensions`) || EMPTY_ARRAY;
+      const curDimensions = deepGet(spec, `dataSchema.dimensionsSpec.dimensions`) || EMPTY_ARRAY;
 
       const convertToMetric = (type: string, prefix: string) => {
         const specWithoutDimension = deepDelete(
           spec,
-          `dataSchema.parser.parseSpec.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
+          `dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
         );
 
         const specWithMetric = deepSet(specWithoutDimension, `dataSchema.metricsSpec.[append]`, {
@@ -2516,7 +2484,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 this.updateSpec(
                   deepSet(
                     spec,
-                    `dataSchema.parser.parseSpec.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
+                    `dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
                     selectedDimensionSpec,
                   ),
                 );
@@ -2536,7 +2504,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   this.updateSpec(
                     deepDelete(
                       spec,
-                      `dataSchema.parser.parseSpec.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
+                      `dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpecIndex}`,
                     ),
                   );
                   close();
@@ -2586,7 +2554,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
         const specWithDimension = deepSet(
           specWithoutMetric,
-          `dataSchema.parser.parseSpec.dimensionsSpec.dimensions.[append]`,
+          `dataSchema.dimensionsSpec.dimensions.[append]`,
           {
             type,
             name: selectedMetricSpec.fieldName,
@@ -2792,10 +2760,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               />
             ) : (
               <div>
-                {ioConfig.firehose
-                  ? `No specific tuning configs for firehose of type '${deepGet(
+                {ioConfig.inputSource
+                  ? `No specific tuning configs for inputSource of type '${deepGet(
                       ioConfig,
-                      'firehose.type',
+                      'inputSource.type',
                     )}'.`
                   : `No specific tuning configs.`}
               </div>
