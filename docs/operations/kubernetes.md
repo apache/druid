@@ -29,4 +29,4 @@ Apache Druid (incubating) distribution is also available as [Docker](https://www
 $docker pull apache/incubator-druid:0.16.0-incubating
 ```
 
-[druid-operator](https://github.com/druid-io/druid-operator) can be used to manage Druid cluster on [Kubernetes](https://kubernetes.io/) .
+[druid-operator](https://github.com/druid-io/druid-operator) can be used to manage a Druid cluster on [Kubernetes](https://kubernetes.io/) .
