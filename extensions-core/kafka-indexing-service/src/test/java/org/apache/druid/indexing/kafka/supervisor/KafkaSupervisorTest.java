@@ -618,7 +618,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
 
-//  @Ignore("This is a regression test that needs to wait 10s+, ignore for now")
+  @Ignore("This is a regression test that needs to wait 10s+, ignore for now")
   @Test
   public void testAlwaysUsesEarliestOffsetForNewlyDiscoveredPartitions() throws Exception
   {
