@@ -34,13 +34,18 @@ import java.util.stream.Stream;
 
 public class FirehoseFactoryToInputSourceAdaptor implements SplittableInputSource
 {
-  private final FirehoseFactory firehoseFactory;
+  private final FiniteFirehoseFactory firehoseFactory;
   private final InputRowParser inputRowParser;
 
-  public FirehoseFactoryToInputSourceAdaptor(FirehoseFactory firehoseFactory, InputRowParser inputRowParser)
+  public FirehoseFactoryToInputSourceAdaptor(FiniteFirehoseFactory firehoseFactory, InputRowParser inputRowParser)
   {
     this.firehoseFactory = firehoseFactory;
     this.inputRowParser = Preconditions.checkNotNull(inputRowParser, "inputRowParser");
+  }
+
+  public FiniteFirehoseFactory getFirehoseFactory()
+  {
+    return firehoseFactory;
   }
 
   @Override
@@ -54,7 +59,7 @@ public class FirehoseFactoryToInputSourceAdaptor implements SplittableInputSourc
       throws IOException
   {
     if (firehoseFactory.isSplittable()) {
-      return ((FiniteFirehoseFactory) firehoseFactory).getSplits(splitHintSpec);
+      return firehoseFactory.getSplits(splitHintSpec);
     } else {
       throw new UnsupportedOperationException();
     }
@@ -64,7 +69,7 @@ public class FirehoseFactoryToInputSourceAdaptor implements SplittableInputSourc
   public int getNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec) throws IOException
   {
     if (firehoseFactory.isSplittable()) {
-      return ((FiniteFirehoseFactory) firehoseFactory).getNumSplits(splitHintSpec);
+      return firehoseFactory.getNumSplits(splitHintSpec);
     } else {
       throw new UnsupportedOperationException();
     }
@@ -75,7 +80,7 @@ public class FirehoseFactoryToInputSourceAdaptor implements SplittableInputSourc
   {
     if (firehoseFactory.isSplittable()) {
       return new FirehoseFactoryToInputSourceAdaptor(
-          ((FiniteFirehoseFactory) firehoseFactory).withSplit(split),
+          firehoseFactory.withSplit(split),
           inputRowParser
       );
     } else {

@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class FirehoseFactoryToInputSourceAdaptorTest
 {
@@ -113,7 +114,7 @@ public class FirehoseFactoryToInputSourceAdaptorTest
     }
   }
 
-  private static class TestFirehoseFactory implements FirehoseFactory<StringInputRowParser>
+  private static class TestFirehoseFactory implements FiniteFirehoseFactory<StringInputRowParser, Object>
   {
     private final List<String> lines;
 
@@ -147,6 +148,30 @@ public class FirehoseFactoryToInputSourceAdaptorTest
           // do nothing
         }
       };
+    }
+
+    @Override
+    public boolean isSplittable()
+    {
+      return false;
+    }
+
+    @Override
+    public Stream<InputSplit<Object>> getSplits(@Nullable SplitHintSpec splitHintSpec) throws IOException
+    {
+      return null;
+    }
+
+    @Override
+    public int getNumSplits(@Nullable SplitHintSpec splitHintSpec) throws IOException
+    {
+      return 0;
+    }
+
+    @Override
+    public FiniteFirehoseFactory withSplit(InputSplit split)
+    {
+      return null;
     }
   }
 }

@@ -19,13 +19,39 @@
 
 package org.apache.druid.data.input.impl;
 
-import org.apache.druid.data.input.FirehoseFactory;
+import org.apache.druid.data.input.FiniteFirehoseFactory;
+import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.SplitHintSpec;
 
-public class NoopFirehoseFactory implements FirehoseFactory
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.util.stream.Stream;
+
+public class NoopFirehoseFactory implements FiniteFirehoseFactory
 {
   @Override
   public String toString()
   {
     return "NoopFirehoseFactory{}";
+  }
+
+  @Override
+  public Stream<InputSplit> getSplits(
+      @Nullable SplitHintSpec splitHintSpec
+  ) throws IOException
+  {
+    return null;
+  }
+
+  @Override
+  public int getNumSplits(@Nullable SplitHintSpec splitHintSpec) throws IOException
+  {
+    return 0;
+  }
+
+  @Override
+  public FiniteFirehoseFactory withSplit(InputSplit split)
+  {
+    return null;
   }
 }

@@ -35,6 +35,7 @@ import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputRow;
@@ -1145,7 +1146,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public InputSource getNonNullInputSource(@Nullable InputRowParser inputRowParser)
     {
       if (inputSource == null) {
-        return new FirehoseFactoryToInputSourceAdaptor(firehoseFactory, inputRowParser);
+        return new FirehoseFactoryToInputSourceAdaptor(
+            (FiniteFirehoseFactory) firehoseFactory,
+            inputRowParser
+        );
       } else {
         return inputSource;
       }

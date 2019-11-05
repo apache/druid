@@ -542,8 +542,6 @@ public class CompactionTask extends AbstractBatchIndexTask
             segmentLoaderFactory,
             retryPolicyFactory
         ),
-        null,
-        null,
         false
     );
   }
