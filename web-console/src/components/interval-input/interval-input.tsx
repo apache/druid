@@ -41,11 +41,18 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
     super(props);
     this.state = {
       currentInterval: this.props.interval,
-      dateRange: this.parseInterval(this.props.interval),
+      dateRange: IntervalInput.parseInterval(this.props.interval),
     };
   }
 
-  parseInterval(interval: string): DateRange {
+  static removeLocalTimezone(localDate: Date): string {
+    // Function removes the local timezone of the date and displays it in UTC as a string, up to seconds
+    return new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000)
+      .toISOString()
+      .substring(0, 19);
+  }
+
+  static parseInterval(interval: string): DateRange {
     const dates = interval.split('/');
     if (dates.length !== 2 || !Date.parse(dates[0]) || !Date.parse(dates[1])) {
       return [undefined, undefined];
@@ -64,20 +71,12 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
     return [startDate, endDate];
   }
 
-  parseDateRange(range: DateRange): string {
-    const [startDate, endDate] = range;
-    return `${
-      startDate
-        ? new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000)
-            .toISOString()
-            .substring(0, 19)
-        : ''
-    }/${
-      endDate
-        ? new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000)
-            .toISOString()
-            .substring(0, 19)
-        : ''
+  static parseDateRange(localRange: DateRange): string {
+    // This function takes in the dates selected from datepicker in local time, and displays them in UTC
+    // Shall Blueprint make any changes to the way dates are selected, this function will have to be reworked
+    const [localStartDate, localEndDate] = localRange;
+    return `${localStartDate ? IntervalInput.removeLocalTimezone(localStartDate) : ''}/${
+      localEndDate ? IntervalInput.removeLocalTimezone(localEndDate) : ''
     }`;
   }
   render() {
@@ -100,7 +99,7 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
                     this.setState({ dateRange: selectedRange });
                     this.setState(
                       {
-                        currentInterval: this.parseDateRange(selectedRange),
+                        currentInterval: IntervalInput.parseDateRange(selectedRange),
                       },
                       () => onValueChange(this.state.currentInterval),
                     );
@@ -114,10 +113,12 @@ export class IntervalInput extends React.PureComponent<IntervalInputProps, Inter
           </div>
         }
         onChange={(e: any) => {
-          this.setState({ currentInterval: e.target.value }, () => {
-            onValueChange(this.state.currentInterval);
-          });
-          this.setState({ dateRange: this.parseInterval(e.target.value) });
+          if (e.target.value.match(/^[\-0-9T:/]+$/g) && e.target.value.length <= 39) {
+            this.setState({ currentInterval: e.target.value }, () => {
+              onValueChange(this.state.currentInterval);
+            });
+            this.setState({ dateRange: IntervalInput.parseInterval(e.target.value) });
+          }
         }}
       />
     );
