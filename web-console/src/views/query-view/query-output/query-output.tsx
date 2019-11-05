@@ -26,6 +26,7 @@ import {
 import React, { useState } from 'react';
 import ReactTable from 'react-table';
 
+import { TableCell } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
 import { copyAndAlert } from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
@@ -47,7 +48,7 @@ export interface QueryOutputProps {
   runeMode: boolean;
 }
 
-export function QueryOutput(props: QueryOutputProps) {
+export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputProps) {
   const { queryResult, parsedQuery, loading, error } = props;
   const [showValue, setShowValue] = useState();
 
@@ -288,11 +289,10 @@ export function QueryOutput(props: QueryOutputProps) {
             accessor: String(i),
             Cell: row => {
               const value = row.value;
-              if (!value) return value == null ? null : value;
               return (
                 <div>
                   <Popover content={getCellMenu(h, value)}>
-                    <div>{value}</div>
+                    <TableCell value={value} unlimited />
                   </Popover>
                 </div>
               );
@@ -305,4 +305,4 @@ export function QueryOutput(props: QueryOutputProps) {
       {showValue && <ShowValueDialog onClose={() => setShowValue(undefined)} str={showValue} />}
     </div>
   );
-}
+});

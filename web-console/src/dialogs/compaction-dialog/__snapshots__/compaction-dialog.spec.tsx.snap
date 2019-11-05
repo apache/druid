@@ -55,7 +55,7 @@ exports[`compaction dialog matches snapshot 1`] = `
           class="auto-form"
         >
           <div
-            class="bp3-form-group"
+            class="bp3-form-group form-group-with-info"
           >
             <label
               class="bp3-label"
@@ -168,7 +168,7 @@ exports[`compaction dialog matches snapshot 1`] = `
             </div>
           </div>
           <div
-            class="bp3-form-group"
+            class="bp3-form-group form-group-with-info"
           >
             <label
               class="bp3-label"
@@ -223,7 +223,7 @@ exports[`compaction dialog matches snapshot 1`] = `
             </div>
           </div>
           <div
-            class="bp3-form-group"
+            class="bp3-form-group form-group-with-info"
           >
             <label
               class="bp3-label"
@@ -336,7 +336,7 @@ exports[`compaction dialog matches snapshot 1`] = `
             </div>
           </div>
           <div
-            class="bp3-form-group"
+            class="bp3-form-group form-group-with-info"
           >
             <label
               class="bp3-label"
@@ -470,7 +470,7 @@ exports[`compaction dialog matches snapshot 1`] = `
             </div>
           </div>
           <div
-            class="bp3-form-group"
+            class="bp3-form-group form-group-with-info"
           >
             <label
               class="bp3-label"
@@ -583,7 +583,7 @@ exports[`compaction dialog matches snapshot 1`] = `
             </div>
           </div>
           <div
-            class="bp3-form-group"
+            class="bp3-form-group form-group-with-info"
           >
             <label
               class="bp3-label"

@@ -25,7 +25,7 @@ export interface LoaderProps {
   loading?: boolean; // This is needed so that this component can be used as a LoadingComponent in react table
 }
 
-export function Loader(props: LoaderProps) {
+export const Loader = React.memo(function Loader(props: LoaderProps) {
   const { loadingText, loading } = props;
   if (!loading) return null;
 
@@ -59,4 +59,4 @@ export function Loader(props: LoaderProps) {
       </div>
     </div>
   );
-}
+});

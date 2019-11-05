@@ -21,6 +21,7 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
+import { TableCellUnparseable } from '../../../components/table-cell-unparseable/table-cell-unparseable';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
 import { possibleDruidFormatForValues } from '../../../utils/druid-time';
 import {
@@ -32,6 +33,16 @@ import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './parse-time-table.scss';
 
+export function parseTimeTableSelectedColumnName(
+  sampleData: HeaderAndRows,
+  timestampSpec: TimestampSpec | undefined,
+): string | undefined {
+  if (!timestampSpec) return;
+  const timestampColumn = timestampSpec.column;
+  if (!timestampColumn || !sampleData.header.includes(timestampColumn)) return;
+  return timestampColumn;
+}
+
 export interface ParseTimeTableProps {
   sampleBundle: {
     headerAndRows: HeaderAndRows;
@@ -39,14 +50,16 @@ export interface ParseTimeTableProps {
   };
   columnFilter: string;
   possibleTimestampColumnsOnly: boolean;
+  selectedColumnName: string | undefined;
   onTimestampColumnSelect: (newTimestampSpec: TimestampSpec) => void;
 }
 
-export function ParseTimeTable(props: ParseTimeTableProps) {
+export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTimeTableProps) {
   const {
     sampleBundle,
     columnFilter,
     possibleTimestampColumnsOnly,
+    selectedColumnName,
     onTimestampColumnSelect,
   } = props;
   const { headerAndRows, timestampSpec } = sampleBundle;
@@ -62,7 +75,7 @@ export function ParseTimeTable(props: ParseTimeTableProps) {
         (columnName, i) => {
           const timestamp = columnName === '__time';
           if (!timestamp && !caseInsensitiveContains(columnName, columnFilter)) return;
-          const selected = timestampSpec.column === columnName;
+          const used = timestampSpec.column === columnName;
           const possibleFormat = timestamp
             ? null
             : possibleDruidFormatForValues(
@@ -72,7 +85,8 @@ export function ParseTimeTable(props: ParseTimeTableProps) {
 
           const columnClassName = classNames({
             timestamp,
-            selected,
+            used,
+            selected: selectedColumnName === columnName,
           });
           return {
             Header: (
@@ -109,9 +123,9 @@ export function ParseTimeTable(props: ParseTimeTableProps) {
                 return <TableCell value={row.original.error} />;
               }
               if (row.original.unparseable) {
-                return <TableCell unparseable />;
+                return <TableCellUnparseable timestamp={timestamp} />;
               }
-              return <TableCell value={row.value} timestamp={timestamp} />;
+              return <TableCell value={timestamp ? new Date(row.value) : row.value} />;
             },
             minWidth: timestamp ? 200 : 100,
             resizable: !timestamp,
@@ -123,4 +137,4 @@ export function ParseTimeTable(props: ParseTimeTableProps) {
       sortable={false}
     />
   );
-}
+});

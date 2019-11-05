@@ -96,7 +96,7 @@ This table compares the three available options:
 
 ### Datasources
 
-Druid data is stored in [datasources](index.html#datasources), which are similar to tables in a traditional RDBMS. Druid
+Druid data is stored in datasources, which are similar to tables in a traditional RDBMS. Druid
 offers a unique data modeling system that bears similarity to both relational and timeseries models.
 
 ### Primary timestamp

@@ -39,7 +39,6 @@ public interface Cursor
   DateTime getTime();
   void advance();
   void advanceUninterruptibly();
-  void advanceTo(int offset);
   boolean isDone();
   boolean isDoneOrInterrupted();
   void reset();

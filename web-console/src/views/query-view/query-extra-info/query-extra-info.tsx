@@ -49,7 +49,7 @@ export interface QueryExtraInfoProps {
   onDownload: (filename: string, format: string) => void;
 }
 
-export function QueryExtraInfo(props: QueryExtraInfoProps) {
+export const QueryExtraInfo = React.memo(function QueryExtraInfo(props: QueryExtraInfoProps) {
   const { queryExtraInfo, onDownload } = props;
 
   function handleQueryInfoClick() {
@@ -118,4 +118,4 @@ export function QueryExtraInfo(props: QueryExtraInfoProps) {
       </Popover>
     </div>
   );
-}
+});

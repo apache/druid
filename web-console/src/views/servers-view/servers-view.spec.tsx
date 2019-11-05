@@ -28,7 +28,7 @@ describe('servers view', () => {
         middleManager={'test'}
         goToQuery={() => {}}
         goToTask={() => {}}
-        noSqlMode={false}
+        capabilities="full"
       />,
     );
     expect(serversView).toMatchSnapshot();

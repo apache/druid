@@ -24,6 +24,7 @@ import React from 'react';
 import { AutoForm, ExternalLink } from '../../components';
 import { AppToaster } from '../../singletons/toaster';
 import { getDruidErrorMessage, QueryManager } from '../../utils';
+import { DRUID_DOCS_VERSION } from '../../variables';
 import { SnitchDialog } from '../snitch-dialog/snitch-dialog';
 
 import './coordinator-dynamic-config-dialog.scss';
@@ -126,7 +127,9 @@ export class CoordinatorDynamicConfigDialog extends React.PureComponent<
         <p>
           Edit the coordinator dynamic configuration on the fly. For more information please refer
           to the{' '}
-          <ExternalLink href="https://druid.apache.org/docs/latest/configuration/index.html#dynamic-configuration">
+          <ExternalLink
+            href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/configuration/index.html#dynamic-configuration`}
+          >
             documentation
           </ExternalLink>
           .

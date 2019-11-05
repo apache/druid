@@ -18,6 +18,8 @@
 
 import React from 'react';
 
+import { Capabilities } from '../../utils/capabilities';
+
 import { DatasourcesCard } from './datasources-card/datasources-card';
 import { LookupsCard } from './lookups-card/lookups-card';
 import { SegmentsCard } from './segments-card/segments-card';
@@ -29,21 +31,21 @@ import { TasksCard } from './tasks-card/tasks-card';
 import './home-view.scss';
 
 export interface HomeViewProps {
-  noSqlMode: boolean;
+  capabilities: Capabilities;
 }
 
-export function HomeView(props: HomeViewProps) {
-  const { noSqlMode } = props;
+export const HomeView = React.memo(function HomeView(props: HomeViewProps) {
+  const { capabilities } = props;
 
   return (
     <div className="home-view app-view">
       <StatusCard />
-      <DatasourcesCard noSqlMode={noSqlMode} />
-      <SegmentsCard noSqlMode={noSqlMode} />
-      <SupervisorsCard />
-      <TasksCard noSqlMode={noSqlMode} />
-      <ServersCard noSqlMode={noSqlMode} />
+      <DatasourcesCard capabilities={capabilities} />
+      <SegmentsCard capabilities={capabilities} />
+      <SupervisorsCard capabilities={capabilities} />
+      <TasksCard capabilities={capabilities} />
+      <ServersCard capabilities={capabilities} />
       <LookupsCard />
     </div>
   );
-}
+});
