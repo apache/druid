@@ -105,15 +105,19 @@ public class CSVParseSpec extends ParseSpec
   @Override
   public void verify(List<String> usedCols)
   {
-    for (String columnName : usedCols) {
-      Preconditions.checkArgument(columns.contains(columnName), "column[%s] not in columns.", columnName);
-    }
+    CsvReader.verify(columns, usedCols);
   }
 
   @Override
   public Parser<String, Object> makeParser()
   {
     return new CSVParser(listDelimiter, columns, hasHeaderRow, skipHeaderRows);
+  }
+
+  @Override
+  public InputFormat toInputFormat()
+  {
+    return new CsvInputFormat(columns, listDelimiter, hasHeaderRow, skipHeaderRows);
   }
 
   @Override
@@ -127,5 +131,4 @@ public class CSVParseSpec extends ParseSpec
   {
     return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, columns, hasHeaderRow, skipHeaderRows);
   }
-
 }

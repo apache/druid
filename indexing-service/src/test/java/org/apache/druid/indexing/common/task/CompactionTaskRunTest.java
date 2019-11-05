@@ -101,16 +101,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
   public ExpectedException expectedException = ExpectedException.none();
 
   public static final ParseSpec DEFAULT_PARSE_SPEC = new CSVParseSpec(
-      new TimestampSpec(
-          "ts",
-          "auto",
-          null
-      ),
-      new DimensionsSpec(
-          DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim")),
-          Collections.emptyList(),
-          Collections.emptyList()
-      ),
+      new TimestampSpec("ts", "auto", null),
+      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim"))),
       null,
       Arrays.asList("ts", "dim", "val"),
       false,

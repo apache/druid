@@ -20,10 +20,41 @@
 package org.apache.druid.java.util.common.parsers;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.function.Function;
 
 /**
  */
 public interface CloseableIterator<T> extends Iterator<T>, Closeable
 {
+  default <R> CloseableIterator<R> map(Function<T, R> mapFunction)
+  {
+    final CloseableIterator<T> delegate = this;
+
+    return new CloseableIterator<R>()
+    {
+      @Override
+      public boolean hasNext()
+      {
+        return delegate.hasNext();
+      }
+
+      @Override
+      public R next()
+      {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        return mapFunction.apply(delegate.next());
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+        delegate.close();
+      }
+    };
+  }
 }

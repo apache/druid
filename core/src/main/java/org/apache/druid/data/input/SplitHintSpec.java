@@ -31,6 +31,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  *
  * @see FiniteFirehoseFactory#getSplits(SplitHintSpec)
  * @see FiniteFirehoseFactory#getNumSplits(SplitHintSpec)
+ * @see org.apache.druid.data.input.impl.SplittableInputSource#createSplits
+ * @see org.apache.druid.data.input.impl.SplittableInputSource#getNumSplits
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {

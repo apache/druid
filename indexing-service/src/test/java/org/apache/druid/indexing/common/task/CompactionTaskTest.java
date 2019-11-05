@@ -36,11 +36,9 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
-import org.apache.druid.data.input.impl.NoopInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
@@ -103,7 +101,6 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
-import org.apache.druid.segment.transform.TransformingInputRowParser;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -1060,13 +1057,10 @@ public class CompactionTaskTest
       final DataSchema dataSchema = ingestionSchema.getDataSchema();
       Assert.assertEquals(DATA_SOURCE, dataSchema.getDataSource());
 
-      final InputRowParser parser = OBJECT_MAPPER.convertValue(dataSchema.getParser(), InputRowParser.class);
-      Assert.assertTrue(parser instanceof TransformingInputRowParser);
-      Assert.assertTrue(((TransformingInputRowParser) parser).getParser() instanceof NoopInputRowParser);
-      Assert.assertTrue(parser.getParseSpec() instanceof TimeAndDimsParseSpec);
+      Assert.assertEquals(new TimestampSpec(null, null, null), dataSchema.getTimestampSpec());
       Assert.assertEquals(
           new HashSet<>(expectedDimensionsSpec.getDimensions()),
-          new HashSet<>(parser.getParseSpec().getDimensionsSpec().getDimensions())
+          new HashSet<>(dataSchema.getDimensionsSpec().getDimensions())
       );
 
       // metrics

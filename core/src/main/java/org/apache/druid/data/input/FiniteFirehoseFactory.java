@@ -33,6 +33,7 @@ import java.util.stream.Stream;
  * @param <T> parser type
  * @param <S> input split type
  */
+@Deprecated
 public interface FiniteFirehoseFactory<T extends InputRowParser, S> extends FirehoseFactory<T>
 {
   /**

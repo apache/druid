@@ -294,8 +294,8 @@ public class IndexGeneratorJob implements Jobby
     final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(theBucket.time.getMillis())
-        .withTimestampSpec(config.getSchema().getDataSchema().getParser().getParseSpec().getTimestampSpec())
-        .withDimensionsSpec(config.getSchema().getDataSchema().getParser())
+        .withTimestampSpec(config.getSchema().getDataSchema().getNonNullTimestampSpec())
+        .withDimensionsSpec(config.getSchema().getDataSchema().getNonNullDimensionsSpec())
         .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
         .withMetrics(aggs)
         .withRollup(config.getSchema().getDataSchema().getGranularitySpec().isRollup())
@@ -341,11 +341,7 @@ public class IndexGeneratorJob implements Jobby
           aggsForSerializingSegmentInputRow[i] = aggregators[i].getCombiningFactory();
         }
       }
-      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema()
-                                                           .getDataSchema()
-                                                           .getParser()
-                                                           .getParseSpec()
-                                                           .getDimensionsSpec());
+      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema().getDataSchema().getNonNullDimensionsSpec());
     }
 
     @Override
@@ -431,11 +427,7 @@ public class IndexGeneratorJob implements Jobby
       for (int i = 0; i < aggregators.length; ++i) {
         combiningAggs[i] = aggregators[i].getCombiningFactory();
       }
-      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema()
-                                                           .getDataSchema()
-                                                           .getParser()
-                                                           .getParseSpec()
-                                                           .getDimensionsSpec());
+      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema().getDataSchema().getNonNullDimensionsSpec());
     }
 
     @Override
@@ -631,11 +623,7 @@ public class IndexGeneratorJob implements Jobby
         metricNames.add(aggregators[i].getName());
         combiningAggs[i] = aggregators[i].getCombiningFactory();
       }
-      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema()
-                                                           .getDataSchema()
-                                                           .getParser()
-                                                           .getParseSpec()
-                                                           .getDimensionsSpec());
+      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema().getDataSchema().getNonNullDimensionsSpec());
     }
 
     @Override

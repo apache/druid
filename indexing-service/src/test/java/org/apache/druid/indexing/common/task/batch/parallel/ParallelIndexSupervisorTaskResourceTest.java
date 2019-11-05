@@ -22,11 +22,15 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.data.input.FiniteFirehoseFactory;
+import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.SplitHintSpec;
-import org.apache.druid.data.input.impl.StringInputRowParser;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputFormat;
+import org.apache.druid.data.input.impl.NoopInputFormat;
+import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -62,6 +66,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -85,19 +90,29 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
 {
   private static final int NUM_SUB_TASKS = 10;
 
-  /** specId -> spec */
+  /**
+   * specId -> spec
+   */
   private final ConcurrentMap<String, SinglePhaseSubTaskSpec> subTaskSpecs = new ConcurrentHashMap<>();
 
-  /** specId -> taskStatusPlus */
+  /**
+   * specId -> taskStatusPlus
+   */
   private final ConcurrentMap<String, TaskStatusPlus> runningSpecs = new ConcurrentHashMap<>();
 
-  /** specId -> taskStatusPlus list */
+  /**
+   * specId -> taskStatusPlus list
+   */
   private final ConcurrentHashMap<String, List<TaskStatusPlus>> taskHistories = new ConcurrentHashMap<>();
 
-  /** taskId -> subTaskSpec */
+  /**
+   * taskId -> subTaskSpec
+   */
   private final ConcurrentMap<String, SinglePhaseSubTaskSpec> taskIdToSpec = new ConcurrentHashMap<>();
 
-  /** taskId -> task */
+  /**
+   * taskId -> task
+   */
   private final CopyOnWriteArrayList<TestSubTask> runningTasks = new CopyOnWriteArrayList<>();
 
   private ExecutorService service;
@@ -126,7 +141,9 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     task = newTask(
         Intervals.of("2017/2018"),
         new ParallelIndexIOConfig(
-            new TestFirehose(IntStream.range(0, NUM_SUB_TASKS).boxed().collect(Collectors.toList())),
+            null,
+            new TestInputSource(IntStream.range(0, NUM_SUB_TASKS).boxed().collect(Collectors.toList())),
+            new NoopInputFormat(),
             false
         )
     );
@@ -149,7 +166,10 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     // test expectedNumSucceededTasks
     response = task.getProgress(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(NUM_SUB_TASKS, ((SinglePhaseParallelIndexingProgress) response.getEntity()).getExpectedSucceeded());
+    Assert.assertEquals(
+        NUM_SUB_TASKS,
+        ((SinglePhaseParallelIndexingProgress) response.getEntity()).getExpectedSucceeded()
+    );
 
     // Since taskMonitor works based on polling, it's hard to use a fancier way to check its state.
     // We use polling to check the state of taskMonitor in this test.
@@ -188,7 +208,8 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     }
 
     // Wait for new tasks to be started
-    while (getNumSubTasks(SinglePhaseParallelIndexingProgress::getFailed) < failedTasks || runningTasks.size() < NUM_SUB_TASKS - succeededTasks) {
+    while (getNumSubTasks(SinglePhaseParallelIndexingProgress::getFailed) < failedTasks
+           || runningTasks.size() < NUM_SUB_TASKS - succeededTasks) {
       Thread.sleep(100);
     }
 
@@ -364,7 +385,8 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
         .filter(entry -> {
           final TaskStatusPlus currentStatus = entry.getValue().getCurrentStatus();
           return currentStatus != null &&
-                 (currentStatus.getStatusCode() == TaskState.SUCCESS || currentStatus.getStatusCode() == TaskState.FAILED);
+                 (currentStatus.getStatusCode() == TaskState.SUCCESS
+                  || currentStatus.getStatusCode() == TaskState.FAILED);
         })
         .map(Entry::getKey)
         .findFirst()
@@ -398,13 +420,8 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
         new DataSchema(
             "dataSource",
-            getObjectMapper().convertValue(
-                new StringInputRowParser(
-                    DEFAULT_PARSE_SPEC,
-                    null
-                ),
-                Map.class
-            ),
+            DEFAULT_TIMESTAMP_SPEC,
+            DEFAULT_DIMENSIONS_SPEC,
             new AggregatorFactory[]{
                 new LongSumAggregatorFactory("val", "val")
             },
@@ -413,8 +430,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
                 Granularities.MINUTE,
                 interval == null ? null : Collections.singletonList(interval)
             ),
-            null,
-            getObjectMapper()
+            null
         ),
         ioConfig,
         new ParallelIndexTuningConfig(
@@ -457,31 +473,42 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     );
   }
 
-  private static class TestFirehose implements FiniteFirehoseFactory<StringInputRowParser, Integer>
+  private static class TestInputSource implements SplittableInputSource<Integer>
   {
     private final List<Integer> ids;
 
-    TestFirehose(List<Integer> ids)
+    TestInputSource(List<Integer> ids)
     {
       this.ids = ids;
     }
 
     @Override
-    public Stream<InputSplit<Integer>> getSplits(@Nullable SplitHintSpec splitHintSpec)
+    public Stream<InputSplit<Integer>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
     {
       return ids.stream().map(InputSplit::new);
     }
 
     @Override
-    public int getNumSplits(@Nullable SplitHintSpec splitHintSpec)
+    public int getNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
     {
       return ids.size();
     }
 
     @Override
-    public FiniteFirehoseFactory<StringInputRowParser, Integer> withSplit(InputSplit<Integer> split)
+    public SplittableInputSource<Integer> withSplit(InputSplit<Integer> split)
     {
-      return new TestFirehose(Collections.singletonList(split.get()));
+      return new TestInputSource(Collections.singletonList(split.get()));
+    }
+
+    @Override
+    public InputSourceReader reader(
+        TimestampSpec timestampSpec,
+        DimensionsSpec dimensionsSpec,
+        InputFormat inputFormat,
+        @Nullable File temporaryDirectory
+    )
+    {
+      throw new UnsupportedOperationException();
     }
   }
 
@@ -539,9 +566,9 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     @Override
     SinglePhaseSubTaskSpec newTaskSpec(InputSplit split)
     {
-      final FiniteFirehoseFactory baseFirehoseFactory = (FiniteFirehoseFactory) getIngestionSchema()
+      final TestInputSource baseInputSource = (TestInputSource) getIngestionSchema()
           .getIOConfig()
-          .getFirehoseFactory();
+          .getInputSource();
       final TestSubTaskSpec spec = new TestSubTaskSpec(
           supervisorTask.getId() + "_" + getAndIncrementNextSpecId(),
           supervisorTask.getGroupId(),
@@ -549,7 +576,9 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           new ParallelIndexIngestionSpec(
               getIngestionSchema().getDataSchema(),
               new ParallelIndexIOConfig(
-                  baseFirehoseFactory.withSplit(split),
+                  null,
+                  baseInputSource.withSplit(split),
+                  getIngestionSchema().getIOConfig().getInputFormat(),
                   getIngestionSchema().getIOConfig().isAppendToExisting()
               ),
               getIngestionSchema().getTuningConfig()
@@ -597,8 +626,10 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           getContext(),
           new LocalParallelIndexTaskClientFactory(supervisorTask)
       );
-      final TestFirehose firehose = (TestFirehose) getIngestionSpec().getIOConfig().getFirehoseFactory();
-      final InputSplit<Integer> split = firehose.getSplits(null).findFirst().orElse(null);
+      final TestInputSource inputSource = (TestInputSource) getIngestionSpec().getIOConfig().getInputSource();
+      final InputSplit<Integer> split = inputSource.createSplits(getIngestionSpec().getIOConfig().getInputFormat(), null)
+                                                   .findFirst()
+                                                   .orElse(null);
       if (split == null) {
         throw new ISE("Split is null");
       }

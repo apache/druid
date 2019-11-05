@@ -92,7 +92,7 @@ public class DataSchemaTest
 
     Assert.assertEquals(
         ImmutableSet.of("time", "col1", "col2", "metric1", "metric2"),
-        schema.getParser().getParseSpec().getDimensionsSpec().getDimensionExclusions()
+        schema.getNonNullDimensionsSpec().getDimensionExclusions()
     );
   }
 
@@ -471,13 +471,15 @@ public class DataSchemaTest
 
     TestModifiedDataSchema originalSchema = new TestModifiedDataSchema(
         "test",
-        parser,
+        null,
+        null,
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("metric1", "col1"),
             new DoubleSumAggregatorFactory("metric2", "col2"),
             },
         new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
         null,
+        parser,
         jsonMapper,
         "some arbitrary string"
     );

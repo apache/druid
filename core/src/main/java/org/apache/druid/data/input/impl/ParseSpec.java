@@ -27,8 +27,10 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.parsers.Parser;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
+@Deprecated
 @ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "format")
 @JsonSubTypes(value = {
@@ -71,6 +73,16 @@ public abstract class ParseSpec
   }
 
   public Parser<String, Object> makeParser()
+  {
+    return null;
+  }
+
+  /**
+   * Returns null if it's not implemented yet.
+   * This method (and maybe this class) will be removed in favor of {@link InputFormat} in the future.
+   */
+  @Nullable
+  public InputFormat toInputFormat()
   {
     return null;
   }

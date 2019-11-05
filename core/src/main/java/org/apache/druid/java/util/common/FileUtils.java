@@ -306,6 +306,33 @@ public class FileUtils
     }
   }
 
+  public static long copyLarge(
+      InputStream inputStream,
+      File outFile,
+      byte[] fetchBuffer,
+      Predicate<Throwable> retryCondition,
+      int numRetries,
+      String messageOnRetry
+  ) throws IOException
+  {
+    try {
+      return RetryUtils.retry(
+          () -> {
+            try (OutputStream out = new FileOutputStream(outFile)) {
+              return IOUtils.copyLarge(inputStream, out, fetchBuffer);
+            }
+          },
+          retryCondition,
+          outFile::delete,
+          numRetries,
+          messageOnRetry
+      );
+    }
+    catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
+
   public interface OutputStreamConsumer<T>
   {
     T apply(OutputStream outputStream) throws IOException;
