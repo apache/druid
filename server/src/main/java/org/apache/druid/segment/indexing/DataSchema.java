@@ -266,6 +266,9 @@ public class DataSchema
       //noinspection unchecked
       inputRowParser = transformSpec.decorate(objectMapper.convertValue(this.parserMap, InputRowParser.class));
       ParseSpec parseSpec = inputRowParser.getParseSpec();
+      parseSpec = parseSpec.withDimensionsSpec(
+          computeDimensionsSpec(parseSpec.getTimestampSpec(), parseSpec.getDimensionsSpec(), aggregators)
+      );
       if (timestampSpec != null) {
         parseSpec = parseSpec.withTimestampSpec(timestampSpec);
       }
