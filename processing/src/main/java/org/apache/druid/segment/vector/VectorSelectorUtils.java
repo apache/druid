@@ -20,6 +20,7 @@
 package org.apache.druid.segment.vector;
 
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
 
@@ -55,6 +56,64 @@ public class VectorSelectorUtils
     } else {
       for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
         retVal[i] = nullValueBitmap.get(offset.getOffsets()[i]);
+      }
+    }
+
+    return retVal;
+  }
+
+  @Nullable
+  public static boolean[] populateNullVector(
+      @Nullable final boolean[] nullVector,
+      final ReadableVectorOffset offset,
+      final PeekableIntIterator nullIterator
+  )
+  {
+    if (!nullIterator.hasNext()) {
+      return null;
+    }
+
+    final boolean[] retVal;
+
+    if (nullVector != null) {
+      retVal = nullVector;
+    } else {
+      retVal = new boolean[offset.getMaxVectorSize()];
+    }
+
+
+    int nextNullRow = nullIterator.next();
+    if (offset.isContiguous()) {
+      nullIterator.advanceIfNeeded(offset.getStartOffset());
+      final int startOffset = offset.getStartOffset();
+      for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
+        final int row = i + startOffset;
+        if (row == nextNullRow) {
+          retVal[i] = true;
+          if (nullIterator.hasNext()) {
+            nextNullRow = nullIterator.next();
+          } else {
+            break;
+          }
+        } else {
+          retVal[i] = false;
+        }
+      }
+    } else {
+      final int[] currentOffsets = offset.getOffsets();
+      nullIterator.advanceIfNeeded(currentOffsets[0]);
+      for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
+        final int row = currentOffsets[i];
+        if (row == nextNullRow) {
+          retVal[i] = true;
+          if (nullIterator.hasNext()) {
+            nextNullRow = nullIterator.next();
+          } else {
+            break;
+          }
+        } else {
+          retVal[i] = false;
+        }
       }
     }
 

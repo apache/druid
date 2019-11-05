@@ -29,6 +29,7 @@ import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorSelectorUtils;
 import org.apache.druid.segment.vector.VectorValueSelector;
+import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -94,10 +95,19 @@ public interface ColumnarLongs extends Closeable
     } else {
       class HistoricalLongColumnSelectorWithNulls implements LongColumnSelector, HistoricalColumnSelector<Long>
       {
+        private final PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
+        private int nullMark = -1;
+
         @Override
         public boolean isNull()
         {
-          return nullValueBitmap.get(offset.getOffset());
+          final int i = offset.getOffset();
+          nullIterator.advanceIfNeeded(i);
+          while (nullIterator.hasNext() && nullMark < i) {
+            nullMark = nullIterator.next();
+          }
+          assert ((nullMark == i) == nullValueBitmap.get(i));
+          return nullMark == i;
         }
 
         @Override
@@ -137,6 +147,8 @@ public interface ColumnarLongs extends Closeable
 
       private int id = ReadableVectorOffset.NULL_ID;
 
+      private final PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
+
       @Nullable
       private boolean[] nullVector = null;
 
@@ -173,7 +185,7 @@ public interface ColumnarLongs extends Closeable
           ColumnarLongs.this.get(longVector, offset.getOffsets(), offset.getCurrentVectorSize());
         }
 
-        nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullValueBitmap);
+        nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);
 
         id = offset.getId();
       }

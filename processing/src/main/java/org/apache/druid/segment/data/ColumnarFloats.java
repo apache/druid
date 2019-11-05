@@ -29,6 +29,7 @@ import org.apache.druid.segment.vector.BaseFloatVectorValueSelector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorSelectorUtils;
 import org.apache.druid.segment.vector.VectorValueSelector;
+import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -94,10 +95,18 @@ public interface ColumnarFloats extends Closeable
     } else {
       class HistoricalFloatColumnSelectorwithNulls implements FloatColumnSelector, HistoricalColumnSelector<Float>
       {
+        private final PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
+        private int nullMark = -1;
+
         @Override
         public boolean isNull()
         {
-          return nullValueBitmap.get(offset.getOffset());
+          final int i = offset.getOffset();
+          nullIterator.advanceIfNeeded(i);
+          while (nullIterator.hasNext() && nullMark < i) {
+            nullMark = nullIterator.next();
+          }
+          return nullMark == i;
         }
 
         @Override
@@ -137,6 +146,8 @@ public interface ColumnarFloats extends Closeable
 
       private int id = ReadableVectorOffset.NULL_ID;
 
+      private final PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
+
       @Nullable
       private boolean[] nullVector = null;
 
@@ -173,7 +184,7 @@ public interface ColumnarFloats extends Closeable
           ColumnarFloats.this.get(floatVector, offset.getOffsets(), offset.getCurrentVectorSize());
         }
 
-        nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullValueBitmap);
+        nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);
 
         id = offset.getId();
       }
