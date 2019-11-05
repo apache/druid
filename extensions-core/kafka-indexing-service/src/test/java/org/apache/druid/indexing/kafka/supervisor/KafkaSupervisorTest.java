@@ -70,6 +70,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.St
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
 import org.apache.druid.indexing.seekablestream.utils.RandomIdUtils;
@@ -90,9 +91,12 @@ import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppendera
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.server.metrics.ExceptionCapturingServiceEmitter;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.security.JaasUtils;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.common.serialization.Deserializer;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
@@ -114,6 +118,9 @@ import scala.collection.Seq;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -3378,11 +3385,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
   )
   {
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
-    consumerProperties.put("metadata.max.age.ms", 1);
-    consumerProperties.put("group.id", StringUtils.format("kafka-supervisor-%s", RandomIdUtils.getRandomId()));
-    consumerProperties.put("auto.offset.reset", "none");
-    consumerProperties.put("enable.auto.commit", "false");
-    consumerProperties.put("isolation.level", "read_committed");
     consumerProperties.put("myCustomKey", "myCustomValue");
     consumerProperties.put("bootstrap.servers", kafkaHost);
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
@@ -3820,7 +3822,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
   private static class TestableKafkaSupervisor extends KafkaSupervisor
   {
-    private final KafkaSupervisorSpec spec;
+    private final Map<String, Object> consumerProperties;
 
     public TestableKafkaSupervisor(
         TaskStorage taskStorage,
@@ -3841,17 +3843,59 @@ public class KafkaSupervisorTest extends EasyMockSupport
           spec,
           rowIngestionMetersFactory
       );
-      this.spec = spec;
+      this.consumerProperties = spec.getIoConfig().getConsumerProperties();
     }
 
     @Override
     protected RecordSupplier<Integer, Long> setupRecordSupplier()
     {
+      final Map<String, Object> consumerConfigs = new HashMap<>();
+      consumerConfigs.put("metadata.max.age.ms", "1");
+      consumerConfigs.put("group.id", StringUtils.format("kafka-supervisor-%s", RandomIdUtils.getRandomId()));
+      consumerConfigs.put("auto.offset.reset", "none");
+      consumerConfigs.put("enable.auto.commit", "false");
+      consumerConfigs.put("isolation.level", "read_committed");
+      final Properties props = new Properties();
+      consumerProperties.get("key.deserializer");
+      System.out.println("consumerProperties");
+      consumerProperties.forEach((key, value) -> System.out.println(key + ":" + value));
+      KafkaRecordSupplier.addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);
+      props.putAll(consumerConfigs);
+      Deserializer keyDeserializerObject = getKafkaDeserializer(props, "key.deserializer");
+      Deserializer valueDeserializerObject = getKafkaDeserializer(props, "value.deserializer");
+
       return new KafkaRecordSupplier(
-          spec.getIoConfig().getConsumerProperties(),
+          consumerProperties,
           sortingMapper,
-          spec.getIoConfig().getConsumerProperties()
+          new KafkaConsumer<>(props, keyDeserializerObject, valueDeserializerObject)
       );
+    }
+
+    private Deserializer getKafkaDeserializer(Properties properties, String kafkaConfigKey)
+    {
+      Deserializer deserializerObject;
+      try {
+        Class deserializerClass = Class.forName(properties.getProperty(
+            kafkaConfigKey,
+            ByteArrayDeserializer.class.getTypeName()
+        ));
+        Method deserializerMethod = deserializerClass.getMethod("deserialize", String.class, byte[].class);
+
+        Type deserializerReturnType = deserializerMethod.getGenericReturnType();
+
+        if (deserializerReturnType == byte[].class) {
+          deserializerObject = (Deserializer) deserializerClass.getConstructor().newInstance();
+        } else {
+          throw new IllegalArgumentException("Kafka deserializers must return a byte array (byte[]), "
+                                             + deserializerClass.getName()
+                                             + " returns "
+                                             + deserializerReturnType.getTypeName());
+        }
+      }
+      catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
+        throw new StreamException(e);
+      }
+      return deserializerObject;
     }
 
     @Override
