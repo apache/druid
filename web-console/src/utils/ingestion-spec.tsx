@@ -29,7 +29,7 @@ import {
   DATETIME_TIME_FORMATS,
   OTHER_TIME_FORMATS,
 } from './druid-time';
-import { deepGet, deepSet } from './object-change';
+import { deepGet, deepMove, deepSet } from './object-change';
 
 export const MAX_INLINE_DATA_LENGTH = 65536;
 
@@ -2441,4 +2441,14 @@ const FILTER_FORM_FIELDS: Field<DruidFilter>[] = [
 
 export function getFilterFormFields() {
   return FILTER_FORM_FIELDS;
+}
+
+export function upgradeSpec(spec: any): any {
+  if (deepGet(spec, 'ioConfig.firehose')) {
+    spec = deepMove(spec, 'ioConfig.firehose', 'ioConfig.inputSource');
+    spec = deepMove(spec, 'dataSchema.parser.parseSpec', 'ioConfig.inputFormat');
+    spec = deepMove(spec, 'ioConfig.inputFormat.timestampSpec', 'dataSchema.timestampSpec');
+    spec = deepMove(spec, 'ioConfig.inputFormat.dimensionsSpec', 'dataSchema.dimensionsSpec');
+  }
+  return spec;
 }
