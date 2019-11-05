@@ -52,6 +52,7 @@ import org.apache.druid.indexing.kafka.KafkaIndexTaskClient;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskIOConfig;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
+import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
 import org.apache.druid.indexing.kafka.test.TestBroker;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -68,8 +69,10 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
+import org.apache.druid.indexing.seekablestream.utils.RandomIdUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -103,7 +106,6 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -618,7 +620,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
 
-  @Ignore("This is a regression test that needs to wait 10s+, ignore for now")
   @Test
   public void testAlwaysUsesEarliestOffsetForNewlyDiscoveredPartitions() throws Exception
   {
@@ -655,8 +656,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
 
     addMoreEvents(9, 6);
-    // sleep 10s to wait for kafka consumer refresh kafka server metadata
-    Thread.sleep(10000);
     EasyMock.reset(taskQueue, taskStorage);
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
     Capture<KafkaIndexTask> tmp = Capture.newInstance();
@@ -3379,6 +3378,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
   )
   {
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
+    consumerProperties.put("metadata.max.age.ms", 1);
+    consumerProperties.put("group.id", StringUtils.format("kafka-supervisor-%s", RandomIdUtils.getRandomId()));
+    consumerProperties.put("auto.offset.reset", "none");
+    consumerProperties.put("enable.auto.commit", "false");
+    consumerProperties.put("isolation.level", "read_committed");
     consumerProperties.put("myCustomKey", "myCustomValue");
     consumerProperties.put("bootstrap.servers", kafkaHost);
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
@@ -3816,6 +3820,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
   private static class TestableKafkaSupervisor extends KafkaSupervisor
   {
+    private final KafkaSupervisorSpec spec;
+
     public TestableKafkaSupervisor(
         TaskStorage taskStorage,
         TaskMaster taskMaster,
@@ -3834,6 +3840,17 @@ public class KafkaSupervisorTest extends EasyMockSupport
           mapper,
           spec,
           rowIngestionMetersFactory
+      );
+      this.spec = spec;
+    }
+
+    @Override
+    protected RecordSupplier<Integer, Long> setupRecordSupplier()
+    {
+      return new KafkaRecordSupplier(
+          spec.getIoConfig().getConsumerProperties(),
+          sortingMapper,
+          spec.getIoConfig().getConsumerProperties()
       );
     }
 

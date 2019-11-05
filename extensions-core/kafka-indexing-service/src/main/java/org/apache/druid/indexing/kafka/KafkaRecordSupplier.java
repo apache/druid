@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
@@ -258,5 +259,37 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
       runnable.run();
       return null;
     });
+  }
+
+  @VisibleForTesting
+  private KafkaConsumer<byte[], byte[]> getKafkaConsumer(Map<String, Object> consumerConfigs)
+  {
+    final Properties props = new Properties();
+    addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);
+    props.putAll(consumerConfigs);
+
+    ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+      Deserializer keyDeserializerObject = getKafkaDeserializer(props, "key.deserializer");
+      Deserializer valueDeserializerObject = getKafkaDeserializer(props, "value.deserializer");
+
+      return new KafkaConsumer<>(props, keyDeserializerObject, valueDeserializerObject);
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(currCtxCl);
+    }
+  }
+
+  @VisibleForTesting
+  public KafkaRecordSupplier(
+      Map<String, Object> consumerProperties,
+      ObjectMapper sortingMapper,
+      Map<String, Object> consumerConfigs
+  )
+  {
+    this.consumerProperties = consumerProperties;
+    this.sortingMapper = sortingMapper;
+    this.consumer = getKafkaConsumer(consumerConfigs);
   }
 }
