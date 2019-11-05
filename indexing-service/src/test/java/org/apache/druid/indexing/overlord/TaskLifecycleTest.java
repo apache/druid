@@ -281,30 +281,46 @@ public class TaskLifecycleTest
     );
   }
 
-  private static class MockExceptionalFirehoseFactory implements FirehoseFactory
+  private static class MockExceptionInputSource implements InputSource
   {
     @Override
-    public Firehose connect(InputRowParser parser, File temporaryDirectory)
+    public InputSourceReader reader(
+        TimestampSpec timestampSpec,
+        DimensionsSpec dimensionsSpec,
+        InputFormat inputFormat,
+        @Nullable File temporaryDirectory
+    )
     {
-      return new Firehose()
+      return new InputSourceReader()
       {
         @Override
-        public boolean hasMore()
+        public CloseableIterator<InputRow> read() throws IOException
         {
-          return true;
+          return new CloseableIterator<InputRow>()
+          {
+            @Override
+            public void close() throws IOException
+            {
+            }
+
+            @Override
+            public boolean hasNext()
+            {
+              return true;
+            }
+
+            @Override
+            public InputRow next()
+            {
+              throw new RuntimeException("HA HA HA");
+            }
+          };
         }
 
-        @Nullable
         @Override
-        public InputRow nextRow()
+        public CloseableIterator<InputRowPlusRaw> sample() throws IOException
         {
-          throw new RuntimeException("HA HA HA");
-        }
-
-        @Override
-        public void close()
-        {
-
+          throw new UnsupportedOperationException();
         }
       };
     }
@@ -424,7 +440,6 @@ public class TaskLifecycleTest
       case METADATA_TASK_STORAGE: {
         TestDerbyConnector testDerbyConnector = derbyConnectorRule.getConnector();
         mapper.registerSubtypes(
-            new NamedType(MockExceptionalFirehoseFactory.class, "mockExcepFirehoseFactory"),
             new NamedType(MockFirehoseFactory.class, "mockFirehoseFactory"),
             new NamedType(MockInputSource.class, "mockInputSource"),
             new NamedType(NoopInputFormat.class, "noopInputFormat")
@@ -791,7 +806,7 @@ public class TaskLifecycleTest
                 null,
                 mapper
             ),
-            new IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
+            new IndexIOConfig(null, new MockExceptionInputSource(), new NoopInputFormat(), false),
             new IndexTuningConfig(
                 null,
                 10000,
