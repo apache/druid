@@ -37,7 +37,9 @@ import org.apache.druid.indexing.overlord.setup.CategoriedWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.EqualDistributionWithCategorySpecWorkerSelectStrategy;
 import org.apache.druid.indexing.overlord.setup.FillCapacityWithCategorySpecWorkerSelectStrategy;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.WorkerCategorySpec;
 import org.apache.druid.indexing.overlord.setup.WorkerSelectStrategy;
+import org.apache.druid.indexing.overlord.setup.WorkerSelectUtils;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
@@ -66,6 +68,7 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
 
   private final CategoriedProvisioningConfig config;
   private final Supplier<WorkerBehaviorConfig> workerConfigRef;
+  private final WorkerCategorySpec workerCategorySpec;
 
   @Nullable
   private static CategoriedWorkerBehaviorConfig getCategoriedWorkerBehaviorConfig(
@@ -88,10 +91,6 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
       return null;
     }
     final CategoriedWorkerBehaviorConfig workerConfig = (CategoriedWorkerBehaviorConfig) workerBehaviorConfig;
-    if (workerConfig.getDefaultAutoScaler() == null) {
-      log.error("No default autoScaler available, cannot %s workers", action);
-      return null;
-    }
     if (!((workerConfig.getSelectStrategy() instanceof FillCapacityWithCategorySpecWorkerSelectStrategy)
           || (workerConfig.getSelectStrategy() instanceof EqualDistributionWithCategorySpecWorkerSelectStrategy))) {
       log.error("Select strategy %s is not supported", workerConfig.getSelectStrategy());
@@ -104,12 +103,14 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
   public CategoriedProvisioningStrategy(
       CategoriedProvisioningConfig config,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
+      WorkerCategorySpec workerCategorySpec,
       ProvisioningSchedulerConfig provisioningSchedulerConfig
   )
   {
     this(
         config,
         workerConfigRef,
+        workerCategorySpec,
         provisioningSchedulerConfig,
         () -> ScheduledExecutors.fixed(1, "CategoriedProvisioning-manager--%d")
     );
@@ -118,6 +119,7 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
   public CategoriedProvisioningStrategy(
       CategoriedProvisioningConfig config,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
+      WorkerCategorySpec workerCategorySpec,
       ProvisioningSchedulerConfig provisioningSchedulerConfig,
       Supplier<ScheduledExecutorService> execFactory
   )
@@ -125,6 +127,7 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
     super(provisioningSchedulerConfig, execFactory);
     this.config = config;
     this.workerConfigRef = workerConfigRef;
+    this.workerCategorySpec = workerCategorySpec;
   }
 
   @Override
@@ -299,11 +302,18 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
           log
       );
       if (workerConfig == null) {
+        log.info("No worker config found. Skip provisioning.");
         return false;
       }
 
       // Group tasks by categories
-      Map<String, List<Task>> tasksByCategories = pendingTasks.stream().collect(Collectors.groupingBy(Task::getType));
+      Map<String, List<Task>> tasksByCategories = pendingTasks.stream().collect(Collectors.groupingBy(
+          task -> WorkerSelectUtils.getTaskCategory(
+              task,
+              workerCategorySpec,
+              CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY
+          )
+      ));
 
       Map<String, List<ImmutableWorkerInfo>> workersByCategories = workers.stream().collect(Collectors.groupingBy(
           immutableWorkerInfo -> immutableWorkerInfo.getWorker().getCategory())
@@ -322,17 +332,15 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
       );
 
       if (allCategories.isEmpty()) {
-        // Likely empty categories means initialization. Just spinup required amount of workers
-        currentlyProvisioning.putIfAbsent(WorkerConfig.DEFAULT_CATEGORY, new HashSet<>());
-        Set<String> currentlyProvisioning = this.currentlyProvisioning.get(WorkerConfig.DEFAULT_CATEGORY);
-        didProvision = doProvision(
-            WorkerConfig.DEFAULT_CATEGORY,
-            Collections.emptyList(),
-            Collections.emptyList(),
-            workerConfig,
-            currentlyProvisioning,
-            workerConfig.getDefaultAutoScaler()
-        );
+        // Likely empty categories means initialization. Just try to spinup required amount of workers of each non empty autoscalers
+        if (workerConfig.getDefaultAutoScaler() != null) {
+          didProvision = initAutoscaler(workerConfig.getDefaultAutoScaler(), CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY, workerConfig);
+        }
+        for (Map.Entry<String, AutoScaler> autoscalerInfo : workerConfig.getAutoScalers().entrySet()) {
+          String category = autoscalerInfo.getKey();
+          AutoScaler autoScaler = autoscalerInfo.getValue();
+          didProvision = initAutoscaler(autoScaler, category, workerConfig) || didProvision;
+        }
         return didProvision;
       }
 
@@ -611,10 +619,27 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
       );
     }
 
+    private boolean initAutoscaler(AutoScaler autoScaler, String category, CategoriedWorkerBehaviorConfig workerConfig)
+    {
+      currentlyProvisioning.putIfAbsent(
+          category,
+          new HashSet<>()
+      );
+      Set<String> currentlyProvisioning = this.currentlyProvisioning.get(category);
+      return doProvision(
+          category,
+          Collections.emptyList(),
+          Collections.emptyList(),
+          workerConfig,
+          currentlyProvisioning,
+          autoScaler
+      );
+    }
+
     @Nullable
     private AutoScaler getCategoryAutoscaler(String category, CategoriedWorkerBehaviorConfig workerConfig)
     {
-      AutoScaler autoScaler = workerConfig.getCategoryAutoScalers().get(category);
+      AutoScaler autoScaler = workerConfig.getAutoScalers().get(category);
       if (autoScaler == null && workerConfig.isStrong()) {
         log.warn(
             "No autoscaler found for category %s. Tasks of this category will not be assigned to default autoscaler because of strong affinity.",

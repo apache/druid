@@ -28,23 +28,22 @@ import java.util.Objects;
 
 public class CategoriedWorkerBehaviorConfig implements WorkerBehaviorConfig
 {
+  public static final String DEFAULT_AUTOSCALER_CATEGORY = "_default_autoscaler_category";
+
   private final WorkerSelectStrategy selectStrategy;
   private final AutoScaler defaultAutoScaler;
   private final Map<String, AutoScaler> categoryAutoScalers;
-  private final boolean strong;
 
   @JsonCreator
   public CategoriedWorkerBehaviorConfig(
       @JsonProperty("selectStrategy") WorkerSelectStrategy selectStrategy,
       @JsonProperty("defaultAutoScaler") AutoScaler defaultAutoScaler,
-      @JsonProperty("categoryAutoScalers") Map<String, AutoScaler> categoryAutoScalers,
-      @JsonProperty("strong") boolean strong
+      @JsonProperty("categoryAutoScalers") Map<String, AutoScaler> categoryAutoScalers
   )
   {
     this.selectStrategy = selectStrategy;
     this.defaultAutoScaler = defaultAutoScaler;
     this.categoryAutoScalers = categoryAutoScalers;
-    this.strong = strong;
   }
 
   @Override
@@ -61,15 +60,14 @@ public class CategoriedWorkerBehaviorConfig implements WorkerBehaviorConfig
   }
 
   @JsonProperty
-  public Map<String, AutoScaler> getCategoryAutoScalers()
+  public Map<String, AutoScaler> getAutoScalers()
   {
     return categoryAutoScalers;
   }
 
-  @JsonProperty
   public boolean isStrong()
   {
-    return strong;
+    return defaultAutoScaler == null;
   }
 
   @Override
@@ -82,8 +80,7 @@ public class CategoriedWorkerBehaviorConfig implements WorkerBehaviorConfig
       return false;
     }
     CategoriedWorkerBehaviorConfig that = (CategoriedWorkerBehaviorConfig) o;
-    return strong == that.strong &&
-           Objects.equals(selectStrategy, that.selectStrategy) &&
+    return Objects.equals(selectStrategy, that.selectStrategy) &&
            Objects.equals(defaultAutoScaler, that.defaultAutoScaler) &&
            Objects.equals(categoryAutoScalers, that.categoryAutoScalers);
   }
@@ -91,7 +88,7 @@ public class CategoriedWorkerBehaviorConfig implements WorkerBehaviorConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(selectStrategy, defaultAutoScaler, categoryAutoScalers, strong);
+    return Objects.hash(selectStrategy, defaultAutoScaler, categoryAutoScalers);
   }
 
   @Override
@@ -101,7 +98,6 @@ public class CategoriedWorkerBehaviorConfig implements WorkerBehaviorConfig
            "selectStrategy=" + selectStrategy +
            ", defaultAutoScaler=" + defaultAutoScaler +
            ", categoryAutoScalers=" + categoryAutoScalers +
-           ", strong=" + strong +
            '}';
   }
 }
