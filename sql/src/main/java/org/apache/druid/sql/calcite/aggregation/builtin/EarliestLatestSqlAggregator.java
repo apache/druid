@@ -79,7 +79,7 @@ public class EarliestLatestSqlAggregator implements SqlAggregator
           case DOUBLE:
             return new DoubleFirstAggregatorFactory(name, fieldName);
           case STRING:
-            return new StringFirstAggregatorFactory(name, fieldName, maxStringBytes);
+            return new StringFirstAggregatorFactory(name, fieldName, maxStringBytes, false);
           default:
             throw new ISE("Cannot build aggregatorFactory for type[%s]", type);
         }
@@ -98,7 +98,7 @@ public class EarliestLatestSqlAggregator implements SqlAggregator
           case DOUBLE:
             return new DoubleLastAggregatorFactory(name, fieldName);
           case STRING:
-            return new StringLastAggregatorFactory(name, fieldName, maxStringBytes);
+            return new StringLastAggregatorFactory(name, fieldName, maxStringBytes, false);
           default:
             throw new ISE("Cannot build aggregatorFactory for type[%s]", type);
         }

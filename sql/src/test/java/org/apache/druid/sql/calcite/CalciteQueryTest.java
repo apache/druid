@@ -921,10 +921,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       aggregators(
                           new LongFirstAggregatorFactory("a0", "cnt"),
                           new FloatFirstAggregatorFactory("a1", "m1"),
-                          new StringFirstAggregatorFactory("a2", "dim1", 10),
+                          new StringFirstAggregatorFactory("a2", "dim1", 10, false),
                           new LongFirstAggregatorFactory("a3", "v0"),
                           new FloatFirstAggregatorFactory("a4", "v1"),
-                          new StringFirstAggregatorFactory("a5", "v2", 10)
+                          new StringFirstAggregatorFactory("a5", "v2", 10, false)
                       )
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -961,10 +961,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       aggregators(
                           new LongLastAggregatorFactory("a0", "cnt"),
                           new FloatLastAggregatorFactory("a1", "m1"),
-                          new StringLastAggregatorFactory("a2", "dim1", 10),
+                          new StringLastAggregatorFactory("a2", "dim1", 10, false),
                           new LongLastAggregatorFactory("a3", "v0"),
                           new FloatLastAggregatorFactory("a4", "v1"),
-                          new StringLastAggregatorFactory("a5", "v2", 10)
+                          new StringLastAggregatorFactory("a5", "v2", 10, false)
                       )
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -1008,7 +1008,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{15.0}
+            new Object[]{NullHandling.sqlCompatible() ? 18.0 : 15.0}
         )
     );
   }
