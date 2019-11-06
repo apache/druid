@@ -27,11 +27,21 @@ import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './filter-table.scss';
 
+export function filterTableSelectedColumnName(
+  sampleData: HeaderAndRows,
+  selectedFilter: DruidFilter | undefined,
+): string | undefined {
+  if (!selectedFilter) return;
+  const selectedFilterName = selectedFilter.dimension;
+  if (!sampleData.header.includes(selectedFilterName)) return;
+  return selectedFilterName;
+}
+
 export interface FilterTableProps {
   sampleData: HeaderAndRows;
   columnFilter: string;
   dimensionFilters: DruidFilter[];
-  selectedFilterIndex: number;
+  selectedFilterName: string | undefined;
   onShowGlobalFilter: () => void;
   onFilterSelect: (filter: DruidFilter, index: number) => void;
 }
@@ -41,7 +51,7 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
     sampleData,
     columnFilter,
     dimensionFilters,
-    selectedFilterIndex,
+    selectedFilterName,
     onShowGlobalFilter,
     onFilterSelect,
   } = props;
@@ -58,7 +68,7 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
 
         const columnClassName = classNames({
           filtered: filter,
-          selected: filter && filterIndex === selectedFilterIndex,
+          selected: columnName === selectedFilterName,
         });
         return {
           Header: (
@@ -82,7 +92,7 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
           className: columnClassName,
           id: String(i),
           accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-          Cell: row => <TableCell value={row.value} timestamp={timestamp} />,
+          Cell: row => <TableCell value={timestamp ? new Date(row.value) : row.value} />,
         };
       })}
       defaultPageSize={50}

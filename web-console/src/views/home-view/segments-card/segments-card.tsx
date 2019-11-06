@@ -22,11 +22,12 @@ import { sum } from 'd3-array';
 import React from 'react';
 
 import { pluralIfNeeded, queryDruidSql, QueryManager } from '../../../utils';
+import { Capabilities } from '../../../utils/capabilities';
 import { deepGet } from '../../../utils/object-change';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface SegmentsCardProps {
-  noSqlMode: boolean;
+  capabilities: Capabilities;
 }
 
 export interface SegmentsCardState {
@@ -37,7 +38,7 @@ export interface SegmentsCardState {
 }
 
 export class SegmentsCard extends React.PureComponent<SegmentsCardProps, SegmentsCardState> {
-  private segmentQueryManager: QueryManager<boolean, any>;
+  private segmentQueryManager: QueryManager<Capabilities, any>;
 
   constructor(props: SegmentsCardProps, context: any) {
     super(props, context);
@@ -48,8 +49,8 @@ export class SegmentsCard extends React.PureComponent<SegmentsCardProps, Segment
     };
 
     this.segmentQueryManager = new QueryManager({
-      processQuery: async noSqlMode => {
-        if (noSqlMode) {
+      processQuery: async capabilities => {
+        if (capabilities === 'no-sql') {
           const loadstatusResp = await axios.get('/druid/coordinator/v1/loadstatus?simple');
           const loadstatus = loadstatusResp.data;
           const unavailableSegmentNum = sum(Object.keys(loadstatus), key => loadstatus[key]);
@@ -86,9 +87,9 @@ FROM sys.segments`,
   }
 
   componentDidMount(): void {
-    const { noSqlMode } = this.props;
+    const { capabilities } = this.props;
 
-    this.segmentQueryManager.runQuery(noSqlMode);
+    this.segmentQueryManager.runQuery(capabilities);
   }
 
   componentWillUnmount(): void {

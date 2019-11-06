@@ -61,34 +61,48 @@ import {
   QueryManager,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
+import { Capabilities } from '../../utils/capabilities';
 import { RuleUtil } from '../../utils/load-rule';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 import { deepGet } from '../../utils/object-change';
 
 import './datasource-view.scss';
 
-const tableColumns: string[] = [
-  'Datasource',
-  'Availability',
-  'Segment load/drop',
-  'Retention',
-  'Replicated size',
-  'Size',
-  'Compaction',
-  'Avg. segment size',
-  'Num rows',
-  ACTION_COLUMN_LABEL,
-];
-const tableColumnsNoSql: string[] = [
-  'Datasource',
-  'Availability',
-  'Segment load/drop',
-  'Retention',
-  'Size',
-  'Compaction',
-  'Avg. segment size',
-  ACTION_COLUMN_LABEL,
-];
+const tableColumns: Record<Capabilities, string[]> = {
+  full: [
+    'Datasource',
+    'Availability',
+    'Segment load/drop',
+    'Retention',
+    'Replicated size',
+    'Size',
+    'Compaction',
+    'Avg. segment size',
+    'Num rows',
+    ACTION_COLUMN_LABEL,
+  ],
+  'no-sql': [
+    'Datasource',
+    'Availability',
+    'Segment load/drop',
+    'Retention',
+    'Size',
+    'Compaction',
+    'Avg. segment size',
+    ACTION_COLUMN_LABEL,
+  ],
+  'no-proxy': [
+    'Datasource',
+    'Availability',
+    'Segment load/drop',
+    'Replicated size',
+    'Size',
+    'Avg. segment size',
+    'Num rows',
+    ACTION_COLUMN_LABEL,
+  ],
+  broken: ['Datasource'],
+};
 
 function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string {
   const loadDrop: string[] = [];
@@ -133,7 +147,7 @@ export interface DatasourcesViewProps {
   goToQuery: (initSql: string) => void;
   goToTask: (datasource?: string, openDialog?: string) => void;
   goToSegments: (datasource: string, onlyUnavailable?: boolean) => void;
-  noSqlMode: boolean;
+  capabilities: Capabilities;
   initDatasource?: string;
 }
 
@@ -198,7 +212,7 @@ GROUP BY 1`;
   }
 
   private datasourceQueryManager: QueryManager<
-    boolean,
+    Capabilities,
     { tiers: string[]; defaultRules: any[]; datasources: Datasource[] }
   >;
 
@@ -231,9 +245,9 @@ GROUP BY 1`;
     };
 
     this.datasourceQueryManager = new QueryManager({
-      processQuery: async noSqlMode => {
+      processQuery: async capabilities => {
         let datasources: DatasourceQueryResultRow[];
-        if (!noSqlMode) {
+        if (capabilities !== 'no-sql') {
           datasources = await queryDruidSql({ query: DatasourcesView.DATASOURCE_SQL });
         } else {
           const datasourcesResp = await axios.get('/druid/coordinator/v1/datasources?simple');
@@ -258,6 +272,17 @@ GROUP BY 1`;
               };
             },
           );
+        }
+
+        if (capabilities === 'no-proxy') {
+          datasources.forEach((ds: any) => {
+            ds.rules = [];
+          });
+          return {
+            datasources,
+            tiers: [],
+            defaultRules: [],
+          };
         }
 
         const seen = countBy(datasources, (x: any) => x.datasource);
@@ -320,8 +345,8 @@ GROUP BY 1`;
   };
 
   componentDidMount(): void {
-    const { noSqlMode } = this.props;
-    this.datasourceQueryManager.runQuery(noSqlMode);
+    const { capabilities } = this.props;
+    this.datasourceQueryManager.runQuery(capabilities);
     window.addEventListener('resize', this.handleResize);
   }
 
@@ -468,10 +493,10 @@ GROUP BY 1`;
   }
 
   renderBulkDatasourceActions() {
-    const { goToQuery, noSqlMode } = this.props;
+    const { goToQuery, capabilities } = this.props;
     const bulkDatasourceActionsMenu = (
       <Menu>
-        {!noSqlMode && (
+        {capabilities !== 'no-sql' && (
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"
@@ -581,7 +606,24 @@ GROUP BY 1`;
     rules: any[],
     compactionConfig: Record<string, any>,
   ): BasicAction[] {
-    const { goToQuery, goToTask } = this.props;
+    const { goToQuery, goToTask, capabilities } = this.props;
+
+    const goToActions: BasicAction[] = [
+      {
+        icon: IconNames.APPLICATION,
+        title: 'Query with SQL',
+        onAction: () => goToQuery(`SELECT * FROM ${escapeSqlIdentifier(datasource)}`),
+      },
+      {
+        icon: IconNames.GANTT_CHART,
+        title: 'Go to tasks',
+        onAction: () => goToTask(datasource),
+      },
+    ];
+
+    if (capabilities === 'no-proxy') {
+      return goToActions;
+    }
 
     if (disabled) {
       return [
@@ -598,12 +640,7 @@ GROUP BY 1`;
         },
       ];
     } else {
-      return [
-        {
-          icon: IconNames.APPLICATION,
-          title: 'Query with SQL',
-          onAction: () => goToQuery(`SELECT * FROM ${escapeSqlIdentifier(datasource)}`),
-        },
+      return goToActions.concat([
         {
           icon: IconNames.GANTT_CHART,
           title: 'Go to tasks',
@@ -657,7 +694,7 @@ GROUP BY 1`;
           intent: Intent.DANGER,
           onAction: () => this.setState({ killDatasource: datasource }),
         },
-      ];
+      ]);
     }
   }
 
@@ -694,7 +731,7 @@ GROUP BY 1`;
   }
 
   renderDatasourceTable() {
-    const { goToSegments, noSqlMode } = this.props;
+    const { goToSegments, capabilities } = this.props;
     const {
       datasources,
       defaultRules,
@@ -794,7 +831,7 @@ GROUP BY 1`;
                   return (
                     <span>
                       <span style={{ color: DatasourcesView.PARTIALLY_AVAILABLE_COLOR }}>
-                        &#x25cf;&nbsp;
+                        {num_available_segments ? '\u25cf' : '\u25cb'}&nbsp;
                       </span>
                       {percentAvailable}% available ({segmentsEl}, {segmentsMissingEl})
                     </span>
@@ -850,7 +887,7 @@ GROUP BY 1`;
                   </span>
                 );
               },
-              show: hiddenColumns.exists('Retention'),
+              show: capabilities !== 'no-proxy' && hiddenColumns.exists('Retention'),
             },
             {
               Header: 'Replicated size',
@@ -904,7 +941,7 @@ GROUP BY 1`;
                   </span>
                 );
               },
-              show: hiddenColumns.exists('Compaction'),
+              show: capabilities !== 'no-proxy' && hiddenColumns.exists('Compaction'),
             },
             {
               Header: 'Avg. segment size',
@@ -920,7 +957,7 @@ GROUP BY 1`;
               filterable: false,
               width: 100,
               Cell: row => formatNumber(row.value),
-              show: !noSqlMode && hiddenColumns.exists('Num rows'),
+              show: capabilities !== 'no-sql' && hiddenColumns.exists('Num rows'),
             },
             {
               Header: ACTION_COLUMN_LABEL,
@@ -965,7 +1002,7 @@ GROUP BY 1`;
   }
 
   render(): JSX.Element {
-    const { noSqlMode } = this.props;
+    const { capabilities } = this.props;
     const {
       showDisabled,
       hiddenColumns,
@@ -993,13 +1030,15 @@ GROUP BY 1`;
             label="Show segment timeline"
             onChange={() => this.setState({ showChart: !showChart })}
           />
-          <Switch
-            checked={showDisabled}
-            label="Show disabled"
-            onChange={() => this.toggleDisabled(showDisabled)}
-          />
+          {capabilities !== 'no-proxy' && (
+            <Switch
+              checked={showDisabled}
+              label="Show disabled"
+              onChange={() => this.toggleDisabled(showDisabled)}
+            />
+          )}
           <TableColumnSelector
-            columns={noSqlMode ? tableColumnsNoSql : tableColumns}
+            columns={tableColumns[capabilities]}
             onChange={column =>
               this.setState(prevState => ({
                 hiddenColumns: prevState.hiddenColumns.toggle(column),

@@ -600,7 +600,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         false,
         new Period("PT30M"),
         null,
-        null
+        null, null
     )
     {
     };

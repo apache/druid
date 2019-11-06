@@ -206,11 +206,19 @@
           &.timestamp {
             background: rgba(19, 129, 201, 0.5);
           }
+
+          &.used {
+            background: rgba(99, 129, 137, 0.5);
+          }
         }
 
         .rt-td {
           &.timestamp {
             background: rgba(19, 129, 201, 0.15);
+          }
+
+          &.used {
+            background: rgba(99, 129, 137, 0.15);
           }
         }
       }
@@ -254,18 +262,19 @@
     padding: 10px;
     border-radius: 2px;
     margin-bottom: 15px;
+  }
 
-    .controls-buttons {
-      position: relative;
+  .control-buttons {
+    position: relative;
 
-      .bp3-button {
-        margin-right: 15px;
-      }
+    .bp3-button {
+      margin-right: 15px;
+    }
 
-      .cancel {
-        position: absolute;
-        right: 0;
-      }
+    .right {
+      position: absolute;
+      right: 0;
+      margin-right: 0;
     }
   }
 

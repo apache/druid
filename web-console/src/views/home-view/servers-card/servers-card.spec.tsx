@@ -23,7 +23,7 @@ import { ServersCard } from './servers-card';
 
 describe('servers card', () => {
   it('matches snapshot', () => {
-    const serversCard = <ServersCard noSqlMode={false} />;
+    const serversCard = <ServersCard capabilities="full" />;
 
     const { container } = render(serversCard);
     expect(container.firstChild).toMatchSnapshot();
