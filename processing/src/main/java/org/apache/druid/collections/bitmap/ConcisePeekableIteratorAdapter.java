@@ -29,11 +29,6 @@ public class ConcisePeekableIteratorAdapter extends PeekableIteratorAdapter<IntS
     super(iterator);
   }
 
-  ConcisePeekableIteratorAdapter(IntSet.IntIterator iterator, int mark)
-  {
-    super(iterator, mark);
-  }
-
   @Override
   public void advanceIfNeeded(int i)
   {
@@ -43,11 +38,5 @@ public class ConcisePeekableIteratorAdapter extends PeekableIteratorAdapter<IntS
         mark = baseIterator.next();
       }
     }
-  }
-
-  @Override
-  public PeekableIntIterator clone()
-  {
-    return new ConcisePeekableIteratorAdapter(baseIterator.clone(), mark);
   }
 }

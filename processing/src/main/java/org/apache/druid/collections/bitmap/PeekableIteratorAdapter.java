@@ -33,13 +33,6 @@ public class PeekableIteratorAdapter<TIntIterator extends IntIterator> implement
     this.baseIterator = Preconditions.checkNotNull(iterator, "iterator");
   }
 
-  PeekableIteratorAdapter(TIntIterator iterator, int mark)
-  {
-    this(iterator);
-    this.mark = mark;
-    this.advanceIfNeeded(mark);
-  }
-
   @Override
   public void advanceIfNeeded(int i)
   {
@@ -61,7 +54,9 @@ public class PeekableIteratorAdapter<TIntIterator extends IntIterator> implement
   @Override
   public PeekableIntIterator clone()
   {
-    return new PeekableIteratorAdapter(baseIterator.clone(), mark);
+    throw new UnsupportedOperationException(
+        "PeekableIteratorAdapter.clone is not implemented, but this should not happen"
+    );
   }
 
   @Override
