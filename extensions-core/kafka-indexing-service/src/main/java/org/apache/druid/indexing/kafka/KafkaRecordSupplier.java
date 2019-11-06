@@ -229,8 +229,9 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
       if (deserializerReturnType == byte[].class) {
         deserializerObject = (Deserializer) deserializerClass.getConstructor().newInstance();
       } else {
-        throw new IllegalArgumentException("Kafka deserializers must return a byte array (byte[]), " + deserializerClass
-            .getName() + " returns " + deserializerReturnType.getTypeName());
+        throw new IllegalArgumentException("Kafka deserializers must return a byte array (byte[]), " +
+                                           deserializerClass.getName() + " returns " +
+                                           deserializerReturnType.getTypeName());
       }
     }
     catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {

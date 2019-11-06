@@ -158,7 +158,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   @Override
   protected int getTaskGroupIdForPartition(Integer partitionId)
   {
-    // record partitionIds so that supervisor knows when a partition is discovered.x
+    // record partitionIds so that supervisor knows when a partition is discovered.
     if (!partitionIds.contains(partitionId)) {
       partitionIds.add(partitionId);
     }

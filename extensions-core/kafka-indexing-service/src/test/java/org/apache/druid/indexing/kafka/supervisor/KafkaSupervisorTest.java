@@ -70,10 +70,8 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.St
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
-import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
-import org.apache.druid.indexing.seekablestream.utils.RandomIdUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -118,9 +116,6 @@ import scala.collection.Seq;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -3849,53 +3844,18 @@ public class KafkaSupervisorTest extends EasyMockSupport
     @Override
     protected RecordSupplier<Integer, Long> setupRecordSupplier()
     {
-      final Map<String, Object> consumerConfigs = new HashMap<>();
+      final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
       consumerConfigs.put("metadata.max.age.ms", "1");
-      consumerConfigs.put("group.id", StringUtils.format("kafka-supervisor-%s", RandomIdUtils.getRandomId()));
-      consumerConfigs.put("auto.offset.reset", "none");
-      consumerConfigs.put("enable.auto.commit", "false");
-      consumerConfigs.put("isolation.level", "read_committed");
       final Properties props = new Properties();
-      consumerProperties.get("key.deserializer");
-      System.out.println("consumerProperties");
-      consumerProperties.forEach((key, value) -> System.out.println(key + ":" + value));
       KafkaRecordSupplier.addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);
       props.putAll(consumerConfigs);
-      Deserializer keyDeserializerObject = getKafkaDeserializer(props, "key.deserializer");
-      Deserializer valueDeserializerObject = getKafkaDeserializer(props, "value.deserializer");
-
+      Deserializer keyDeserializerObject = new ByteArrayDeserializer();
+      Deserializer valueDeserializerObject = new ByteArrayDeserializer();
       return new KafkaRecordSupplier(
           consumerProperties,
           sortingMapper,
           new KafkaConsumer<>(props, keyDeserializerObject, valueDeserializerObject)
       );
-    }
-
-    private Deserializer getKafkaDeserializer(Properties properties, String kafkaConfigKey)
-    {
-      Deserializer deserializerObject;
-      try {
-        Class deserializerClass = Class.forName(properties.getProperty(
-            kafkaConfigKey,
-            ByteArrayDeserializer.class.getTypeName()
-        ));
-        Method deserializerMethod = deserializerClass.getMethod("deserialize", String.class, byte[].class);
-
-        Type deserializerReturnType = deserializerMethod.getGenericReturnType();
-
-        if (deserializerReturnType == byte[].class) {
-          deserializerObject = (Deserializer) deserializerClass.getConstructor().newInstance();
-        } else {
-          throw new IllegalArgumentException("Kafka deserializers must return a byte array (byte[]), "
-                                             + deserializerClass.getName()
-                                             + " returns "
-                                             + deserializerReturnType.getTypeName());
-        }
-      }
-      catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
-        throw new StreamException(e);
-      }
-      return deserializerObject;
     }
 
     @Override
