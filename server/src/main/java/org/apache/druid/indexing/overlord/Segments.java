@@ -38,8 +38,7 @@ package org.apache.druid.indexing.overlord;
  * segment is considered (fully) overshadowed on a series of intervals if it's overshadowed (= non-visible) on all of
  * the intervals in the series.
  *
- * If not specified otherwise, visibility (or overshadowness) should be assumed on the interval (-inf, +inf). This
- * visibility may also be called "global" or "general" visibility.
+ * If not specified otherwise, visibility (or overshadowness) should be assumed on the interval (-inf, +inf).
  */
 public enum Segments
 {
