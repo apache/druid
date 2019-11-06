@@ -16,16 +16,23 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
+import { shallow } from 'enzyme';
 import React from 'react';
 
-import { ServersCard } from './servers-card';
+import { Capabilities } from '../../utils/capabilities';
 
-describe('servers card', () => {
-  it('matches snapshot', () => {
-    const serversCard = <ServersCard capabilities="full" />;
+import { ServicesView } from './services-view';
 
-    const { container } = render(serversCard);
-    expect(container.firstChild).toMatchSnapshot();
+describe('services view', () => {
+  it('action services view', () => {
+    const servicesView = shallow(
+      <ServicesView
+        middleManager={'test'}
+        goToQuery={() => {}}
+        goToTask={() => {}}
+        capabilities={Capabilities.FULL}
+      />,
+    );
+    expect(servicesView).toMatchSnapshot();
   });
 });
