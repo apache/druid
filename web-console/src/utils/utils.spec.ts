@@ -164,6 +164,11 @@ describe('druid-type.ts', () => {
       Object {
         "dataSchema": Object {
           "dataSource": "wikipedia",
+          "dimensionsSpec": Object {
+            "dimensions": Array [
+              "header",
+            ],
+          },
           "granularitySpec": Object {
             "queryGranularity": "HOUR",
             "rollup": true,
@@ -176,24 +181,16 @@ describe('druid-type.ts', () => {
               "type": "count",
             },
           ],
-          "parser": Object {
-            "parseSpec": Object {
-              "dimensionsSpec": Object {
-                "dimensions": Array [
-                  "header",
-                ],
-              },
-              "format": "json",
-              "timestampSpec": Object {
-                "column": "timestamp",
-                "format": "iso",
-              },
-            },
-            "type": "string",
+          "timestampSpec": Object {
+            "column": "timestamp",
+            "format": "iso",
           },
         },
         "ioConfig": Object {
-          "firehose": Object {
+          "inputFormat": Object {
+            "type": "json",
+          },
+          "inputSource": Object {
             "type": "http",
             "uris": Array [
               "https://static.imply.io/data/wikipedia.json.gz",
