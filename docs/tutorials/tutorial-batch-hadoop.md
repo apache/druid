@@ -122,15 +122,15 @@ In the Hadoop container's shell, run the following commands to setup the HDFS di
 
 ```bash
 cd /usr/local/hadoop/bin
-./hadoop fs -mkdir /druid
-./hadoop fs -mkdir /druid/segments
-./hadoop fs -mkdir /quickstart
-./hadoop fs -chmod 777 /druid
-./hadoop fs -chmod 777 /druid/segments
-./hadoop fs -chmod 777 /quickstart
-./hadoop fs -chmod -R 777 /tmp
-./hadoop fs -chmod -R 777 /user
-./hadoop fs -put /shared/wikiticker-2015-09-12-sampled.json.gz /quickstart/wikiticker-2015-09-12-sampled.json.gz
+./hdfs dfs -mkdir /druid
+./hdfs dfs -mkdir /druid/segments
+./hdfs dfs -mkdir /quickstart
+./hdfs dfs -chmod 777 /druid
+./hdfs dfs -chmod 777 /druid/segments
+./hdfs dfs -chmod 777 /quickstart
+./hdfs dfs -chmod -R 777 /tmp
+./hdfs dfs -chmod -R 777 /user
+./hdfs dfs -put /shared/wikiticker-2015-09-12-sampled.json.gz /quickstart/wikiticker-2015-09-12-sampled.json.gz
 ```
 
 If you encounter namenode errors when running this command, the Hadoop container may not be finished initializing. When this occurs, wait a couple of minutes and retry the commands.

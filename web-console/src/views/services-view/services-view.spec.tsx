@@ -19,18 +19,20 @@
 import { shallow } from 'enzyme';
 import React from 'react';
 
-import { ServersView } from './servers-view';
+import { Capabilities } from '../../utils/capabilities';
 
-describe('servers view', () => {
-  it('action servers view', () => {
-    const serversView = shallow(
-      <ServersView
+import { ServicesView } from './services-view';
+
+describe('services view', () => {
+  it('action services view', () => {
+    const servicesView = shallow(
+      <ServicesView
         middleManager={'test'}
         goToQuery={() => {}}
         goToTask={() => {}}
-        noSqlMode={false}
+        capabilities={Capabilities.FULL}
       />,
     );
-    expect(serversView).toMatchSnapshot();
+    expect(servicesView).toMatchSnapshot();
   });
 });

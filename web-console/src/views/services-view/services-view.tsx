@@ -53,13 +53,14 @@ import {
   QueryManager,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
+import { Capabilities, CapabilitiesMode } from '../../utils/capabilities';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 import { deepGet } from '../../utils/object-change';
 
-import './servers-view.scss';
+import './services-view.scss';
 
-const serverTableColumns: string[] = [
-  'Server',
+const allColumns: string[] = [
+  'Service',
   'Type',
   'Tier',
   'Host',
@@ -70,6 +71,12 @@ const serverTableColumns: string[] = [
   'Detail',
   ACTION_COLUMN_LABEL,
 ];
+
+const tableColumns: Record<CapabilitiesMode, string[]> = {
+  full: allColumns,
+  'no-sql': allColumns,
+  'no-proxy': ['Service', 'Type', 'Tier', 'Host', 'Port', 'Curr size', 'Max size', 'Usage'],
+};
 
 function formatQueues(
   segmentsToLoad: number,
@@ -91,19 +98,19 @@ function formatQueues(
   return queueParts.join(', ') || 'Empty load/drop queues';
 }
 
-export interface ServersViewProps {
+export interface ServicesViewProps {
   middleManager: string | undefined;
   goToQuery: (initSql: string) => void;
   goToTask: (taskId: string) => void;
-  noSqlMode: boolean;
+  capabilities: Capabilities;
 }
 
-export interface ServersViewState {
-  serversLoading: boolean;
-  servers?: any[];
-  serversError?: string;
-  serverFilter: Filter[];
-  groupServersBy?: 'server_type' | 'tier';
+export interface ServicesViewState {
+  servicesLoading: boolean;
+  services?: any[];
+  servicesError?: string;
+  serviceFilter: Filter[];
+  groupServicesBy?: 'service_type' | 'tier';
 
   middleManagerDisableWorkerHost?: string;
   middleManagerEnableWorkerHost?: string;
@@ -111,9 +118,9 @@ export interface ServersViewState {
   hiddenColumns: LocalStorageBackedArray<string>;
 }
 
-interface ServerQueryResultRow {
-  server: string;
-  server_type: string;
+interface ServiceQueryResultRow {
+  service: string;
+  service_type: string;
   tier: string;
   curr_size: number;
   host: string;
@@ -144,13 +151,13 @@ interface MiddleManagerQueryResultRow {
   };
 }
 
-interface ServerResultRow
-  extends ServerQueryResultRow,
+interface ServiceResultRow
+  extends ServiceQueryResultRow,
     Partial<LoadQueueStatus>,
     Partial<MiddleManagerQueryResultRow> {}
 
-export class ServersView extends React.PureComponent<ServersViewProps, ServersViewState> {
-  private serverQueryManager: QueryManager<boolean, ServerResultRow[]>;
+export class ServicesView extends React.PureComponent<ServicesViewProps, ServicesViewState> {
+  private serviceQueryManager: QueryManager<Capabilities, ServiceResultRow[]>;
 
   // Ranking
   //   coordinator => 7
@@ -161,8 +168,8 @@ export class ServersView extends React.PureComponent<ServersViewProps, ServersVi
   //   middle_manager => 2
   //   peon => 1
 
-  static SERVER_SQL = `SELECT
-  "server", "server_type", "tier", "host", "plaintext_port", "tls_port", "curr_size", "max_size",
+  static SERVICE_SQL = `SELECT
+  "server" AS "service", "server_type" AS "service_type", "tier", "host", "plaintext_port", "tls_port", "curr_size", "max_size",
   (
     CASE "server_type"
     WHEN 'coordinator' THEN 7
@@ -176,15 +183,15 @@ export class ServersView extends React.PureComponent<ServersViewProps, ServersVi
     END
   ) AS "rank"
 FROM sys.servers
-ORDER BY "rank" DESC, "server" DESC`;
+ORDER BY "rank" DESC, "service" DESC`;
 
-  static async getServers(): Promise<ServerQueryResultRow[]> {
-    const allServerResp = await axios.get('/druid/coordinator/v1/servers?simple');
-    const allServers = allServerResp.data;
-    return allServers.map((s: any) => {
+  static async getServices(): Promise<ServiceQueryResultRow[]> {
+    const allServiceResp = await axios.get('/druid/coordinator/v1/servers?simple');
+    const allServices = allServiceResp.data;
+    return allServices.map((s: any) => {
       return {
-        server: s.host,
-        server_type: s.type === 'indexer-executor' ? 'peon' : s.type,
+        service: s.host,
+        service_type: s.type === 'indexer-executor' ? 'peon' : s.type,
         tier: s.tier,
         host: s.host.split(':')[0],
         plaintext_port: parseInt(s.host.split(':')[1], 10),
@@ -195,90 +202,99 @@ ORDER BY "rank" DESC, "server" DESC`;
     });
   }
 
-  constructor(props: ServersViewProps, context: any) {
+  constructor(props: ServicesViewProps, context: any) {
     super(props, context);
     this.state = {
-      serversLoading: true,
-      serverFilter: [],
+      servicesLoading: true,
+      serviceFilter: [],
 
       hiddenColumns: new LocalStorageBackedArray<string>(
-        LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION,
+        LocalStorageKeys.SERVICE_TABLE_COLUMN_SELECTION,
       ),
     };
 
-    this.serverQueryManager = new QueryManager({
-      processQuery: async noSqlMode => {
-        let servers: ServerQueryResultRow[];
-        if (!noSqlMode) {
-          servers = await queryDruidSql({ query: ServersView.SERVER_SQL });
+    this.serviceQueryManager = new QueryManager({
+      processQuery: async capabilities => {
+        let services: ServiceQueryResultRow[];
+        if (capabilities.hasSql()) {
+          services = await queryDruidSql({ query: ServicesView.SERVICE_SQL });
+        } else if (capabilities.hasCoordinatorAccess()) {
+          services = await ServicesView.getServices();
         } else {
-          servers = await ServersView.getServers();
+          throw new Error(`must have SQL or coordinator access`);
         }
 
-        const loadQueueResponse = await axios.get('/druid/coordinator/v1/loadqueue?simple');
-        const loadQueues: Record<string, LoadQueueStatus> = loadQueueResponse.data;
-        servers = servers.map((s: any) => {
-          const loadQueueInfo = loadQueues[s.server];
-          if (loadQueueInfo) {
-            s = Object.assign(s, loadQueueInfo);
-          }
-          return s;
-        });
-
-        let middleManagers: MiddleManagerQueryResultRow[];
-        try {
-          const middleManagerResponse = await axios.get('/druid/indexer/v1/workers');
-          middleManagers = middleManagerResponse.data;
-        } catch (e) {
-          if (
-            e.response &&
-            typeof e.response.data === 'object' &&
-            e.response.data.error === 'Task Runner does not support worker listing'
-          ) {
-            // Swallow this error because it simply a reflection of a local task runner.
-            middleManagers = [];
-          } else {
-            // Otherwise re-throw.
-            throw e;
-          }
+        if (capabilities.hasCoordinatorAccess()) {
+          const loadQueueResponse = await axios.get('/druid/coordinator/v1/loadqueue?simple');
+          const loadQueues: Record<string, LoadQueueStatus> = loadQueueResponse.data;
+          services = services.map(s => {
+            const loadQueueInfo = loadQueues[s.service];
+            if (loadQueueInfo) {
+              s = Object.assign(s, loadQueueInfo);
+            }
+            return s;
+          });
         }
 
-        const middleManagersLookup = lookupBy(middleManagers, m => m.worker.host);
-
-        return servers.map((s: any) => {
-          const middleManagerInfo = middleManagersLookup[s.server];
-          if (middleManagerInfo) {
-            s = Object.assign(s, middleManagerInfo);
+        if (capabilities.hasOverlordAccess()) {
+          let middleManagers: MiddleManagerQueryResultRow[];
+          try {
+            const middleManagerResponse = await axios.get('/druid/indexer/v1/workers');
+            middleManagers = middleManagerResponse.data;
+          } catch (e) {
+            if (
+              e.response &&
+              typeof e.response.data === 'object' &&
+              e.response.data.error === 'Task Runner does not support worker listing'
+            ) {
+              // Swallow this error because it simply a reflection of a local task runner.
+              middleManagers = [];
+            } else {
+              // Otherwise re-throw.
+              throw e;
+            }
           }
-          return s;
-        });
+
+          const middleManagersLookup = lookupBy(middleManagers, m => m.worker.host);
+
+          services = services.map(s => {
+            const middleManagerInfo = middleManagersLookup[s.service];
+            if (middleManagerInfo) {
+              s = Object.assign(s, middleManagerInfo);
+            }
+            return s;
+          });
+        }
+
+        return services;
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
-          servers: result,
-          serversLoading: loading,
-          serversError: error,
+          services: result,
+          servicesLoading: loading,
+          servicesError: error,
         });
       },
     });
   }
 
   componentDidMount(): void {
-    const { noSqlMode } = this.props;
-    this.serverQueryManager.runQuery(noSqlMode);
+    const { capabilities } = this.props;
+    this.serviceQueryManager.runQuery(capabilities);
   }
 
   componentWillUnmount(): void {
-    this.serverQueryManager.terminate();
+    this.serviceQueryManager.terminate();
   }
 
-  renderServersTable() {
+  renderServicesTable() {
+    const { capabilities } = this.props;
     const {
-      servers,
-      serversLoading,
-      serversError,
-      serverFilter,
-      groupServersBy,
+      services,
+      servicesLoading,
+      servicesError,
+      serviceFilter,
+      groupServicesBy,
       hiddenColumns,
     } = this.state;
 
@@ -295,36 +311,38 @@ ORDER BY "rank" DESC, "server" DESC`;
 
     return (
       <ReactTable
-        data={servers || []}
-        loading={serversLoading}
+        data={services || []}
+        loading={servicesLoading}
         noDataText={
-          !serversLoading && servers && !servers.length ? 'No historicals' : serversError || ''
+          !servicesLoading && services && !services.length ? 'No historicals' : servicesError || ''
         }
         filterable
-        filtered={serverFilter}
+        filtered={serviceFilter}
         onFilteredChange={filtered => {
-          this.setState({ serverFilter: filtered });
+          this.setState({ serviceFilter: filtered });
         }}
-        pivotBy={groupServersBy ? [groupServersBy] : []}
+        pivotBy={groupServicesBy ? [groupServicesBy] : []}
         defaultPageSize={50}
         columns={[
           {
-            Header: 'Server',
-            accessor: 'server',
+            Header: 'Service',
+            accessor: 'service',
             width: 300,
             Aggregated: () => '',
-            show: hiddenColumns.exists('Server'),
+            show: hiddenColumns.exists('Service'),
           },
           {
             Header: 'Type',
-            accessor: 'server_type',
+            accessor: 'service_type',
             width: 150,
             Cell: row => {
               const value = row.value;
               return (
                 <a
                   onClick={() => {
-                    this.setState({ serverFilter: addFilter(serverFilter, 'server_type', value) });
+                    this.setState({
+                      serviceFilter: addFilter(serviceFilter, 'service_type', value),
+                    });
                   }}
                 >
                   {value}
@@ -341,7 +359,7 @@ ORDER BY "rank" DESC, "server" DESC`;
               return (
                 <a
                   onClick={() => {
-                    this.setState({ serverFilter: addFilter(serverFilter, 'tier', value) });
+                    this.setState({ serviceFilter: addFilter(serviceFilter, 'tier', value) });
                   }}
                 >
                   {value}
@@ -385,7 +403,7 @@ ORDER BY "rank" DESC, "server" DESC`;
               return formatBytes(totalCurr);
             },
             Cell: row => {
-              if (row.aggregated || row.original.server_type !== 'historical') return '';
+              if (row.aggregated || row.original.service_type !== 'historical') return '';
               if (row.value === null) return '';
               return formatBytes(row.value);
             },
@@ -404,7 +422,7 @@ ORDER BY "rank" DESC, "server" DESC`;
               return formatBytes(totalMax);
             },
             Cell: row => {
-              if (row.aggregated || row.original.server_type !== 'historical') return '';
+              if (row.aggregated || row.original.service_type !== 'historical') return '';
               if (row.value === null) return '';
               return formatBytes(row.value);
             },
@@ -416,7 +434,7 @@ ORDER BY "rank" DESC, "server" DESC`;
             width: 100,
             filterable: false,
             accessor: row => {
-              if (row.server_type === 'middle_manager') {
+              if (row.service_type === 'middle_manager') {
                 return row.worker ? row.currCapacityUsed / row.worker.capacity : null;
               } else {
                 return row.max_size ? row.curr_size / row.max_size : null;
@@ -448,8 +466,8 @@ ORDER BY "rank" DESC, "server" DESC`;
             },
             Cell: row => {
               if (row.aggregated) return '';
-              const { server_type } = row.original;
-              switch (server_type) {
+              const { service_type } = row.original;
+              switch (service_type) {
                 case 'historical':
                   return fillIndicator(row.value);
 
@@ -474,7 +492,7 @@ ORDER BY "rank" DESC, "server" DESC`;
             width: 400,
             filterable: false,
             accessor: row => {
-              if (row.server_type === 'middle_manager') {
+              if (row.service_type === 'middle_manager') {
                 if (deepGet(row, 'worker.version') === '') return 'Disabled';
 
                 const details: string[] = [];
@@ -491,8 +509,8 @@ ORDER BY "rank" DESC, "server" DESC`;
             },
             Cell: row => {
               if (row.aggregated) return '';
-              const { server_type } = row.original;
-              switch (server_type) {
+              const { service_type } = row.original;
+              switch (service_type) {
                 case 'historical':
                   const {
                     segmentsToLoad,
@@ -528,7 +546,7 @@ ORDER BY "rank" DESC, "server" DESC`;
                 segmentsToDropSize,
               );
             },
-            show: hiddenColumns.exists('Detail'),
+            show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Detail'),
           },
           {
             Header: ACTION_COLUMN_LABEL,
@@ -542,7 +560,7 @@ ORDER BY "rank" DESC, "server" DESC`;
               const workerActions = this.getWorkerActions(row.value.host, disabled);
               return <ActionCell actions={workerActions} />;
             },
-            show: hiddenColumns.exists(ACTION_COLUMN_LABEL),
+            show: capabilities.hasOverlordAccess() && hiddenColumns.exists(ACTION_COLUMN_LABEL),
           },
         ]}
       />
@@ -590,7 +608,7 @@ ORDER BY "rank" DESC, "server" DESC`;
           this.setState({ middleManagerDisableWorkerHost: undefined });
         }}
         onSuccess={() => {
-          this.serverQueryManager.rerunLastQuery();
+          this.serviceQueryManager.rerunLastQuery();
         }}
       >
         <p>{`Are you sure you want to disable worker '${middleManagerDisableWorkerHost}'?`}</p>
@@ -619,7 +637,7 @@ ORDER BY "rank" DESC, "server" DESC`;
           this.setState({ middleManagerEnableWorkerHost: undefined });
         }}
         onSuccess={() => {
-          this.serverQueryManager.rerunLastQuery();
+          this.serviceQueryManager.rerunLastQuery();
         }}
       >
         <p>{`Are you sure you want to enable worker '${middleManagerEnableWorkerHost}'?`}</p>
@@ -627,16 +645,16 @@ ORDER BY "rank" DESC, "server" DESC`;
     );
   }
 
-  renderBulkServersActions() {
-    const { goToQuery, noSqlMode } = this.props;
+  renderBulkServicesActions() {
+    const { goToQuery, capabilities } = this.props;
 
-    const bulkserversActionsMenu = (
+    const bulkservicesActionsMenu = (
       <Menu>
-        {!noSqlMode && (
+        {capabilities.hasSql() && (
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"
-            onClick={() => goToQuery(ServersView.SERVER_SQL)}
+            onClick={() => goToQuery(ServicesView.SERVICE_SQL)}
           />
         )}
       </Menu>
@@ -644,7 +662,7 @@ ORDER BY "rank" DESC, "server" DESC`;
 
     return (
       <>
-        <Popover content={bulkserversActionsMenu} position={Position.BOTTOM_LEFT}>
+        <Popover content={bulkservicesActionsMenu} position={Position.BOTTOM_LEFT}>
           <Button icon={IconNames.MORE} />
         </Popover>
       </>
@@ -652,39 +670,40 @@ ORDER BY "rank" DESC, "server" DESC`;
   }
 
   render(): JSX.Element {
-    const { groupServersBy, hiddenColumns } = this.state;
+    const { capabilities } = this.props;
+    const { groupServicesBy, hiddenColumns } = this.state;
 
     return (
-      <div className="servers-view app-view">
-        <ViewControlBar label="Servers">
+      <div className="services-view app-view">
+        <ViewControlBar label="Services">
           <Label>Group by</Label>
           <ButtonGroup>
             <Button
-              active={!groupServersBy}
-              onClick={() => this.setState({ groupServersBy: undefined })}
+              active={!groupServicesBy}
+              onClick={() => this.setState({ groupServicesBy: undefined })}
             >
               None
             </Button>
             <Button
-              active={groupServersBy === 'server_type'}
-              onClick={() => this.setState({ groupServersBy: 'server_type' })}
+              active={groupServicesBy === 'service_type'}
+              onClick={() => this.setState({ groupServicesBy: 'service_type' })}
             >
               Type
             </Button>
             <Button
-              active={groupServersBy === 'tier'}
-              onClick={() => this.setState({ groupServersBy: 'tier' })}
+              active={groupServicesBy === 'tier'}
+              onClick={() => this.setState({ groupServicesBy: 'tier' })}
             >
               Tier
             </Button>
           </ButtonGroup>
           <RefreshButton
-            onRefresh={auto => this.serverQueryManager.rerunLastQuery(auto)}
-            localStorageKey={LocalStorageKeys.SERVERS_REFRESH_RATE}
+            onRefresh={auto => this.serviceQueryManager.rerunLastQuery(auto)}
+            localStorageKey={LocalStorageKeys.SERVICES_REFRESH_RATE}
           />
-          {this.renderBulkServersActions()}
+          {this.renderBulkServicesActions()}
           <TableColumnSelector
-            columns={serverTableColumns}
+            columns={tableColumns[capabilities.getMode()]}
             onChange={column =>
               this.setState(prevState => ({
                 hiddenColumns: prevState.hiddenColumns.toggle(column),
@@ -693,7 +712,7 @@ ORDER BY "rank" DESC, "server" DESC`;
             tableColumnsHidden={hiddenColumns.storedArray}
           />
         </ViewControlBar>
-        {this.renderServersTable()}
+        {this.renderServicesTable()}
         {this.renderDisableWorkerAction()}
         {this.renderEnableWorkerAction()}
       </div>

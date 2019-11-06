@@ -1,11 +1,11 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`servers view action servers view 1`] = `
+exports[`services view action services view 1`] = `
 <div
-  className="servers-view app-view"
+  className="services-view app-view"
 >
   <Memo(ViewControlBar)
-    label="Servers"
+    label="Services"
   >
     <Component>
       Group by
@@ -31,7 +31,7 @@ exports[`servers view action servers view 1`] = `
       </Blueprint3.Button>
     </Blueprint3.ButtonGroup>
     <Memo(RefreshButton)
-      localStorageKey="servers-refresh-rate"
+      localStorageKey="services-refresh-rate"
       onRefresh={[Function]}
     />
     <Blueprint3.Popover
@@ -74,7 +74,7 @@ exports[`servers view action servers view 1`] = `
     <Memo(TableColumnSelector)
       columns={
         Array [
-          "Server",
+          "Service",
           "Type",
           "Tier",
           "Host",
@@ -149,15 +149,15 @@ exports[`servers view action servers view 1`] = `
       Array [
         Object {
           "Aggregated": [Function],
-          "Header": "Server",
-          "accessor": "server",
+          "Header": "Service",
+          "accessor": "service",
           "show": true,
           "width": 300,
         },
         Object {
           "Cell": [Function],
           "Header": "Type",
-          "accessor": "server_type",
+          "accessor": "service_type",
           "show": true,
           "width": 150,
         },
