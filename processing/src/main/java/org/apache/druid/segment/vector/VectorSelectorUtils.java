@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.vector;
 
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
@@ -29,39 +28,6 @@ public class VectorSelectorUtils
   /**
    * Helper used by ColumnarLongs, ColumnarDoubles, etc. to populate null-flag vectors.
    */
-  @Nullable
-  public static boolean[] populateNullVector(
-      @Nullable final boolean[] nullVector,
-      final ReadableVectorOffset offset,
-      final ImmutableBitmap nullValueBitmap
-  )
-  {
-    if (nullValueBitmap.isEmpty()) {
-      return null;
-    }
-
-    final boolean[] retVal;
-
-    if (nullVector != null) {
-      retVal = nullVector;
-    } else {
-      retVal = new boolean[offset.getMaxVectorSize()];
-    }
-
-    // Probably not super efficient to call "get" so much, but, no worse than the non-vectorized version.
-    if (offset.isContiguous()) {
-      for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
-        retVal[i] = nullValueBitmap.get(i + offset.getStartOffset());
-      }
-    } else {
-      for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
-        retVal[i] = nullValueBitmap.get(offset.getOffsets()[i]);
-      }
-    }
-
-    return retVal;
-  }
-
   @Nullable
   public static boolean[] populateNullVector(
       @Nullable final boolean[] nullVector,
