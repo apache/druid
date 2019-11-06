@@ -122,6 +122,7 @@ import {
   Transform,
   TuningConfig,
   updateIngestionType,
+  upgradeSpec,
 } from '../../utils/ingestion-spec';
 import { deepDelete, deepGet, deepSet } from '../../utils/object-change';
 import {
@@ -439,6 +440,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   private updateSpec = (newSpec: IngestionSpec) => {
     newSpec = normalizeSpec(newSpec);
+    newSpec = upgradeSpec(newSpec);
     this.setState({ spec: newSpec, specPreview: newSpec });
     localStorageSet(LocalStorageKeys.INGESTION_SPEC, JSON.stringify(newSpec));
   };
@@ -2233,7 +2235,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   fields={[
                     {
                       name: 'dataSchema.dimensionsSpec.dimensionExclusions',
-                      label: 'Exclusions',
+                      label: 'Dimension exclusions',
                       type: 'string-array',
                       info: (
                         <>

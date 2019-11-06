@@ -33,6 +33,7 @@ import {
   TimestampSpec,
   Transform,
   TransformSpec,
+  upgradeSpec,
 } from './ingestion-spec';
 import { deepGet, deepSet } from './object-change';
 
@@ -626,7 +627,7 @@ export async function sampleForExampleManifests(
       return {
         name: parsed.name,
         description: parsed.description,
-        spec,
+        spec: upgradeSpec(spec),
       };
     } else {
       return;
