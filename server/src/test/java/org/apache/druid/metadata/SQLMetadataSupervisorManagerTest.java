@@ -190,5 +190,18 @@ public class SQLMetadataSupervisorManagerTest
     {
       return Collections.singletonList(dataSource);
     }
+
+    @Override
+    public String getType()
+    {
+      return null;
+    }
+
+    @Override
+    public String getSource()
+    {
+      return null;
+    }
+
   }
 }

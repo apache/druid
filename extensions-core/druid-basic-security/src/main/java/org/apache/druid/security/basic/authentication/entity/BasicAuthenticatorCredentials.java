@@ -77,7 +77,7 @@ public class BasicAuthenticatorCredentials
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (o == null || !getClass().equals(o.getClass())) {
       return false;
     }
 
@@ -86,11 +86,8 @@ public class BasicAuthenticatorCredentials
     if (getIterations() != that.getIterations()) {
       return false;
     }
-    if (!Arrays.equals(getSalt(), that.getSalt())) {
-      return false;
-    }
-    return Arrays.equals(getHash(), that.getHash());
 
+    return Arrays.equals(getSalt(), that.getSalt()) && Arrays.equals(getHash(), that.getHash());
   }
 
   @Override

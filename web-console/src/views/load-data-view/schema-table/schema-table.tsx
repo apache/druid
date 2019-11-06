@@ -52,110 +52,108 @@ export interface SchemaTableProps {
   ) => void;
 }
 
-export class SchemaTable extends React.PureComponent<SchemaTableProps> {
-  render(): JSX.Element {
-    const {
-      sampleBundle,
-      columnFilter,
-      selectedDimensionSpecIndex,
-      selectedMetricSpecIndex,
-      onDimensionOrMetricSelect,
-    } = this.props;
-    const { headerAndRows, dimensionsSpec, metricsSpec } = sampleBundle;
+export const SchemaTable = React.memo(function SchemaTable(props: SchemaTableProps) {
+  const {
+    sampleBundle,
+    columnFilter,
+    selectedDimensionSpecIndex,
+    selectedMetricSpecIndex,
+    onDimensionOrMetricSelect,
+  } = props;
+  const { headerAndRows, dimensionsSpec, metricsSpec } = sampleBundle;
 
-    const dimensionMetricSortedHeader = sortWithPrefixSuffix(
-      headerAndRows.header,
-      ['__time'],
-      metricsSpec.map(getMetricSpecName),
-      null,
-    );
+  const dimensionMetricSortedHeader = sortWithPrefixSuffix(
+    headerAndRows.header,
+    ['__time'],
+    metricsSpec.map(getMetricSpecName),
+    null,
+  );
 
-    return (
-      <ReactTable
-        className="schema-table -striped -highlight"
-        data={headerAndRows.rows}
-        columns={filterMap(dimensionMetricSortedHeader, (columnName, i) => {
-          if (!caseInsensitiveContains(columnName, columnFilter)) return;
+  return (
+    <ReactTable
+      className="schema-table -striped -highlight"
+      data={headerAndRows.rows}
+      columns={filterMap(dimensionMetricSortedHeader, (columnName, i) => {
+        if (!caseInsensitiveContains(columnName, columnFilter)) return;
 
-          const metricSpecIndex = metricsSpec.findIndex(m => getMetricSpecName(m) === columnName);
-          const metricSpec = metricsSpec[metricSpecIndex];
+        const metricSpecIndex = metricsSpec.findIndex(m => getMetricSpecName(m) === columnName);
+        const metricSpec = metricsSpec[metricSpecIndex];
 
-          if (metricSpec) {
-            const columnClassName = classNames('metric', {
-              selected: metricSpec && metricSpecIndex === selectedMetricSpecIndex,
-            });
-            return {
-              Header: (
-                <div
-                  className="clickable"
-                  onClick={() =>
-                    onDimensionOrMetricSelect(undefined, -1, metricSpec, metricSpecIndex)
+        if (metricSpec) {
+          const columnClassName = classNames('metric', {
+            selected: metricSpec && metricSpecIndex === selectedMetricSpecIndex,
+          });
+          return {
+            Header: (
+              <div
+                className="clickable"
+                onClick={() =>
+                  onDimensionOrMetricSelect(undefined, -1, metricSpec, metricSpecIndex)
+                }
+              >
+                <div className="column-name">{columnName}</div>
+                <div className="column-detail">{metricSpec.type}&nbsp;</div>
+              </div>
+            ),
+            headerClassName: columnClassName,
+            className: columnClassName,
+            id: String(i),
+            accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
+            Cell: row => <TableCell value={row.value} />,
+          };
+        } else {
+          const timestamp = columnName === '__time';
+          const dimensionSpecIndex = dimensionsSpec.dimensions
+            ? dimensionsSpec.dimensions.findIndex(d => getDimensionSpecName(d) === columnName)
+            : -1;
+          const dimensionSpec = dimensionsSpec.dimensions
+            ? dimensionsSpec.dimensions[dimensionSpecIndex]
+            : null;
+          const dimensionSpecType = dimensionSpec ? getDimensionSpecType(dimensionSpec) : null;
+
+          const columnClassName = classNames(
+            timestamp ? 'timestamp' : 'dimension',
+            dimensionSpecType || 'string',
+            {
+              selected: dimensionSpec && dimensionSpecIndex === selectedDimensionSpecIndex,
+            },
+          );
+          return {
+            Header: (
+              <div
+                className="clickable"
+                onClick={() => {
+                  if (timestamp) {
+                    onDimensionOrMetricSelect(undefined, -1, undefined, -1);
+                    return;
                   }
-                >
-                  <div className="column-name">{columnName}</div>
-                  <div className="column-detail">{metricSpec.type}&nbsp;</div>
-                </div>
-              ),
-              headerClassName: columnClassName,
-              className: columnClassName,
-              id: String(i),
-              accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-              Cell: row => <TableCell value={row.value} />,
-            };
-          } else {
-            const timestamp = columnName === '__time';
-            const dimensionSpecIndex = dimensionsSpec.dimensions
-              ? dimensionsSpec.dimensions.findIndex(d => getDimensionSpecName(d) === columnName)
-              : -1;
-            const dimensionSpec = dimensionsSpec.dimensions
-              ? dimensionsSpec.dimensions[dimensionSpecIndex]
-              : null;
-            const dimensionSpecType = dimensionSpec ? getDimensionSpecType(dimensionSpec) : null;
 
-            const columnClassName = classNames(
-              timestamp ? 'timestamp' : 'dimension',
-              dimensionSpecType || 'string',
-              {
-                selected: dimensionSpec && dimensionSpecIndex === selectedDimensionSpecIndex,
-              },
-            );
-            return {
-              Header: (
-                <div
-                  className="clickable"
-                  onClick={() => {
-                    if (timestamp) {
-                      onDimensionOrMetricSelect(undefined, -1, undefined, -1);
-                      return;
-                    }
-
-                    if (!dimensionSpec) return;
-                    onDimensionOrMetricSelect(
-                      inflateDimensionSpec(dimensionSpec),
-                      dimensionSpecIndex,
-                      undefined,
-                      -1,
-                    );
-                  }}
-                >
-                  <div className="column-name">{columnName}</div>
-                  <div className="column-detail">
-                    {timestamp ? 'long (time column)' : dimensionSpecType || 'string (auto)'}&nbsp;
-                  </div>
+                  if (!dimensionSpec) return;
+                  onDimensionOrMetricSelect(
+                    inflateDimensionSpec(dimensionSpec),
+                    dimensionSpecIndex,
+                    undefined,
+                    -1,
+                  );
+                }}
+              >
+                <div className="column-name">{columnName}</div>
+                <div className="column-detail">
+                  {timestamp ? 'long (time column)' : dimensionSpecType || 'string (auto)'}&nbsp;
                 </div>
-              ),
-              headerClassName: columnClassName,
-              className: columnClassName,
-              id: String(i),
-              accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-              Cell: row => <TableCell value={row.value} timestamp={timestamp} />,
-            };
-          }
-        })}
-        defaultPageSize={50}
-        showPagination={false}
-        sortable={false}
-      />
-    );
-  }
-}
+              </div>
+            ),
+            headerClassName: columnClassName,
+            className: columnClassName,
+            id: String(i),
+            accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
+            Cell: row => <TableCell value={timestamp ? new Date(row.value) : row.value} />,
+          };
+        }
+      })}
+      defaultPageSize={50}
+      showPagination={false}
+      sortable={false}
+    />
+  );
+});

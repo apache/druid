@@ -27,7 +27,6 @@ import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.JsonIterator;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.transform.Transformer;
-import org.apache.druid.utils.Runnables;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -83,12 +82,6 @@ public class SqlFirehose implements Firehose
     }
 
     return resultIterator.next();
-  }
-
-  @Override
-  public Runnable commit()
-  {
-    return Runnables.getNoopRunnable();
   }
 
   @Override

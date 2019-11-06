@@ -20,6 +20,7 @@
 package org.apache.druid.common.aws;
 
 import com.amazonaws.auth.AWSCredentialsProviderChain;
+import com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.auth.SystemPropertiesCredentialsProvider;
@@ -35,6 +36,7 @@ public class AWSCredentialsUtils
         new EnvironmentVariableCredentialsProvider(),
         new SystemPropertiesCredentialsProvider(),
         new ProfileCredentialsProvider(),
-        new InstanceProfileCredentialsProvider());
+        new EC2ContainerCredentialsProviderWrapper(),
+        InstanceProfileCredentialsProvider.getInstance());
   }
 }

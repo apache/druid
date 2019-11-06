@@ -149,7 +149,7 @@ The format of the results would look like so:
 ]
 ```
 
-### Behavior on multi-value dimensions
+## Behavior on multi-value dimensions
 
 topN queries can group on multi-value dimensions. When grouping on a multi-value dimension, _all_ values
 from matching rows will be used to generate one group per value. It's possible for a query to return more groups than
@@ -160,7 +160,7 @@ improve performance.
 
 See [Multi-value dimensions](multi-value-dimensions.html) for more details.
 
-### Aliasing
+## Aliasing
 
 The current TopN algorithm is an approximate algorithm. The top 1000 local results from each segment are returned for merging to determine the global topN. As such, the topN algorithm is approximate in both rank and results. Approximate results *ONLY APPLY WHEN THERE ARE MORE THAN 1000 DIM VALUES*. A topN over a dimension with fewer than 1000 unique dimension values can be considered accurate in rank and accurate in aggregates.
 
@@ -176,16 +176,16 @@ Users wishing to get an *exact rank and exact aggregates* topN over a dimension 
 
 Users who can tolerate *approximate rank* topN over a dimension with greater than 1000 unique values, but require *exact aggregates* can issue two queries. One to get the approximate topN dimension values, and another topN with dimension selection filters which only use the topN results of the first.
 
-#### Example First query:
+### Example First query
 
 ```json
 {
     "aggregations": [
-             {
-                 "fieldName": "L_QUANTITY_longSum",
-                 "name": "L_QUANTITY_",
-                 "type": "longSum"
-             }
+         {
+             "fieldName": "L_QUANTITY_longSum",
+             "name": "L_QUANTITY_",
+             "type": "longSum"
+         }
     ],
     "dataSource": "tpch_year",
     "dimension":"l_orderkey",
@@ -199,35 +199,35 @@ Users who can tolerate *approximate rank* topN over a dimension with greater tha
 }
 ```
 
-#### Example second query:
+### Example second query
 
 ```json
 {
     "aggregations": [
-             {
-                 "fieldName": "L_TAX_doubleSum",
-                 "name": "L_TAX_",
-                 "type": "doubleSum"
-             },
-             {
-                 "fieldName": "L_DISCOUNT_doubleSum",
-                 "name": "L_DISCOUNT_",
-                 "type": "doubleSum"
-             },
-             {
-                 "fieldName": "L_EXTENDEDPRICE_doubleSum",
-                 "name": "L_EXTENDEDPRICE_",
-                 "type": "doubleSum"
-             },
-             {
-                 "fieldName": "L_QUANTITY_longSum",
-                 "name": "L_QUANTITY_",
-                 "type": "longSum"
-             },
-             {
-                 "name": "count",
-                 "type": "count"
-             }
+         {
+             "fieldName": "L_TAX_doubleSum",
+             "name": "L_TAX_",
+             "type": "doubleSum"
+         },
+         {
+             "fieldName": "L_DISCOUNT_doubleSum",
+             "name": "L_DISCOUNT_",
+             "type": "doubleSum"
+         },
+         {
+             "fieldName": "L_EXTENDEDPRICE_doubleSum",
+             "name": "L_EXTENDEDPRICE_",
+             "type": "doubleSum"
+         },
+         {
+             "fieldName": "L_QUANTITY_longSum",
+             "name": "L_QUANTITY_",
+             "type": "longSum"
+         },
+         {
+             "name": "count",
+             "type": "count"
+         }
     ],
     "dataSource": "tpch_year",
     "dimension":"l_orderkey",

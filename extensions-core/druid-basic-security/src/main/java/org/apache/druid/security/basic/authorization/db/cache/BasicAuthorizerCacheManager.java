@@ -19,6 +19,7 @@
 
 package org.apache.druid.security.basic.authorization.db.cache;
 
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 
@@ -32,11 +33,18 @@ public interface BasicAuthorizerCacheManager
 {
   /**
    * Update this cache manager's local state with fresh information pushed by the coordinator.
-   *
    * @param authorizerPrefix The name of the authorizer this update applies to.
    * @param serializedUserAndRoleMap The updated, serialized user and role maps
    */
-  void handleAuthorizerUpdate(String authorizerPrefix, byte[] serializedUserAndRoleMap);
+  void handleAuthorizerUserUpdate(String authorizerPrefix, byte[] serializedUserAndRoleMap);
+
+  /**
+   * Update this cache manager's local state with fresh information pushed by the coordinator.
+   * @param authorizerPrefix The name of the authorizer this update applies to.
+   * @param serializedGroupMappingAndRoleMap The updated, serialized group and role maps
+   * */
+  void handleAuthorizerGroupMappingUpdate(String authorizerPrefix, byte[] serializedGroupMappingAndRoleMap);
+
 
   /**
    * Return the cache manager's local view of the user map for the authorizer named `authorizerPrefix`.
@@ -53,4 +61,20 @@ public interface BasicAuthorizerCacheManager
    * @return Role map
    */
   Map<String, BasicAuthorizerRole> getRoleMap(String authorizerPrefix);
+
+  /**
+   * Return the cache manager's local view of the groupMapping map for the authorizer named `authorizerPrefix`.
+   *
+   * @param authorizerPrefix The name of the authorizer
+   * @return GroupMapping map
+   */
+  Map<String, BasicAuthorizerGroupMapping> getGroupMappingMap(String authorizerPrefix);
+
+  /**
+   * Return the cache manager's local view of the groupMapping-role map for the authorizer named `authorizerPrefix`.
+   *
+   * @param authorizerPrefix The name of the authorizer
+   * @return Role map
+   */
+  Map<String, BasicAuthorizerRole> getGroupMappingRoleMap(String authorizerPrefix);
 }

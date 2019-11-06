@@ -21,10 +21,11 @@ import axios from 'axios';
 import React from 'react';
 
 import { lookupBy, pluralIfNeeded, queryDruidSql, QueryManager } from '../../../utils';
+import { Capabilities } from '../../../utils/capabilities';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface TasksCardProps {
-  noSqlMode: boolean;
+  capabilities: Capabilities;
 }
 
 export interface TasksCardState {
@@ -38,7 +39,7 @@ export interface TasksCardState {
 }
 
 export class TasksCard extends React.PureComponent<TasksCardProps, TasksCardState> {
-  private taskQueryManager: QueryManager<boolean, any>;
+  private taskQueryManager: QueryManager<Capabilities, any>;
 
   constructor(props: TasksCardProps, context: any) {
     super(props, context);
@@ -52,8 +53,17 @@ export class TasksCard extends React.PureComponent<TasksCardProps, TasksCardStat
     };
 
     this.taskQueryManager = new QueryManager({
-      processQuery: async noSqlMode => {
-        if (noSqlMode) {
+      processQuery: async capabilities => {
+        if (capabilities.hasSql()) {
+          const taskCountsFromQuery: { status: string; count: number }[] = await queryDruidSql({
+            query: `SELECT
+  CASE WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status",
+  COUNT (*) AS "count"
+FROM sys.tasks
+GROUP BY 1`,
+          });
+          return lookupBy(taskCountsFromQuery, x => x.status, x => x.count);
+        } else if (capabilities.hasOverlordAccess()) {
           const completeTasksResp = await axios.get('/druid/indexer/v1/completeTasks');
           const runningTasksResp = await axios.get('/druid/indexer/v1/runningTasks');
           const pendingTasksResp = await axios.get('/druid/indexer/v1/pendingTasks');
@@ -66,14 +76,7 @@ export class TasksCard extends React.PureComponent<TasksCardProps, TasksCardStat
             WAITING: waitingTasksResp.data.length,
           };
         } else {
-          const taskCountsFromQuery: { status: string; count: number }[] = await queryDruidSql({
-            query: `SELECT
-  CASE WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status",
-  COUNT (*) AS "count"
-FROM sys.tasks
-GROUP BY 1`,
-          });
-          return lookupBy(taskCountsFromQuery, x => x.status, x => x.count);
+          throw new Error(`must have SQL or overlord access`);
         }
       },
       onStateChange: ({ result, loading, error }) => {
@@ -91,9 +94,9 @@ GROUP BY 1`,
   }
 
   componentDidMount(): void {
-    const { noSqlMode } = this.props;
+    const { capabilities } = this.props;
 
-    this.taskQueryManager.runQuery(noSqlMode);
+    this.taskQueryManager.runQuery(capabilities);
   }
 
   componentWillUnmount(): void {

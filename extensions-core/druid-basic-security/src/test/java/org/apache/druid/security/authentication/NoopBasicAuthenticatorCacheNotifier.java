@@ -24,8 +24,8 @@ import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticato
 public class NoopBasicAuthenticatorCacheNotifier implements BasicAuthenticatorCacheNotifier
 {
   @Override
-  public void addUpdate(String updatedAuthenticatorPrefix, byte[] updatedUserMap)
+  public void addUserUpdate(String updatedAuthenticatorPrefix, byte[] updatedUserMap)
   {
-
+    // Do nothing as this is a noop implementation
   }
 }

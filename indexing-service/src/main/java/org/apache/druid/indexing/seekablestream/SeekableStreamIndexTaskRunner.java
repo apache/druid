@@ -44,6 +44,7 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeType;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -638,7 +639,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                       // move the segment out from the active segments of BaseAppenderatorDriver to make a new segment.
                       final boolean isPushRequired = addResult.isPushRequired(
                           tuningConfig.getPartitionsSpec().getMaxRowsPerSegment(),
-                          tuningConfig.getPartitionsSpec().getMaxTotalRows()
+                          tuningConfig.getPartitionsSpec().getMaxTotalRowsOr(DynamicPartitionsSpec.DEFAULT_MAX_TOTAL_ROWS)
                       );
                       if (isPushRequired && !sequenceToUse.isCheckpointed()) {
                         sequenceToCheckpoint = sequenceToUse;
@@ -723,7 +724,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             final CheckPointDataSourceMetadataAction checkpointAction = new CheckPointDataSourceMetadataAction(
                 task.getDataSource(),
                 ioConfig.getTaskGroupId(),
-                task.getIOConfig().getBaseSequenceName(),
                 null,
                 createDataSourceMetadata(
                     new SeekableStreamStartSequenceNumbers<>(
@@ -768,10 +768,14 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         status = Status.PUBLISHING;
       }
 
-      for (int i = 0; i < sequences.size(); i++) {
-        final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata = sequences.get(i);
+      // We need to copy sequences here, because the success callback in publishAndRegisterHandoff removes items from
+      // the sequence list. If a publish finishes before we finish iterating through the sequence list, we can
+      // end up skipping some sequences.
+      List<SequenceMetadata<PartitionIdType, SequenceOffsetType>> sequencesSnapshot = new ArrayList<>(sequences);
+      for (int i = 0; i < sequencesSnapshot.size(); i++) {
+        final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata = sequencesSnapshot.get(i);
         if (!publishingSequences.contains(sequenceMetadata.getSequenceName())) {
-          final boolean isLast = i == (sequences.size() - 1);
+          final boolean isLast = i == (sequencesSnapshot.size() - 1);
           if (isLast) {
             // Shorten endOffsets of the last sequence to match currOffsets.
             sequenceMetadata.setEndOffsets(currOffsets);

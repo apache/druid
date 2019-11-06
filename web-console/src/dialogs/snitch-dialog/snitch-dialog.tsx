@@ -116,13 +116,15 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
     if (!historyRecords) return null;
 
     return (
-      <HistoryDialog {...this.props} historyRecords={historyRecords}>
-        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+      <HistoryDialog
+        {...this.props}
+        historyRecords={historyRecords}
+        buttons={
           <Button onClick={this.back} icon={IconNames.ARROW_LEFT}>
             Back
           </Button>
-        </div>
-      </HistoryDialog>
+        }
+      />
     );
   }
 

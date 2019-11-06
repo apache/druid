@@ -42,6 +42,10 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
   // to ingest data until taskDuration has elapsed or the task was stopped or paused or killed
   public static final String NO_END_SEQUENCE_NUMBER = "NO_END_SEQUENCE_NUMBER";
 
+  // this special marker is used by the KinesisSupervisor to mark that a shard has been expired
+  // (i.e., closed and then the retention period has passed)
+  public static final String EXPIRED_MARKER = "EXPIRED";
+
   // this flag is used to indicate either END_OF_SHARD_MARKER
   // or NO_END_SEQUENCE_NUMBER so that they can be properly compared
   // with other sequence numbers

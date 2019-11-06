@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexer.partitions;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -33,4 +34,7 @@ public interface DimensionBasedPartitionsSpec extends PartitionsSpec
   String TARGET_PARTITION_SIZE = "targetPartitionSize";
 
   List<String> getPartitionDimensions();
+
+  @Nullable
+  Integer getTargetRowsPerSegment();
 }

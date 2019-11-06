@@ -37,6 +37,7 @@ import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -477,7 +478,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
   private static ImmutableWorkerInfo createDummyWorker(String scheme, String host, int capacity, String version)
   {
     return new ImmutableWorkerInfo(
-        new Worker(scheme, host, "-2", capacity, version),
+        new Worker(scheme, host, "-2", capacity, version, WorkerConfig.DEFAULT_CATEGORY),
         0,
         new HashSet<>(),
         new HashSet<>(),

@@ -411,6 +411,18 @@ public class SupervisorManagerTest extends EasyMockSupport
     }
 
     @Override
+    public String getType()
+    {
+      return null;
+    }
+
+    @Override
+    public String getSource()
+    {
+      return null;
+    }
+
+    @Override
     public List<String> getDataSources()
     {
       return new ArrayList<>();

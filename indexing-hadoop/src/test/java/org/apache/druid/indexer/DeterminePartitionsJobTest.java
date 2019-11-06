@@ -41,6 +41,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -51,6 +52,11 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class DeterminePartitionsJobTest
 {
+  @Nullable
+  private static final Long NO_TARGET_ROWS_PER_SEGMENT = null;
+  @Nullable
+  private static final Long NO_MAX_ROWS_PER_SEGMENT = null;
+
   private final HadoopDruidIndexerConfig config;
   private final int expectedNumOfSegments;
   private final int[] expectedNumOfShardsForEachSegment;
@@ -59,19 +65,22 @@ public class DeterminePartitionsJobTest
   private final File tmpDir;
 
   @Parameterized.Parameters(name = "assumeGrouped={0}, "
-                                   + "maxRowsPerSegment={1}, "
-                                   + "interval={2}"
-                                   + "expectedNumOfSegments={3}, "
-                                   + "expectedNumOfShardsForEachSegment={4}, "
-                                   + "expectedStartEndForEachShard={5}, "
-                                   + "data={6}")
+                                   + "targetRowsPerSegment={1}, "
+                                   + "maxRowsPerSegment={2}, "
+                                   + "interval={3}"
+                                   + "expectedNumOfSegments={4}, "
+                                   + "expectedNumOfShardsForEachSegment={5}, "
+                                   + "expectedStartEndForEachShard={6}, "
+                                   + "data={7}")
   public static Collection<Object[]> constructFeed()
   {
     return Arrays.asList(
         new Object[][]{
             {
+                // Test partitoning by targetRowsPerSegment
                 true,
-                3,
+                2,
+                NO_MAX_ROWS_PER_SEGMENT,
                 "2014-10-22T00:00:00Z/P1D",
                 1,
                 new int[]{5},
@@ -86,7 +95,36 @@ public class DeterminePartitionsJobTest
                 },
                 ImmutableList.of(
                     "2014102200,a.example.com,CN,100",
-                    "2014102200,b.exmaple.com,US,50",
+                    "2014102200,b.example.com,US,50",
+                    "2014102200,c.example.com,US,200",
+                    "2014102200,d.example.com,US,250",
+                    "2014102200,e.example.com,US,123",
+                    "2014102200,f.example.com,US,567",
+                    "2014102200,g.example.com,US,11",
+                    "2014102200,h.example.com,US,251",
+                    "2014102200,i.example.com,US,963",
+                    "2014102200,j.example.com,US,333"
+                )
+            },
+            {
+                true,
+                NO_TARGET_ROWS_PER_SEGMENT,
+                2,
+                "2014-10-22T00:00:00Z/P1D",
+                1,
+                new int[]{5},
+                new String[][][]{
+                    {
+                        {null, "c.example.com"},
+                        {"c.example.com", "e.example.com"},
+                        {"e.example.com", "g.example.com"},
+                        {"g.example.com", "i.example.com"},
+                        {"i.example.com", null}
+                    }
+                },
+                ImmutableList.of(
+                    "2014102200,a.example.com,CN,100",
+                    "2014102200,b.example.com,US,50",
                     "2014102200,c.example.com,US,200",
                     "2014102200,d.example.com,US,250",
                     "2014102200,e.example.com,US,123",
@@ -99,7 +137,8 @@ public class DeterminePartitionsJobTest
             },
             {
                 false,
-                3,
+                NO_TARGET_ROWS_PER_SEGMENT,
+                2,
                 "2014-10-20T00:00:00Z/P1D",
                 1,
                 new int[]{5},
@@ -115,8 +154,8 @@ public class DeterminePartitionsJobTest
                 ImmutableList.of(
                     "2014102000,a.example.com,CN,100",
                     "2014102000,a.example.com,CN,100",
-                    "2014102000,b.exmaple.com,US,50",
-                    "2014102000,b.exmaple.com,US,50",
+                    "2014102000,b.example.com,US,50",
+                    "2014102000,b.example.com,US,50",
                     "2014102000,c.example.com,US,200",
                     "2014102000,c.example.com,US,200",
                     "2014102000,d.example.com,US,250",
@@ -137,7 +176,8 @@ public class DeterminePartitionsJobTest
             },
             {
                 true,
-                6,
+                NO_TARGET_ROWS_PER_SEGMENT,
+                5,
                 "2014-10-20T00:00:00Z/P3D",
                 3,
                 new int[]{2, 2, 2},
@@ -157,7 +197,7 @@ public class DeterminePartitionsJobTest
                 },
                 ImmutableList.of(
                     "2014102000,a.example.com,CN,100",
-                    "2014102000,b.exmaple.com,CN,50",
+                    "2014102000,b.example.com,CN,50",
                     "2014102000,c.example.com,CN,200",
                     "2014102000,d.example.com,US,250",
                     "2014102000,e.example.com,US,123",
@@ -166,9 +206,8 @@ public class DeterminePartitionsJobTest
                     "2014102000,h.example.com,US,251",
                     "2014102000,i.example.com,US,963",
                     "2014102000,j.example.com,US,333",
-                    "2014102000,k.example.com,US,555",
                     "2014102100,a.example.com,CN,100",
-                    "2014102100,b.exmaple.com,CN,50",
+                    "2014102100,b.example.com,CN,50",
                     "2014102100,c.example.com,CN,200",
                     "2014102100,d.example.com,US,250",
                     "2014102100,e.example.com,US,123",
@@ -177,9 +216,8 @@ public class DeterminePartitionsJobTest
                     "2014102100,h.example.com,US,251",
                     "2014102100,i.example.com,US,963",
                     "2014102100,j.example.com,US,333",
-                    "2014102100,k.example.com,US,555",
                     "2014102200,a.example.com,CN,100",
-                    "2014102200,b.exmaple.com,CN,50",
+                    "2014102200,b.example.com,CN,50",
                     "2014102200,c.example.com,CN,200",
                     "2014102200,d.example.com,US,250",
                     "2014102200,e.example.com,US,123",
@@ -187,12 +225,12 @@ public class DeterminePartitionsJobTest
                     "2014102200,g.example.com,US,11",
                     "2014102200,h.example.com,US,251",
                     "2014102200,i.example.com,US,963",
-                    "2014102200,j.example.com,US,333",
-                    "2014102200,k.example.com,US,555"
+                    "2014102200,j.example.com,US,333"
                 )
             },
             {
                 true,
+                NO_TARGET_ROWS_PER_SEGMENT,
                 1000,
                 "2014-10-22T00:00:00Z/P1D",
                 1,
@@ -204,7 +242,7 @@ public class DeterminePartitionsJobTest
                 },
                 ImmutableList.of(
                     "2014102200,a.example.com,CN,100",
-                    "2014102200,b.exmaple.com,US,50",
+                    "2014102200,b.example.com,US,50",
                     "2014102200,c.example.com,US,200",
                     "2014102200,d.example.com,US,250",
                     "2014102200,e.example.com,US,123",
@@ -221,6 +259,7 @@ public class DeterminePartitionsJobTest
 
   public DeterminePartitionsJobTest(
       boolean assumeGrouped,
+      @Nullable Integer targetRowsPerSegment,
       Integer maxRowsPerSegment,
       String interval,
       int expectedNumOfSegments,
@@ -284,7 +323,7 @@ public class DeterminePartitionsJobTest
             new HadoopTuningConfig(
                 tmpDir.getCanonicalPath(),
                 null,
-                new SingleDimensionPartitionsSpec(null, maxRowsPerSegment, null, assumeGrouped),
+                new SingleDimensionPartitionsSpec(targetRowsPerSegment, maxRowsPerSegment, null, assumeGrouped),
                 null,
                 null,
                 null,
