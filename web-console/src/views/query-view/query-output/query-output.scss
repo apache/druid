@@ -22,6 +22,7 @@
     top: 0;
     bottom: 0;
     width: 100%;
+    font-feature-settings: tnum;
     font-variant-numeric: tabular-nums;
   }
   .clickable-cell {

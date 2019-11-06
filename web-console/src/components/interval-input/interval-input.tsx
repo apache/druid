@@ -25,6 +25,43 @@ import './interval-input.scss';
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
 
+function removeLocalTimezone(localDate: Date): Date {
+  // Function removes the local timezone of the date and displays it in UTC
+  return new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000);
+}
+
+function parseInterval(interval: string): DateRange {
+  const dates = interval.split('/');
+  if (dates.length !== 2) {
+    return [undefined, undefined];
+  }
+  const startDate = Date.parse(dates[0]) ? new Date(dates[0]) : undefined;
+  const endDate = Date.parse(dates[1]) ? new Date(dates[1]) : undefined;
+  // Must check if the start and end dates are within range
+  return [
+    startDate && startDate.getFullYear() < CURRENT_YEAR - 20 ? undefined : startDate,
+    endDate && endDate.getFullYear() > CURRENT_YEAR ? undefined : endDate,
+  ];
+}
+function stringifyDateRange(localRange: DateRange): string {
+  // This function takes in the dates selected from datepicker in local time, and displays them in UTC
+  // Shall Blueprint make any changes to the way dates are selected, this function will have to be reworked
+  const [localStartDate, localEndDate] = localRange;
+  return `${
+    localStartDate
+      ? removeLocalTimezone(localStartDate)
+          .toISOString()
+          .substring(0, 19)
+      : ''
+  }/${
+    localEndDate
+      ? removeLocalTimezone(localEndDate)
+          .toISOString()
+          .substring(0, 19)
+      : ''
+  }`;
+}
+
 export interface IntervalInputProps {
   interval: string;
   placeholder: string | undefined;
@@ -35,46 +72,9 @@ export const IntervalInput = React.memo(function IntervalInput(props: IntervalIn
   const [tempInterval, setTempInterval] = useState();
   const { interval, placeholder, onValueChange } = props;
 
-  function removeLocalTimezone(localDate: Date): Date {
-    // Function removes the local timezone of the date and displays it in UTC
-    return new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000);
-  }
-
-  function parseInterval(interval: string): DateRange {
-    const dates = interval.split('/');
-    if (dates.length !== 2) {
-      return [undefined, undefined];
-    }
-    const startDate = Date.parse(dates[0]) ? new Date(dates[0]) : undefined;
-    const endDate = Date.parse(dates[1]) ? new Date(dates[1]) : undefined;
-    // Must check if the start and end dates are within range
-    return [
-      startDate && startDate.getFullYear() < CURRENT_YEAR - 20 ? undefined : startDate,
-      endDate && endDate.getFullYear() > CURRENT_YEAR ? undefined : endDate,
-    ];
-  }
-  function parseDateRange(localRange: DateRange): string {
-    // This function takes in the dates selected from datepicker in local time, and displays them in UTC
-    // Shall Blueprint make any changes to the way dates are selected, this function will have to be reworked
-    const [localStartDate, localEndDate] = localRange;
-    return `${
-      localStartDate
-        ? removeLocalTimezone(localStartDate)
-            .toISOString()
-            .substring(0, 19)
-        : ''
-    }/${
-      localEndDate
-        ? removeLocalTimezone(localEndDate)
-            .toISOString()
-            .substring(0, 19)
-        : ''
-    }`;
-  }
-
   return (
     <InputGroup
-      value={`${interval || tempInterval}`}
+      value={interval || tempInterval}
       placeholder={placeholder}
       rightElement={
         <div>
@@ -86,7 +86,7 @@ export const IntervalInput = React.memo(function IntervalInput(props: IntervalIn
                 value={parseInterval(interval)}
                 contiguousCalendarMonths={false}
                 onChange={(selectedRange: DateRange) => {
-                  onValueChange(parseDateRange(selectedRange));
+                  onValueChange(stringifyDateRange(selectedRange));
                 }}
               />
             }
@@ -97,16 +97,13 @@ export const IntervalInput = React.memo(function IntervalInput(props: IntervalIn
         </div>
       }
       onChange={(e: any) => {
-        if (
-          (e.target.value.match(/^[\-0-9T:/]+$/g) && e.target.value.length <= 39) ||
-          e.target.value === ''
-        ) {
-          if (parseInterval(e.target.value) !== [undefined, undefined]) {
-            onValueChange(e.target.value);
-            setTempInterval('');
-          } else {
-            setTempInterval({ tempInterval: e.target.value });
-          }
+        const value = e.target.value.replace(/[^\-0-9T:/]/g, '').substring(0, 39);
+
+        if (parseInterval(value)[0] && parseInterval(value)[1]) {
+          onValueChange(value);
+          setTempInterval('');
+        } else {
+          setTempInterval({ tempInterval: value });
         }
       }}
     />
