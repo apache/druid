@@ -137,6 +137,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       throw new ISE("invalid spec input");
     }
     if (ingestionSchema == null) {
+      assert (ioConfig != null);
+      assert (dataSchema != null);
       return makeGroupId(ioConfig.appendToExisting, dataSchema.getDataSource());
     } else {
       return makeGroupId(ingestionSchema.ioConfig.appendToExisting, ingestionSchema.dataSchema.getDataSource());
