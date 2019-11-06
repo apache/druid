@@ -19,16 +19,18 @@
 
 package org.apache.druid.data.input.impl.prefetch;
 
+import javax.annotation.Nullable;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Holds the essential configuration required by {@link Fetcher} for prefetching purposes.
+ * Holds configurations required by {@link Fetcher} for fetching objects.
  */
-public class PrefetchConfig
+public class FetchConfig
 {
-  public static final long DEFAULT_MAX_CACHE_CAPACITY_BYTES = 1024 * 1024 * 1024; // 1GB
-  public static final long DEFAULT_MAX_FETCH_CAPACITY_BYTES = 1024 * 1024 * 1024; // 1GB
-  public static final long DEFAULT_FETCH_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(60);
+  private static final long DEFAULT_MAX_CACHE_CAPACITY_BYTES = 1024 * 1024 * 1024; // 1GB
+  private static final long DEFAULT_MAX_FETCH_CAPACITY_BYTES = 1024 * 1024 * 1024; // 1GB
+  private static final long DEFAULT_FETCH_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(60);
+  private static final int DEFAULT_MAX_FETCH_RETRY = 3;
 
   // A roughly max size of total fetched objects, but the actual fetched size can be bigger. The reason is our current
   // client implementations for cloud storages like s3 don't support range scan yet, so we must download the whole file
@@ -44,12 +46,14 @@ public class PrefetchConfig
   // timeout for fetching an object from the remote site
   private final long fetchTimeout;
 
+  private final int maxFetchRetry;
 
-  public PrefetchConfig(
-      Long maxCacheCapacityBytes,
-      Long maxFetchCapacityBytes,
-      Long prefetchTriggerBytes,
-      Long fetchTimeout
+  public FetchConfig(
+      @Nullable Long maxCacheCapacityBytes,
+      @Nullable Long maxFetchCapacityBytes,
+      @Nullable Long prefetchTriggerBytes,
+      @Nullable Long fetchTimeout,
+      @Nullable Integer maxFetchRetry
   )
   {
     this.maxCacheCapacityBytes = maxCacheCapacityBytes == null
@@ -62,6 +66,7 @@ public class PrefetchConfig
                                 ? this.maxFetchCapacityBytes / 2
                                 : prefetchTriggerBytes;
     this.fetchTimeout = fetchTimeout == null ? DEFAULT_FETCH_TIMEOUT_MS : fetchTimeout;
+    this.maxFetchRetry = maxFetchRetry == null ? DEFAULT_MAX_FETCH_RETRY : maxFetchRetry;
   }
 
   public long getMaxCacheCapacityBytes()
@@ -84,4 +89,8 @@ public class PrefetchConfig
     return fetchTimeout;
   }
 
+  public int getMaxFetchRetry()
+  {
+    return maxFetchRetry;
+  }
 }
