@@ -37,14 +37,7 @@ import { CoordinatorDynamicConfigDialog } from '../../dialogs/coordinator-dynami
 import { DoctorDialog } from '../../dialogs/doctor-dialog/doctor-dialog';
 import { OverlordDynamicConfigDialog } from '../../dialogs/overlord-dynamic-config-dialog/overlord-dynamic-config-dialog';
 import { Capabilities } from '../../utils/capabilities';
-import {
-  DRUID_ASF_SLACK,
-  DRUID_DOCS,
-  DRUID_GITHUB,
-  DRUID_USER_GROUP,
-  LEGACY_COORDINATOR_CONSOLE,
-  LEGACY_OVERLORD_CONSOLE,
-} from '../../variables';
+import { DRUID_ASF_SLACK, DRUID_DOCS, DRUID_GITHUB, DRUID_USER_GROUP } from '../../variables';
 
 import './header-bar.scss';
 
@@ -115,41 +108,13 @@ const DruidLogo = React.memo(function DruidLogo() {
   );
 });
 
-interface LegacyMenuProps {
-  capabilities: Capabilities;
-}
-
-const LegacyMenu = React.memo(function LegacyMenu(props: LegacyMenuProps) {
-  const { capabilities } = props;
-
-  return (
-    <Menu>
-      <MenuItem
-        icon={IconNames.GRAPH}
-        text="Legacy coordinator console"
-        href={LEGACY_COORDINATOR_CONSOLE}
-        target="_blank"
-        disabled={!capabilities.hasCoordinatorAccess()}
-      />
-      <MenuItem
-        icon={IconNames.MAP}
-        text="Legacy overlord console"
-        href={LEGACY_OVERLORD_CONSOLE}
-        target="_blank"
-        disabled={!capabilities.hasOverlordAccess()}
-      />
-    </Menu>
-  );
-});
-
 export interface HeaderBarProps {
   active: HeaderActiveTab;
-  hideLegacy: boolean;
   capabilities: Capabilities;
 }
 
 export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
-  const { active, hideLegacy, capabilities } = props;
+  const { active, capabilities } = props;
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [doctorDialogOpen, setDoctorDialogOpen] = useState(false);
   const [coordinatorDynamicConfigDialogOpen, setCoordinatorDynamicConfigDialogOpen] = useState(
@@ -262,14 +227,6 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         />
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
-        {!hideLegacy && (
-          <Popover
-            content={<LegacyMenu capabilities={capabilities} />}
-            position={Position.BOTTOM_RIGHT}
-          >
-            <Button minimal icon={IconNames.SHARE} text="Legacy" />
-          </Popover>
-        )}
         <Popover content={configMenu} position={Position.BOTTOM_RIGHT}>
           <Button minimal icon={IconNames.COG} />
         </Popover>

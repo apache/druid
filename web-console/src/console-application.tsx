@@ -41,7 +41,6 @@ import {
 import './console-application.scss';
 
 export interface ConsoleApplicationProps {
-  hideLegacy: boolean;
   exampleManifestsUrl?: string;
 }
 
@@ -208,12 +207,11 @@ export class ConsoleApplication extends React.PureComponent<
     el: JSX.Element,
     classType: 'normal' | 'narrow-pad' = 'normal',
   ) => {
-    const { hideLegacy } = this.props;
     const { capabilities } = this.state;
 
     return (
       <>
-        <HeaderBar active={active} hideLegacy={hideLegacy} capabilities={capabilities} />
+        <HeaderBar active={active} capabilities={capabilities} />
         <div className={classNames('view-container', classType)}>{el}</div>
       </>
     );
