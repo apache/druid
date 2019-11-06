@@ -31,7 +31,6 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 
 /**
  * InputSource abstracts the storage system where input data is stored.
@@ -69,5 +68,5 @@ public interface InputSource
       DimensionsSpec dimensionsSpec,
       InputFormat inputFormat,
       @Nullable File temporaryDirectory
-  ) throws IOException;
+  );
 }
