@@ -29,11 +29,17 @@ import org.apache.druid.segment.ColumnValueSelector;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
-public class NullableValueGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
+/**
+ * A wrapper around a numeric {@link GroupByColumnSelectorStrategy} that makes it null-aware. Should only be used
+ * for numeric strategies, not for string strategies.
+ *
+ * @see org.apache.druid.segment.BaseNullableColumnValueSelector#isNull() for why this only works in the numeric case
+ */
+public class NullableNumericGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
 {
   private final GroupByColumnSelectorStrategy delegate;
 
-  public NullableValueGroupByColumnSelectorStrategy(GroupByColumnSelectorStrategy delegate)
+  public NullableNumericGroupByColumnSelectorStrategy(GroupByColumnSelectorStrategy delegate)
   {
     this.delegate = delegate;
   }

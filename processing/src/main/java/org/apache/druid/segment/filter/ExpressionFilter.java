@@ -63,25 +63,35 @@ public class ExpressionFilter implements Filter
       @Override
       public boolean matches()
       {
-        if (NullHandling.sqlCompatible() && selector.isNull()) {
-          return false;
-        }
-        ExprEval eval = selector.getObject();
-        if (eval == null) {
-          return false;
-        }
+        final ExprEval eval = selector.getObject();
+
         switch (eval.type()) {
           case LONG_ARRAY:
-            Long[] lResult = eval.asLongArray();
+            final Long[] lResult = eval.asLongArray();
+            if (lResult == null) {
+              return false;
+            }
+
             return Arrays.stream(lResult).anyMatch(Evals::asBoolean);
+
           case STRING_ARRAY:
-            String[] sResult = eval.asStringArray();
+            final String[] sResult = eval.asStringArray();
+            if (sResult == null) {
+              return false;
+            }
+
             return Arrays.stream(sResult).anyMatch(Evals::asBoolean);
+
           case DOUBLE_ARRAY:
-            Double[] dResult = eval.asDoubleArray();
+            final Double[] dResult = eval.asDoubleArray();
+            if (dResult == null) {
+              return false;
+            }
+
             return Arrays.stream(dResult).anyMatch(Evals::asBoolean);
+
           default:
-            return Evals.asBoolean(selector.getLong());
+            return eval.asBoolean();
         }
       }
 
