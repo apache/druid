@@ -368,6 +368,7 @@ whitelist
 whitelisted
 whitespace
 wildcard
+wildcards
 xml
 znode
 znodes
@@ -483,12 +484,14 @@ doubleMax
 doubleMean
 doubleMeanNoNulls
 doubleMin
+doubleSum
 druid.generic.useDefaultValueForNull
 limitSpec
 longMax
 longMean
 longMeanNoNulls
 longMin
+longSum
 movingAverage
 postAggregations
 postAveragers

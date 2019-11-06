@@ -6,17 +6,49 @@ exports[`home view matches snapshot 1`] = `
 >
   <StatusCard />
   <DatasourcesCard
-    noSqlMode={false}
+    capabilities={
+      Capabilities {
+        "coordinator": true,
+        "overlord": true,
+        "queryType": "nativeAndSql",
+      }
+    }
   />
   <SegmentsCard
-    noSqlMode={false}
+    capabilities={
+      Capabilities {
+        "coordinator": true,
+        "overlord": true,
+        "queryType": "nativeAndSql",
+      }
+    }
   />
-  <SupervisorsCard />
+  <SupervisorsCard
+    capabilities={
+      Capabilities {
+        "coordinator": true,
+        "overlord": true,
+        "queryType": "nativeAndSql",
+      }
+    }
+  />
   <TasksCard
-    noSqlMode={false}
+    capabilities={
+      Capabilities {
+        "coordinator": true,
+        "overlord": true,
+        "queryType": "nativeAndSql",
+      }
+    }
   />
-  <ServersCard
-    noSqlMode={false}
+  <ServicesCard
+    capabilities={
+      Capabilities {
+        "coordinator": true,
+        "overlord": true,
+        "queryType": "nativeAndSql",
+      }
+    }
   />
   <LookupsCard />
 </div>

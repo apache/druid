@@ -20,4 +20,8 @@ import 'core-js/stable';
 import { configure } from 'enzyme';
 import enzymeAdapterReact16 from 'enzyme-adapter-react-16';
 
+import { UrlBaser } from './singletons/url-baser';
+
 configure({ adapter: new (enzymeAdapterReact16 as any)() });
+
+UrlBaser.baseUrl = '/some/base_url';

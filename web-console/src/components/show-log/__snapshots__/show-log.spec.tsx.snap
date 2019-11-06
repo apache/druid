@@ -25,7 +25,7 @@ exports[`show log describe show log 1`] = `
       <a
         class="bp3-button bp3-minimal"
         download="test"
-        href="test"
+        href="/some/base_url/druid/index/test/log"
         role="button"
         tabindex="0"
       >

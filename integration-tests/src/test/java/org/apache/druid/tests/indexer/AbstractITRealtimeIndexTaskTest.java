@@ -58,7 +58,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
 
   static final int DELAY_BETWEEN_EVENTS_SECS = 4;
   final String TIME_PLACEHOLDER = "YYYY-MM-DDTHH:MM:SS";
-  // format for putting datestamp into events
+  // format for putting timestamp into events
   static final DateTimeFormatter EVENT_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss");
   // format for the querying interval
   private static final DateTimeFormatter INTERVAL_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:'00Z'");
