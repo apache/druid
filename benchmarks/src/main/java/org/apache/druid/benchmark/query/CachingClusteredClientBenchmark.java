@@ -199,6 +199,7 @@ public class CachingClusteredClientBenchmark
                                                  .interval(schemaInfo.getDataInterval())
                                                  .version("1")
                                                  .shardSpec(new LinearShardSpec(i))
+                                                 .size(0)
                                                  .build();
       final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
       LOG.info("Starting benchmark setup using cacheDir[%s], rows[%,d].", segmentGenerator.getCacheDir(), rowsPerSegment);
