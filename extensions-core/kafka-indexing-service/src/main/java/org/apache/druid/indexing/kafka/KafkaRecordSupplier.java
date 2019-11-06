@@ -62,9 +62,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
       ObjectMapper sortingMapper
   )
   {
-    this.consumerProperties = consumerProperties;
-    this.sortingMapper = sortingMapper;
-    this.consumer = getKafkaConsumer();
+    this(consumerProperties, sortingMapper, getKafkaConsumer(sortingMapper, consumerProperties));
   }
 
   @VisibleForTesting
@@ -214,7 +212,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     }
   }
 
-  private Deserializer getKafkaDeserializer(Properties properties, String kafkaConfigKey)
+  private static Deserializer getKafkaDeserializer(Properties properties, String kafkaConfigKey)
   {
     Deserializer deserializerObject;
     try {
@@ -240,7 +238,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     return deserializerObject;
   }
 
-  private KafkaConsumer<byte[], byte[]> getKafkaConsumer()
+  private static KafkaConsumer<byte[], byte[]> getKafkaConsumer(ObjectMapper sortingMapper, Map<String, Object> consumerProperties)
   {
     final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
     final Properties props = new Properties();
@@ -249,7 +247,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
 
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
-      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+      Thread.currentThread().setContextClassLoader(KafkaRecordSupplier.class.getClassLoader());
       Deserializer keyDeserializerObject = getKafkaDeserializer(props, "key.deserializer");
       Deserializer valueDeserializerObject = getKafkaDeserializer(props, "value.deserializer");
 
