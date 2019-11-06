@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 5, time = 10, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 20, time = 10, timeUnit = TimeUnit.SECONDS)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Timeout(time = 30, timeUnit = TimeUnit.SECONDS)
@@ -165,15 +165,17 @@ public class NullHandlingBitmapGetVsIteratorBenchmark
     PeekableIntIterator nullIterator = bitmap.peekableIterator();
     int nullMark = -1;
     for (int i = pretendFilterOffsets.nextSetBit(0); i >= 0; i = pretendFilterOffsets.nextSetBit(i + 1)) {
-      nullIterator.advanceIfNeeded(i);
-      while (nullMark < i && nullIterator.hasNext()) {
-        nullMark = nullIterator.next();
+      if (nullMark < i) {
+        nullIterator.advanceIfNeeded(i);
+        if (nullIterator.hasNext()) {
+          nullMark = nullIterator.next();
+        }
       }
       final boolean isNull = nullMark == i;
       if (isNull) {
-        blackhole.consume(null);
-      } else {
         blackhole.consume(i);
+      } else {
+        blackhole.consume(null);
       }
     }
   }

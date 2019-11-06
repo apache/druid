@@ -87,7 +87,8 @@ public class BitmapPeekableIteratorTest
       iterator.advanceIfNeeded(i);
       Assert.assertTrue(iterator.hasNext());
       iterator.advanceIfNeeded(i); // this should do nothing
-      while (mark < i && iterator.hasNext()) {
+      Assert.assertTrue(iterator.hasNext());
+      if (iterator.hasNext()) {
         Assert.assertEquals(i, iterator.peekNext());
         mark = iterator.next();
       }

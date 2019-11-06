@@ -102,11 +102,12 @@ public interface ColumnarLongs extends Closeable
         public boolean isNull()
         {
           final int i = offset.getOffset();
-          nullIterator.advanceIfNeeded(i);
-          while (nullIterator.hasNext() && nullMark < i) {
-            nullMark = nullIterator.next();
+          if (nullMark < i) {
+            nullIterator.advanceIfNeeded(i);
+            if (nullIterator.hasNext()) {
+              nullMark = nullIterator.next();
+            }
           }
-          assert ((nullMark == i) == nullValueBitmap.get(i));
           return nullMark == i;
         }
 

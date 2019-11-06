@@ -47,11 +47,10 @@ public class VectorSelectorUtils
       retVal = new boolean[offset.getMaxVectorSize()];
     }
 
-
     int nextNullRow = nullIterator.next();
     if (offset.isContiguous()) {
-      nullIterator.advanceIfNeeded(offset.getStartOffset());
       final int startOffset = offset.getStartOffset();
+      nullIterator.advanceIfNeeded(startOffset);
       for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
         final int row = i + startOffset;
         if (row == nextNullRow) {
