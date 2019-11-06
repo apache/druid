@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.TestHelper;
 import org.joda.time.Interval;
@@ -31,7 +32,7 @@ import java.util.List;
 
 /**
  */
-public class SegmentListUsedActionSerdeTest
+public class RetrieveUsedSegmentsActionSerdeTest
 {
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
@@ -40,13 +41,11 @@ public class SegmentListUsedActionSerdeTest
   {
     Interval interval = Intervals.of("2014/2015");
 
-    SegmentListUsedAction expected = new SegmentListUsedAction(
-        "dataSource",
-        interval,
-        null
-    );
+    RetrieveUsedSegmentsAction expected =
+        new RetrieveUsedSegmentsAction("dataSource", interval, null, Segments.ONLY_VISIBLE);
 
-    SegmentListUsedAction actual = MAPPER.readValue(MAPPER.writeValueAsString(expected), SegmentListUsedAction.class);
+    RetrieveUsedSegmentsAction actual =
+        MAPPER.readValue(MAPPER.writeValueAsString(expected), RetrieveUsedSegmentsAction.class);
     Assert.assertEquals(ImmutableList.of(interval), actual.getIntervals());
     Assert.assertEquals(expected, actual);
   }
@@ -55,13 +54,15 @@ public class SegmentListUsedActionSerdeTest
   public void testMultiIntervalSerde() throws Exception
   {
     List<Interval> intervals = ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2016/2017"));
-    SegmentListUsedAction expected = new SegmentListUsedAction(
+    RetrieveUsedSegmentsAction expected = new RetrieveUsedSegmentsAction(
         "dataSource",
         null,
-        intervals
+        intervals,
+        Segments.ONLY_VISIBLE
     );
 
-    SegmentListUsedAction actual = MAPPER.readValue(MAPPER.writeValueAsString(expected), SegmentListUsedAction.class);
+    RetrieveUsedSegmentsAction actual =
+        MAPPER.readValue(MAPPER.writeValueAsString(expected), RetrieveUsedSegmentsAction.class);
     Assert.assertEquals(intervals, actual.getIntervals());
     Assert.assertEquals(expected, actual);
   }
@@ -70,8 +71,11 @@ public class SegmentListUsedActionSerdeTest
   public void testOldJsonDeserialization() throws Exception
   {
     String jsonStr = "{\"type\": \"segmentListUsed\", \"dataSource\": \"test\", \"interval\": \"2014/2015\"}";
-    SegmentListUsedAction actual = (SegmentListUsedAction) MAPPER.readValue(jsonStr, TaskAction.class);
+    RetrieveUsedSegmentsAction actual = (RetrieveUsedSegmentsAction) MAPPER.readValue(jsonStr, TaskAction.class);
 
-    Assert.assertEquals(new SegmentListUsedAction("test", Intervals.of("2014/2015"), null), actual);
+    Assert.assertEquals(
+        new RetrieveUsedSegmentsAction("test", Intervals.of("2014/2015"), null, Segments.ONLY_VISIBLE),
+        actual
+    );
   }
 }

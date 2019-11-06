@@ -51,14 +51,14 @@ export class SupervisorsCard extends React.PureComponent<
 
     this.supervisorQueryManager = new QueryManager({
       processQuery: async capabilities => {
-        if (capabilities !== 'no-sql') {
+        if (capabilities.hasSql()) {
           return (await queryDruidSql({
             query: `SELECT
   COUNT(*) FILTER (WHERE "suspended" = 0) AS "runningSupervisorCount",
   COUNT(*) FILTER (WHERE "suspended" = 1) AS "suspendedSupervisorCount"
 FROM sys.supervisors`,
           }))[0];
-        } else {
+        } else if (capabilities.hasOverlordAccess()) {
           const resp = await axios.get('/druid/indexer/v1/supervisor?full');
           const data = resp.data;
           const runningSupervisorCount = data.filter((d: any) => d.spec.suspended === false).length;
@@ -68,6 +68,8 @@ FROM sys.supervisors`,
             runningSupervisorCount,
             suspendedSupervisorCount,
           };
+        } else {
+          throw new Error(`must have SQL or overlord access`);
         }
       },
       onStateChange: ({ result, loading, error }) => {

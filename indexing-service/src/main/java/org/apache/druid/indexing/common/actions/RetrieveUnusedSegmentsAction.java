@@ -23,45 +23,28 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
-import java.util.Collection;
 import java.util.List;
 
-public class SegmentListUsedAction implements TaskAction<List<DataSegment>>
+public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment>>
 {
   @JsonIgnore
   private final String dataSource;
 
   @JsonIgnore
-  private final List<Interval> intervals;
+  private final Interval interval;
 
   @JsonCreator
-  public SegmentListUsedAction(
+  public RetrieveUnusedSegmentsAction(
       @JsonProperty("dataSource") String dataSource,
-      @Deprecated @JsonProperty("interval") Interval interval,
-      @JsonProperty("intervals") Collection<Interval> intervals
+      @JsonProperty("interval") Interval interval
   )
   {
     this.dataSource = dataSource;
-
-    Preconditions.checkArgument(
-        interval == null || intervals == null,
-        "please specify intervals only"
-    );
-
-    List<Interval> theIntervals = null;
-    if (interval != null) {
-      theIntervals = ImmutableList.of(interval);
-    } else if (intervals != null && intervals.size() > 0) {
-      theIntervals = JodaUtils.condenseIntervals(intervals);
-    }
-    this.intervals = Preconditions.checkNotNull(theIntervals, "no intervals found");
+    this.interval = interval;
   }
 
   @JsonProperty
@@ -71,9 +54,9 @@ public class SegmentListUsedAction implements TaskAction<List<DataSegment>>
   }
 
   @JsonProperty
-  public List<Interval> getIntervals()
+  public Interval getInterval()
   {
-    return intervals;
+    return interval;
   }
 
   @Override
@@ -85,7 +68,7 @@ public class SegmentListUsedAction implements TaskAction<List<DataSegment>>
   @Override
   public List<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
-    return toolbox.getIndexerMetadataStorageCoordinator().getUsedSegmentsForIntervals(dataSource, intervals);
+    return toolbox.getIndexerMetadataStorageCoordinator().getUnusedSegmentsForInterval(dataSource, interval);
   }
 
   @Override
@@ -95,38 +78,11 @@ public class SegmentListUsedAction implements TaskAction<List<DataSegment>>
   }
 
   @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    SegmentListUsedAction that = (SegmentListUsedAction) o;
-
-    if (!dataSource.equals(that.dataSource)) {
-      return false;
-    }
-    return intervals.equals(that.intervals);
-
-  }
-
-  @Override
-  public int hashCode()
-  {
-    int result = dataSource.hashCode();
-    result = 31 * result + intervals.hashCode();
-    return result;
-  }
-
-  @Override
   public String toString()
   {
-    return "SegmentListUsedAction{" +
+    return getClass().getSimpleName() + "{" +
            "dataSource='" + dataSource + '\'' +
-           ", intervals=" + intervals +
+           ", interval=" + interval +
            '}';
   }
 }

@@ -1,9 +1,9 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`servers card matches snapshot 1`] = `
+exports[`services card matches snapshot 1`] = `
 <a
-  class="home-view-card servers-card"
-  href="#servers"
+  class="home-view-card services-card"
+  href="#services"
 >
   <div
     class="bp3-card bp3-interactive bp3-elevation-0"
@@ -32,7 +32,7 @@ exports[`servers card matches snapshot 1`] = `
         </svg>
       </span>
        
-      Servers
+      Services
     </h5>
     <p>
       Loading...

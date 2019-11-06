@@ -54,7 +54,16 @@ export class TasksCard extends React.PureComponent<TasksCardProps, TasksCardStat
 
     this.taskQueryManager = new QueryManager({
       processQuery: async capabilities => {
-        if (capabilities === 'no-sql') {
+        if (capabilities.hasSql()) {
+          const taskCountsFromQuery: { status: string; count: number }[] = await queryDruidSql({
+            query: `SELECT
+  CASE WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status",
+  COUNT (*) AS "count"
+FROM sys.tasks
+GROUP BY 1`,
+          });
+          return lookupBy(taskCountsFromQuery, x => x.status, x => x.count);
+        } else if (capabilities.hasOverlordAccess()) {
           const completeTasksResp = await axios.get('/druid/indexer/v1/completeTasks');
           const runningTasksResp = await axios.get('/druid/indexer/v1/runningTasks');
           const pendingTasksResp = await axios.get('/druid/indexer/v1/pendingTasks');
@@ -67,14 +76,7 @@ export class TasksCard extends React.PureComponent<TasksCardProps, TasksCardStat
             WAITING: waitingTasksResp.data.length,
           };
         } else {
-          const taskCountsFromQuery: { status: string; count: number }[] = await queryDruidSql({
-            query: `SELECT
-  CASE WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status",
-  COUNT (*) AS "count"
-FROM sys.tasks
-GROUP BY 1`,
-          });
-          return lookupBy(taskCountsFromQuery, x => x.status, x => x.count);
+          throw new Error(`must have SQL or overlord access`);
         }
       },
       onStateChange: ({ result, loading, error }) => {
