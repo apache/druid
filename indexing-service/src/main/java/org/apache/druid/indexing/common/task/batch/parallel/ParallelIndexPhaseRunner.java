@@ -53,7 +53,6 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -84,7 +83,6 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   // subTaskId -> report
   private final ConcurrentHashMap<String, SubTaskReportType> reportsMap = new ConcurrentHashMap<>();
 
-  private final ExecutorService blockingQueueHandler;
   private volatile boolean subTaskScheduleAndMonitorStopped;
   private volatile TaskMonitor<SubTaskType> taskMonitor;
 
@@ -106,7 +104,6 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     this.context = context;
     this.maxNumConcurrentSubTasks = tuningConfig.getMaxNumConcurrentSubTasks();
     this.indexingServiceClient = Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient");
-    this.blockingQueueHandler = Execs.singleThreaded("blocking-queue-handler");
   }
 
   /**
@@ -289,7 +286,8 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
             taskCompleteEvents.offer(SubTaskCompleteEvent.fail(spec, t));
           }
         },
-        blockingQueueHandler
+        // The callback is mostly non-blocking and quick, so it's OK to schedule it using directExecutor()
+        Execs.directExecutor()
     );
   }
 

@@ -197,6 +197,7 @@ public class TaskManagementResource
             }
           }
         },
+        // use dedicated thread for async json write
         jsonWriter
     );
 

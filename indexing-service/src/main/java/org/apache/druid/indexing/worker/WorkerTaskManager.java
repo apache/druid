@@ -179,6 +179,9 @@ public abstract class WorkerTaskManager
     return completedTasks;
   }
 
+  /**
+   * This method is mostly non-blocking because exec is a ThreadPoolExecutor with unbounded queue used by default.
+   */
   private void submitNoticeToExec(Notice notice)
   {
     exec.execute(
@@ -254,7 +257,7 @@ public abstract class WorkerTaskManager
             submitNoticeToExec(new StatusNotice(task, TaskStatus.failure(task.getId())));
           }
         },
-        // The callback is non-blocking and quick, so it's OK to schedule it using directExecutor()
+        // The callback is mostly non-blocking and quick, so it's OK to schedule it using directExecutor()
         Execs.directExecutor()
     );
   }

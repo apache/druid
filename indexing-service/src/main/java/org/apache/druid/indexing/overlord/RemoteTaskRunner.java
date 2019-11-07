@@ -257,7 +257,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                         }
                       }
                     },
-                    // The callback is non-blocking and quick, so it's OK to schedule it using directExecutor()
+                    // The callback is mostly non-blocking and quick, so it's OK to schedule it using directExecutor()
                     Execs.directExecutor()
                 );
                 break;
