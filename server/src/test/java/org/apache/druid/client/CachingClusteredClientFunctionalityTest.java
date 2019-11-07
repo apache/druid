@@ -181,6 +181,7 @@ public class CachingClusteredClientFunctionalityTest
                        .interval(interval)
                        .version(version)
                        .shardSpec(NoneShardSpec.instance())
+                       .size(0)
                        .build(),
             new TierSelectorStrategy()
             {

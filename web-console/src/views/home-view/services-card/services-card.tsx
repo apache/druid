@@ -24,12 +24,12 @@ import { compact, lookupBy, pluralIfNeeded, queryDruidSql, QueryManager } from '
 import { Capabilities } from '../../../utils/capabilities';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
-export interface ServersCardProps {
+export interface ServicesCardProps {
   capabilities: Capabilities;
 }
 
-export interface ServersCardState {
-  serverCountLoading: boolean;
+export interface ServicesCardState {
+  serviceCountLoading: boolean;
   coordinatorCount: number;
   overlordCount: number;
   routerCount: number;
@@ -38,10 +38,10 @@ export interface ServersCardState {
   middleManagerCount: number;
   peonCount: number;
   indexerCount: number;
-  serverCountError?: string;
+  serviceCountError?: string;
 }
 
-export class ServersCard extends React.PureComponent<ServersCardProps, ServersCardState> {
+export class ServicesCard extends React.PureComponent<ServicesCardProps, ServicesCardState> {
   static renderPluralIfNeededPair(
     count1: number,
     singular1: string,
@@ -56,12 +56,12 @@ export class ServersCard extends React.PureComponent<ServersCardProps, ServersCa
     return <p>{text}</p>;
   }
 
-  private serverQueryManager: QueryManager<Capabilities, any>;
+  private serviceQueryManager: QueryManager<Capabilities, any>;
 
-  constructor(props: ServersCardProps, context: any) {
+  constructor(props: ServicesCardProps, context: any) {
     super(props, context);
     this.state = {
-      serverCountLoading: false,
+      serviceCountLoading: false,
       coordinatorCount: 0,
       overlordCount: 0,
       routerCount: 0,
@@ -72,29 +72,37 @@ export class ServersCard extends React.PureComponent<ServersCardProps, ServersCa
       indexerCount: 0,
     };
 
-    this.serverQueryManager = new QueryManager({
+    this.serviceQueryManager = new QueryManager({
       processQuery: async capabilities => {
-        if (capabilities === 'no-sql') {
-          const serversResp = await axios.get('/druid/coordinator/v1/servers?simple');
-          const middleManagerResp = await axios.get('/druid/indexer/v1/workers');
-          return {
-            historical: serversResp.data.filter((s: any) => s.type === 'historical').length,
-            middle_manager: middleManagerResp.data.length,
-            peon: serversResp.data.filter((s: any) => s.type === 'indexer-executor').length,
-          };
-        } else {
-          const serverCountsFromQuery: {
-            server_type: string;
+        if (capabilities.hasSql()) {
+          const serviceCountsFromQuery: {
+            service_type: string;
             count: number;
           }[] = await queryDruidSql({
-            query: `SELECT server_type, COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
+            query: `SELECT server_type AS "service_type", COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
           });
-          return lookupBy(serverCountsFromQuery, x => x.server_type, x => x.count);
+          return lookupBy(serviceCountsFromQuery, x => x.service_type, x => x.count);
+        } else if (capabilities.hasCoordinatorAccess() || capabilities.hasOverlordAccess()) {
+          const services = capabilities.hasCoordinatorAccess()
+            ? (await axios.get('/druid/coordinator/v1/servers?simple')).data
+            : [];
+
+          const middleManager = capabilities.hasOverlordAccess()
+            ? (await axios.get('/druid/indexer/v1/workers')).data
+            : [];
+
+          return {
+            historical: services.filter((s: any) => s.type === 'historical').length,
+            middle_manager: middleManager.length,
+            peon: services.filter((s: any) => s.type === 'indexer-executor').length,
+          };
+        } else {
+          throw new Error(`must have SQL or coordinator/overlord access`);
         }
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
-          serverCountLoading: loading,
+          serviceCountLoading: loading,
           coordinatorCount: result ? result.coordinator : 0,
           overlordCount: result ? result.overlord : 0,
           routerCount: result ? result.router : 0,
@@ -103,7 +111,7 @@ export class ServersCard extends React.PureComponent<ServersCardProps, ServersCa
           middleManagerCount: result ? result.middle_manager : 0,
           peonCount: result ? result.peon : 0,
           indexerCount: result ? result.indexer : 0,
-          serverCountError: error,
+          serviceCountError: error,
         });
       },
     });
@@ -112,16 +120,16 @@ export class ServersCard extends React.PureComponent<ServersCardProps, ServersCa
   componentDidMount(): void {
     const { capabilities } = this.props;
 
-    this.serverQueryManager.runQuery(capabilities);
+    this.serviceQueryManager.runQuery(capabilities);
   }
 
   componentWillUnmount(): void {
-    this.serverQueryManager.terminate();
+    this.serviceQueryManager.terminate();
   }
 
   render(): JSX.Element {
     const {
-      serverCountLoading,
+      serviceCountLoading,
       coordinatorCount,
       overlordCount,
       routerCount,
@@ -130,31 +138,31 @@ export class ServersCard extends React.PureComponent<ServersCardProps, ServersCa
       middleManagerCount,
       peonCount,
       indexerCount,
-      serverCountError,
+      serviceCountError,
     } = this.state;
     return (
       <HomeViewCard
-        className="servers-card"
-        href={'#servers'}
+        className="services-card"
+        href={'#services'}
         icon={IconNames.DATABASE}
-        title={'Servers'}
-        loading={serverCountLoading}
-        error={serverCountError}
+        title={'Services'}
+        loading={serviceCountLoading}
+        error={serviceCountError}
       >
-        {ServersCard.renderPluralIfNeededPair(
+        {ServicesCard.renderPluralIfNeededPair(
           overlordCount,
           'overlord',
           coordinatorCount,
           'coordinator',
         )}
-        {ServersCard.renderPluralIfNeededPair(routerCount, 'router', brokerCount, 'broker')}
-        {ServersCard.renderPluralIfNeededPair(
+        {ServicesCard.renderPluralIfNeededPair(routerCount, 'router', brokerCount, 'broker')}
+        {ServicesCard.renderPluralIfNeededPair(
           historicalCount,
           'historical',
           middleManagerCount,
           'middle manager',
         )}
-        {ServersCard.renderPluralIfNeededPair(peonCount, 'peon', indexerCount, 'indexer')}
+        {ServicesCard.renderPluralIfNeededPair(peonCount, 'peon', indexerCount, 'indexer')}
       </HomeViewCard>
     );
   }
