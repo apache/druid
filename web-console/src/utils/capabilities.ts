@@ -146,8 +146,16 @@ export class Capabilities {
     return this.coordinator;
   }
 
+  public hasSqlOrCoordinatorAccess(): boolean {
+    return this.hasSql() || this.hasCoordinatorAccess();
+  }
+
   public hasOverlordAccess(): boolean {
     return this.overlord;
+  }
+
+  public hasSqlOrOverlordAccess(): boolean {
+    return this.hasSql() || this.hasOverlordAccess();
   }
 }
 Capabilities.FULL = new Capabilities({

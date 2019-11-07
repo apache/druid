@@ -193,6 +193,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           icon={IconNames.MULTI_SELECT}
           text="Datasources"
           href="#datasources"
+          disabled={!capabilities.hasSqlOrCoordinatorAccess()}
         />
         <AnchorButton
           minimal
@@ -200,6 +201,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           icon={IconNames.STACKED_CHART}
           text="Segments"
           href="#segments"
+          disabled={!capabilities.hasSqlOrCoordinatorAccess()}
         />
         <AnchorButton
           minimal
@@ -214,6 +216,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           icon={IconNames.DATABASE}
           text="Services"
           href="#services"
+          disabled={!capabilities.hasSqlOrCoordinatorAccess()}
         />
 
         <NavbarDivider />
