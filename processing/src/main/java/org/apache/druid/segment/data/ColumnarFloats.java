@@ -95,20 +95,27 @@ public interface ColumnarFloats extends Closeable
     } else {
       class HistoricalFloatColumnSelectorwithNulls implements FloatColumnSelector, HistoricalColumnSelector<Float>
       {
-        private final PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
+        private PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
         private int nullMark = -1;
+        private int offsetMark = -1;
 
         @Override
         public boolean isNull()
         {
           final int i = offset.getOffset();
+          if (i < offsetMark) {
+            // offset was reset, reset iterator state
+            nullMark = -1;
+            nullIterator = nullValueBitmap.peekableIterator();
+          }
+          offsetMark = i;
           if (nullMark < i) {
-            nullIterator.advanceIfNeeded(i);
+            nullIterator.advanceIfNeeded(offsetMark);
             if (nullIterator.hasNext()) {
               nullMark = nullIterator.next();
             }
           }
-          return nullMark == i;
+          return nullMark == offsetMark;
         }
 
         @Override
@@ -148,7 +155,8 @@ public interface ColumnarFloats extends Closeable
 
       private int id = ReadableVectorOffset.NULL_ID;
 
-      private final PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
+      private PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
+      private int offsetMark = -1;
 
       @Nullable
       private boolean[] nullVector = null;
@@ -181,9 +189,18 @@ public interface ColumnarFloats extends Closeable
         }
 
         if (offset.isContiguous()) {
+          if (offset.getStartOffset() < offsetMark) {
+            nullIterator = nullValueBitmap.peekableIterator();
+          }
+          offsetMark = offset.getStartOffset();
           ColumnarFloats.this.get(floatVector, offset.getStartOffset(), offset.getCurrentVectorSize());
         } else {
-          ColumnarFloats.this.get(floatVector, offset.getOffsets(), offset.getCurrentVectorSize());
+          final int[] offsets = offset.getOffsets();
+          if (offsets[0] < offsetMark) {
+            nullIterator = nullValueBitmap.peekableIterator();
+          }
+          offsetMark = offsets[0];
+          ColumnarFloats.this.get(floatVector, offsets, offset.getCurrentVectorSize());
         }
 
         nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);

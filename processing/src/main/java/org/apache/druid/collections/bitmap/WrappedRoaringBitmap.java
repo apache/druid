@@ -19,6 +19,7 @@
 
 package org.apache.druid.collections.bitmap;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.PeekableIntIterator;
 import org.roaringbitmap.RoaringBitmap;
@@ -57,7 +58,8 @@ public class WrappedRoaringBitmap implements MutableBitmap
     this.compressRunOnSerialization = compressRunOnSerialization;
   }
 
-  ImmutableBitmap toImmutableBitmap()
+  @VisibleForTesting
+  public ImmutableBitmap toImmutableBitmap()
   {
     MutableRoaringBitmap bitmap = writer.get().clone();
     if (compressRunOnSerialization) {

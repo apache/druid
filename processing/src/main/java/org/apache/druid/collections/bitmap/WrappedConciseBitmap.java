@@ -19,6 +19,7 @@
 
 package org.apache.druid.collections.bitmap;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.extendedset.intset.ConciseSet;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
 import org.roaringbitmap.IntIterator;
@@ -49,7 +50,8 @@ public class WrappedConciseBitmap implements MutableBitmap
     this.bitmap = conciseSet;
   }
 
-  ConciseSet getBitmap()
+  @VisibleForTesting
+  public ConciseSet getBitmap()
   {
     return bitmap;
   }

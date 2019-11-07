@@ -130,7 +130,7 @@ public class NullHandlingBitmapGetVsIteratorBenchmark
     for (int i = pretendFilterOffsets.nextSetBit(0); i >= 0; i = pretendFilterOffsets.nextSetBit(i + 1)) {
       final boolean isNull = bitmap.get(i);
       if (isNull) {
-        blackhole.consume(null);
+        blackhole.consume(isNull);
       } else {
         blackhole.consume(i);
       }
@@ -143,16 +143,23 @@ public class NullHandlingBitmapGetVsIteratorBenchmark
   public void iterator(final Blackhole blackhole)
   {
     IntIterator nullIterator = bitmap.iterator();
+    int offsetMark = -1;
     int nullMark = -1;
     for (int i = pretendFilterOffsets.nextSetBit(0); i >= 0; i = pretendFilterOffsets.nextSetBit(i + 1)) {
+      // this is totally useless, hopefully this doesn't get optimized out, try to mimic what the selector is doing
+      if (i < offsetMark) {
+        nullMark = -1;
+        nullIterator = bitmap.iterator();
+      }
+      offsetMark = i;
       while (nullMark < i && nullIterator.hasNext()) {
         nullMark = nullIterator.next();
       }
-      final boolean isNull = nullMark == i;
+      final boolean isNull = nullMark == offsetMark;
       if (isNull) {
-        blackhole.consume(null);
+        blackhole.consume(isNull);
       } else {
-        blackhole.consume(i);
+        blackhole.consume(offsetMark);
       }
     }
   }
@@ -163,19 +170,26 @@ public class NullHandlingBitmapGetVsIteratorBenchmark
   public void peekableIterator(final Blackhole blackhole)
   {
     PeekableIntIterator nullIterator = bitmap.peekableIterator();
+    int offsetMark = -1;
     int nullMark = -1;
     for (int i = pretendFilterOffsets.nextSetBit(0); i >= 0; i = pretendFilterOffsets.nextSetBit(i + 1)) {
+      // this is totally useless, hopefully this doesn't get optimized out, try to mimic what the selector is doing
+      if (i < offsetMark) {
+        nullMark = -1;
+        nullIterator = bitmap.peekableIterator();
+      }
+      offsetMark = i;
       if (nullMark < i) {
         nullIterator.advanceIfNeeded(i);
         if (nullIterator.hasNext()) {
           nullMark = nullIterator.next();
         }
       }
-      final boolean isNull = nullMark == i;
+      final boolean isNull = nullMark == offsetMark;
       if (isNull) {
-        blackhole.consume(i);
+        blackhole.consume(isNull);
       } else {
-        blackhole.consume(null);
+        blackhole.consume(offsetMark);
       }
     }
   }

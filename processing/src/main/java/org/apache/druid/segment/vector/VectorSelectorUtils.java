@@ -47,38 +47,33 @@ public class VectorSelectorUtils
       retVal = new boolean[offset.getMaxVectorSize()];
     }
 
-    int nextNullRow = nullIterator.next();
     if (offset.isContiguous()) {
       final int startOffset = offset.getStartOffset();
       nullIterator.advanceIfNeeded(startOffset);
+      if (!nullIterator.hasNext()) {
+        return null;
+      }
       for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
         final int row = i + startOffset;
-        if (row == nextNullRow) {
-          retVal[i] = true;
-          if (nullIterator.hasNext()) {
-            nextNullRow = nullIterator.next();
-          } else {
-            break;
-          }
-        } else {
-          retVal[i] = false;
+        nullIterator.advanceIfNeeded(row);
+        if (!nullIterator.hasNext()) {
+          break;
         }
+        retVal[i] = row == nullIterator.peekNext();
       }
     } else {
       final int[] currentOffsets = offset.getOffsets();
       nullIterator.advanceIfNeeded(currentOffsets[0]);
+      if (!nullIterator.hasNext()) {
+        return null;
+      }
       for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
         final int row = currentOffsets[i];
-        if (row == nextNullRow) {
-          retVal[i] = true;
-          if (nullIterator.hasNext()) {
-            nextNullRow = nullIterator.next();
-          } else {
-            break;
-          }
-        } else {
-          retVal[i] = false;
+        nullIterator.advanceIfNeeded(row);
+        if (!nullIterator.hasNext()) {
+          break;
         }
+        retVal[i] = row == nullIterator.peekNext();
       }
     }
 

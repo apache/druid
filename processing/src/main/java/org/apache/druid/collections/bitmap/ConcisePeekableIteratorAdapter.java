@@ -20,7 +20,6 @@
 package org.apache.druid.collections.bitmap;
 
 import org.apache.druid.extendedset.intset.IntSet;
-import org.roaringbitmap.PeekableIntIterator;
 
 public class ConcisePeekableIteratorAdapter extends PeekableIteratorAdapter<IntSet.IntIterator>
 {
