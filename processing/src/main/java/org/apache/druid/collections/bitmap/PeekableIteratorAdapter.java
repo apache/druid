@@ -26,7 +26,7 @@ import org.roaringbitmap.PeekableIntIterator;
 public class PeekableIteratorAdapter<TIntIterator extends IntIterator> implements PeekableIntIterator
 {
   final TIntIterator baseIterator;
-  Integer mark;
+  int mark = -1;
 
   PeekableIteratorAdapter(TIntIterator iterator)
   {
@@ -36,7 +36,7 @@ public class PeekableIteratorAdapter<TIntIterator extends IntIterator> implement
   @Override
   public void advanceIfNeeded(int i)
   {
-    while ((mark == null || mark < i) && baseIterator.hasNext()) {
+    while (mark < i && baseIterator.hasNext()) {
       mark = baseIterator.next();
     }
   }
@@ -44,8 +44,8 @@ public class PeekableIteratorAdapter<TIntIterator extends IntIterator> implement
   @Override
   public int peekNext()
   {
-    Preconditions.checkArgument(mark != null || baseIterator.hasNext());
-    if (mark == null) {
+    Preconditions.checkArgument(mark > 0 || baseIterator.hasNext());
+    if (mark < 0) {
       mark = baseIterator.next();
     }
     return mark;
@@ -62,15 +62,15 @@ public class PeekableIteratorAdapter<TIntIterator extends IntIterator> implement
   @Override
   public boolean hasNext()
   {
-    return mark != null || baseIterator.hasNext();
+    return mark > 0 || baseIterator.hasNext();
   }
 
   @Override
   public int next()
   {
-    if (mark != null) {
+    if (mark > 0) {
       final int currentBit = mark;
-      mark = null;
+      mark = -1;
       return currentBit;
     }
     return baseIterator.next();

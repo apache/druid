@@ -31,7 +31,7 @@ public class ConcisePeekableIteratorAdapter extends PeekableIteratorAdapter<IntS
   @Override
   public void advanceIfNeeded(int i)
   {
-    if (mark == null || i > mark) {
+    if (mark < i) {
       baseIterator.skipAllBefore(i);
       if (baseIterator.hasNext()) {
         mark = baseIterator.next();
