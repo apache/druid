@@ -33,6 +33,8 @@ export type QueryType = 'none' | 'nativeOnly' | 'nativeAndSql';
 export class Capabilities {
   static STATUS_TIMEOUT = 2000;
   static FULL: Capabilities;
+  static COORDINATOR: Capabilities;
+  static OVERLORD: Capabilities;
 
   private queryType: QueryType;
   private coordinator: boolean;
@@ -161,5 +163,15 @@ export class Capabilities {
 Capabilities.FULL = new Capabilities({
   queryType: 'nativeAndSql',
   coordinator: true,
+  overlord: true,
+});
+Capabilities.COORDINATOR = new Capabilities({
+  queryType: 'none',
+  coordinator: true,
+  overlord: false,
+});
+Capabilities.OVERLORD = new Capabilities({
+  queryType: 'none',
+  coordinator: false,
   overlord: true,
 });
