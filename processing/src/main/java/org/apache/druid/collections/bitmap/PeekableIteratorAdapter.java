@@ -25,8 +25,9 @@ import org.roaringbitmap.PeekableIntIterator;
 
 public class PeekableIteratorAdapter<TIntIterator extends IntIterator> implements PeekableIntIterator
 {
+  private static final int NOT_SET = -1;
   final TIntIterator baseIterator;
-  int mark = -1;
+  int mark = NOT_SET;
 
   PeekableIteratorAdapter(TIntIterator iterator)
   {
@@ -44,8 +45,7 @@ public class PeekableIteratorAdapter<TIntIterator extends IntIterator> implement
   @Override
   public int peekNext()
   {
-    Preconditions.checkArgument(mark > 0 || baseIterator.hasNext());
-    if (mark < 0) {
+    if (mark == NOT_SET) {
       mark = baseIterator.next();
     }
     return mark;
@@ -62,15 +62,15 @@ public class PeekableIteratorAdapter<TIntIterator extends IntIterator> implement
   @Override
   public boolean hasNext()
   {
-    return mark > 0 || baseIterator.hasNext();
+    return mark != NOT_SET || baseIterator.hasNext();
   }
 
   @Override
   public int next()
   {
-    if (mark > 0) {
+    if (mark != NOT_SET) {
       final int currentBit = mark;
-      mark = -1;
+      mark = NOT_SET;
       return currentBit;
     }
     return baseIterator.next();
