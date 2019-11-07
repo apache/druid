@@ -16,45 +16,21 @@
  * limitations under the License.
  */
 
-@import '../node_modules/normalize.css/normalize';
-@import '../node_modules/@blueprintjs/core/lib/css/blueprint';
-@import '../node_modules/@blueprintjs/datetime/lib/css/blueprint-datetime';
-@import '../lib/react-table';
-@import '../node_modules/react-splitter-layout/lib/index.css';
+import { render } from '@testing-library/react';
+import React from 'react';
 
-html,
-body {
-  //font-family: 'Open Sans', Helvetica, Arial, sans-serif;
-  position: fixed;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-  font-size: 13px;
-}
+import { IntervalInput } from './interval-input';
 
-body {
-  &.bp3-dark {
-    background: rgb(41, 55, 66);
-  }
-
-  &.mouse-mode {
-    *:focus {
-      outline: none !important;
-    }
-  }
-}
-
-.app-container {
-  position: absolute;
-  height: 100%;
-  width: 100%;
-}
-
-.label-info-text {
-  max-width: 400px;
-  padding: 15px;
-
-  p:last-child {
-    margin-bottom: 0;
-  }
-}
+describe('interval calendar component', () => {
+  it('matches snapshot', () => {
+    const intervalInput = (
+      <IntervalInput
+        interval={'2010-01-01/2020-01-01'}
+        placeholder={'2010-01-01/2020-01-01'}
+        onValueChange={() => {}}
+      />
+    );
+    const { container } = render(intervalInput);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
