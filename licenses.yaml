@@ -3975,22 +3975,12 @@ libraries:
 ---
 
 # Web console modules start
-name: "@babel/polyfill"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Sebastian McKenzie
-version: 7.4.4
-license_file_path: licenses/bin/@babel-polyfill.MIT
-
----
-
 name: "@babel/runtime"
 license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Sebastian McKenzie
-version: 7.5.4
+version: 7.5.5
 license_file_path: licenses/bin/@babel-runtime.MIT
 
 ---
@@ -4000,7 +3990,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.18.0
+version: 3.19.1
 
 ---
 
@@ -4009,7 +3999,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.10.0
+version: 3.11.0
 
 ---
 
@@ -4020,16 +4010,6 @@ license_name: MIT License
 copyright: Microsoft Corporation.
 version: 2.0.1
 license_file_path: licenses/bin/@types-dom4.MIT
-
----
-
-name: "asap"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Contributors
-version: 2.0.6
-license_file_path: licenses/bin/asap.MIT
 
 ---
 
@@ -4088,27 +4068,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Denis Pushkarev
-version: 1.2.7
-license_file_path: licenses/bin/core-js.MIT
-
----
-
-name: "core-js"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Denis Pushkarev
-version: 2.6.9
-license_file_path: licenses/bin/core-js.MIT
-
----
-
-name: "core-js"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Denis Pushkarev
-version: 3.1.4
+version: 3.3.4
 license_file_path: licenses/bin/core-js.MIT
 
 ---
@@ -4118,7 +4078,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: James Kyle
-version: 0.2.2
+version: 0.3.0
 license_file_path: licenses/bin/create-react-context.MIT
 
 ---
@@ -4138,7 +4098,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 2.2.0
+version: 2.3.3
 license_file_path: licenses/bin/d3-array.BSD3
 
 ---
@@ -4158,7 +4118,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.0.6
+version: 1.1.3
 license_file_path: licenses/bin/d3-brush.BSD3
 
 ---
@@ -4188,7 +4148,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.2.8
+version: 1.4.0
 license_file_path: licenses/bin/d3-color.BSD3
 
 ---
@@ -4218,7 +4178,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.2.3
+version: 1.2.4
 license_file_path: licenses/bin/d3-drag.BSD3
 
 ---
@@ -4268,7 +4228,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.3.2
+version: 1.4.1
 license_file_path: licenses/bin/d3-format.BSD3
 
 ---
@@ -4308,7 +4268,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.0.7
+version: 1.0.8
 license_file_path: licenses/bin/d3-path.BSD3
 
 ---
@@ -4348,7 +4308,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.3.3
+version: 1.5.0
 license_file_path: licenses/bin/d3-scale-chromatic.BSD3
 
 ---
@@ -4388,7 +4348,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 2.1.3
+version: 2.2.1
 license_file_path: licenses/bin/d3-time-format.BSD3
 
 ---
@@ -4398,7 +4358,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.0.11
+version: 1.1.0
 license_file_path: licenses/bin/d3-time.BSD3
 
 ---
@@ -4438,7 +4398,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.7.3
+version: 1.8.3
 license_file_path: licenses/bin/d3-zoom.BSD3
 
 ---
@@ -4448,7 +4408,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 5.9.7
+version: 5.12.0
 license_file_path: licenses/bin/d3.BSD3
 
 ---
@@ -4492,41 +4452,12 @@ license_file_path: licenses/bin/dom4.MIT
 
 ---
 
-name: "druid-console"
-license_category: binary
-module: web-console
-license_name: Apache License version 2.0
-copyright: Tarek Rached
-version: 0.0.2
-
----
-
 name: "druid-query-toolkit"
 license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.3.8
-
----
-
-name: "encoding"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Andris Reinman
-version: 0.1.12
-license_file_path: licenses/bin/encoding.MIT
-
----
-
-name: "fbjs"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Facebook, Inc.
-version: 0.8.17
-license_file_path: licenses/bin/fbjs.MIT
+version: 0.3.29
 
 ---
 
@@ -4575,7 +4506,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Michael Jackson
-version: 4.9.0
+version: 4.10.1
 license_file_path: licenses/bin/history.MIT
 
 ---
@@ -4585,7 +4516,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Christian Zangl
-version: 3.1.2
+version: 3.2.1
 license_file_path: licenses/bin/hjson.MIT
 
 ---
@@ -4620,16 +4551,6 @@ license_file_path: licenses/bin/is-buffer.MIT
 
 ---
 
-name: "is-stream"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Sindre Sorhus
-version: 1.1.0
-license_file_path: licenses/bin/is-stream.MIT
-
----
-
 name: "isarray"
 license_category: binary
 module: web-console
@@ -4637,16 +4558,6 @@ license_name: MIT License
 copyright: Julian Gruber
 version: 0.0.1
 license_file_path: licenses/bin/isarray.MIT
-
----
-
-name: "isomorphic-fetch"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Matt Andrews
-version: 2.2.1
-license_file_path: licenses/bin/isomorphic-fetch.MIT
 
 ---
 
@@ -4715,7 +4626,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Alex Reardon
-version: 5.0.5
+version: 5.1.1
 license_file_path: licenses/bin/memoize-one.MIT
 
 ---
@@ -4737,16 +4648,6 @@ license_name: MIT License
 copyright: Zeit, Inc.
 version: 2.0.0
 license_file_path: licenses/bin/ms.MIT
-
----
-
-name: "node-fetch"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: David Frank
-version: 1.7.3
-license_file_path: licenses/bin/node-fetch.MIT
 
 ---
 
@@ -4800,16 +4701,6 @@ license_file_path: licenses/bin/popper.js.MIT
 
 ---
 
-name: "promise"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: ForbesLindesay
-version: 7.3.1
-license_file_path: licenses/bin/promise.MIT
-
----
-
 name: "prop-types"
 license_category: binary
 module: web-console
@@ -4825,7 +4716,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: James Hrisho
-version: 7.0.2
+version: 7.0.5
 license_file_path: licenses/bin/react-ace.MIT
 
 ---
@@ -4835,7 +4726,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
-version: 16.8.6
+version: 16.11.0
 license_file_path: licenses/bin/react-dom.MIT
 
 ---
@@ -4865,7 +4756,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Travis Arnold
-version: 1.3.3
+version: 1.3.4
 license_file_path: licenses/bin/react-popper.MIT
 
 ---
@@ -4875,7 +4766,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: React Training
-version: 5.0.1
+version: 5.1.2
 license_file_path: licenses/bin/react-router-dom.MIT
 
 ---
@@ -4885,7 +4776,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: React Training
-version: 5.0.1
+version: 5.1.2
 license_file_path: licenses/bin/react-router.MIT
 
 ---
@@ -4905,7 +4796,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Tanner Linsley
-version: 6.10.0
+version: 6.10.3
 license_file_path: licenses/bin/react-table.MIT
 
 ---
@@ -4925,7 +4816,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
-version: 16.8.6
+version: 16.11.0
 license_file_path: licenses/bin/react.MIT
 
 ---
@@ -4955,7 +4846,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Michael Jackson
-version: 2.2.0
+version: 3.0.0
 license_file_path: licenses/bin/resolve-pathname.MIT
 
 ---
@@ -4985,18 +4876,8 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
-version: 0.13.6
+version: 0.17.0
 license_file_path: licenses/bin/scheduler.MIT
-
----
-
-name: "setimmediate"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: YuzuJS
-version: 1.0.5
-license_file_path: licenses/bin/setimmediate.MIT
 
 ---
 
@@ -5005,7 +4886,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Alex Reardon
-version: 1.0.5
+version: 1.0.6
 license_file_path: licenses/bin/tiny-invariant.MIT
 
 ---
@@ -5036,21 +4917,15 @@ module: web-console
 license_name: Apache License version 2.0
 copyright: Microsoft Corp.
 version: 1.10.0
-notice: |
-  /*! *****************************************************************************
-  Copyright (c) Microsoft Corporation. All rights reserved.
-  Licensed under the Apache License, Version 2.0 (the "License"); you may not use
-  this file except in compliance with the License. You may obtain a copy of the
-  License at http://www.apache.org/licenses/LICENSE-2.0
 
-  THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-  KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
-  WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
-  MERCHANTABLITY OR NON-INFRINGEMENT.
+---
 
-  See the Apache Version 2.0 License for specific language governing permissions
-  and limitations under the License.
-  ***************************************************************************** */
+name: "tslib"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Microsoft Corp.
+version: 1.9.3
 
 ---
 
@@ -5064,22 +4939,12 @@ license_file_path: licenses/bin/typed-styles.MIT
 
 ---
 
-name: "ua-parser-js"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Faisal Salman
-version: 0.7.20
-license_file_path: licenses/bin/ua-parser-js.MIT
-
----
-
 name: "value-equal"
 license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Michael Jackson
-version: 0.4.0
+version: 1.0.1
 license_file_path: licenses/bin/value-equal.MIT
 
 ---
@@ -5091,14 +4956,4 @@ license_name: MIT License
 copyright: Berkeley Martinez
 version: 4.0.3
 license_file_path: licenses/bin/warning.MIT
-
----
-
-name: "whatwg-fetch"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: GitHub, Inc.
-version: 3.0.0
-license_file_path: licenses/bin/whatwg-fetch.MIT
 # Web console modules end
