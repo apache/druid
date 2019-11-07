@@ -324,9 +324,11 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
       allCategories.addAll(workersByCategories.keySet());
 
       log.debug(
-          "Pending Tasks of %d categories, Workers of %d categories (%d common categories: %s)",
+          "Pending Tasks of %d categories (%s), Workers of %d categories (%s). %d common categories: %s",
           tasksByCategories.size(),
+          tasksByCategories.keySet(),
           workersByCategories.size(),
+          workersByCategories.keySet(),
           allCategories.size(),
           allCategories
       );
@@ -334,7 +336,11 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
       if (allCategories.isEmpty()) {
         // Likely empty categories means initialization. Just try to spinup required amount of workers of each non empty autoscalers
         if (workerConfig.getDefaultAutoScaler() != null) {
-          didProvision = initAutoscaler(workerConfig.getDefaultAutoScaler(), CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY, workerConfig);
+          didProvision = initAutoscaler(
+              workerConfig.getDefaultAutoScaler(),
+              CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY,
+              workerConfig
+          );
         }
         for (Map.Entry<String, AutoScaler> autoscalerInfo : workerConfig.getAutoScalers().entrySet()) {
           String category = autoscalerInfo.getKey();
@@ -639,6 +645,9 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
     @Nullable
     private AutoScaler getCategoryAutoscaler(String category, CategoriedWorkerBehaviorConfig workerConfig)
     {
+      if (CategoriedWorkerBehaviorConfig.DEFAULT_AUTOSCALER_CATEGORY.equals(category)) {
+        return workerConfig.getDefaultAutoScaler();
+      }
       AutoScaler autoScaler = workerConfig.getAutoScalers().get(category);
       if (autoScaler == null && workerConfig.isStrong()) {
         log.warn(
