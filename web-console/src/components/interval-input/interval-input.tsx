@@ -19,7 +19,7 @@
 import { Button, InputGroup, Popover, Position } from '@blueprintjs/core';
 import { DateRange, DateRangePicker } from '@blueprintjs/datetime';
 import { IconNames } from '@blueprintjs/icons';
-import React, { useState } from 'react';
+import React from 'react';
 
 import './interval-input.scss';
 
@@ -69,12 +69,11 @@ export interface IntervalInputProps {
 }
 
 export const IntervalInput = React.memo(function IntervalInput(props: IntervalInputProps) {
-  const [tempInterval, setTempInterval] = useState();
   const { interval, placeholder, onValueChange } = props;
 
   return (
     <InputGroup
-      value={interval || tempInterval}
+      value={interval}
       placeholder={placeholder}
       rightElement={
         <div>
@@ -98,13 +97,7 @@ export const IntervalInput = React.memo(function IntervalInput(props: IntervalIn
       }
       onChange={(e: any) => {
         const value = e.target.value.replace(/[^\-0-9T:/]/g, '').substring(0, 39);
-
-        if (parseInterval(value)[0] && parseInterval(value)[1]) {
-          onValueChange(value);
-          setTempInterval('');
-        } else {
-          setTempInterval({ tempInterval: value });
-        }
+        onValueChange(value);
       }}
     />
   );
