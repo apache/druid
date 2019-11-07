@@ -403,6 +403,11 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 |Function|Notes|
 |--------|-----|
 |`DS_GET_QUANTILE(expr, fraction)`|Returns the quantile estimate corresponding to `fraction` from a quantiles sketch. `expr` must return a quantiles sketch.|
+|`DS_GET_QUANTILES(expr, fraction0, fraction1, ...)`|Returns a string representing an array of quantile estimates corresponding to a list of fractions from a quantiles sketch. `expr` must return a quantiles sketch.|
+|`DS_HISTOGRAM(expr, splitPoint0, splitPoint1, ...)`|Returns a string representing an approximation to the histogram given a list of split points that define the histogram bins from a quantiles sketch. `expr` must return a quantiles sketch.|
+|`DS_CDF(expr, splitPoint0, splitPoint1, ...)`|Returns a string representing approximation to the Cumulative Distribution Function given a list of split points that define the edges of the bins from a quantiles sketch. `expr` must return a quantiles sketch.|
+|`DS_RANK(expr, value)`|Returns an approximation to the rank of a given value that is the fraction of the distribution less than that value from a quantiles sketch. `expr` must return a quantiles sketch.|
+|`DS_QUANTILE_SUMMARY(expr)`|Returns a string summary of a quantiles sketch, useful for debugging. `expr` must return a quantiles sketch.|
 
 ### Other functions
 

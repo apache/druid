@@ -40,7 +40,12 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchModule;
+import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToCDFPostAggregator;
+import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToHistogramPostAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToQuantilePostAggregator;
+import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToQuantilesPostAggregator;
+import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToRankPostAggregator;
+import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToStringPostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -172,7 +177,12 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
             new DoublesSketchObjectSqlAggregator()
         ),
         ImmutableSet.of(
-            new DoublesSketchQuantileOperatorConversion()
+            new DoublesSketchQuantileOperatorConversion(),
+            new DoublesSketchQuantilesOperatorConversion(),
+            new DoublesSketchToHistogramOperatorConversion(),
+            new DoublesSketchRankOperatorConversion(),
+            new DoublesSketchCDFOperatorConversion(),
+            new DoublesSketchSummaryOperatorConversion()
         )
     );
 
@@ -490,7 +500,12 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
                        + "  APPROX_QUANTILE_DS(cnt, 0.5) + 1,\n"
                        + "  DS_GET_QUANTILE(DS_QUANTILES_SKETCH(cnt), 0.5) + 1000,\n"
                        + "  DS_GET_QUANTILE(DS_QUANTILES_SKETCH(cnt + 123), 0.5) + 1000,\n"
-                       + "  ABS(DS_GET_QUANTILE(DS_QUANTILES_SKETCH(cnt), 0.5))\n"
+                       + "  ABS(DS_GET_QUANTILE(DS_QUANTILES_SKETCH(cnt), 0.5)),\n"
+                       + "  DS_GET_QUANTILES(DS_QUANTILES_SKETCH(cnt), 0.5, 0.8),\n"
+                       + "  DS_HISTOGRAM(DS_QUANTILES_SKETCH(cnt), 0.2, 0.6),\n"
+                       + "  DS_RANK(DS_QUANTILES_SKETCH(cnt), 3),\n"
+                       + "  DS_CDF(DS_QUANTILES_SKETCH(cnt), 0.2, 0.6),\n"
+                       + "  DS_QUANTILE_SUMMARY(DS_QUANTILES_SKETCH(cnt))\n"
                        + "FROM foo";
 
     // Verify results
@@ -501,7 +516,30 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
             2.0d,
             1001.0d,
             1124.0d,
-            1.0d
+            1.0d,
+            "[1.0,1.0]",
+            "[0.0,0.0,6.0]",
+            1.0d,
+            "[0.0,0.0,1.0]",
+            "\n"
+            + "### Quantiles HeapUpdateDoublesSketch SUMMARY: \n"
+            + "   Empty                        : false\n"
+            + "   Direct, Capacity bytes       : false, \n"
+            + "   Estimation Mode              : false\n"
+            + "   K                            : 128\n"
+            + "   N                            : 6\n"
+            + "   Levels (Needed, Total, Valid): 0, 0, 0\n"
+            + "   Level Bit Pattern            : 0\n"
+            + "   BaseBufferCount              : 6\n"
+            + "   Combined Buffer Capacity     : 8\n"
+            + "   Retained Items               : 6\n"
+            + "   Compact Storage Bytes        : 80\n"
+            + "   Updatable Storage Bytes      : 96\n"
+            + "   Normalized Rank Error        : 1.406%\n"
+            + "   Normalized Rank Error (PMF)  : 1.711%\n"
+            + "   Min Value                    : 1.000000e+00\n"
+            + "   Max Value                    : 1.000000e+00\n"
+            + "### END SKETCH SUMMARY\n"
         }
     );
     Assert.assertEquals(expectedResults.size(), results.size());
@@ -576,7 +614,46 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
                                         ),
                                         0.5f
                                     ),
-                                    new ExpressionPostAggregator("p9", "abs(p8)", null, TestExprMacroTable.INSTANCE)
+                                    new ExpressionPostAggregator("p9", "abs(p8)", null, TestExprMacroTable.INSTANCE),
+                                    new DoublesSketchToQuantilesPostAggregator(
+                                        "p11",
+                                        new FieldAccessPostAggregator(
+                                            "p10",
+                                            "a2:agg"
+                                        ),
+                                        new double[]{0.5d, 0.8d}
+                                    ),
+                                    new DoublesSketchToHistogramPostAggregator(
+                                        "p13",
+                                        new FieldAccessPostAggregator(
+                                            "p12",
+                                            "a2:agg"
+                                        ),
+                                        new double[]{0.2d, 0.6d}
+                                    ),
+                                    new DoublesSketchToRankPostAggregator(
+                                        "p15",
+                                        new FieldAccessPostAggregator(
+                                            "p14",
+                                            "a2:agg"
+                                        ),
+                                        3.0d
+                                    ),
+                                    new DoublesSketchToCDFPostAggregator(
+                                        "p17",
+                                        new FieldAccessPostAggregator(
+                                            "p16",
+                                            "a2:agg"
+                                        ),
+                                        new double[]{0.2d, 0.6d}
+                                    ),
+                                    new DoublesSketchToStringPostAggregator(
+                                        "p19",
+                                        new FieldAccessPostAggregator(
+                                            "p18",
+                                            "a2:agg"
+                                        )
+                                    )
                                 )
                                 .context(ImmutableMap.of(
                                     "skipEmptyBuckets",
