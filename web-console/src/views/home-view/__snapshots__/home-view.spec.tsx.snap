@@ -50,6 +50,14 @@ exports[`home view matches snapshot 1`] = `
       }
     }
   />
-  <LookupsCard />
+  <LookupsCard
+    capabilities={
+      Capabilities {
+        "coordinator": true,
+        "overlord": true,
+        "queryType": "nativeAndSql",
+      }
+    }
+  />
 </div>
 `;

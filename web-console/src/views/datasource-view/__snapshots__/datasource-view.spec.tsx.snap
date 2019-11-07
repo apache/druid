@@ -50,11 +50,13 @@ exports[`data source view matches snapshot 1`] = `
     </Blueprint3.Popover>
     <Blueprint3.Switch
       checked={false}
+      disabled={false}
       label="Show segment timeline"
       onChange={[Function]}
     />
     <Blueprint3.Switch
       checked={false}
+      disabled={false}
       label="Show disabled"
       onChange={[Function]}
     />

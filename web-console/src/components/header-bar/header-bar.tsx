@@ -209,6 +209,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           icon={IconNames.GANTT_CHART}
           text="Tasks"
           href="#tasks"
+          disabled={!capabilities.hasSqlOrOverlordAccess()}
         />
         <AnchorButton
           minimal

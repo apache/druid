@@ -1030,14 +1030,14 @@ GROUP BY 1`;
             checked={showChart}
             label="Show segment timeline"
             onChange={() => this.setState({ showChart: !showChart })}
+            disabled={!capabilities.hasSql()}
           />
-          {capabilities.hasCoordinatorAccess() && (
-            <Switch
-              checked={showDisabled}
-              label="Show disabled"
-              onChange={() => this.toggleDisabled(showDisabled)}
-            />
-          )}
+          <Switch
+            checked={showDisabled}
+            label="Show disabled"
+            onChange={() => this.toggleDisabled(showDisabled)}
+            disabled={!capabilities.hasCoordinatorAccess()}
+          />
           <TableColumnSelector
             columns={tableColumns[capabilities.getMode()]}
             onChange={column =>
