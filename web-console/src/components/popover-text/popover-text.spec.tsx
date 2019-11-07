@@ -16,35 +16,16 @@
  * limitations under the License.
  */
 
-@import '../node_modules/normalize.css/normalize';
-@import '../node_modules/@blueprintjs/core/lib/css/blueprint';
-@import '../lib/react-table';
-@import '../node_modules/react-splitter-layout/lib/index.css';
+import { render } from '@testing-library/react';
+import React from 'react';
 
-html,
-body {
-  //font-family: 'Open Sans', Helvetica, Arial, sans-serif;
-  position: fixed;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-  font-size: 13px;
-}
+import { PopoverText } from './popover-text';
 
-body {
-  &.bp3-dark {
-    background: rgb(41, 55, 66);
-  }
+describe('popover text', () => {
+  it('matches snapshot', () => {
+    const popoverText = <PopoverText>Hello world</PopoverText>;
 
-  &.mouse-mode {
-    *:focus {
-      outline: none !important;
-    }
-  }
-}
-
-.app-container {
-  position: absolute;
-  height: 100%;
-  width: 100%;
-}
+    const { container } = render(popoverText);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

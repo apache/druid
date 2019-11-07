@@ -68,6 +68,15 @@ exports[`header bar matches snapshot 1`] = `
   <Blueprint3.NavbarGroup
     align="right"
   >
+    <Memo(RestrictedMode)
+      capabilities={
+        Capabilities {
+          "coordinator": true,
+          "overlord": true,
+          "queryType": "nativeAndSql",
+        }
+      }
+    />
     <Blueprint3.Popover
       boundary="scrollParent"
       captureDismiss={false}

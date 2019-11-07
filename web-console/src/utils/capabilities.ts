@@ -22,13 +22,21 @@ import { localStorageGetJson, LocalStorageKeys } from './local-storage-keys';
 
 export type CapabilitiesMode = 'full' | 'no-sql' | 'no-proxy';
 
+export type CapabilitiesModeExtended =
+  | 'full'
+  | 'no-sql'
+  | 'no-proxy'
+  | 'no-sql-no-proxy'
+  | 'coordinator'
+  | 'overlord';
+
+export type QueryType = 'none' | 'nativeOnly' | 'nativeAndSql';
+
 export interface CapabilitiesOptions {
   queryType: QueryType;
   coordinator: boolean;
   overlord: boolean;
 }
-
-export type QueryType = 'none' | 'nativeOnly' | 'nativeAndSql';
 
 export class Capabilities {
   static STATUS_TIMEOUT = 2000;
@@ -130,6 +138,35 @@ export class Capabilities {
     if (!this.hasSql()) return 'no-sql';
     if (!this.hasCoordinatorAccess()) return 'no-proxy';
     return 'full';
+  }
+
+  public getModeExtended(): CapabilitiesModeExtended | undefined {
+    const { queryType, coordinator, overlord } = this;
+
+    if (queryType === 'nativeAndSql') {
+      if (coordinator && overlord) {
+        return 'full';
+      }
+      if (!coordinator && !overlord) {
+        return 'no-proxy';
+      }
+    } else if (queryType === 'nativeOnly') {
+      if (coordinator && overlord) {
+        return 'no-sql';
+      }
+      if (!coordinator && !overlord) {
+        return 'no-sql-no-proxy';
+      }
+    } else {
+      if (coordinator) {
+        return 'coordinator';
+      }
+      if (overlord) {
+        return 'overlord';
+      }
+    }
+
+    return;
   }
 
   public hasEverything(): boolean {

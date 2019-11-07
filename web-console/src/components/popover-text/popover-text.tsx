@@ -16,35 +16,14 @@
  * limitations under the License.
  */
 
-@import '../node_modules/normalize.css/normalize';
-@import '../node_modules/@blueprintjs/core/lib/css/blueprint';
-@import '../lib/react-table';
-@import '../node_modules/react-splitter-layout/lib/index.css';
+import React from 'react';
 
-html,
-body {
-  //font-family: 'Open Sans', Helvetica, Arial, sans-serif;
-  position: fixed;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-  font-size: 13px;
+import './popover-text.scss';
+
+export interface PopoverTextProps {
+  children: React.ReactNode;
 }
 
-body {
-  &.bp3-dark {
-    background: rgb(41, 55, 66);
-  }
-
-  &.mouse-mode {
-    *:focus {
-      outline: none !important;
-    }
-  }
-}
-
-.app-container {
-  position: absolute;
-  height: 100%;
-  width: 100%;
-}
+export const PopoverText = React.memo(function PopoverText(props: PopoverTextProps) {
+  return <div className="popover-text">{props.children}</div>;
+});

@@ -37,7 +37,17 @@ import { CoordinatorDynamicConfigDialog } from '../../dialogs/coordinator-dynami
 import { DoctorDialog } from '../../dialogs/doctor-dialog/doctor-dialog';
 import { OverlordDynamicConfigDialog } from '../../dialogs/overlord-dynamic-config-dialog/overlord-dynamic-config-dialog';
 import { Capabilities } from '../../utils/capabilities';
-import { DRUID_ASF_SLACK, DRUID_DOCS, DRUID_GITHUB, DRUID_USER_GROUP } from '../../variables';
+import {
+  DRUID_ASF_SLACK,
+  DRUID_DOCS,
+  DRUID_DOCS_API,
+  DRUID_DOCS_SQL,
+  DRUID_DOCS_VERSION,
+  DRUID_GITHUB,
+  DRUID_USER_GROUP,
+} from '../../variables';
+import { ExternalLink } from '../external-link/external-link';
+import { PopoverText } from '../popover-text/popover-text';
 
 import './header-bar.scss';
 
@@ -105,6 +115,129 @@ const DruidLogo = React.memo(function DruidLogo() {
         />
       </svg>
     </div>
+  );
+});
+
+interface RestrictedModeProps {
+  capabilities: Capabilities;
+}
+
+const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeProps) {
+  const { capabilities } = props;
+  const mode = capabilities.getModeExtended();
+
+  let label: string;
+  let message: JSX.Element;
+  switch (mode) {
+    case 'full':
+      return null; // Do not show anything
+
+    case 'no-sql':
+      label = 'No SQL mode';
+      message = (
+        <p>
+          It appears that the SQL endpoint is disabled. The console will fall back to{' '}
+          <ExternalLink href={DRUID_DOCS_API}>native Druid APIs</ExternalLink> and will be limited
+          in functionality. Look at <ExternalLink href={DRUID_DOCS_SQL}>the SQL docs</ExternalLink>{' '}
+          to enable the SQL endpoint.
+        </p>
+      );
+      break;
+
+    case 'no-proxy':
+      label = 'No management proxy mode';
+      message = (
+        <p>
+          It appears that the management proxy is not enabled, the console will operate with limited
+          functionality. Look at{' '}
+          <ExternalLink
+            href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/operations/management-uis.html#druid-console`}
+          >
+            the console docs
+          </ExternalLink>{' '}
+          for more info on how to enable the management proxy.
+        </p>
+      );
+      break;
+
+    case 'no-sql-no-proxy':
+      label = 'No SQL mode';
+      message = (
+        <p>
+          It appears that the SQL endpoint and management proxy are disabled. The console can only
+          be used to make queries. Look at{' '}
+          <ExternalLink
+            href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/operations/management-uis.html#druid-console`}
+          >
+            the console docs
+          </ExternalLink>{' '}
+          for more info on how to make the console more functional.
+        </p>
+      );
+      break;
+
+    case 'coordinator':
+      label = 'Coordinator mode';
+      message = (
+        <>
+          <p>
+            It appears that you are accessing the console on the Coordinator service. This should
+            only be used for debugging. The full version of the console can be accessed on the
+            Router service.
+          </p>
+          <p>
+            For more info check out the{' '}
+            <ExternalLink
+              href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/operations/management-uis.html#druid-console`}
+            >
+              console docs
+            </ExternalLink>
+            .
+          </p>
+        </>
+      );
+      break;
+
+    case 'overlord':
+      label = 'Overlord mode';
+      message = (
+        <>
+          <p>
+            It appears that you are accessing the console on the Overlord service. This should only
+            be used for debugging. The full version of the console can be accessed on the Router
+            service.
+          </p>
+          <p>
+            For more info check out the{' '}
+            <ExternalLink
+              href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/operations/management-uis.html#druid-console`}
+            >
+              console docs
+            </ExternalLink>
+            .
+          </p>
+        </>
+      );
+      break;
+
+    default:
+      label = 'Restricted mode';
+      message = <p>Please double check your configuration.</p>;
+      break;
+  }
+
+  return (
+    <Popover
+      content={
+        <PopoverText>
+          <p>The console is running in restricted mode.</p>
+          {message}
+        </PopoverText>
+      }
+      position={Position.BOTTOM_RIGHT}
+    >
+      <Button icon={IconNames.WARNING_SIGN} text={label} intent={Intent.WARNING} minimal />
+    </Popover>
   );
 });
 
@@ -231,6 +364,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         />
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
+        <RestrictedMode capabilities={capabilities} />
         <Popover content={configMenu} position={Position.BOTTOM_RIGHT}>
           <Button minimal icon={IconNames.COG} />
         </Popover>

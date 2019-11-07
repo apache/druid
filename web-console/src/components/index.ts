@@ -24,6 +24,7 @@ export * from './external-link/external-link';
 export * from './header-bar/header-bar';
 export * from './json-collapse/json-collapse';
 export * from './json-input/json-input';
+export * from './popover-text/popover-text';
 export * from './loader/loader';
 export * from './menu-checkbox/menu-checkbox';
 export * from './table-cell/table-cell';
