@@ -30,6 +30,7 @@ import {
 import { IconNames } from '@blueprintjs/icons';
 import * as React from 'react';
 
+import { IntervalInput } from '../../../components/interval-input/interval-input';
 import { getDruidErrorMessage, queryDruidRune, QueryManager } from '../../../utils/index';
 
 import './rollup-ratio-panel.scss';
@@ -155,11 +156,18 @@ export class RollupRatioPanel extends React.PureComponent<
             </p>
           </Callout>
           <FormGroup label={`Interval`}>
-            <InputGroup
+            {/* <InputGroup
               value={intervalInput}
               placeholder="2019-01-01/2020-01-01"
               onChange={(e: any) => {
                 this.setState({ intervalInput: e.target.value });
+              }}
+            /> */}
+            <IntervalInput
+              interval={intervalInput}
+              placeholder="2019-01-01/2020-01-01"
+              onValueChange={(e: any) => {
+                this.setState({ intervalInput: e });
               }}
             />
           </FormGroup>

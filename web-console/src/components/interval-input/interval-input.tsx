@@ -21,8 +21,6 @@ import { DateRange, DateRangePicker } from '@blueprintjs/datetime';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
-import './interval-input.scss';
-
 const CURRENT_YEAR = new Date().getUTCFullYear();
 
 function removeLocalTimezone(localDate: Date): Date {
@@ -78,6 +76,7 @@ export const IntervalInput = React.memo(function IntervalInput(props: IntervalIn
       rightElement={
         <div>
           <Popover
+            boundary={'viewport'}
             popoverClassName={'calendar'}
             content={
               <DateRangePicker
