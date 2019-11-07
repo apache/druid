@@ -120,8 +120,6 @@ import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.util.resource.Resource;
-import org.eclipse.jetty.util.resource.ResourceCollection;
 
 import java.util.List;
 
@@ -136,12 +134,6 @@ public class CliOverlord extends ServerRunnable
   private static Logger log = new Logger(CliOverlord.class);
 
   protected static final List<String> UNSECURED_PATHS = ImmutableList.of(
-      "/",
-      "/favicon.png",
-      "/console.html",
-      "/old-console/*",
-      "/images/*",
-      "/js/*",
       "/druid/indexer/v1/isLeader",
       "/status/health"
   );
@@ -371,17 +363,10 @@ public class CliOverlord extends ServerRunnable
     {
       final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
       root.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
-      root.setInitParameter("org.eclipse.jetty.servlet.Default.redirectWelcome", "true");
-      root.setWelcomeFiles(new String[]{"console.html"});
 
       ServletHolder holderPwd = new ServletHolder("default", DefaultServlet.class);
 
       root.addServlet(holderPwd, "/");
-      root.setBaseResource(
-          new ResourceCollection(
-              Resource.newClassPathResource("org/apache/druid/console")
-          )
-      );
 
       final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
       final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
@@ -390,6 +375,7 @@ public class CliOverlord extends ServerRunnable
 
       // perform no-op authorization/authentication for these resources
       AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, UNSECURED_PATHS);
+      WebConsoleJettyServerInitializer.intializeServerForWebConsoleRoot(root);
       AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
       final List<Authenticator> authenticators = authenticatorMapper.getAuthenticatorChain();
