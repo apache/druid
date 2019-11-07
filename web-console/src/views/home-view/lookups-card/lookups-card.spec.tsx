@@ -18,6 +18,7 @@
 
 import { render } from '@testing-library/react';
 import React from 'react';
+
 import { Capabilities } from '../../../utils/capabilities';
 
 import { LookupsCard } from './lookups-card';
