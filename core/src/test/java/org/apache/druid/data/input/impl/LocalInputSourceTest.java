@@ -33,10 +33,7 @@ public class LocalInputSourceTest
   public void testSerde() throws IOException
   {
     final ObjectMapper mapper = new ObjectMapper();
-    final LocalInputSource source = new LocalInputSource(
-        new File("myFile").getAbsoluteFile(),
-        "myFilter"
-    );
+    final LocalInputSource source = new LocalInputSource(new File("myFile").getAbsoluteFile(), "myFilter");
     final byte[] json = mapper.writeValueAsBytes(source);
     final LocalInputSource fromJson = (LocalInputSource) mapper.readValue(json, InputSource.class);
     Assert.assertEquals(source, fromJson);

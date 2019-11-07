@@ -17,27 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.impl;
+package org.apache.druid.data.input;
 
-import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputFormat;
+import org.apache.druid.data.input.impl.TimestampSpec;
 
-public class NoopInputSource implements InputSource
+import javax.annotation.Nullable;
+import java.io.File;
+
+public interface Formattable
 {
-  @Override
-  public String toString()
-  {
-    return "NoopInputSource{}";
-  }
+  boolean isFormattable();
 
-  @Override
-  public boolean isSplittable()
-  {
-    return false;
-  }
-
-  @Override
-  public boolean isFormattable()
-  {
-    return false;
-  }
+  InputSourceReader reader(
+      TimestampSpec timestampSpec,
+      DimensionsSpec dimensionsSpec,
+      InputFormat inputFormat,
+      @Nullable File temporaryDirectory
+  );
 }

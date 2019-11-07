@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
+import org.apache.druid.data.input.Formattable;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
@@ -39,7 +40,7 @@ import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-public class LocalInputSource implements SplittableInputSource<File>
+public class LocalInputSource implements SplittableInputSource<File>, Formattable
 {
   private final File baseDir;
   private final String filter;
@@ -99,6 +100,12 @@ public class LocalInputSource implements SplittableInputSource<File>
   {
     final File file = split.get();
     return new LocalInputSource(file.getParentFile(), file.getName());
+  }
+
+  @Override
+  public boolean isFormattable()
+  {
+    return true;
   }
 
   @Override

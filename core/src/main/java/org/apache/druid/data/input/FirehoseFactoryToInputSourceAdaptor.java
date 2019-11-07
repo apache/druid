@@ -32,7 +32,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.stream.Stream;
 
-public class FirehoseFactoryToInputSourceAdaptor implements SplittableInputSource
+public class FirehoseFactoryToInputSourceAdaptor implements SplittableInputSource, Formattable
 {
   private final FiniteFirehoseFactory firehoseFactory;
   private final InputRowParser inputRowParser;
@@ -86,6 +86,12 @@ public class FirehoseFactoryToInputSourceAdaptor implements SplittableInputSourc
     } else {
       throw new UnsupportedOperationException();
     }
+  }
+
+  @Override
+  public boolean isFormattable()
+  {
+    return true;
   }
 
   @Override

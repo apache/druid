@@ -22,6 +22,7 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.Formattable;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
@@ -35,7 +36,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-public class HttpInputSource implements SplittableInputSource<URI>
+public class HttpInputSource implements SplittableInputSource<URI>, Formattable
 {
   private final List<URI> uris;
   @Nullable
@@ -138,5 +139,11 @@ public class HttpInputSource implements SplittableInputSource<URI>
   public int hashCode()
   {
     return Objects.hash(uris, httpAuthenticationUsername, httpAuthenticationPasswordProvider);
+  }
+
+  @Override
+  public boolean isFormattable()
+  {
+    return true;
   }
 }

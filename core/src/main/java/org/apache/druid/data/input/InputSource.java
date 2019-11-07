@@ -22,15 +22,9 @@ package org.apache.druid.data.input;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.HttpInputSource;
-import org.apache.druid.data.input.impl.InputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
-import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.annotations.ExtensionPoint;
-
-import javax.annotation.Nullable;
-import java.io.File;
 
 /**
  * InputSource abstracts the storage system where input data is stored.
@@ -58,15 +52,7 @@ public interface InputSource
   /**
    * Returns true if this inputSource can be processed in parallel using ParallelIndexSupervisorTask.
    */
-  default boolean isSplittable()
-  {
-    return false;
-  }
+  boolean isSplittable();
 
-  InputSourceReader reader(
-      TimestampSpec timestampSpec,
-      DimensionsSpec dimensionsSpec,
-      InputFormat inputFormat,
-      @Nullable File temporaryDirectory
-  );
+  boolean isFormattable();
 }
