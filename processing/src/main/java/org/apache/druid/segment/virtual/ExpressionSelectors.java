@@ -487,7 +487,7 @@ public class ExpressionSelectors
         if (val instanceof Number || val instanceof String) {
           return val;
         } else if (val instanceof List) {
-          return coerceListDimToStringArray((List) val);
+          return coerceListToArray((List) val);
         } else {
           return null;
         }
@@ -496,7 +496,7 @@ public class ExpressionSelectors
       return () -> {
         final Object val = selector.getObject();
         if (val != null) {
-          return coerceListDimToStringArray((List) val);
+          return coerceListToArray((List) val);
         }
         return null;
       };
@@ -509,11 +509,19 @@ public class ExpressionSelectors
   /**
    * Selectors are not consistent in treatment of null, [], and [null], so coerce [] to [null]
    */
-  public static Object coerceListDimToStringArray(List val)
+  public static Object coerceListToArray(List val)
   {
-    Object[] arrayVal = val.stream().map(x -> x != null ? x.toString() : x).toArray(String[]::new);
-    if (arrayVal.length > 0) {
-      return arrayVal;
+    if (val != null && val.size() > 0) {
+      Object firstElement = val.get(0);
+      if (firstElement instanceof Long || firstElement instanceof Integer) {
+        return val.stream().toArray(Long[]::new);
+      } else if (firstElement instanceof Float) {
+        return val.stream().map(x -> ((Float) x).doubleValue()).toArray(Double[]::new);
+      } else if (firstElement instanceof Double) {
+        return val.stream().toArray(Double[]::new);
+      } else {
+        return val.stream().map(x -> x != null ? x.toString() : x).toArray(String[]::new);
+      }
     }
     return new String[]{null};
   }
@@ -522,14 +530,20 @@ public class ExpressionSelectors
    * Coerces {@link ExprEval} value back to selector friendly {@link List} if the evaluated expression result is an
    * array type
    */
+  @Nullable
   public static Object coerceEvalToSelectorObject(ExprEval eval)
   {
-    if (eval.isArray()) {
-      return Arrays.stream(eval.asStringArray())
-                   .map(NullHandling::emptyToNullIfNeeded)
-                   .collect(Collectors.toList());
+    switch (eval.type()) {
+      case STRING_ARRAY:
+        return Arrays.stream(eval.asStringArray())
+                     .map(NullHandling::emptyToNullIfNeeded)
+                     .collect(Collectors.toList());
+      case DOUBLE_ARRAY:
+      case LONG_ARRAY:
+        return Arrays.stream(eval.asArray()).collect(Collectors.toList());
+      default:
+        return eval.value();
     }
-    return eval.value();
   }
 
   /**

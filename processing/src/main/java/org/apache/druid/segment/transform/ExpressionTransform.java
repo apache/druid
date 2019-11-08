@@ -94,7 +94,7 @@ public class ExpressionTransform implements Transform
     } else {
       Object raw = row.getRaw(column);
       if (raw instanceof List) {
-        return ExpressionSelectors.coerceListDimToStringArray((List) raw);
+        return ExpressionSelectors.coerceListToArray((List) raw);
       }
       return raw;
     }
