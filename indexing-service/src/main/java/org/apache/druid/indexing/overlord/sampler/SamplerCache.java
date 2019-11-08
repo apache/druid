@@ -30,7 +30,6 @@ import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.utils.Runnables;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -170,12 +169,6 @@ public class SamplerCache
       catch (ParseException e) {
         return InputRowPlusRaw.of(raw, e);
       }
-    }
-
-    @Override
-    public Runnable commit()
-    {
-      return Runnables.getNoopRunnable();
     }
 
     @Override

@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
@@ -31,6 +32,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -41,8 +43,8 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -57,12 +59,13 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 @RunWith(Parameterized.class)
 public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSupervisorTaskTest
@@ -187,21 +190,19 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     runTestTask(inputInterval, Granularities.DAY);
 
     final Interval interval = inputInterval == null ? Intervals.ETERNITY : inputInterval;
-    final List<DataSegment> allSegments = getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
+    final Collection<DataSegment> oldSegments =
+        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
 
     // Reingest the same data. Each segment should get replaced by a segment with a newer version.
     runTestTask(inputInterval, secondSegmentGranularity);
 
     // Verify that the segment has been replaced.
-    final List<DataSegment> newSegments = getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
-    allSegments.addAll(newSegments);
+    final Collection<DataSegment> newSegments =
+        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
+    Set<DataSegment> allSegments = ImmutableSet.<DataSegment>builder().addAll(oldSegments).addAll(newSegments).build();
     final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(allSegments);
-    final List<DataSegment> visibles = timeline.lookup(interval)
-                                               .stream()
-                                               .flatMap(holder -> holder.getObject().stream())
-                                               .map(PartitionChunk::getObject)
-                                               .collect(Collectors.toList());
-    Assert.assertEquals(newSegments, visibles);
+    final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
+    Assert.assertEquals(new HashSet<>(newSegments), visibles);
   }
 
   @Test
@@ -301,6 +302,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
             null,
             null,
             null,
+            null,
             1,
             null,
             null,
@@ -328,18 +330,16 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   {
     final Interval interval = Intervals.of("2017/2018");
     runTestTask(interval, Granularities.DAY, true);
-    final List<DataSegment> oldSegments = getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
+    final Collection<DataSegment> oldSegments =
+        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
 
     runTestTask(interval, Granularities.DAY, true);
-    final List<DataSegment> newSegments = getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
+    final Collection<DataSegment> newSegments =
+        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
     Assert.assertTrue(newSegments.containsAll(oldSegments));
     final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(newSegments);
-    final List<DataSegment> visibles = timeline.lookup(interval)
-                                               .stream()
-                                               .flatMap(holder -> holder.getObject().stream())
-                                               .map(PartitionChunk::getObject)
-                                               .collect(Collectors.toList());
-    Assert.assertEquals(newSegments, visibles);
+    final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
+    Assert.assertEquals(new HashSet<>(newSegments), visibles);
   }
 
   private ParallelIndexSupervisorTask newTask(@Nullable Interval interval, ParallelIndexIOConfig ioConfig)
@@ -358,6 +358,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         segmentGranularity,
         ioConfig,
         new ParallelIndexTuningConfig(
+            null,
             null,
             null,
             null,
@@ -431,9 +432,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     );
   }
 
-  private static class TestSupervisorTask extends TestParallelIndexSupervisorTask
+  public static class TestSupervisorTask extends TestParallelIndexSupervisorTask
   {
-    TestSupervisorTask(
+    public TestSupervisorTask(
         String id,
         TaskResource taskResource,
         ParallelIndexIngestionSpec ingestionSchema,
@@ -451,7 +452,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     }
   }
 
-  private static class TestSinglePhaseRunner extends TestSinglePhaseParallelIndexTaskRunner
+  public static class TestSinglePhaseRunner extends TestSinglePhaseParallelIndexTaskRunner
   {
     private final ParallelIndexSupervisorTask supervisorTask;
 
@@ -496,7 +497,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     }
   }
 
-  private static class TestSinglePhaseSubTaskSpec extends SinglePhaseSubTaskSpec
+  public static class TestSinglePhaseSubTaskSpec extends SinglePhaseSubTaskSpec
   {
     private final ParallelIndexSupervisorTask supervisorTask;
 

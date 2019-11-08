@@ -18,6 +18,11 @@
 $side-bar-width: 120px;
 
 .status-dialog {
+  .loader {
+    position: relative;
+    height: 500px;
+  }
+
   &.bp3-dialog {
     margin-top: 5vh;
     top: 5%;

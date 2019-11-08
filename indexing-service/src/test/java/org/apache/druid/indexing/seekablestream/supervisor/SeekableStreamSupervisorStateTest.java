@@ -600,7 +600,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         false,
         new Period("PT30M"),
         null,
-        null
+        null, null
     )
     {
     };
@@ -638,6 +638,12 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       public Duration getShutdownTimeout()
       {
         return new Period("PT1S").toStandardDuration();
+      }
+
+      @Override
+      public Duration getRepartitionTransitionDuration()
+      {
+        return new Period("PT2M").toStandardDuration();
       }
 
       @Override
@@ -909,6 +915,12 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     @Override
     protected boolean isEndOfShard(String seqNum)
+    {
+      return false;
+    }
+
+    @Override
+    protected boolean isShardExpirationMarker(String seqNum)
     {
       return false;
     }

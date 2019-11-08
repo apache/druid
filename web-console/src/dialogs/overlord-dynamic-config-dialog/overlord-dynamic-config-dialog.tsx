@@ -24,6 +24,7 @@ import React from 'react';
 import { AutoForm, ExternalLink } from '../../components';
 import { AppToaster } from '../../singletons/toaster';
 import { getDruidErrorMessage, QueryManager } from '../../utils';
+import { DRUID_DOCS_VERSION } from '../../variables';
 import { SnitchDialog } from '../snitch-dialog/snitch-dialog';
 
 import './overlord-dynamic-config-dialog.scss';
@@ -129,7 +130,9 @@ export class OverlordDynamicConfigDialog extends React.PureComponent<
         <p>
           Edit the overlord dynamic configuration on the fly. For more information please refer to
           the{' '}
-          <ExternalLink href="https://druid.apache.org/docs/latest/configuration/index.html#overlord-dynamic-configuration">
+          <ExternalLink
+            href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/configuration/index.html#overlord-dynamic-configuration`}
+          >
             documentation
           </ExternalLink>
           .

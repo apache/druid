@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Duration;
 import org.junit.Assert;
@@ -78,35 +79,36 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertEquals(Duration.standardMinutes(30), config.getCompletionTimeout());
     Assert.assertFalse("lateMessageRejectionPeriod", config.getLateMessageRejectionPeriod().isPresent());
     Assert.assertFalse("earlyMessageRejectionPeriod", config.getEarlyMessageRejectionPeriod().isPresent());
+    Assert.assertFalse("lateMessageRejectionStartDateTime", config.getLateMessageRejectionStartDateTime().isPresent());
   }
 
   @Test
-  public void testSerdeWithNonDefaults() throws Exception
+  public void testSerdeWithNonDefaultsWithLateMessagePeriod() throws Exception
   {
     String jsonStr = "{\n"
-                     + "  \"type\": \"kafka\",\n"
-                     + "  \"topic\": \"my-topic\",\n"
-                     + "  \"replicas\": 3,\n"
-                     + "  \"taskCount\": 9,\n"
-                     + "  \"taskDuration\": \"PT30M\",\n"
-                     + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
-                     + "  \"pollTimeout\": 1000,\n"
-                     + "  \"startDelay\": \"PT1M\",\n"
-                     + "  \"period\": \"PT10S\",\n"
-                     + "  \"useEarliestOffset\": true,\n"
-                     + "  \"completionTimeout\": \"PT45M\",\n"
-                     + "  \"lateMessageRejectionPeriod\": \"PT1H\",\n"
-                     + "  \"earlyMessageRejectionPeriod\": \"PT1H\"\n"
-                     + "}";
+        + "  \"type\": \"kafka\",\n"
+        + "  \"topic\": \"my-topic\",\n"
+        + "  \"replicas\": 3,\n"
+        + "  \"taskCount\": 9,\n"
+        + "  \"taskDuration\": \"PT30M\",\n"
+        + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
+        + "  \"pollTimeout\": 1000,\n"
+        + "  \"startDelay\": \"PT1M\",\n"
+        + "  \"period\": \"PT10S\",\n"
+        + "  \"useEarliestOffset\": true,\n"
+        + "  \"completionTimeout\": \"PT45M\",\n"
+        + "  \"lateMessageRejectionPeriod\": \"PT1H\",\n"
+        + "  \"earlyMessageRejectionPeriod\": \"PT1H\"\n"
+        + "}";
 
     KafkaSupervisorIOConfig config = mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
                 KafkaSupervisorIOConfig.class
-            )
-        ), KafkaSupervisorIOConfig.class
-    );
+                )
+            ), KafkaSupervisorIOConfig.class
+        );
 
     Assert.assertEquals("my-topic", config.getTopic());
     Assert.assertEquals(3, (int) config.getReplicas());
@@ -120,6 +122,47 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertEquals(Duration.standardMinutes(45), config.getCompletionTimeout());
     Assert.assertEquals(Duration.standardHours(1), config.getLateMessageRejectionPeriod().get());
     Assert.assertEquals(Duration.standardHours(1), config.getEarlyMessageRejectionPeriod().get());
+  }
+
+  @Test
+  public void testSerdeWithNonDefaultsWithLateMessageStartDateTime() throws Exception
+  {
+    String jsonStr = "{\n"
+        + "  \"type\": \"kafka\",\n"
+        + "  \"topic\": \"my-topic\",\n"
+        + "  \"replicas\": 3,\n"
+        + "  \"taskCount\": 9,\n"
+        + "  \"taskDuration\": \"PT30M\",\n"
+        + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
+        + "  \"pollTimeout\": 1000,\n"
+        + "  \"startDelay\": \"PT1M\",\n"
+        + "  \"period\": \"PT10S\",\n"
+        + "  \"useEarliestOffset\": true,\n"
+        + "  \"completionTimeout\": \"PT45M\",\n"
+        + "  \"earlyMessageRejectionPeriod\": \"PT1H\",\n"
+        + "  \"lateMessageRejectionStartDateTime\": \"2016-05-31T12:00Z\"\n"
+        + "}";
+
+    KafkaSupervisorIOConfig config = mapper.readValue(
+        mapper.writeValueAsString(
+            mapper.readValue(
+                jsonStr,
+                KafkaSupervisorIOConfig.class
+                )
+            ), KafkaSupervisorIOConfig.class
+        );
+
+    Assert.assertEquals("my-topic", config.getTopic());
+    Assert.assertEquals(3, (int) config.getReplicas());
+    Assert.assertEquals(9, (int) config.getTaskCount());
+    Assert.assertEquals(Duration.standardMinutes(30), config.getTaskDuration());
+    Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
+    Assert.assertEquals(1000, config.getPollTimeout());
+    Assert.assertEquals(Duration.standardMinutes(1), config.getStartDelay());
+    Assert.assertEquals(Duration.standardSeconds(10), config.getPeriod());
+    Assert.assertEquals(true, config.isUseEarliestOffset());
+    Assert.assertEquals(Duration.standardMinutes(45), config.getCompletionTimeout());
+    Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getLateMessageRejectionStartDateTime().get());
   }
 
   @Test
@@ -177,14 +220,44 @@ public class KafkaSupervisorIOConfigTest
   public void testBootstrapServersRequired() throws Exception
   {
     String jsonStr = "{\n"
-                     + "  \"type\": \"kafka\",\n"
-                     + "  \"topic\": \"my-topic\",\n"
-                     + "  \"consumerProperties\": {}\n"
-                     + "}";
+        + "  \"type\": \"kafka\",\n"
+        + "  \"topic\": \"my-topic\",\n"
+        + "  \"consumerProperties\": {}\n"
+        + "}";
 
     exception.expect(JsonMappingException.class);
     exception.expectCause(CoreMatchers.isA(NullPointerException.class));
     exception.expectMessage(CoreMatchers.containsString("bootstrap.servers"));
     mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
+  }
+
+  @Test
+  public void testSerdeWithBothExclusiveProperties() throws Exception
+  {
+    String jsonStr = "{\n"
+        + "  \"type\": \"kafka\",\n"
+        + "  \"topic\": \"my-topic\",\n"
+        + "  \"replicas\": 3,\n"
+        + "  \"taskCount\": 9,\n"
+        + "  \"taskDuration\": \"PT30M\",\n"
+        + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
+        + "  \"pollTimeout\": 1000,\n"
+        + "  \"startDelay\": \"PT1M\",\n"
+        + "  \"period\": \"PT10S\",\n"
+        + "  \"useEarliestOffset\": true,\n"
+        + "  \"completionTimeout\": \"PT45M\",\n"
+        + "  \"lateMessageRejectionPeriod\": \"PT1H\",\n"
+        + "  \"earlyMessageRejectionPeriod\": \"PT1H\",\n"
+        + "  \"lateMessageRejectionStartDateTime\": \"2016-05-31T12:00Z\"\n"
+        + "}";
+    exception.expect(JsonMappingException.class);
+    KafkaSupervisorIOConfig config = mapper.readValue(
+        mapper.writeValueAsString(
+            mapper.readValue(
+                jsonStr,
+                KafkaSupervisorIOConfig.class
+                )
+            ), KafkaSupervisorIOConfig.class
+        );
   }
 }

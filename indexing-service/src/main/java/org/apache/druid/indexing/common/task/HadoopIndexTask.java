@@ -50,7 +50,8 @@ import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
-import org.apache.druid.indexing.hadoop.OverlordActionBasedUsedSegmentLister;
+import org.apache.druid.indexing.hadoop.OverlordActionBasedUsedSegmentsRetriever;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -322,7 +323,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     spec = HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
         spec,
         jsonMapper,
-        new OverlordActionBasedUsedSegmentLister(toolbox)
+        new OverlordActionBasedUsedSegmentsRetriever(toolbox)
     );
 
     Object determinePartitionsInnerProcessingRunner = getForeignClassloaderObject(

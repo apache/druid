@@ -30,27 +30,24 @@ export interface ShowValueDialogProps {
   str: string;
 }
 
-export class ShowValueDialog extends React.PureComponent<ShowValueDialogProps> {
-  render(): JSX.Element {
-    const { onClose, str } = this.props;
+export const ShowValueDialog = React.memo(function ShowValueDialog(props: ShowValueDialogProps) {
+  const { onClose, str } = props;
 
-    return (
-      <Dialog className="show-value-dialog" isOpen onClose={onClose} title="Full value">
-        <TextArea value={str} />
-        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          <Button icon={IconNames.DUPLICATE} text={'Copy'} onClick={this.handleCopy} />
-          <Button text={'Close'} intent={Intent.PRIMARY} onClick={onClose} />
-        </div>
-      </Dialog>
-    );
-  }
-
-  private handleCopy = () => {
-    const { str } = this.props;
+  function handleCopy() {
     copy(str, { format: 'text/plain' });
     AppToaster.show({
       message: 'Value copied to clipboard',
       intent: Intent.SUCCESS,
     });
-  };
-}
+  }
+
+  return (
+    <Dialog className="show-value-dialog" isOpen onClose={onClose} title="Full value">
+      <TextArea value={str} />
+      <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+        <Button icon={IconNames.DUPLICATE} text={'Copy'} onClick={handleCopy} />
+        <Button text={'Close'} intent={Intent.PRIMARY} onClick={onClose} />
+      </div>
+    </Dialog>
+  );
+});

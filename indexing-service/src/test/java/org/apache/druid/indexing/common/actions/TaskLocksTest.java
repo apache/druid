@@ -75,18 +75,21 @@ public class TaskLocksTest
             .interval(Intervals.of("2017-01-01/2017-01-02"))
             .version(DateTimes.nowUtc().toString())
             .shardSpec(new LinearShardSpec(2))
+            .size(0)
             .build(),
         new DataSegment.Builder()
             .dataSource(task.getDataSource())
             .interval(Intervals.of("2017-01-02/2017-01-03"))
             .version(DateTimes.nowUtc().toString())
             .shardSpec(new LinearShardSpec(2))
+            .size(0)
             .build(),
         new DataSegment.Builder()
             .dataSource(task.getDataSource())
             .interval(Intervals.of("2017-01-03/2017-01-04"))
             .version(DateTimes.nowUtc().toString())
             .shardSpec(new LinearShardSpec(2))
+            .size(0)
             .build()
     );
   }
@@ -100,30 +103,35 @@ public class TaskLocksTest
             .interval(Intervals.of("2017-01-01/2017-01-02"))
             .version(version)
             .shardSpec(new NumberedShardSpec(0, 0))
+            .size(0)
             .build(),
         new DataSegment.Builder()
             .dataSource(task.getDataSource())
             .interval(Intervals.of("2017-01-01/2017-01-02"))
             .version(version)
             .shardSpec(new NumberedShardSpec(1, 0))
+            .size(0)
             .build(),
         new DataSegment.Builder()
             .dataSource(task.getDataSource())
             .interval(Intervals.of("2017-01-01/2017-01-02"))
             .version(version)
             .shardSpec(new NumberedShardSpec(2, 0))
+            .size(0)
             .build(),
         new DataSegment.Builder()
             .dataSource(task.getDataSource())
             .interval(Intervals.of("2017-01-01/2017-01-02"))
             .version(version)
             .shardSpec(new NumberedShardSpec(3, 0))
+            .size(0)
             .build(),
         new DataSegment.Builder()
             .dataSource(task.getDataSource())
             .interval(Intervals.of("2017-01-01/2017-01-02"))
             .version(version)
             .shardSpec(new NumberedShardSpec(4, 0))
+            .size(0)
             .build()
     );
   }

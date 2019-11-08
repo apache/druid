@@ -25,7 +25,6 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowPlusRaw;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.utils.Runnables;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -107,12 +106,6 @@ public class FileIteratingFirehose implements Firehose
     final LineIterator iterator = lineIterators.next();
     parser.startFileFromBeginning();
     return iterator;
-  }
-
-  @Override
-  public Runnable commit()
-  {
-    return Runnables.getNoopRunnable();
   }
 
   @Override

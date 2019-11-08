@@ -89,6 +89,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
+      boolean storeCompactionState,
       FireDepartmentMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
@@ -99,6 +100,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
     return Appenderators.createOffline(
         schema,
         config,
+        storeCompactionState,
         metrics,
         dataSegmentPusher,
         objectMapper,

@@ -338,3 +338,9 @@ export function copyAndAlert(copyString: string, alertMessage: string): void {
     intent: Intent.SUCCESS,
   });
 }
+
+export function delay(ms: number) {
+  return new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+}

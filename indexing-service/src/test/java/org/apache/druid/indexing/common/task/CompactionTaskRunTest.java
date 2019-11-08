@@ -22,14 +22,18 @@ package org.apache.druid.indexing.common.task;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
@@ -38,6 +42,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -54,7 +59,9 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -73,9 +80,11 @@ import org.junit.runners.Parameterized;
 import javax.annotation.Nullable;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -87,15 +96,13 @@ import java.util.concurrent.Future;
 @RunWith(Parameterized.class)
 public class CompactionTaskRunTest extends IngestionTestBase
 {
-  public static final String DATA_SOURCE = "test";
-
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  private static final ParseSpec DEFAULT_PARSE_SPEC = new CSVParseSpec(
+  public static final ParseSpec DEFAULT_PARSE_SPEC = new CSVParseSpec(
       new TimestampSpec(
           "ts",
           "auto",
@@ -111,6 +118,19 @@ public class CompactionTaskRunTest extends IngestionTestBase
       false,
       0
   );
+  private static final CompactionState DEFAULT_COMPACTION_STATE = new CompactionState(
+      new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
+      ImmutableMap.of(
+          "bitmap",
+          ImmutableMap.of("type", "concise"),
+          "dimensionCompression",
+          "lz4",
+          "metricCompression",
+          "lz4",
+          "longEncoding",
+          "longs"
+      )
+  );
 
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -121,24 +141,29 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
   }
 
+  private static final String DATA_SOURCE = "test";
   private static final RetryPolicyFactory RETRY_POLICY_FACTORY = new RetryPolicyFactory(new RetryPolicyConfig());
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
+  private final IndexingServiceClient indexingServiceClient;
   private final CoordinatorClient coordinatorClient;
   private final SegmentLoaderFactory segmentLoaderFactory;
   private final LockGranularity lockGranularity;
+  private final AppenderatorsManager appenderatorsManager;
+
   private ExecutorService exec;
-  private AppenderatorsManager appenderatorsManager;
+  private File localDeepStorage;
 
   public CompactionTaskRunTest(LockGranularity lockGranularity)
   {
     TestUtils testUtils = new TestUtils();
     rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
+    indexingServiceClient = new NoopIndexingServiceClient();
     coordinatorClient = new CoordinatorClient(null, null)
     {
       @Override
-      public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+      public Collection<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
       {
-        return getStorageCoordinator().getUsedSegmentsForIntervals(dataSource, intervals);
+        return getStorageCoordinator().getUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE);
       }
     };
     segmentLoaderFactory = new SegmentLoaderFactory(getIndexIO(), getObjectMapper());
@@ -147,15 +172,17 @@ public class CompactionTaskRunTest extends IngestionTestBase
   }
 
   @Before
-  public void setup()
+  public void setup() throws IOException
   {
     exec = Execs.multiThreaded(2, "compaction-task-run-test-%d");
+    localDeepStorage = temporaryFolder.newFolder();
   }
 
   @After
   public void teardown()
   {
     exec.shutdownNow();
+    temporaryFolder.delete();
   }
 
   @Test
@@ -167,8 +194,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
         DATA_SOURCE,
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
+        new NoopChatHandlerProvider(),
         rowIngestionMetersFactory,
+        indexingServiceClient,
         coordinatorClient,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY,
@@ -191,6 +219,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
+      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
             new NumberedOverwriteShardSpec(32768, 0, 2, (short) 1, (short) 1),
@@ -211,8 +240,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
         DATA_SOURCE,
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
+        new NoopChatHandlerProvider(),
         rowIngestionMetersFactory,
+        indexingServiceClient,
         coordinatorClient,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY,
@@ -235,6 +265,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
+      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
             new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1),
@@ -261,6 +292,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
+      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
             new NumberedOverwriteShardSpec(
@@ -287,8 +319,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
         DATA_SOURCE,
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
+        new NoopChatHandlerProvider(),
         rowIngestionMetersFactory,
+        indexingServiceClient,
         coordinatorClient,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY,
@@ -331,7 +364,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
+        new NoopChatHandlerProvider(),
         rowIngestionMetersFactory,
         appenderatorsManager
     );
@@ -364,6 +397,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
+      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
       if (lockGranularity == LockGranularity.SEGMENT) {
         Assert.assertEquals(
             new NumberedOverwriteShardSpec(PartitionIds.NON_ROOT_GEN_START_PARTITION_ID, 0, 2, (short) 1, (short) 1),
@@ -384,8 +418,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
         DATA_SOURCE,
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
+        new NoopChatHandlerProvider(),
         rowIngestionMetersFactory,
+        indexingServiceClient,
         coordinatorClient,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY,
@@ -408,6 +443,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
     Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(0).getShardSpec());
+    Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(0).getLastCompactionState());
 
     // hour segmentGranularity
     final CompactionTask compactionTask2 = builder
@@ -425,6 +461,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     for (int i = 0; i < 3; i++) {
       Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
       Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
+      Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(i).getLastCompactionState());
     }
   }
 
@@ -437,8 +474,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
         DATA_SOURCE,
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
+        new NoopChatHandlerProvider(),
         rowIngestionMetersFactory,
+        indexingServiceClient,
         coordinatorClient,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY,
@@ -461,7 +499,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final Set<DataSegment> usedSegments = new HashSet<>(
         getStorageCoordinator().getUsedSegmentsForIntervals(
             DATA_SOURCE,
-            Collections.singletonList(Intervals.of("2014-01-01/2014-01-02"))
+            Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
+            Segments.ONLY_VISIBLE
         )
     );
 
@@ -484,8 +523,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
         DATA_SOURCE,
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
+        new NoopChatHandlerProvider(),
         rowIngestionMetersFactory,
+        indexingServiceClient,
         coordinatorClient,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY,
@@ -542,8 +582,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
         DATA_SOURCE,
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
+        new NoopChatHandlerProvider(),
         rowIngestionMetersFactory,
+        indexingServiceClient,
         coordinatorClient,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY,
@@ -653,7 +694,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
+        new NoopChatHandlerProvider(),
         rowIngestionMetersFactory,
         appenderatorsManager
     );
@@ -674,31 +715,54 @@ public class CompactionTaskRunTest extends IngestionTestBase
   {
     getLockbox().add(task);
     getTaskStorage().insert(task, TaskStatus.running(task.getId()));
-    final TestLocalTaskActionClient actionClient = createActionClient(task);
 
-    final File deepStorageDir = temporaryFolder.newFolder();
     final ObjectMapper objectMapper = getObjectMapper();
     objectMapper.registerSubtypes(
         new NamedType(LocalLoadSpec.class, "local")
     );
     objectMapper.registerSubtypes(LocalDataSegmentPuller.class);
 
+    final TaskToolbox box = createTaskToolbox(objectMapper, task);
+
+    task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
+    task.addToContext(Tasks.STORE_COMPACTION_STATE_KEY, true);
+    if (task.isReady(box.getTaskActionClient())) {
+      if (readyLatchToCountDown != null) {
+        readyLatchToCountDown.countDown();
+      }
+      if (latchToAwaitBeforeRun != null) {
+        latchToAwaitBeforeRun.await();
+      }
+      TaskStatus status = task.run(box);
+      shutdownTask(task);
+      final List<DataSegment> segments = new ArrayList<>(
+          ((TestLocalTaskActionClient) box.getTaskActionClient()).getPublishedSegments()
+      );
+      Collections.sort(segments);
+      return Pair.of(status, segments);
+    } else {
+      throw new ISE("task[%s] is not ready", task.getId());
+    }
+  }
+
+  private TaskToolbox createTaskToolbox(ObjectMapper objectMapper, Task task) throws IOException
+  {
     final SegmentLoader loader = new SegmentLoaderLocalCacheManager(
         getIndexIO(),
         new SegmentLoaderConfig() {
           @Override
           public List<StorageLocationConfig> getLocations()
           {
-            return ImmutableList.of(new StorageLocationConfig(deepStorageDir, null, null));
+            return ImmutableList.of(new StorageLocationConfig(localDeepStorage, null, null));
           }
         },
         objectMapper
     );
 
-    final TaskToolbox box = new TaskToolbox(
+    return new TaskToolbox(
         null,
         null,
-        actionClient,
+        createActionClient(task),
         null,
         new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()),
         new NoopDataSegmentKiller(),
@@ -725,22 +789,5 @@ public class CompactionTaskRunTest extends IngestionTestBase
         new NoopTestTaskReportFileWriter(),
         null
     );
-
-    task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
-    if (task.isReady(box.getTaskActionClient())) {
-      if (readyLatchToCountDown != null) {
-        readyLatchToCountDown.countDown();
-      }
-      if (latchToAwaitBeforeRun != null) {
-        latchToAwaitBeforeRun.await();
-      }
-      TaskStatus status = task.run(box);
-      shutdownTask(task);
-      final List<DataSegment> segments = new ArrayList<>(actionClient.getPublishedSegments());
-      Collections.sort(segments);
-      return Pair.of(status, segments);
-    } else {
-      throw new ISE("task[%s] is not ready", task.getId());
-    }
   }
 }

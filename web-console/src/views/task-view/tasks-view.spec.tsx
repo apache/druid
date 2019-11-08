@@ -19,6 +19,8 @@
 import { shallow } from 'enzyme';
 import React from 'react';
 
+import { Capabilities } from '../../utils/capabilities';
+
 import { TasksView } from './tasks-view';
 
 describe('tasks view', () => {
@@ -32,7 +34,7 @@ describe('tasks view', () => {
         goToQuery={() => {}}
         goToMiddleManager={() => {}}
         goToLoadData={() => {}}
-        noSqlMode={false}
+        capabilities={Capabilities.FULL}
       />,
     );
     expect(taskView).toMatchSnapshot();

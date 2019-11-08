@@ -25,7 +25,10 @@ import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
+import com.google.inject.util.Providers;
 import io.airlift.airline.Command;
+import org.apache.druid.client.DruidServer;
+import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeType;
 import org.apache.druid.discovery.WorkerNodeService;
@@ -58,6 +61,7 @@ import org.apache.druid.segment.realtime.CliIndexerDataSegmentServerAnnouncerLif
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.initialization.jetty.CliIndexerServerModule;
@@ -142,11 +146,17 @@ public class CliIndexer extends ServerRunnable
 
             LifecycleModule.register(binder, Server.class, RemoteChatHandler.class);
 
+            binder.bind(SegmentLoadDropHandler.class).toProvider(Providers.of(null));
+
             bindAnnouncer(
                 binder,
                 DiscoverySideEffectsProvider.builder(NodeType.INDEXER)
                                             .serviceClasses(
-                                                ImmutableList.of(LookupNodeService.class, WorkerNodeService.class)
+                                                ImmutableList.of(
+                                                    LookupNodeService.class,
+                                                    WorkerNodeService.class,
+                                                    DataNodeService.class
+                                                )
                                             )
                                             .build()
             );
@@ -161,7 +171,8 @@ public class CliIndexer extends ServerRunnable
                 node.getHostAndPortToUse(),
                 config.getIp(),
                 config.getCapacity(),
-                config.getVersion()
+                config.getVersion(),
+                WorkerConfig.DEFAULT_CATEGORY
             );
           }
 
@@ -172,7 +183,20 @@ public class CliIndexer extends ServerRunnable
             return new WorkerNodeService(
                 workerConfig.getIp(),
                 workerConfig.getCapacity(),
-                workerConfig.getVersion()
+                workerConfig.getVersion(),
+                WorkerConfig.DEFAULT_CATEGORY
+            );
+          }
+
+          @Provides
+          @LazySingleton
+          public DataNodeService getDataNodeService()
+          {
+            return new DataNodeService(
+                DruidServer.DEFAULT_TIER,
+                0L,
+                ServerType.INDEXER_EXECUTOR,
+                DruidServer.DEFAULT_PRIORITY
             );
           }
         },

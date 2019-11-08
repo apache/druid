@@ -19,11 +19,13 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
+import { Capabilities } from '../../../utils/capabilities';
+
 import { DatasourcesCard } from './datasources-card';
 
 describe('datasources card', () => {
   it('matches snapshot', () => {
-    const datasourcesCard = <DatasourcesCard noSqlMode={false} />;
+    const datasourcesCard = <DatasourcesCard capabilities={Capabilities.FULL} />;
 
     const { container } = render(datasourcesCard);
     expect(container.firstChild).toMatchSnapshot();

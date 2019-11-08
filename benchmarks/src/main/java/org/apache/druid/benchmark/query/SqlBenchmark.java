@@ -173,6 +173,7 @@ public class SqlBenchmark
                                                .interval(schemaInfo.getDataInterval())
                                                .version("1")
                                                .shardSpec(new LinearShardSpec(0))
+                                               .size(0)
                                                .build();
 
     final PlannerConfig plannerConfig = new PlannerConfig();

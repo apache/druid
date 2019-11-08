@@ -41,7 +41,7 @@ This example demonstrates how to load Protobuf messages from Kafka.  Please read
 
 Files used in this example are found at `./examples/quickstart/protobuf` in your Druid directory.
 
-- We will use [Kafka Indexing Service](./kafka-ingestion.md) instead of Tranquility.
+- We will use [Kafka Indexing Service](./kafka-ingestion.md).
 - Kafka broker host is `localhost:9092`.
 - Kafka topic is `metrics_pb` instead of `metrics`.
 - datasource name is `metrics-kafka-pb` instead of `metrics-kafka` to avoid the confusion.

@@ -46,7 +46,7 @@ import java.util.Objects;
  * It extends "NullableAggregatorFactory<ColumnValueSelector>" instead of "NullableAggregatorFactory<BaseDoubleColumnValueSelector>"
  * to additionally support aggregation on single/multi value string column types.
  */
-public abstract class SimpleDoubleAggregatorFactory extends NullableAggregatorFactory<ColumnValueSelector>
+public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggregatorFactory<ColumnValueSelector>
 {
   protected final String name;
   @Nullable
