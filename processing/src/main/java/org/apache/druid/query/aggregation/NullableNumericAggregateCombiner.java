@@ -20,26 +20,26 @@
 package org.apache.druid.query.aggregation;
 
 import org.apache.druid.guice.annotations.PublicApi;
-import org.apache.druid.segment.BaseNullableColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 
 /**
- * The result of a NullableAggregateCombiner will be null if all the values to be combined are null values or no values
- * are combined at all. If any of the value is non-null, the result would be the value of the delegate combiner.
- * Note that the delegate combiner is not required to perform check for {@link BaseNullableColumnValueSelector#isNull()}
- * on the selector as only non-null values will be passed to the delegate combiner.
- * This class is only used when SQL compatible null handling is enabled.
+ * Null-aware numeric {@link AggregateCombiner}.
+ *
+ * Used by {@link NullableNumericAggregatorFactory#makeAggregateCombiner()} to wrap non-null aware combiners. This
+ * class is only used when SQL compatible null handling is enabled.
+ *
+ * @see NullableNumericAggregatorFactory#makeAggregateCombiner()
  */
 @PublicApi
-public final class NullableAggregateCombiner<T> implements AggregateCombiner<T>
+public final class NullableNumericAggregateCombiner<T> implements AggregateCombiner<T>
 {
   private boolean isNullResult = true;
 
   private final AggregateCombiner<T> delegate;
 
-  public NullableAggregateCombiner(AggregateCombiner<T> delegate)
+  public NullableNumericAggregateCombiner(AggregateCombiner<T> delegate)
   {
     this.delegate = delegate;
   }

@@ -24,16 +24,19 @@ import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 
 /**
  * Null value checking polymorphic "part" of the {@link ColumnValueSelector} interface for primitive values.
- * Users of {@link BaseLongColumnValueSelector#getLong()}, {@link BaseDoubleColumnValueSelector#getDouble()}
- * and {@link BaseFloatColumnValueSelector#getFloat()} are required to check the nullability of the primitive
- * types returned.
  */
 @PublicApi
 public interface BaseNullableColumnValueSelector
 {
   /**
-   * Returns true if selected primitive value is null for {@link BaseFloatColumnValueSelector},
-   * {@link BaseLongColumnValueSelector} and {@link BaseDoubleColumnValueSelector} otherwise false.
+   * Returns true if the primitive long, double, or float value returned by this selector should be treated as null.
+   *
+   * Users of {@link BaseLongColumnValueSelector#getLong()}, {@link BaseDoubleColumnValueSelector#getDouble()}
+   * and {@link BaseFloatColumnValueSelector#getFloat()} must check this method first, or else they may improperly
+   * use placeholder values returned by the primitive get methods.
+   *
+   * Users of {@link BaseObjectColumnValueSelector#getObject()} should not call this method. Instead, call "getObject"
+   * and check if it is null.
    */
   @CalledFromHotLoop
   boolean isNull();

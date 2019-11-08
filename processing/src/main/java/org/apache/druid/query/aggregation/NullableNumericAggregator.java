@@ -21,24 +21,34 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
+import org.apache.druid.segment.ColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 
 /**
- * The result of a NullableAggregator will be null if all the values to be aggregated are null values
- * or no values are aggregated at all. If any of the value is non-null, the result would be the aggregated
- * value of the delegate aggregator. Note that the delegate aggregator is not required to perform check for
- * {@link BaseNullableColumnValueSelector#isNull()} on the selector as only non-null values will be passed
- * to the delegate aggregator. This class is only used when SQL compatible null handling is enabled.
+ * Null-aware numeric {@link Aggregator}.
+ *
+ * The result of this aggregator will be null if all the values to be aggregated are null values or no values are
+ * aggregated at all. If any of the values are non-null, the result will be the aggregated value of the delegate
+ * aggregator.
+ *
+ * When wrapped by this class, the underlying aggregator's required storage space is increased by one byte. The extra
+ * byte is a boolean that stores whether or not any non-null values have been seen. The extra byte is placed before
+ * the underlying aggregator's normal state. (Buffer layout = [nullability byte] [delegate storage bytes])
+ *
+ * Used by {@link NullableNumericAggregatorFactory#factorize(ColumnSelectorFactory)} to wrap non-null aware
+ * aggregators. This class is only used when SQL compatible null handling is enabled.
+ *
+ * @see NullableNumericAggregatorFactory#factorize(ColumnSelectorFactory)
  */
 @PublicApi
-public final class NullableAggregator implements Aggregator
+public final class NullableNumericAggregator implements Aggregator
 {
   private final Aggregator delegate;
   private final BaseNullableColumnValueSelector selector;
   private boolean isNullResult = true;
 
-  public NullableAggregator(Aggregator delegate, BaseNullableColumnValueSelector selector)
+  public NullableNumericAggregator(Aggregator delegate, BaseNullableColumnValueSelector selector)
   {
     this.delegate = delegate;
     this.selector = selector;

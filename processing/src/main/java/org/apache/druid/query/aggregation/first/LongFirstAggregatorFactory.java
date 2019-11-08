@@ -30,7 +30,7 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.NullableAggregatorFactory;
+import org.apache.druid.query.aggregation.NullableNumericAggregatorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -44,7 +44,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-public class LongFirstAggregatorFactory extends NullableAggregatorFactory<ColumnValueSelector>
+public class LongFirstAggregatorFactory extends NullableNumericAggregatorFactory<ColumnValueSelector>
 {
   public static final Comparator<SerializablePair<Long, Long>> VALUE_COMPARATOR =
       Comparator.comparingLong(o -> o.rhs);
