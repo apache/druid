@@ -156,13 +156,6 @@ export class RollupRatioPanel extends React.PureComponent<
             </p>
           </Callout>
           <FormGroup label={`Interval`}>
-            {/* <InputGroup
-              value={intervalInput}
-              placeholder="2019-01-01/2020-01-01"
-              onChange={(e: any) => {
-                this.setState({ intervalInput: e.target.value });
-              }}
-            /> */}
             <IntervalInput
               interval={intervalInput}
               placeholder="2019-01-01/2020-01-01"
