@@ -116,7 +116,8 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
                       null
                   ),
                   new JSONPathSpec(true, ImmutableList.of()),
-                  ImmutableMap.of()
+                  null,
+                  null
               ),
               StandardCharsets.UTF_8.name()
           ),
