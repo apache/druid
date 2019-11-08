@@ -40,9 +40,15 @@ import java.util.Arrays;
  * byte is a boolean that stores whether or not any non-null values have been seen. The extra byte is placed before
  * the underlying aggregator's normal state. (Buffer layout = [nullability byte] [delegate storage bytes])
  *
- * @see NullableBufferAggregator, the vectorized version.
+ * The result of a NullableAggregator will be null if all the values to be aggregated are null values
+ * or no values are aggregated at all. If any of the value is non-null, the result would be the aggregated
+ * value of the delegate aggregator. Note that the delegate aggregator is not required to perform check for
+ * {@link VectorValueSelector#getNullVector()} on the selector as only non-null values will be passed
+ * to the delegate aggregator. This class is only used when SQL compatible null handling is enabled.
+ *
+ * @see NullableNumericBufferAggregator , the vectorized version.
  */
-public class NullableVectorAggregator implements VectorAggregator
+public class NullableNumericVectorAggregator implements VectorAggregator
 {
   private final VectorAggregator delegate;
   private final VectorValueSelector selector;
@@ -53,7 +59,7 @@ public class NullableVectorAggregator implements VectorAggregator
   @Nullable
   private int[] vAggregationRows = null;
 
-  NullableVectorAggregator(VectorAggregator delegate, VectorValueSelector selector)
+  NullableNumericVectorAggregator(VectorAggregator delegate, VectorValueSelector selector)
   {
     this.delegate = delegate;
     this.selector = selector;

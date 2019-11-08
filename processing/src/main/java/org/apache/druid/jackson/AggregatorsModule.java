@@ -67,8 +67,6 @@ import org.apache.druid.query.aggregation.post.LongGreatestPostAggregator;
 import org.apache.druid.query.aggregation.post.LongLeastPostAggregator;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
-/**
- */
 public class AggregatorsModule extends SimpleModule
 {
   public AggregatorsModule()

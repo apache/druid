@@ -23,13 +23,13 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
+import org.apache.druid.segment.ColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
- * A wrapper around a non-null-aware BufferAggregator that makes it null-aware. This removes the need for each
- * aggregator class to handle nulls on its own.
+ * Null-aware numeric {@link BufferAggregator}.
  *
  * The result of this aggregator will be null if all the values to be aggregated are null values or no values are
  * aggregated at all. If any of the values are non-null, the result will be the aggregated value of the delegate
@@ -39,15 +39,19 @@ import java.nio.ByteBuffer;
  * byte is a boolean that stores whether or not any non-null values have been seen. The extra byte is placed before
  * the underlying aggregator's normal state. (Buffer layout = [nullability byte] [delegate storage bytes])
  *
- * @see NullableVectorAggregator, the vectorized version.
+ * Used by {@link NullableNumericAggregatorFactory#factorizeBuffered(ColumnSelectorFactory)} to wrap non-null aware
+ * aggregators. This class is only used when SQL compatible null handling is enabled.
+ *
+ * @see NullableNumericAggregatorFactory#factorizeBuffered(ColumnSelectorFactory)
+ * @see NullableNumericVectorAggregator the vectorized version.
  */
 @PublicApi
-public final class NullableBufferAggregator implements BufferAggregator
+public final class NullableNumericBufferAggregator implements BufferAggregator
 {
   private final BufferAggregator delegate;
   private final BaseNullableColumnValueSelector nullSelector;
 
-  public NullableBufferAggregator(BufferAggregator delegate, BaseNullableColumnValueSelector nullSelector)
+  public NullableNumericBufferAggregator(BufferAggregator delegate, BaseNullableColumnValueSelector nullSelector)
   {
     this.delegate = delegate;
     this.nullSelector = nullSelector;
