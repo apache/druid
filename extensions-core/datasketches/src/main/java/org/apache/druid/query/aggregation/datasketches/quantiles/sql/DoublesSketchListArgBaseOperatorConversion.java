@@ -88,7 +88,7 @@ public abstract class DoublesSketchListArgBaseOperatorConversion implements SqlO
             if (!operand.isA(SqlKind.LITERAL)) {
               return null;
             }
-            Double arg = ((Number) RexLiteral.value(operand)).doubleValue();
+            double arg = ((Number) RexLiteral.value(operand)).doubleValue();
             args[operandCounter - 1] = arg;
           }
           catch (ClassCastException cce) {
