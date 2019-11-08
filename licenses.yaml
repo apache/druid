@@ -1508,6 +1508,7 @@ libraries:
   - org.eclipse.jetty: jetty-http
   - org.eclipse.jetty: jetty-io
   - org.eclipse.jetty: jetty-proxy
+  - org.eclipse.jetty: jetty-rewrite
   - org.eclipse.jetty: jetty-security
   - org.eclipse.jetty: jetty-server
   - org.eclipse.jetty: jetty-servlet

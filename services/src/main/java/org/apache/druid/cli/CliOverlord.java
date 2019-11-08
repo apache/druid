@@ -408,6 +408,7 @@ public class CliOverlord extends ServerRunnable
       HandlerList handlerList = new HandlerList();
       handlerList.setHandlers(
           new Handler[]{
+              WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler(),
               JettyServerInitUtils.getJettyRequestLogHandler(),
               JettyServerInitUtils.wrapWithDefaultGzipHandler(
                   root,

@@ -143,6 +143,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     final HandlerList handlerList = new HandlerList();
     handlerList.setHandlers(
         new Handler[]{
+            WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler(),
             JettyServerInitUtils.getJettyRequestLogHandler(),
             JettyServerInitUtils.wrapWithDefaultGzipHandler(
                 root,
