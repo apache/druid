@@ -41,12 +41,26 @@ public class Aggregations
     // No instantiation.
   }
 
+  /**
+   * Get Druid expressions that correspond to "simple" aggregator inputs. This is used by standard sum/min/max
+   * aggregators, which have the following properties:
+   *
+   * 1) They can take direct field accesses or expressions as inputs.
+   * 2) They cannot implicitly cast strings to numbers when using a direct field access.
+   *
+   * @param plannerContext SQL planner context
+   * @param rowSignature   input row signature
+   * @param call           aggregate call object
+   * @param project        project that should be applied before aggregation; may be null
+   *
+   * @return list of expressions corresponding to aggregator arguments, or null if any cannot be translated
+   */
   @Nullable
   public static List<DruidExpression> getArgumentsForSimpleAggregator(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final AggregateCall call,
-      final Project project
+      @Nullable final Project project
   )
   {
     final List<DruidExpression> args = call
