@@ -98,10 +98,6 @@ export class Capabilities {
         timeout: Capabilities.STATUS_TIMEOUT,
       });
     } catch (e) {
-      const { response } = e;
-      if (response.status !== 404) {
-        return; // other failure
-      }
       return false;
     }
 
