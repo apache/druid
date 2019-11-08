@@ -28,9 +28,8 @@ import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.junit.rules.ExternalResource;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * JUnit rule to capture a class's logger output to an in-memory buffer to allow verification of log messages in tests.
@@ -78,12 +77,13 @@ public class LoggerCaptureRule extends ExternalResource
   {
     static final String NAME = InMemoryAppender.class.getName();
 
-    private final List<LogEvent> logEvents;
+    // logEvents has concurrent iteration and modification in CuratorModuleTest::exitsJvmWhenMaxRetriesExceeded(), needs to be thread safe
+    private final CopyOnWriteArrayList<LogEvent> logEvents;
 
     InMemoryAppender()
     {
       super(NAME, null, null);
-      logEvents = new ArrayList<>();
+      logEvents = new CopyOnWriteArrayList<>();
     }
 
     @Override
@@ -94,7 +94,7 @@ public class LoggerCaptureRule extends ExternalResource
 
     List<LogEvent> getLogEvents()
     {
-      return Collections.unmodifiableList(logEvents);
+      return logEvents;
     }
 
     void clearLogEvents()

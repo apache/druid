@@ -154,7 +154,7 @@ public class SQLMetadataSegmentManagerTest
     sqlSegmentsMetadata.poll();
     Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
     Assert.assertEquals(
-        ImmutableList.of("wikipedia"),
+        ImmutableSet.of("wikipedia"),
         sqlSegmentsMetadata.retrieveAllDataSourceNames()
     );
     Assert.assertEquals(
@@ -228,7 +228,7 @@ public class SQLMetadataSegmentManagerTest
     sqlSegmentsMetadata.stopPollingDatabasePeriodically();
     Assert.assertFalse(sqlSegmentsMetadata.isPollingDatabasePeriodically());
     Assert.assertEquals(
-        ImmutableList.of("wikipedia"),
+        ImmutableSet.of("wikipedia"),
         sqlSegmentsMetadata.retrieveAllDataSourceNames()
     );
     DataSegment newSegment = createNewSegment1("wikipedia2");

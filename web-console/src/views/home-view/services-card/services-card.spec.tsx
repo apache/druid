@@ -19,13 +19,15 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { ServersCard } from './servers-card';
+import { Capabilities } from '../../../utils/capabilities';
 
-describe('servers card', () => {
+import { ServicesCard } from './services-card';
+
+describe('services card', () => {
   it('matches snapshot', () => {
-    const serversCard = <ServersCard capabilities="full" />;
+    const servicesCard = <ServicesCard capabilities={Capabilities.FULL} />;
 
-    const { container } = render(serversCard);
+    const { container } = render(servicesCard);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

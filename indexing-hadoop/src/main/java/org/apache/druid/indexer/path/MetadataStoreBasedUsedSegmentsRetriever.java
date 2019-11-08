@@ -17,36 +17,40 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.hadoop;
+package org.apache.druid.indexer.path;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import org.apache.druid.indexer.path.UsedSegmentLister;
-import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
-import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 /**
  */
-public class OverlordActionBasedUsedSegmentLister implements UsedSegmentLister
+public class MetadataStoreBasedUsedSegmentsRetriever implements UsedSegmentsRetriever
 {
-  private final TaskToolbox toolbox;
+  private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
 
   @Inject
-  public OverlordActionBasedUsedSegmentLister(TaskToolbox toolbox)
+  public MetadataStoreBasedUsedSegmentsRetriever(IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator)
   {
-    this.toolbox = Preconditions.checkNotNull(toolbox, "null task toolbox");
+    this.indexerMetadataStorageCoordinator = Preconditions.checkNotNull(
+        indexerMetadataStorageCoordinator,
+        "null indexerMetadataStorageCoordinator"
+    );
   }
 
   @Override
-  public List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> intervals) throws IOException
+  public Collection<DataSegment> getUsedSegmentsForIntervals(
+      String dataSource,
+      List<Interval> intervals,
+      Segments visibility
+  )
   {
-    return toolbox
-        .getTaskActionClient()
-        .submit(new SegmentListUsedAction(dataSource, null, intervals));
+    return indexerMetadataStorageCoordinator.getUsedSegmentsForIntervals(dataSource, intervals, visibility);
   }
 }

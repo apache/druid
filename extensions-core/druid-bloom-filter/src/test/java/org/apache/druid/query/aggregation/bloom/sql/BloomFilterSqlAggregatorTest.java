@@ -185,6 +185,7 @@ public class BloomFilterSqlAggregatorTest
                    .interval(index.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index
     );

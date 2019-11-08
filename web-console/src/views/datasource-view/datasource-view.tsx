@@ -61,14 +61,14 @@ import {
   QueryManager,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { Capabilities } from '../../utils/capabilities';
+import { Capabilities, CapabilitiesMode } from '../../utils/capabilities';
 import { RuleUtil } from '../../utils/load-rule';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 import { deepGet } from '../../utils/object-change';
 
 import './datasource-view.scss';
 
-const tableColumns: Record<Capabilities, string[]> = {
+const tableColumns: Record<CapabilitiesMode, string[]> = {
   full: [
     'Datasource',
     'Availability',
@@ -101,7 +101,6 @@ const tableColumns: Record<Capabilities, string[]> = {
     'Num rows',
     ACTION_COLUMN_LABEL,
   ],
-  broken: ['Datasource'],
 };
 
 function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string {
@@ -247,9 +246,9 @@ GROUP BY 1`;
     this.datasourceQueryManager = new QueryManager({
       processQuery: async capabilities => {
         let datasources: DatasourceQueryResultRow[];
-        if (capabilities !== 'no-sql') {
+        if (capabilities.hasSql()) {
           datasources = await queryDruidSql({ query: DatasourcesView.DATASOURCE_SQL });
-        } else {
+        } else if (capabilities.hasCoordinatorAccess()) {
           const datasourcesResp = await axios.get('/druid/coordinator/v1/datasources?simple');
           const loadstatusResp = await axios.get('/druid/coordinator/v1/loadstatus?simple');
           const loadstatus = loadstatusResp.data;
@@ -272,9 +271,11 @@ GROUP BY 1`;
               };
             },
           );
+        } else {
+          throw new Error(`must have SQL or coordinator access`);
         }
 
-        if (capabilities === 'no-proxy') {
+        if (!capabilities.hasCoordinatorAccess()) {
           datasources.forEach((ds: any) => {
             ds.rules = [];
           });
@@ -496,7 +497,7 @@ GROUP BY 1`;
     const { goToQuery, capabilities } = this.props;
     const bulkDatasourceActionsMenu = (
       <Menu>
-        {capabilities !== 'no-sql' && (
+        {capabilities.hasSql() && (
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"
@@ -621,7 +622,7 @@ GROUP BY 1`;
       },
     ];
 
-    if (capabilities === 'no-proxy') {
+    if (!capabilities.hasCoordinatorAccess()) {
       return goToActions;
     }
 
@@ -831,7 +832,7 @@ GROUP BY 1`;
                   return (
                     <span>
                       <span style={{ color: DatasourcesView.PARTIALLY_AVAILABLE_COLOR }}>
-                        &#x25cf;&nbsp;
+                        {num_available_segments ? '\u25cf' : '\u25cb'}&nbsp;
                       </span>
                       {percentAvailable}% available ({segmentsEl}, {segmentsMissingEl})
                     </span>
@@ -887,7 +888,7 @@ GROUP BY 1`;
                   </span>
                 );
               },
-              show: capabilities !== 'no-proxy' && hiddenColumns.exists('Retention'),
+              show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Retention'),
             },
             {
               Header: 'Replicated size',
@@ -941,7 +942,7 @@ GROUP BY 1`;
                   </span>
                 );
               },
-              show: capabilities !== 'no-proxy' && hiddenColumns.exists('Compaction'),
+              show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Compaction'),
             },
             {
               Header: 'Avg. segment size',
@@ -957,7 +958,7 @@ GROUP BY 1`;
               filterable: false,
               width: 100,
               Cell: row => formatNumber(row.value),
-              show: capabilities !== 'no-sql' && hiddenColumns.exists('Num rows'),
+              show: capabilities.hasSql() && hiddenColumns.exists('Num rows'),
             },
             {
               Header: ACTION_COLUMN_LABEL,
@@ -1030,7 +1031,7 @@ GROUP BY 1`;
             label="Show segment timeline"
             onChange={() => this.setState({ showChart: !showChart })}
           />
-          {capabilities !== 'no-proxy' && (
+          {capabilities.hasCoordinatorAccess() && (
             <Switch
               checked={showDisabled}
               label="Show disabled"
@@ -1038,7 +1039,7 @@ GROUP BY 1`;
             />
           )}
           <TableColumnSelector
-            columns={tableColumns[capabilities]}
+            columns={tableColumns[capabilities.getMode()]}
             onChange={column =>
               this.setState(prevState => ({
                 hiddenColumns: prevState.hiddenColumns.toggle(column),

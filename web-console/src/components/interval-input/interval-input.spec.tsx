@@ -16,21 +16,21 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
+import { render } from '@testing-library/react';
 import React from 'react';
 
-import { ServersView } from './servers-view';
+import { IntervalInput } from './interval-input';
 
-describe('servers view', () => {
-  it('action servers view', () => {
-    const serversView = shallow(
-      <ServersView
-        middleManager={'test'}
-        goToQuery={() => {}}
-        goToTask={() => {}}
-        capabilities="full"
-      />,
+describe('interval calendar component', () => {
+  it('matches snapshot', () => {
+    const intervalInput = (
+      <IntervalInput
+        interval={'2010-01-01/2020-01-01'}
+        placeholder={'2010-01-01/2020-01-01'}
+        onValueChange={() => {}}
+      />
     );
-    expect(serversView).toMatchSnapshot();
+    const { container } = render(intervalInput);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark;
+package org.apache.druid.benchmark.sequences;
 
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;

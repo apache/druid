@@ -55,12 +55,12 @@ export type HeaderActiveTab =
   | 'datasources'
   | 'segments'
   | 'tasks'
-  | 'servers'
+  | 'services'
   | 'lookups';
 
-function Logo() {
+const DruidLogo = React.memo(function DruidLogo() {
   return (
-    <div className="logo">
+    <div className="druid-logo">
       <svg
         version="1.1"
         xmlns="http://www.w3.org/2000/svg"
@@ -113,9 +113,15 @@ function Logo() {
       </svg>
     </div>
   );
+});
+
+interface LegacyMenuProps {
+  capabilities: Capabilities;
 }
 
-function LegacyMenu() {
+const LegacyMenu = React.memo(function LegacyMenu(props: LegacyMenuProps) {
+  const { capabilities } = props;
+
   return (
     <Menu>
       <MenuItem
@@ -123,16 +129,18 @@ function LegacyMenu() {
         text="Legacy coordinator console"
         href={LEGACY_COORDINATOR_CONSOLE}
         target="_blank"
+        disabled={!capabilities.hasCoordinatorAccess()}
       />
       <MenuItem
         icon={IconNames.MAP}
         text="Legacy overlord console"
         href={LEGACY_OVERLORD_CONSOLE}
         target="_blank"
+        disabled={!capabilities.hasOverlordAccess()}
       />
     </Menu>
   );
-}
+});
 
 export interface HeaderBarProps {
   active: HeaderActiveTab;
@@ -171,22 +179,26 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         icon={IconNames.PULSE}
         text="Druid Doctor"
         onClick={() => setDoctorDialogOpen(true)}
+        disabled={!capabilities.hasEverything()}
       />
       <MenuItem
         icon={IconNames.SETTINGS}
         text="Coordinator dynamic config"
         onClick={() => setCoordinatorDynamicConfigDialogOpen(true)}
+        disabled={!capabilities.hasCoordinatorAccess()}
       />
       <MenuItem
         icon={IconNames.WRENCH}
         text="Overlord dynamic config"
         onClick={() => setOverlordDynamicConfigDialogOpen(true)}
+        disabled={!capabilities.hasOverlordAccess()}
       />
       <MenuItem
         icon={IconNames.PROPERTIES}
         active={active === 'lookups'}
         text="Lookups"
         href="#lookups"
+        disabled={!capabilities.hasCoordinatorAccess()}
       />
     </Menu>
   );
@@ -195,7 +207,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
     <Navbar className="header-bar">
       <NavbarGroup align={Alignment.LEFT}>
         <a href="#">
-          <Logo />
+          <DruidLogo />
         </a>
 
         <NavbarDivider />
@@ -206,7 +218,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           href="#load-data"
           minimal={!loadDataPrimary}
           intent={loadDataPrimary ? Intent.PRIMARY : Intent.NONE}
-          disabled={capabilities === 'no-proxy'}
+          disabled={!capabilities.hasEverything()}
         />
 
         <NavbarDivider />
@@ -233,10 +245,10 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         />
         <AnchorButton
           minimal
-          active={active === 'servers'}
+          active={active === 'services'}
           icon={IconNames.DATABASE}
-          text="Servers"
-          href="#servers"
+          text="Services"
+          href="#services"
         />
 
         <NavbarDivider />
@@ -246,29 +258,20 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           icon={IconNames.APPLICATION}
           text="Query"
           href="#query"
+          disabled={!capabilities.hasQuerying()}
         />
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
         {!hideLegacy && (
           <Popover
-            content={<LegacyMenu />}
+            content={<LegacyMenu capabilities={capabilities} />}
             position={Position.BOTTOM_RIGHT}
-            disabled={capabilities === 'no-proxy'}
           >
-            <Button
-              minimal
-              icon={IconNames.SHARE}
-              text="Legacy"
-              disabled={capabilities === 'no-proxy'}
-            />
+            <Button minimal icon={IconNames.SHARE} text="Legacy" />
           </Popover>
         )}
-        <Popover
-          content={configMenu}
-          position={Position.BOTTOM_RIGHT}
-          disabled={capabilities === 'no-proxy'}
-        >
-          <Button minimal icon={IconNames.COG} disabled={capabilities === 'no-proxy'} />
+        <Popover content={configMenu} position={Position.BOTTOM_RIGHT}>
+          <Button minimal icon={IconNames.COG} />
         </Popover>
         <Popover content={helpMenu} position={Position.BOTTOM_RIGHT}>
           <Button minimal icon={IconNames.HELP} />

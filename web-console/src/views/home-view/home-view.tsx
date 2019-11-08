@@ -23,7 +23,7 @@ import { Capabilities } from '../../utils/capabilities';
 import { DatasourcesCard } from './datasources-card/datasources-card';
 import { LookupsCard } from './lookups-card/lookups-card';
 import { SegmentsCard } from './segments-card/segments-card';
-import { ServersCard } from './servers-card/servers-card';
+import { ServicesCard } from './services-card/services-card';
 import { StatusCard } from './status-card/status-card';
 import { SupervisorsCard } from './supervisors-card/supervisors-card';
 import { TasksCard } from './tasks-card/tasks-card';
@@ -44,7 +44,7 @@ export const HomeView = React.memo(function HomeView(props: HomeViewProps) {
       <SegmentsCard capabilities={capabilities} />
       <SupervisorsCard capabilities={capabilities} />
       <TasksCard capabilities={capabilities} />
-      <ServersCard capabilities={capabilities} />
+      <ServicesCard capabilities={capabilities} />
       <LookupsCard />
     </div>
   );

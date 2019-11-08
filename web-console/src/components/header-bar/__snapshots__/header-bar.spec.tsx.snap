@@ -10,7 +10,7 @@ exports[`header bar matches snapshot 1`] = `
     <a
       href="#"
     >
-      <Logo />
+      <Memo(DruidLogo) />
     </a>
     <Blueprint3.NavbarDivider />
     <Blueprint3.AnchorButton
@@ -46,14 +46,15 @@ exports[`header bar matches snapshot 1`] = `
     />
     <Blueprint3.AnchorButton
       active={false}
-      href="#servers"
+      href="#services"
       icon="database"
       minimal={true}
-      text="Servers"
+      text="Services"
     />
     <Blueprint3.NavbarDivider />
     <Blueprint3.AnchorButton
       active={false}
+      disabled={false}
       href="#query"
       icon="application"
       minimal={true}
@@ -66,7 +67,17 @@ exports[`header bar matches snapshot 1`] = `
     <Blueprint3.Popover
       boundary="scrollParent"
       captureDismiss={false}
-      content={<LegacyMenu />}
+      content={
+        <Memo(LegacyMenu)
+          capabilities={
+            Capabilities {
+              "coordinator": true,
+              "overlord": true,
+              "queryType": "nativeAndSql",
+            }
+          }
+        />
+      }
       defaultIsOpen={false}
       disabled={false}
       fill={false}
@@ -85,7 +96,6 @@ exports[`header bar matches snapshot 1`] = `
       wrapperTagName="span"
     >
       <Blueprint3.Button
-        disabled={false}
         icon="share"
         minimal={true}
         text="Legacy"
@@ -153,7 +163,6 @@ exports[`header bar matches snapshot 1`] = `
       wrapperTagName="span"
     >
       <Blueprint3.Button
-        disabled={false}
         icon="cog"
         minimal={true}
       />
