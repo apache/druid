@@ -62,6 +62,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -130,19 +131,32 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
 
       private Ordering<SegmentAnalysis> makeOrdering(SegmentMetadataQuery query)
       {
-        if (query.isMerge()) {
-          // Merge everything always
-          return Comparators.alwaysEqual();
-        }
-
-        return query.getResultOrdering(); // No two elements should be equal, so it should never merge
+        return (Ordering<SegmentAnalysis>) SegmentMetadataQueryQueryToolChest.this.createResultComparator(query);
       }
 
       private BinaryOperator<SegmentAnalysis> createMergeFn(final SegmentMetadataQuery inQ)
       {
-        return (arg1, arg2) -> mergeAnalyses(arg1, arg2, inQ.isLenientAggregatorMerge());
+        return SegmentMetadataQueryQueryToolChest.this.createMergeFn(inQ);
       }
     };
+  }
+
+  @Override
+  public BinaryOperator<SegmentAnalysis> createMergeFn(Query<SegmentAnalysis> query)
+  {
+    return (arg1, arg2) -> mergeAnalyses(arg1, arg2, ((SegmentMetadataQuery) query).isLenientAggregatorMerge());
+  }
+
+  @Override
+  public Comparator<SegmentAnalysis> createResultComparator(Query<SegmentAnalysis> query)
+  {
+    SegmentMetadataQuery segmentMetadataQuery = (SegmentMetadataQuery) query;
+    if (segmentMetadataQuery.isMerge()) {
+      // Merge everything always
+      return Comparators.alwaysEqual();
+    }
+
+    return segmentMetadataQuery.getResultOrdering(); // No two elements should be equal, so it should never merge
   }
 
   @Override

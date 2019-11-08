@@ -39,7 +39,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-public abstract class SimpleFloatAggregatorFactory extends NullableAggregatorFactory<ColumnValueSelector>
+public abstract class SimpleFloatAggregatorFactory extends NullableNumericAggregatorFactory<ColumnValueSelector>
 {
   protected final String name;
   @Nullable

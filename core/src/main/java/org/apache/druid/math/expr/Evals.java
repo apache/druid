@@ -22,6 +22,7 @@ package org.apache.druid.math.expr;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 
@@ -46,21 +47,6 @@ public class Evals
     return true;
   }
 
-  // for binary operator not providing constructor of form <init>(String, Expr, Expr),
-  // you should create it explicitly in here
-  public static Expr binaryOp(BinaryOpExprBase binary, Expr left, Expr right)
-  {
-    try {
-      return binary.getClass()
-                   .getDeclaredConstructor(String.class, Expr.class, Expr.class)
-                   .newInstance(binary.op, left, right);
-    }
-    catch (Exception e) {
-      log.warn(e, "failed to rewrite expression " + binary);
-      return binary;  // best effort.. keep it working
-    }
-  }
-
   public static long asLong(boolean x)
   {
     return x ? 1L : 0L;
@@ -81,8 +67,8 @@ public class Evals
     return x > 0;
   }
 
-  public static boolean asBoolean(String x)
+  public static boolean asBoolean(@Nullable String x)
   {
-    return !NullHandling.isNullOrEquivalent(x) && Boolean.valueOf(x);
+    return !NullHandling.isNullOrEquivalent(x) && Boolean.parseBoolean(x);
   }
 }
