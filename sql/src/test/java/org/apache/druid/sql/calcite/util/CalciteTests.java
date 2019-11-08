@@ -84,10 +84,6 @@ import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
 import org.apache.druid.query.scan.ScanQueryRunnerFactory;
-import org.apache.druid.query.select.SelectQuery;
-import org.apache.druid.query.select.SelectQueryEngine;
-import org.apache.druid.query.select.SelectQueryQueryToolChest;
-import org.apache.druid.query.select.SelectQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
@@ -538,17 +534,6 @@ public class CalciteTests
                 )
             )
             .put(
-                SelectQuery.class,
-                new SelectQueryRunnerFactory(
-                    new SelectQueryQueryToolChest(
-                        TestHelper.makeJsonMapper(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    ),
-                    new SelectQueryEngine(),
-                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                )
-            )
-            .put(
                 TimeseriesQuery.class,
                 new TimeseriesQueryRunnerFactory(
                     new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
@@ -662,6 +647,7 @@ public class CalciteTests
                    .interval(index1.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index1
     ).add(
@@ -670,6 +656,7 @@ public class CalciteTests
                    .interval(index2.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index2
     ).add(
@@ -678,6 +665,7 @@ public class CalciteTests
                    .interval(forbiddenIndex.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         forbiddenIndex
     ).add(
@@ -686,6 +674,7 @@ public class CalciteTests
                    .interval(indexNumericDims.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         indexNumericDims
     ).add(
@@ -694,6 +683,7 @@ public class CalciteTests
                    .interval(index4.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index4
     );

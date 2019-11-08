@@ -21,6 +21,7 @@ import React from 'react';
 
 import { Field } from '../components/auto-form/auto-form';
 import { ExternalLink } from '../components/external-link/external-link';
+import { DRUID_DOCS_VERSION } from '../variables';
 
 import {
   BASIC_TIME_FORMATS,
@@ -60,7 +61,8 @@ export type IngestionComboType =
   | 'index:ingestSegment'
   | 'index:inline'
   | 'index:static-s3'
-  | 'index:static-google-blobstore';
+  | 'index:static-google-blobstore'
+  | 'index:hdfs';
 
 // Some extra values that can be selected in the initial screen
 export type IngestionComboTypeWithExtra = IngestionComboType | 'hadoop' | 'example' | 'other';
@@ -81,7 +83,7 @@ function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): str
   }
 }
 
-export function getIngestionComboType(spec: IngestionSpec): IngestionComboType | null {
+export function getIngestionComboType(spec: IngestionSpec): IngestionComboType | undefined {
   const ioConfig = deepGet(spec, 'ioConfig') || EMPTY_OBJECT;
 
   switch (ioConfig.type) {
@@ -99,11 +101,12 @@ export function getIngestionComboType(spec: IngestionSpec): IngestionComboType |
         case 'inline':
         case 'static-s3':
         case 'static-google-blobstore':
+        case 'hdfs':
           return `index:${firehose.type}` as IngestionComboType;
       }
   }
 
-  return null;
+  return;
 }
 
 export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): string {
@@ -125,6 +128,9 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
     case 'index:static-google-blobstore':
       return 'Google Cloud Storage';
+
+    case 'index:hdfs':
+      return 'HDFS';
 
     case 'kafka':
       return 'Apache Kafka';
@@ -152,6 +158,21 @@ export function getIngestionImage(ingestionType: IngestionComboTypeWithExtra): s
   return ingestionType;
 }
 
+export function getIngestionDocLink(spec: IngestionSpec): string {
+  const type = getSpecType(spec);
+
+  switch (type) {
+    case 'kafka':
+      return `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kafka-ingestion.html`;
+
+    case 'kinesis':
+      return `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kinesis-ingestion.html`;
+
+    default:
+      return `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/native-batch.html#firehoses`;
+  }
+}
+
 export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): string | undefined {
   switch (ingestionType) {
     case 'index:static-s3':
@@ -159,6 +180,9 @@ export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): s
 
     case 'index:static-google-blobstore':
       return 'druid-google-extensions';
+
+    case 'index:hdfs':
+      return 'druid-hdfs-storage';
 
     case 'kafka':
       return 'druid-kafka-indexing-service';
@@ -283,7 +307,9 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
         <p>The parser used to parse the data.</p>
         <p>
           For more information see{' '}
-          <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/data-formats.html">
+          <ExternalLink
+            href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/data-formats.html`}
+          >
             the documentation
           </ExternalLink>
           .
@@ -326,14 +352,23 @@ const PARSE_SPEC_FORM_FIELDS: Field<ParseSpec>[] = [
   {
     name: 'columns',
     type: 'string-array',
+    required: (p: ParseSpec) =>
+      ((p.format === 'csv' || p.format === 'tsv') && !p.hasHeaderRow) || p.format === 'regex',
     defined: (p: ParseSpec) =>
       ((p.format === 'csv' || p.format === 'tsv') && !p.hasHeaderRow) || p.format === 'regex',
   },
   {
+    name: 'delimiter',
+    type: 'string',
+    defaultValue: '\t',
+    defined: (p: ParseSpec) => p.format === 'tsv',
+    info: <>A custom delimiter for data values.</>,
+  },
+  {
     name: 'listDelimiter',
     type: 'string',
-    defaultValue: '|',
     defined: (p: ParseSpec) => p.format === 'csv' || p.format === 'tsv',
+    info: <>A custom delimiter for multi-value dimensions.</>,
   },
 ];
 
@@ -541,7 +576,9 @@ const FLATTEN_FIELD_FORM_FIELDS: Field<FlattenField>[] = [
     info: (
       <>
         Specify a flatten{' '}
-        <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/flatten-json">
+        <ExternalLink
+          href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/flatten-json`}
+        >
           expression
         </ExternalLink>
         .
@@ -586,7 +623,9 @@ const TRANSFORM_FORM_FIELDS: Field<Transform>[] = [
     info: (
       <>
         A valid Druid{' '}
-        <ExternalLink href="https://druid.apache.org/docs/latest/misc/math-expr.html">
+        <ExternalLink
+          href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/misc/math-expr.html`}
+        >
           expression
         </ExternalLink>
         .
@@ -629,6 +668,7 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'name',
     type: 'string',
+    info: <>The metric name as it will appear in Druid.</>,
   },
   {
     name: 'type',
@@ -655,37 +695,24 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
         group: 'last',
         suggestions: ['longLast', 'doubleLast', 'floatLast'],
       },
-      'cardinality',
+      'thetaSketch',
+      {
+        group: 'HLLSketch',
+        suggestions: ['HLLSketchBuild', 'HLLSketchMerge'],
+      },
+      'quantilesDoublesSketch',
+      'momentSketch',
+      'fixedBucketsHistogram',
       'hyperUnique',
       'filtered',
     ],
+    info: <>The aggregation function to apply.</>,
   },
   {
     name: 'fieldName',
     type: 'string',
-    defined: m => {
-      return [
-        'longSum',
-        'doubleSum',
-        'floatSum',
-        'longMin',
-        'doubleMin',
-        'floatMin',
-        'longMax',
-        'doubleMax',
-        'floatMax',
-        'longFirst',
-        'doubleFirst',
-        'floatFirst',
-        'stringFirst',
-        'longLast',
-        'doubleLast',
-        'floatLast',
-        'stringLast',
-        'cardinality',
-        'hyperUnique',
-      ].includes(m.type);
-    },
+    defined: m => m.type !== 'filtered',
+    info: <>The column name for the aggregator to operate on.</>,
   },
   {
     name: 'maxStringBytes',
@@ -703,21 +730,196 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
       return ['stringFirst', 'stringLast'].includes(m.type);
     },
   },
+  // filtered
   {
     name: 'filter',
     type: 'json',
-    defined: m => {
-      return m.type === 'filtered';
-    },
+    defined: m => m.type === 'filtered',
   },
   {
     name: 'aggregator',
     type: 'json',
-    defined: m => {
-      return m.type === 'filtered';
-    },
+    defined: m => m.type === 'filtered',
   },
-  // ToDo: fill in approximates
+  // thetaSketch
+  {
+    name: 'size',
+    type: 'number',
+    defined: m => m.type === 'thetaSketch',
+    defaultValue: 16384,
+    info: (
+      <>
+        <p>
+          Must be a power of 2. Internally, size refers to the maximum number of entries sketch
+          object will retain. Higher size means higher accuracy but more space to store sketches.
+          Note that after you index with a particular size, druid will persist sketch in segments
+          and you will use size greater or equal to that at query time.
+        </p>
+        <p>
+          See the{' '}
+          <ExternalLink href="https://datasketches.github.io/docs/Theta/ThetaSize.html">
+            DataSketches site
+          </ExternalLink>{' '}
+          for details.
+        </p>
+        <p>In general, We recommend just sticking to default size.</p>
+      </>
+    ),
+  },
+  {
+    name: 'isInputThetaSketch',
+    type: 'boolean',
+    defined: m => m.type === 'thetaSketch',
+    defaultValue: false,
+    info: (
+      <>
+        This should only be used at indexing time if your input data contains theta sketch objects.
+        This would be the case if you use datasketches library outside of Druid, say with Pig/Hive,
+        to produce the data that you are ingesting into Druid
+      </>
+    ),
+  },
+  // HLLSketchBuild & HLLSketchMerge
+  {
+    name: 'lgK',
+    type: 'number',
+    defined: m => m.type === 'HLLSketchBuild' || m.type === 'HLLSketchMerge',
+    defaultValue: 12,
+    info: (
+      <>
+        <p>
+          log2 of K that is the number of buckets in the sketch, parameter that controls the size
+          and the accuracy.
+        </p>
+        <p>Must be between 4 to 21 inclusively.</p>
+      </>
+    ),
+  },
+  {
+    name: 'tgtHllType',
+    type: 'string',
+    defined: m => m.type === 'HLLSketchBuild' || m.type === 'HLLSketchMerge',
+    defaultValue: 'HLL_4',
+    suggestions: ['HLL_4', 'HLL_6', 'HLL_8'],
+    info: (
+      <>
+        The type of the target HLL sketch. Must be <Code>HLL_4</Code>, <Code>HLL_6</Code>, or{' '}
+        <Code>HLL_8</Code>.
+      </>
+    ),
+  },
+  // quantilesDoublesSketch
+  {
+    name: 'k',
+    type: 'number',
+    defined: m => m.type === 'quantilesDoublesSketch',
+    defaultValue: 128,
+    info: (
+      <>
+        <p>
+          Parameter that determines the accuracy and size of the sketch. Higher k means higher
+          accuracy but more space to store sketches.
+        </p>
+        <p>
+          Must be a power of 2 from 2 to 32768. See the{' '}
+          <ExternalLink href="https://datasketches.github.io/docs/Quantiles/QuantilesAccuracy.html">
+            Quantiles Accuracy
+          </ExternalLink>{' '}
+          for details.
+        </p>
+      </>
+    ),
+  },
+  // momentSketch
+  {
+    name: 'k',
+    type: 'number',
+    defined: m => m.type === 'momentSketch',
+    required: true,
+    info: (
+      <>
+        Parameter that determines the accuracy and size of the sketch. Higher k means higher
+        accuracy but more space to store sketches. Usable range is generally [3,15]
+      </>
+    ),
+  },
+  {
+    name: 'compress',
+    type: 'boolean',
+    defined: m => m.type === 'momentSketch',
+    defaultValue: true,
+    info: (
+      <>
+        Flag for whether the aggregator compresses numeric values using arcsinh. Can improve
+        robustness to skewed and long-tailed distributions, but reduces accuracy slightly on more
+        uniform distributions.
+      </>
+    ),
+  },
+  // fixedBucketsHistogram
+  {
+    name: 'lowerLimit',
+    type: 'number',
+    defined: m => m.type === 'fixedBucketsHistogram',
+    required: true,
+    info: <>Lower limit of the histogram.</>,
+  },
+  {
+    name: 'upperLimit',
+    type: 'number',
+    defined: m => m.type === 'fixedBucketsHistogram',
+    required: true,
+    info: <>Upper limit of the histogram.</>,
+  },
+  {
+    name: 'numBuckets',
+    type: 'number',
+    defined: m => m.type === 'fixedBucketsHistogram',
+    defaultValue: 10,
+    required: true,
+    info: (
+      <>
+        Number of buckets for the histogram. The range <Code>[lowerLimit, upperLimit]</Code> will be
+        divided into <Code>numBuckets</Code> intervals of equal size.
+      </>
+    ),
+  },
+  {
+    name: 'outlierHandlingMode',
+    type: 'string',
+    defined: m => m.type === 'fixedBucketsHistogram',
+    required: true,
+    suggestions: ['ignore', 'overflow', 'clip'],
+    info: (
+      <>
+        <p>
+          Specifies how values outside of <Code>[lowerLimit, upperLimit]</Code> will be handled.
+        </p>
+        <p>
+          Supported modes are <Code>ignore</Code>, <Code>overflow</Code>, and <Code>clip</Code>. See
+          <ExternalLink
+            href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/approximate-histograms.html#outlier-handling-modes`}
+          >
+            outlier handling modes
+          </ExternalLink>{' '}
+          for more details.
+        </p>
+      </>
+    ),
+  },
+  // hyperUnique
+  {
+    name: 'isInputHyperUnique',
+    type: 'boolean',
+    defined: m => m.type === 'hyperUnique',
+    defaultValue: false,
+    info: (
+      <>
+        This can be set to true to index precomputed HLL (Base64 encoded output from druid-hll is
+        expected).
+      </>
+    ),
+  },
 ];
 
 export function getMetricSpecFormFields() {
@@ -774,6 +976,9 @@ export interface Firehose {
 
   // inline
   data?: string;
+
+  // hdfs
+  paths?: string;
 }
 
 export function getIoConfigFormFields(ingestionComboType: IngestionComboType): Field<IoConfig>[] {
@@ -781,11 +986,13 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     name: 'firehose.type',
     label: 'Firehose type',
     type: 'string',
-    suggestions: ['local', 'http', 'inline', 'static-s3', 'static-google-blobstore'],
+    suggestions: ['local', 'http', 'inline', 'static-s3', 'static-google-blobstore', 'hdfs'],
     info: (
       <p>
         Druid connects to raw data through{' '}
-        <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html">
+        <ExternalLink
+          href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/firehose.html`}
+        >
           firehoses
         </ExternalLink>
         . You can change your selected firehose here.
@@ -838,7 +1045,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           required: true,
           info: (
             <>
-              <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html#localfirehose">
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/firehose.html#localfirehose`}
+              >
                 firehose.baseDir
               </ExternalLink>
               <p>Specifies the directory to search recursively for files to be ingested.</p>
@@ -853,7 +1062,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           suggestions: ['*', '*.json', '*.json.gz', '*.csv', '*.tsv'],
           info: (
             <>
-              <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/firehose.html#localfirehose">
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/firehose.html#localfirehose`}
+              >
                 firehose.filter
               </ExternalLink>
               <p>
@@ -881,13 +1092,8 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         {
           name: 'firehose.interval',
           label: 'Interval',
-          type: 'string',
+          type: 'interval',
           placeholder: `${CURRENT_YEAR}-01-01/${CURRENT_YEAR + 1}-01-01`,
-          suggestions: [
-            `${CURRENT_YEAR}-01-01T00:00:00/${CURRENT_YEAR + 1}-01-01T00:00:00`,
-            `${CURRENT_YEAR}-01-01/${CURRENT_YEAR + 1}-01-01`,
-            `${CURRENT_YEAR}/${CURRENT_YEAR + 1}`,
-          ],
           required: true,
           info: (
             <p>
@@ -928,7 +1134,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <p>
               The{' '}
-              <ExternalLink href="https://druid.apache.org/docs/latest/querying/filters.html">
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/querying/filters.html`}
+              >
                 filter
               </ExternalLink>{' '}
               to apply to the data as part of querying.
@@ -991,13 +1199,27 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink href="https://druid.apache.org/docs/latest/development/extensions-contrib/google.html">
+                <ExternalLink
+                  href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-contrib/google.html`}
+                >
                   Google Blobs
                 </ExternalLink>
                 .
               </p>
             </>
           ),
+        },
+      ];
+
+    case 'index:hdfs':
+      return [
+        firehoseType,
+        {
+          name: 'firehose.paths',
+          label: 'Paths',
+          type: 'string',
+          placeholder: '/path/to/file.ext',
+          required: true,
         },
       ];
 
@@ -1010,7 +1232,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           required: true,
           info: (
             <>
-              <ExternalLink href="https://druid.apache.org/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig">
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
+              >
                 consumerProperties
               </ExternalLink>
               <p>
@@ -1032,7 +1256,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           defaultValue: {},
           info: (
             <>
-              <ExternalLink href="https://druid.apache.org/docs/latest/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig">
+              <ExternalLink
+                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
+              >
                 consumerProperties
               </ExternalLink>
               <p>A map of properties to be passed to the Kafka consumer.</p>
@@ -1082,7 +1308,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <>
               The Amazon Kinesis stream endpoint for a region. You can find a list of endpoints{' '}
-              <ExternalLink href="http://docs.aws.amazon.com/general/latest/gr/rande.html#ak_region">
+              <ExternalLink
+                href={`http://docs.aws.amazon.com/general/${DRUID_DOCS_VERSION}/gr/rande.html#ak_region`}
+              >
                 here
               </ExternalLink>
               .
@@ -1148,6 +1376,12 @@ function issueWithFirehose(firehose: Firehose | undefined): string | undefined {
         return 'must have at least one blob';
       }
       break;
+
+    case 'hdfs':
+      if (!firehose.paths) {
+        return 'must have paths';
+      }
+      break;
   }
   return;
 }
@@ -1182,6 +1416,7 @@ export function getIoConfigTuningFormFields(
     case 'index:http':
     case 'index:static-s3':
     case 'index:static-google-blobstore':
+    case 'index:hdfs':
       return [
         {
           name: 'firehose.fetchTimeout',

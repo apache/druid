@@ -129,9 +129,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       root.addServlet(managementForwardingServletHolder, "/proxy/*");
     }
 
-    if (managementProxyConfig.isEnabled()) {
-      root.setBaseResource(Resource.newClassPathResource("org/apache/druid/console"));
-    }
+    root.setBaseResource(Resource.newClassPathResource("org/apache/druid/console"));
 
     final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
@@ -140,9 +138,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 
     // perform no-op authorization/authentication for these resources
     AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, UNSECURED_PATHS);
-    if (managementProxyConfig.isEnabled()) {
-      AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, UNSECURED_PATHS_FOR_UI);
-    }
+    AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, UNSECURED_PATHS_FOR_UI);
     AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
     final List<Authenticator> authenticators = authenticatorMapper.getAuthenticatorChain();

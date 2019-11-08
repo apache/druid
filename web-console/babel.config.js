@@ -25,7 +25,10 @@ module.exports = function (api) {
       {
         "useBuiltIns": "entry",
         "corejs": 3,
-        "forceAllTransforms": true
+        "forceAllTransforms": true,
+        "targets": {
+          "ie": "11"
+        }
       }
     ]
   ];

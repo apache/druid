@@ -19,8 +19,7 @@
 
 package org.apache.druid.query.aggregation.first;
 
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -31,6 +30,11 @@ import java.nio.ByteBuffer;
 
 public class StringFirstBufferAggregator implements BufferAggregator
 {
+  private static final SerializablePairLongString INIT = new SerializablePairLongString(
+      DateTimes.MAX.getMillis(),
+      null
+  );
+
   private final BaseLongColumnValueSelector timeSelector;
   private final BaseObjectColumnValueSelector valueSelector;
   private final int maxStringBytes;
@@ -49,54 +53,26 @@ public class StringFirstBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.putLong(position, Long.MAX_VALUE);
-    buf.putInt(position + Long.BYTES, 0);
+    StringFirstLastUtils.writePair(buf, position, INIT, maxStringBytes);
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    ByteBuffer mutationBuffer = buf.duplicate();
-    mutationBuffer.position(position);
+    final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromSelectors(
+        timeSelector,
+        valueSelector
+    );
 
-    Object value = valueSelector.getObject();
-
-    long time = timeSelector.getLong();
-    String firstString = null;
-
-    if (value != null) {
-      if (value instanceof SerializablePairLongString) {
-        SerializablePairLongString serializablePair = (SerializablePairLongString) value;
-        time = serializablePair.lhs;
-        firstString = serializablePair.rhs;
-      } else if (value instanceof String) {
-        firstString = (String) value;
-      } else {
-        throw new ISE(
-            "Try to aggregate unsuported class type [%s].Supported class types: String or SerializablePairLongString",
-            value.getClass().getName()
+    if (inPair != null && inPair.rhs != null) {
+      final long firstTime = buf.getLong(position);
+      if (inPair.lhs < firstTime) {
+        StringFirstLastUtils.writePair(
+            buf,
+            position,
+            new SerializablePairLongString(inPair.lhs, inPair.rhs),
+            maxStringBytes
         );
-      }
-    }
-
-    long lastTime = mutationBuffer.getLong(position);
-
-    if (time < lastTime) {
-      if (firstString != null) {
-        if (firstString.length() > maxStringBytes) {
-          firstString = firstString.substring(0, maxStringBytes);
-        }
-
-        byte[] valueBytes = StringUtils.toUtf8(firstString);
-
-        mutationBuffer.putLong(position, time);
-        mutationBuffer.putInt(position + Long.BYTES, valueBytes.length);
-
-        mutationBuffer.position(position + Long.BYTES + Integer.BYTES);
-        mutationBuffer.put(valueBytes);
-      } else {
-        mutationBuffer.putLong(position, time);
-        mutationBuffer.putInt(position + Long.BYTES, 0);
       }
     }
   }
@@ -104,24 +80,7 @@ public class StringFirstBufferAggregator implements BufferAggregator
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    ByteBuffer mutationBuffer = buf.duplicate();
-    mutationBuffer.position(position);
-
-    Long timeValue = mutationBuffer.getLong(position);
-    int stringSizeBytes = mutationBuffer.getInt(position + Long.BYTES);
-
-    SerializablePairLongString serializablePair;
-
-    if (stringSizeBytes > 0) {
-      byte[] valueBytes = new byte[stringSizeBytes];
-      mutationBuffer.position(position + Long.BYTES + Integer.BYTES);
-      mutationBuffer.get(valueBytes, 0, stringSizeBytes);
-      serializablePair = new SerializablePairLongString(timeValue, StringUtils.fromUtf8(valueBytes));
-    } else {
-      serializablePair = new SerializablePairLongString(timeValue, null);
-    }
-
-    return serializablePair;
+    return StringFirstLastUtils.readPair(buf, position);
   }
 
   @Override

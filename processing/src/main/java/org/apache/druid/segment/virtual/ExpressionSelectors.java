@@ -369,15 +369,15 @@ public class ExpressionSelectors
       if (nativeType == ValueType.FLOAT) {
         ColumnValueSelector selector = columnSelectorFactory
             .makeColumnValueSelector(columnName);
-        supplier = makeNullableSupplier(selector, selector::getFloat);
+        supplier = makeNullableNumericSupplier(selector, selector::getFloat);
       } else if (nativeType == ValueType.LONG) {
         ColumnValueSelector selector = columnSelectorFactory
             .makeColumnValueSelector(columnName);
-        supplier = makeNullableSupplier(selector, selector::getLong);
+        supplier = makeNullableNumericSupplier(selector, selector::getLong);
       } else if (nativeType == ValueType.DOUBLE) {
         ColumnValueSelector selector = columnSelectorFactory
             .makeColumnValueSelector(columnName);
-        supplier = makeNullableSupplier(selector, selector::getDouble);
+        supplier = makeNullableNumericSupplier(selector, selector::getDouble);
       } else if (nativeType == ValueType.STRING) {
         supplier = supplierFromDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName)),
@@ -414,7 +414,12 @@ public class ExpressionSelectors
     }
   }
 
-  private static <T> Supplier<T> makeNullableSupplier(
+  /**
+   * Wraps a {@link ColumnValueSelector} and uses it to supply numeric values in a null-aware way.
+   *
+   * @see org.apache.druid.segment.BaseNullableColumnValueSelector#isNull() for why this only works in the numeric case
+   */
+  private static <T> Supplier<T> makeNullableNumericSupplier(
       ColumnValueSelector selector,
       Supplier<T> supplier
   )

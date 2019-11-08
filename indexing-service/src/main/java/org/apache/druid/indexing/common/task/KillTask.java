@@ -25,7 +25,7 @@ import org.apache.druid.client.indexing.ClientKillQuery;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.SegmentListUnusedAction;
+import org.apache.druid.indexing.common.actions.RetrieveUnusedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentNukeAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskLocks;
@@ -79,7 +79,7 @@ public class KillTask extends AbstractFixedIntervalTask
     // List unused segments
     final List<DataSegment> unusedSegments = toolbox
         .getTaskActionClient()
-        .submit(new SegmentListUnusedAction(getDataSource(), getInterval()));
+        .submit(new RetrieveUnusedSegmentsAction(getDataSource(), getInterval()));
 
     if (!TaskLocks.isLockCoversSegments(taskLockMap, unusedSegments)) {
       throw new ISE(

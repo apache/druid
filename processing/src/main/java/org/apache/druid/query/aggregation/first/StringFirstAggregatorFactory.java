@@ -29,10 +29,8 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.NullableAggregatorFactory;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
 
@@ -45,7 +43,7 @@ import java.util.Map;
 import java.util.Objects;
 
 @JsonTypeName("stringFirst")
-public class StringFirstAggregatorFactory extends NullableAggregatorFactory<BaseObjectColumnValueSelector>
+public class StringFirstAggregatorFactory extends AggregatorFactory
 {
   public static final int DEFAULT_MAX_STRING_SIZE = 1024;
 
@@ -106,31 +104,27 @@ public class StringFirstAggregatorFactory extends NullableAggregatorFactory<Base
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
     this.name = name;
     this.fieldName = fieldName;
-    this.maxStringBytes = maxStringBytes == null ? DEFAULT_MAX_STRING_SIZE : maxStringBytes;
+    this.maxStringBytes = maxStringBytes == null
+                          ? StringFirstAggregatorFactory.DEFAULT_MAX_STRING_SIZE
+                          : maxStringBytes;
   }
 
   @Override
-  protected BaseObjectColumnValueSelector selector(ColumnSelectorFactory metricFactory)
-  {
-    return metricFactory.makeColumnValueSelector(fieldName);
-  }
-
-  @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory, BaseObjectColumnValueSelector selector)
+  public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new StringFirstAggregator(
         metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-        selector,
+        metricFactory.makeColumnValueSelector(fieldName),
         maxStringBytes
     );
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, BaseObjectColumnValueSelector selector)
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     return new StringFirstBufferAggregator(
         metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-        selector,
+        metricFactory.makeColumnValueSelector(fieldName),
         maxStringBytes
     );
   }
@@ -156,7 +150,7 @@ public class StringFirstAggregatorFactory extends NullableAggregatorFactory<Base
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new StringFirstFoldingAggregatorFactory(name, name, maxStringBytes);
+    return new StringFirstAggregatorFactory(name, name, maxStringBytes);
   }
 
   @Override
@@ -234,25 +228,25 @@ public class StringFirstAggregatorFactory extends NullableAggregatorFactory<Base
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     StringFirstAggregatorFactory that = (StringFirstAggregatorFactory) o;
-
-    return fieldName.equals(that.fieldName) && name.equals(that.name) && maxStringBytes == that.maxStringBytes;
+    return maxStringBytes == that.maxStringBytes &&
+           Objects.equals(fieldName, that.fieldName) &&
+           Objects.equals(name, that.name);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName, maxStringBytes);
+    return Objects.hash(fieldName, name, maxStringBytes);
   }
 
   @Override
   public String toString()
   {
     return "StringFirstAggregatorFactory{" +
-           "name='" + name + '\'' +
-           ", fieldName='" + fieldName + '\'' +
-           ", maxStringBytes=" + maxStringBytes + '\'' +
+           "fieldName='" + fieldName + '\'' +
+           ", name='" + name + '\'' +
+           ", maxStringBytes=" + maxStringBytes +
            '}';
   }
 }

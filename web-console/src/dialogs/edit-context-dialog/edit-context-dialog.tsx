@@ -36,7 +36,9 @@ export interface EditContextDialogState {
   error?: string;
 }
 
-export function EditContextDialog(props: EditContextDialogProps) {
+export const EditContextDialog = React.memo(function EditContextDialog(
+  props: EditContextDialogProps,
+) {
   const { onQueryContextChange, onClose } = props;
   const [state, setState] = useState<EditContextDialogState>(() => ({
     queryContext: props.queryContext,
@@ -98,4 +100,4 @@ export function EditContextDialog(props: EditContextDialogProps) {
       </div>
     </Dialog>
   );
-}
+});

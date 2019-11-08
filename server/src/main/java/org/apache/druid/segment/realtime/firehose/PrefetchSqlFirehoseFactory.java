@@ -22,7 +22,6 @@ package org.apache.druid.segment.realtime.firehose;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.LineIterator;
@@ -30,11 +29,11 @@ import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.prefetch.CacheManager;
+import org.apache.druid.data.input.impl.prefetch.FetchConfig;
 import org.apache.druid.data.input.impl.prefetch.Fetcher;
 import org.apache.druid.data.input.impl.prefetch.JsonIterator;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
-import org.apache.druid.data.input.impl.prefetch.OpenedObject;
-import org.apache.druid.data.input.impl.prefetch.PrefetchConfig;
+import org.apache.druid.data.input.impl.prefetch.OpenObject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -64,7 +63,7 @@ import java.util.concurrent.TimeUnit;
  * <br/>
  * - Fetching: when it reads all cached data, it fetches remaining objects into a local disk and reads data from
  * them.  For the performance reason, prefetch technique is used, that is, when the size of remaining fetched data is
- * smaller than {@link PrefetchConfig#prefetchTriggerBytes}, a background prefetch thread automatically starts to fetch remaining
+ * smaller than {@link FetchConfig#prefetchTriggerBytes}, a background prefetch thread automatically starts to fetch remaining
  * objects.
  * <br/>
  * <p/>
@@ -94,7 +93,7 @@ public abstract class PrefetchSqlFirehoseFactory<T>
 {
   private static final Logger LOG = new Logger(PrefetchSqlFirehoseFactory.class);
 
-  private final PrefetchConfig prefetchConfig;
+  private final FetchConfig fetchConfig;
   private final CacheManager<T> cacheManager;
   private List<T> objects;
   private ObjectMapper objectMapper;
@@ -108,14 +107,15 @@ public abstract class PrefetchSqlFirehoseFactory<T>
       ObjectMapper objectMapper
   )
   {
-    this.prefetchConfig = new PrefetchConfig(
+    this.fetchConfig = new FetchConfig(
         maxCacheCapacityBytes,
         maxFetchCapacityBytes,
         prefetchTriggerBytes,
-        fetchTimeout
+        fetchTimeout,
+        0
     );
     this.cacheManager = new CacheManager<>(
-        prefetchConfig.getMaxCacheCapacityBytes()
+        fetchConfig.getMaxCacheCapacityBytes()
     );
     this.objectMapper = objectMapper;
   }
@@ -129,25 +129,19 @@ public abstract class PrefetchSqlFirehoseFactory<T>
   @JsonProperty
   public long getMaxFetchCapacityBytes()
   {
-    return prefetchConfig.getMaxFetchCapacityBytes();
+    return fetchConfig.getMaxFetchCapacityBytes();
   }
 
   @JsonProperty
   public long getPrefetchTriggerBytes()
   {
-    return prefetchConfig.getPrefetchTriggerBytes();
+    return fetchConfig.getPrefetchTriggerBytes();
   }
 
   @JsonProperty
   public long getFetchTimeout()
   {
-    return prefetchConfig.getFetchTimeout();
-  }
-
-  @VisibleForTesting
-  CacheManager<T> getCacheManager()
-  {
-    return cacheManager;
+    return fetchConfig.getFetchTimeout();
   }
 
   @Override
@@ -156,7 +150,7 @@ public abstract class PrefetchSqlFirehoseFactory<T>
     if (objects == null) {
       objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "objects"));
     }
-    if (cacheManager.isEnabled() || prefetchConfig.getMaxFetchCapacityBytes() > 0) {
+    if (cacheManager.isEnabled() || fetchConfig.getMaxFetchCapacityBytes() > 0) {
       Preconditions.checkNotNull(temporaryDirectory, "temporaryDirectory");
       Preconditions.checkArgument(
           temporaryDirectory.exists(),
@@ -179,7 +173,7 @@ public abstract class PrefetchSqlFirehoseFactory<T>
         objects,
         fetchExecutor,
         temporaryDirectory,
-        prefetchConfig,
+        fetchConfig,
         new ObjectOpenFunction<T>()
         {
           @Override
@@ -216,9 +210,9 @@ public abstract class PrefetchSqlFirehoseFactory<T>
               TypeReference<Map<String, Object>> type = new TypeReference<Map<String, Object>>()
               {
               };
-              final OpenedObject<T> openedObject = fetcher.next();
-              final InputStream stream = openedObject.getObjectStream();
-              return new JsonIterator<>(type, stream, openedObject.getResourceCloser(), objectMapper);
+              final OpenObject<T> openObject = fetcher.next();
+              final InputStream stream = openObject.getObjectStream();
+              return new JsonIterator<>(type, stream, openObject.getResourceCloser(), objectMapper);
             }
             catch (Exception ioe) {
               throw new RuntimeException(ioe);
@@ -230,7 +224,7 @@ public abstract class PrefetchSqlFirehoseFactory<T>
           fetchExecutor.shutdownNow();
           try {
             Preconditions.checkState(fetchExecutor.awaitTermination(
-                prefetchConfig.getFetchTimeout(),
+                fetchConfig.getFetchTimeout(),
                 TimeUnit.MILLISECONDS
             ));
           }

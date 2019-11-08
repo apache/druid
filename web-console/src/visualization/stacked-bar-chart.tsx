@@ -50,7 +50,7 @@ export interface HoveredBarInfo {
   yValue?: number;
 }
 
-export function StackedBarChart(props: StackedBarChartProps) {
+export const StackedBarChart = React.memo(function StackedBarChart(props: StackedBarChartProps) {
   const {
     activeDataType,
     svgWidth,
@@ -147,4 +147,4 @@ export function StackedBarChart(props: StackedBarChartProps) {
       {renderBarChart()}
     </div>
   );
-}
+});

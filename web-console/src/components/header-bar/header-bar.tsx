@@ -36,6 +36,7 @@ import { AboutDialog } from '../../dialogs/about-dialog/about-dialog';
 import { CoordinatorDynamicConfigDialog } from '../../dialogs/coordinator-dynamic-config-dialog/coordinator-dynamic-config-dialog';
 import { DoctorDialog } from '../../dialogs/doctor-dialog/doctor-dialog';
 import { OverlordDynamicConfigDialog } from '../../dialogs/overlord-dynamic-config-dialog/overlord-dynamic-config-dialog';
+import { Capabilities } from '../../utils/capabilities';
 import {
   DRUID_ASF_SLACK,
   DRUID_DOCS,
@@ -54,13 +55,19 @@ export type HeaderActiveTab =
   | 'datasources'
   | 'segments'
   | 'tasks'
-  | 'servers'
+  | 'services'
   | 'lookups';
 
-function Logo() {
+const DruidLogo = React.memo(function DruidLogo() {
   return (
-    <div className="logo">
-      <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 288 134">
+    <div className="druid-logo">
+      <svg
+        version="1.1"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 288 134"
+        width="288"
+        height="134"
+      >
         <path
           fill="#FFFFFF"
           d="M136.7,67.5c0.5-6.1,5-10.4,10.6-10.4c3.9,0,6.5,2,7.4,4.3l1.1-12.4c0-0.1,0.3-0.2,0.7-0.2
@@ -106,9 +113,15 @@ function Logo() {
       </svg>
     </div>
   );
+});
+
+interface LegacyMenuProps {
+  capabilities: Capabilities;
 }
 
-function LegacyMenu() {
+const LegacyMenu = React.memo(function LegacyMenu(props: LegacyMenuProps) {
+  const { capabilities } = props;
+
   return (
     <Menu>
       <MenuItem
@@ -116,24 +129,27 @@ function LegacyMenu() {
         text="Legacy coordinator console"
         href={LEGACY_COORDINATOR_CONSOLE}
         target="_blank"
+        disabled={!capabilities.hasCoordinatorAccess()}
       />
       <MenuItem
         icon={IconNames.MAP}
         text="Legacy overlord console"
         href={LEGACY_OVERLORD_CONSOLE}
         target="_blank"
+        disabled={!capabilities.hasOverlordAccess()}
       />
     </Menu>
   );
-}
+});
 
 export interface HeaderBarProps {
   active: HeaderActiveTab;
   hideLegacy: boolean;
+  capabilities: Capabilities;
 }
 
-export function HeaderBar(props: HeaderBarProps) {
-  const { active, hideLegacy } = props;
+export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
+  const { active, hideLegacy, capabilities } = props;
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [doctorDialogOpen, setDoctorDialogOpen] = useState(false);
   const [coordinatorDynamicConfigDialogOpen, setCoordinatorDynamicConfigDialogOpen] = useState(
@@ -163,22 +179,26 @@ export function HeaderBar(props: HeaderBarProps) {
         icon={IconNames.PULSE}
         text="Druid Doctor"
         onClick={() => setDoctorDialogOpen(true)}
+        disabled={!capabilities.hasEverything()}
       />
       <MenuItem
         icon={IconNames.SETTINGS}
         text="Coordinator dynamic config"
         onClick={() => setCoordinatorDynamicConfigDialogOpen(true)}
+        disabled={!capabilities.hasCoordinatorAccess()}
       />
       <MenuItem
         icon={IconNames.WRENCH}
         text="Overlord dynamic config"
         onClick={() => setOverlordDynamicConfigDialogOpen(true)}
+        disabled={!capabilities.hasOverlordAccess()}
       />
       <MenuItem
         icon={IconNames.PROPERTIES}
         active={active === 'lookups'}
         text="Lookups"
         href="#lookups"
+        disabled={!capabilities.hasCoordinatorAccess()}
       />
     </Menu>
   );
@@ -187,7 +207,7 @@ export function HeaderBar(props: HeaderBarProps) {
     <Navbar className="header-bar">
       <NavbarGroup align={Alignment.LEFT}>
         <a href="#">
-          <Logo />
+          <DruidLogo />
         </a>
 
         <NavbarDivider />
@@ -198,6 +218,7 @@ export function HeaderBar(props: HeaderBarProps) {
           href="#load-data"
           minimal={!loadDataPrimary}
           intent={loadDataPrimary ? Intent.PRIMARY : Intent.NONE}
+          disabled={!capabilities.hasEverything()}
         />
 
         <NavbarDivider />
@@ -224,10 +245,10 @@ export function HeaderBar(props: HeaderBarProps) {
         />
         <AnchorButton
           minimal
-          active={active === 'servers'}
+          active={active === 'services'}
           icon={IconNames.DATABASE}
-          text="Servers"
-          href="#servers"
+          text="Services"
+          href="#services"
         />
 
         <NavbarDivider />
@@ -237,11 +258,15 @@ export function HeaderBar(props: HeaderBarProps) {
           icon={IconNames.APPLICATION}
           text="Query"
           href="#query"
+          disabled={!capabilities.hasQuerying()}
         />
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
         {!hideLegacy && (
-          <Popover content={<LegacyMenu />} position={Position.BOTTOM_RIGHT}>
+          <Popover
+            content={<LegacyMenu capabilities={capabilities} />}
+            position={Position.BOTTOM_RIGHT}
+          >
             <Button minimal icon={IconNames.SHARE} text="Legacy" />
           </Popover>
         )}
@@ -264,4 +289,4 @@ export function HeaderBar(props: HeaderBarProps) {
       )}
     </Navbar>
   );
-}
+});

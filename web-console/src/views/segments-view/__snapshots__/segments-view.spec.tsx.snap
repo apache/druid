@@ -5,10 +5,10 @@ exports[`segments-view matches snapshot 1`] = `
   <div
     className="segments-view app-view"
   >
-    <ViewControlBar
+    <Memo(ViewControlBar)
       label="Segments"
     >
-      <RefreshButton
+      <Memo(RefreshButton)
         localStorageKey="segments-refresh-rate"
         onRefresh={[Function]}
       />
@@ -66,7 +66,7 @@ exports[`segments-view matches snapshot 1`] = `
           icon="more"
         />
       </Blueprint3.Popover>
-      <TableColumnSelector
+      <Memo(TableColumnSelector)
         columns={
           Array [
             "Segment ID",
@@ -88,7 +88,7 @@ exports[`segments-view matches snapshot 1`] = `
         onChange={[Function]}
         tableColumnsHidden={Array []}
       />
-    </ViewControlBar>
+    </Memo(ViewControlBar)>
     <ReactTable
       AggregatedComponent={[Function]}
       ExpanderComponent={[Function]}
