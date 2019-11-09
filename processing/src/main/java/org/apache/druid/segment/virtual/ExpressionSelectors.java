@@ -517,7 +517,7 @@ public class ExpressionSelectors
       Object firstElement = val.get(0);
       if (firstElement instanceof Long) {
         return val.stream().toArray(Long[]::new);
-      } else if(firstElement instanceof Integer) {
+      } else if (firstElement instanceof Integer) {
         return val.stream().map(x -> ((Integer) x).longValue()).toArray(Long[]::new);
       } else if (firstElement instanceof Float) {
         return val.stream().map(x -> ((Float) x).doubleValue()).toArray(Double[]::new);
