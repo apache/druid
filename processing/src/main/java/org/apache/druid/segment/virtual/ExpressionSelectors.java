@@ -539,9 +539,7 @@ public class ExpressionSelectors
   {
     switch (eval.type()) {
       case STRING_ARRAY:
-        return Arrays.stream(eval.asStringArray())
-                     .map(NullHandling::emptyToNullIfNeeded)
-                     .collect(Collectors.toList());
+        return Arrays.stream(eval.asStringArray()).collect(Collectors.toList());
       case DOUBLE_ARRAY:
       case LONG_ARRAY:
         return Arrays.stream(eval.asArray()).collect(Collectors.toList());

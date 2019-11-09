@@ -176,7 +176,7 @@ public class ExpressionColumnValueSelectorTest
     withNulls.add("c");
     Assert.assertEquals(
         withNulls,
-        ExpressionSelectors.coerceEvalToSelectorObject(ExprEval.ofStringArray(new String[]{"a", "", "c"}))
+        ExpressionSelectors.coerceEvalToSelectorObject(ExprEval.ofStringArray(new String[]{"a", null, "c"}))
     );
   }
 
