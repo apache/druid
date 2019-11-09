@@ -192,14 +192,14 @@ public interface ColumnarFloats extends Closeable
           if (offset.getStartOffset() < offsetMark) {
             nullIterator = nullValueBitmap.peekableIterator();
           }
-          offsetMark = offset.getStartOffset();
+          offsetMark = offset.getStartOffset() + offset.getCurrentVectorSize();
           ColumnarFloats.this.get(floatVector, offset.getStartOffset(), offset.getCurrentVectorSize());
         } else {
           final int[] offsets = offset.getOffsets();
-          if (offsets[0] < offsetMark) {
+          if (offsets[offsets.length - 1] < offsetMark) {
             nullIterator = nullValueBitmap.peekableIterator();
           }
-          offsetMark = offsets[0];
+          offsetMark = offsets[offsets.length - 1];
           ColumnarFloats.this.get(floatVector, offsets, offset.getCurrentVectorSize());
         }
 

@@ -35,6 +35,8 @@ public class ConcisePeekableIteratorAdapter extends PeekableIteratorAdapter<IntS
       baseIterator.skipAllBefore(i);
       if (baseIterator.hasNext()) {
         mark = baseIterator.next();
+      } else {
+        mark = NOT_SET;
       }
     }
   }
