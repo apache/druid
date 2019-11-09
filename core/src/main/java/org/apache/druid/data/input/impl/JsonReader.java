@@ -22,6 +22,7 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.TextReader;
 import org.apache.druid.java.util.common.parsers.JSONFlattenerMaker;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -38,13 +39,12 @@ public class JsonReader extends TextReader
   private final ObjectMapper mapper;
 
   public JsonReader(
-      TimestampSpec timestampSpec,
-      DimensionsSpec dimensionsSpec,
+      InputRowSchema inputRowSchema,
       JSONPathSpec flattenSpec,
       ObjectMapper mapper
   )
   {
-    super(timestampSpec, dimensionsSpec);
+    super(inputRowSchema);
     this.flattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker());
     this.mapper = mapper;
   }
@@ -55,8 +55,8 @@ public class JsonReader extends TextReader
     final JsonNode document = mapper.readValue(line, JsonNode.class);
     final Map<String, Object> flattened = flattener.flatten(document);
     return MapInputRowParser.parse(
-        getTimestampSpec(),
-        getDimensionsSpec(),
+        getInputRowSchema().getTimestampSpec(),
+        getInputRowSchema().getDimensionsSpec(),
         flattened
     );
   }

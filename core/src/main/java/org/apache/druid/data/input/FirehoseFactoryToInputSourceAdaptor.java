@@ -20,19 +20,17 @@
 package org.apache.druid.data.input;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FirehoseToInputSourceReaderAdaptor;
 import org.apache.druid.data.input.impl.InputFormat;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.SplittableInputSource;
-import org.apache.druid.data.input.impl.TimestampSpec;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.stream.Stream;
 
-public class FirehoseFactoryToInputSourceAdaptor implements SplittableInputSource, Formattable
+public class FirehoseFactoryToInputSourceAdaptor extends AbstractInputSource implements SplittableInputSource
 {
   private final FiniteFirehoseFactory firehoseFactory;
   private final InputRowParser inputRowParser;
@@ -89,18 +87,13 @@ public class FirehoseFactoryToInputSourceAdaptor implements SplittableInputSourc
   }
 
   @Override
-  public boolean isFormattable()
+  public boolean needsFormat()
   {
-    return true;
+    return false;
   }
 
   @Override
-  public InputSourceReader reader(
-      TimestampSpec timestampSpec,
-      DimensionsSpec dimensionsSpec,
-      @Nullable InputFormat inputFormat, // inputFormat will be ignored
-      @Nullable File temporaryDirectory
-  )
+  protected InputSourceReader unformattableReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
   {
     return new FirehoseToInputSourceReaderAdaptor(firehoseFactory, inputRowParser, temporaryDirectory);
   }

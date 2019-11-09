@@ -22,7 +22,8 @@ package org.apache.druid.data.input.impl;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.SplitReader;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.ObjectReader;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -32,14 +33,16 @@ import org.junit.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class CsvReaderTest
 {
-  private static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec("ts", "auto", null);
-  private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
-      DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "name"))
+  private static final InputRowSchema INPUT_ROW_SCHEMA = new InputRowSchema(
+      new TimestampSpec("ts", "auto", null),
+      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "name"))),
+      Collections.emptyList()
   );
 
   @Test
@@ -114,7 +117,7 @@ public class CsvReaderTest
         )
     );
     final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), "|", true, 0);
-    final SplitReader reader = format.createReader(TIMESTAMP_SPEC, DIMENSIONS_SPEC);
+    final ObjectReader reader = format.createReader(INPUT_ROW_SCHEMA);
     int numResults = 0;
     try (CloseableIterator<InputRow> iterator = reader.read(source, null)) {
       while (iterator.hasNext()) {
@@ -153,7 +156,7 @@ public class CsvReaderTest
 
   private void assertResult(ByteSource source, CsvInputFormat format) throws IOException
   {
-    final SplitReader reader = format.createReader(TIMESTAMP_SPEC, DIMENSIONS_SPEC);
+    final ObjectReader reader = format.createReader(INPUT_ROW_SCHEMA);
     int numResults = 0;
     try (CloseableIterator<InputRow> iterator = reader.read(source, null)) {
       while (iterator.hasNext()) {

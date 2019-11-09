@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.SplitHintSpec;
@@ -469,7 +470,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     );
   }
 
-  private static class TestInputSource implements SplittableInputSource<Integer>
+  private static class TestInputSource extends AbstractInputSource implements SplittableInputSource<Integer>
   {
     private final List<Integer> ids;
 
@@ -497,7 +498,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     }
 
     @Override
-    public boolean isFormattable()
+    public boolean needsFormat()
     {
       return false;
     }

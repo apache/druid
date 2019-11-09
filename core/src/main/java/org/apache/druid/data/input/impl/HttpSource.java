@@ -21,8 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.SplitSource;
+import org.apache.druid.data.input.ObjectSource;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.utils.CompressionUtils;
@@ -34,16 +33,16 @@ import java.net.URI;
 import java.net.URLConnection;
 import java.util.Base64;
 
-public class HttpSource implements SplitSource<URI>
+public class HttpSource implements ObjectSource<URI>
 {
-  private final InputSplit<URI> split;
+  private final URI split;
   @Nullable
   private final String httpAuthenticationUsername;
   @Nullable
   private final PasswordProvider httpAuthenticationPasswordProvider;
 
   HttpSource(
-      InputSplit<URI> split,
+      URI split,
       @Nullable String httpAuthenticationUsername,
       @Nullable PasswordProvider httpAuthenticationPasswordProvider
   )
@@ -54,7 +53,7 @@ public class HttpSource implements SplitSource<URI>
   }
 
   @Override
-  public InputSplit<URI> getSplit()
+  public URI getObject()
   {
     return split;
   }
@@ -62,11 +61,10 @@ public class HttpSource implements SplitSource<URI>
   @Override
   public InputStream open() throws IOException
   {
-    return CompressionUtils.decompress(openURLConnection(
-        split.get(),
-        httpAuthenticationUsername,
-        httpAuthenticationPasswordProvider
-    ).getInputStream(), split.get().toString());
+    return CompressionUtils.decompress(
+        openURLConnection(split, httpAuthenticationUsername, httpAuthenticationPasswordProvider).getInputStream(),
+        split.toString()
+    );
   }
 
   @Override

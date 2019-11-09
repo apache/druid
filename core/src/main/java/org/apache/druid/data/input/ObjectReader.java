@@ -19,21 +19,22 @@
 
 package org.apache.druid.data.input;
 
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputFormat;
-import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
-import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 
-public interface Formattable
+/**
+ * ObjectReader knows how to parse data into {@link InputRow}.
+ * This class is <i>stateful</i> and a new ObjectReader should be created per {@link ObjectSource}.
+ *
+ * @see TextReader for text format readers
+ */
+@ExtensionPoint
+public interface ObjectReader
 {
-  boolean isFormattable();
+  CloseableIterator<InputRow> read(ObjectSource<?> source, File temporaryDirectory) throws IOException;
 
-  InputSourceReader reader(
-      TimestampSpec timestampSpec,
-      DimensionsSpec dimensionsSpec,
-      InputFormat inputFormat,
-      @Nullable File temporaryDirectory
-  );
+  CloseableIterator<InputRowPlusRaw> sample(ObjectSource<?> source, File temporaryDirectory) throws IOException;
 }

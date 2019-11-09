@@ -27,6 +27,7 @@ import com.google.common.base.Optional;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.indexer.TaskStatus;
@@ -54,6 +55,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
@@ -80,6 +82,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -423,10 +426,16 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
         tuningConfig,
         getContextValue(Tasks.STORE_COMPACTION_STATE_KEY, Tasks.DEFAULT_STORE_COMPACTION_STATE)
     );
+    final List<String> metricsNames = Arrays.stream(ingestionSchema.getDataSchema().getAggregators())
+                                            .map(AggregatorFactory::getName)
+                                            .collect(Collectors.toList());
     final InputSourceReader inputSourceReader = dataSchema.getTransformSpec().decorate(
         inputSource.reader(
-            ingestionSchema.getDataSchema().getNonNullTimestampSpec(),
-            ingestionSchema.getDataSchema().getNonNullDimensionsSpec(),
+            new InputRowSchema(
+                ingestionSchema.getDataSchema().getNonNullTimestampSpec(),
+                ingestionSchema.getDataSchema().getNonNullDimensionsSpec(),
+                metricsNames
+            ),
             ParallelIndexSupervisorTask.getInputFormat(ingestionSchema),
             tmpDir
         )

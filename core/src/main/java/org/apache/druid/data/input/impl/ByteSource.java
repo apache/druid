@@ -21,21 +21,19 @@ package org.apache.druid.data.input.impl;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.SplitSource;
+import org.apache.druid.data.input.ObjectSource;
 import org.apache.druid.io.ByteBufferInputStream;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
-public class ByteSource implements SplitSource<ByteBuffer>
+public class ByteSource implements ObjectSource<ByteBuffer>
 {
-  private final InputSplit<ByteBuffer> split;
+  private final ByteBuffer buffer;
 
   public ByteSource(ByteBuffer buffer)
   {
-    this.split = new InputSplit<>(buffer.duplicate());
+    this.buffer = buffer.duplicate();
   }
 
   public ByteSource(byte[] bytes)
@@ -44,15 +42,15 @@ public class ByteSource implements SplitSource<ByteBuffer>
   }
 
   @Override
-  public InputSplit<ByteBuffer> getSplit()
+  public ByteBuffer getObject()
   {
-    return split;
+    return buffer;
   }
 
   @Override
-  public InputStream open() throws IOException
+  public InputStream open()
   {
-    return new ByteBufferInputStream(split.get());
+    return new ByteBufferInputStream(buffer);
   }
 
   @Override

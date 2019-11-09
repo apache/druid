@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputFormat;
@@ -235,7 +236,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     }
   }
 
-  private static class TestInputSource implements SplittableInputSource<TestInput>
+  private static class TestInputSource extends AbstractInputSource implements SplittableInputSource<TestInput>
   {
     private final List<InputSplit<TestInput>> splits;
 
@@ -275,7 +276,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     }
 
     @Override
-    public boolean isFormattable()
+    public boolean needsFormat()
     {
       return false;
     }

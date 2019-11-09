@@ -22,7 +22,8 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.data.input.Formattable;
+import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
@@ -36,7 +37,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-public class HttpInputSource implements SplittableInputSource<URI>, Formattable
+public class HttpInputSource extends AbstractInputSource implements SplittableInputSource<URI>
 {
   private final List<URI> uris;
   @Nullable
@@ -100,19 +101,17 @@ public class HttpInputSource implements SplittableInputSource<URI>, Formattable
   }
 
   @Override
-  public InputSourceReader reader(
-      TimestampSpec timestampSpec,
-      DimensionsSpec dimensionsSpec,
-      InputFormat inputFormat,
+  protected InputSourceReader formattableReader(
+      InputRowSchema inputRowSchema,
+      @Nullable InputFormat inputFormat,
       @Nullable File temporaryDirectory
   )
   {
-    return new SplitIteratingReader<>(
-        timestampSpec,
-        dimensionsSpec,
+    return new ObjectIteratingReader<>(
+        inputRowSchema,
         inputFormat,
         createSplits(inputFormat, null).map(split -> new HttpSource(
-            split,
+            split.get(),
             httpAuthenticationUsername,
             httpAuthenticationPasswordProvider
         )),
@@ -142,7 +141,7 @@ public class HttpInputSource implements SplittableInputSource<URI>, Formattable
   }
 
   @Override
-  public boolean isFormattable()
+  public boolean needsFormat()
   {
     return true;
   }

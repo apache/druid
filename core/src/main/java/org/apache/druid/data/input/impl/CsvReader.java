@@ -26,6 +26,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.opencsv.CSVParser;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.TextReader;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.collect.Utils;
@@ -50,15 +51,14 @@ public class CsvReader extends TextReader
   private List<String> columns;
 
   CsvReader(
-      TimestampSpec timestampSpec,
-      DimensionsSpec dimensionsSpec,
+      InputRowSchema inputRowSchema,
       String listDelimiter,
       @Nullable List<String> columns,
       boolean hasHeaderRow,
       int skipHeaderRows
   )
   {
-    super(timestampSpec, dimensionsSpec);
+    super(inputRowSchema);
     this.hasHeaderRow = hasHeaderRow;
     this.skipHeaderRows = skipHeaderRows;
     final String finalListDelimeter = listDelimiter == null ? Parsers.DEFAULT_LIST_DELIMITER : listDelimiter;
@@ -69,7 +69,7 @@ public class CsvReader extends TextReader
       for (String column : this.columns) {
         Preconditions.checkArgument(!column.contains(","), "Column[%s] has a comma, it cannot", column);
       }
-      verify(this.columns, dimensionsSpec.getDimensionNames());
+      verify(this.columns, inputRowSchema.getDimensionsSpec().getDimensionNames());
     } else {
       Preconditions.checkArgument(
           hasHeaderRow,
@@ -87,7 +87,11 @@ public class CsvReader extends TextReader
         Preconditions.checkNotNull(columns, "columns"),
         Iterables.transform(Arrays.asList(parsed), multiValueFunction)
     );
-    return MapInputRowParser.parse(getTimestampSpec(), getDimensionsSpec(), zipped);
+    return MapInputRowParser.parse(
+        getInputRowSchema().getTimestampSpec(),
+        getInputRowSchema().getDimensionsSpec(),
+        zipped
+    );
   }
 
   @Override

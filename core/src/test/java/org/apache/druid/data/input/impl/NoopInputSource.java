@@ -19,7 +19,12 @@
 
 package org.apache.druid.data.input.impl;
 
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.InputSourceReader;
+
+import javax.annotation.Nullable;
+import java.io.File;
 
 public class NoopInputSource implements InputSource
 {
@@ -36,8 +41,18 @@ public class NoopInputSource implements InputSource
   }
 
   @Override
-  public boolean isFormattable()
+  public boolean needsFormat()
   {
     return false;
+  }
+
+  @Override
+  public InputSourceReader reader(
+      InputRowSchema inputRowSchema,
+      @Nullable InputFormat inputFormat,
+      @Nullable File temporaryDirectory
+  )
+  {
+    return null;
   }
 }

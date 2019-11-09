@@ -23,7 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.data.input.SplitReader;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.ObjectReader;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 
 import javax.annotation.Nullable;
@@ -65,9 +66,9 @@ public class JsonInputFormat extends NestedInputFormat
   }
 
   @Override
-  public SplitReader createReader(TimestampSpec timestampSpec, DimensionsSpec dimensionsSpec)
+  public ObjectReader createReader(InputRowSchema inputRowSchema)
   {
-    return new JsonReader(timestampSpec, dimensionsSpec, getFlattenSpec(), objectMapper);
+    return new JsonReader(inputRowSchema, getFlattenSpec(), objectMapper);
   }
 
   @Override

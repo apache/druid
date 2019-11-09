@@ -31,12 +31,12 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * SplitSource abstracts an {@link InputSplit} and knows how to read bytes from the given split.
+ * ObjectSource abstracts an object and knows how to read bytes from the given object.
  */
 @ExtensionPoint
-public interface SplitSource<T>
+  public interface ObjectSource<T>
 {
-  Logger LOG = new Logger(SplitSource.class);
+  Logger LOG = new Logger(ObjectSource.class);
 
   int DEFAULT_FETCH_BUFFER_SIZE = 4 * 1024; // 4 KB
   int DEFAULT_MAX_FETCH_RETRY = 2; // 3 tries including the initial try
@@ -50,18 +50,18 @@ public interface SplitSource<T>
     File file();
   }
 
-  InputSplit<T> getSplit();
+  T getObject();
 
   /**
-   * Opens an {@link InputStream} on the split directly.
-   * This is the basic way to read the given split.
+   * Opens an {@link InputStream} on the object directly.
+   * This is the basic way to read the given object.
    *
    * @see #fetch as an alternative way to read data.
    */
   InputStream open() throws IOException;
 
   /**
-   * Fetches the split into the local storage.
+   * Fetches the object into the local storage.
    * This method might be preferred instead of {@link #open()}, for example
    *
    * - {@link org.apache.druid.data.input.impl.InputFormat} requires expensive random access on remote storage.
@@ -69,22 +69,27 @@ public interface SplitSource<T>
    *
    * @param temporaryDirectory to store temp data. This directory will be removed automatically once
    *                           the task finishes.
-   * @param fetchBuffer        is used to fetch remote split into local storage.
+   * @param fetchBuffer        is used to fetch remote object into local storage.
    *
    * @see FileUtils#copyLarge
    */
   default CleanableFile fetch(File temporaryDirectory, byte[] fetchBuffer) throws IOException
   {
-    final File tempFile = File.createTempFile("druid-split", ".tmp", temporaryDirectory);
-    LOG.debug("Fetching split into file[%s]", tempFile.getAbsolutePath());
-    FileUtils.copyLarge(
-        open(),
-        tempFile,
-        fetchBuffer,
-        getRetryCondition(),
-        DEFAULT_MAX_FETCH_RETRY,
-        StringUtils.format("Failed to fetch into [%s]", tempFile.getAbsolutePath())
-    );
+    final File tempFile = File.createTempFile("druid-object-source", ".tmp", temporaryDirectory);
+    LOG.debug("Fetching object into file[%s]", tempFile.getAbsolutePath());
+    try (InputStream is = open()) {
+      FileUtils.copyLarge(
+          is,
+          tempFile,
+          fetchBuffer,
+          getRetryCondition(),
+          DEFAULT_MAX_FETCH_RETRY,
+          StringUtils.format("Failed to fetch into [%s]", tempFile.getAbsolutePath())
+      );
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
 
     return new CleanableFile()
     {

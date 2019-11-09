@@ -21,9 +21,10 @@ package org.apache.druid.data.input.impl;
 
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowPlusRaw;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
-import org.apache.druid.data.input.SplitReader;
-import org.apache.druid.data.input.SplitSource;
+import org.apache.druid.data.input.ObjectSource;
+import org.apache.druid.data.input.ObjectReader;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.File;
@@ -34,26 +35,23 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
- * InputSourceReader iterating multiple {@link SplitSource}s.
+ * InputSourceReader iterating multiple {@link ObjectSource}s.
  */
-public class SplitIteratingReader<T> implements InputSourceReader
+public class ObjectIteratingReader<T> implements InputSourceReader
 {
-  private final TimestampSpec timestampSpec;
-  private final DimensionsSpec dimensionsSpec;
+  private final InputRowSchema inputRowSchema;
   private final InputFormat inputFormat;
-  private final Iterator<SplitSource<T>> sourceIterator;
+  private final Iterator<ObjectSource<T>> sourceIterator;
   private final File temporaryDirectory;
 
-  public SplitIteratingReader(
-      TimestampSpec timestampSpec,
-      DimensionsSpec dimensionsSpec,
+  ObjectIteratingReader(
+      InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      Stream<SplitSource<T>> sourceStream,
+      Stream<ObjectSource<T>> sourceStream,
       File temporaryDirectory
   )
   {
-    this.timestampSpec = timestampSpec;
-    this.dimensionsSpec = dimensionsSpec;
+    this.inputRowSchema = inputRowSchema;
     this.inputFormat = inputFormat;
     this.sourceIterator = sourceStream.iterator();
     this.temporaryDirectory = temporaryDirectory;
@@ -85,7 +83,7 @@ public class SplitIteratingReader<T> implements InputSourceReader
     });
   }
 
-  private <R> CloseableIterator<R> createIterator(Function<SplitReader, CloseableIterator<R>> rowPopulator)
+  private <R> CloseableIterator<R> createIterator(Function<ObjectReader, CloseableIterator<R>> rowPopulator)
   {
     return new CloseableIterator<R>()
     {
@@ -120,8 +118,8 @@ public class SplitIteratingReader<T> implements InputSourceReader
           }
           if (sourceIterator.hasNext()) {
             // SplitSampler is stateful and so a new one should be created per split.
-            final SplitReader splitReader = inputFormat.createReader(timestampSpec, dimensionsSpec);
-            rowIterator = rowPopulator.apply(splitReader);
+            final ObjectReader objectReader = inputFormat.createReader(inputRowSchema);
+            rowIterator = rowPopulator.apply(objectReader);
           }
         }
       }

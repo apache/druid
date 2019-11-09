@@ -21,8 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.SplitSource;
+import org.apache.druid.data.input.ObjectSource;
 import org.apache.druid.utils.CompressionUtils;
 
 import java.io.File;
@@ -33,16 +32,16 @@ import java.io.RandomAccessFile;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 
-public class FileSource implements SplitSource<File>
+public class FileSource implements ObjectSource<File>
 {
-  private final InputSplit<File> split;
+  private final File file;
   private final FileChannel channel;
 
-  FileSource(InputSplit<File> split) throws FileNotFoundException
+  FileSource(File file) throws FileNotFoundException
   {
-    this.split = split;
-    final RandomAccessFile file = new RandomAccessFile(split.get(), "r");
-    this.channel = file.getChannel();
+    this.file = file;
+    final RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
+    this.channel = randomAccessFile.getChannel();
   }
 
   @Override
@@ -53,7 +52,7 @@ public class FileSource implements SplitSource<File>
       @Override
       public File file()
       {
-        return split.get();
+        return file;
       }
 
       @Override
@@ -65,15 +64,15 @@ public class FileSource implements SplitSource<File>
   }
 
   @Override
-  public InputSplit<File> getSplit()
+  public File getObject()
   {
-    return split;
+    return file;
   }
 
   @Override
   public InputStream open() throws IOException
   {
-    return CompressionUtils.decompress(Channels.newInputStream(channel), split.get().getName());
+    return CompressionUtils.decompress(Channels.newInputStream(channel), file.getName());
   }
 
   @Override

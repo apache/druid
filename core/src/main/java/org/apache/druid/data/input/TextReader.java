@@ -20,8 +20,6 @@
 package org.apache.druid.data.input;
 
 import org.apache.commons.io.LineIterator;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -31,31 +29,24 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 
 /**
- * Abstract {@link SplitReader} for text format readers such as CSV or JSON.
+ * Abstract {@link ObjectReader} for text format readers such as CSV or JSON.
  */
-public abstract class TextReader implements SplitReader
+public abstract class TextReader implements ObjectReader
 {
-  private final TimestampSpec timestampSpec;
-  private final DimensionsSpec dimensionsSpec;
+  private final InputRowSchema inputRowSchema;
 
-  public TextReader(TimestampSpec timestampSpec, DimensionsSpec dimensionsSpec)
+  public TextReader(InputRowSchema inputRowSchema)
   {
-    this.timestampSpec = timestampSpec;
-    this.dimensionsSpec = dimensionsSpec;
+    this.inputRowSchema = inputRowSchema;
   }
 
-  public TimestampSpec getTimestampSpec()
+  public InputRowSchema getInputRowSchema()
   {
-    return timestampSpec;
-  }
-
-  public DimensionsSpec getDimensionsSpec()
-  {
-    return dimensionsSpec;
+    return inputRowSchema;
   }
 
   @Override
-  public CloseableIterator<InputRow> read(SplitSource source, File temporaryDirectory) throws IOException
+  public CloseableIterator<InputRow> read(ObjectSource source, File temporaryDirectory) throws IOException
   {
     return lineIterator(source).map(line -> {
       try {
@@ -68,7 +59,7 @@ public abstract class TextReader implements SplitReader
   }
 
   @Override
-  public CloseableIterator<InputRowPlusRaw> sample(SplitSource source, File temporaryDirectory)
+  public CloseableIterator<InputRowPlusRaw> sample(ObjectSource<?> source, File temporaryDirectory)
       throws IOException
   {
     return lineIterator(source).map(line -> {
@@ -84,7 +75,7 @@ public abstract class TextReader implements SplitReader
     });
   }
 
-  private CloseableIterator<String> lineIterator(SplitSource source) throws IOException
+  private CloseableIterator<String> lineIterator(ObjectSource source) throws IOException
   {
     final LineIterator delegate = new LineIterator(
         new InputStreamReader(source.open(), StringUtils.UTF8_STRING)

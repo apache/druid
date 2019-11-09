@@ -23,12 +23,13 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.data.input.SplitReader;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.ObjectReader;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
 /**
  * InputFormat abstracts the file format of input data.
- * It creates a {@link SplitReader} to read data and parse it into {@link org.apache.druid.data.input.InputRow}.
+ * It creates a {@link ObjectReader} to read data and parse it into {@link org.apache.druid.data.input.InputRow}.
  * The created SplitReader is used by {@link org.apache.druid.data.input.InputSourceReader}.
  *
  * @see NestedInputFormat for nested input formats such as JSON.
@@ -50,5 +51,5 @@ public interface InputFormat
   @JsonIgnore
   boolean isSplittable();
 
-  SplitReader createReader(TimestampSpec timestampSpec, DimensionsSpec dimensionsSpec);
+  ObjectReader createReader(InputRowSchema inputRowSchema);
 }

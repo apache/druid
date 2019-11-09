@@ -24,7 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.SplitReader;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.ObjectReader;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
 
@@ -115,9 +116,9 @@ public class CsvInputFormat implements InputFormat
   }
 
   @Override
-  public SplitReader createReader(TimestampSpec timestampSpec, DimensionsSpec dimensionsSpec)
+  public ObjectReader createReader(InputRowSchema inputRowSchema)
   {
-    return new CsvReader(timestampSpec, dimensionsSpec, listDelimiter, columns, findColumnsFromHeader, skipHeaderRows);
+    return new CsvReader(inputRowSchema, listDelimiter, columns, findColumnsFromHeader, skipHeaderRows);
   }
 
   @Override

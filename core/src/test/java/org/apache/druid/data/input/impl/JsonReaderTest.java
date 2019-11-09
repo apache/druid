@@ -22,7 +22,8 @@ package org.apache.druid.data.input.impl;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.SplitReader;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.ObjectReader;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -59,9 +60,12 @@ public class JsonReaderTest
         StringUtils.toUtf8("{\"timestamp\":\"2019-01-01\",\"bar\":null,\"foo\":\"x\",\"baz\":4,\"o\":{\"mg\":1}}")
     );
 
-    final SplitReader reader = format.createReader(
-        new TimestampSpec("timestamp", "iso", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo")))
+    final ObjectReader reader = format.createReader(
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "iso", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
+            Collections.emptyList()
+        )
     );
     try (CloseableIterator<InputRow> iterator = reader.read(source, null)) {
       while (iterator.hasNext()) {
@@ -99,9 +103,12 @@ public class JsonReaderTest
         StringUtils.toUtf8("{\"timestamp\":\"2019-01-01\",\"something_else\": {\"foo\": \"test\"}}")
     );
 
-    final SplitReader reader = format.createReader(
-        new TimestampSpec("timestamp", "iso", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo")))
+    final ObjectReader reader = format.createReader(
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "iso", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))),
+            Collections.emptyList()
+        )
     );
 
     try (CloseableIterator<InputRow> iterator = reader.read(source, null)) {

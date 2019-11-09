@@ -33,15 +33,15 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowPlusRaw;
-import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputFormat;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.NoopInputFormat;
@@ -281,25 +281,20 @@ public class TaskLifecycleTest
     );
   }
 
-  private static class MockExceptionInputSource implements InputSource
+  private static class MockExceptionInputSource extends AbstractInputSource
   {
     @Override
-    public InputSourceReader reader(
-        TimestampSpec timestampSpec,
-        DimensionsSpec dimensionsSpec,
-        InputFormat inputFormat,
-        @Nullable File temporaryDirectory
-    )
+    protected InputSourceReader unformattableReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
     {
       return new InputSourceReader()
       {
         @Override
-        public CloseableIterator<InputRow> read() throws IOException
+        public CloseableIterator<InputRow> read()
         {
           return new CloseableIterator<InputRow>()
           {
             @Override
-            public void close() throws IOException
+            public void close()
             {
             }
 
@@ -318,23 +313,30 @@ public class TaskLifecycleTest
         }
 
         @Override
-        public CloseableIterator<InputRowPlusRaw> sample() throws IOException
+        public CloseableIterator<InputRowPlusRaw> sample()
         {
           throw new UnsupportedOperationException();
         }
       };
     }
+
+    @Override
+    public boolean isSplittable()
+    {
+      return false;
+    }
+
+    @Override
+    public boolean needsFormat()
+    {
+      return false;
+    }
   }
 
-  private static class MockInputSource implements InputSource
+  private static class MockInputSource extends AbstractInputSource
   {
     @Override
-    public InputSourceReader reader(
-        TimestampSpec timestampSpec,
-        DimensionsSpec dimensionsSpec,
-        InputFormat inputFormat,
-        @Nullable File temporaryDirectory
-    )
+    protected InputSourceReader unformattableReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
     {
       return new InputSourceReader()
       {
@@ -351,6 +353,18 @@ public class TaskLifecycleTest
           throw new UnsupportedOperationException();
         }
       };
+    }
+
+    @Override
+    public boolean isSplittable()
+    {
+      return false;
+    }
+
+    @Override
+    public boolean needsFormat()
+    {
+      return false;
     }
   }
 

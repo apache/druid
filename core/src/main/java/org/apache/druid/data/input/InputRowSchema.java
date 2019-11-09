@@ -22,19 +22,33 @@ package org.apache.druid.data.input;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 
-import javax.annotation.Nullable;
-import java.io.File;
+import java.util.List;
 
-public interface Unformattable
+public class InputRowSchema
 {
-  default boolean isFormattable()
+  private final TimestampSpec timestampSpec;
+  private final DimensionsSpec dimensionsSpec;
+  private final List<String> metricsNames;
+
+  public InputRowSchema(TimestampSpec timestampSpec, DimensionsSpec dimensionsSpec, List<String> metricsNames)
   {
-    return false;
+    this.timestampSpec = timestampSpec;
+    this.dimensionsSpec = dimensionsSpec;
+    this.metricsNames = metricsNames;
   }
 
-  InputSourceReader reader(
-      TimestampSpec timestampSpec,
-      DimensionsSpec dimensionsSpec,
-      @Nullable File temporaryDirectory
-  );
+  public TimestampSpec getTimestampSpec()
+  {
+    return timestampSpec;
+  }
+
+  public DimensionsSpec getDimensionsSpec()
+  {
+    return dimensionsSpec;
+  }
+
+  public List<String> getMetricsNames()
+  {
+    return metricsNames;
+  }
 }

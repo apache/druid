@@ -22,7 +22,7 @@ package org.apache.druid.data.input.impl;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -37,9 +37,10 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-public class SplitIteratingReaderTest
+public class ObjectIteratingReaderTest
 {
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -56,10 +57,13 @@ public class SplitIteratingReaderTest
         writer.write(StringUtils.format("%d,%s,%d", 20190102 + i, "name_" + (i + 1), i + 1));
       }
     }
-    final SplitIteratingReader<File> firehose = new SplitIteratingReader<>(
-        new TimestampSpec("time", "yyyyMMdd", null),
-        new DimensionsSpec(
-            DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "name", "score"))
+    final ObjectIteratingReader<File> firehose = new ObjectIteratingReader<>(
+        new InputRowSchema(
+            new TimestampSpec("time", "yyyyMMdd", null),
+            new DimensionsSpec(
+                DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "name", "score"))
+            ),
+            Collections.emptyList()
         ),
         new CsvInputFormat(
             ImmutableList.of("time", "name", "score"),
@@ -69,7 +73,7 @@ public class SplitIteratingReaderTest
         ),
         files.stream().flatMap(file -> {
           try {
-            return ImmutableList.of(new FileSource(new InputSplit<>(file))).stream();
+            return ImmutableList.of(new FileSource(file)).stream();
           }
           catch (IOException e) {
             throw new RuntimeException(e);

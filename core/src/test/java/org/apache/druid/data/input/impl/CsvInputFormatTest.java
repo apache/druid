@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.InputRowSchema;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -51,8 +52,11 @@ public class CsvInputFormatTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("column[b] not in columns");
     format.createReader(
-        new TimestampSpec("timestamp", "auto", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "b")))
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "auto", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "b"))),
+            Collections.emptyList()
+        )
     );
   }
 
@@ -63,8 +67,11 @@ public class CsvInputFormatTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("column[a,] not in columns");
     format.createReader(
-        new TimestampSpec("timestamp", "auto", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("a,", "b")))
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "auto", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("a,", "b"))),
+            Collections.emptyList()
+        )
     );
   }
 }

@@ -37,6 +37,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -67,8 +68,11 @@ public class FirehoseFactoryToInputSourceAdaptorTest
         inputRowParser
     );
     final InputSourceReader reader = inputSourceAdaptor.reader(
-        inputRowParser.getParseSpec().getTimestampSpec(),
-        inputRowParser.getParseSpec().getDimensionsSpec(),
+        new InputRowSchema(
+            inputRowParser.getParseSpec().getTimestampSpec(),
+            inputRowParser.getParseSpec().getDimensionsSpec(),
+            Collections.emptyList()
+        ),
         null,
         null
     );
@@ -157,13 +161,13 @@ public class FirehoseFactoryToInputSourceAdaptorTest
     }
 
     @Override
-    public Stream<InputSplit<Object>> getSplits(@Nullable SplitHintSpec splitHintSpec) throws IOException
+    public Stream<InputSplit<Object>> getSplits(@Nullable SplitHintSpec splitHintSpec)
     {
       return null;
     }
 
     @Override
-    public int getNumSplits(@Nullable SplitHintSpec splitHintSpec) throws IOException
+    public int getNumSplits(@Nullable SplitHintSpec splitHintSpec)
     {
       return 0;
     }

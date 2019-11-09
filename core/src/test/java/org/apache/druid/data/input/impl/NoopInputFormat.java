@@ -19,7 +19,8 @@
 
 package org.apache.druid.data.input.impl;
 
-import org.apache.druid.data.input.SplitReader;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.ObjectReader;
 
 public class NoopInputFormat implements InputFormat
 {
@@ -30,7 +31,7 @@ public class NoopInputFormat implements InputFormat
   }
 
   @Override
-  public SplitReader createReader(TimestampSpec timestampSpec, DimensionsSpec dimensionsSpec)
+  public ObjectReader createReader(InputRowSchema inputRowSchema)
   {
     throw new UnsupportedOperationException();
   }
