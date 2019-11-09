@@ -72,14 +72,7 @@ public class ObjectIteratingReaderTest
             false,
             0
         ),
-        files.stream().flatMap(file -> {
-          try {
-            return ImmutableList.of(new FileSource(file)).stream();
-          }
-          catch (IOException e) {
-            throw new RuntimeException(e);
-          }
-        }),
+        files.stream().flatMap(file -> ImmutableList.of(new FileSource(file)).stream()),
         temporaryFolder.newFolder()
     );
 

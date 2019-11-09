@@ -198,7 +198,7 @@ public class DataSchema
   }
 
   @Nullable
-  @JsonProperty
+  @JsonProperty("timestampSpec")
   private TimestampSpec getGivenTimestampSpec()
   {
     return timestampSpec;
@@ -213,7 +213,7 @@ public class DataSchema
   }
 
   @Nullable
-  @JsonProperty
+  @JsonProperty("dimensionsSpec")
   private DimensionsSpec getGivenDimensionsSpec()
   {
     return dimensionsSpec;

@@ -34,7 +34,6 @@ import org.apache.druid.data.input.SplitHintSpec;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.Spliterator;
@@ -117,14 +116,7 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
         // reader() is supposed to be called in each task that creates segments.
         // The task should already have only one split in parallel indexing,
         // while there's no need to make splits using splitHintSpec in sequential indexing.
-        createSplits(inputFormat, null).map(split -> {
-          try {
-            return new FileSource(split.get());
-          }
-          catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-          }
-        }),
+        createSplits(inputFormat, null).map(split -> new FileSource(split.get())),
         temporaryDirectory
     );
   }
