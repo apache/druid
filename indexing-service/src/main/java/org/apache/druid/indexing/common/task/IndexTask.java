@@ -729,8 +729,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     final InputSourceReader inputSourceReader = ingestionSchema.getDataSchema().getTransformSpec().decorate(
         inputSource.reader(
             new InputRowSchema(
-                ingestionSchema.getDataSchema().getNonNullTimestampSpec(),
-                ingestionSchema.getDataSchema().getNonNullDimensionsSpec(),
+                ingestionSchema.getDataSchema().getTimestampSpec(),
+                ingestionSchema.getDataSchema().getDimensionsSpec(),
                 metricsNames
             ),
             getInputFormat(ingestionSchema),
@@ -1061,7 +1061,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           )
       );
       if (dataSchema.getParserMap() != null && ioConfig.getInputSource() != null) {
-        throw new IAE("Cannot use parser and inputSource together. Try use inputFormat instead of parser.");
+        throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
       }
 
       this.dataSchema = dataSchema;
@@ -1113,7 +1113,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           ImmutableList.of(new Property<>("firehose", firehoseFactory), new Property<>("inputSource", inputSource))
       );
       if (firehoseFactory != null && inputFormat != null) {
-        throw new IAE("Cannot use firehose and inputFormat together. Try use inputSource instead of firehose.");
+        throw new IAE("Cannot use firehose and inputFormat together. Try using inputSource instead of firehose.");
       }
       this.firehoseFactory = firehoseFactory;
       this.inputSource = inputSource;

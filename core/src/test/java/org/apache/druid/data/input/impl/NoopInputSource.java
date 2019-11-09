@@ -53,6 +53,6 @@ public class NoopInputSource implements InputSource
       @Nullable File temporaryDirectory
   )
   {
-    return null;
+    throw new UnsupportedOperationException();
   }
 }

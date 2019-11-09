@@ -53,7 +53,7 @@ public class FirehoseFactoryToInputSourceAdaptorTest
     }
     final TestFirehoseFactory firehoseFactory = new TestFirehoseFactory(lines);
     final StringInputRowParser inputRowParser = new StringInputRowParser(
-        new TestCsvParseSpec(
+        new UnimplementedInputFormatCsvParseSpec(
             new TimestampSpec(null, "yyyyMMdd", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "name", "score"))),
             ",",
@@ -96,9 +96,9 @@ public class FirehoseFactoryToInputSourceAdaptorTest
     }
   }
 
-  private static class TestCsvParseSpec extends CSVParseSpec
+  private static class UnimplementedInputFormatCsvParseSpec extends CSVParseSpec
   {
-    private TestCsvParseSpec(
+    private UnimplementedInputFormatCsvParseSpec(
         TimestampSpec timestampSpec,
         DimensionsSpec dimensionsSpec,
         String listDelimiter,

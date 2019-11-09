@@ -94,8 +94,8 @@ public class CsvReaderTest
   {
     final ByteSource source = writeData(
         ImmutableList.of(
-            "ts,name,score",
             "this,is,a,row,to,skip",
+            "ts,name,score",
             "2019-01-01T00:00:10Z,name_1,5",
             "2019-01-01T00:00:20Z,name_2,10",
             "2019-01-01T00:00:30Z,name_3,15"

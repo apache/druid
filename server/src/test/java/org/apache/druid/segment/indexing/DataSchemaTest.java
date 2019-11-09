@@ -92,7 +92,7 @@ public class DataSchemaTest
 
     Assert.assertEquals(
         ImmutableSet.of("time", "col1", "col2", "metric1", "metric2"),
-        schema.getNonNullDimensionsSpec().getDimensionExclusions()
+        schema.getDimensionsSpec().getDimensionExclusions()
     );
   }
 
@@ -360,7 +360,6 @@ public class DataSchemaTest
       Assert.assertEquals(testFailMsg, expectedMsg, errorMsg.getMessage());
     }
   }
-
 
   @Test
   public void testSerde() throws Exception

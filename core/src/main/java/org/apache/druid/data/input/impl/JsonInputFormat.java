@@ -40,7 +40,7 @@ public class JsonInputFormat extends NestedInputFormat
 
   @JsonCreator
   public JsonInputFormat(
-      @JsonProperty("flattenSpec") JSONPathSpec flattenSpec,
+      @JsonProperty("flattenSpec") @Nullable JSONPathSpec flattenSpec,
       @JsonProperty("featureSpec") @Nullable Map<String, Boolean> featureSpec
   )
   {

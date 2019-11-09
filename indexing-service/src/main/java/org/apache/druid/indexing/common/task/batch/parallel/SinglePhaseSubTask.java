@@ -432,8 +432,8 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
     final InputSourceReader inputSourceReader = dataSchema.getTransformSpec().decorate(
         inputSource.reader(
             new InputRowSchema(
-                ingestionSchema.getDataSchema().getNonNullTimestampSpec(),
-                ingestionSchema.getDataSchema().getNonNullDimensionsSpec(),
+                ingestionSchema.getDataSchema().getTimestampSpec(),
+                ingestionSchema.getDataSchema().getDimensionsSpec(),
                 metricsNames
             ),
             ParallelIndexSupervisorTask.getInputFormat(ingestionSchema),

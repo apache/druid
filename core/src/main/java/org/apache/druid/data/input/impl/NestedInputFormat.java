@@ -31,6 +31,7 @@ import java.util.Objects;
  */
 public abstract class NestedInputFormat implements InputFormat
 {
+  @Nullable
   private final JSONPathSpec flattenSpec;
 
   protected NestedInputFormat(@Nullable JSONPathSpec flattenSpec)
@@ -38,6 +39,7 @@ public abstract class NestedInputFormat implements InputFormat
     this.flattenSpec = flattenSpec == null ? JSONPathSpec.DEFAULT : flattenSpec;
   }
 
+  @Nullable
   @JsonProperty("flattenSpec")
   public JSONPathSpec getFlattenSpec()
   {

@@ -138,7 +138,6 @@ public class IndexTaskTest extends IngestionTestBase
     return ImmutableList.of(
         new Object[]{LockGranularity.TIME_CHUNK, false},
         new Object[]{LockGranularity.TIME_CHUNK, true},
-        new Object[]{LockGranularity.SEGMENT, false},
         new Object[]{LockGranularity.SEGMENT, true}
     );
   }

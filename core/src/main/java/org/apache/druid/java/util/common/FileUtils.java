@@ -287,22 +287,15 @@ public class FileUtils
       String messageOnRetry
   ) throws IOException
   {
-    try {
-      return RetryUtils.retry(
-          () -> {
-            try (InputStream inputStream = objectOpenFunction.open(object);
-                 OutputStream out = new FileOutputStream(outFile)) {
-              return IOUtils.copyLarge(inputStream, out, fetchBuffer);
-            }
-          },
+    try (InputStream inputStream = objectOpenFunction.open(object)) {
+      return copyLarge(
+          inputStream,
+          outFile,
+          fetchBuffer,
           retryCondition,
-          outFile::delete,
           numRetries,
           messageOnRetry
       );
-    }
-    catch (Exception e) {
-      throw new IOException(e);
     }
   }
 

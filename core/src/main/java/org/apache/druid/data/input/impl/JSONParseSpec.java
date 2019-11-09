@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.parsers.JSONPathParser;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.common.parsers.Parser;
 
-import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,7 +73,6 @@ public class JSONParseSpec extends NestedDataParseSpec<JSONPathSpec>
     return new JSONPathParser(getFlattenSpec(), objectMapper);
   }
 
-  @Nullable
   @Override
   public InputFormat toInputFormat()
   {

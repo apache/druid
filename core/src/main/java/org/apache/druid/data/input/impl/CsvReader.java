@@ -44,7 +44,7 @@ import java.util.Map;
 public class CsvReader extends TextReader
 {
   private final CSVParser parser = new CSVParser();
-  private final boolean hasHeaderRow;
+  private final boolean findColumnsFromHeader;
   private final int skipHeaderRows;
   private final Function<String, Object> multiValueFunction;
   @Nullable
@@ -54,16 +54,16 @@ public class CsvReader extends TextReader
       InputRowSchema inputRowSchema,
       String listDelimiter,
       @Nullable List<String> columns,
-      boolean hasHeaderRow,
+      boolean findColumnsFromHeader,
       int skipHeaderRows
   )
   {
     super(inputRowSchema);
-    this.hasHeaderRow = hasHeaderRow;
+    this.findColumnsFromHeader = findColumnsFromHeader;
     this.skipHeaderRows = skipHeaderRows;
     final String finalListDelimeter = listDelimiter == null ? Parsers.DEFAULT_LIST_DELIMITER : listDelimiter;
     this.multiValueFunction = ParserUtils.getMultiValueFunction(finalListDelimeter, Splitter.on(finalListDelimeter));
-    this.columns = hasHeaderRow ? null : columns; // columns will be overriden by header row
+    this.columns = findColumnsFromHeader ? null : columns; // columns will be overriden by header row
 
     if (this.columns != null) {
       for (String column : this.columns) {
@@ -72,7 +72,7 @@ public class CsvReader extends TextReader
       verify(this.columns, inputRowSchema.getDimensionsSpec().getDimensionNames());
     } else {
       Preconditions.checkArgument(
-          hasHeaderRow,
+          findColumnsFromHeader,
           "If columns field is not set, the first row of your data must have your header"
           + " and hasHeaderRow must be set to true."
       );
@@ -95,18 +95,25 @@ public class CsvReader extends TextReader
   }
 
   @Override
-  public int getNumHeaderLines()
+  public int getNumHeaderLinesToSkip()
   {
-    return (hasHeaderRow ? 1 : 0) + skipHeaderRows;
+    return skipHeaderRows;
+  }
+
+  @Override
+  public boolean needsToProcessHeaderLine()
+  {
+    return findColumnsFromHeader;
   }
 
   @Override
   public void processHeaderLine(String line) throws IOException
   {
-    if (hasHeaderRow && (columns == null || columns.isEmpty())) {
-      columns = findOrCreateColumnNames(Arrays.asList(parser.parseLine(line)));
+    if (!findColumnsFromHeader) {
+      throw new ISE("Don't call this if findColumnsFromHeader = false");
     }
-    if (columns == null || columns.isEmpty()) {
+    columns = findOrCreateColumnNames(Arrays.asList(parser.parseLine(line)));
+    if (columns.isEmpty()) {
       throw new ISE("Empty columns");
     }
   }

@@ -46,22 +46,15 @@ public class CsvInputFormatTest
   }
 
   @Test
-  public void testColumnMissing()
+  public void testComma()
   {
-    final CsvInputFormat format = new CsvInputFormat(Collections.singletonList("a"), ",", false, 0);
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("column[b] not in columns");
-    format.createReader(
-        new InputRowSchema(
-            new TimestampSpec("timestamp", "auto", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "b"))),
-            Collections.emptyList()
-        )
-    );
+    expectedException.expectMessage("Column[a,] has a comma, it cannot");
+    new CsvInputFormat(Collections.singletonList("a,"), ",", false, 0);
   }
 
   @Test
-  public void testComma()
+  public void testComma2()
   {
     final CsvInputFormat format = new CsvInputFormat(Collections.singletonList("a"), ",", false, 0);
     expectedException.expect(IllegalArgumentException.class);

@@ -62,9 +62,15 @@ public class JsonReader extends TextReader
   }
 
   @Override
-  public int getNumHeaderLines()
+  public int getNumHeaderLinesToSkip()
   {
     return 0;
+  }
+
+  @Override
+  public boolean needsToProcessHeaderLine()
+  {
+    return false;
   }
 
   @Override

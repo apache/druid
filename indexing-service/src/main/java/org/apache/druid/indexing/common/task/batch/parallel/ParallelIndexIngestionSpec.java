@@ -52,7 +52,7 @@ public class ParallelIndexIngestionSpec extends IngestionSpec<ParallelIndexIOCon
     );
     if (dataSchema.getParserMap() != null && ioConfig.getInputSource() != null) {
       if (!(ioConfig.getInputSource() instanceof FirehoseFactoryToInputSourceAdaptor)) {
-        throw new IAE("Cannot use parser and inputSource together. Try use inputFormat instead of parser.");
+        throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
       }
     }
 

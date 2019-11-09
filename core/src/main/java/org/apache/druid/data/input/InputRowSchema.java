@@ -28,13 +28,13 @@ public class InputRowSchema
 {
   private final TimestampSpec timestampSpec;
   private final DimensionsSpec dimensionsSpec;
-  private final List<String> metricsNames;
+  private final List<String> metricNames;
 
-  public InputRowSchema(TimestampSpec timestampSpec, DimensionsSpec dimensionsSpec, List<String> metricsNames)
+  public InputRowSchema(TimestampSpec timestampSpec, DimensionsSpec dimensionsSpec, List<String> metricNames)
   {
     this.timestampSpec = timestampSpec;
     this.dimensionsSpec = dimensionsSpec;
-    this.metricsNames = metricsNames;
+    this.metricNames = metricNames;
   }
 
   public TimestampSpec getTimestampSpec()
@@ -47,8 +47,8 @@ public class InputRowSchema
     return dimensionsSpec;
   }
 
-  public List<String> getMetricsNames()
+  public List<String> getMetricNames()
   {
-    return metricsNames;
+    return metricNames;
   }
 }

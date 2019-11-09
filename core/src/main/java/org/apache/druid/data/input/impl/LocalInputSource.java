@@ -22,6 +22,7 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterators;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
@@ -78,13 +79,7 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   @Override
   public int getNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
-    final Iterator<File> fileIterator = getFileIterator();
-    int num = 0;
-    while (fileIterator.hasNext()) {
-      fileIterator.next();
-      num++;
-    }
-    return num;
+    return Iterators.size(getFileIterator());
   }
 
   private Iterator<File> getFileIterator()

@@ -354,9 +354,9 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   {
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(minTimestamp)
-        .withTimestampSpec(schema.getNonNullTimestampSpec())
+        .withTimestampSpec(schema.getTimestampSpec())
         .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
-        .withDimensionsSpec(schema.getNonNullDimensionsSpec())
+        .withDimensionsSpec(schema.getDimensionsSpec())
         .withMetrics(schema.getAggregators())
         .withRollup(schema.getGranularitySpec().isRollup())
         .build();

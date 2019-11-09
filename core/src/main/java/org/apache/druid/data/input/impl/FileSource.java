@@ -30,18 +30,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
 
 public class FileSource implements ObjectSource<File>
 {
   private final File file;
-  private final FileChannel channel;
+  private final RandomAccessFile randomAccessFile;
 
   FileSource(File file) throws FileNotFoundException
   {
     this.file = file;
-    final RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
-    this.channel = randomAccessFile.getChannel();
+    this.randomAccessFile = new RandomAccessFile(file, "r");
   }
 
   @Override
@@ -56,9 +54,10 @@ public class FileSource implements ObjectSource<File>
       }
 
       @Override
-      public void close()
+      public void close() throws IOException
       {
         // do nothing
+        randomAccessFile.close();
       }
     };
   }
@@ -72,7 +71,7 @@ public class FileSource implements ObjectSource<File>
   @Override
   public InputStream open() throws IOException
   {
-    return CompressionUtils.decompress(Channels.newInputStream(channel), file.getName());
+    return CompressionUtils.decompress(Channels.newInputStream(randomAccessFile.getChannel()), file.getName());
   }
 
   @Override

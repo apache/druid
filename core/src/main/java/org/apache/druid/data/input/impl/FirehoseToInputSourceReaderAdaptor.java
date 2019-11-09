@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 public class FirehoseToInputSourceReaderAdaptor implements InputSourceReader
 {
@@ -60,7 +61,7 @@ public class FirehoseToInputSourceReaderAdaptor implements InputSourceReader
           return firehose.hasMore();
         }
         catch (IOException e) {
-          throw new RuntimeException(e);
+          throw new UncheckedIOException(e);
         }
       }
 
@@ -71,7 +72,7 @@ public class FirehoseToInputSourceReaderAdaptor implements InputSourceReader
           return firehose.nextRow();
         }
         catch (IOException e) {
-          throw new RuntimeException(e);
+          throw new UncheckedIOException(e);
         }
       }
 
@@ -97,7 +98,7 @@ public class FirehoseToInputSourceReaderAdaptor implements InputSourceReader
           return firehose.hasMore();
         }
         catch (IOException e) {
-          throw new RuntimeException(e);
+          throw new UncheckedIOException(e);
         }
       }
 
@@ -108,7 +109,7 @@ public class FirehoseToInputSourceReaderAdaptor implements InputSourceReader
           return firehose.nextRowWithRaw();
         }
         catch (IOException e) {
-          throw new RuntimeException(e);
+          throw new UncheckedIOException(e);
         }
       }
 

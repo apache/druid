@@ -106,8 +106,8 @@ public class InputSourceProcessor
     final InputSourceReader inputSourceReader = dataSchema.getTransformSpec().decorate(
         inputSource.reader(
             new InputRowSchema(
-                dataSchema.getNonNullTimestampSpec(),
-                dataSchema.getNonNullDimensionsSpec(),
+                dataSchema.getTimestampSpec(),
+                dataSchema.getDimensionsSpec(),
                 metricsNames
             ),
             inputFormat,

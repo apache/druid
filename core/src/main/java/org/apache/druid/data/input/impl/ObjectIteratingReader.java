@@ -92,7 +92,7 @@ public class ObjectIteratingReader<T> implements InputSourceReader
       @Override
       public boolean hasNext()
       {
-        checkRowIterator();
+        updateRowIteratorIfNeeded();
         return rowIterator != null && rowIterator.hasNext();
       }
 
@@ -105,7 +105,7 @@ public class ObjectIteratingReader<T> implements InputSourceReader
         return rowIterator.next();
       }
 
-      private void checkRowIterator()
+      private void updateRowIteratorIfNeeded()
       {
         if (rowIterator == null || !rowIterator.hasNext()) {
           try {

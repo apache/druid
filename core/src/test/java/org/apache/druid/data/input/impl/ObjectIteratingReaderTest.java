@@ -48,8 +48,9 @@ public class ObjectIteratingReaderTest
   @Test
   public void test() throws IOException
   {
+    final int numFiles = 5;
     final List<File> files = new ArrayList<>();
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < numFiles; i++) {
       final File file = temporaryFolder.newFile("test_" + i);
       files.add(file);
       try (Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
@@ -97,6 +98,7 @@ public class ObjectIteratingReaderTest
         Assert.assertEquals(Integer.toString(i + 1), Iterables.getOnlyElement(row.getDimension("score")));
         i++;
       }
+      Assert.assertEquals(numFiles, i);
     }
   }
 }

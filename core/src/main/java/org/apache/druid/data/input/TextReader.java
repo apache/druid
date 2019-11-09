@@ -80,8 +80,11 @@ public abstract class TextReader implements ObjectReader
     final LineIterator delegate = new LineIterator(
         new InputStreamReader(source.open(), StringUtils.UTF8_STRING)
     );
-    final int numHeaderLines = getNumHeaderLines();
+    final int numHeaderLines = getNumHeaderLinesToSkip();
     for (int i = 0; i < numHeaderLines && delegate.hasNext(); i++) {
+      delegate.nextLine(); // skip lines
+    }
+    if (needsToProcessHeaderLine() && delegate.hasNext()) {
       processHeaderLine(delegate.nextLine());
     }
 
@@ -116,10 +119,16 @@ public abstract class TextReader implements ObjectReader
    * Returns the number of header lines to skip.
    * {@link #processHeaderLine} will be called as many times as the returned number.
    */
-  public abstract int getNumHeaderLines();
+  public abstract int getNumHeaderLinesToSkip();
 
   /**
-   * Processes a header line. This will be called as many times as {@link #getNumHeaderLines()}.
+   * Returns true if the file format needs to process a header line.
+   * This method will be called after skipping lines as many as {@link #getNumHeaderLinesToSkip()}.
+   */
+  public abstract boolean needsToProcessHeaderLine();
+
+  /**
+   * Processes a header line. This will be called as many times as {@link #getNumHeaderLinesToSkip()}.
    */
   public abstract void processHeaderLine(String line) throws IOException;
 }

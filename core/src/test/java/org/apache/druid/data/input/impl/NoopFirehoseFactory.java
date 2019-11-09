@@ -24,7 +24,6 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.stream.Stream;
 
 public class NoopFirehoseFactory implements FiniteFirehoseFactory
@@ -36,22 +35,20 @@ public class NoopFirehoseFactory implements FiniteFirehoseFactory
   }
 
   @Override
-  public Stream<InputSplit> getSplits(
-      @Nullable SplitHintSpec splitHintSpec
-  ) throws IOException
+  public Stream<InputSplit> getSplits(@Nullable SplitHintSpec splitHintSpec)
   {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   @Override
-  public int getNumSplits(@Nullable SplitHintSpec splitHintSpec) throws IOException
+  public int getNumSplits(@Nullable SplitHintSpec splitHintSpec)
   {
-    return 0;
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public FiniteFirehoseFactory withSplit(InputSplit split)
   {
-    return null;
+    throw new UnsupportedOperationException();
   }
 }
