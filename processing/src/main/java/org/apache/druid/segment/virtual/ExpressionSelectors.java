@@ -509,12 +509,16 @@ public class ExpressionSelectors
   /**
    * Selectors are not consistent in treatment of null, [], and [null], so coerce [] to [null]
    */
+  // suppressed because calling toArray creates Object[] instead of Long[] which makes ExprEval.bestEffortOf sad
+  @SuppressWarnings("SimplifyStreamApiCallChains")
   public static Object coerceListToArray(List val)
   {
     if (val != null && val.size() > 0) {
       Object firstElement = val.get(0);
-      if (firstElement instanceof Long || firstElement instanceof Integer) {
+      if (firstElement instanceof Long) {
         return val.stream().toArray(Long[]::new);
+      } else if(firstElement instanceof Integer) {
+        return val.stream().map(x -> ((Integer) x).longValue()).toArray(Long[]::new);
       } else if (firstElement instanceof Float) {
         return val.stream().map(x -> ((Float) x).doubleValue()).toArray(Double[]::new);
       } else if (firstElement instanceof Double) {
