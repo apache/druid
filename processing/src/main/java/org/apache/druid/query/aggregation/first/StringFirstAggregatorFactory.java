@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -102,6 +103,11 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
+
+    if (maxStringBytes != null && maxStringBytes < 0) {
+      throw new IAE("maxStringBytes must be greater than 0");
+    }
+
     this.name = name;
     this.fieldName = fieldName;
     this.maxStringBytes = maxStringBytes == null
