@@ -39,6 +39,11 @@ public class QueryContexts
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
   public static final String MAX_QUEUED_BYTES_KEY = "maxQueuedBytes";
   public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
+  public static final String BROKER_PARALLEL_MERGE_KEY = "enableParallelMerge";
+  public static final String BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY = "parallelMergeInitialYieldRows";
+  public static final String BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY = "parallelMergeSmallBatchRows";
+  public static final String BROKER_PARALLELISM = "parallelMergeParallelism";
+
   @Deprecated
   public static final String CHUNK_PERIOD_KEY = "chunkPeriod";
   public static final String VECTORIZE_KEY = "vectorize";
@@ -54,6 +59,7 @@ public class QueryContexts
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
   public static final long NO_TIMEOUT = 0;
+  public static final boolean DEFAULT_ENABLE_PARALLEL_MERGE = true;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
@@ -193,6 +199,26 @@ public class QueryContexts
   public static <T> int getPriority(Query<T> query, int defaultValue)
   {
     return parseInt(query, PRIORITY_KEY, defaultValue);
+  }
+
+  public static <T> boolean getEnableParallelMerges(Query<T> query)
+  {
+    return parseBoolean(query, BROKER_PARALLEL_MERGE_KEY, DEFAULT_ENABLE_PARALLEL_MERGE);
+  }
+
+  public static <T> int getParallelMergeInitialYieldRows(Query<T> query, int defaultValue)
+  {
+    return parseInt(query, BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY, defaultValue);
+  }
+
+  public static <T> int getParallelMergeSmallBatchRows(Query<T> query, int defaultValue)
+  {
+    return parseInt(query, BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY, defaultValue);
+  }
+
+  public static <T> int getParallelMergeParallelism(Query<T> query, int defaultValue)
+  {
+    return parseInt(query, BROKER_PARALLELISM, defaultValue);
   }
 
   @Deprecated

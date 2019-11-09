@@ -48,7 +48,7 @@ import org.apache.druid.query.groupby.epinephelinae.column.FloatGroupByColumnSel
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorPlus;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.LongGroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.NullableValueGroupByColumnSelectorStrategy;
+import org.apache.druid.query.groupby.epinephelinae.column.NullableNumericGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -350,20 +350,20 @@ public class GroupByQueryEngineV2
             return new DictionaryBuildingStringGroupByColumnSelectorStrategy();
           }
         case LONG:
-          return makeNullableStrategy(new LongGroupByColumnSelectorStrategy());
+          return makeNullableNumericStrategy(new LongGroupByColumnSelectorStrategy());
         case FLOAT:
-          return makeNullableStrategy(new FloatGroupByColumnSelectorStrategy());
+          return makeNullableNumericStrategy(new FloatGroupByColumnSelectorStrategy());
         case DOUBLE:
-          return makeNullableStrategy(new DoubleGroupByColumnSelectorStrategy());
+          return makeNullableNumericStrategy(new DoubleGroupByColumnSelectorStrategy());
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
       }
     }
 
-    private GroupByColumnSelectorStrategy makeNullableStrategy(GroupByColumnSelectorStrategy delegate)
+    private GroupByColumnSelectorStrategy makeNullableNumericStrategy(GroupByColumnSelectorStrategy delegate)
     {
       if (NullHandling.sqlCompatible()) {
-        return new NullableValueGroupByColumnSelectorStrategy(delegate);
+        return new NullableNumericGroupByColumnSelectorStrategy(delegate);
       } else {
         return delegate;
       }

@@ -290,19 +290,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             query: TasksView.TASK_SQL,
           });
         } else if (capabilities.hasOverlordAccess()) {
-          const taskEndpoints: string[] = [
-            'completeTasks',
-            'runningTasks',
-            'waitingTasks',
-            'pendingTasks',
-          ];
-          const result: TaskQueryResultRow[][] = await Promise.all(
-            taskEndpoints.map(async (endpoint: string) => {
-              const resp = await axios.get(`/druid/indexer/v1/${endpoint}`);
-              return TasksView.parseTasks(resp.data);
-            }),
-          );
-          return result.flat();
+          const resp = await axios.get(`/druid/indexer/v1/tasks`);
+          return TasksView.parseTasks(resp.data);
         } else {
           throw new Error(`must have SQL or overlord access`);
         }

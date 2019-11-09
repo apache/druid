@@ -51,6 +51,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -84,6 +85,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  * Base class for implementing MovingAverageQuery tests
@@ -349,7 +351,16 @@ public class MovingAverageQueryTest
           {
             return 0L;
           }
-        }
+        },
+        new DruidProcessingConfig()
+        {
+          @Override
+          public String getFormatString()
+          {
+            return null;
+          }
+        },
+        ForkJoinPool.commonPool()
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(

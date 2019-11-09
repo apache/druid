@@ -35,6 +35,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
@@ -279,16 +280,21 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
           );
       }
     } else {
+      // No column capabilities, try to guess based on selector type.
       BaseNullableColumnValueSelector selector = columnFactory.makeColumnValueSelector(field.getDimension());
+
       if (selector instanceof NilColumnValueSelector) {
         return new NoopBloomFilterAggregator(maxNumEntries, onHeap);
+      } else if (selector instanceof DimensionSelector) {
+        return new StringBloomFilterAggregator((DimensionSelector) selector, maxNumEntries, onHeap);
+      } else {
+        // Use fallback 'object' aggregator.
+        return new ObjectBloomFilterAggregator(
+            columnFactory.makeColumnValueSelector(field.getDimension()),
+            maxNumEntries,
+            onHeap
+        );
       }
-      // no column capabilities, use fallback 'object' aggregator
-      return new ObjectBloomFilterAggregator(
-          columnFactory.makeColumnValueSelector(field.getDimension()),
-          maxNumEntries,
-          onHeap
-      );
     }
   }
 }

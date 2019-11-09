@@ -30,7 +30,7 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.NullableAggregatorFactory;
+import org.apache.druid.query.aggregation.NullableNumericAggregatorFactory;
 import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -46,7 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class LongLastAggregatorFactory extends NullableAggregatorFactory<ColumnValueSelector>
+public class LongLastAggregatorFactory extends NullableNumericAggregatorFactory<ColumnValueSelector>
 {
   private final String fieldName;
   private final String name;

@@ -252,7 +252,7 @@ public class DirectDruidClientTest
         )
     )
             .andReturn(cancellationFuture)
-            .once();
+            .anyTimes();
 
     EasyMock.replay(httpClient);
 
@@ -261,7 +261,7 @@ public class DirectDruidClientTest
     query = query.withOverriddenContext(ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE));
     cancellationFuture.set(new StatusResponseHolder(HttpResponseStatus.OK, new StringBuilder("cancelled")));
     Sequence results = client.run(QueryPlus.wrap(query));
-    Assert.assertEquals(HttpMethod.DELETE, capturedRequest.getValue().getMethod());
+    Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
     Assert.assertEquals(0, client.getNumOpenConnections());
 
 

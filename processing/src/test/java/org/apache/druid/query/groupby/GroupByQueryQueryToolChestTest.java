@@ -540,7 +540,13 @@ public class GroupByQueryQueryToolChestTest
         );
 
     // test timestamps that result in integer size millis
-    final ResultRow result1 = ResultRow.of(123L, "val1", "fooval1", 1, getIntermediateComplexValue(ValueType.STRING, "val1"));
+    final ResultRow result1 = ResultRow.of(
+        123L,
+        "val1",
+        "fooval1",
+        1,
+        getIntermediateComplexValue(ValueType.STRING, "val1")
+    );
 
     Object preparedValue = strategy.prepareForSegmentLevelCache().apply(result1);
 

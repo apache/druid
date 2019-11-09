@@ -22,6 +22,7 @@ import React from 'react';
 import { deepDelete, deepGet, deepSet } from '../../utils/object-change';
 import { ArrayInput } from '../array-input/array-input';
 import { FormGroupWithInfo } from '../form-group-with-info/form-group-with-info';
+import { IntervalInput } from '../interval-input/interval-input';
 import { JsonInput } from '../json-input/json-input';
 import { PopoverText } from '../popover-text/popover-text';
 import { SuggestibleInput, SuggestionGroup } from '../suggestible-input/suggestible-input';
@@ -32,7 +33,15 @@ export interface Field<T> {
   name: string;
   label?: string;
   info?: React.ReactNode;
-  type: 'number' | 'size-bytes' | 'string' | 'duration' | 'boolean' | 'string-array' | 'json';
+  type:
+    | 'number'
+    | 'size-bytes'
+    | 'string'
+    | 'duration'
+    | 'boolean'
+    | 'string-array'
+    | 'json'
+    | 'interval';
   defaultValue?: any;
   suggestions?: (string | SuggestionGroup)[];
   placeholder?: string;
@@ -289,6 +298,21 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     );
   }
 
+  private renderIntervalInput(field: Field<T>): JSX.Element {
+    const { model } = this.props;
+
+    const modelValue = deepGet(model as any, field.name);
+    return (
+      <IntervalInput
+        interval={modelValue != null ? modelValue : field.defaultValue || ''}
+        onValueChange={(v: any) => {
+          this.fieldChange(field, v);
+        }}
+        placeholder={field.placeholder}
+      />
+    );
+  }
+
   renderFieldInput(field: Field<T>) {
     switch (field.type) {
       case 'number':
@@ -307,6 +331,8 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         return this.renderStringArrayInput(field);
       case 'json':
         return this.renderJsonInput(field);
+      case 'interval':
+        return this.renderIntervalInput(field);
       default:
         throw new Error(`unknown field type '${field.type}'`);
     }

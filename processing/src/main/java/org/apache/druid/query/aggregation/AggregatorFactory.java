@@ -39,7 +39,7 @@ import java.util.Map;
  * max, sum of metric columns, or cardinality of dimension columns (see {@link
  * org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory}).
  * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
- * to extend {@link NullableAggregatorFactory}.
+ * to extend {@link NullableNumericAggregatorFactory}.
  *
  * Implementations are also expected to correctly handle single/multi value string type columns as it makes sense
  * for them e.g. doubleSum aggregator tries to parse the string value as double and assumes it to be zero if parsing
@@ -106,11 +106,11 @@ public abstract class AggregatorFactory implements Cacheable
   /**
    * Creates an {@link AggregateCombiner} which supports nullability.
    * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
-   * to extend {@link NullableAggregatorFactory} instead of overriding this method.
+   * to extend {@link NullableNumericAggregatorFactory} instead of overriding this method.
    * Default implementation calls {@link #makeAggregateCombiner()} for backwards compatibility.
    *
    * @see AggregateCombiner
-   * @see NullableAggregatorFactory
+   * @see NullableNumericAggregatorFactory
    */
   public AggregateCombiner makeNullableAggregateCombiner()
   {
@@ -221,7 +221,7 @@ public abstract class AggregatorFactory implements Cacheable
   /**
    * Returns the maximum size that this aggregator will require in bytes for intermediate storage of results.
    * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
-   * to extend {@link NullableAggregatorFactory} instead of overriding this method.
+   * to extend {@link NullableNumericAggregatorFactory} instead of overriding this method.
    * Default implementation calls {@link #makeAggregateCombiner()} for backwards compatibility.
    *
    * @return the maximum number of bytes that an aggregator of this type will require for intermediate result storage.

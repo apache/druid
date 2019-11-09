@@ -19,17 +19,17 @@
 
 package org.apache.druid.query.aggregation.last;
 
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
+import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
 public class StringLastAggregator implements Aggregator
 {
-
-  private final BaseObjectColumnValueSelector valueSelector;
   private final BaseLongColumnValueSelector timeSelector;
+  private final BaseObjectColumnValueSelector valueSelector;
   private final int maxStringBytes;
 
   protected long lastTime;
@@ -45,35 +45,29 @@ public class StringLastAggregator implements Aggregator
     this.timeSelector = timeSelector;
     this.maxStringBytes = maxStringBytes;
 
-    lastTime = Long.MIN_VALUE;
+    lastTime = DateTimes.MIN.getMillis();
     lastValue = null;
   }
 
   @Override
   public void aggregate()
   {
-    long time = timeSelector.getLong();
-    if (time >= lastTime) {
-      lastTime = time;
-      Object value = valueSelector.getObject();
+    final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromSelectors(
+        timeSelector,
+        valueSelector
+    );
 
-      if (value != null) {
-        if (value instanceof String) {
-          lastValue = (String) value;
-        } else if (value instanceof SerializablePairLongString) {
-          lastValue = ((SerializablePairLongString) value).rhs;
-        } else {
-          throw new ISE(
-              "Try to aggregate unsuported class type [%s].Supported class types: String or SerializablePairLongString",
-              value.getClass().getName()
-          );
-        }
+    if (inPair == null) {
+      // Don't aggregate nulls.
+      return;
+    }
 
-        if (lastValue != null && lastValue.length() > maxStringBytes) {
-          lastValue = lastValue.substring(0, maxStringBytes);
-        }
-      } else {
-        lastValue = null;
+    if (inPair != null && inPair.rhs != null && inPair.lhs >= lastTime) {
+      lastTime = inPair.lhs;
+      lastValue = inPair.rhs;
+
+      if (lastValue.length() > maxStringBytes) {
+        lastValue = lastValue.substring(0, maxStringBytes);
       }
     }
   }
@@ -81,25 +75,25 @@ public class StringLastAggregator implements Aggregator
   @Override
   public Object get()
   {
-    return new SerializablePairLongString(lastTime, lastValue);
+    return new SerializablePairLongString(lastTime, StringFirstLastUtils.chop(lastValue, maxStringBytes));
   }
 
   @Override
   public float getFloat()
   {
-    throw new UnsupportedOperationException("StringFirstAggregator does not support getFloat()");
+    throw new UnsupportedOperationException("StringLastAggregator does not support getFloat()");
   }
 
   @Override
   public long getLong()
   {
-    throw new UnsupportedOperationException("StringFirstAggregator does not support getLong()");
+    throw new UnsupportedOperationException("StringLastAggregator does not support getLong()");
   }
 
   @Override
   public double getDouble()
   {
-    throw new UnsupportedOperationException("StringFirstAggregator does not support getDouble()");
+    throw new UnsupportedOperationException("StringLastAggregator does not support getDouble()");
   }
 
   @Override
