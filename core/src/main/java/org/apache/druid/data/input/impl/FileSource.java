@@ -25,21 +25,17 @@ import org.apache.druid.data.input.ObjectSource;
 import org.apache.druid.utils.CompressionUtils;
 
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.RandomAccessFile;
-import java.nio.channels.Channels;
 
 public class FileSource implements ObjectSource<File>
 {
   private final File file;
-  private final RandomAccessFile randomAccessFile;
 
-  FileSource(File file) throws FileNotFoundException
+  FileSource(File file)
   {
     this.file = file;
-    this.randomAccessFile = new RandomAccessFile(file, "r");
   }
 
   @Override
@@ -54,10 +50,9 @@ public class FileSource implements ObjectSource<File>
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         // do nothing
-        randomAccessFile.close();
       }
     };
   }
@@ -71,7 +66,7 @@ public class FileSource implements ObjectSource<File>
   @Override
   public InputStream open() throws IOException
   {
-    return CompressionUtils.decompress(Channels.newInputStream(randomAccessFile.getChannel()), file.getName());
+    return CompressionUtils.decompress(new FileInputStream(file), file.getName());
   }
 
   @Override
