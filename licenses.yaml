@@ -3995,6 +3995,15 @@ version: 3.19.1
 
 ---
 
+name: "@blueprintjs/datetime"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Palantir Technologies
+version: 3.14.0
+
+---
+
 name: "@blueprintjs/icons"
 license_category: binary
 module: web-console
@@ -4090,16 +4099,6 @@ module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
 version: 1.2.4
-license_file_path: licenses/bin/d3-array.BSD3
-
----
-
-name: "d3-array"
-license_category: binary
-module: web-console
-license_name: BSD-3-Clause License
-copyright: Mike Bostock
-version: 2.3.3
 license_file_path: licenses/bin/d3-array.BSD3
 
 ---
@@ -4722,6 +4721,16 @@ license_file_path: licenses/bin/react-ace.MIT
 
 ---
 
+name: "react-day-picker"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Giampaolo Bellavite
+version: 7.4.0
+license_file_path: licenses/bin/react-day-picker.MIT
+
+---
+
 name: "react-dom"
 license_category: binary
 module: web-console
@@ -4918,15 +4927,19 @@ module: web-console
 license_name: Apache License version 2.0
 copyright: Microsoft Corp.
 version: 1.10.0
-
----
-
-name: "tslib"
-license_category: binary
-module: web-console
-license_name: Apache License version 2.0
-copyright: Microsoft Corp.
-version: 1.9.3
+notice: |
+  /*! *****************************************************************************
+  Copyright (c) Microsoft Corporation. All rights reserved.
+  Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+  this file except in compliance with the License. You may obtain a copy of the
+  License at http://www.apache.org/licenses/LICENSE-2.0
+  THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
+  WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
+  MERCHANTABLITY OR NON-INFRINGEMENT.
+  See the Apache Version 2.0 License for specific language governing permissions
+  and limitations under the License.
+  ***************************************************************************** */
 
 ---
 
