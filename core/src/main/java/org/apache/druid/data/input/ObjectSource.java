@@ -34,7 +34,7 @@ import java.io.InputStream;
  * ObjectSource abstracts an object and knows how to read bytes from the given object.
  */
 @ExtensionPoint
-  public interface ObjectSource<T>
+public interface ObjectSource<T>
 {
   Logger LOG = new Logger(ObjectSource.class);
 
