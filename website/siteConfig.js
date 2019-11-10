@@ -84,7 +84,6 @@ const siteConfig = {
   ],
 
   stylesheets: [
-    'https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i,700&display=swap" rel="stylesheet',
     'https://use.fontawesome.com/releases/v5.7.2/css/all.css',
     '/css/code-block-buttons.css',
   ],
