@@ -193,16 +193,16 @@ public final class SegmentId implements Comparable<SegmentId>
       return Collections.emptyList();
     }
     List<SegmentId> possibleParsings = new ArrayList<>(2);
-    String version = DELIMITER_JOINER.join(splits.subList(2, Math.max(splits.size() - 1, 3)));
-    String trail = splits.size() > 3 ? splits.get(splits.size() - 1) : null;
-    if (trail != null) {
+    // Making some assumptions to make this work for namespacing. This will break if versions have splits
+    String version = splits.get(2);
+    String trail = DELIMITER_JOINER.join(splits.subList(3, splits.size()));
+    if (splits.size() > 3) {
       Integer possiblePartitionNum = Ints.tryParse(trail);
       if (possiblePartitionNum != null && possiblePartitionNum > 0) {
         possibleParsings.add(of(dataSource, new Interval(start, end), version, possiblePartitionNum));
       }
-      version = version + '_' + trail;
     }
-    possibleParsings.add(of(dataSource, new Interval(start, end), version, 0));
+    possibleParsings.add(of(dataSource, new Interval(start, end), version, trail));
     return possibleParsings;
   }
 
@@ -358,7 +358,7 @@ public final class SegmentId implements Comparable<SegmentId>
 
   public SegmentDescriptor toDescriptor()
   {
-    return new SegmentDescriptor(Intervals.utc(intervalStartMillis, intervalEndMillis), version, partitionNum);
+    return new SegmentDescriptor(Intervals.utc(intervalStartMillis, intervalEndMillis), version, partitionNum, identifier + "_" + partitionNum);
   }
 
   @Override

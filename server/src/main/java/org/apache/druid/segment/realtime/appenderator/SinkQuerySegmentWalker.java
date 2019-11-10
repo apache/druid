@@ -137,7 +137,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                     chunk -> new SegmentDescriptor(
                         holder.getInterval(),
                         holder.getVersion(),
-                        chunk.getChunkNumber()
+                        chunk.getChunkNumber(),
+                        chunk.getChunkIdentifier()
                     )
                 )
         );

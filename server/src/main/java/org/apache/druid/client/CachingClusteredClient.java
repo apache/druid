@@ -499,7 +499,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
           final SegmentDescriptor segment = new SegmentDescriptor(
               holder.getInterval(),
               holder.getVersion(),
-              chunk.getChunkNumber()
+              chunk.getChunkNumber(),
+              chunk.getChunkIdentifier()
           );
           segments.add(new SegmentServerSelector(server, segment));
         }
