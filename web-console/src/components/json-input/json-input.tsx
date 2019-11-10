@@ -16,82 +16,73 @@
  * limitations under the License.
  */
 
-import React from 'react';
+import classNames = require('classnames');
+import React, { useEffect, useState } from 'react';
 import AceEditor from 'react-ace';
 
-import { parseStringToJson, stringifyJson, validJson } from '../../utils';
+import { validJson } from '../../utils';
+
+import './json-input.scss';
+
+function stringifyJson(item: any): string {
+  if (item != null) {
+    return JSON.stringify(item, null, 2);
+  } else {
+    return '';
+  }
+}
 
 interface JsonInputProps {
-  onChange: (newJSONValue: any) => void;
   value: any;
-  updateInputValidity?: (valueValid: boolean) => void;
+  onChange: (value: any) => void;
   placeholder?: string;
   focus?: boolean;
   width?: string;
   height?: string;
 }
 
-interface JsonInputState {
-  stringValue: string;
-}
+export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
+  const { onChange, placeholder, focus, width, height, value } = props;
+  const stringifiedValue = stringifyJson(value);
+  const [stringValue, setStringValue] = useState(stringifiedValue);
+  const [blurred, setBlurred] = useState(false);
 
-export class JsonInput extends React.PureComponent<JsonInputProps, JsonInputState> {
-  constructor(props: JsonInputProps) {
-    super(props);
-    this.state = {
-      stringValue: '',
-    };
-  }
+  useEffect(() => {
+    setStringValue(stringifiedValue);
+  }, [stringifiedValue]);
 
-  componentDidMount(): void {
-    const { value } = this.props;
-    const stringValue = stringifyJson(value);
-    this.setState({
-      stringValue,
-    });
-  }
-
-  componentWillReceiveProps(nextProps: JsonInputProps): void {
-    if (JSON.stringify(nextProps.value) !== JSON.stringify(this.props.value)) {
-      this.setState({
-        stringValue: stringifyJson(nextProps.value),
-      });
-    }
-  }
-
-  render(): JSX.Element {
-    const { onChange, updateInputValidity, placeholder, focus, width, height } = this.props;
-    const { stringValue } = this.state;
-    return (
-      <AceEditor
-        key="hjson"
-        mode="hjson"
-        theme="solarized_dark"
-        name="ace-editor"
-        onChange={(e: string) => {
-          this.setState({ stringValue: e });
-          if (validJson(e) || e === '') onChange(parseStringToJson(e));
-          if (updateInputValidity) updateInputValidity(validJson(e) || e === '');
-        }}
-        focus={focus}
-        fontSize={12}
-        width={width || '100%'}
-        height={height || '8vh'}
-        showPrintMargin={false}
-        showGutter={false}
-        value={stringValue}
-        placeholder={placeholder}
-        editorProps={{
-          $blockScrolling: Infinity,
-        }}
-        setOptions={{
-          enableBasicAutocompletion: false,
-          enableLiveAutocompletion: false,
-          showLineNumbers: false,
-          tabSize: 2,
-        }}
-        style={{}}
-      />
-    );
-  }
-}
+  return (
+    <AceEditor
+      className={classNames('json-input', { invalid: !validJson(stringValue) && blurred })}
+      mode="hjson"
+      theme="solarized_dark"
+      onChange={(inputJson: string) => {
+        setStringValue(inputJson);
+        try {
+          const value = inputJson === '' ? null : JSON.parse(inputJson);
+          onChange(value);
+        } catch {}
+      }}
+      onFocus={() => setBlurred(false)}
+      onBlur={() => setBlurred(true)}
+      focus={focus}
+      fontSize={12}
+      width={width || '100%'}
+      height={height || '8vh'}
+      showPrintMargin={false}
+      showGutter={false}
+      value={stringValue}
+      placeholder={placeholder}
+      editorProps={{
+        $blockScrolling: Infinity,
+      }}
+      setOptions={{
+        enableBasicAutocompletion: false,
+        enableLiveAutocompletion: false,
+        showLineNumbers: false,
+        tabSize: 2,
+      }}
+      style={{}}
+    />
+  );
+});
