@@ -228,4 +228,11 @@ public class SegmentIdTest
     Assert.assertEquals(2, possibleParsings.size());
     Assert.assertEquals(expected, ImmutableSet.copyOf(possibleParsings));
   }
+
+  @Test
+  public void testIterateAllPossibleParsingsNamespaced() {
+    String segmentId = "ads_metrics_2019-11-05T23:00:00.000Z_2019-11-06T00:00:00.000Z_2019-11-05T23:28:20.039Z_onsite_0";
+    List<SegmentId> possibleParsings = ImmutableList.copyOf(SegmentId.iterateAllPossibleParsings(segmentId));
+    Assert.assertEquals(2, possibleParsings.size());
+  }
 }
