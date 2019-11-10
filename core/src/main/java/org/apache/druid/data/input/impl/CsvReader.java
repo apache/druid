@@ -69,7 +69,6 @@ public class CsvReader extends TextReader
       for (String column : this.columns) {
         Preconditions.checkArgument(!column.contains(","), "Column[%s] has a comma, it cannot", column);
       }
-      verify(this.columns, inputRowSchema.getDimensionsSpec().getDimensionNames());
     } else {
       Preconditions.checkArgument(
           findColumnsFromHeader,
@@ -115,13 +114,6 @@ public class CsvReader extends TextReader
     columns = findOrCreateColumnNames(Arrays.asList(parser.parseLine(line)));
     if (columns.isEmpty()) {
       throw new ISE("Empty columns");
-    }
-  }
-
-  public static void verify(List<String> columns, List<String> dimensionNames)
-  {
-    for (String columnName : dimensionNames) {
-      Preconditions.checkArgument(columns.contains(columnName), "column[%s] not in columns.", columnName);
     }
   }
 
