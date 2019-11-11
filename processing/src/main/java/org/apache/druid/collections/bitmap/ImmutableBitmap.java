@@ -39,7 +39,7 @@ public interface ImmutableBitmap
    */
   default PeekableIntIterator peekableIterator()
   {
-    return new PeekableIteratorAdapter(iterator());
+    return new PeekableIteratorAdapter<>(iterator());
   }
 
   /**
