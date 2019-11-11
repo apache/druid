@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowIterator;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.easymock.EasyMock;
@@ -39,7 +40,7 @@ import java.util.function.Supplier;
 
 class Factory
 {
-  static final DateTime TIMESTAMP = new DateTime(0);
+  static final DateTime TIMESTAMP = DateTimes.utc(0);
   static final String DIMENSION = "dimension";
   static final Optional<Interval> PRESENT_BUCKET_INTERVAL_OPT = Optional.of(Intervals.ETERNITY);
 

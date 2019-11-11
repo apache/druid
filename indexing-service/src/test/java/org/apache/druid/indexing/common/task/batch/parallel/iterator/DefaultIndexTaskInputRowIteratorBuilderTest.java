@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel.iterator;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowIterator;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.easymock.EasyMock;
@@ -127,7 +128,7 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
     @Test
     public void invokesNullRowHandlerFirst()
     {
-      DateTime invalidTimestamp = new DateTime(Long.MAX_VALUE);
+      DateTime invalidTimestamp = DateTimes.utc(Long.MAX_VALUE);
       Firehose nullRowFirehose = Factory.createFirehose(null);
       GranularitySpec absentBucketIntervalGranularitySpec =
           Factory.createAbsentBucketIntervalGranularitySpec(invalidTimestamp);
@@ -144,7 +145,7 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
     @Test
     public void invokesInvalidTimestampHandlerBeforeAbsentBucketIntervalHandler()
     {
-      DateTime invalidTimestamp = new DateTime(Long.MAX_VALUE);
+      DateTime invalidTimestamp = DateTimes.utc(Long.MAX_VALUE);
       InputRow inputRow = Factory.createInputRow(invalidTimestamp);
       Firehose firehose = Factory.createFirehose(inputRow);
       GranularitySpec absentBucketIntervalGranularitySpec =
@@ -202,7 +203,7 @@ public class DefaultIndexTaskInputRowIteratorBuilderTest
     @Test
     public void doesNotInvokeHandlersIfRowValid()
     {
-      DateTime timestamp = new DateTime(0);
+      DateTime timestamp = DateTimes.utc(0);
       InputRow inputRow = Factory.createInputRow(timestamp);
       Firehose firehose = Factory.createFirehose(inputRow);
       GranularitySpec granularitySpec = Factory.createGranularitySpec(timestamp, Factory.PRESENT_BUCKET_INTERVAL_OPT);

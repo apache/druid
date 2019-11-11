@@ -31,7 +31,6 @@ import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskSegmentAllocator;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.DefaultIndexTaskInputRowIteratorBuilder;
-import org.apache.druid.indexing.worker.ShuffleDataSegmentPusher;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
@@ -47,7 +46,7 @@ import java.util.Map;
  * The worker task of {@link PartialHashSegmentGenerateParallelIndexTaskRunner}. This task partitions input data by
  * hashing the segment granularity and partition dimensions in {@link
  * org.apache.druid.indexer.partitions.PartitionsSpec}. Partitioned segments are stored in local storage using {@link
- * ShuffleDataSegmentPusher}.
+ * org.apache.druid.indexing.worker.ShuffleDataSegmentPusher}.
  */
 public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask
 {
