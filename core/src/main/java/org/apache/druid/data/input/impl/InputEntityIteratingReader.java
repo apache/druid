@@ -19,12 +19,13 @@
 
 package org.apache.druid.data.input.impl;
 
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowPlusRaw;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
-import org.apache.druid.data.input.ObjectReader;
-import org.apache.druid.data.input.ObjectSource;
+import org.apache.druid.data.input.InputEntityReader;
+import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.File;
@@ -35,19 +36,20 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
- * InputSourceReader iterating multiple {@link ObjectSource}s.
+ * InputSourceReader iterating multiple {@link InputEntity}s. This class could be used for
+ * most of {@link org.apache.druid.data.input.InputSource}s.
  */
-public class ObjectIteratingReader<T> implements InputSourceReader
+public class InputEntityIteratingReader<T> implements InputSourceReader
 {
   private final InputRowSchema inputRowSchema;
   private final InputFormat inputFormat;
-  private final Iterator<ObjectSource<T>> sourceIterator;
+  private final Iterator<InputEntity<T>> sourceIterator;
   private final File temporaryDirectory;
 
-  ObjectIteratingReader(
+  InputEntityIteratingReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      Stream<ObjectSource<T>> sourceStream,
+      Stream<InputEntity<T>> sourceStream,
       File temporaryDirectory
   )
   {
@@ -83,7 +85,7 @@ public class ObjectIteratingReader<T> implements InputSourceReader
     });
   }
 
-  private <R> CloseableIterator<R> createIterator(Function<ObjectReader, CloseableIterator<R>> rowPopulator)
+  private <R> CloseableIterator<R> createIterator(Function<InputEntityReader, CloseableIterator<R>> rowPopulator)
   {
     return new CloseableIterator<R>()
     {
@@ -118,8 +120,8 @@ public class ObjectIteratingReader<T> implements InputSourceReader
           }
           if (sourceIterator.hasNext()) {
             // SplitSampler is stateful and so a new one should be created per split.
-            final ObjectReader objectReader = inputFormat.createReader(inputRowSchema);
-            rowIterator = rowPopulator.apply(objectReader);
+            final InputEntityReader inputEntityReader = inputFormat.createReader(inputRowSchema);
+            rowIterator = rowPopulator.apply(inputEntityReader);
           }
         }
       }

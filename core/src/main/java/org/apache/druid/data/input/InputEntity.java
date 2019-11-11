@@ -31,12 +31,12 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * ObjectSource abstracts an object and knows how to read bytes from the given object.
+ * InputEntity abstracts an object and knows how to read bytes from the given object.
  */
 @ExtensionPoint
-public interface ObjectSource<T>
+public interface InputEntity<T>
 {
-  Logger LOG = new Logger(ObjectSource.class);
+  Logger LOG = new Logger(InputEntity.class);
 
   int DEFAULT_FETCH_BUFFER_SIZE = 4 * 1024; // 4 KB
   int DEFAULT_MAX_FETCH_RETRY = 2; // 3 tries including the initial try
@@ -64,7 +64,7 @@ public interface ObjectSource<T>
    * Fetches the object into the local storage.
    * This method might be preferred instead of {@link #open()}, for example
    *
-   * - {@link org.apache.druid.data.input.impl.InputFormat} requires expensive random access on remote storage.
+   * - {@link InputFormat} requires expensive random access on remote storage.
    * - Holding a connection until you consume the entire InputStream is expensive.
    *
    * @param temporaryDirectory to store temp data. This directory will be removed automatically once
@@ -82,13 +82,10 @@ public interface ObjectSource<T>
           is,
           tempFile,
           fetchBuffer,
-          getRetryCondition(),
+          getFetchRetryCondition(),
           DEFAULT_MAX_FETCH_RETRY,
           StringUtils.format("Failed to fetch into [%s]", tempFile.getAbsolutePath())
       );
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
     }
 
     return new CleanableFile()
@@ -110,7 +107,7 @@ public interface ObjectSource<T>
   }
 
   /**
-   * {@link #fetch} will retry during the fetch if it sees an exception mathing to the returned predicate.
+   * {@link #fetch} will retry during the fetch if it sees an exception matching to the returned predicate.
    */
-  Predicate<Throwable> getRetryCondition();
+  Predicate<Throwable> getFetchRetryCondition();
 }

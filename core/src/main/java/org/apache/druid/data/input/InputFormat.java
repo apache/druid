@@ -17,20 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.impl;
+package org.apache.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.data.input.ObjectReader;
+import org.apache.druid.data.input.impl.CsvInputFormat;
+import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.NestedInputFormat;
+import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
 /**
  * InputFormat abstracts the file format of input data.
- * It creates a {@link ObjectReader} to read data and parse it into {@link org.apache.druid.data.input.InputRow}.
- * The created SplitReader is used by {@link org.apache.druid.data.input.InputSourceReader}.
+ * It creates a {@link InputEntityReader} to read data and parse it into {@link InputRow}.
+ * The created SplitReader is used by {@link InputSourceReader}.
  *
  * @see NestedInputFormat for nested input formats such as JSON.
  */
@@ -43,7 +45,7 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 public interface InputFormat
 {
   /**
-   * Trait to indicate that a file can be split into multiple {@link org.apache.druid.data.input.InputSplit}s.
+   * Trait to indicate that a file can be split into multiple {@link InputSplit}s.
    *
    * This method is not being used anywhere for now, but should be considered
    * in {@link SplittableInputSource#createSplits}.
@@ -51,5 +53,5 @@ public interface InputFormat
   @JsonIgnore
   boolean isSplittable();
 
-  ObjectReader createReader(InputRowSchema inputRowSchema);
+  InputEntityReader createReader(InputRowSchema inputRowSchema);
 }

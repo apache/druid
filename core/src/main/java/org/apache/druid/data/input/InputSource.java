@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.data.input.impl.HttpInputSource;
-import org.apache.druid.data.input.impl.InputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
@@ -31,8 +30,8 @@ import javax.annotation.Nullable;
 import java.io.File;
 
 /**
- * InputSource abstracts the storage system where input data is stored.
- * It creates an {@link InputSourceReader} to read data from the given input source.
+ * InputSource abstracts the storage system where input data is stored. It creates an {@link InputSourceReader}
+ * to read data from the given input source.
  * The most common use case would be:
  *
  * <pre>{@code
@@ -59,7 +58,11 @@ public interface InputSource
   boolean isSplittable();
 
   /**
-   * Returns true if this inputSource supports different {@link InputFormat}s.
+   * Returns true if this inputSource supports different {@link InputFormat}s. Some inputSources such as
+   * {@link LocalInputSource} can store files of any format. These storage types require an {@link InputFormat}
+   * to be passed so that {@link InputSourceReader} can parse data properly. However, some storage types have
+   * a fixed format. For example, druid inputSource always reads segments. These inputSources should return false for
+   * this method.
    */
   boolean needsFormat();
 

@@ -26,15 +26,15 @@ import java.io.File;
 import java.io.IOException;
 
 /**
- * ObjectReader knows how to parse data into {@link InputRow}.
- * This class is <i>stateful</i> and a new ObjectReader should be created per {@link ObjectSource}.
+ * InputEntityReader knows how to parse data into {@link InputRow}.
+ * This class is <i>stateful</i> and a new InputEntityReader should be created per {@link InputEntity}.
  *
  * @see TextReader for text format readers
  */
 @ExtensionPoint
-public interface ObjectReader
+public interface InputEntityReader
 {
-  CloseableIterator<InputRow> read(ObjectSource<?> source, File temporaryDirectory) throws IOException;
+  CloseableIterator<InputRow> read(InputEntity<?> source, File temporaryDirectory) throws IOException;
 
-  CloseableIterator<InputRowPlusRaw> sample(ObjectSource<?> source, File temporaryDirectory) throws IOException;
+  CloseableIterator<InputRowPlusRaw> sample(InputEntity<?> source, File temporaryDirectory) throws IOException;
 }

@@ -20,7 +20,7 @@
 package org.apache.druid.segment.indexing;
 
 import org.apache.druid.data.input.InputSource;
-import org.apache.druid.data.input.impl.InputFormat;
+import org.apache.druid.data.input.InputFormat;
 
 /**
  * IOConfig for all batch tasks except compactionTask.

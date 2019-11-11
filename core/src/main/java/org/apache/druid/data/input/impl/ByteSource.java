@@ -21,13 +21,13 @@ package org.apache.druid.data.input.impl;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import org.apache.druid.data.input.ObjectSource;
+import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.io.ByteBufferInputStream;
 
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
-public class ByteSource implements ObjectSource<ByteBuffer>
+public class ByteSource implements InputEntity<ByteBuffer>
 {
   private final ByteBuffer buffer;
 
@@ -54,7 +54,7 @@ public class ByteSource implements ObjectSource<ByteBuffer>
   }
 
   @Override
-  public Predicate<Throwable> getRetryCondition()
+  public Predicate<Throwable> getFetchRetryCondition()
   {
     return Predicates.alwaysFalse();
   }

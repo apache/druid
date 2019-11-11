@@ -29,9 +29,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 
 /**
- * Abstract {@link ObjectReader} for text format readers such as CSV or JSON.
+ * Abstract {@link InputEntityReader} for text format readers such as CSV or JSON.
  */
-public abstract class TextReader implements ObjectReader
+public abstract class TextReader implements InputEntityReader
 {
   private final InputRowSchema inputRowSchema;
 
@@ -46,7 +46,7 @@ public abstract class TextReader implements ObjectReader
   }
 
   @Override
-  public CloseableIterator<InputRow> read(ObjectSource source, File temporaryDirectory) throws IOException
+  public CloseableIterator<InputRow> read(InputEntity source, File temporaryDirectory) throws IOException
   {
     return lineIterator(source).map(line -> {
       try {
@@ -59,7 +59,7 @@ public abstract class TextReader implements ObjectReader
   }
 
   @Override
-  public CloseableIterator<InputRowPlusRaw> sample(ObjectSource<?> source, File temporaryDirectory)
+  public CloseableIterator<InputRowPlusRaw> sample(InputEntity<?> source, File temporaryDirectory)
       throws IOException
   {
     return lineIterator(source).map(line -> {
@@ -75,7 +75,7 @@ public abstract class TextReader implements ObjectReader
     });
   }
 
-  private CloseableIterator<String> lineIterator(ObjectSource source) throws IOException
+  private CloseableIterator<String> lineIterator(InputEntity source) throws IOException
   {
     final LineIterator delegate = new LineIterator(
         new InputStreamReader(source.open(), StringUtils.UTF8_STRING)

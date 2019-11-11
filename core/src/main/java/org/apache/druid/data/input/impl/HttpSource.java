@@ -21,7 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import org.apache.druid.data.input.ObjectSource;
+import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.utils.CompressionUtils;
@@ -33,7 +33,7 @@ import java.net.URI;
 import java.net.URLConnection;
 import java.util.Base64;
 
-public class HttpSource implements ObjectSource<URI>
+public class HttpSource implements InputEntity<URI>
 {
   private final URI split;
   @Nullable
@@ -68,7 +68,7 @@ public class HttpSource implements ObjectSource<URI>
   }
 
   @Override
-  public Predicate<Throwable> getRetryCondition()
+  public Predicate<Throwable> getFetchRetryCondition()
   {
     return t -> t instanceof IOException;
   }

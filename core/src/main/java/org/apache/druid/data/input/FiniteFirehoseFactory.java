@@ -30,6 +30,8 @@ import java.util.stream.Stream;
  * {@link FiniteFirehoseFactory} designed for batch processing. Its implementations assume that the amount of inputs is
  * limited.
  *
+ * This class is deprecated in favor of {@link InputSource}.
+ *
  * @param <T> parser type
  * @param <S> input split type
  */

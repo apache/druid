@@ -27,6 +27,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
@@ -110,7 +111,7 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
       @Nullable File temporaryDirectory
   )
   {
-    return new ObjectIteratingReader<>(
+    return new InputEntityIteratingReader<>(
         inputRowSchema,
         inputFormat,
         // reader() is supposed to be called in each task that creates segments.

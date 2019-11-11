@@ -19,7 +19,7 @@
 
 package org.apache.druid.data.input;
 
-import org.apache.druid.data.input.impl.ObjectIteratingReader;
+import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
@@ -29,9 +29,10 @@ import java.io.IOException;
  * InputSourceReader reads data from {@link InputSource} and returns a {@link CloseableIterator} of
  * {@link InputRow}. See {@link InputSource} for an example usage.
  *
- * Implementations of this class can use {@link ObjectSource} and {@link ObjectReader}.
+ * Implementations of this class can use {@link InputEntity} and {@link InputEntityReader}. {@link InputFormat}
+ * can be useful to understand how to create an InputEntityReader.
  *
- * See {@link ObjectIteratingReader} as an example.
+ * See {@link InputEntityIteratingReader} as an example.
  */
 @ExtensionPoint
 public interface InputSourceReader

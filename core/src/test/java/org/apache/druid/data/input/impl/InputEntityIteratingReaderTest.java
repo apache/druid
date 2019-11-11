@@ -40,7 +40,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class ObjectIteratingReaderTest
+public class InputEntityIteratingReaderTest
 {
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -58,7 +58,7 @@ public class ObjectIteratingReaderTest
         writer.write(StringUtils.format("%d,%s,%d", 20190102 + i, "name_" + (i + 1), i + 1));
       }
     }
-    final ObjectIteratingReader<File> firehose = new ObjectIteratingReader<>(
+    final InputEntityIteratingReader<File> firehose = new InputEntityIteratingReader<>(
         new InputRowSchema(
             new TimestampSpec("time", "yyyyMMdd", null),
             new DimensionsSpec(

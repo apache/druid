@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.data.input.ObjectReader;
+import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -117,7 +117,7 @@ public class CsvReaderTest
         )
     );
     final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), "|", true, 0);
-    final ObjectReader reader = format.createReader(INPUT_ROW_SCHEMA);
+    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA);
     int numResults = 0;
     try (CloseableIterator<InputRow> iterator = reader.read(source, null)) {
       while (iterator.hasNext()) {
@@ -156,7 +156,7 @@ public class CsvReaderTest
 
   private void assertResult(ByteSource source, CsvInputFormat format) throws IOException
   {
-    final ObjectReader reader = format.createReader(INPUT_ROW_SCHEMA);
+    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA);
     int numResults = 0;
     try (CloseableIterator<InputRow> iterator = reader.read(source, null)) {
       while (iterator.hasNext()) {

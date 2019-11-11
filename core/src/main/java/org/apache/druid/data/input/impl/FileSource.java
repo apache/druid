@@ -21,7 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import org.apache.druid.data.input.ObjectSource;
+import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.utils.CompressionUtils;
 
 import java.io.File;
@@ -29,7 +29,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class FileSource implements ObjectSource<File>
+public class FileSource implements InputEntity<File>
 {
   private final File file;
 
@@ -70,7 +70,7 @@ public class FileSource implements ObjectSource<File>
   }
 
   @Override
-  public Predicate<Throwable> getRetryCondition()
+  public Predicate<Throwable> getFetchRetryCondition()
   {
     return Predicates.alwaysFalse();
   }

@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputSource;
-import org.apache.druid.data.input.impl.InputFormat;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 
 import javax.annotation.Nullable;

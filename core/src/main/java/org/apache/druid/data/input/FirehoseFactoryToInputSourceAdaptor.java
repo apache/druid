@@ -21,7 +21,6 @@ package org.apache.druid.data.input;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.impl.FirehoseToInputSourceReaderAdaptor;
-import org.apache.druid.data.input.impl.InputFormat;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 
