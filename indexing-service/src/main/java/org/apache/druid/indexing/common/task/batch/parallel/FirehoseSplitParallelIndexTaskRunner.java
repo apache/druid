@@ -19,28 +19,27 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.task.Task;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 
 /**
- * {@link ParallelIndexTaskRunner} for the phase to create partitioned segments in multi-phase parallel indexing.
- *
- * @see PartialSegmentMergeParallelIndexTaskRunner
+ * Base class for different implementations of {@link ParallelIndexTaskRunner} that operate on
+ * {@link org.apache.druid.data.input.Firehose} splits.
  */
-class PartialSegmentGenerateParallelIndexTaskRunner
-    extends ParallelIndexPhaseRunner<PartialSegmentGenerateTask, GeneratedPartitionsReport>
+abstract class FirehoseSplitParallelIndexTaskRunner<T extends Task, R extends SubTaskReport>
+    extends ParallelIndexPhaseRunner<T, R>
 {
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final FiniteFirehoseFactory<?, ?> baseFirehoseFactory;
 
-  PartialSegmentGenerateParallelIndexTaskRunner(
+  FirehoseSplitParallelIndexTaskRunner(
       TaskToolbox toolbox,
       String taskId,
       String groupId,
@@ -62,36 +61,18 @@ class PartialSegmentGenerateParallelIndexTaskRunner
   }
 
   @Override
-  public String getName()
-  {
-    return PartialSegmentGenerateTask.TYPE;
-  }
-
-  @Override
-  Iterator<SubTaskSpec<PartialSegmentGenerateTask>> subTaskSpecIterator() throws IOException
+  Iterator<SubTaskSpec<T>> subTaskSpecIterator() throws IOException
   {
     return baseFirehoseFactory.getSplits(getTuningConfig().getSplitHintSpec()).map(this::newTaskSpec).iterator();
   }
 
   @Override
-  int getTotalNumSubTasks() throws IOException
+  final int getTotalNumSubTasks() throws IOException
   {
     return baseFirehoseFactory.getNumSplits(getTuningConfig().getSplitHintSpec());
   }
 
-  @VisibleForTesting
-  ParallelIndexIngestionSpec getIngestionSchema()
-  {
-    return ingestionSchema;
-  }
-
-  @VisibleForTesting
-  FiniteFirehoseFactory<?, ?> getBaseFirehoseFactory()
-  {
-    return baseFirehoseFactory;
-  }
-
-  SubTaskSpec<PartialSegmentGenerateTask> newTaskSpec(InputSplit split)
+  final SubTaskSpec<T> newTaskSpec(InputSplit split)
   {
     final ParallelIndexIngestionSpec subTaskIngestionSpec = new ParallelIndexIngestionSpec(
         ingestionSchema.getDataSchema(),
@@ -101,30 +82,25 @@ class PartialSegmentGenerateParallelIndexTaskRunner
         ),
         ingestionSchema.getTuningConfig()
     );
-    return new SubTaskSpec<PartialSegmentGenerateTask>(
+
+    return createSubTaskSpec(
         getTaskId() + "_" + getAndIncrementNextSpecId(),
         getGroupId(),
         getTaskId(),
         getContext(),
-        split
-    )
-    {
-      @Override
-      public PartialSegmentGenerateTask newSubTask(int numAttempts)
-      {
-        return new PartialSegmentGenerateTask(
-            null,
-            getGroupId(),
-            null,
-            getSupervisorTaskId(),
-            numAttempts,
-            subTaskIngestionSpec,
-            getContext(),
-            getIndexingServiceClient(),
-            null,
-            null
-        );
-      }
-    };
+        split,
+        subTaskIngestionSpec,
+        getIndexingServiceClient()
+    );
   }
+
+  abstract SubTaskSpec<T> createSubTaskSpec(
+      String id,
+      String groupId,
+      String supervisorTaskId,
+      Map<String, Object> context,
+      InputSplit split,
+      ParallelIndexIngestionSpec subTaskIngestionSpec,
+      IndexingServiceClient indexingServiceClient
+  );
 }

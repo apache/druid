@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ForwardingIterator;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -112,6 +113,44 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
    */
   abstract int getTotalNumSubTasks() throws IOException;
 
+  /**
+   * Workaround for not modifying how {@link org.apache.druid.indexing.common.task.AbstractTask#getOrMakeId} generates
+   * unique IDs (which include the current time).
+   */
+  private class UniqueSubTaskIdDecorator extends ForwardingIterator<SubTaskSpec<SubTaskType>>
+  {
+    private final Iterator<SubTaskSpec<SubTaskType>> delegate;
+
+    UniqueSubTaskIdDecorator(Iterator<SubTaskSpec<SubTaskType>> subTaskSpecIterator)
+    {
+      delegate = subTaskSpecIterator;
+    }
+
+    @Override
+    protected Iterator<SubTaskSpec<SubTaskType>> delegate()
+    {
+      return delegate;
+    }
+
+    @Override
+    public SubTaskSpec<SubTaskType> next()
+    {
+      ensureUniqueSubtaskId();
+      return super.next();
+    }
+
+    private void ensureUniqueSubtaskId()
+    {
+      try {
+        // Ensure each subtask has a different id (which includes the current time -- see AbstractTask.getOrMakeId())
+        Thread.sleep(1);
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+
   @Override
   public TaskState run() throws Exception
   {
@@ -120,7 +159,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
       return TaskState.SUCCESS;
     }
 
-    final Iterator<SubTaskSpec<SubTaskType>> subTaskSpecIterator = subTaskSpecIterator();
+    final Iterator<SubTaskSpec<SubTaskType>> subTaskSpecIterator = new UniqueSubTaskIdDecorator(subTaskSpecIterator());
     final long taskStatusCheckingPeriod = tuningConfig.getTaskStatusCheckPeriodMs();
 
     taskMonitor = new TaskMonitor<>(
@@ -161,7 +200,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
 
               if (!subTaskSpecIterator.hasNext()) {
                 // We have no more subTasks to run
-                if (taskMonitor.getNumRunningTasks() == 0 && taskCompleteEvents.size() == 0) {
+                if (taskMonitor.getNumRunningTasks() == 0 && taskCompleteEvents.isEmpty()) {
                   subTaskScheduleAndMonitorStopped = true;
                   if (taskMonitor.isSucceeded()) {
                     // Succeeded

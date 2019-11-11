@@ -21,30 +21,34 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.base.Preconditions;
-import org.apache.druid.segment.indexing.IOConfig;
+import org.joda.time.Interval;
 
-import java.util.List;
-
-@JsonTypeName(PartialHashSegmentMergeTask.TYPE)
-public class PartialSegmentMergeIOConfig<T extends PartitionLocation> implements IOConfig
+/**
+ * This class represents the intermediary data server where the partition of {@link #interval} and {@link #partitionId}
+ * is stored.
+ */
+public class HashPartitionLocation extends PartitionLocation<Integer>
 {
-  private final List<T> partitionLocations;
+  private final int partitionId;
 
   @JsonCreator
-  public PartialSegmentMergeIOConfig(@JsonProperty("partitionLocations") List<T> partitionLocations)
+  public HashPartitionLocation(
+      @JsonProperty("host") String host,
+      @JsonProperty("port") int port,
+      @JsonProperty("useHttps") boolean useHttps,
+      @JsonProperty("subTaskId") String subTaskId,
+      @JsonProperty("interval") Interval interval,
+      @JsonProperty("partitionId") int partitionId
+  )
   {
-    Preconditions.checkState(
-        partitionLocations != null && !partitionLocations.isEmpty(),
-        "Empty partition locations"
-    );
-    this.partitionLocations = partitionLocations;
+    super(host, port, useHttps, subTaskId, interval, partitionId);
+    this.partitionId = partitionId;
   }
 
   @JsonProperty
-  public List<T> getPartitionLocations()
+  @Override
+  public int getPartitionId()
   {
-    return partitionLocations;
+    return partitionId;
   }
 }

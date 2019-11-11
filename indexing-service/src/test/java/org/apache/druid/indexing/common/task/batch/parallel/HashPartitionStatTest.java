@@ -19,32 +19,41 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.base.Preconditions;
-import org.apache.druid.segment.indexing.IOConfig;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.segment.TestHelper;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
-import java.util.List;
-
-@JsonTypeName(PartialHashSegmentMergeTask.TYPE)
-public class PartialSegmentMergeIOConfig<T extends PartitionLocation> implements IOConfig
+public class HashPartitionStatTest
 {
-  private final List<T> partitionLocations;
+  private static final ObjectMapper OBJECT_MAPPER = Factory.createObjectMapper();
 
-  @JsonCreator
-  public PartialSegmentMergeIOConfig(@JsonProperty("partitionLocations") List<T> partitionLocations)
+  private HashPartitionStat target;
+
+  @Before
+  public void setup()
   {
-    Preconditions.checkState(
-        partitionLocations != null && !partitionLocations.isEmpty(),
-        "Empty partition locations"
+    target = new HashPartitionStat(
+        Factory.TASK_EXECUTOR_HOST,
+        Factory.TASK_EXECUTOR_PORT,
+        Factory.USE_HTTPS,
+        Factory.INTERVAL,
+        Factory.PARTITION_ID,
+        Factory.NUM_ROWS,
+        Factory.SIZE_BYTES
     );
-    this.partitionLocations = partitionLocations;
   }
 
-  @JsonProperty
-  public List<T> getPartitionLocations()
+  @Test
+  public void serializesDeserializes()
   {
-    return partitionLocations;
+    TestHelper.testSerializesDeserializes(OBJECT_MAPPER, target);
+  }
+
+  @Test
+  public void hasPartitionIdThatMatchesSecondaryPartition()
+  {
+    Assert.assertEquals(target.getSecondaryPartition().intValue(), target.getPartitionId());
   }
 }

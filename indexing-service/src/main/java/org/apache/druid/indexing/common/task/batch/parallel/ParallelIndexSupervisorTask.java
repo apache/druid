@@ -32,6 +32,8 @@ import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.TaskLock;
@@ -100,6 +102,7 @@ import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -185,9 +188,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
 
     if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()) {
-      if (ingestionSchema.getTuningConfig().getNumShards() == null) {
-        throw new ISE("forceGuaranteedRollup is set but numShards is missing in partitionsSpec");
-      }
+      checkPartitionsSpecForForceGuaranteedRollup(ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec());
 
       if (ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals().isEmpty()) {
         throw new ISE("forceGuaranteedRollup is set but intervals is missing in granularitySpec");
@@ -208,7 +209,15 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (missingIntervalsInOverwriteMode) {
       addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
     }
+  }
 
+  private static void checkPartitionsSpecForForceGuaranteedRollup(PartitionsSpec partitionsSpec)
+  {
+    if (!partitionsSpec.isForceGuaranteedRollupCompatible()) {
+      String incompatibiltyMsg = partitionsSpec.getForceGuaranteedRollupIncompatiblityReason();
+      String msg = "forceGuaranteedRollup is incompatible with partitionsSpec: " + incompatibiltyMsg;
+      throw new ISE(msg);
+    }
   }
 
   @Override
@@ -260,7 +269,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
   }
 
-  private TaskState runNextPhase(@Nullable ParallelIndexTaskRunner nextPhaseRunner) throws Exception
+  private static TaskState runNextPhase(@Nullable ParallelIndexTaskRunner nextPhaseRunner) throws Exception
   {
     if (nextPhaseRunner == null) {
       LOG.info("Task is asked to stop. Finish as failed");
@@ -284,9 +293,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   @VisibleForTesting
-  public PartialSegmentGenerateParallelIndexTaskRunner createPartialSegmentGenerateRunner(TaskToolbox toolbox)
+  PartialHashSegmentGenerateParallelIndexTaskRunner createPartialHashSegmentGenerateRunner(TaskToolbox toolbox)
   {
-    return new PartialSegmentGenerateParallelIndexTaskRunner(
+    return new PartialHashSegmentGenerateParallelIndexTaskRunner(
         toolbox,
         getId(),
         getGroupId(),
@@ -297,12 +306,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   @VisibleForTesting
-  public PartialSegmentMergeParallelIndexTaskRunner createPartialSegmentMergeRunner(
+  PartialHashSegmentMergeParallelIndexTaskRunner createPartialHashSegmentMergeRunner(
       TaskToolbox toolbox,
-      List<PartialSegmentMergeIOConfig> ioConfigs
+      List<PartialSegmentMergeIOConfig<HashPartitionLocation>> ioConfigs
   )
   {
-    return new PartialSegmentMergeParallelIndexTaskRunner(
+    return new PartialHashSegmentMergeParallelIndexTaskRunner(
         toolbox,
         getId(),
         getGroupId(),
@@ -462,17 +471,31 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    *
    * - In the first phase, each task partitions input data and stores those partitions in local storage.
    *   - The partition is created based on the segment granularity (primary partition key) and the partition dimension
-   *     values in {@link org.apache.druid.indexer.partitions.PartitionsSpec} (secondary partition key).
+   *     values in {@link PartitionsSpec} (secondary partition key).
    *   - Partitioned data is maintained by {@link org.apache.druid.indexing.worker.IntermediaryDataManager}.
    * - In the second phase, each task reads partitioned data from the intermediary data server (middleManager
    *   or indexer) and merges them to create the final segments.
    */
   private TaskStatus runMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
+    if (useHashPartitions()) {
+      return runHashPartitionMultiPhaseParallel(toolbox);
+    } else {
+      throw new UnsupportedOperationException("hash partition required");
+    }
+  }
+
+  private boolean useHashPartitions()
+  {
+    return (ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec() instanceof HashedPartitionsSpec);
+  }
+
+  private TaskStatus runHashPartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
+  {
     // 1. Partial segment generation phase
-    final ParallelIndexTaskRunner<PartialSegmentGenerateTask, GeneratedPartitionsReport> indexingRunner = createRunner(
+    ParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedPartitionsReport<HashPartitionStat>> indexingRunner = createRunner(
         toolbox,
-        this::createPartialSegmentGenerateRunner
+        this::createPartialHashSegmentGenerateRunner
     );
 
     TaskState state = runNextPhase(indexingRunner);
@@ -483,18 +506,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     // 2. Partial segment merge phase
 
     // partition (interval, partitionId) -> partition locations
-    //noinspection ConstantConditions
-    Map<Pair<Interval, Integer>, List<PartitionLocation>> partitionToLocations = groupPartitionLocationsPerPartition(
-        indexingRunner.getReports()
-    );
-    final List<PartialSegmentMergeIOConfig> ioConfigs = createMergeIOConfigs(
+    Map<Pair<Interval, Integer>, List<HashPartitionLocation>> partitionToLocations =
+        groupHashPartitionLocationsPerPartition(indexingRunner.getReports());
+    final List<PartialSegmentMergeIOConfig<HashPartitionLocation>> ioConfigs = createMergeIOConfigs(
         ingestionSchema.getTuningConfig().getTotalNumMergeTasks(),
         partitionToLocations
     );
 
-    final ParallelIndexTaskRunner<PartialSegmentMergeTask, PushedSegmentsReport> mergeRunner = createRunner(
+    final ParallelIndexTaskRunner<PartialHashSegmentMergeTask, PushedSegmentsReport> mergeRunner = createRunner(
         toolbox,
-        tb -> createPartialSegmentMergeRunner(tb, ioConfigs)
+        tb -> createPartialHashSegmentMergeRunner(tb, ioConfigs)
     );
     state = runNextPhase(mergeRunner);
     if (state.isSuccess()) {
@@ -505,40 +526,50 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return TaskStatus.fromCode(getId(), state);
   }
 
-  private static Map<Pair<Interval, Integer>, List<PartitionLocation>> groupPartitionLocationsPerPartition(
-      // subTaskId -> report
-      Map<String, GeneratedPartitionsReport> reports
+  private static Map<Pair<Interval, Integer>, List<HashPartitionLocation>> groupHashPartitionLocationsPerPartition(
+      Map<String, GeneratedPartitionsReport<HashPartitionStat>> subTaskIdToReport
   )
   {
-    // partition (interval, partitionId) -> partition locations
-    final Map<Pair<Interval, Integer>, List<PartitionLocation>> partitionToLocations = new HashMap<>();
-    for (Entry<String, GeneratedPartitionsReport> entry : reports.entrySet()) {
-      final String subTaskId = entry.getKey();
-      final GeneratedPartitionsReport report = entry.getValue();
-      for (PartitionStat partitionStat : report.getPartitionStats()) {
-        final List<PartitionLocation> locationsOfSamePartition = partitionToLocations.computeIfAbsent(
-            Pair.of(partitionStat.getInterval(), partitionStat.getPartitionId()),
-            k -> new ArrayList<>()
-        );
-        locationsOfSamePartition.add(
-            new PartitionLocation(
+    BiFunction<String, HashPartitionStat, HashPartitionLocation> createPartitionLocationFunction =
+        (subtaskId, partitionStat) ->
+            new HashPartitionLocation(
                 partitionStat.getTaskExecutorHost(),
                 partitionStat.getTaskExecutorPort(),
                 partitionStat.isUseHttps(),
-                subTaskId,
+                subtaskId,
                 partitionStat.getInterval(),
-                partitionStat.getPartitionId()
-            )
+                partitionStat.getSecondaryPartition()
+            );
+
+    return groupPartitionLocationsPerPartition(subTaskIdToReport, createPartitionLocationFunction);
+  }
+
+  private static <S extends PartitionStat, L extends PartitionLocation>
+        Map<Pair<Interval, Integer>, List<L>> groupPartitionLocationsPerPartition(
+      Map<String, GeneratedPartitionsReport<S>> subTaskIdToReport,
+      BiFunction<String, S, L> createPartitionLocationFunction
+  )
+  {
+    // partition (interval, partitionId) -> partition locations
+    final Map<Pair<Interval, Integer>, List<L>> partitionToLocations = new HashMap<>();
+    for (Entry<String, GeneratedPartitionsReport<S>> entry : subTaskIdToReport.entrySet()) {
+      final String subTaskId = entry.getKey();
+      final GeneratedPartitionsReport<S> report = entry.getValue();
+      for (S partitionStat : report.getPartitionStats()) {
+        final List<L> locationsOfSamePartition = partitionToLocations.computeIfAbsent(
+            Pair.of(partitionStat.getInterval(), partitionStat.getPartitionId()),
+            k -> new ArrayList<>()
         );
+        locationsOfSamePartition.add(createPartitionLocationFunction.apply(subTaskId, partitionStat));
       }
     }
 
     return partitionToLocations;
   }
 
-  private static List<PartialSegmentMergeIOConfig> createMergeIOConfigs(
+  private static <T extends PartitionLocation> List<PartialSegmentMergeIOConfig<T>> createMergeIOConfigs(
       int totalNumMergeTasks,
-      Map<Pair<Interval, Integer>, List<PartitionLocation>> partitionToLocations
+      Map<Pair<Interval, Integer>, List<T>> partitionToLocations
   )
   {
     final int numMergeTasks = Math.min(totalNumMergeTasks, partitionToLocations.size());
@@ -550,28 +581,28 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     );
     // Randomly shuffle partitionIds to evenly distribute partitions of potentially different sizes
     // This will be improved once we collect partition stats properly.
-    // See PartitionStat in GeneratedPartitionsReport.
+    // See HashPartitionStat in GeneratedPartitionsReport.
     final List<Pair<Interval, Integer>> partitions = new ArrayList<>(partitionToLocations.keySet());
     Collections.shuffle(partitions, ThreadLocalRandom.current());
     final int numPartitionsPerTask = (int) Math.round(partitions.size() / (double) numMergeTasks);
 
-    final List<PartialSegmentMergeIOConfig> assignedPartitionLocations = new ArrayList<>(numMergeTasks);
+    final List<PartialSegmentMergeIOConfig<T>> assignedPartitionLocations = new ArrayList<>(numMergeTasks);
     for (int i = 0; i < numMergeTasks - 1; i++) {
-      final List<PartitionLocation> assignedToSameTask = partitions
+      final List<T> assignedToSameTask = partitions
           .subList(i * numPartitionsPerTask, (i + 1) * numPartitionsPerTask)
           .stream()
           .flatMap(intervalAndPartitionId -> partitionToLocations.get(intervalAndPartitionId).stream())
           .collect(Collectors.toList());
-      assignedPartitionLocations.add(new PartialSegmentMergeIOConfig(assignedToSameTask));
+      assignedPartitionLocations.add(new PartialSegmentMergeIOConfig<T>(assignedToSameTask));
     }
 
     // The last task is assigned all remaining partitions.
-    final List<PartitionLocation> assignedToSameTask = partitions
+    final List<T> assignedToSameTask = partitions
         .subList((numMergeTasks - 1) * numPartitionsPerTask, partitions.size())
         .stream()
         .flatMap(intervalAndPartitionId -> partitionToLocations.get(intervalAndPartitionId).stream())
         .collect(Collectors.toList());
-    assignedPartitionLocations.add(new PartialSegmentMergeIOConfig(assignedToSameTask));
+    assignedPartitionLocations.add(new PartialSegmentMergeIOConfig<>(assignedToSameTask));
 
     return assignedPartitionLocations;
   }
@@ -779,7 +810,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   /**
-   * {@link SinglePhaseSubTask}s call this API to report the segments they generated and pushed.
+   * Worker tasks spawned by the supervisor call this API to report the segments they generated and pushed.
+   *
+   * @see ParallelIndexSupervisorTaskClient#report(String, SubTaskReport)
    */
   @POST
   @Path("/report")

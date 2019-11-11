@@ -53,6 +53,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
+import org.apache.druid.indexing.common.task.batch.parallel.iterator.DefaultIndexTaskInputRowIteratorBuilder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -802,7 +803,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       // We use the timeChunk lock and don't have to ask the overlord to create segmentIds.
       // Instead, a local allocator is used.
       if (isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig)) {
-        return new CachingLocalSegmentAllocator(toolbox, getId(), getDataSource(), allocateSpec);
+        return new DefaultCachingLocalSegmentAllocator(toolbox, getId(), getDataSource(), allocateSpec);
       } else {
         return new LocalSegmentAllocator(toolbox, getId(), getDataSource(), dataSchema.getGranularitySpec());
       }
@@ -885,7 +886,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           buildSegmentsSavedParseExceptions,
           tuningConfig.isLogParseExceptions(),
           tuningConfig.getMaxParseExceptions(),
-          pushTimeout
+          pushTimeout,
+          new DefaultIndexTaskInputRowIteratorBuilder()
       );
       firehoseProcessor.process(
           dataSchema,
@@ -969,25 +971,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
 
     /**
-     * Return the underlying map.
-     *
-     * @return a map of intervals to shardSpecs
-     */
-    Map<Interval, List<ShardSpec>> getMap()
-    {
-      return map;
-    }
-
-    Set<Interval> getIntervals()
-    {
-      return map.keySet();
-    }
-
-    /**
      * Return a shardSpec for the given interval and input row.
      *
      * @param interval interval for shardSpec
      * @param row      input row
+     *
      * @return a shardSpec
      */
     ShardSpec getShardSpec(Interval interval, InputRow row)
@@ -1109,7 +1097,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     @Nullable
     private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
-    public static IndexTuningConfig createDefault()
+    static IndexTuningConfig createDefault()
     {
       return new IndexTuningConfig();
     }
@@ -1142,8 +1130,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         }
       } else {
         if (forceGuaranteedRollup) {
-          if (!(partitionsSpec instanceof HashedPartitionsSpec)) {
-            throw new ISE("HashedPartitionsSpec must be used for perfect rollup");
+          if (!partitionsSpec.isForceGuaranteedRollupCompatibleType()) {
+            throw new ISE(partitionsSpec.getClass().getSimpleName() + " cannot be used for perfect rollup");
           }
         } else {
           if (!(partitionsSpec instanceof DynamicPartitionsSpec)) {
@@ -1364,7 +1352,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
      */
     @Deprecated
     @JsonProperty
-    public boolean isBuildV9Directly()
+    public static boolean isBuildV9Directly()
     {
       return true;
     }

@@ -82,6 +82,12 @@ public class DynamicPartitionsSpec implements PartitionsSpec
   }
 
   @Override
+  public String getForceGuaranteedRollupIncompatiblityReason()
+  {
+    return NAME + " partitions unsupported";
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

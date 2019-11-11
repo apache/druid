@@ -26,8 +26,8 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
-import org.apache.druid.indexing.common.task.batch.parallel.PartialSegmentGenerateTask;
-import org.apache.druid.indexing.common.task.batch.parallel.PartialSegmentMergeTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -56,8 +56,8 @@ import java.util.Map;
     @JsonSubTypes.Type(name = ParallelIndexSupervisorTask.TYPE, value = ParallelIndexSupervisorTask.class),
     @JsonSubTypes.Type(name = SinglePhaseSubTask.TYPE, value = SinglePhaseSubTask.class),
     @JsonSubTypes.Type(name = "index_sub", value = SinglePhaseSubTask.class), // for backward compatibility
-    @JsonSubTypes.Type(name = PartialSegmentGenerateTask.TYPE, value = PartialSegmentGenerateTask.class),
-    @JsonSubTypes.Type(name = PartialSegmentMergeTask.TYPE, value = PartialSegmentMergeTask.class),
+    @JsonSubTypes.Type(name = PartialHashSegmentGenerateTask.TYPE, value = PartialHashSegmentGenerateTask.class),
+    @JsonSubTypes.Type(name = PartialHashSegmentMergeTask.TYPE, value = PartialHashSegmentMergeTask.class),
     @JsonSubTypes.Type(name = "index_hadoop", value = HadoopIndexTask.class),
     @JsonSubTypes.Type(name = "index_realtime", value = RealtimeIndexTask.class),
     @JsonSubTypes.Type(name = "index_realtime_appenderator", value = AppenderatorDriverRealtimeIndexTask.class),

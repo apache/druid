@@ -73,7 +73,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -109,7 +108,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
   private IntermediaryDataManager intermediaryDataManager;
 
-  protected void initializeIntermeidaryDataManager() throws IOException
+  protected void initializeIntermediaryDataManager() throws IOException
   {
     intermediaryDataManager = new IntermediaryDataManager(
         new WorkerConfig(),
@@ -346,32 +345,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           context,
           indexingServiceClient
       );
-    }
-
-    @Override
-    Iterator<SubTaskSpec<SinglePhaseSubTask>> subTaskSpecIterator() throws IOException
-    {
-      final Iterator<SubTaskSpec<SinglePhaseSubTask>> iterator = super.subTaskSpecIterator();
-      return new Iterator<SubTaskSpec<SinglePhaseSubTask>>()
-      {
-        @Override
-        public boolean hasNext()
-        {
-          return iterator.hasNext();
-        }
-
-        @Override
-        public SubTaskSpec<SinglePhaseSubTask> next()
-        {
-          try {
-            Thread.sleep(10);
-            return iterator.next();
-          }
-          catch (InterruptedException e) {
-            throw new RuntimeException(e);
-          }
-        }
-      };
     }
   }
 

@@ -48,18 +48,20 @@ public class ITParallelIndexTest extends AbstractITBatchIndexTest
   @DataProvider
   public static Object[][] resources()
   {
-    return new Object[][]{{false}, {true}};
+    return new Object[][]{
+        {new DynamicPartitionsSpec(null, null)},
+        {new HashedPartitionsSpec(null, 2, null)}
+    };
   }
 
   @Test(dataProvider = "resources")
-  public void testIndexData(boolean forceGuaranteedRollup) throws Exception
+  public void testIndexData(PartitionsSpec partitionsSpec) throws Exception
   {
     try (final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
          final Closeable ignored2 = unloader(INDEX_INGEST_SEGMENT_DATASOURCE + config.getExtraDatasourceNameSuffix())
     ) {
-      final PartitionsSpec partitionsSpec = forceGuaranteedRollup
-                                            ? new HashedPartitionsSpec(null, 2, null)
-                                            : new DynamicPartitionsSpec(null, null);
+      boolean forceGuaranteedRollup = partitionsSpec.isForceGuaranteedRollupCompatible();
+
       final Function<String, String> rollupTransform = spec -> {
         try {
           spec = StringUtils.replace(

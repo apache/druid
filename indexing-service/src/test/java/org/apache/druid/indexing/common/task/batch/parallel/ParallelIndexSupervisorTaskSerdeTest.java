@@ -31,6 +31,7 @@ import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -48,6 +49,7 @@ import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -66,6 +68,7 @@ import java.util.Map;
 public class ParallelIndexSupervisorTaskSerdeTest
 {
   private static final ObjectMapper OBJECT_MAPPER = createObjectMapper();
+  private static final List<Interval> INTERVALS = Collections.singletonList(Intervals.of("2018/2019"));
 
   private static ObjectMapper createObjectMapper()
   {
@@ -86,7 +89,7 @@ public class ParallelIndexSupervisorTaskSerdeTest
     ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTaskBuilder()
         .ingestionSpec(
             new ParallelIndexIngestionSpecBuilder()
-                .inputIntervals(Collections.singletonList(Intervals.of("2018/2019")))
+                .inputIntervals(INTERVALS)
                 .build()
         )
         .build();
@@ -115,11 +118,11 @@ public class ParallelIndexSupervisorTaskSerdeTest
   }
 
   @Test
-  public void forceGuaranteedRollupWithMissingNumShards()
+  public void forceGuaranteedRollupWithHashPartitionsMissingNumShards()
   {
     expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage(
-        "forceGuaranteedRollup is set but numShards is missing in partitionsSpec"
+        "forceGuaranteedRollup is incompatible with partitionsSpec: numShards must be specified"
     );
 
     Integer numShards = null;
@@ -128,6 +131,44 @@ public class ParallelIndexSupervisorTaskSerdeTest
             new ParallelIndexIngestionSpecBuilder()
                 .forceGuaranteedRollup(true)
                 .partitionsSpec(new HashedPartitionsSpec(null, numShards, null))
+                .inputIntervals(INTERVALS)
+                .build()
+        )
+        .build();
+  }
+
+  @Test
+  public void forceGuaranteedRollupWithHashPartitionsValid()
+  {
+    Integer numShards = 2;
+    ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTaskBuilder()
+        .ingestionSpec(
+            new ParallelIndexIngestionSpecBuilder()
+                .forceGuaranteedRollup(true)
+                .partitionsSpec(new HashedPartitionsSpec(null, numShards, null))
+                .inputIntervals(INTERVALS)
+                .build()
+        )
+        .build();
+
+    PartitionsSpec partitionsSpec = task.getIngestionSchema().getTuningConfig().getPartitionsSpec();
+    Assert.assertThat(partitionsSpec, CoreMatchers.instanceOf(HashedPartitionsSpec.class));
+  }
+
+  @Test
+  public void forceGuaranteedRollupWithSingleDimPartitionsInvalid()
+  {
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage(
+        "forceGuaranteedRollup is incompatible with partitionsSpec: single_dim partitions unsupported"
+    );
+
+    new ParallelIndexSupervisorTaskBuilder()
+        .ingestionSpec(
+            new ParallelIndexIngestionSpecBuilder()
+                .forceGuaranteedRollup(true)
+                .partitionsSpec(new SingleDimensionPartitionsSpec(1, null, "a", true))
+                .inputIntervals(INTERVALS)
                 .build()
         )
         .build();
@@ -207,6 +248,7 @@ public class ParallelIndexSupervisorTaskSerdeTest
     @Nullable
     PartitionsSpec partitionsSpec = null;
 
+    @SuppressWarnings("SameParameterValue")
     ParallelIndexIngestionSpecBuilder inputIntervals(List<Interval> inputIntervals)
     {
       this.inputIntervals = inputIntervals;

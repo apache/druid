@@ -30,22 +30,22 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * {@link ParallelIndexTaskRunner} for the phase to merge partitioned segments in multi-phase parallel indexing.
+ * {@link ParallelIndexTaskRunner} for the phase to merge hash partitioned segments in multi-phase parallel indexing.
  *
- * @see PartialSegmentGenerateParallelIndexTaskRunner
+ * @see PartialHashSegmentGenerateParallelIndexTaskRunner
  */
-class PartialSegmentMergeParallelIndexTaskRunner
-    extends ParallelIndexPhaseRunner<PartialSegmentMergeTask, PushedSegmentsReport>
+class PartialHashSegmentMergeParallelIndexTaskRunner
+    extends ParallelIndexPhaseRunner<PartialHashSegmentMergeTask, PushedSegmentsReport>
 {
   private final DataSchema dataSchema;
-  private final List<PartialSegmentMergeIOConfig> mergeIOConfigs;
+  private final List<PartialSegmentMergeIOConfig<HashPartitionLocation>> mergeIOConfigs;
 
-  PartialSegmentMergeParallelIndexTaskRunner(
+  PartialHashSegmentMergeParallelIndexTaskRunner(
       TaskToolbox toolbox,
       String taskId,
       String groupId,
       DataSchema dataSchema,
-      List<PartialSegmentMergeIOConfig> mergeIOConfigs,
+      List<PartialSegmentMergeIOConfig<HashPartitionLocation>> mergeIOConfigs,
       ParallelIndexTuningConfig tuningConfig,
       Map<String, Object> context,
       IndexingServiceClient indexingServiceClient
@@ -60,11 +60,11 @@ class PartialSegmentMergeParallelIndexTaskRunner
   @Override
   public String getName()
   {
-    return PartialSegmentMergeTask.TYPE;
+    return PartialHashSegmentMergeTask.TYPE;
   }
 
   @Override
-  Iterator<SubTaskSpec<PartialSegmentMergeTask>> subTaskSpecIterator()
+  Iterator<SubTaskSpec<PartialHashSegmentMergeTask>> subTaskSpecIterator()
   {
     return mergeIOConfigs.stream().map(this::newTaskSpec).iterator();
   }
@@ -76,14 +76,15 @@ class PartialSegmentMergeParallelIndexTaskRunner
   }
 
   @VisibleForTesting
-  SubTaskSpec<PartialSegmentMergeTask> newTaskSpec(PartialSegmentMergeIOConfig ioConfig)
+  SubTaskSpec<PartialHashSegmentMergeTask> newTaskSpec(PartialSegmentMergeIOConfig<HashPartitionLocation> ioConfig)
   {
-    final PartialSegmentMergeIngestionSpec ingestionSpec = new PartialSegmentMergeIngestionSpec(
-        dataSchema,
-        ioConfig,
-        getTuningConfig()
-    );
-    return new SubTaskSpec<PartialSegmentMergeTask>(
+    final PartialSegmentMergeIngestionSpec<HashPartitionLocation> ingestionSpec =
+        new PartialSegmentMergeIngestionSpec<>(
+            dataSchema,
+            ioConfig,
+            getTuningConfig()
+        );
+    return new SubTaskSpec<PartialHashSegmentMergeTask>(
         getTaskId() + "_" + getAndIncrementNextSpecId(),
         getGroupId(),
         getTaskId(),
@@ -92,9 +93,9 @@ class PartialSegmentMergeParallelIndexTaskRunner
     )
     {
       @Override
-      public PartialSegmentMergeTask newSubTask(int numAttempts)
+      public PartialHashSegmentMergeTask newSubTask(int numAttempts)
       {
-        return new PartialSegmentMergeTask(
+        return new PartialHashSegmentMergeTask(
             null,
             getGroupId(),
             null,

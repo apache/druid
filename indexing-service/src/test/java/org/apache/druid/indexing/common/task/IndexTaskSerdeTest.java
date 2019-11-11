@@ -189,7 +189,7 @@ public class IndexTaskSerdeTest
   public void testForceGuaranteedRollupWithDynamicPartitionsSpec()
   {
     expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("HashedPartitionsSpec must be used for perfect rollup");
+    expectedException.expectMessage("DynamicPartitionsSpec cannot be used for perfect rollup");
     final IndexTuningConfig tuningConfig = new IndexTuningConfig(
         null,
         null,

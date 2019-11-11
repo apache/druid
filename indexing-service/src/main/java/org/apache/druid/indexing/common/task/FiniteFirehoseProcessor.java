@@ -23,12 +23,12 @@ import com.google.common.base.Optional;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowIterator;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
+import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -55,13 +55,15 @@ public class FiniteFirehoseProcessor
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
   private final long pushTimeout;
+  private final IndexTaskInputRowIteratorBuilder inputRowIteratorBuilder;
 
   public FiniteFirehoseProcessor(
       RowIngestionMeters buildSegmentsMeters,
       @Nullable CircularBuffer<Throwable> buildSegmentsSavedParseExceptions,
       boolean logParseExceptions,
       int maxParseExceptions,
-      long pushTimeout
+      long pushTimeout,
+      IndexTaskInputRowIteratorBuilder inputRowIteratorBuilder
   )
   {
     this.buildSegmentsMeters = buildSegmentsMeters;
@@ -69,6 +71,7 @@ public class FiniteFirehoseProcessor
     this.logParseExceptions = logParseExceptions;
     this.maxParseExceptions = maxParseExceptions;
     this.pushTimeout = pushTimeout;
+    this.inputRowIteratorBuilder = inputRowIteratorBuilder;
   }
 
   /**
@@ -92,32 +95,26 @@ public class FiniteFirehoseProcessor
                                                         ? (DynamicPartitionsSpec) partitionsSpec
                                                         : null;
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
+
     try (
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
-      while (firehose.hasMore()) {
+      InputRowIterator iterator = inputRowIteratorBuilder
+          .firehose(firehose)
+          .granularitySpec(granularitySpec)
+          .nullRowRunnable(buildSegmentsMeters::incrementThrownAway)
+          .absentBucketIntervalConsumer(inputRow -> buildSegmentsMeters.incrementThrownAway())
+          .build();
+
+      while (iterator.hasNext()) {
         try {
-          final InputRow inputRow = firehose.nextRow();
-
+          InputRow inputRow = iterator.next();
           if (inputRow == null) {
-            buildSegmentsMeters.incrementThrownAway();
             continue;
           }
 
-          if (!Intervals.ETERNITY.contains(inputRow.getTimestamp())) {
-            final String errorMsg = StringUtils.format(
-                "Encountered row with timestamp that cannot be represented as a long: [%s]",
-                inputRow
-            );
-            throw new ParseException(errorMsg);
-          }
-
-          final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
-          if (!optInterval.isPresent()) {
-            buildSegmentsMeters.incrementThrownAway();
-            continue;
-          }
-
+          Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
+          @SuppressWarnings("OptionalGetWithoutIsPresent")  // always present via IndexTaskInputRowIteratorBuilder
           final Interval interval = optInterval.get();
           final String sequenceName = segmentAllocator.getSequenceName(interval, inputRow);
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
