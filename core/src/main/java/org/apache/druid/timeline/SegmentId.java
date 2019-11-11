@@ -202,7 +202,7 @@ public final class SegmentId implements Comparable<SegmentId>
         possibleParsings.add(of(dataSource, new Interval(start, end), version, possiblePartitionNum));
       }
     }
-    possibleParsings.add(of(dataSource, new Interval(start, end), version, trail));
+    possibleParsings.add(of(dataSource, new Interval(start, end), version, trail.equals("") ? 0 : trail));
     return possibleParsings;
   }
 
@@ -358,7 +358,10 @@ public final class SegmentId implements Comparable<SegmentId>
 
   public SegmentDescriptor toDescriptor()
   {
-    return new SegmentDescriptor(Intervals.utc(intervalStartMillis, intervalEndMillis), version, partitionNum, identifier + "_" + partitionNum);
+    if (identifier != null) {
+      return new SegmentDescriptor(Intervals.utc(intervalStartMillis, intervalEndMillis), version, partitionNum, identifier + "_" + partitionNum);
+    }
+    return new SegmentDescriptor(Intervals.utc(intervalStartMillis, intervalEndMillis), version, partitionNum);
   }
 
   @Override
