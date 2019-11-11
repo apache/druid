@@ -17,10 +17,9 @@
  */
 
 import classNames = require('classnames');
-import React, { useEffect, useState } from 'react';
+import Hjson from 'hjson';
+import React, { useState } from 'react';
 import AceEditor from 'react-ace';
-
-import { validJson } from '../../utils';
 
 import './json-input.scss';
 
@@ -47,21 +46,27 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
   const [stringValue, setStringValue] = useState(stringifiedValue);
   const [blurred, setBlurred] = useState(false);
 
-  useEffect(() => {
+  let parsedValue: any;
+  try {
+    parsedValue = Hjson.parse(stringValue);
+  } catch {}
+  if (typeof parsedValue !== 'object') parsedValue = undefined;
+
+  if (parsedValue !== undefined && stringifyJson(parsedValue) !== stringifiedValue) {
     setStringValue(stringifiedValue);
-  }, [stringifiedValue]);
+  }
 
   return (
     <AceEditor
-      className={classNames('json-input', { invalid: !validJson(stringValue) && blurred })}
+      className={classNames('json-input', { invalid: parsedValue === undefined && blurred })}
       mode="hjson"
       theme="solarized_dark"
       onChange={(inputJson: string) => {
-        setStringValue(inputJson);
         try {
-          const value = inputJson === '' ? null : JSON.parse(inputJson);
+          const value = inputJson === '' ? null : Hjson.parse(inputJson);
           onChange(value);
         } catch {}
+        setStringValue(inputJson);
       }}
       onFocus={() => setBlurred(false)}
       onBlur={() => setBlurred(true)}
