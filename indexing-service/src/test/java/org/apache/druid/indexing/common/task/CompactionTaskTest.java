@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.coordinator.CoordinatorClient;
@@ -50,7 +51,7 @@ import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -123,6 +124,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1116,9 +1118,9 @@ public class CompactionTaskTest
     }
 
     @Override
-    public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+    public Collection<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
     {
-      return new ArrayList<>(segmentMap.keySet());
+      return ImmutableSet.copyOf(segmentMap.keySet());
     }
   }
 
@@ -1189,7 +1191,7 @@ public class CompactionTaskTest
     @Override
     public <RetType> RetType submit(TaskAction<RetType> taskAction)
     {
-      if (!(taskAction instanceof SegmentListUsedAction)) {
+      if (!(taskAction instanceof RetrieveUsedSegmentsAction)) {
         throw new ISE("action[%s] is not supported", taskAction);
       }
       return (RetType) segments;

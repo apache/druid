@@ -69,6 +69,7 @@ public class KinesisSupervisorIOConfigTest
     Assert.assertEquals(Duration.standardMinutes(30), config.getCompletionTimeout());
     Assert.assertFalse("lateMessageRejectionPeriod", config.getLateMessageRejectionPeriod().isPresent());
     Assert.assertFalse("earlyMessageRejectionPeriod", config.getEarlyMessageRejectionPeriod().isPresent());
+    Assert.assertFalse("lateMessageRejectionStartDateTime", config.getLateMessageRejectionStartDateTime().isPresent());
     Assert.assertEquals((Integer) 4000, config.getRecordsPerFetch());
     Assert.assertEquals((Integer) 0, config.getFetchDelayMillis());
     Assert.assertNull(config.getAwsAssumedRoleArn());

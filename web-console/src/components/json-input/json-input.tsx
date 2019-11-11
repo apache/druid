@@ -21,7 +21,7 @@ import AceEditor from 'react-ace';
 
 import { parseStringToJson, stringifyJson, validJson } from '../../utils';
 
-interface JSONInputProps {
+interface JsonInputProps {
   onChange: (newJSONValue: any) => void;
   value: any;
   updateInputValidity?: (valueValid: boolean) => void;
@@ -31,12 +31,12 @@ interface JSONInputProps {
   height?: string;
 }
 
-interface JSONInputState {
+interface JsonInputState {
   stringValue: string;
 }
 
-export class JSONInput extends React.PureComponent<JSONInputProps, JSONInputState> {
-  constructor(props: JSONInputProps) {
+export class JsonInput extends React.PureComponent<JsonInputProps, JsonInputState> {
+  constructor(props: JsonInputProps) {
     super(props);
     this.state = {
       stringValue: '',
@@ -51,7 +51,7 @@ export class JSONInput extends React.PureComponent<JSONInputProps, JSONInputStat
     });
   }
 
-  componentWillReceiveProps(nextProps: JSONInputProps): void {
+  componentWillReceiveProps(nextProps: JsonInputProps): void {
     if (JSON.stringify(nextProps.value) !== JSON.stringify(this.props.value)) {
       this.setState({
         stringValue: stringifyJson(nextProps.value),

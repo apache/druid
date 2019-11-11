@@ -31,7 +31,7 @@ Apache Druid (incubating) uses [Apache ZooKeeper](http://zookeeper.apache.org/) 
 4.  [Overlord](../design/overlord.md) leader election
 5.  [Overlord](../design/overlord.md) and [MiddleManager](../design/middlemanager.md) task management
 
-### Coordinator Leader Election
+## Coordinator Leader Election
 
 We use the Curator LeadershipLatch recipe to do leader election at path
 
@@ -39,7 +39,7 @@ We use the Curator LeadershipLatch recipe to do leader election at path
 ${druid.zk.paths.coordinatorPath}/_COORDINATOR
 ```
 
-### Segment "publishing" protocol from Historical and Realtime
+## Segment "publishing" protocol from Historical and Realtime
 
 The `announcementsPath` and `servedSegmentsPath` are used for this.
 
@@ -63,7 +63,7 @@ ${druid.zk.paths.servedSegmentsPath}/${druid.host}/_segment_identifier_
 
 Processes like the [Coordinator](../design/coordinator.md) and [Broker](../design/broker.md) can then watch these paths to see which processes are currently serving which segments.
 
-### Segment load/drop protocol between Coordinator and Historical
+## Segment load/drop protocol between Coordinator and Historical
 
 The `loadQueuePath` is used for this.
 

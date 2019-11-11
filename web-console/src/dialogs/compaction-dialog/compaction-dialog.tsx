@@ -20,6 +20,7 @@ import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import React from 'react';
 
 import { AutoForm, ExternalLink } from '../../components';
+import { DRUID_DOCS_VERSION } from '../../variables';
 
 import './compaction-dialog.scss';
 
@@ -125,7 +126,9 @@ export class CompactionDialog extends React.PureComponent<
               type: 'json',
               info: (
                 <p>
-                  <ExternalLink href="https://druid.apache.org/docs/latest/ingestion/tasks.html#task-context">
+                  <ExternalLink
+                    href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/tasks.html#task-context`}
+                  >
                     Task context
                   </ExternalLink>{' '}
                   for compaction tasks.
@@ -143,7 +146,9 @@ export class CompactionDialog extends React.PureComponent<
               type: 'json',
               info: (
                 <p>
-                  <ExternalLink href="https://druid.apache.org/docs/latest/configuration/index.html#compact-task-tuningconfig">
+                  <ExternalLink
+                    href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/configuration/index.html#compact-task-tuningconfig`}
+                  >
                     Tuning config
                   </ExternalLink>{' '}
                   for compaction tasks.

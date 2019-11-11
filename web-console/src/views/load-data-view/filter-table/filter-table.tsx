@@ -27,69 +27,77 @@ import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './filter-table.scss';
 
+export function filterTableSelectedColumnName(
+  sampleData: HeaderAndRows,
+  selectedFilter: DruidFilter | undefined,
+): string | undefined {
+  if (!selectedFilter) return;
+  const selectedFilterName = selectedFilter.dimension;
+  if (!sampleData.header.includes(selectedFilterName)) return;
+  return selectedFilterName;
+}
+
 export interface FilterTableProps {
   sampleData: HeaderAndRows;
   columnFilter: string;
   dimensionFilters: DruidFilter[];
-  selectedFilterIndex: number;
+  selectedFilterName: string | undefined;
   onShowGlobalFilter: () => void;
   onFilterSelect: (filter: DruidFilter, index: number) => void;
 }
 
-export class FilterTable extends React.PureComponent<FilterTableProps> {
-  render(): JSX.Element {
-    const {
-      sampleData,
-      columnFilter,
-      dimensionFilters,
-      selectedFilterIndex,
-      onShowGlobalFilter,
-      onFilterSelect,
-    } = this.props;
+export const FilterTable = React.memo(function FilterTable(props: FilterTableProps) {
+  const {
+    sampleData,
+    columnFilter,
+    dimensionFilters,
+    selectedFilterName,
+    onShowGlobalFilter,
+    onFilterSelect,
+  } = props;
 
-    return (
-      <ReactTable
-        className="filter-table -striped -highlight"
-        data={sampleData.rows}
-        columns={filterMap(sampleData.header, (columnName, i) => {
-          if (!caseInsensitiveContains(columnName, columnFilter)) return;
-          const timestamp = columnName === '__time';
-          const filterIndex = dimensionFilters.findIndex(f => f.dimension === columnName);
-          const filter = dimensionFilters[filterIndex];
+  return (
+    <ReactTable
+      className="filter-table -striped -highlight"
+      data={sampleData.rows}
+      columns={filterMap(sampleData.header, (columnName, i) => {
+        if (!caseInsensitiveContains(columnName, columnFilter)) return;
+        const timestamp = columnName === '__time';
+        const filterIndex = dimensionFilters.findIndex(f => f.dimension === columnName);
+        const filter = dimensionFilters[filterIndex];
 
-          const columnClassName = classNames({
-            filtered: filter,
-            selected: filter && filterIndex === selectedFilterIndex,
-          });
-          return {
-            Header: (
-              <div
-                className={classNames('clickable')}
-                onClick={() => {
-                  if (timestamp) {
-                    onShowGlobalFilter();
-                  } else if (filter) {
-                    onFilterSelect(filter, filterIndex);
-                  } else {
-                    onFilterSelect({ type: 'selector', dimension: columnName, value: '' }, -1);
-                  }
-                }}
-              >
-                <div className="column-name">{columnName}</div>
-                <div className="column-detail">{filter ? `(filtered)` : ''}&nbsp;</div>
-              </div>
-            ),
-            headerClassName: columnClassName,
-            className: columnClassName,
-            id: String(i),
-            accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-            Cell: row => <TableCell value={row.value} timestamp={timestamp} />,
-          };
-        })}
-        defaultPageSize={50}
-        showPagination={false}
-        sortable={false}
-      />
-    );
-  }
-}
+        const columnClassName = classNames({
+          filtered: filter,
+          selected: columnName === selectedFilterName,
+        });
+        return {
+          Header: (
+            <div
+              className={classNames('clickable')}
+              onClick={() => {
+                if (timestamp) {
+                  onShowGlobalFilter();
+                } else if (filter) {
+                  onFilterSelect(filter, filterIndex);
+                } else {
+                  onFilterSelect({ type: 'selector', dimension: columnName, value: '' }, -1);
+                }
+              }}
+            >
+              <div className="column-name">{columnName}</div>
+              <div className="column-detail">{filter ? `(filtered)` : ''}&nbsp;</div>
+            </div>
+          ),
+          headerClassName: columnClassName,
+          className: columnClassName,
+          id: String(i),
+          accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
+          Cell: row => <TableCell value={timestamp ? new Date(row.value) : row.value} />,
+        };
+      })}
+      defaultPageSize={50}
+      showPagination={false}
+      sortable={false}
+    />
+  );
+});

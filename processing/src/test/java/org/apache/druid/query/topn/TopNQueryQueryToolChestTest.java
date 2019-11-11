@@ -150,8 +150,10 @@ public class TopNQueryQueryToolChestTest
     ).getCacheStrategy(query2);
 
     Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertFalse(Arrays.equals(strategy1.computeResultLevelCacheKey(query1),
-                                     strategy2.computeResultLevelCacheKey(query2)));
+    Assert.assertFalse(Arrays.equals(
+        strategy1.computeResultLevelCacheKey(query1),
+        strategy2.computeResultLevelCacheKey(query2)
+    ));
   }
 
   @Test
@@ -234,8 +236,10 @@ public class TopNQueryQueryToolChestTest
     //segment level cache key excludes postaggregates in topn
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
     Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy1.computeResultLevelCacheKey(query1)));
-    Assert.assertFalse(Arrays.equals(strategy1.computeResultLevelCacheKey(query1),
-                                     strategy2.computeResultLevelCacheKey(query2)));
+    Assert.assertFalse(Arrays.equals(
+        strategy1.computeResultLevelCacheKey(query1),
+        strategy2.computeResultLevelCacheKey(query2)
+    ));
   }
 
   @Test
@@ -323,7 +327,8 @@ public class TopNQueryQueryToolChestTest
         collector.add(CardinalityAggregator.HASH_FUNCTION.hashLong((Long) dimValue).asBytes());
         break;
       case DOUBLE:
-        collector.add(CardinalityAggregator.HASH_FUNCTION.hashLong(Double.doubleToLongBits((Double) dimValue)).asBytes());
+        collector.add(CardinalityAggregator.HASH_FUNCTION.hashLong(Double.doubleToLongBits((Double) dimValue))
+                                                         .asBytes());
         break;
       case FLOAT:
         collector.add(CardinalityAggregator.HASH_FUNCTION.hashInt(Float.floatToIntBits((Float) dimValue)).asBytes());

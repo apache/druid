@@ -18,7 +18,7 @@
 
 import { Button, Callout, Classes, Dialog, Intent, TextArea } from '@blueprintjs/core';
 import Hjson from 'hjson';
-import React from 'react';
+import React, { useState } from 'react';
 
 import { QueryContext } from '../../utils/query-context';
 
@@ -36,21 +36,20 @@ export interface EditContextDialogState {
   error?: string;
 }
 
-export class EditContextDialog extends React.PureComponent<
-  EditContextDialogProps,
-  EditContextDialogState
-> {
-  constructor(props: EditContextDialogProps) {
-    super(props);
-    this.state = {
-      queryContext: props.queryContext,
-      queryContextString: Object.keys(props.queryContext).length
-        ? JSON.stringify(props.queryContext, undefined, 2)
-        : '{\n\n}',
-    };
-  }
+export const EditContextDialog = React.memo(function EditContextDialog(
+  props: EditContextDialogProps,
+) {
+  const { onQueryContextChange, onClose } = props;
+  const [state, setState] = useState<EditContextDialogState>(() => ({
+    queryContext: props.queryContext,
+    queryContextString: Object.keys(props.queryContext).length
+      ? JSON.stringify(props.queryContext, undefined, 2)
+      : '{\n\n}',
+  }));
 
-  private handleTextChange = (e: any) => {
+  const { queryContext, queryContextString, error } = state;
+
+  function handleTextChange(e: any) {
     const queryContextString = (e.target as HTMLInputElement).value;
 
     let error: string | undefined;
@@ -66,46 +65,39 @@ export class EditContextDialog extends React.PureComponent<
       queryContext = undefined;
     }
 
-    this.setState({
+    setState({
       queryContextString,
       queryContext,
       error,
     });
-  };
-
-  private handleSave = () => {
-    const { onQueryContextChange, onClose } = this.props;
-    const { queryContext } = this.state;
-    if (!queryContext) return;
-
-    onQueryContextChange(queryContext);
-    onClose();
-  };
-
-  render(): JSX.Element {
-    const { onClose } = this.props;
-    const { queryContextString, error } = this.state;
-
-    return (
-      <Dialog className="edit-context-dialog" isOpen onClose={onClose} title={'Edit query context'}>
-        <TextArea value={queryContextString} onChange={this.handleTextChange} autoFocus />
-        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          {error && (
-            <Callout intent={Intent.DANGER} className="edit-context-dialog-error">
-              {error}
-            </Callout>
-          )}
-          <div className={'edit-context-dialog-buttons'}>
-            <Button text={'Close'} onClick={onClose} />
-            <Button
-              text={'Save'}
-              intent={Intent.PRIMARY}
-              disabled={Boolean(error)}
-              onClick={this.handleSave}
-            />
-          </div>
-        </div>
-      </Dialog>
-    );
   }
-}
+
+  return (
+    <Dialog className="edit-context-dialog" isOpen onClose={onClose} title={'Edit query context'}>
+      <TextArea value={queryContextString} onChange={handleTextChange} autoFocus />
+      <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+        {error && (
+          <Callout intent={Intent.DANGER} className="edit-context-dialog-error">
+            {error}
+          </Callout>
+        )}
+        <div className={'edit-context-dialog-buttons'}>
+          <Button text={'Close'} onClick={onClose} />
+          <Button
+            text={'Save'}
+            intent={Intent.PRIMARY}
+            disabled={Boolean(error)}
+            onClick={
+              queryContext
+                ? () => {
+                    onQueryContextChange(queryContext);
+                    onClose();
+                  }
+                : undefined
+            }
+          />
+        </div>
+      </div>
+    </Dialog>
+  );
+});

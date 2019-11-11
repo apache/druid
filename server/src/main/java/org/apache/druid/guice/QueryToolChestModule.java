@@ -28,6 +28,7 @@ import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
@@ -48,11 +49,6 @@ import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchQueryConfig;
 import org.apache.druid.query.search.SearchQueryMetricsFactory;
 import org.apache.druid.query.search.SearchQueryQueryToolChest;
-import org.apache.druid.query.select.DefaultSelectQueryMetricsFactory;
-import org.apache.druid.query.select.SelectQuery;
-import org.apache.druid.query.select.SelectQueryConfig;
-import org.apache.druid.query.select.SelectQueryMetricsFactory;
-import org.apache.druid.query.select.SelectQueryQueryToolChest;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
 import org.apache.druid.query.timeseries.DefaultTimeseriesQueryMetricsFactory;
@@ -75,7 +71,6 @@ public class QueryToolChestModule implements Module
   public static final String GROUPBY_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.groupBy.queryMetricsFactory";
   public static final String TIMESERIES_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.timeseries.queryMetricsFactory";
   public static final String TOPN_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.topN.queryMetricsFactory";
-  public static final String SELECT_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.select.queryMetricsFactory";
   public static final String SEARCH_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.search.queryMetricsFactory";
 
   public final Map<Class<? extends Query>, Class<? extends QueryToolChest>> mappings =
@@ -86,7 +81,6 @@ public class QueryToolChestModule implements Module
                   .put(SegmentMetadataQuery.class, SegmentMetadataQueryQueryToolChest.class)
                   .put(GroupByQuery.class, GroupByQueryQueryToolChest.class)
                   .put(ScanQuery.class, ScanQueryQueryToolChest.class)
-                  .put(SelectQuery.class, SelectQueryQueryToolChest.class)
                   .put(TopNQuery.class, TopNQueryQueryToolChest.class)
                   .put(DataSourceMetadataQuery.class, DataSourceQueryQueryToolChest.class)
                   .build();
@@ -103,11 +97,11 @@ public class QueryToolChestModule implements Module
 
     binder.bind(QueryToolChestWarehouse.class).to(MapQueryToolChestWarehouse.class);
 
+    JsonConfigProvider.bind(binder, "druid.query", QueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.groupBy", GroupByQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.search", SearchQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.topN", TopNQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.segmentMetadata", SegmentMetadataQueryConfig.class);
-    JsonConfigProvider.bind(binder, "druid.query.select", SelectQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.scan", ScanQueryConfig.class);
 
     PolyBind.createChoice(
@@ -153,17 +147,6 @@ public class QueryToolChestModule implements Module
         .optionBinder(binder, Key.get(TopNQueryMetricsFactory.class))
         .addBinding("default")
         .to(DefaultTopNQueryMetricsFactory.class);
-
-    PolyBind.createChoice(
-        binder,
-        SELECT_QUERY_METRICS_FACTORY_PROPERTY,
-        Key.get(SelectQueryMetricsFactory.class),
-        Key.get(DefaultSelectQueryMetricsFactory.class)
-    );
-    PolyBind
-        .optionBinder(binder, Key.get(SelectQueryMetricsFactory.class))
-        .addBinding("default")
-        .to(DefaultSelectQueryMetricsFactory.class);
 
     PolyBind.createChoice(
         binder,

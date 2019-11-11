@@ -20,6 +20,7 @@
 package org.apache.druid.timeline.partition;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 import org.apache.druid.timeline.partition.OvershadowableManager.RootPartitionRange;
 import org.apache.druid.timeline.partition.OvershadowableManager.State;
 import org.junit.Assert;
@@ -980,7 +981,7 @@ public class OvershadowableManagerTest
     Assert.assertEquals(
         "Mismatched visible chunks",
         new HashSet<>(expectedVisibleChunks),
-        new HashSet<>(manager.getVisibleChunks())
+        Sets.newHashSet(manager.createVisibleChunksStream().iterator())
     );
     Assert.assertEquals(
         "Mismatched overshadowed chunks",

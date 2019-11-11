@@ -22,6 +22,7 @@ package org.apache.druid.indexing.firehose;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
@@ -321,11 +322,11 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       final CoordinatorClient cc = new CoordinatorClient(null, null)
       {
         @Override
-        public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+        public Collection<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
         {
           // Expect the interval we asked for
           if (intervals.equals(ImmutableList.of(testCase.interval))) {
-            return ImmutableList.copyOf(testCase.segments);
+            return ImmutableSet.copyOf(testCase.segments);
           } else {
             throw new IllegalArgumentException("WTF");
           }

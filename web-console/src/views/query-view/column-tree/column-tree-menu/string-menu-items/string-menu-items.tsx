@@ -35,9 +35,9 @@ export interface StringMenuItemsProps {
   onQueryChange: (queryString: SqlQuery, run?: boolean) => void;
 }
 
-export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
-  renderFilterMenu(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = this.props;
+export const StringMenuItems = React.memo(function StringMenuItems(props: StringMenuItemsProps) {
+  function renderFilterMenu(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = props;
 
     return (
       <MenuItem icon={IconNames.FILTER} text={`Filter`}>
@@ -57,8 +57,8 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
     );
   }
 
-  renderRemoveFilter(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = this.props;
+  function renderRemoveFilter(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.hasFilterForColumn(columnName)) return;
 
     return (
@@ -72,8 +72,8 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
     );
   }
 
-  renderRemoveGroupBy(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = this.props;
+  function renderRemoveGroupBy(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.hasGroupByForColumn(columnName)) return;
     return (
       <MenuItem
@@ -86,8 +86,8 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
     );
   }
 
-  renderGroupByMenu(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = this.props;
+  function renderGroupByMenu(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.hasGroupBy()) return;
 
     return (
@@ -117,8 +117,8 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
     );
   }
 
-  renderAggregateMenu(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = this.props;
+  function renderAggregateMenu(): JSX.Element | undefined {
+    const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.hasGroupBy()) return;
 
     return (
@@ -171,15 +171,13 @@ export class StringMenuItems extends React.PureComponent<StringMenuItemsProps> {
     );
   }
 
-  render(): JSX.Element {
-    return (
-      <>
-        {this.renderFilterMenu()}
-        {this.renderRemoveFilter()}
-        {this.renderGroupByMenu()}
-        {this.renderRemoveGroupBy()}
-        {this.renderAggregateMenu()}
-      </>
-    );
-  }
-}
+  return (
+    <>
+      {renderFilterMenu()}
+      {renderRemoveFilter()}
+      {renderGroupByMenu()}
+      {renderRemoveGroupBy()}
+      {renderAggregateMenu()}
+    </>
+  );
+});

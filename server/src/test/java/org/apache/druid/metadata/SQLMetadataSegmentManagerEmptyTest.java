@@ -80,7 +80,7 @@ public class SQLMetadataSegmentManagerEmptyTest
     sqlSegmentsMetadata.poll();
     Assert.assertTrue(sqlSegmentsMetadata.isPollingDatabasePeriodically());
     Assert.assertEquals(
-        ImmutableList.of(),
+        ImmutableSet.of(),
         sqlSegmentsMetadata.retrieveAllDataSourceNames()
     );
     Assert.assertEquals(
