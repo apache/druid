@@ -277,6 +277,9 @@ jobs:
           echo $v dmesg ======================== ;
           docker exec -it druid-$v sh -c 'dmesg | tail -3' ;
           done
+        - for v in ~/shared/tasklogs/*.log ; do
+          echo $v logtail ======================== ; tail -100 $v ;
+          done
 
     - &integration_kafka_index
       name: "kafka index integration test"

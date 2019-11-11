@@ -36,7 +36,7 @@ public class PartialHashSegmentGenerateTaskTest
       Factory.createDataSchema(Factory.INPUT_INTERVALS)
   );
 
-  private PartialSegmentGenerateTask target;
+  private PartialHashSegmentGenerateTask target;
 
   @Before
   public void setup()

@@ -1352,7 +1352,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
      */
     @Deprecated
     @JsonProperty
-    public static boolean isBuildV9Directly()
+    public boolean isBuildV9Directly()
     {
       return true;
     }
