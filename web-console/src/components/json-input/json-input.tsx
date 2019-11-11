@@ -23,6 +23,10 @@ import AceEditor from 'react-ace';
 
 import './json-input.scss';
 
+function parseHjson(str: string) {
+  return str === '' ? null : Hjson.parse(str);
+}
+
 function stringifyJson(item: any): string {
   if (item != null) {
     return JSON.stringify(item, null, 2);
@@ -48,7 +52,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
 
   let parsedValue: any;
   try {
-    parsedValue = Hjson.parse(stringValue);
+    parsedValue = parseHjson(stringValue);
   } catch {}
   if (typeof parsedValue !== 'object') parsedValue = undefined;
 
@@ -63,7 +67,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
       theme="solarized_dark"
       onChange={(inputJson: string) => {
         try {
-          const value = inputJson === '' ? null : Hjson.parse(inputJson);
+          const value = parseHjson(inputJson);
           onChange(value);
         } catch {}
         setStringValue(inputJson);
