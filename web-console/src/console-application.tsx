@@ -87,8 +87,7 @@ export class ConsoleApplication extends React.PureComponent<
       processQuery: async () => {
         const capabilities = await Capabilities.detectCapabilities();
         if (!capabilities) ConsoleApplication.shownNotifications();
-        // return capabilities || Capabilities.FULL;
-        return Capabilities.COORDINATOR;
+        return capabilities || Capabilities.FULL;
       },
       onStateChange: ({ result, loading }) => {
         this.setState({
