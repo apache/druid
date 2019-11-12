@@ -128,8 +128,8 @@ function makeLoadByPeriod(rule) {
   retVal +=
     "<span class='rule_label'>includeFuture</span><input type='text' name='includeFuture' " +
       "value='" +
-      rule.includeFuture !==
-    undefined
+      typeof rule.includeFuture !==
+    'undefined'
       ? rule.includeFuture
       : true + "'/>";
   retVal += "<button type='button' class='add_tier'>Add Another Tier</button>";
@@ -185,8 +185,8 @@ function makeDropByPeriod(rule) {
   retVal +=
     "<span class='rule_label'>includeFuture</span><input type='text' name='includeFuture' " +
       "value='" +
-      rule.includeFuture !==
-    undefined
+      typeof rule.includeFuture !==
+    'undefined'
       ? rule.includeFuture
       : true + "'/>";
   return retVal;
