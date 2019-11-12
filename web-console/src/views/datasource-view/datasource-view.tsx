@@ -1014,7 +1014,7 @@ GROUP BY 1`;
             checked={showChart}
             label="Show segment timeline"
             onChange={() => this.setState({ showChart: !showChart })}
-            disabled={!capabilities.hasSql()}
+            disabled={!capabilities.hasSqlOrCoordinatorAccess()}
           />
           <Switch
             checked={showDisabled}
@@ -1034,7 +1034,11 @@ GROUP BY 1`;
         </ViewControlBar>
         {showChart && (
           <div className={'chart-container'}>
-            <SegmentTimeline chartHeight={chartHeight} chartWidth={chartWidth} />
+            <SegmentTimeline
+              capabilities={capabilities}
+              chartHeight={chartHeight}
+              chartWidth={chartWidth}
+            />
           </div>
         )}
         {this.renderDatasourceTable()}
