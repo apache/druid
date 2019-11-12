@@ -128,7 +128,7 @@ public abstract class TextReader implements InputEntityReader
   public abstract boolean needsToProcessHeaderLine();
 
   /**
-   * Processes a header line. This will be called as many times as {@link #getNumHeaderLinesToSkip()}.
+   * Processes a header line. This will be called if {@link #needsToProcessHeaderLine()} = true.
    */
   public abstract void processHeaderLine(String line) throws IOException;
 }

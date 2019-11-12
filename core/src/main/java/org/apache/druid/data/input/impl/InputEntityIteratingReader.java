@@ -19,13 +19,13 @@
 
 package org.apache.druid.data.input.impl;
 
+import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowPlusRaw;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
-import org.apache.druid.data.input.InputEntityReader;
-import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.File;
