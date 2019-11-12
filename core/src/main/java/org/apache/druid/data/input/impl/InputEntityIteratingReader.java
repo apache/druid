@@ -26,12 +26,12 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowPlusRaw;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -87,52 +87,12 @@ public class InputEntityIteratingReader<T> implements InputSourceReader
 
   private <R> CloseableIterator<R> createIterator(Function<InputEntityReader, CloseableIterator<R>> rowPopulator)
   {
-    return new CloseableIterator<R>()
-    {
-      CloseableIterator<R> rowIterator = null;
-
-      @Override
-      public boolean hasNext()
-      {
-        updateRowIteratorIfNeeded();
-        return rowIterator != null && rowIterator.hasNext();
-      }
-
-      @Override
-      public R next()
-      {
-        if (!hasNext()) {
-          throw new NoSuchElementException();
-        }
-        return rowIterator.next();
-      }
-
-      private void updateRowIteratorIfNeeded()
-      {
-        if (rowIterator == null || !rowIterator.hasNext()) {
-          try {
-            if (rowIterator != null) {
-              rowIterator.close();
-            }
-          }
-          catch (IOException e) {
-            throw new RuntimeException(e);
-          }
-          if (sourceIterator.hasNext()) {
-            // SplitSampler is stateful and so a new one should be created per split.
-            final InputEntityReader inputEntityReader = inputFormat.createReader(inputRowSchema);
-            rowIterator = rowPopulator.apply(inputEntityReader);
-          }
-        }
-      }
-
-      @Override
-      public void close() throws IOException
-      {
-        if (rowIterator != null) {
-          rowIterator.close();
-        }
-      }
-    };
+    return CloseableIterators
+        .withEmptyBaggage(sourceIterator)
+        .flatMap(entity -> {
+          // InputEntityReader is stateful and so a new one should be created per split.
+          final InputEntityReader inputEntityReader = inputFormat.createReader(inputRowSchema);
+          return rowPopulator.apply(inputEntityReader);
+        });
   }
 }

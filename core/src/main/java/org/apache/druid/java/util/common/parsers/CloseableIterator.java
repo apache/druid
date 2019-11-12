@@ -21,6 +21,7 @@ package org.apache.druid.java.util.common.parsers;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.function.Function;
@@ -48,6 +49,48 @@ public interface CloseableIterator<T> extends Iterator<T>, Closeable
           throw new NoSuchElementException();
         }
         return mapFunction.apply(delegate.next());
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+        delegate.close();
+      }
+    };
+  }
+
+  default <R> CloseableIterator<R> flatMap(Function<T, CloseableIterator<R>> function)
+  {
+    final CloseableIterator<T> delegate = this;
+
+    return new CloseableIterator<R>()
+    {
+      CloseableIterator<R> iterator = null;
+
+      @Override
+      public boolean hasNext()
+      {
+        return (iterator != null && iterator.hasNext()) || delegate.hasNext();
+      }
+
+      @Override
+      public R next()
+      {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        if (iterator == null || !iterator.hasNext()) {
+          if (iterator != null) {
+            try {
+              iterator.close();
+            }
+            catch (IOException e) {
+              throw new UncheckedIOException(e);
+            }
+          }
+          iterator = function.apply(delegate.next());
+        }
+        return iterator.next();
       }
 
       @Override

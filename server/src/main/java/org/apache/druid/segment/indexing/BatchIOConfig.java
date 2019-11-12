@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.indexing;
 
-import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputSource;
 
 /**
  * IOConfig for all batch tasks except compactionTask.
