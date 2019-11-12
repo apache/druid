@@ -54,6 +54,7 @@ import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.CheckPointDataSourceMetadataAction;
 import org.apache.druid.indexing.common.actions.ResetDataSourceMetadataAction;
+import org.apache.druid.indexing.common.actions.SeekableStreamPartitionsClosedNotifyAction;
 import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
@@ -970,6 +971,29 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 Preconditions.checkNotNull(publishedSegmentsAndMetadata.getCommitMetadata(), "commitMetadata")
             );
 
+            if (supportsPartitionExpiration() && publishedSegmentsAndMetadata.getSegments().isEmpty()) {
+              // we didn't publish anything, check if we have any closed partitions that we should tell the
+              // supervisor about so that it stop assigning them to later tasks.
+              log.info("We published nothing! Checking sequence metadata for closed shards: " + sequenceMetadata);
+              Set<PartitionIdType> closedShards = new HashSet<>();
+              for (Map.Entry<PartitionIdType, SequenceOffsetType> endOffset : sequenceMetadata.getEndOffsets().entrySet()) {
+                if (isEndOfShard(endOffset.getValue())) {
+                  closedShards.add(endOffset.getKey());
+                }
+              }
+              if (!closedShards.isEmpty()) {
+                try {
+                  log.info("Sending closed shards to supervisor: " + closedShards);
+                  sendClosedShardsAndWait(closedShards, toolbox);
+                }
+                catch (IOException e) {
+                  log.error(e, "Unable to update closed shards [%s], dying", closedShards);
+                  handoffFuture.setException(e);
+                  throw new RuntimeException(e);
+                }
+              }
+            }
+
             sequences.remove(sequenceMetadata);
             publishingSequences.remove(sequenceMetadata.getSequenceName());
             try {
@@ -1348,6 +1372,29 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       requestPause();
     } else {
       log.makeAlert("Failed to send reset request for partitions [%s]", partitionOffsetMap.keySet()).emit();
+    }
+  }
+
+  protected void sendClosedShardsAndWait(
+      Set<PartitionIdType> closedShards,
+      TaskToolbox taskToolbox
+  )
+      throws IOException
+  {
+    log.info("Closing shards: " + closedShards);
+    boolean result = taskToolbox
+        .getTaskActionClient()
+        .submit(
+            new SeekableStreamPartitionsClosedNotifyAction(
+                task.getDataSource(),
+                (Set<String>) closedShards
+            )
+        );
+
+    log.info("Send closed shards result: " + result);
+    if (result) {
+
+    } else {
     }
   }
 
@@ -1858,6 +1905,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     // Finally, check if this record comes before the endOffsets for this partition.
     return isMoreToReadBeforeReadingRecord(recordSequenceNumber.get(), endOffsets.get(partition));
+  }
+
+  protected boolean supportsPartitionExpiration()
+  {
+    return false;
   }
 
   /**

@@ -406,6 +406,24 @@ public class TaskQueue
     }
   }
 
+  public void shutdownWithSuccess(final String taskId, String reasonFormat, Object... args)
+  {
+    giant.lock();
+
+    try {
+      Preconditions.checkNotNull(taskId, "taskId");
+      for (final Task task : tasks) {
+        if (task.getId().equals(taskId)) {
+          notifyStatus(task, TaskStatus.success(taskId), reasonFormat, args);
+          break;
+        }
+      }
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
   /**
    * Notify this queue that some task has an updated status. If this update is valid, the status will be persisted in
    * the task storage facility. If the status is a completed status, the task will be unlocked and no further

@@ -174,6 +174,12 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   }
 
   @Override
+  protected boolean supportsPartitionExpiration()
+  {
+    return true;
+  }
+
+  @Override
   protected boolean isEndOfShard(String seqNum)
   {
     return KinesisSequenceNumber.END_OF_SHARD_MARKER.equals(seqNum);

@@ -105,7 +105,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 
 public class KinesisSupervisorTest extends EasyMockSupport
@@ -1233,24 +1235,18 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.pauseAsync(EasyMock.contains("sequenceName-0")))
             .andReturn(Futures.immediateFuture(ImmutableMap.of(
                 SHARD_ID1,
-                "1",
-                SHARD_ID0,
-                "0"
+                "1"
             )))
             .andReturn(Futures.immediateFuture(ImmutableMap.of(
                 SHARD_ID1,
-                "3",
-                SHARD_ID0,
-                "1"
+                "3"
             )));
     EasyMock.expect(
         taskClient.setEndOffsetsAsync(
             EasyMock.contains("sequenceName-0"),
             EasyMock.eq(ImmutableMap.of(
                 SHARD_ID1,
-                "3",
-                SHARD_ID0,
-                "1"
+                "3"
             )),
             EasyMock.eq(true)
         )
@@ -1293,13 +1289,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
           "3",
           taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
       );
-      Assert.assertEquals(
-          "1",
-          taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID0)
-      );
       // start sequenceNumbers should be exclusive for the second batch of tasks
       Assert.assertEquals(
-          ImmutableSet.of(SHARD_ID0, SHARD_ID1),
+          ImmutableSet.of(SHARD_ID1),
           ((KinesisIndexTask) task).getIOConfig().getStartSequenceNumbers().getExclusivePartitions()
       );
     }
@@ -3351,8 +3343,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
   public void testGetCurrentTotalStats()
   {
     supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null, false);
+    supervisor.setPartitionIdsForTests(
+        ImmutableList.of(SHARD_ID0, SHARD_ID1)
+    );
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
-        supervisor.getTaskGroupIdForPartition("0"),
+        supervisor.getTaskGroupIdForPartition(SHARD_ID0),
         ImmutableMap.of("0", "0"),
         Optional.absent(),
         Optional.absent(),
@@ -3361,7 +3356,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
-        supervisor.getTaskGroupIdForPartition("1"),
+        supervisor.getTaskGroupIdForPartition(SHARD_ID1),
         ImmutableMap.of("0", "0"),
         Optional.absent(),
         Optional.absent(),
@@ -3903,12 +3898,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
             .anyTimes();
     TreeMap<Integer, Map<String, String>> checkpointsGroup0 = new TreeMap<>();
     checkpointsGroup0.put(0, ImmutableMap.of(
-        SHARD_ID2, "0",
-        SHARD_ID0, KinesisSequenceNumber.END_OF_SHARD_MARKER
+        SHARD_ID1, "0"
     ));
     TreeMap<Integer, Map<String, String>> checkpointsGroup1 = new TreeMap<>();
     checkpointsGroup1.put(1, ImmutableMap.of(
-        SHARD_ID1, "0"
+        SHARD_ID2, "0"
     ));
     // there would be 2 tasks, 1 for each task group
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
@@ -3937,7 +3931,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new SeekableStreamStartSequenceNumbers<>(
             STREAM,
             ImmutableMap.of(
-                SHARD_ID2, "0"
+                SHARD_ID1, "0"
             ),
             ImmutableSet.of()
         );
@@ -3946,7 +3940,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new SeekableStreamEndSequenceNumbers<>(
             STREAM,
             ImmutableMap.of(
-                SHARD_ID2, KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
+                SHARD_ID1, KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
             )
         );
 
@@ -3954,7 +3948,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new SeekableStreamStartSequenceNumbers<>(
             STREAM,
             ImmutableMap.of(
-                SHARD_ID1, "0"
+                SHARD_ID2, "0"
             ),
             ImmutableSet.of()
         );
@@ -3963,7 +3957,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new SeekableStreamEndSequenceNumbers<>(
             STREAM,
             ImmutableMap.of(
-                SHARD_ID1, KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
+                SHARD_ID2, KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
             )
         );
 
@@ -4160,11 +4154,21 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertEquals(group1ExpectedStartSequenceNumbers, group1Config.getStartSequenceNumbers());
     Assert.assertEquals(group1ExpectedEndSequenceNumbers, group1Config.getEndSequenceNumbers());
 
-    Map<Integer, Map<String, String>> expectedPartitionGroups = ImmutableMap.of(
-        0, ImmutableMap.of(SHARD_ID1, "-1"),
-        1, ImmutableMap.of(SHARD_ID2, "-1")
+    Map<Integer, Set<String>> expectedPartitionGroups = ImmutableMap.of(
+        0, ImmutableSet.of(SHARD_ID1),
+        1, ImmutableSet.of(SHARD_ID2)
     );
     Assert.assertEquals(expectedPartitionGroups, supervisor.getPartitionGroups());
+
+    ConcurrentHashMap<String, String> expectedPartitionOffsets = new ConcurrentHashMap<>(
+        ImmutableMap.of(
+            SHARD_ID2, "-1",
+            SHARD_ID1, "-1",
+            SHARD_ID0, "-1"
+        )
+    );
+    Assert.assertEquals(expectedPartitionOffsets, supervisor.getPartitionOffsets());
+
   }
 
   @Test
@@ -4554,11 +4558,19 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertEquals(group0ExpectedStartSequenceNumbers, group0Config.getStartSequenceNumbers());
     Assert.assertEquals(group0ExpectedEndSequenceNumbers, group0Config.getEndSequenceNumbers());
 
-    Map<Integer, Map<String, String>> expectedPartitionGroups = ImmutableMap.of(
-        0, ImmutableMap.of(SHARD_ID2, "-1"),
-        1, ImmutableMap.of()
+    Map<Integer, Set<String>> expectedPartitionGroups = ImmutableMap.of(
+        0, ImmutableSet.of(SHARD_ID2),
+        1, ImmutableSet.of()
+    );
+    ConcurrentHashMap<String, String> expectedPartitionOffsets = new ConcurrentHashMap<>(
+        ImmutableMap.of(
+            SHARD_ID2, "-1",
+            SHARD_ID1, "-1",
+            SHARD_ID0, "-1"
+        )
     );
     Assert.assertEquals(expectedPartitionGroups, supervisor.getPartitionGroups());
+    Assert.assertEquals(expectedPartitionOffsets, supervisor.getPartitionOffsets());
   }
 
   private TestableKinesisSupervisor getTestableSupervisor(

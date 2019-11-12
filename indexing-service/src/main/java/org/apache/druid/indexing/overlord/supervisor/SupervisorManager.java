@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -187,6 +188,25 @@ public class SupervisorManager
     }
 
     supervisor.lhs.reset(dataSourceMetadata);
+    return true;
+  }
+
+  public boolean updateClosedShards(String id, Set<String> closedShards)
+  {
+
+    Preconditions.checkState(started, "SupervisorManager not started");
+    Preconditions.checkNotNull(id, "id");
+    Preconditions.checkNotNull(id, "closedShards");
+
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+
+    if (supervisor == null) {
+      return false;
+    }
+    if (supervisor.lhs instanceof SeekableStreamSupervisor) {
+      ((SeekableStreamSupervisor) supervisor.lhs).updateClosedShards(closedShards);
+    }
+
     return true;
   }
 
