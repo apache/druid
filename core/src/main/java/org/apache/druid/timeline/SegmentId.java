@@ -202,7 +202,7 @@ public final class SegmentId implements Comparable<SegmentId>
         possibleParsings.add(of(dataSource, new Interval(start, end), version, possiblePartitionNum));
       }
     }
-    possibleParsings.add(of(dataSource, new Interval(start, end), version, trail.equals("") ? 0 : trail));
+    possibleParsings.add(of(dataSource, new Interval(start, end), version, "".equals(trail) ? 0 : trail));
     return possibleParsings;
   }
 
