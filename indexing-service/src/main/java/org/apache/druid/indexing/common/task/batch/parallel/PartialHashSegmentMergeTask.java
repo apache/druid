@@ -49,7 +49,7 @@ public class PartialHashSegmentMergeTask
   public static final String TYPE = "partial_index_merge";
 
   private final HashedPartitionsSpec partitionsSpec;
-  private final PartialSegmentMergeIngestionSpec<HashPartitionLocation> ingestionSchema;
+  private final PartialHashSegmentMergeIngestionSpec ingestionSchema;
 
   @JsonCreator
   public PartialHashSegmentMergeTask(
@@ -59,7 +59,7 @@ public class PartialHashSegmentMergeTask
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("supervisorTaskId") final String supervisorTaskId,
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
-      @JsonProperty("spec") final PartialSegmentMergeIngestionSpec<HashPartitionLocation> ingestionSchema,
+      @JsonProperty("spec") final PartialHashSegmentMergeIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context,
       @JacksonInject IndexingServiceClient indexingServiceClient,
       @JacksonInject IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
@@ -90,7 +90,7 @@ public class PartialHashSegmentMergeTask
   }
 
   @JsonProperty("spec")
-  private PartialSegmentMergeIngestionSpec<HashPartitionLocation> getIngestionSchema()
+  private PartialHashSegmentMergeIngestionSpec getIngestionSchema()
   {
     return ingestionSchema;
   }

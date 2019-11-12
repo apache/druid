@@ -19,57 +19,26 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
- * Report containing the {@link PartitionStat}s created by a {@link PartialSegmentGenerateTask}.
+ * Report containing the {@link HashPartitionStat}s created by a {@link PartialHashSegmentGenerateTask}.
  * This report is collected by {@link ParallelIndexSupervisorTask} and
  * used to generate {@link PartialHashSegmentMergeIOConfig}.
  */
-abstract class GeneratedPartitionsReport<T extends PartitionStat> implements SubTaskReport
+public class GeneratedHashPartitionsReport extends GeneratedPartitionsReport<HashPartitionStat> implements SubTaskReport
 {
-  private final String taskId;
-  private final List<T> partitionStats;
+  public static final String TYPE = "generated_partitions";
 
-  GeneratedPartitionsReport(String taskId, List<T> partitionStats)
+  @JsonCreator
+  public GeneratedHashPartitionsReport(
+      @JsonProperty("taskId") String taskId,
+      @JsonProperty("partitionStats") List<HashPartitionStat> partitionStats
+  )
   {
-    this.taskId = taskId;
-    this.partitionStats = partitionStats;
-  }
-
-  @Override
-  @JsonProperty
-  public String getTaskId()
-  {
-    return taskId;
-  }
-
-  @JsonProperty
-  public List<T> getPartitionStats()
-  {
-    return partitionStats;
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    GeneratedPartitionsReport that = (GeneratedPartitionsReport) o;
-    return Objects.equals(taskId, that.taskId) &&
-           Objects.equals(partitionStats, that.partitionStats);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(taskId, partitionStats);
+    super(taskId, partitionStats);
   }
 }

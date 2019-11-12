@@ -189,7 +189,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
     @Override
     public PartialHashSegmentMergeParallelIndexTaskRunner createPartialHashSegmentMergeRunner(
         TaskToolbox toolbox,
-        List<PartialSegmentMergeIOConfig<HashPartitionLocation>> ioConfigs
+        List<PartialHashSegmentMergeIOConfig> ioConfigs
     )
     {
       return new TestPartialHashSegmentMergeParallelIndexTaskRunner(
@@ -230,7 +230,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
     private TestPartialHashSegmentMergeParallelIndexTaskRunner(
         TaskToolbox toolbox,
         ParallelIndexSupervisorTask supervisorTask,
-        List<PartialSegmentMergeIOConfig<HashPartitionLocation>> mergeIOConfigs,
+        List<PartialHashSegmentMergeIOConfig> mergeIOConfigs,
         IndexingServiceClient indexingServiceClient
     )
     {
@@ -248,10 +248,10 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
     }
 
     @Override
-    SubTaskSpec<PartialHashSegmentMergeTask> newTaskSpec(PartialSegmentMergeIOConfig<HashPartitionLocation> ioConfig)
+    SubTaskSpec<PartialHashSegmentMergeTask> newTaskSpec(PartialHashSegmentMergeIOConfig ioConfig)
     {
-      final PartialSegmentMergeIngestionSpec<HashPartitionLocation> ingestionSpec =
-          new PartialSegmentMergeIngestionSpec<>(
+      final PartialHashSegmentMergeIngestionSpec ingestionSpec =
+          new PartialHashSegmentMergeIngestionSpec(
               supervisorTask.getIngestionSchema().getDataSchema(),
               ioConfig,
               getTuningConfig()
@@ -294,7 +294,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         TaskResource taskResource,
         String supervisorTaskId,
         int numAttempts,
-        PartialSegmentMergeIngestionSpec<HashPartitionLocation> ingestionSchema,
+        PartialHashSegmentMergeIngestionSpec ingestionSchema,
         Map<String, Object> context,
         IndexingServiceClient indexingServiceClient,
         IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,

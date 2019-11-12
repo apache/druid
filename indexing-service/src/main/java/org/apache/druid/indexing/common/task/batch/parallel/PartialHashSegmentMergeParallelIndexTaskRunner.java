@@ -38,14 +38,14 @@ class PartialHashSegmentMergeParallelIndexTaskRunner
     extends ParallelIndexPhaseRunner<PartialHashSegmentMergeTask, PushedSegmentsReport>
 {
   private final DataSchema dataSchema;
-  private final List<PartialSegmentMergeIOConfig<HashPartitionLocation>> mergeIOConfigs;
+  private final List<PartialHashSegmentMergeIOConfig> mergeIOConfigs;
 
   PartialHashSegmentMergeParallelIndexTaskRunner(
       TaskToolbox toolbox,
       String taskId,
       String groupId,
       DataSchema dataSchema,
-      List<PartialSegmentMergeIOConfig<HashPartitionLocation>> mergeIOConfigs,
+      List<PartialHashSegmentMergeIOConfig> mergeIOConfigs,
       ParallelIndexTuningConfig tuningConfig,
       Map<String, Object> context,
       IndexingServiceClient indexingServiceClient
@@ -76,10 +76,10 @@ class PartialHashSegmentMergeParallelIndexTaskRunner
   }
 
   @VisibleForTesting
-  SubTaskSpec<PartialHashSegmentMergeTask> newTaskSpec(PartialSegmentMergeIOConfig<HashPartitionLocation> ioConfig)
+  SubTaskSpec<PartialHashSegmentMergeTask> newTaskSpec(PartialHashSegmentMergeIOConfig ioConfig)
   {
-    final PartialSegmentMergeIngestionSpec<HashPartitionLocation> ingestionSpec =
-        new PartialSegmentMergeIngestionSpec<>(
+    final PartialHashSegmentMergeIngestionSpec ingestionSpec =
+        new PartialHashSegmentMergeIngestionSpec(
             dataSchema,
             ioConfig,
             getTuningConfig()

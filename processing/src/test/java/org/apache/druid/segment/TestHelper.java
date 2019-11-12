@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
@@ -46,7 +45,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -401,49 +399,9 @@ public class TestHelper
 
   public static void testSerializesDeserializes(ObjectMapper objectMapper, Object object)
   {
-    testSerializesDeserializes(
-        objectMapper,
-        object,
-        serialized -> {
-          try {
-            return objectMapper.readValue(serialized, object.getClass());
-          }
-          catch (IOException e) {
-            throw new UncheckedIOException(e);
-          }
-        }
-    );
-  }
-
-  public static void testSerializesDeserializes(
-      ObjectMapper objectMapper,
-      Object object,
-      TypeReference<?> typeReference
-  )
-  {
-    testSerializesDeserializes(
-        objectMapper,
-        object,
-        serialized -> {
-          try {
-            return objectMapper.readValue(serialized, typeReference);
-          }
-          catch (IOException e) {
-            throw new UncheckedIOException(e);
-          }
-        }
-    );
-  }
-
-  private static void testSerializesDeserializes(
-      ObjectMapper objectMapper,
-      Object object,
-      Function<String, Object> readValueFunction
-  )
-  {
     try {
       String serialized = objectMapper.writeValueAsString(object);
-      Object deserialized = readValueFunction.apply(serialized);
+      Object deserialized = objectMapper.readValue(serialized, object.getClass());
       Assert.assertEquals(serialized, objectMapper.writeValueAsString(deserialized));
     }
     catch (IOException e) {

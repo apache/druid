@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Before;
@@ -27,16 +26,16 @@ import org.junit.Test;
 
 import java.util.Collections;
 
-public class GeneratedPartitionsReportTest
+public class GeneratedHashPartitionsReportTest
 {
   private static final ObjectMapper OBJECT_MAPPER = Factory.createObjectMapper();
 
-  private GeneratedPartitionsReport<HashPartitionStat> target;
+  private GeneratedHashPartitionsReport target;
 
   @Before
   public void setup()
   {
-    target = new GeneratedPartitionsReport<>(
+    target = new GeneratedHashPartitionsReport(
         "task-id",
         Collections.singletonList(
             new HashPartitionStat(
@@ -55,12 +54,6 @@ public class GeneratedPartitionsReportTest
   @Test
   public void serializesDeserializes()
   {
-    TestHelper.testSerializesDeserializes(
-        OBJECT_MAPPER,
-        target,
-        new TypeReference<GeneratedPartitionsReport<HashPartitionStat>>()
-        {
-        }
-    );
+    TestHelper.testSerializesDeserializes(OBJECT_MAPPER, target);
   }
 }

@@ -19,28 +19,19 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import org.apache.druid.segment.indexing.IOConfig;
+import org.apache.druid.segment.indexing.DataSchema;
 
-import java.util.List;
-
-abstract class PartialSegmentMergeIOConfig<T extends PartitionLocation> implements IOConfig
+public class PartialHashSegmentMergeIngestionSpec extends PartialSegmentMergeIngestionSpec<PartialHashSegmentMergeIOConfig>
 {
-  private final List<T> partitionLocations;
-
-  PartialSegmentMergeIOConfig(List<T> partitionLocations)
+  @JsonCreator
+  public PartialHashSegmentMergeIngestionSpec(
+      @JsonProperty("dataSchema") DataSchema dataSchema,
+      @JsonProperty("ioConfig") PartialHashSegmentMergeIOConfig ioConfig,
+      @JsonProperty("tuningConfig") ParallelIndexTuningConfig tuningConfig
+  )
   {
-    Preconditions.checkState(
-        partitionLocations != null && !partitionLocations.isEmpty(),
-        "Empty partition locations"
-    );
-    this.partitionLocations = partitionLocations;
-  }
-
-  @JsonProperty
-  public List<T> getPartitionLocations()
-  {
-    return partitionLocations;
+    super(dataSchema, ioConfig, tuningConfig);
   }
 }

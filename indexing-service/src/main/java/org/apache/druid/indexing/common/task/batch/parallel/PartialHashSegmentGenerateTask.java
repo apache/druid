@@ -40,15 +40,16 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * The worker task of {@link PartialHashSegmentGenerateParallelIndexTaskRunner}. This task partitions input data by
- * hashing the segment granularity and partition dimensions in {@link
- * org.apache.druid.indexer.partitions.PartitionsSpec}. Partitioned segments are stored in local storage using {@link
- * org.apache.druid.indexing.worker.ShuffleDataSegmentPusher}.
+ * hashing the segment granularity and partition dimensions in {@link HashedPartitionsSpec}. Partitioned segments are
+ * stored in local storage using {@link org.apache.druid.indexing.worker.ShuffleDataSegmentPusher}.
  */
-public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask
+public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<GeneratedHashPartitionsReport>
 {
   public static final String TYPE = "partial_index_generate";
   private static final String PROP_SPEC = "spec";
@@ -135,7 +136,15 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask
   }
 
   @Override
-  HashPartitionStat createPartitionStat(TaskToolbox toolbox, DataSegment segment)
+  GeneratedHashPartitionsReport createGeneratedPartitionsReport(TaskToolbox toolbox, List<DataSegment> segments)
+  {
+    List<HashPartitionStat> partitionStats = segments.stream()
+                                                     .map(segment -> createPartitionStat(toolbox, segment))
+                                                     .collect(Collectors.toList());
+    return new GeneratedHashPartitionsReport(getId(), partitionStats);
+  }
+
+  private HashPartitionStat createPartitionStat(TaskToolbox toolbox, DataSegment segment)
   {
     return new HashPartitionStat(
         toolbox.getTaskExecutorNode().getHost(),

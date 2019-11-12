@@ -34,7 +34,7 @@ import java.util.Map;
  * @see PartialHashSegmentMergeParallelIndexTaskRunner
  */
 class PartialHashSegmentGenerateParallelIndexTaskRunner
-    extends FirehoseSplitParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedPartitionsReport<HashPartitionStat>>
+    extends FirehoseSplitParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedHashPartitionsReport>
 {
   // For tests
   private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory;

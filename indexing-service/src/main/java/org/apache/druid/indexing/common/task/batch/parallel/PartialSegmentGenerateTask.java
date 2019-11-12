@@ -55,12 +55,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 /**
  * Base class for parallel indexing perfect rollup worker partial segment generate tasks.
  */
-abstract class PartialSegmentGenerateTask<T extends PartitionStat> extends PerfectRollupWorkerTask
+abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> extends PerfectRollupWorkerTask
 {
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
@@ -117,10 +116,7 @@ abstract class PartialSegmentGenerateTask<T extends PartitionStat> extends Perfe
     );
 
     final List<DataSegment> segments = generateSegments(toolbox, firehoseFactory, firehoseTempDir);
-    final List<T> partitionStats = segments.stream()
-                                           .map(segment -> createPartitionStat(toolbox, segment))
-                                           .collect(Collectors.toList());
-    taskClient.report(supervisorTaskId, new GeneratedPartitionsReport<>(getId(), partitionStats));
+    taskClient.report(supervisorTaskId, createGeneratedPartitionsReport(toolbox, segments));
 
     return TaskStatus.success(getId());
   }
@@ -131,9 +127,12 @@ abstract class PartialSegmentGenerateTask<T extends PartitionStat> extends Perfe
   abstract IndexTaskSegmentAllocator createSegmentAllocator(TaskToolbox toolbox) throws IOException;
 
   /**
-   * @return {@link PartitionStat<T>} suitable for the desired segment partitioning strategy.
+   * @return {@link GeneratedPartitionsReport} suitable for the desired segment partitioning strategy.
    */
-  abstract T createPartitionStat(TaskToolbox toolbox, DataSegment segment);
+  abstract T createGeneratedPartitionsReport(
+      TaskToolbox toolbox,
+      List<DataSegment> segments
+  );
 
   private List<DataSegment> generateSegments(
       final TaskToolbox toolbox,

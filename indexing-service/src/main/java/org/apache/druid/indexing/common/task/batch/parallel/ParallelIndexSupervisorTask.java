@@ -308,7 +308,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @VisibleForTesting
   PartialHashSegmentMergeParallelIndexTaskRunner createPartialHashSegmentMergeRunner(
       TaskToolbox toolbox,
-      List<PartialSegmentMergeIOConfig<HashPartitionLocation>> ioConfigs
+      List<PartialHashSegmentMergeIOConfig> ioConfigs
   )
   {
     return new PartialHashSegmentMergeParallelIndexTaskRunner(
@@ -493,7 +493,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private TaskStatus runHashPartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
     // 1. Partial segment generation phase
-    ParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedPartitionsReport<HashPartitionStat>> indexingRunner = createRunner(
+    ParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedHashPartitionsReport> indexingRunner = createRunner(
         toolbox,
         this::createPartialHashSegmentGenerateRunner
     );
@@ -508,7 +508,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     // partition (interval, partitionId) -> partition locations
     Map<Pair<Interval, Integer>, List<HashPartitionLocation>> partitionToLocations =
         groupHashPartitionLocationsPerPartition(indexingRunner.getReports());
-    final List<PartialSegmentMergeIOConfig<HashPartitionLocation>> ioConfigs = createMergeIOConfigs(
+    final List<PartialHashSegmentMergeIOConfig> ioConfigs = createHashMergeIOConfigs(
         ingestionSchema.getTuningConfig().getTotalNumMergeTasks(),
         partitionToLocations
     );
@@ -527,7 +527,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   private static Map<Pair<Interval, Integer>, List<HashPartitionLocation>> groupHashPartitionLocationsPerPartition(
-      Map<String, GeneratedPartitionsReport<HashPartitionStat>> subTaskIdToReport
+      Map<String, GeneratedHashPartitionsReport> subTaskIdToReport
   )
   {
     BiFunction<String, HashPartitionStat, HashPartitionLocation> createPartitionLocationFunction =
@@ -546,13 +546,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private static <S extends PartitionStat, L extends PartitionLocation>
         Map<Pair<Interval, Integer>, List<L>> groupPartitionLocationsPerPartition(
-      Map<String, GeneratedPartitionsReport<S>> subTaskIdToReport,
+      Map<String, ? extends GeneratedPartitionsReport<S>> subTaskIdToReport,
       BiFunction<String, S, L> createPartitionLocationFunction
   )
   {
     // partition (interval, partitionId) -> partition locations
     final Map<Pair<Interval, Integer>, List<L>> partitionToLocations = new HashMap<>();
-    for (Entry<String, GeneratedPartitionsReport<S>> entry : subTaskIdToReport.entrySet()) {
+    for (Entry<String, ? extends GeneratedPartitionsReport<S>> entry : subTaskIdToReport.entrySet()) {
       final String subTaskId = entry.getKey();
       final GeneratedPartitionsReport<S> report = entry.getValue();
       for (S partitionStat : report.getPartitionStats()) {
@@ -567,9 +567,22 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return partitionToLocations;
   }
 
-  private static <T extends PartitionLocation> List<PartialSegmentMergeIOConfig<T>> createMergeIOConfigs(
+  private static List<PartialHashSegmentMergeIOConfig> createHashMergeIOConfigs(
       int totalNumMergeTasks,
-      Map<Pair<Interval, Integer>, List<T>> partitionToLocations
+      Map<Pair<Interval, Integer>, List<HashPartitionLocation>> partitionToLocations
+  )
+  {
+    return createMergeIOConfigs(
+        totalNumMergeTasks,
+        partitionToLocations,
+        PartialHashSegmentMergeIOConfig::new
+    );
+  }
+
+  private static <M extends PartialSegmentMergeIOConfig, L extends PartitionLocation> List<M> createMergeIOConfigs(
+      int totalNumMergeTasks,
+      Map<Pair<Interval, Integer>, List<L>> partitionToLocations,
+      Function<List<L>, M> createPartialSegmentMergeIOConfig
   )
   {
     final int numMergeTasks = Math.min(totalNumMergeTasks, partitionToLocations.size());
@@ -581,28 +594,28 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     );
     // Randomly shuffle partitionIds to evenly distribute partitions of potentially different sizes
     // This will be improved once we collect partition stats properly.
-    // See HashPartitionStat in GeneratedPartitionsReport.
+    // See PartitionStat in GeneratedPartitionsReport.
     final List<Pair<Interval, Integer>> partitions = new ArrayList<>(partitionToLocations.keySet());
     Collections.shuffle(partitions, ThreadLocalRandom.current());
     final int numPartitionsPerTask = (int) Math.round(partitions.size() / (double) numMergeTasks);
 
-    final List<PartialSegmentMergeIOConfig<T>> assignedPartitionLocations = new ArrayList<>(numMergeTasks);
+    final List<M> assignedPartitionLocations = new ArrayList<>(numMergeTasks);
     for (int i = 0; i < numMergeTasks - 1; i++) {
-      final List<T> assignedToSameTask = partitions
+      final List<L> assignedToSameTask = partitions
           .subList(i * numPartitionsPerTask, (i + 1) * numPartitionsPerTask)
           .stream()
           .flatMap(intervalAndPartitionId -> partitionToLocations.get(intervalAndPartitionId).stream())
           .collect(Collectors.toList());
-      assignedPartitionLocations.add(new PartialSegmentMergeIOConfig<T>(assignedToSameTask));
+      assignedPartitionLocations.add(createPartialSegmentMergeIOConfig.apply(assignedToSameTask));
     }
 
     // The last task is assigned all remaining partitions.
-    final List<T> assignedToSameTask = partitions
+    final List<L> assignedToSameTask = partitions
         .subList((numMergeTasks - 1) * numPartitionsPerTask, partitions.size())
         .stream()
         .flatMap(intervalAndPartitionId -> partitionToLocations.get(intervalAndPartitionId).stream())
         .collect(Collectors.toList());
-    assignedPartitionLocations.add(new PartialSegmentMergeIOConfig<>(assignedToSameTask));
+    assignedPartitionLocations.add(createPartialSegmentMergeIOConfig.apply(assignedToSameTask));
 
     return assignedPartitionLocations;
   }

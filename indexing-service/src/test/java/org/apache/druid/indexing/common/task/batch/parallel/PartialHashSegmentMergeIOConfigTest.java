@@ -20,16 +20,13 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.segment.TestHelper;
-import org.hamcrest.Matchers;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
 
-public class PartialHashSegmentMergeTaskTest
+public class PartialHashSegmentMergeIOConfigTest
 {
   private static final ObjectMapper OBJECT_MAPPER = Factory.createObjectMapper();
   private static final HashPartitionLocation HASH_PARTITION_LOCATION = new HashPartitionLocation(
@@ -40,51 +37,18 @@ public class PartialHashSegmentMergeTaskTest
       Factory.INTERVAL,
       Factory.PARTITION_ID
   );
-  private static final PartialHashSegmentMergeIOConfig IO_CONFIG =
-      new PartialHashSegmentMergeIOConfig(Collections.singletonList(HASH_PARTITION_LOCATION));
-  private static final HashedPartitionsSpec PARTITIONS_SPEC = new HashedPartitionsSpec(
-      null,
-      1,
-      Collections.emptyList()
-  );
-  private static final PartialHashSegmentMergeIngestionSpec INGESTION_SPEC =
-      new PartialHashSegmentMergeIngestionSpec(
-          Factory.createDataSchema(Factory.INPUT_INTERVALS),
-          IO_CONFIG,
-          new Factory.TuningConfigBuilder()
-              .partitionsSpec(PARTITIONS_SPEC)
-              .build()
-      );
 
-  private PartialHashSegmentMergeTask target;
+  private PartialHashSegmentMergeIOConfig target;
 
   @Before
   public void setup()
   {
-    target = new PartialHashSegmentMergeTask(
-        Factory.AUTOMATIC_ID,
-        Factory.GROUP_ID,
-        Factory.TASK_RESOURCE,
-        Factory.SUPERVISOR_TASK_ID,
-        Factory.NUM_ATTEMPTS,
-        INGESTION_SPEC,
-        Factory.CONTEXT,
-        Factory.INDEXING_SERVICE_CLIENT,
-        Factory.TASK_CLIENT_FACTORY,
-        Factory.SHUFFLE_CLIENT
-    );
+    target = new PartialHashSegmentMergeIOConfig(Collections.singletonList(HASH_PARTITION_LOCATION));
   }
 
   @Test
   public void serializesDeserializes()
   {
     TestHelper.testSerializesDeserializes(OBJECT_MAPPER, target);
-  }
-
-  @Test
-  public void hasCorrectPrefixForAutomaticId()
-  {
-    String id = target.getId();
-    Assert.assertThat(id, Matchers.startsWith(PartialHashSegmentMergeTask.TYPE));
   }
 }
