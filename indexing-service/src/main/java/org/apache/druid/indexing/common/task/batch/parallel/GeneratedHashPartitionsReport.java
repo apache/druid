@@ -29,12 +29,12 @@ import java.util.List;
  * This report is collected by {@link ParallelIndexSupervisorTask} and
  * used to generate {@link PartialHashSegmentMergeIOConfig}.
  */
-public class GeneratedHashPartitionsReport extends GeneratedPartitionsReport<HashPartitionStat> implements SubTaskReport
+class GeneratedHashPartitionsReport extends GeneratedPartitionsReport<HashPartitionStat> implements SubTaskReport
 {
   public static final String TYPE = "generated_partitions";
 
   @JsonCreator
-  public GeneratedHashPartitionsReport(
+  GeneratedHashPartitionsReport(
       @JsonProperty("taskId") String taskId,
       @JsonProperty("partitionStats") List<HashPartitionStat> partitionStats
   )

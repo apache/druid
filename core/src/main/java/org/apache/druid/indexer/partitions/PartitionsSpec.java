@@ -79,8 +79,6 @@ public interface PartitionsSpec
 
   /**
    * @return True if this partitionSpec's type is compatible with forceGuaranteedRollup=true.
-   *
-   * @see org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig#forceGuaranteedRollup
    */
   @JsonIgnore
   default boolean isForceGuaranteedRollupCompatibleType()
@@ -90,8 +88,6 @@ public interface PartitionsSpec
 
   /**
    * @return True if this partitionSpec's property values are compatible with forceGuaranteedRollup=true.
-   *
-   * @see org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig#forceGuaranteedRollup
    */
   @JsonIgnore
   default boolean isForceGuaranteedRollupCompatible()

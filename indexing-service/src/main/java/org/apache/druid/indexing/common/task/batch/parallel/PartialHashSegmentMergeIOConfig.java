@@ -27,11 +27,11 @@ import org.apache.druid.segment.indexing.IOConfig;
 import java.util.List;
 
 @JsonTypeName(PartialHashSegmentMergeTask.TYPE)
-public class PartialHashSegmentMergeIOConfig extends PartialSegmentMergeIOConfig<HashPartitionLocation>
+class PartialHashSegmentMergeIOConfig extends PartialSegmentMergeIOConfig<HashPartitionLocation>
     implements IOConfig
 {
   @JsonCreator
-  public PartialHashSegmentMergeIOConfig(
+  PartialHashSegmentMergeIOConfig(
       @JsonProperty("partitionLocations") List<HashPartitionLocation> partitionLocations
   )
   {

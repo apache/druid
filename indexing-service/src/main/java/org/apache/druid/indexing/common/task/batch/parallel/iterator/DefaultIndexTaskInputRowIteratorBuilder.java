@@ -52,8 +52,6 @@ import java.util.function.Consumer;
  * If any of the handlers invoke their respective callback, the {@link InputRowIterator} will yield
  * a null {@link InputRow} next; otherwise, the next {@link InputRow} is yielded.
  * </pre>
- *
- * @see RangePartitionIndexTaskInputRowIteratorBuilder
  */
 public class DefaultIndexTaskInputRowIteratorBuilder implements IndexTaskInputRowIteratorBuilder
 {
@@ -61,7 +59,7 @@ public class DefaultIndexTaskInputRowIteratorBuilder implements IndexTaskInputRo
   private GranularitySpec granularitySpec = null;
   private InputRowIterator.InputRowHandler nullRowHandler = null;
   private InputRowIterator.InputRowHandler absentBucketIntervalHandler = null;
-  private List<InputRowIterator.InputRowHandler> appendedInputRowHandlers = new ArrayList();
+  private List<InputRowIterator.InputRowHandler> appendedInputRowHandlers = new ArrayList<>();
 
   @Override
   public DefaultIndexTaskInputRowIteratorBuilder firehose(Firehose firehose)
