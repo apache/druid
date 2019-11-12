@@ -98,8 +98,6 @@ public interface PartitionsSpec
   /**
    * @return Message describing why this partitionSpec is incompatible with forceGuaranteedRollup=true. Empty string if
    * the partitionSpec is compatible.
-   *
-   * @see org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig#forceGuaranteedRollup
    */
   @JsonIgnore
   String getForceGuaranteedRollupIncompatiblityReason();
