@@ -149,13 +149,7 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
       message = (
         <p>
           It appears that the management proxy is not enabled, the console will operate with limited
-          functionality. Look at{' '}
-          <ExternalLink
-            href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/operations/management-uis.html#druid-console`}
-          >
-            the console docs
-          </ExternalLink>{' '}
-          for more info on how to enable the management proxy.
+          functionality.
         </p>
       );
       break;
@@ -165,13 +159,7 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
       message = (
         <p>
           It appears that the SQL endpoint and management proxy are disabled. The console can only
-          be used to make queries. Look at{' '}
-          <ExternalLink
-            href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/operations/management-uis.html#druid-console`}
-          >
-            the console docs
-          </ExternalLink>{' '}
-          for more info on how to make the console more functional.
+          be used to make queries.
         </p>
       );
       break;
@@ -179,50 +167,33 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
     case 'coordinator':
       label = 'Coordinator mode';
       message = (
-        <>
-          <p>
-            It appears that you are accessing the console on the Coordinator service. This should
-            only be used for debugging. The full version of the console can be accessed on the
-            Router service.
-          </p>
-          <p>
-            For more info check out the{' '}
-            <ExternalLink
-              href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/operations/management-uis.html#druid-console`}
-            >
-              console docs
-            </ExternalLink>
-            .
-          </p>
-        </>
+        <p>
+          It appears that you are accessing the console on the Coordinator service. Due to the lack
+          of access to some APIs on this service the console will operate in a limited mode. The
+          full version of the console can be accessed on the Router service.
+        </p>
       );
       break;
 
     case 'overlord':
       label = 'Overlord mode';
       message = (
-        <>
-          <p>
-            It appears that you are accessing the console on the Overlord service. This should only
-            be used for debugging. The full version of the console can be accessed on the Router
-            service.
-          </p>
-          <p>
-            For more info check out the{' '}
-            <ExternalLink
-              href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/operations/management-uis.html#druid-console`}
-            >
-              console docs
-            </ExternalLink>
-            .
-          </p>
-        </>
+        <p>
+          It appears that you are accessing the console on the Overlord service. Due to the lack of
+          access to some APIs on this service the console will operate in a limited mode. The full
+          version of the console can be accessed on the Router service.
+        </p>
       );
       break;
 
     default:
       label = 'Restricted mode';
-      message = <p>Please double check your configuration.</p>;
+      message = (
+        <p>
+          Due to the lack of access to some APIs on this service the console will operate in a
+          limited mode. The full version of the console can be accessed on the Router service.
+        </p>
+      );
       break;
   }
 
@@ -232,6 +203,15 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
         <PopoverText>
           <p>The console is running in restricted mode.</p>
           {message}
+          <p>
+            For more info check out the{' '}
+            <ExternalLink
+              href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/operations/management-uis.html#druid-console`}
+            >
+              console documentation
+            </ExternalLink>
+            .
+          </p>
         </PopoverText>
       }
       position={Position.BOTTOM_RIGHT}
