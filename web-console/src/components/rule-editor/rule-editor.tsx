@@ -192,7 +192,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
                 <option value="ByInterval">by interval</option>
               </HTMLSelect>
               {ruleTimeType === 'ByPeriod' && (
-                <div className={`byPeriod`}>
+                <div className={`by-period`}>
                   <InputGroup
                     value={rule.period || ''}
                     onChange={(e: any) =>

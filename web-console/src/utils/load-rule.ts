@@ -38,17 +38,23 @@ export type LoadType = 'load' | 'drop' | 'broadcast';
 export type TimeType = 'Forever' | 'ByInterval' | 'ByPeriod';
 
 export class RuleUtil {
+  static shouldIncludeFuture(rule: Rule): boolean {
+    if (rule.includeFuture !== false) {
+      return (
+        rule.type === 'loadByPeriod' ||
+        rule.type === 'dropByPeriod' ||
+        rule.type === 'broadcastByPeriod'
+      );
+    }
+    return false;
+  }
+
   static ruleToString(rule: Rule): string {
     return (
       rule.type +
       (rule.period ? `(${rule.period})` : '') +
       (rule.interval ? `(${rule.interval})` : '') +
-      (rule.includeFuture !== false &&
-      (rule.type === 'loadByPeriod' ||
-        rule.type === 'dropByPeriod' ||
-        rule.type === 'broadcastByPeriod')
-        ? `(includeFuture)`
-        : '')
+      (RuleUtil.shouldIncludeFuture(rule) ? `(includeFuture)` : '')
     );
   }
 
