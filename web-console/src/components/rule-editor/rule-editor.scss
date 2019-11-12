@@ -30,4 +30,11 @@
       flex: 1;
     }
   }
+
+  .byPeriod {
+    display: flex;
+    .bp3-input-group {
+      padding-right: 15px;
+    }
+  }
 }

@@ -29,6 +29,7 @@ export interface Rule {
     | 'broadcastByPeriod';
   interval?: string;
   period?: string;
+  includeFuture?: boolean;
   tieredReplicants?: Record<string, number>;
   colocatedDataSources?: string[];
 }
@@ -41,7 +42,13 @@ export class RuleUtil {
     return (
       rule.type +
       (rule.period ? `(${rule.period})` : '') +
-      (rule.interval ? `(${rule.interval})` : '')
+      (rule.interval ? `(${rule.interval})` : '') +
+      (rule.includeFuture !== false &&
+      (rule.type === 'loadByPeriod' ||
+        rule.type === 'dropByPeriod' ||
+        rule.type === 'broadcastByPeriod')
+        ? `(includeFuture)`
+        : '')
     );
   }
 
@@ -73,6 +80,10 @@ export class RuleUtil {
 
   static changePeriod(rule: Rule, period: string): Rule {
     return Object.assign({}, rule, { period });
+  }
+
+  static changeIncludeFuture(rule: Rule, includeFuture: boolean): Rule {
+    return Object.assign({}, rule, { includeFuture });
   }
 
   static changeInterval(rule: Rule, interval: string): Rule {
