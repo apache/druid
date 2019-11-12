@@ -242,7 +242,6 @@ public class SegmentIdTest
     Assert.assertEquals(expected, ImmutableSet.copyOf(possibleParsings));
   }
 
-  @Ignore
   @Test
   public void testIterateAllPossibleParsingsNamespaced()
   {
@@ -256,7 +255,6 @@ public class SegmentIdTest
     Assert.assertEquals(s.toDescriptor().getPartitionIdentifier(), "onsite_0");
   }
 
-  @Ignore
   @Test
   public void testIterateAllPossibleParsingsNotNamespaced()
   {
@@ -267,6 +265,6 @@ public class SegmentIdTest
     Assert.assertEquals(s.getDataSource(), "ads_reporting_pepsi_request_logs");
     Assert.assertEquals(s.getVersion(), "2019-11-11T22:00:00.156Z");
     Assert.assertEquals(s.getPartitionNum(), 0);
-    Assert.assertEquals(s.toDescriptor().getPartitionIdentifier(), "0");
+    Assert.assertEquals(s.toDescriptor().getPartitionIdentifier(), 0);
   }
 }
