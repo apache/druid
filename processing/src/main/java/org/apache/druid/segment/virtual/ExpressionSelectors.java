@@ -25,6 +25,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.Parser;
@@ -509,25 +510,65 @@ public class ExpressionSelectors
   /**
    * Selectors are not consistent in treatment of null, [], and [null], so coerce [] to [null]
    */
-  // suppressed because calling toArray creates Object[] instead of Long[] which makes ExprEval.bestEffortOf sad
-  @SuppressWarnings("SimplifyStreamApiCallChains")
-  public static Object coerceListToArray(List val)
+  public static Object coerceListToArray(@Nullable List<?> val)
   {
     if (val != null && val.size() > 0) {
-      Object firstElement = val.get(0);
-      if (firstElement instanceof Long) {
-        return val.stream().toArray(Long[]::new);
-      } else if (firstElement instanceof Integer) {
-        return val.stream().map(x -> ((Integer) x).longValue()).toArray(Long[]::new);
-      } else if (firstElement instanceof Float) {
-        return val.stream().map(x -> ((Float) x).doubleValue()).toArray(Double[]::new);
-      } else if (firstElement instanceof Double) {
-        return val.stream().toArray(Double[]::new);
-      } else {
-        return val.stream().map(x -> x != null ? x.toString() : x).toArray(String[]::new);
+      Class coercedType = null;
+
+      for (Object elem : val) {
+        if (elem != null) {
+          coercedType = convertType(coercedType, elem.getClass());
+        }
       }
+
+      if (coercedType == Long.class || coercedType == Integer.class) {
+        return val.stream().map(x -> x != null ? ((Number) x).longValue() : null).toArray(Long[]::new);
+      }
+      if (coercedType == Float.class || coercedType == Double.class) {
+        return val.stream().map(x -> x != null ? ((Number) x).doubleValue() : null).toArray(Double[]::new);
+      }
+      // default to string
+      return val.stream().map(x -> x != null ? x.toString() : null).toArray(String[]::new);
     }
     return new String[]{null};
+  }
+
+  private static Class convertType(@Nullable Class existing, Class next)
+  {
+    if (Number.class.isAssignableFrom(next) || next == String.class) {
+      if (existing == null) {
+        return next;
+      }
+      // string wins everything
+      if (existing == String.class) {
+        return existing;
+      }
+      if (next == String.class) {
+        return next;
+      }
+      // all numbers win over Integer
+      if (existing == Integer.class) {
+        return next;
+      }
+      if (existing == Float.class) {
+        // doubles win over floats
+        if (next == Double.class) {
+          return next;
+        }
+        return existing;
+      }
+      if (existing == Long.class) {
+        if (next == Integer.class) {
+          // long beats int
+          return existing;
+        }
+        // double and float win over longs
+        return next;
+      }
+      // otherwise double
+      return Double.class;
+    }
+    throw new UOE("Invalid array expression type: ", next);
   }
 
   /**
@@ -541,8 +582,9 @@ public class ExpressionSelectors
       case STRING_ARRAY:
         return Arrays.stream(eval.asStringArray()).collect(Collectors.toList());
       case DOUBLE_ARRAY:
+        return Arrays.stream(eval.asDoubleArray()).collect(Collectors.toList());
       case LONG_ARRAY:
-        return Arrays.stream(eval.asArray()).collect(Collectors.toList());
+        return Arrays.stream(eval.asLongArray()).collect(Collectors.toList());
       default:
         return eval.value();
     }
