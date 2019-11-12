@@ -57,7 +57,11 @@ public class WorkerSelectUtils
       final Function<ImmutableMap<String, ImmutableWorkerInfo>, ImmutableWorkerInfo> workerSelector
   )
   {
-    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(task, allWorkers, workerTaskRunnerConfig);
+    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(
+        task,
+        allWorkers,
+        workerTaskRunnerConfig
+    );
 
     if (affinityConfig == null) {
       // All runnable workers are valid.
@@ -92,10 +96,10 @@ public class WorkerSelectUtils
   /**
    * Helper for {@link WorkerSelectStrategy} implementations.
    *
-   * @param allWorkers     map of all workers, in the style provided to {@link WorkerSelectStrategy}
+   * @param allWorkers         map of all workers, in the style provided to {@link WorkerSelectStrategy}
    * @param workerCategorySpec worker category spec, or null
-   * @param workerSelector function that receives a list of eligible workers: version is high enough, worker can run
-   *                       the task, and worker satisfies the worker category spec. may return null.
+   * @param workerSelector     function that receives a list of eligible workers: version is high enough, worker can run
+   *                           the task, and worker satisfies the worker category spec. may return null.
    *
    * @return selected worker from "allWorkers", or null.
    */
@@ -108,7 +112,11 @@ public class WorkerSelectUtils
       final Function<ImmutableMap<String, ImmutableWorkerInfo>, ImmutableWorkerInfo> workerSelector
   )
   {
-    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(task, allWorkers, workerTaskRunnerConfig);
+    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(
+        task,
+        allWorkers,
+        workerTaskRunnerConfig
+    );
 
     // select worker according to worker category spec
     if (workerCategorySpec != null) {
@@ -116,7 +124,10 @@ public class WorkerSelectUtils
 
       if (preferredCategory != null) {
         // select worker from preferred category
-        final ImmutableMap<String, ImmutableWorkerInfo> categoryWorkers = getCategoryWorkers(preferredCategory, runnableWorkers);
+        final ImmutableMap<String, ImmutableWorkerInfo> categoryWorkers = getCategoryWorkers(
+            preferredCategory,
+            runnableWorkers
+        );
         final ImmutableWorkerInfo selected = workerSelector.apply(categoryWorkers);
 
         if (selected != null) {
@@ -132,7 +143,8 @@ public class WorkerSelectUtils
   }
 
   @Nullable
-  public static String getTaskCategory(Task task, WorkerCategorySpec workerCategorySpec, String defaultValue) {
+  public static String getTaskCategory(Task task, WorkerCategorySpec workerCategorySpec, String defaultValue)
+  {
     // select worker according to worker category spec
     if (workerCategorySpec != null) {
       final WorkerCategorySpec.CategoryConfig categoryConfig = workerCategorySpec.getCategoryMap().get(task.getType());
@@ -167,8 +179,8 @@ public class WorkerSelectUtils
   /**
    * Return workers belong to this category.
    *
-   * @param category worker category name
-   * @param workerMap  map of worker hostname to worker info
+   * @param category  worker category name
+   * @param workerMap map of worker hostname to worker info
    *
    * @return map of worker hostname to worker info
    */
