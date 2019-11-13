@@ -28,7 +28,9 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.virtual.ExpressionSelectors;
 
+import java.util.List;
 import java.util.Objects;
 
 public class ExpressionTransform implements Transform
@@ -81,7 +83,7 @@ public class ExpressionTransform implements Transform
     @Override
     public Object eval(final Row row)
     {
-      return expr.eval(name -> getValueFromRow(row, name)).value();
+      return ExpressionSelectors.coerceEvalToSelectorObject(expr.eval(name -> getValueFromRow(row, name)));
     }
   }
 
@@ -90,7 +92,11 @@ public class ExpressionTransform implements Transform
     if (column.equals(ColumnHolder.TIME_COLUMN_NAME)) {
       return row.getTimestampFromEpoch();
     } else {
-      return row.getRaw(column);
+      Object raw = row.getRaw(column);
+      if (raw instanceof List) {
+        return ExpressionSelectors.coerceListToArray((List) raw);
+      }
+      return raw;
     }
   }
 

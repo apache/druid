@@ -647,6 +647,7 @@ public class CalciteTests
                    .interval(index1.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index1
     ).add(
@@ -655,6 +656,7 @@ public class CalciteTests
                    .interval(index2.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index2
     ).add(
@@ -663,6 +665,7 @@ public class CalciteTests
                    .interval(forbiddenIndex.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         forbiddenIndex
     ).add(
@@ -671,6 +674,7 @@ public class CalciteTests
                    .interval(indexNumericDims.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         indexNumericDims
     ).add(
@@ -679,6 +683,7 @@ public class CalciteTests
                    .interval(index4.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index4
     );

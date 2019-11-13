@@ -59,29 +59,6 @@ public class DelimitedParseSpecTest
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testColumnMissing()
-  {
-    @SuppressWarnings("unused") // expected exception
-    final ParseSpec spec = new DelimitedParseSpec(
-        new TimestampSpec(
-            "timestamp",
-            "auto",
-            null
-        ),
-        new DimensionsSpec(
-            DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "b")),
-            new ArrayList<>(),
-            new ArrayList<>()
-        ),
-        ",",
-        " ",
-        Collections.singletonList("a"),
-        false,
-        0
-    );
-  }
-
-  @Test(expected = IllegalArgumentException.class)
   public void testComma()
   {
     @SuppressWarnings("unused") // expected exception
@@ -98,7 +75,7 @@ public class DelimitedParseSpecTest
         ),
         ",",
         null,
-        Collections.singletonList("a"),
+        Collections.singletonList("a,"),
         false,
         0
     );

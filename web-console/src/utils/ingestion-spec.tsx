@@ -1092,13 +1092,8 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         {
           name: 'firehose.interval',
           label: 'Interval',
-          type: 'string',
+          type: 'interval',
           placeholder: `${CURRENT_YEAR}-01-01/${CURRENT_YEAR + 1}-01-01`,
-          suggestions: [
-            `${CURRENT_YEAR}-01-01T00:00:00/${CURRENT_YEAR + 1}-01-01T00:00:00`,
-            `${CURRENT_YEAR}-01-01/${CURRENT_YEAR + 1}-01-01`,
-            `${CURRENT_YEAR}/${CURRENT_YEAR + 1}`,
-          ],
           required: true,
           info: (
             <p>

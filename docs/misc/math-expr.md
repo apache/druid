@@ -60,9 +60,6 @@ dialects. However, by using the `array_to_string` function, aggregations may be 
 complete array, allowing the complete row to be preserved. Using `string_to_array` in an expression post-aggregator,
 allows transforming the stringified dimension back into the true native array type.
 
-> Note that array functions are not currently supported at ingestion time with
-> [`transformSpec`](../ingestion/index.md#transformspec).
-
 
 The following built-in functions are available.
 

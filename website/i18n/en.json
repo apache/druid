@@ -321,6 +321,9 @@
       "operations/insert-segment-to-db": {
         "title": "insert-segment-to-db tool"
       },
+      "operations/kubernetes": {
+        "title": "kubernetes"
+      },
       "operations/management-uis": {
         "title": "Management UIs"
       },

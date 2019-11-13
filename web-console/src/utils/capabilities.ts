@@ -16,4 +16,142 @@
  * limitations under the License.
  */
 
-export type Capabilities = 'full' | 'no-sql' | 'no-proxy' | 'broken';
+import axios from 'axios';
+
+import { localStorageGetJson, LocalStorageKeys } from './local-storage-keys';
+
+export type CapabilitiesMode = 'full' | 'no-sql' | 'no-proxy';
+
+export interface CapabilitiesOptions {
+  queryType: QueryType;
+  coordinator: boolean;
+  overlord: boolean;
+}
+
+export type QueryType = 'none' | 'nativeOnly' | 'nativeAndSql';
+
+export class Capabilities {
+  static STATUS_TIMEOUT = 2000;
+  static FULL: Capabilities;
+
+  private queryType: QueryType;
+  private coordinator: boolean;
+  private overlord: boolean;
+
+  static async detectQueryType(): Promise<QueryType | undefined> {
+    // Check SQL endpoint
+    try {
+      await axios.post(
+        '/druid/v2/sql',
+        { query: 'SELECT 1337', context: { timeout: Capabilities.STATUS_TIMEOUT } },
+        { timeout: Capabilities.STATUS_TIMEOUT },
+      );
+    } catch (e) {
+      const { response } = e;
+      if (response.status !== 405 && response.status !== 404) {
+        return; // other failure
+      }
+      try {
+        await axios.get('/status', { timeout: Capabilities.STATUS_TIMEOUT });
+      } catch (e) {
+        return; // total failure
+      }
+      // Status works but SQL 405s => the SQL endpoint is disabled
+
+      try {
+        await axios.post(
+          '/druid/v2',
+          {
+            queryType: 'dataSourceMetadata',
+            dataSource: '__web_console_probe__',
+            context: { timeout: Capabilities.STATUS_TIMEOUT },
+          },
+          { timeout: Capabilities.STATUS_TIMEOUT },
+        );
+      } catch (e) {
+        if (response.status !== 405 && response.status !== 404) {
+          return; // other failure
+        }
+
+        return 'none';
+      }
+
+      return 'nativeOnly';
+    }
+
+    return 'nativeAndSql';
+  }
+
+  static async detectNode(node: 'coordinator' | 'overlord'): Promise<boolean | undefined> {
+    try {
+      await axios.get(`/druid/${node === 'overlord' ? 'indexer' : node}/v1/isLeader`, {
+        timeout: Capabilities.STATUS_TIMEOUT,
+      });
+    } catch (e) {
+      const { response } = e;
+      if (response.status !== 404) {
+        return; // other failure
+      }
+      return false;
+    }
+
+    return true;
+  }
+
+  static async detectCapabilities(): Promise<Capabilities | undefined> {
+    const capabilitiesOverride = localStorageGetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE);
+    if (capabilitiesOverride) return new Capabilities(capabilitiesOverride as any);
+
+    const queryType = await Capabilities.detectQueryType();
+    if (typeof queryType === 'undefined') return;
+
+    const coordinator = await Capabilities.detectNode('coordinator');
+    if (typeof coordinator === 'undefined') return;
+
+    const overlord = await Capabilities.detectNode('overlord');
+    if (typeof overlord === 'undefined') return;
+
+    return new Capabilities({
+      queryType,
+      coordinator,
+      overlord,
+    });
+  }
+
+  constructor(options: CapabilitiesOptions) {
+    this.queryType = options.queryType;
+    this.coordinator = options.coordinator;
+    this.overlord = options.overlord;
+  }
+
+  public getMode(): CapabilitiesMode {
+    if (!this.hasSql()) return 'no-sql';
+    if (!this.hasCoordinatorAccess()) return 'no-proxy';
+    return 'full';
+  }
+
+  public hasEverything(): boolean {
+    return this.queryType === 'nativeAndSql' && this.coordinator && this.overlord;
+  }
+
+  public hasQuerying(): boolean {
+    return this.queryType !== 'none';
+  }
+
+  public hasSql(): boolean {
+    return this.queryType === 'nativeAndSql';
+  }
+
+  public hasCoordinatorAccess(): boolean {
+    return this.coordinator;
+  }
+
+  public hasOverlordAccess(): boolean {
+    return this.overlord;
+  }
+}
+Capabilities.FULL = new Capabilities({
+  queryType: 'nativeAndSql',
+  coordinator: true,
+  overlord: true,
+});

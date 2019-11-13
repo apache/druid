@@ -24,6 +24,10 @@ import { lookupBy, pluralIfNeeded, queryDruidSql, QueryManager } from '../../../
 import { Capabilities } from '../../../utils/capabilities';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
+function getTaskStatus(d: any) {
+  return d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode;
+}
+
 export interface TasksCardProps {
   capabilities: Capabilities;
 }
@@ -54,19 +58,7 @@ export class TasksCard extends React.PureComponent<TasksCardProps, TasksCardStat
 
     this.taskQueryManager = new QueryManager({
       processQuery: async capabilities => {
-        if (capabilities === 'no-sql') {
-          const completeTasksResp = await axios.get('/druid/indexer/v1/completeTasks');
-          const runningTasksResp = await axios.get('/druid/indexer/v1/runningTasks');
-          const pendingTasksResp = await axios.get('/druid/indexer/v1/pendingTasks');
-          const waitingTasksResp = await axios.get('/druid/indexer/v1/waitingTasks');
-          return {
-            SUCCESS: completeTasksResp.data.filter((d: any) => d.status === 'SUCCESS').length,
-            FAILED: completeTasksResp.data.filter((d: any) => d.status === 'FAILED').length,
-            RUNNING: runningTasksResp.data.length,
-            PENDING: pendingTasksResp.data.length,
-            WAITING: waitingTasksResp.data.length,
-          };
-        } else {
+        if (capabilities.hasSql()) {
           const taskCountsFromQuery: { status: string; count: number }[] = await queryDruidSql({
             query: `SELECT
   CASE WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status",
@@ -75,6 +67,17 @@ FROM sys.tasks
 GROUP BY 1`,
           });
           return lookupBy(taskCountsFromQuery, x => x.status, x => x.count);
+        } else if (capabilities.hasOverlordAccess()) {
+          const tasks: any[] = (await axios.get('/druid/indexer/v1/tasks')).data;
+          return {
+            SUCCESS: tasks.filter(d => getTaskStatus(d) === 'SUCCESS').length,
+            FAILED: tasks.filter(d => getTaskStatus(d) === 'FAILED').length,
+            RUNNING: tasks.filter(d => getTaskStatus(d) === 'RUNNING').length,
+            PENDING: tasks.filter(d => getTaskStatus(d) === 'PENDING').length,
+            WAITING: tasks.filter(d => getTaskStatus(d) === 'WAITING').length,
+          };
+        } else {
+          throw new Error(`must have SQL or overlord access`);
         }
       },
       onStateChange: ({ result, loading, error }) => {
