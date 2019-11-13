@@ -68,7 +68,6 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
 
   private final CategoriedProvisioningConfig config;
   private final Supplier<WorkerBehaviorConfig> workerConfigRef;
-  private final WorkerCategorySpec workerCategorySpec;
 
   @Nullable
   private static CategoriedWorkerBehaviorConfig getCategoriedWorkerBehaviorConfig(
@@ -103,14 +102,12 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
   public CategoriedProvisioningStrategy(
       CategoriedProvisioningConfig config,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
-      WorkerCategorySpec workerCategorySpec,
       ProvisioningSchedulerConfig provisioningSchedulerConfig
   )
   {
     this(
         config,
         workerConfigRef,
-        workerCategorySpec,
         provisioningSchedulerConfig,
         () -> ScheduledExecutors.fixed(1, "CategoriedProvisioning-manager--%d")
     );
@@ -119,7 +116,6 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
   public CategoriedProvisioningStrategy(
       CategoriedProvisioningConfig config,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
-      WorkerCategorySpec workerCategorySpec,
       ProvisioningSchedulerConfig provisioningSchedulerConfig,
       Supplier<ScheduledExecutorService> execFactory
   )
@@ -127,7 +123,6 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
     super(provisioningSchedulerConfig, execFactory);
     this.config = config;
     this.workerConfigRef = workerConfigRef;
-    this.workerCategorySpec = workerCategorySpec;
   }
 
   @Override
@@ -305,6 +300,8 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
         log.info("No worker config found. Skip provisioning.");
         return false;
       }
+
+      WorkerCategorySpec workerCategorySpec = getWorkerCategorySpec(workerConfig);
 
       // Group tasks by categories
       Map<String, List<Task>> tasksByCategories = pendingTasks.stream().collect(Collectors.groupingBy(
@@ -657,6 +654,20 @@ public class CategoriedProvisioningStrategy extends AbstractWorkerProvisioningSt
         return null;
       }
       return autoScaler == null ? workerConfig.getDefaultAutoScaler() : autoScaler;
+    }
+
+    @Nullable
+    private WorkerCategorySpec getWorkerCategorySpec(CategoriedWorkerBehaviorConfig workerConfig)
+    {
+      if (workerConfig != null && workerConfig.getSelectStrategy() != null) {
+        WorkerSelectStrategy selectStrategy = workerConfig.getSelectStrategy();
+        if (selectStrategy instanceof FillCapacityWithCategorySpecWorkerSelectStrategy) {
+          return ((FillCapacityWithCategorySpecWorkerSelectStrategy) selectStrategy).getWorkerCategorySpec();
+        } else if (selectStrategy instanceof EqualDistributionWithCategorySpecWorkerSelectStrategy) {
+          return ((EqualDistributionWithCategorySpecWorkerSelectStrategy) selectStrategy).getWorkerCategorySpec();
+        }
+      }
+      return null;
     }
   }
 }
