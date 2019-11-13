@@ -21,9 +21,10 @@ package org.apache.druid.data.input.impl;
 
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
+import org.apache.druid.data.input.InputEntitySampler;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowPlusRaw;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.java.util.common.CloseableIterators;
@@ -62,7 +63,9 @@ public class InputEntityIteratingReader<T> implements InputSourceReader
   @Override
   public CloseableIterator<InputRow> read()
   {
-    return createIterator(reader -> {
+    return createIterator(entity -> {
+      // InputEntityReader is stateful and so a new one should be created per entity.
+      final InputEntityReader reader = inputFormat.createReader(inputRowSchema);
       try {
         return reader.read(sourceIterator.next(), temporaryDirectory);
       }
@@ -73,11 +76,13 @@ public class InputEntityIteratingReader<T> implements InputSourceReader
   }
 
   @Override
-  public CloseableIterator<InputRowPlusRaw> sample()
+  public CloseableIterator<InputRowListPlusJson> sample()
   {
-    return createIterator(reader -> {
+    return createIterator(entity -> {
+      // InputEntitySampler is stateful and so a new one should be created per entity.
+      final InputEntitySampler sampler = inputFormat.createSampler(inputRowSchema);
       try {
-        return reader.sample(sourceIterator.next(), temporaryDirectory);
+        return sampler.sample(sourceIterator.next(), temporaryDirectory);
       }
       catch (IOException e) {
         throw new RuntimeException(e);
@@ -85,14 +90,8 @@ public class InputEntityIteratingReader<T> implements InputSourceReader
     });
   }
 
-  private <R> CloseableIterator<R> createIterator(Function<InputEntityReader, CloseableIterator<R>> rowPopulator)
+  private <R> CloseableIterator<R> createIterator(Function<InputEntity<T>, CloseableIterator<R>> rowPopulator)
   {
-    return CloseableIterators
-        .withEmptyBaggage(sourceIterator)
-        .flatMap(entity -> {
-          // InputEntityReader is stateful and so a new one should be created per split.
-          final InputEntityReader inputEntityReader = inputFormat.createReader(inputRowSchema);
-          return rowPopulator.apply(inputEntityReader);
-        });
+    return CloseableIterators.withEmptyBaggage(sourceIterator).flatMap(rowPopulator);
   }
 }

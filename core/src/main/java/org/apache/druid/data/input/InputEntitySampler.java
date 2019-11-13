@@ -17,35 +17,20 @@
  * under the License.
  */
 
-package org.apache.druid.segment.transform;
+package org.apache.druid.data.input;
 
-import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowListPlusJson;
-import org.apache.druid.data.input.InputSourceReader;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
+import java.io.File;
 import java.io.IOException;
 
-public class TransformingReader implements InputSourceReader
+// TODO: maybe merge with reader back?
+public interface InputEntitySampler
 {
-  private final InputSourceReader delegate;
-  private final Transformer transformer;
+  // TODO: should be clear to convert into map first and then json?
+  ObjectWriter SAMPLER_JSON_WRITER = new ObjectMapper().writerWithDefaultPrettyPrinter();
 
-  TransformingReader(InputSourceReader delegate, Transformer transformer)
-  {
-    this.delegate = delegate;
-    this.transformer = transformer;
-  }
-
-  @Override
-  public CloseableIterator<InputRow> read() throws IOException
-  {
-    return delegate.read().map(transformer::transform);
-  }
-
-  @Override
-  public CloseableIterator<InputRowListPlusJson> sample() throws IOException
-  {
-    return delegate.sample().map(transformer::transform);
-  }
+  CloseableIterator<InputRowListPlusJson> sample(InputEntity<?> source, File temporaryDirectory) throws IOException;
 }

@@ -54,4 +54,6 @@ public interface InputFormat
   boolean isSplittable();
 
   InputEntityReader createReader(InputRowSchema inputRowSchema);
+
+  InputEntitySampler createSampler(InputRowSchema inputRowSchema);
 }

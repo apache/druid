@@ -20,7 +20,7 @@
 package org.apache.druid.segment.transform;
 
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowPlusRaw;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.DateTimes;
@@ -94,18 +94,18 @@ public class Transformer
   }
 
   @Nullable
-  public InputRowPlusRaw transform(@Nullable final InputRowPlusRaw row)
+  public InputRowListPlusJson transform(@Nullable final InputRowListPlusJson row)
   {
     if (row == null) {
       return null;
     }
 
-    final InputRowPlusRaw transformedRow;
+    final InputRowListPlusJson transformedRow;
 
     if (transforms.isEmpty()) {
       transformedRow = row;
     } else {
-      transformedRow = InputRowPlusRaw.of(new TransformedInputRow(row.getInputRow(), transforms), row.getRaw());
+      transformedRow = InputRowListPlusJson.of(new TransformedInputRow(row.getInputRow(), transforms), row.getRaw());
     }
 
     if (valueMatcher != null) {

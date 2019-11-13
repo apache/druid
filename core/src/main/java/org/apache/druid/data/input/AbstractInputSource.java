@@ -51,7 +51,7 @@ public abstract class AbstractInputSource implements InputSource
 
   protected InputSourceReader formattableReader(
       InputRowSchema inputRowSchema,
-      @Nullable InputFormat inputFormat,
+      InputFormat inputFormat,
       @Nullable File temporaryDirectory
   )
   {

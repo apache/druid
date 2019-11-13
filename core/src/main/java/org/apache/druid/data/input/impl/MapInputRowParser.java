@@ -65,17 +65,18 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
       TimestampSpec timestampSpec,
       DimensionsSpec dimensionsSpec,
       Map<String, Object> theMap
-  )
+  ) throws ParseException
   {
     return parse(timestampSpec, dimensionsSpec.getDimensionNames(), dimensionsSpec.getDimensionExclusions(), theMap);
   }
 
+  // TODO: maybe prune columns with metrics + dimensions
   public static InputRow parse(
       TimestampSpec timestampSpec,
       List<String> dimensions,
       Set<String> dimensionExclusions,
       Map<String, Object> theMap
-  )
+  ) throws ParseException
   {
     final List<String> dimensionsToUse;
     if (!dimensions.isEmpty()) {

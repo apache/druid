@@ -35,6 +35,4 @@ import java.io.IOException;
 public interface InputEntityReader
 {
   CloseableIterator<InputRow> read(InputEntity<?> source, File temporaryDirectory) throws IOException;
-
-  CloseableIterator<InputRowPlusRaw> sample(InputEntity<?> source, File temporaryDirectory) throws IOException;
 }

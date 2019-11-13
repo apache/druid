@@ -68,17 +68,6 @@ public class CSVParseSpec extends ParseSpec
     }
   }
 
-  @Deprecated
-  public CSVParseSpec(
-      TimestampSpec timestampSpec,
-      DimensionsSpec dimensionsSpec,
-      String listDelimiter,
-      List<String> columns
-  )
-  {
-    this(timestampSpec, dimensionsSpec, listDelimiter, columns, false, 0);
-  }
-
   @JsonProperty
   public String getListDelimiter()
   {

@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import org.apache.druid.data.input.InputEntityReader;
+import org.apache.druid.data.input.InputEntitySampler;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 
@@ -33,6 +34,12 @@ public class NoopInputFormat implements InputFormat
 
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public InputEntitySampler createSampler(InputRowSchema inputRowSchema)
   {
     throw new UnsupportedOperationException();
   }

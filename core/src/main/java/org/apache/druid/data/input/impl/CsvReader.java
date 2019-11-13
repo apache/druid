@@ -26,6 +26,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.opencsv.CSVParser;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowListPlusJson;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.TextReader;
 import org.apache.druid.java.util.common.ISE;
@@ -38,6 +39,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -52,7 +54,7 @@ public class CsvReader extends TextReader
 
   CsvReader(
       InputRowSchema inputRowSchema,
-      String listDelimiter,
+      @Nullable String listDelimiter,
       @Nullable List<String> columns,
       boolean findColumnsFromHeader,
       int skipHeaderRows
@@ -80,17 +82,38 @@ public class CsvReader extends TextReader
   }
 
   @Override
-  public InputRow readLine(String line) throws IOException, ParseException
+  public List<InputRow> readLine(String line) throws IOException, ParseException
+  {
+    final Map<String, Object> zipped = parseLine(line);
+    return Collections.singletonList(
+        MapInputRowParser.parse(
+            getInputRowSchema().getTimestampSpec(),
+            getInputRowSchema().getDimensionsSpec(),
+            zipped
+        )
+    );
+  }
+
+  @Override
+  public InputRowListPlusJson sampleLine(String line) throws IOException
+  {
+    final Map<String, Object> zipped = parseLine(line);
+    return InputRowListPlusJson.ofJson(
+        MapInputRowParser.parse(
+            getInputRowSchema().getTimestampSpec(),
+            getInputRowSchema().getDimensionsSpec(),
+            zipped
+        ),
+        SAMPLER_JSON_WRITER.writeValueAsString(zipped)
+    );
+  }
+
+  private Map<String, Object> parseLine(String line) throws IOException
   {
     final String[] parsed = parser.parseLine(line);
-    final Map<String, Object> zipped = Utils.zipMapPartial(
+    return Utils.zipMapPartial(
         Preconditions.checkNotNull(columns, "columns"),
         Iterables.transform(Arrays.asList(parsed), multiValueFunction)
-    );
-    return MapInputRowParser.parse(
-        getInputRowSchema().getTimestampSpec(),
-        getInputRowSchema().getDimensionsSpec(),
-        zipped
     );
   }
 
