@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -123,6 +124,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   private static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
   private static final String TYPE = "index";
 
+  private static String makeGroupId(IndexIngestionSpec ingestionSchema)
+  {
+    return makeGroupId(ingestionSchema.ioConfig.appendToExisting, ingestionSchema.dataSchema.getDataSource());
+  }
+
   private static String makeGroupId(
       IndexIngestionSpec ingestionSchema,
       DataSchema dataSchema,
@@ -134,7 +140,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                                                          && ioConfig != null
                                                          && tuningConfig != null);
     if (!isValid) {
-      throw new ISE("invalid spec input");
+      if (ingestionSchema == null) {
+        throw new ISE("invalid spec input, please add dataSchema, ioConfig, tuningConfig to spec");
+      } else {
+        throw new ISE("invalid spec input, please either add spec section or dataSchema, ioConfig, tuningConfig");
+      }
     }
     if (ingestionSchema == null) {
       assert (ioConfig != null);
@@ -186,11 +196,38 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @JsonIgnore
   private final AppenderatorsManager appenderatorsManager;
 
-  @JsonCreator
+  @Deprecated
+  @VisibleForTesting
   public IndexTask(
       @JsonProperty("id") final String id,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("spec") final IndexIngestionSpec ingestionSchema,
+      @JsonProperty("context") final Map<String, Object> context,
+      @JacksonInject AuthorizerMapper authorizerMapper,
+      @JacksonInject ChatHandlerProvider chatHandlerProvider,
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject AppenderatorsManager appenderatorsManager
+  )
+  {
+    this(
+        id,
+        makeGroupId(ingestionSchema),
+        taskResource,
+        ingestionSchema.dataSchema.getDataSource(),
+        ingestionSchema,
+        context,
+        authorizerMapper,
+        chatHandlerProvider,
+        rowIngestionMetersFactory,
+        appenderatorsManager
+    );
+  }
+
+  @JsonCreator
+  public IndexTask(
+      @JsonProperty("id") final String id,
+      @JsonProperty("resource") final TaskResource taskResource,
+      @Deprecated @JsonProperty("spec") final IndexIngestionSpec ingestionSchema,
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("ioConfig") IndexIOConfig ioConfig,
       @JsonProperty("tuningConfig") IndexTuningConfig tuningConfig,

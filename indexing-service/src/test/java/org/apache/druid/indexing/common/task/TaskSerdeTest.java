@@ -34,7 +34,6 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -220,9 +219,6 @@ public class TaskSerdeTest
             )
         ),
         null,
-        null,
-        null,
-        null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
         rowIngestionMetersFactory,
@@ -314,7 +310,6 @@ public class TaskSerdeTest
 
     final String json = jsonMapper.writeValueAsString(task);
 
-    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
     final IndexTask task2 = (IndexTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
@@ -344,92 +339,6 @@ public class TaskSerdeTest
     Assert.assertEquals(taskTuningConfig.getNumShards(), task2TuningConfig.getNumShards());
     Assert.assertEquals(taskTuningConfig.getMaxRowsPerSegment(), task2TuningConfig.getMaxRowsPerSegment());
     Assert.assertEquals(taskTuningConfig.isReportParseExceptions(), task2TuningConfig.isReportParseExceptions());
-  }
-
-  @Test(expected = ISE.class)
-  public void testIndexTaskInvalidSpecSerde()
-  {
-    new IndexTask(
-        null,
-        null,
-        new IndexIngestionSpec(
-            new DataSchema(
-                "foo",
-                null,
-                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    null,
-                    ImmutableList.of(Intervals.of("2010-01-01/P2D"))
-                ),
-                null,
-                jsonMapper
-            ),
-            new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
-            new IndexTuningConfig(
-                null,
-                null,
-                10,
-                null,
-                null,
-                9999,
-                null,
-                null,
-                new DynamicPartitionsSpec(10000, null),
-                indexSpec,
-                null,
-                3,
-                false,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )
-        ),
-        new DataSchema(
-            "foo",
-            null,
-            new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
-            new UniformGranularitySpec(
-                Granularities.DAY,
-                null,
-                ImmutableList.of(Intervals.of("2010-01-01/P2D"))
-            ),
-            null,
-            jsonMapper
-        ),
-        new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
-        new IndexTuningConfig(
-            null,
-            null,
-            10,
-            null,
-            null,
-            9999,
-            null,
-            null,
-            new DynamicPartitionsSpec(10000, null),
-            indexSpec,
-            null,
-            3,
-            false,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        ),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        null
-    );
   }
 
   @Test
@@ -475,9 +384,6 @@ public class TaskSerdeTest
                 null
             )
         ),
-        null,
-        null,
-        null,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,

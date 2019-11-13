@@ -702,9 +702,6 @@ public class TaskLifecycleTest
             )
         ),
         null,
-        null,
-        null,
-        null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
         ROW_INGESTION_METERS_FACTORY,
@@ -788,9 +785,6 @@ public class TaskLifecycleTest
                 null
             )
         ),
-        null,
-        null,
-        null,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
@@ -1214,9 +1208,6 @@ public class TaskLifecycleTest
             )
         ),
         null,
-        null,
-        null,
-        null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
         ROW_INGESTION_METERS_FACTORY,
@@ -1322,9 +1313,6 @@ public class TaskLifecycleTest
                 null
             )
         ),
-        null,
-        null,
-        null,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,

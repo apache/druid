@@ -197,9 +197,6 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
             false
         ),
         null,
-        null,
-        null,
-        null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         new NoopChatHandlerProvider(),
         rowIngestionMetersFactory,

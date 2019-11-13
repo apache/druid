@@ -361,9 +361,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
             false
         ),
         null,
-        null,
-        null,
-        null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         new NoopChatHandlerProvider(),
         rowIngestionMetersFactory,
@@ -692,9 +689,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
             IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, null, false, true),
             appendToExisting
         ),
-        null,
-        null,
-        null,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         new NoopChatHandlerProvider(),
