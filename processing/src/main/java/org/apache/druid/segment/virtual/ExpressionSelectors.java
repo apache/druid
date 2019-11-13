@@ -568,7 +568,7 @@ public class ExpressionSelectors
       // otherwise double
       return Double.class;
     }
-    throw new UOE("Invalid array expression type: ", next);
+    throw new UOE("Invalid array expression type: %s", next);
   }
 
   /**
