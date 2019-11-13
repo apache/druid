@@ -16,24 +16,15 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
-
-import { JsonInput } from './json-input';
-
-describe('json input', () => {
-  it('matches snapshot (null)', () => {
-    const jsonCollapse = <JsonInput onChange={() => {}} value={null} />;
-    const { container } = render(jsonCollapse);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot (value)', () => {
-    const value = {
-      hello: ['world', { a: 1, b: 2 }],
-    };
-    const jsonCollapse = <JsonInput onChange={() => {}} value={value} />;
-    const { container } = render(jsonCollapse);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+.json-input {
+  &.invalid::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border: 1px solid #ff4852;
+    pointer-events: none;
+  }
+}

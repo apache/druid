@@ -88,7 +88,7 @@ public class Expressions
    */
   public static RexNode fromFieldAccess(
       final RowSignature rowSignature,
-      final Project project,
+      @Nullable final Project project,
       final int fieldNumber
   )
   {

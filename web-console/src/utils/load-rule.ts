@@ -29,6 +29,7 @@ export interface Rule {
     | 'broadcastByPeriod';
   interval?: string;
   period?: string;
+  includeFuture?: boolean;
   tieredReplicants?: Record<string, number>;
   colocatedDataSources?: string[];
 }
@@ -37,11 +38,23 @@ export type LoadType = 'load' | 'drop' | 'broadcast';
 export type TimeType = 'Forever' | 'ByInterval' | 'ByPeriod';
 
 export class RuleUtil {
+  static shouldIncludeFuture(rule: Rule): boolean {
+    if (rule.includeFuture !== false) {
+      return (
+        rule.type === 'loadByPeriod' ||
+        rule.type === 'dropByPeriod' ||
+        rule.type === 'broadcastByPeriod'
+      );
+    }
+    return false;
+  }
+
   static ruleToString(rule: Rule): string {
     return (
       rule.type +
       (rule.period ? `(${rule.period})` : '') +
-      (rule.interval ? `(${rule.interval})` : '')
+      (rule.interval ? `(${rule.interval})` : '') +
+      (RuleUtil.shouldIncludeFuture(rule) ? `(includeFuture)` : '')
     );
   }
 
@@ -73,6 +86,10 @@ export class RuleUtil {
 
   static changePeriod(rule: Rule, period: string): Rule {
     return Object.assign({}, rule, { period });
+  }
+
+  static changeIncludeFuture(rule: Rule, includeFuture: boolean): Rule {
+    return Object.assign({}, rule, { includeFuture });
   }
 
   static changeInterval(rule: Rule, interval: string): Rule {

@@ -25,20 +25,19 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
-import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToQuantilePostAggregator;
+import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToRankPostAggregator;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 
-public class DoublesSketchQuantileOperatorConversion extends DoublesSketchSingleArgBaseOperatorConversion
+public class DoublesSketchRankOperatorConversion extends DoublesSketchSingleArgBaseOperatorConversion
 {
-  private static final String FUNCTION_NAME = "DS_GET_QUANTILE";
+  private static final String FUNCTION_NAME = "DS_RANK";
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
       .returnType(SqlTypeName.DOUBLE)
       .build();
 
-
-  public DoublesSketchQuantileOperatorConversion()
+  public DoublesSketchRankOperatorConversion()
   {
     super(SQL_FUNCTION, FUNCTION_NAME);
   }
@@ -52,7 +51,7 @@ public class DoublesSketchQuantileOperatorConversion extends DoublesSketchSingle
   @Override
   public PostAggregator makePostAgg(String name, PostAggregator field, float arg)
   {
-    return new DoublesSketchToQuantilePostAggregator(
+    return new DoublesSketchToRankPostAggregator(
         name,
         field,
         arg
