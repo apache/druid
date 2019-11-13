@@ -134,65 +134,65 @@ which has been configured to read the `quickstart/tutorial/wikiticker-2015-09-12
 
 ```json
 {
-    "type" : "index",
-    "dataSchema" : {
-      "dataSource" : "wikipedia",
-      "parser" : {
-        "type" : "string",
-        "parseSpec" : {
-          "format" : "json",
-          "dimensionsSpec" : {
-            "dimensions" : [
-              "channel",
-              "cityName",
-              "comment",
-              "countryIsoCode",
-              "countryName",
-              "isAnonymous",
-              "isMinor",
-              "isNew",
-              "isRobot",
-              "isUnpatrolled",
-              "metroCode",
-              "namespace",
-              "page",
-              "regionIsoCode",
-              "regionName",
-              "user",
-              { "name": "added", "type": "long" },
-              { "name": "deleted", "type": "long" },
-              { "name": "delta", "type": "long" }
-            ]
-          },
-          "timestampSpec": {
-            "column": "time",
-            "format": "iso"
-          }
+  "type" : "index",
+  "dataSchema" : {
+    "dataSource" : "wikipedia",
+    "parser" : {
+      "type" : "string",
+      "parseSpec" : {
+        "format" : "json",
+        "dimensionsSpec" : {
+          "dimensions" : [
+            "channel",
+            "cityName",
+            "comment",
+            "countryIsoCode",
+            "countryName",
+            "isAnonymous",
+            "isMinor",
+            "isNew",
+            "isRobot",
+            "isUnpatrolled",
+            "metroCode",
+            "namespace",
+            "page",
+            "regionIsoCode",
+            "regionName",
+            "user",
+            { "name": "added", "type": "long" },
+            { "name": "deleted", "type": "long" },
+            { "name": "delta", "type": "long" }
+          ]
+        },
+        "timestampSpec": {
+          "column": "time",
+          "format": "iso"
         }
-      },
-      "metricsSpec" : [],
-      "granularitySpec" : {
-        "type" : "uniform",
-        "segmentGranularity" : "day",
-        "queryGranularity" : "none",
-        "intervals" : ["2015-09-12/2015-09-13"],
-        "rollup" : false
       }
     },
-    "ioConfig" : {
-      "type" : "index",
-      "firehose" : {
-        "type" : "local",
-        "baseDir" : "quickstart/tutorial/",
-        "filter" : "wikiticker-2015-09-12-sampled.json.gz"
-      },
-      "appendToExisting" : false
-    },
-    "tuningConfig" : {
-      "type" : "index",
-      "maxRowsPerSegment" : 5000000,
-      "maxRowsInMemory" : 25000
+    "metricsSpec" : [],
+    "granularitySpec" : {
+      "type" : "uniform",
+      "segmentGranularity" : "day",
+      "queryGranularity" : "none",
+      "intervals" : ["2015-09-12/2015-09-13"],
+      "rollup" : false
     }
+  },
+  "ioConfig" : {
+    "type" : "index",
+    "firehose" : {
+      "type" : "local",
+      "baseDir" : "quickstart/tutorial/",
+      "filter" : "wikiticker-2015-09-12-sampled.json.gz"
+    },
+    "appendToExisting" : false
+  },
+  "tuningConfig" : {
+    "type" : "index",
+    "maxRowsPerSegment" : 5000000,
+    "maxRowsInMemory" : 25000
+  }
 }
 ```
 
