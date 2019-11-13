@@ -29,6 +29,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.JvmUtils;
 import org.apache.hadoop.yarn.util.ApplicationClassLoader;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -125,18 +126,31 @@ public class HadoopTaskTest
     final Class<?> hadoopClazz = Class.forName("org.apache.hadoop.fs.FSDataInputStream", false, classLoader);
     assertClassLoaderIsSingular(hadoopClazz.getClassLoader());
 
-    final Class<?> druidHadoopConfigClazz = Class.forName("org.apache.druid.indexer.HadoopDruidIndexerConfig", false, classLoader);
+    final Class<?> druidHadoopConfigClazz = Class.forName(
+        "org.apache.druid.indexer.HadoopDruidIndexerConfig",
+        false,
+        classLoader
+    );
     assertClassLoaderIsSingular(druidHadoopConfigClazz.getClassLoader());
   }
 
   public static void assertClassLoaderIsSingular(ClassLoader classLoader)
   {
-    // This is a check against the current HadoopTask which creates a single URLClassLoader with null parent
-    Assert.assertNull(classLoader.getParent());
+    if (JvmUtils.isIsJava9Compatible()) {
+      // See also https://docs.oracle.com/en/java/javase/11/migrate/index.html#JSMIG-GUID-A868D0B9-026F-4D46-B979-901834343F9E
+      Assert.assertEquals("PlatformClassLoader", classLoader.getParent().getClass().getSimpleName());
+    } else {
+      // This is a check against the current HadoopTask which creates a single URLClassLoader with null parent
+      Assert.assertNull(classLoader.getParent());
+    }
     Assert.assertFalse(classLoader instanceof ApplicationClassLoader);
     Assert.assertTrue(classLoader instanceof URLClassLoader);
 
     final ClassLoader appLoader = HadoopDruidIndexerConfig.class.getClassLoader();
-    Assert.assertNotEquals(StringUtils.format("ClassLoader [%s] is not isolated!", classLoader), appLoader, classLoader);
+    Assert.assertNotEquals(
+        StringUtils.format("ClassLoader [%s] is not isolated!", classLoader),
+        appLoader,
+        classLoader
+    );
   }
 }
