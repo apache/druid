@@ -56,7 +56,7 @@ public class JsonReaderTest
         null
     );
 
-    final ByteSource source = new ByteSource(
+    final ByteEntity source = new ByteEntity(
         StringUtils.toUtf8("{\"timestamp\":\"2019-01-01\",\"bar\":null,\"foo\":\"x\",\"baz\":4,\"o\":{\"mg\":1}}")
     );
 
@@ -103,7 +103,7 @@ public class JsonReaderTest
         null
     );
 
-    final ByteSource source = new ByteSource(
+    final ByteEntity source = new ByteEntity(
         StringUtils.toUtf8("{\"timestamp\":\"2019-01-01\",\"something_else\": {\"foo\": \"test\"}}")
     );
 

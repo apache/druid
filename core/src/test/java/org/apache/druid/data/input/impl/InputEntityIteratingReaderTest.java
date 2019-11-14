@@ -72,7 +72,7 @@ public class InputEntityIteratingReaderTest
             false,
             0
         ),
-        files.stream().flatMap(file -> ImmutableList.of(new FileSource(file)).stream()),
+        files.stream().flatMap(file -> ImmutableList.of(new FileEntity(file)).stream()),
         temporaryFolder.newFolder()
     );
 

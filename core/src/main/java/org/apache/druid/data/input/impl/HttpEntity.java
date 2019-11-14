@@ -33,7 +33,7 @@ import java.net.URI;
 import java.net.URLConnection;
 import java.util.Base64;
 
-public class HttpSource implements InputEntity<URI>
+public class HttpEntity implements InputEntity<URI>
 {
   private final URI split;
   @Nullable
@@ -41,7 +41,7 @@ public class HttpSource implements InputEntity<URI>
   @Nullable
   private final PasswordProvider httpAuthenticationPasswordProvider;
 
-  HttpSource(
+  HttpEntity(
       URI split,
       @Nullable String httpAuthenticationUsername,
       @Nullable PasswordProvider httpAuthenticationPasswordProvider

@@ -51,7 +51,7 @@ public class CsvReaderTest
   @Test
   public void testWithoutHeaders() throws IOException
   {
-    final ByteSource source = writeData(
+    final ByteEntity source = writeData(
         ImmutableList.of(
             "2019-01-01T00:00:10Z,name_1,5",
             "2019-01-01T00:00:20Z,name_2,10",
@@ -65,7 +65,7 @@ public class CsvReaderTest
   @Test
   public void testFindColumn() throws IOException
   {
-    final ByteSource source = writeData(
+    final ByteEntity source = writeData(
         ImmutableList.of(
             "ts,name,score",
             "2019-01-01T00:00:10Z,name_1,5",
@@ -80,7 +80,7 @@ public class CsvReaderTest
   @Test
   public void testSkipHeaders() throws IOException
   {
-    final ByteSource source = writeData(
+    final ByteEntity source = writeData(
         ImmutableList.of(
             "this,is,a,row,to,skip",
             "2019-01-01T00:00:10Z,name_1,5",
@@ -95,7 +95,7 @@ public class CsvReaderTest
   @Test
   public void testFindColumnAndSkipHeaders() throws IOException
   {
-    final ByteSource source = writeData(
+    final ByteEntity source = writeData(
         ImmutableList.of(
             "this,is,a,row,to,skip",
             "ts,name,score",
@@ -111,7 +111,7 @@ public class CsvReaderTest
   @Test
   public void testMultiValues() throws IOException
   {
-    final ByteSource source = writeData(
+    final ByteEntity source = writeData(
         ImmutableList.of(
             "ts,name,score",
             "2019-01-01T00:00:10Z,name_1,5|1",
@@ -146,7 +146,7 @@ public class CsvReaderTest
   @Test
   public void testQuotes() throws IOException
   {
-    final ByteSource source = writeData(
+    final ByteEntity source = writeData(
         ImmutableList.of(
             "3,\"Lets do some \"\"normal\"\" quotes\",2018-05-05T10:00:00Z",
             "34,\"Lets do some \"\"normal\"\", quotes with comma\",2018-05-06T10:00:00Z",
@@ -231,7 +231,7 @@ public class CsvReaderTest
   @Test
   public void testRussianTextMess() throws IOException
   {
-    final ByteSource source = writeData(
+    final ByteEntity source = writeData(
         ImmutableList.of(
             "2019-01-01T00:00:10Z,name_1,\"Как говорится: \\\"\"всё течет, всё изменяется\\\"\". Украина как всегда обвиняет Россию в собственных проблемах. #ПровокацияКиева\""
         )
@@ -251,7 +251,7 @@ public class CsvReaderTest
     }
   }
 
-  private ByteSource writeData(List<String> lines) throws IOException
+  private ByteEntity writeData(List<String> lines) throws IOException
   {
     final List<byte[]> byteLines = lines.stream()
                                         .map(line -> StringUtils.toUtf8(line + "\n"))
@@ -262,10 +262,10 @@ public class CsvReaderTest
     for (byte[] bytes : byteLines) {
       outputStream.write(bytes);
     }
-    return new ByteSource(outputStream.toByteArray());
+    return new ByteEntity(outputStream.toByteArray());
   }
 
-  private void assertResult(ByteSource source, CsvInputFormat format) throws IOException
+  private void assertResult(ByteEntity source, CsvInputFormat format) throws IOException
   {
     final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA);
     int numResults = 0;

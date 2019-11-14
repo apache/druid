@@ -29,11 +29,11 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class FileSource implements InputEntity<File>
+public class FileEntity implements InputEntity<File>
 {
   private final File file;
 
-  FileSource(File file)
+  FileEntity(File file)
   {
     this.file = file;
   }

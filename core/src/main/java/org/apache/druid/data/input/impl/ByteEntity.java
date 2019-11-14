@@ -27,16 +27,16 @@ import org.apache.druid.io.ByteBufferInputStream;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
-public class ByteSource implements InputEntity<ByteBuffer>
+public class ByteEntity implements InputEntity<ByteBuffer>
 {
   private final ByteBuffer buffer;
 
-  public ByteSource(ByteBuffer buffer)
+  public ByteEntity(ByteBuffer buffer)
   {
     this.buffer = buffer.duplicate();
   }
 
-  public ByteSource(byte[] bytes)
+  public ByteEntity(byte[] bytes)
   {
     this(ByteBuffer.wrap(bytes));
   }

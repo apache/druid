@@ -111,7 +111,7 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
     return new InputEntityIteratingReader<>(
         inputRowSchema,
         inputFormat,
-        createSplits(inputFormat, null).map(split -> new HttpSource(
+        createSplits(inputFormat, null).map(split -> new HttpEntity(
             split.get(),
             httpAuthenticationUsername,
             httpAuthenticationPasswordProvider

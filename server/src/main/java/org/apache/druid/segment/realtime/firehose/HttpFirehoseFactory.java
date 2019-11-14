@@ -26,7 +26,7 @@ import com.google.common.base.Predicate;
 import com.google.common.net.HttpHeaders;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.impl.HttpSource;
+import org.apache.druid.data.input.impl.HttpEntity;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import org.apache.druid.java.util.common.StringUtils;
@@ -108,7 +108,7 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   @Override
   protected InputStream openObjectStream(URI object, long start) throws IOException
   {
-    URLConnection urlConnection = HttpSource.openURLConnection(
+    URLConnection urlConnection = HttpEntity.openURLConnection(
         object,
         httpAuthenticationUsername,
         httpAuthenticationPasswordProvider
